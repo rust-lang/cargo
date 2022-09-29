@@ -29,7 +29,7 @@ fn minimal_version_cli() {
         .build();
 
     p.cargo("generate-lockfile -Zminimal-versions")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["minimal-versions"])
         .run();
 
     let lock = p.read_lockfile();

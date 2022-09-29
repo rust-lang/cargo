@@ -266,6 +266,12 @@ git = 'https://github.com/example/baz'
 baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
 ```
 
+> **Note**: The `[patch]` table can also be specified as a [configuration
+> option](config.md), such as in a `.cargo/config.toml` file or a CLI option
+> like `--config 'patch.crates-io.rand.path="rand"'`. This can be useful for
+> local-only changes that you don't want to commit, or temporarily testing a
+> patch.
+
 The `[patch]` table is made of dependency-like sub-tables. Each key after
 `[patch]` is a URL of the source that is being patched, or the name of a
 registry. The name `crates-io` may be used to override the default registry
@@ -284,6 +290,10 @@ Sources can be patched with versions of crates that do not exist, and they can
 also be patched with versions of crates that already exist. If a source is
 patched with a crate version that already exists in the source, then the
 source's original crate is replaced.
+
+Cargo only looks at the patch settings in the `Cargo.toml` manifest at the
+root of the workspace. Patch settings defined in dependencies will be
+ignored.
 
 ### The `[replace]` section
 
@@ -306,6 +316,10 @@ value of each key is the same as the `[dependencies]` syntax for specifying
 dependencies, except that you can't specify features. Note that when a crate
 is overridden the copy it's overridden with must have both the same name and
 version, but it can come from a different source (e.g., git or a local path).
+
+Cargo only looks at the replace settings in the `Cargo.toml` manifest at the
+root of the workspace. Replace settings defined in dependencies will be
+ignored.
 
 ### `paths` overrides
 

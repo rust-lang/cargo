@@ -31,6 +31,11 @@ If no source is specified, then a best effort will be made to select one, includ
 
 When you add a package that is already present, the existing entry will be updated with the flags specified.
 
+Upon successful invocation, the enabled (`+`) and disabled (`-`) [features] of the specified
+dependency will be listed in the command's output.
+
+[features]: ../reference/features.md
+
 ## OPTIONS
 
 ### Source options
@@ -175,6 +180,12 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-add---config"><a class="option-anchor" href="#option-cargo-add---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
 
 
 <dt class="option-term" id="option-cargo-add--h"><a class="option-anchor" href="#option-cargo-add--h"></a><code>-h</code></dt>

@@ -14,12 +14,12 @@ use cargo_util::paths;
 use curl::easy::{HttpVersion, List};
 use curl::multi::{EasyHandle, Multi};
 use log::{debug, trace};
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::str;
-use std::task::Poll;
+use std::task::{ready, Poll};
 use std::time::Duration;
 use url::Url;
 
@@ -98,6 +98,9 @@ pub struct Downloads<'cfg> {
     progress: RefCell<Option<Progress<'cfg>>>,
     /// Number of downloads that have successfully finished.
     downloads_finished: usize,
+    /// Number of times the caller has requested blocking. This is used for
+    /// an estimate of progress.
+    blocking_calls: usize,
 }
 
 struct Download {
@@ -113,10 +116,6 @@ struct Download {
 
     /// ETag or Last-Modified header received from the server (if any).
     index_version: RefCell<Option<String>>,
-
-    /// Statistics updated from the progress callback in libcurl.
-    total: Cell<u64>,
-    current: Cell<u64>,
 }
 
 struct CompletedDownload {
@@ -126,16 +125,25 @@ struct CompletedDownload {
 }
 
 impl<'cfg> HttpRegistry<'cfg> {
-    pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> HttpRegistry<'cfg> {
-        let url = source_id
-            .url()
-            .to_string()
+    pub fn new(
+        source_id: SourceId,
+        config: &'cfg Config,
+        name: &str,
+    ) -> CargoResult<HttpRegistry<'cfg>> {
+        if !config.cli_unstable().sparse_registry {
+            anyhow::bail!("usage of sparse registries requires `-Z sparse-registry`");
+        }
+        let url = source_id.url().as_str();
+        // Ensure the url ends with a slash so we can concatenate paths.
+        if !url.ends_with('/') {
+            anyhow::bail!("registry url must end in a slash `/`: {url}")
+        }
+        let url = url
             .trim_start_matches("sparse+")
-            .trim_end_matches('/')
             .into_url()
             .expect("a url with the protocol stripped should still be valid");
 
-        HttpRegistry {
+        Ok(HttpRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
@@ -149,17 +157,18 @@ impl<'cfg> HttpRegistry<'cfg> {
                 pending_ids: HashMap::new(),
                 results: HashMap::new(),
                 progress: RefCell::new(Some(Progress::with_style(
-                    "Fetching",
-                    ProgressStyle::Ratio,
+                    "Fetch",
+                    ProgressStyle::Indeterminate,
                     config,
                 ))),
                 downloads_finished: 0,
+                blocking_calls: 0,
             },
             fresh: HashSet::new(),
             requested_update: false,
             fetch_started: false,
             registry_config: None,
-        }
+        })
     }
 
     fn handle_http_header(buf: &[u8]) -> Option<(&str, &str)> {
@@ -245,7 +254,8 @@ impl<'cfg> HttpRegistry<'cfg> {
     }
 
     fn full_url(&self, path: &Path) -> String {
-        format!("{}/{}", self.url, path.display())
+        // self.url always ends with a slash.
+        format!("{}{}", self.url, path.display())
     }
 
     fn is_fresh(&self, path: &Path) -> bool {
@@ -373,10 +383,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         // Load the registry config.
         if self.registry_config.is_none() && path != Path::new("config.json") {
-            match self.config()? {
-                Poll::Ready(_) => {}
-                Poll::Pending => return Poll::Pending,
-            }
+            ready!(self.config()?);
         }
 
         let mut handle = ops::http_handle(self.config)?;
@@ -447,15 +454,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             Ok(buf.len())
         })?;
 
-        // Same goes for the progress function -- it goes through thread-local storage.
-        handle.progress(true)?;
-        handle.progress_function(move |dl_total, dl_cur, _, _| {
-            tls::with(|downloads| match downloads {
-                Some(d) => d.progress(token, dl_total as u64, dl_cur as u64),
-                None => false,
-            })
-        })?;
-
         // And ditto for the header function.
         handle.header_function(move |buf| {
             if let Some((tag, value)) = Self::handle_http_header(buf) {
@@ -484,8 +482,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             data: RefCell::new(Vec::new()),
             path: path.to_path_buf(),
             index_version: RefCell::new(None),
-            total: Cell::new(0),
-            current: Cell::new(0),
         };
 
         // Finally add the request we've lined up to the pool of requests that cURL manages.
@@ -516,11 +512,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
 
-        match self.load(Path::new(""), Path::new("config.json"), None)? {
-            Poll::Ready(LoadResponse::Data {
+        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
+            LoadResponse::Data {
                 raw_data,
                 index_version: _,
-            }) => {
+            } => {
                 trace!("config loaded");
                 self.registry_config = Some(serde_json::from_slice(&raw_data)?);
                 if paths::create_dir_all(&config_json_path.parent().unwrap()).is_ok() {
@@ -530,13 +526,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 }
                 Poll::Ready(Ok(self.registry_config.clone()))
             }
-            Poll::Ready(LoadResponse::NotFound) => {
+            LoadResponse::NotFound => {
                 Poll::Ready(Err(anyhow::anyhow!("config.json not found in registry")))
             }
-            Poll::Ready(LoadResponse::CacheValid) => {
+            LoadResponse::CacheValid => {
                 panic!("config.json is not stored in the index cache")
             }
-            Poll::Pending => Poll::Pending,
         }
     }
 
@@ -578,11 +573,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        let initial_pending_count = self.downloads.pending.len();
         trace!(
             "block_until_ready: {} transfers pending",
-            initial_pending_count
+            self.downloads.pending.len()
         );
+        self.downloads.blocking_calls += 1;
 
         loop {
             self.handle_completed_downloads()?;
@@ -612,21 +607,31 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 }
 
 impl<'cfg> Downloads<'cfg> {
-    fn progress(&self, token: usize, total: u64, cur: u64) -> bool {
-        let dl = &self.pending[&token].0;
-        dl.total.set(total);
-        dl.current.set(cur);
-        true
-    }
-
     fn tick(&self) -> CargoResult<()> {
         let mut progress = self.progress.borrow_mut();
         let progress = progress.as_mut().unwrap();
 
+        // Since the sparse protocol discovers dependencies as it goes,
+        // it's not possible to get an accurate progress indication.
+        //
+        // As an approximation, we assume that the depth of the dependency graph
+        // is fixed, and base the progress on how many times the caller has asked
+        // for blocking. If there are actually additional dependencies, the progress
+        // bar will get stuck. If there are fewer dependencies, it will disappear
+        // early. It will never go backwards.
+        //
+        // The status text also contains the number of completed & pending requests, which
+        // gives an better indication of forward progress.
+        let approximate_tree_depth = 10;
+
         progress.tick(
-            self.downloads_finished,
-            self.downloads_finished + self.pending.len(),
-            "",
+            self.blocking_calls.min(approximate_tree_depth),
+            approximate_tree_depth + 1,
+            &format!(
+                " {} complete; {} pending",
+                self.downloads_finished,
+                self.pending.len()
+            ),
         )
     }
 }

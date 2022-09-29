@@ -2,7 +2,7 @@ use crate::core::Target;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, StableHasher};
-use anyhow::{bail, Context as _};
+use anyhow::Context as _;
 use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fs;
@@ -65,9 +65,6 @@ impl CompileKind {
         };
 
         if !targets.is_empty() {
-            if targets.len() > 1 && !config.cli_unstable().multitarget {
-                bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
-            }
             return dedup(targets);
         }
 
@@ -182,13 +179,19 @@ impl CompileTarget {
     /// See [`CompileKind::fingerprint_hash`].
     pub fn fingerprint_hash(&self) -> u64 {
         let mut hasher = StableHasher::new();
-        self.name.hash(&mut hasher);
-        if self.name.ends_with(".json") {
-            // This may have some performance concerns, since it is called
-            // fairly often. If that ever seems worth fixing, consider
-            // embedding this in `CompileTarget`.
-            if let Ok(contents) = fs::read_to_string(self.name) {
+        match self
+            .name
+            .ends_with(".json")
+            .then(|| fs::read_to_string(self.name))
+        {
+            Some(Ok(contents)) => {
+                // This may have some performance concerns, since it is called
+                // fairly often. If that ever seems worth fixing, consider
+                // embedding this in `CompileTarget`.
                 contents.hash(&mut hasher);
+            }
+            _ => {
+                self.name.hash(&mut hasher);
             }
         }
         hasher.finish()

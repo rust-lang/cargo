@@ -17,7 +17,7 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -85,7 +85,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -111,7 +111,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -251,7 +251,7 @@ fn vcs_file_collision() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 description = "foo"
                 version = "0.0.1"
@@ -290,7 +290,7 @@ fn orig_file_collision() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 description = "foo"
                 version = "0.0.1"
@@ -328,7 +328,7 @@ fn path_dependency_no_version() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -367,7 +367,7 @@ fn git_dependency_no_version() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -403,7 +403,7 @@ fn exclude() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -525,7 +525,7 @@ fn include() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -577,7 +577,7 @@ fn package_git_submodule() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = ["foo@example.com"]
@@ -680,7 +680,7 @@ src/main.rs
 #[cargo_test]
 fn ignore_nested() {
     let cargo_toml = r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -814,7 +814,7 @@ fn broken_symlink() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -840,6 +840,55 @@ Caused by:
 
 Caused by:
   [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+/// Tests if a broken but excluded symlink is ignored.
+/// See issue rust-lang/cargo#10917
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
+fn broken_but_excluded_symlink() {
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    if !symlink_supported() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = 'foo'
+                documentation = 'foo'
+                homepage = 'foo'
+                repository = 'foo'
+                exclude = ["src/foo.rs"]
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+    t!(symlink("nowhere", &p.root().join("src/foo.rs")));
+
+    p.cargo("package -v --list")
+        // `src/foo.rs` is excluded.
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
 ",
         )
         .run();
@@ -973,7 +1022,7 @@ fn do_not_package_if_repository_is_dirty() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 license = "MIT"
@@ -990,7 +1039,7 @@ fn do_not_package_if_repository_is_dirty() {
     p.change_file(
         "Cargo.toml",
         r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             license = "MIT"
@@ -1072,7 +1121,7 @@ src/lib.rs
 
 #[cargo_test]
 fn generated_manifest() {
-    registry::alt_init();
+    let registry = registry::alt_init();
     Package::new("abc", "1.0.0").publish();
     Package::new("def", "1.0.0").alternative(true).publish();
     Package::new("ghi", "1.0.0").publish();
@@ -1082,7 +1131,7 @@ fn generated_manifest() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1090,7 +1139,7 @@ fn generated_manifest() {
                 license = "MIT"
                 description = "foo"
 
-                [project.metadata]
+                [package.metadata]
                 foo = 'bar'
 
                 [workspace]
@@ -1137,7 +1186,7 @@ registry-index = "{}"
 version = "1.0"
 "#,
         cargo::core::package::MANIFEST_PREAMBLE,
-        registry::alt_registry_url()
+        registry.index_url()
     );
 
     validate_crate_contents(
@@ -1154,7 +1203,7 @@ fn ignore_workspace_specifier() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 
@@ -1208,7 +1257,7 @@ fn package_two_kinds_of_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1390,7 +1439,7 @@ fn package_with_select_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1419,7 +1468,7 @@ fn package_with_all_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1448,7 +1497,7 @@ fn package_no_default_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2007,6 +2056,12 @@ src/lib.rs
 #[cargo_test]
 #[cfg(windows)]
 fn reserved_windows_name() {
+    // If we are running on a version of Windows that allows these reserved filenames,
+    // skip this test.
+    if paths::windows_reserved_names_are_allowed() {
+        return;
+    }
+
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "pub mod aux;")
         .file("src/aux.rs", "")
@@ -2016,7 +2071,7 @@ fn reserved_windows_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2185,7 +2240,7 @@ fn reproducible_output() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2276,7 +2331,7 @@ fn in_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2291,7 +2346,7 @@ fn in_workspace() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 authors = []
@@ -2324,4 +2379,75 @@ See [..]
 
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     assert!(p.root().join("target/package/bar-0.0.1.crate").is_file());
+}
+
+#[cargo_test]
+fn workspace_overrides_resolver() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                edition = "2015"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify -p bar -p baz").run();
+
+    let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+edition = "2021"
+name = "bar"
+version = "0.1.0"
+resolver = "1"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    validate_crate_contents(
+        f,
+        "bar-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
+
+    // When the crate has the same implicit resolver as the workspace it is not overridden
+    let f = File::open(&p.root().join("target/package/baz-0.1.0.crate")).unwrap();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+edition = "2015"
+name = "baz"
+version = "0.1.0"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    validate_crate_contents(
+        f,
+        "baz-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
 }

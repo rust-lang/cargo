@@ -246,7 +246,7 @@ whether or not [`rpath`] is enabled.
 #### dev
 
 The `dev` profile is used for normal development and debugging. It is the
-default for build commands like [`cargo build`].
+default for build commands like [`cargo build`], and is used for `cargo install --debug`.
 
 The default settings for the `dev` profile are:
 

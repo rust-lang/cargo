@@ -2,7 +2,7 @@
 
 use cargo::util::IntoUrl;
 use cargo_test_support::publish::validate_alt_upload;
-use cargo_test_support::registry::{self, Package};
+use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::{basic_manifest, git, paths, project};
 use std::fs;
 
@@ -13,7 +13,7 @@ fn depend_on_alt_registry() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -62,7 +62,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -104,7 +104,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -146,7 +146,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -190,7 +190,7 @@ fn registry_and_path_dep_works() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -224,7 +224,7 @@ fn registry_incompatible_with_git() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -255,7 +255,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -312,7 +312,7 @@ fn publish_with_registry_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -376,7 +376,7 @@ fn alt_registry_and_crates_io_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -479,7 +479,7 @@ fn publish_with_crates_io_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = ["me"]
@@ -616,7 +616,7 @@ fn bad_registry_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -660,18 +660,8 @@ Caused by:
 
 #[cargo_test]
 fn no_api() {
-    registry::alt_init();
+    let _registry = RegistryBuilder::new().alternative().no_api().build();
     Package::new("bar", "0.0.1").alternative(true).publish();
-    // Configure without `api`.
-    let repo = git2::Repository::open(registry::alt_registry_path()).unwrap();
-    let cfg_path = registry::alt_registry_path().join("config.json");
-    fs::write(
-        cfg_path,
-        format!(r#"{{"dl": "{}"}}"#, registry::alt_dl_url()),
-    )
-    .unwrap();
-    git::add(&repo);
-    git::commit(&repo);
 
     // First check that a dependency works.
     let p = project()
@@ -1052,7 +1042,7 @@ fn unknown_registry() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1221,13 +1211,11 @@ fn registries_index_relative_url() {
     )
     .unwrap();
 
-    registry::init();
-
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1270,13 +1258,11 @@ fn registries_index_relative_path_not_allowed() {
     )
     .unwrap();
 
-    registry::init();
-
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []

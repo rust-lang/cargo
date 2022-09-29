@@ -5,7 +5,7 @@ use cargo::util::interning::InternedString;
 const PRINT_ARG_NAME: &str = "print";
 const CRATE_TYPE_ARG_NAME: &str = "crate-type";
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("rustc")
         .trailing_var_arg(true)
         .about("Compile a package, and pass extra options to the compiler")
@@ -39,7 +39,7 @@ pub fn cli() -> App {
         .arg(multi_opt(
             CRATE_TYPE_ARG_NAME,
             "CRATE-TYPE",
-            "Comma separated list of types of crates for the compiler to emit (unstable)",
+            "Comma separated list of types of crates for the compiler to emit",
         ))
         .arg_target_dir()
         .arg_manifest_path()
@@ -56,7 +56,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // This is a legacy behavior that changes the behavior based on the profile.
     // If we want to support this more formally, I think adding a --mode flag
     // would be warranted.
-    let mode = match args.value_of("profile") {
+    let mode = match args.get_one::<String>("profile").map(String::as_str) {
         Some("test") => CompileMode::Test,
         Some("bench") => CompileMode::Bench,
         Some("check") => CompileMode::Check { test: false },
@@ -77,7 +77,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else {
         Some(target_args)
     };
-    if let Some(opt_value) = args.value_of(PRINT_ARG_NAME) {
+    if let Some(opt_value) = args.get_one::<String>(PRINT_ARG_NAME) {
         config
             .cli_unstable()
             .fail_if_stable_opt(PRINT_ARG_NAME, 9357)?;
@@ -88,9 +88,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     compile_opts.target_rustc_crate_types = if crate_types.is_empty() {
         None
     } else {
-        config
-            .cli_unstable()
-            .fail_if_stable_opt(CRATE_TYPE_ARG_NAME, 10083)?;
         Some(crate_types)
     };
     ops::compile(&ws, &compile_opts)?;

@@ -7,14 +7,16 @@ use crate::util::{network, Config, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
-use git2::{self, ErrorClass, ObjectType};
+use git2::{self, ErrorClass, ObjectType, Oid};
 use log::{debug, info};
 use serde::ser;
 use serde::Serialize;
+use std::borrow::Cow;
 use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str;
 use std::time::{Duration, Instant};
 use url::Url;
 
@@ -150,34 +152,21 @@ impl GitDatabase {
         rev: git2::Oid,
         dest: &Path,
         cargo_config: &Config,
+        parent_remote_url: &Url,
     ) -> CargoResult<GitCheckout<'_>> {
-        let mut checkout = None;
-        if let Ok(repo) = git2::Repository::open(dest) {
-            let mut co = GitCheckout::new(dest, self, rev, repo);
-            if !co.is_fresh() {
-                // After a successful fetch operation the subsequent reset can
-                // fail sometimes for corrupt repositories where the fetch
-                // operation succeeds but the object isn't actually there in one
-                // way or another. In these situations just skip the error and
-                // try blowing away the whole repository and trying with a
-                // clone.
-                co.fetch(cargo_config)?;
-                match co.reset(cargo_config) {
-                    Ok(()) => {
-                        assert!(co.is_fresh());
-                        checkout = Some(co);
-                    }
-                    Err(e) => debug!("failed reset after fetch {:?}", e),
-                }
-            } else {
-                checkout = Some(co);
-            }
-        };
-        let checkout = match checkout {
-            Some(c) => c,
+        // If the existing checkout exists, and it is fresh, use it.
+        // A non-fresh checkout can happen if the checkout operation was
+        // interrupted. In that case, the checkout gets deleted and a new
+        // clone is created.
+        let checkout = match git2::Repository::open(dest)
+            .ok()
+            .map(|repo| GitCheckout::new(dest, self, rev, repo))
+            .filter(|co| co.is_fresh())
+        {
+            Some(co) => co,
             None => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
-        checkout.update_submodules(cargo_config)?;
+        checkout.update_submodules(cargo_config, parent_remote_url)?;
         Ok(checkout)
     }
 
@@ -311,14 +300,6 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
-    fn fetch(&mut self, cargo_config: &Config) -> CargoResult<()> {
-        info!("fetch {}", self.repo.path().display());
-        let url = self.database.path.into_url()?;
-        let reference = GitReference::Rev(self.revision.to_string());
-        fetch(&mut self.repo, url.as_str(), &reference, cargo_config)?;
-        Ok(())
-    }
-
     fn reset(&self, config: &Config) -> CargoResult<()> {
         // If we're interrupted while performing this reset (e.g., we die because
         // of a signal) Cargo needs to be sure to try to check out this repo
@@ -343,19 +324,25 @@ impl<'a> GitCheckout<'a> {
         Ok(())
     }
 
-    fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
-        return update_submodules(&self.repo, cargo_config);
+    fn update_submodules(&self, cargo_config: &Config, parent_remote_url: &Url) -> CargoResult<()> {
+        return update_submodules(&self.repo, cargo_config, parent_remote_url);
 
-        fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
+        fn update_submodules(
+            repo: &git2::Repository,
+            cargo_config: &Config,
+            parent_remote_url: &Url,
+        ) -> CargoResult<()> {
             debug!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()? {
-                update_submodule(repo, &mut child, cargo_config).with_context(|| {
-                    format!(
-                        "failed to update submodule `{}`",
-                        child.name().unwrap_or("")
-                    )
-                })?;
+                update_submodule(repo, &mut child, cargo_config, parent_remote_url).with_context(
+                    || {
+                        format!(
+                            "failed to update submodule `{}`",
+                            child.name().unwrap_or("")
+                        )
+                    },
+                )?;
             }
             Ok(())
         }
@@ -364,11 +351,51 @@ impl<'a> GitCheckout<'a> {
             parent: &git2::Repository,
             child: &mut git2::Submodule<'_>,
             cargo_config: &Config,
+            parent_remote_url: &Url,
         ) -> CargoResult<()> {
             child.init(false)?;
-            let url = child.url().ok_or_else(|| {
+
+            let child_url_str = child.url().ok_or_else(|| {
                 anyhow::format_err!("non-utf8 url for submodule {:?}?", child.path())
             })?;
+
+            // Skip the submodule if the config says not to update it.
+            if child.update_strategy() == git2::SubmoduleUpdate::None {
+                cargo_config.shell().status(
+                    "Skipping",
+                    format!(
+                        "git submodule `{}` due to update strategy in .gitmodules",
+                        child_url_str
+                    ),
+                )?;
+                return Ok(());
+            }
+
+            // Git only assumes a URL is a relative path if it starts with `./` or `../`.
+            // See [`git submodule add`] documentation.
+            //
+            // [`git submodule add`]: https://git-scm.com/docs/git-submodule
+            let url = if child_url_str.starts_with("./") || child_url_str.starts_with("../") {
+                let mut new_parent_remote_url = parent_remote_url.clone();
+
+                let mut new_path = Cow::from(parent_remote_url.path());
+                if !new_path.ends_with('/') {
+                    new_path.to_mut().push('/');
+                }
+                new_parent_remote_url.set_path(&new_path);
+
+                match new_parent_remote_url.join(child_url_str) {
+                    Ok(x) => x.to_string(),
+                    Err(err) => Err(err).with_context(|| {
+                        format!(
+                            "failed to parse relative child submodule url `{}` using parent base url `{}`",
+                            child_url_str, new_parent_remote_url
+                        )
+                    })?,
+                }
+            } else {
+                child_url_str.to_string()
+            };
 
             // A submodule which is listed in .gitmodules but not actually
             // checked out will not have a head id, so we should ignore it.
@@ -388,7 +415,7 @@ impl<'a> GitCheckout<'a> {
             let mut repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
-                        return update_submodules(&repo, cargo_config);
+                        return update_submodules(&repo, cargo_config, parent_remote_url);
                     }
                     repo
                 }
@@ -403,7 +430,7 @@ impl<'a> GitCheckout<'a> {
             cargo_config
                 .shell()
                 .status("Updating", format!("git submodule `{}`", url))?;
-            fetch(&mut repo, url, &reference, cargo_config).with_context(|| {
+            fetch(&mut repo, &url, &reference, cargo_config).with_context(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
@@ -413,7 +440,7 @@ impl<'a> GitCheckout<'a> {
 
             let obj = repo.find_object(head, None)?;
             reset(&repo, &obj, cargo_config)?;
-            update_submodules(&repo, cargo_config)
+            update_submodules(&repo, cargo_config, parent_remote_url)
         }
     }
 }
@@ -517,7 +544,7 @@ where
         //
         // If ssh-agent authentication fails, libgit2 will keep calling this
         // callback asking for other authentication methods to try. Check
-        // cred_helper_bad to make sure we only try the git credentail helper
+        // cred_helper_bad to make sure we only try the git credential helper
         // once, to avoid looping forever.
         if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) && cred_helper_bad.is_none()
         {
@@ -769,11 +796,15 @@ pub fn fetch(
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository
-    match github_up_to_date(repo, url, reference, config) {
-        Ok(true) => return Ok(()),
-        Ok(false) => {}
-        Err(e) => debug!("failed to check github {:?}", e),
-    }
+    let oid_to_fetch = match github_fast_path(repo, url, reference, config) {
+        Ok(FastPathRev::UpToDate) => return Ok(()),
+        Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
+        Ok(FastPathRev::Indeterminate) => None,
+        Err(e) => {
+            debug!("failed to check github {:?}", e);
+            None
+        }
+    };
 
     // We reuse repositories quite a lot, so before we go through and update the
     // repo check to see if it's a little too old and could benefit from a gc.
@@ -805,6 +836,8 @@ pub fn fetch(
         GitReference::Rev(rev) => {
             if rev.starts_with("refs/") {
                 refspecs.push(format!("+{0}:{0}", rev));
+            } else if let Some(oid_to_fetch) = oid_to_fetch {
+                refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
             } else {
                 // We don't know what the rev will point to. To handle this
                 // situation we fetch all branches and tags, and then we pray
@@ -1001,15 +1034,25 @@ fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
     Ok(git2::Repository::init_opts(&path, &opts)?)
 }
 
+enum FastPathRev {
+    /// The local rev (determined by `reference.resolve(repo)`) is already up to
+    /// date with what this rev resolves to on GitHub's server.
+    UpToDate,
+    /// The following SHA must be fetched in order for the local rev to become
+    /// up to date.
+    NeedsFetch(Oid),
+    /// Don't know whether local rev is up to date. We'll fetch _all_ branches
+    /// and tags from the server and see what happens.
+    Indeterminate,
+}
+
 /// Updating the index is done pretty regularly so we want it to be as fast as
 /// possible. For registries hosted on GitHub (like the crates.io index) there's
 /// a fast path available to use [1] to tell us that there's no updates to be
 /// made.
 ///
 /// This function will attempt to hit that fast path and verify that the `oid`
-/// is actually the current branch of the repository. If `true` is returned then
-/// no update needs to be performed, but if `false` is returned then the
-/// standard update logic still needs to happen.
+/// is actually the current branch of the repository.
 ///
 /// [1]: https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference
 ///
@@ -1017,16 +1060,18 @@ fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
 /// just a fast path. As a result all errors are ignored in this function and we
 /// just return a `bool`. Any real errors will be reported through the normal
 /// update path above.
-fn github_up_to_date(
+fn github_fast_path(
     repo: &mut git2::Repository,
     url: &str,
     reference: &GitReference,
     config: &Config,
-) -> CargoResult<bool> {
+) -> CargoResult<FastPathRev> {
     let url = Url::parse(url)?;
-    if url.host_str() != Some("github.com") {
-        return Ok(false);
+    if !is_github(&url) {
+        return Ok(FastPathRev::Indeterminate);
     }
+
+    let local_object = reference.resolve(repo).ok();
 
     let github_branch_name = match reference {
         GitReference::Branch(branch) => branch,
@@ -1035,9 +1080,33 @@ fn github_up_to_date(
         GitReference::Rev(rev) => {
             if rev.starts_with("refs/") {
                 rev
+            } else if looks_like_commit_hash(rev) {
+                // `revparse_single` (used by `resolve`) is the only way to turn
+                // short hash -> long hash, but it also parses other things,
+                // like branch and tag names, which might coincidentally be
+                // valid hex.
+                //
+                // We only return early if `rev` is a prefix of the object found
+                // by `revparse_single`. Don't bother talking to GitHub in that
+                // case, since commit hashes are permanent. If a commit with the
+                // requested hash is already present in the local clone, its
+                // contents must be the same as what is on the server for that
+                // hash.
+                //
+                // If `rev` is not found locally by `revparse_single`, we'll
+                // need GitHub to resolve it and get a hash. If `rev` is found
+                // but is not a short hash of the found object, it's probably a
+                // branch and we also need to get a hash from GitHub, in case
+                // the branch has moved.
+                if let Some(local_object) = local_object {
+                    if is_short_hash_of(rev, local_object) {
+                        return Ok(FastPathRev::UpToDate);
+                    }
+                }
+                rev
             } else {
                 debug!("can't use github fast path with `rev = \"{}\"`", rev);
-                return Ok(false);
+                return Ok(FastPathRev::Indeterminate);
             }
         }
     };
@@ -1070,10 +1139,50 @@ fn github_up_to_date(
     handle.get(true)?;
     handle.url(&url)?;
     handle.useragent("cargo")?;
-    let mut headers = List::new();
-    headers.append("Accept: application/vnd.github.3.sha")?;
-    headers.append(&format!("If-None-Match: \"{}\"", reference.resolve(repo)?))?;
-    handle.http_headers(headers)?;
-    handle.perform()?;
-    Ok(handle.response_code()? == 304)
+    handle.http_headers({
+        let mut headers = List::new();
+        headers.append("Accept: application/vnd.github.3.sha")?;
+        if let Some(local_object) = local_object {
+            headers.append(&format!("If-None-Match: \"{}\"", local_object))?;
+        }
+        headers
+    })?;
+
+    let mut response_body = Vec::new();
+    let mut transfer = handle.transfer();
+    transfer.write_function(|data| {
+        response_body.extend_from_slice(data);
+        Ok(data.len())
+    })?;
+    transfer.perform()?;
+    drop(transfer); // end borrow of handle so that response_code can be called
+
+    let response_code = handle.response_code()?;
+    if response_code == 304 {
+        Ok(FastPathRev::UpToDate)
+    } else if response_code == 200 {
+        let oid_to_fetch = str::from_utf8(&response_body)?.parse::<Oid>()?;
+        Ok(FastPathRev::NeedsFetch(oid_to_fetch))
+    } else {
+        // Usually response_code == 404 if the repository does not exist, and
+        // response_code == 422 if exists but GitHub is unable to resolve the
+        // requested rev.
+        Ok(FastPathRev::Indeterminate)
+    }
+}
+
+fn is_github(url: &Url) -> bool {
+    url.host_str() == Some("github.com")
+}
+
+fn looks_like_commit_hash(rev: &str) -> bool {
+    rev.len() >= 7 && rev.chars().all(|ch| ch.is_ascii_hexdigit())
+}
+
+fn is_short_hash_of(rev: &str, oid: Oid) -> bool {
+    let long_hash = oid.to_string();
+    match long_hash.get(..rev.len()) {
+        Some(truncated_long_hash) => truncated_long_hash.eq_ignore_ascii_case(rev),
+        None => false,
+    }
 }

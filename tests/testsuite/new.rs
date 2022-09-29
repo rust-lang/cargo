@@ -39,11 +39,17 @@ fn simple_lib() {
     let contents = fs::read_to_string(&lib).unwrap();
     assert_eq!(
         contents,
-        r#"#[cfg(test)]
+        r#"pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+
+#[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn it_works() {
-        let result = 2 + 2;
+        let result = add(2, 2);
         assert_eq!(result, 4);
     }
 }
@@ -429,7 +435,7 @@ fn non_ascii_name() {
         .with_stderr(
             "\
 [WARNING] the name `Привет` contains non-ASCII characters
-Support for non-ASCII crate names is experimental and only valid on the nightly toolchain.
+Non-ASCII crate names are not supported by Rust.
 [CREATED] binary (application) `Привет` package
 ",
         )

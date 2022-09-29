@@ -122,6 +122,21 @@ typically finish in under 30 minutes.
 The reviewer might point out changes deemed necessary. Large or tricky changes
 may require several passes of review and changes.
 
+### Status labeling
+
+PRs will get marked with [labels] like [`S-waiting-on-review`] or [`S-waiting-on-author`] to indicate their status.
+The [`@rustbot`] bot can be used by anyone to adjust the labels.
+If a PR gets marked as `S-waiting-on-author`, and you have pushed new changes that you would like to be reviewed, you can write a comment on the PR with the text `@rustbot ready`.
+The bot will switch the labels on the PR.
+
+More information about these commands can be found at the [shortcuts documentation].
+
+[labels]: https://github.com/rust-lang/cargo/labels
+[`S-waiting-on-review`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-review
+[`S-waiting-on-author`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-author
+[`@rustbot`]: https://github.com/rustbot
+[shortcuts documentation]: https://github.com/rust-lang/triagebot/wiki/Shortcuts
+
 ## The merging process
 
 After a reviewer has approved your PR, they will issue a command to the [bors]

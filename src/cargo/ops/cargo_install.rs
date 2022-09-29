@@ -530,36 +530,21 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         // duplicate "Updating", but since `source` is taken by value, then it
         // wouldn't be available for `compile_ws`.
         let (pkg_set, resolve) = ops::resolve_ws(&self.ws)?;
-        let mut sources = pkg_set.sources_mut();
-
-        // Checking the yanked status involves taking a look at the registry and
-        // maybe updating files, so be sure to lock it here.
-        let _lock = self.ws.config().acquire_package_cache_lock()?;
-
-        for pkg_id in resolve.iter() {
-            if let Some(source) = sources.get_mut(pkg_id.source_id()) {
-                if source.is_yanked(pkg_id)? {
-                    self.ws.config().shell().warn(format!(
-                        "package `{}` in Cargo.lock is yanked in registry `{}`, \
-                         consider running without --locked",
-                        pkg_id,
-                        pkg_id.source_id().display_registry_name()
-                    ))?;
-                }
-            }
-        }
-
-        Ok(())
+        ops::check_yanked(
+            self.ws.config(),
+            &pkg_set,
+            &resolve,
+            "consider running without --locked",
+        )
     }
 }
 
 pub fn install(
     config: &Config,
     root: Option<&str>,
-    krates: Vec<&str>,
+    krates: Vec<(&str, Option<&str>)>,
     source_id: SourceId,
     from_cwd: bool,
-    vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
@@ -569,18 +554,13 @@ pub fn install(
     let map = SourceConfigMap::new(config)?;
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
+        let (krate, vers) = krates
+            .into_iter()
+            .next()
+            .map(|(k, v)| (Some(k), v))
+            .unwrap_or((None, None));
         let installable_pkg = InstallablePackage::new(
-            config,
-            root,
-            map,
-            krates.into_iter().next(),
-            source_id,
-            from_cwd,
-            vers,
-            opts,
-            force,
-            no_track,
-            true,
+            config, root, map, krate, source_id, from_cwd, vers, opts, force, no_track, true,
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
@@ -596,7 +576,7 @@ pub fn install(
 
         let pkgs_to_install: Vec<_> = krates
             .into_iter()
-            .filter_map(|krate| {
+            .filter_map(|(krate, vers)| {
                 let root = root.clone();
                 let map = map.clone();
                 match InstallablePackage::new(

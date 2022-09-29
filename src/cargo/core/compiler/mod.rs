@@ -292,7 +292,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &script_outputs, script_metadata);
+            add_custom_flags(&mut rustc, &script_outputs, script_metadata)?;
         }
 
         for output in outputs.iter() {
@@ -304,6 +304,19 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 if dst.exists() {
                     paths::remove_file(&dst)?;
                 }
+            }
+
+            // Some linkers do not remove the executable, but truncate and modify it.
+            // That results in the old hard-link being modified even after renamed.
+            // We delete the old artifact here to prevent this behavior from confusing users.
+            // See rust-lang/cargo#8348.
+            if output.hardlink.is_some() && output.path.exists() {
+                _ = paths::remove_file(&output.path).map_err(|e| {
+                    log::debug!(
+                        "failed to delete previous output file `{:?}`: {e:?}",
+                        output.path
+                    );
+                });
             }
         }
 
@@ -408,9 +421,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
 
             if key.0 == current_id {
-                for cfg in &output.cfgs {
-                    rustc.arg("--cfg").arg(cfg);
-                }
                 if pass_l_flag {
                     for name in output.library_links.iter() {
                         rustc.arg("-l").arg(name);
@@ -430,22 +440,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
         }
         Ok(())
-    }
-
-    // Add all custom environment variables present in `state` (after they've
-    // been put there by one of the `build_scripts`) to the command provided.
-    fn add_custom_env(
-        rustc: &mut ProcessBuilder,
-        build_script_outputs: &BuildScriptOutputs,
-        metadata: Option<Metadata>,
-    ) {
-        if let Some(metadata) = metadata {
-            if let Some(output) = build_script_outputs.get(metadata) {
-                for &(ref name, ref value) in output.env.iter() {
-                    rustc.env(name, value);
-                }
-            }
-        }
     }
 }
 
@@ -645,7 +639,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     paths::create_dir_all(&doc_dir)?;
 
     rustdoc.arg("-o").arg(&doc_dir);
-    rustdoc.args(&features_args(cx, unit));
+    rustdoc.args(&features_args(unit));
     rustdoc.args(&check_cfg_args(cx, unit));
 
     add_error_format_and_color(cx, &mut rustdoc);
@@ -713,16 +707,11 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let mut output_options = OutputOptions::new(cx, unit);
     let script_metadata = cx.find_build_script_metadata(unit);
     Ok(Work::new(move |state| {
-        if let Some(script_metadata) = script_metadata {
-            if let Some(output) = build_script_outputs.lock().unwrap().get(script_metadata) {
-                for cfg in output.cfgs.iter() {
-                    rustdoc.arg("--cfg").arg(cfg);
-                }
-                for &(ref name, ref value) in output.env.iter() {
-                    rustdoc.env(name, value);
-                }
-            }
-        }
+        add_custom_flags(
+            &mut rustdoc,
+            &build_script_outputs.lock().unwrap(),
+            script_metadata,
+        )?;
         let crate_dir = doc_dir.join(&crate_name);
         if crate_dir.exists() {
             // Remove output from a previous build. This ensures that stale
@@ -817,11 +806,11 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
         ) {
             // Terminal width explicitly provided - only useful for testing.
             (Some(Some(width)), _) => {
-                cmd.arg(format!("-Zterminal-width={}", width));
+                cmd.arg(format!("--diagnostic-width={}", width));
             }
             // Terminal width was not explicitly provided but flag was provided - common case.
             (Some(None), Some(width)) => {
-                cmd.arg(format!("-Zterminal-width={}", width));
+                cmd.arg(format!("--diagnostic-width={}", width));
             }
             // User didn't opt-in.
             _ => (),
@@ -966,7 +955,7 @@ fn build_base_args(
         cmd.arg("--cfg").arg("test");
     }
 
-    cmd.args(&features_args(cx, unit));
+    cmd.args(&features_args(unit));
     cmd.args(&check_cfg_args(cx, unit));
 
     let meta = cx.files().metadata(unit);
@@ -1019,7 +1008,7 @@ fn build_base_args(
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
-    // Add `CARGO_BIN_` environment variables for building tests.
+    // Add `CARGO_BIN_EXE_` environment variables for building tests.
     if unit.target.is_test() || unit.target.is_bench() {
         for bin_target in unit
             .pkg
@@ -1042,7 +1031,7 @@ fn build_base_args(
 }
 
 /// All active features for the unit passed as --cfg
-fn features_args(_cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+fn features_args(unit: &Unit) -> Vec<OsString> {
     let mut args = Vec::with_capacity(unit.features.len() * 2);
 
     for feat in &unit.features {
@@ -1055,43 +1044,42 @@ fn features_args(_cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
 
 /// Generate the --check-cfg arguments for the unit
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    if !cx.bcx.config.cli_unstable().check_cfg_features
-        && !cx.bcx.config.cli_unstable().check_cfg_well_known_names
-        && !cx.bcx.config.cli_unstable().check_cfg_well_known_values
+    if let Some((features, well_known_names, well_known_values, _output)) =
+        cx.bcx.config.cli_unstable().check_cfg
     {
-        return Vec::new();
-    }
+        let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);
+        args.push(OsString::from("-Zunstable-options"));
 
-    let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);
-    args.push(OsString::from("-Zunstable-options"));
+        if features {
+            // This generate something like this:
+            //  - values(feature)
+            //  - values(feature, "foo", "bar")
+            let mut arg = OsString::from("values(feature");
+            for (&feat, _) in unit.pkg.summary().features() {
+                arg.push(", \"");
+                arg.push(&feat);
+                arg.push("\"");
+            }
+            arg.push(")");
 
-    if cx.bcx.config.cli_unstable().check_cfg_features {
-        // This generate something like this:
-        //  - values(feature)
-        //  - values(feature, "foo", "bar")
-        let mut arg = OsString::from("values(feature");
-        for (&feat, _) in unit.pkg.summary().features() {
-            arg.push(", \"");
-            arg.push(&feat);
-            arg.push("\"");
+            args.push(OsString::from("--check-cfg"));
+            args.push(arg);
         }
-        arg.push(")");
 
-        args.push(OsString::from("--check-cfg"));
-        args.push(arg);
+        if well_known_names {
+            args.push(OsString::from("--check-cfg"));
+            args.push(OsString::from("names()"));
+        }
+
+        if well_known_values {
+            args.push(OsString::from("--check-cfg"));
+            args.push(OsString::from("values()"));
+        }
+
+        args
+    } else {
+        Vec::new()
     }
-
-    if cx.bcx.config.cli_unstable().check_cfg_well_known_names {
-        args.push(OsString::from("--check-cfg"));
-        args.push(OsString::from("names()"));
-    }
-
-    if cx.bcx.config.cli_unstable().check_cfg_well_known_values {
-        args.push(OsString::from("--check-cfg"));
-        args.push(OsString::from("values()"));
-    }
-
-    args
 }
 
 fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
@@ -1180,6 +1168,32 @@ fn build_deps_args(
     // requiring nightly rust
     if unstable_opts {
         cmd.arg("-Z").arg("unstable-options");
+    }
+
+    Ok(())
+}
+
+/// Add custom flags from the output a of build-script to a `ProcessBuilder`
+fn add_custom_flags(
+    cmd: &mut ProcessBuilder,
+    build_script_outputs: &BuildScriptOutputs,
+    metadata: Option<Metadata>,
+) -> CargoResult<()> {
+    if let Some(metadata) = metadata {
+        if let Some(output) = build_script_outputs.get(metadata) {
+            for cfg in output.cfgs.iter() {
+                cmd.arg("--cfg").arg(cfg);
+            }
+            if !output.check_cfgs.is_empty() {
+                cmd.arg("-Zunstable-options");
+                for check_cfg in &output.check_cfgs {
+                    cmd.arg("--check-cfg").arg(check_cfg);
+                }
+            }
+            for &(ref name, ref value) in output.env.iter() {
+                cmd.env(name, value);
+            }
+        }
     }
 
     Ok(())

@@ -182,7 +182,7 @@ fn cargo_compile_with_invalid_manifest2() {
         .file(
             "Cargo.toml",
             "
-                [project]
+                [package]
                 foo = bar
             ",
         )
@@ -647,7 +647,7 @@ fn cargo_compile_with_warnings_in_the_root_package() {
         .build();
 
     p.cargo("build")
-        .with_stderr_contains("[..]function is never used: `dead`[..]")
+        .with_stderr_contains("[WARNING] [..]dead[..]")
         .run();
 }
 
@@ -657,7 +657,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -686,7 +686,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
         .build();
 
     p.cargo("build")
-        .with_stderr_contains("[..]function is never used: `dead`[..]")
+        .with_stderr_contains("[WARNING] [..]dead[..]")
         .run();
 
     assert!(p.bin("foo").is_file());
@@ -700,7 +700,7 @@ fn cargo_compile_with_nested_deps_inferred() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -717,7 +717,7 @@ fn cargo_compile_with_nested_deps_inferred() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -763,7 +763,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -780,7 +780,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -826,7 +826,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -840,7 +840,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -890,7 +890,7 @@ fn cargo_compile_with_nested_deps_longhand() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -909,7 +909,7 @@ fn cargo_compile_with_nested_deps_longhand() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -1041,7 +1041,14 @@ fn cargo_compile_with_filename() {
 
     p.cargo("build --bin bin.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no bin target named `bin.rs`")
+        .with_stderr(
+            "\
+[ERROR] no bin target named `bin.rs`.
+Available bin targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("build --bin a.rs")
@@ -1056,7 +1063,14 @@ fn cargo_compile_with_filename() {
 
     p.cargo("build --example example.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no example target named `example.rs`")
+        .with_stderr(
+            "\
+[ERROR] no example target named `example.rs`.
+Available example targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("build --example a.rs")
@@ -1087,7 +1101,7 @@ fn incompatible_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 
@@ -1133,7 +1147,7 @@ fn incompatible_dependencies_with_multi_semver() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 
@@ -1305,7 +1319,7 @@ fn crate_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.5.1-alpha.1"
             description = "This is foo"
@@ -1314,6 +1328,7 @@ fn crate_env_vars() {
             authors = ["wycats@example.com"]
             license = "MIT OR Apache-2.0"
             license-file = "license.txt"
+            rust-version = "1.61.0"
 
             [[bin]]
             name = "foo-bar"
@@ -1338,6 +1353,7 @@ fn crate_env_vars() {
                 static LICENSE: &'static str = env!("CARGO_PKG_LICENSE");
                 static LICENSE_FILE: &'static str = env!("CARGO_PKG_LICENSE_FILE");
                 static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
+                static RUST_VERSION: &'static str = env!("CARGO_PKG_RUST_VERSION");
                 static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
                 static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
 
@@ -1356,6 +1372,7 @@ fn crate_env_vars() {
                      assert_eq!("MIT OR Apache-2.0", LICENSE);
                      assert_eq!("license.txt", LICENSE_FILE);
                      assert_eq!("This is foo", DESCRIPTION);
+                     assert_eq!("1.61.0", RUST_VERSION);
                     let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
                                     VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
                     assert_eq!(s, VERSION);
@@ -1460,7 +1477,7 @@ fn crate_authors_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.1-alpha.1"
                 authors = ["wycats@example.com", "neikos@example.com"]
@@ -1509,7 +1526,7 @@ fn vv_prints_rustc_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = ["escape='\"@example.com"]
@@ -1589,7 +1606,7 @@ fn many_crate_types_old_style_lib_location() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -1622,7 +1639,7 @@ fn many_crate_types_correct() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -1649,7 +1666,7 @@ fn set_both_dylib_and_cdylib_crate_types() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -1754,7 +1771,7 @@ fn lib_crate_types_conflicting_warning() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = ["wycats@example.com"]
@@ -1781,7 +1798,7 @@ fn examples_crate_types_conflicting_warning() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = ["wycats@example.com"]
@@ -2397,7 +2414,7 @@ fn found_multiple_target_files() {
 
     p.cargo("build -v")
         .with_status(101)
-        // Don't assert the inferred pathes since the order is non-deterministic.
+        // Don't assert the inferred paths since the order is non-deterministic.
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -2949,7 +2966,7 @@ fn cargo_platform_specific_dependency() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = ["wycats@example.com"]
@@ -2996,7 +3013,7 @@ fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = ["wycats@example.com"]
@@ -3037,7 +3054,7 @@ fn cargo_platform_specific_dependency_dev_dependencies_conflicting_warning() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = ["wycats@example.com"]
@@ -3076,7 +3093,7 @@ fn bad_platform_specific_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -3106,7 +3123,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -3740,7 +3757,7 @@ fn compiler_json_error_format() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -4070,7 +4087,7 @@ fn build_all_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4102,7 +4119,7 @@ fn build_all_exclude() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4135,7 +4152,7 @@ fn build_all_exclude_not_found() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4167,7 +4184,7 @@ fn build_all_exclude_glob() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4200,7 +4217,7 @@ fn build_all_exclude_glob_not_found() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4242,7 +4259,7 @@ fn build_all_workspace_implicit_examples() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -4489,7 +4506,7 @@ fn build_all_member_dependency_same_name() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.1.0"
 
@@ -4700,7 +4717,7 @@ fn cdylib_not_lifted() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 authors = []
                 version = "0.1.0"
@@ -4738,7 +4755,7 @@ fn cdylib_final_outputs() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo-bar"
                 authors = []
                 version = "0.1.0"
@@ -4826,7 +4843,7 @@ fn deterministic_cfg_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -5088,12 +5105,12 @@ fn same_metadata_different_directory() {
 }
 
 #[cargo_test]
-fn building_a_dependent_crate_witout_bin_should_fail() {
+fn building_a_dependent_crate_without_bin_should_fail() {
     Package::new("testless", "0.1.0")
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "testless"
                 version = "0.1.0"
 
@@ -5108,7 +5125,7 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -5379,7 +5396,7 @@ required by package `bar v0.1.0 ([..]/foo)`
         )
         .run();
     p.cargo("build -Zavoid-dev-deps")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["avoid-dev-deps"])
         .run();
 }
 
@@ -5414,6 +5431,18 @@ fn good_cargo_config_jobs() {
 }
 
 #[cargo_test]
+fn good_jobs() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build --jobs 1").run();
+
+    p.cargo("build --jobs -1").run();
+}
+
+#[cargo_test]
 fn invalid_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
@@ -5438,11 +5467,9 @@ fn invalid_jobs() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    p.cargo("build --jobs -1")
-        .with_status(1)
-        .with_stderr_contains(
-            "error: Found argument '-1' which wasn't expected, or isn't valid in this context",
-        )
+    p.cargo("build --jobs 0")
+        .with_status(101)
+        .with_stderr_contains("error: jobs may not be 0")
         .run();
 
     p.cargo("build --jobs over9000")
@@ -6101,12 +6128,8 @@ fn target_directory_backup_exclusion() {
     assert!(!&cachedir_tag.is_file());
 }
 
-#[cargo_test]
+#[cargo_test(>=1.64, reason = "--diagnostic-width is stabilized in 1.64")]
 fn simple_terminal_width() {
-    if !is_nightly() {
-        // --terminal-width is unstable
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
@@ -6119,7 +6142,7 @@ fn simple_terminal_width() {
         .build();
 
     p.cargo("build -Zterminal-width=20")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["terminal-width"])
         .with_status(101)
         .with_stderr_contains("3 | ..._: () = 42;")
         .run();
@@ -6225,252 +6248,31 @@ fn primary_package_env_var() {
     foo.cargo("test").run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
-fn check_cfg_features() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
-
+fn renamed_uplifted_artifact_remains_unmodified_after_rebuild() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
-                version = "0.1.0"
-
-                [features]
-                f_a = []
-                f_b = []
+                authors = []
+                version = "0.0.0"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Z check-cfg-features")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
+    p.cargo("build").run();
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
-#[cargo_test]
-fn check_cfg_features_with_deps() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
+    let bin = p.bin("foo");
+    let renamed_bin = p.bin("foo-renamed");
 
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
+    fs::rename(&bin, &renamed_bin).unwrap();
 
-                [dependencies]
-                bar = { path = "bar/" }
+    p.change_file("src/main.rs", "fn main() { eprintln!(\"hello, world\"); }");
+    p.cargo("build").run();
 
-                [features]
-                f_a = []
-                f_b = []
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
-        .build();
-
-    p.cargo("build -v -Z check-cfg-features")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] bar v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature)' [..]
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
-#[cargo_test]
-fn check_cfg_features_with_opt_deps() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-
-                [dependencies]
-                bar = { path = "bar/", optional = true }
-
-                [features]
-                default = ["bar"]
-                f_a = []
-                f_b = []
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
-        .build();
-
-    p.cargo("build -v -Z check-cfg-features")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] bar v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature)' [..]
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"bar\", \"default\", \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
-#[cargo_test]
-fn check_cfg_features_with_namespaced_features() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-
-                [dependencies]
-                bar = { path = "bar/", optional = true }
-
-                [features]
-                f_a = ["dep:bar"]
-                f_b = []
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
-        .build();
-
-    p.cargo("build -v -Z check-cfg-features")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
-#[cargo_test]
-fn check_cfg_well_known_names() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
-
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build -v -Z check-cfg-well-known-names")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'names()' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
-#[cargo_test]
-fn check_cfg_well_known_values() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
-
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build -v -Z check-cfg-well-known-values")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values()' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
-#[cargo_test]
-fn check_cfg_all() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-
-                [features]
-                f_a = []
-                f_b = []
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build -v -Z check-cfg-features -Z check-cfg-well-known-names -Z check-cfg-well-known-values")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' --check-cfg 'names()' --check-cfg 'values()' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+    let not_the_same = !same_file::is_same_file(bin, renamed_bin).unwrap();
+    assert!(not_the_same, "renamed uplifted artifact must be unmodified");
 }

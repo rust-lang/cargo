@@ -587,10 +587,12 @@ fn compute_metadata(
     unit.mode.hash(&mut hasher);
     cx.lto[unit].hash(&mut hasher);
 
-    // Artifacts compiled for the host should have a different metadata
-    // piece than those compiled for the target, so make sure we throw in
-    // the unit's `kind` as well
-    unit.kind.hash(&mut hasher);
+    // Artifacts compiled for the host should have a different
+    // metadata piece than those compiled for the target, so make sure
+    // we throw in the unit's `kind` as well.  Use `fingerprint_hash`
+    // so that the StableHash doesn't change based on the pathnames
+    // of the custom target JSON spec files.
+    unit.kind.fingerprint_hash().hash(&mut hasher);
 
     // Finally throw in the target name/kind. This ensures that concurrent
     // compiles of targets in the same crate don't collide.

@@ -23,6 +23,7 @@
 //!       repeats until the queue is empty.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
@@ -174,13 +175,13 @@ impl Packages {
         };
         if specs.is_empty() {
             if ws.is_virtual() {
-                anyhow::bail!(
+                bail!(
                     "manifest path `{}` contains no package: The manifest is virtual, \
                      and the workspace has no members.",
                     ws.root().display()
                 )
             }
-            anyhow::bail!("no packages to compile")
+            bail!("no packages to compile")
         }
         Ok(specs)
     }
@@ -401,19 +402,8 @@ pub fn create_bcx<'a, 'cfg>(
     } = resolve;
 
     let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
-        if build_config.build_plan {
-            config
-                .shell()
-                .warn("-Zbuild-std does not currently fully support --build-plan")?;
-        }
-        if build_config.requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed. Unfortunately it is not
-            // easy to get the host triple in BuildConfig. Consider changing
-            // requested_target to an enum, or some other approach.
-            anyhow::bail!("-Zbuild-std requires --target");
-        }
         let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
+            standard_lib::resolve_std(ws, &target_data, &build_config, crates)?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {
@@ -554,19 +544,7 @@ pub fn create_bcx<'a, 'cfg>(
         None => Vec::new(),
     };
 
-    let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
-        // Only build libtest if it looks like it is needed.
-        let mut crates = crates.clone();
-        if !crates.iter().any(|c| c == "test")
-            && units
-                .iter()
-                .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
-        {
-            // Only build libtest when libstd is built (libtest depends on libstd)
-            if crates.iter().any(|c| c == "std") {
-                crates.push("test".to_string());
-            }
-        }
+    let std_roots = if let Some(crates) = standard_lib::std_crates(config, Some(&units)) {
         let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
             &crates,
@@ -646,6 +624,12 @@ pub fn create_bcx<'a, 'cfg>(
             if rustdoc_document_private_items || unit.target.is_bin() {
                 let mut args = extra_args.take().unwrap_or_default();
                 args.push("--document-private-items".into());
+                if unit.target.is_bin() {
+                    // This warning only makes sense if it's possible to document private items
+                    // sometimes and ignore them at other times. But cargo consistently passes
+                    // `--document-private-items`, so the warning isn't useful.
+                    args.push("-Arustdoc::private-intra-doc-links".into());
+                }
                 extra_args = Some(args);
             }
 
@@ -678,12 +662,34 @@ pub fn create_bcx<'a, 'cfg>(
                 continue;
             }
 
+            let guidance = if ws.is_ephemeral() {
+                if ws.ignore_lock() {
+                    "Try re-running cargo install with `--locked`".to_string()
+                } else {
+                    String::new()
+                }
+            } else if !unit.is_local() {
+                format!(
+                    "Either upgrade to rustc {} or newer, or use\n\
+                     cargo update -p {}@{} --precise ver\n\
+                     where `ver` is the latest version of `{}` supporting rustc {}",
+                    version,
+                    unit.pkg.name(),
+                    unit.pkg.version(),
+                    unit.pkg.name(),
+                    current_version,
+                )
+            } else {
+                String::new()
+            };
+
             anyhow::bail!(
                 "package `{}` cannot be built because it requires rustc {} or newer, \
-                 while the currently active rustc version is {}",
+                 while the currently active rustc version is {}\n{}",
                 unit.pkg,
                 version,
                 current_version,
+                guidance,
             );
         }
     }
@@ -819,7 +825,7 @@ impl CompileFilter {
     /// Constructs a filter that includes all test targets.
     ///
     /// Being different from the behavior of [`CompileFilter::Default`], this
-    /// function only recongnizes test targets, which means cargo might compile
+    /// function only recognizes test targets, which means cargo might compile
     /// all targets with `tested` flag on, whereas [`CompileFilter::Default`]
     /// may include additional example targets to ensure they can be compiled.
     ///
@@ -1521,19 +1527,40 @@ fn find_named_targets<'a>(
     };
 
     if proposals.is_empty() {
-        let targets = packages.iter().flat_map(|pkg| {
-            pkg.targets()
-                .iter()
-                .filter(|target| is_expected_kind(target))
-        });
-        let suggestion = closest_msg(target_name, targets, |t| t.name());
-        anyhow::bail!(
-            "no {} target {} `{}`{}",
-            target_desc,
-            if is_glob { "matches pattern" } else { "named" },
-            target_name,
-            suggestion
-        );
+        let targets = packages
+            .iter()
+            .flat_map(|pkg| {
+                pkg.targets()
+                    .iter()
+                    .filter(|target| is_expected_kind(target))
+            })
+            .collect::<Vec<_>>();
+        let suggestion = closest_msg(target_name, targets.iter(), |t| t.name());
+        if !suggestion.is_empty() {
+            anyhow::bail!(
+                "no {} target {} `{}`{}",
+                target_desc,
+                if is_glob { "matches pattern" } else { "named" },
+                target_name,
+                suggestion
+            );
+        } else {
+            let mut msg = String::new();
+            writeln!(
+                msg,
+                "no {} target {} `{}`.",
+                target_desc,
+                if is_glob { "matches pattern" } else { "named" },
+                target_name,
+            )?;
+            if !targets.is_empty() {
+                writeln!(msg, "Available {} targets:", target_desc)?;
+                for target in targets {
+                    writeln!(msg, "    {}", target.name())?;
+                }
+            }
+            anyhow::bail!(msg);
+        }
     }
     Ok(proposals)
 }

@@ -1,13 +1,13 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
 #![allow(clippy::all)]
 
-use cargo::core::shell::Shell;
 use cargo::util::toml::StringOrVec;
 use cargo::util::CliError;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
 use cargo_util::{ProcessBuilder, ProcessError};
 use std::collections::BTreeMap;
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -22,25 +22,17 @@ fn main() {
     #[cfg(not(feature = "pretty-env-logger"))]
     env_logger::init_from_env("CARGO_LOG");
 
-    let mut config = match Config::default() {
-        Ok(cfg) => cfg,
-        Err(e) => {
-            let mut shell = Shell::new();
-            cargo::exit_with_error(e.into(), &mut shell)
-        }
-    };
+    let mut config = cli::LazyConfig::new();
 
-    let result = match cargo::ops::fix_maybe_exec_rustc(&config) {
-        Ok(true) => Ok(()),
-        Ok(false) => {
-            let _token = cargo::util::job::setup();
-            cli::main(&mut config)
-        }
-        Err(e) => Err(CliError::from(e)),
+    let result = if let Some(lock_addr) = cargo::ops::fix_get_proxy_lock_addr() {
+        cargo::ops::fix_exec_rustc(config.get(), &lock_addr).map_err(|e| CliError::from(e))
+    } else {
+        let _token = cargo::util::job::setup();
+        cli::main(&mut config)
     };
 
     match result {
-        Err(e) => cargo::exit_with_error(e, &mut *config.shell()),
+        Err(e) => cargo::exit_with_error(e, &mut config.get_mut().shell()),
         Ok(()) => {}
     }
 }
@@ -61,6 +53,14 @@ fn builtin_aliases_execs(cmd: &str) -> Option<&(&str, &str, &str)> {
     BUILTIN_ALIASES.iter().find(|alias| alias.0 == cmd)
 }
 
+/// Resolve the aliased command from the [`Config`] with a given command string.
+///
+/// The search fallback chain is:
+///
+/// 1. Get the aliased command as a string.
+/// 2. If an `Err` occurs (missing key, type mismatch, or any possible error),
+///    try to get it as an array again.
+/// 3. If still cannot find any, finds one insides [`BUILTIN_ALIASES`].
 fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
     let alias_name = format!("alias.{}", command);
     let user_alias = match config.get_string(&alias_name) {
@@ -161,24 +161,41 @@ fn find_external_subcommand(config: &Config, cmd: &str) -> Option<PathBuf> {
         .find(|file| is_executable(file))
 }
 
-fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
+fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> CliResult {
     let path = find_external_subcommand(config, cmd);
     let command = match path {
         Some(command) => command,
         None => {
-            let suggestions = list_commands(config);
-            let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
-            let err = anyhow::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
+            let err = if cmd.starts_with('+') {
+                anyhow::format_err!(
+                    "no such subcommand: `{}`\n\n\t\
+                    Cargo does not handle `+toolchain` directives.\n\t\
+                    Did you mean to invoke `cargo` through `rustup` instead?",
+                    cmd
+                )
+            } else {
+                let suggestions = list_commands(config);
+                let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
+
+                anyhow::format_err!(
+                    "no such subcommand: `{}`{}\n\n\t\
+                    View all installed commands with `cargo --list`",
+                    cmd,
+                    did_you_mean
+                )
+            };
+
             return Err(CliError::new(err, 101));
         }
     };
 
     let cargo_exe = config.cargo_exe()?;
-    let err = match ProcessBuilder::new(&command)
-        .env(cargo::CARGO_ENV, cargo_exe)
-        .args(args)
-        .exec_replace()
-    {
+    let mut cmd = ProcessBuilder::new(&command);
+    cmd.env(cargo::CARGO_ENV, cargo_exe).args(args);
+    if let Some(client) = config.jobserver_from_env() {
+        cmd.inherit_jobserver(client);
+    }
+    let err = match cmd.exec_replace() {
         Ok(()) => return Ok(()),
         Err(e) => e,
     };
@@ -204,11 +221,28 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
-    let mut dirs = vec![config.home().clone().into_path_unlocked().join("bin")];
-    if let Some(val) = env::var_os("PATH") {
-        dirs.extend(env::split_paths(&val));
-    }
-    dirs
+    let mut path_dirs = if let Some(val) = env::var_os("PATH") {
+        env::split_paths(&val).collect()
+    } else {
+        vec![]
+    };
+
+    let home_bin = config.home().clone().into_path_unlocked().join("bin");
+
+    // If any of that PATH elements contains `home_bin`, do not
+    // add it again. This is so that the users can control priority
+    // of it using PATH, while preserving the historical
+    // behavior of preferring it over system global directories even
+    // when not in PATH at all.
+    // See https://github.com/rust-lang/cargo/issues/11020 for details.
+    //
+    // Note: `p == home_bin` will ignore trailing slash, but we don't
+    // `canonicalize` the paths.
+    if !path_dirs.iter().any(|p| p == &home_bin) {
+        path_dirs.insert(0, home_bin);
+    };
+
+    path_dirs
 }
 
 fn init_git_transports(config: &Config) {
@@ -238,5 +272,28 @@ fn init_git_transports(config: &Config) {
     // anyway
     unsafe {
         git2_curl::register(handle);
+    }
+
+    // Disabling the owner validation in git can, in theory, lead to code execution
+    // vulnerabilities. However, libgit2 does not launch executables, which is the foundation of
+    // the original security issue. Meanwhile, issues with refusing to load git repos in
+    // `CARGO_HOME` for example will likely be very frustrating for users. So, we disable the
+    // validation.
+    //
+    // For further discussion of Cargo's current interactions with git, see
+    //
+    //   https://github.com/rust-lang/rfcs/pull/3279
+    //
+    // and in particular the subsection on "Git support".
+    //
+    // Note that we only disable this when Cargo is run as a binary. If Cargo is used as a library,
+    // this code won't be invoked. Instead, developers will need to explicitly disable the
+    // validation in their code. This is inconvenient, but won't accidentally open consuming
+    // applications up to security issues if they use git2 to open repositories elsewhere in their
+    // code.
+    unsafe {
+        if git2::opts::set_verify_owner_validation(false).is_err() {
+            return;
+        }
     }
 }

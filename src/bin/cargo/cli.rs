@@ -1,12 +1,12 @@
 use anyhow::anyhow;
+use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
-use clap::{
-    error::{ContextKind, ContextValue},
-    AppSettings, Arg, ArgMatches,
-};
+use clap::{AppSettings, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fmt::Write;
 
 use super::commands;
@@ -24,43 +24,21 @@ lazy_static::lazy_static! {
     ]);
 }
 
-pub fn main(config: &mut Config) -> CliResult {
+pub fn main(config: &mut LazyConfig) -> CliResult {
+    let args = cli().try_get_matches()?;
+
     // CAUTION: Be careful with using `config` until it is configured below.
     // In general, try to avoid loading config values unless necessary (like
     // the [alias] table).
+    let config = config.get_mut();
 
-    if commands::help::handle_embedded_help(config) {
-        return Ok(());
-    }
-
-    let args = match cli().try_get_matches() {
-        Ok(args) => args,
-        Err(e) => {
-            if e.kind() == clap::ErrorKind::UnrecognizedSubcommand {
-                // An unrecognized subcommand might be an external subcommand.
-                let cmd = e
-                    .context()
-                    .find_map(|c| match c {
-                        (ContextKind::InvalidSubcommand, &ContextValue::String(ref cmd)) => {
-                            Some(cmd)
-                        }
-                        _ => None,
-                    })
-                    .expect("UnrecognizedSubcommand implies the presence of InvalidSubcommand");
-                return super::execute_external_subcommand(config, cmd, &[cmd, "--help"])
-                    .map_err(|_| e.into());
-            } else {
-                return Err(e.into());
-            }
-        }
-    };
-
-    // Global args need to be extracted before expanding aliases because the
-    // clap code for extracting a subcommand discards global options
-    // (appearing before the subcommand).
     let (expanded_args, global_args) = expand_aliases(config, args, vec![])?;
 
-    if expanded_args.value_of("unstable-features") == Some("help") {
+    if expanded_args
+        .get_one::<String>("unstable-features")
+        .map(String::as_str)
+        == Some("help")
+    {
         let options = CliUnstable::help();
         let non_hidden_options: Vec<(String, String)> = options
             .iter()
@@ -112,20 +90,20 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'",
         return Ok(());
     }
 
-    let is_verbose = expanded_args.occurrences_of("verbose") > 0;
-    if expanded_args.is_present("version") {
+    let is_verbose = expanded_args.verbose() > 0;
+    if expanded_args.flag("version") {
         let version = get_version_string(is_verbose);
         drop_print!(config, "{}", version);
         return Ok(());
     }
 
-    if let Some(code) = expanded_args.value_of("explain") {
+    if let Some(code) = expanded_args.get_one::<String>("explain") {
         let mut procss = config.load_global_rustc(None)?.process();
         procss.arg("--explain").arg(code).exec()?;
         return Ok(());
     }
 
-    if expanded_args.is_present("list") {
+    if expanded_args.flag("list") {
         drop_println!(config, "Installed Commands:");
         for (name, command) in list_commands(config) {
             let known_external_desc = KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS.get(name.as_str());
@@ -243,35 +221,47 @@ fn add_ssl(version_string: &mut String) {
     }
 }
 
+/// Expands aliases recursively to collect all the command line arguments.
+///
+/// [`GlobalArgs`] need to be extracted before expanding aliases because the
+/// clap code for extracting a subcommand discards global options
+/// (appearing before the subcommand).
 fn expand_aliases(
     config: &mut Config,
     args: ArgMatches,
     mut already_expanded: Vec<String>,
 ) -> Result<(ArgMatches, GlobalArgs), CliError> {
     if let Some((cmd, args)) = args.subcommand() {
-        match (
-            commands::builtin_exec(cmd),
-            super::aliased_command(config, cmd)?,
-        ) {
-            (Some(_), Some(_)) => {
+        let exec = commands::builtin_exec(cmd);
+        let aliased_cmd = super::aliased_command(config, cmd);
+
+        match (exec, aliased_cmd) {
+            (Some(_), Ok(Some(_))) => {
                 // User alias conflicts with a built-in subcommand
                 config.shell().warn(format!(
                     "user-defined alias `{}` is ignored, because it is shadowed by a built-in command",
                     cmd,
                 ))?;
             }
-            (Some(_), None) => {
-                // Command is built-in and is not conflicting with alias, but contains ignored values.
-                if let Some(mut values) = args.values_of("") {
-                    config.shell().warn(format!(
-                        "trailing arguments after built-in command `{}` are ignored: `{}`",
+            (Some(_), Ok(None) | Err(_)) => {
+                // Here we ignore errors from aliasing as we already favor built-in command,
+                // and alias doesn't involve in this context.
+
+                if let Some(values) = args.get_many::<OsString>("") {
+                    // Command is built-in and is not conflicting with alias, but contains ignored values.
+                    return Err(anyhow::format_err!(
+                        "\
+trailing arguments after built-in command `{}` are unsupported: `{}`
+
+To pass the arguments to the subcommand, remove `--`",
                         cmd,
-                        values.join(" "),
-                    ))?;
+                        values.map(|s| s.to_string_lossy()).join(" "),
+                    )
+                    .into());
                 }
             }
-            (None, None) => {}
-            (_, Some(mut alias)) => {
+            (None, Ok(None)) => {}
+            (None, Ok(Some(alias))) => {
                 // Check if this alias is shadowing an external subcommand
                 // (binary of the form `cargo-<subcommand>`)
                 // Currently this is only a warning, but after a transition period this will become
@@ -287,11 +277,11 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     ))?;
                 }
 
-                alias.extend(
-                    args.values_of("")
-                        .unwrap_or_default()
-                        .map(|s| s.to_string()),
-                );
+                let mut alias = alias
+                    .into_iter()
+                    .map(|s| OsString::from(s))
+                    .collect::<Vec<_>>();
+                alias.extend(args.get_many::<OsString>("").unwrap_or_default().cloned());
                 // new_args strips out everything before the subcommand, so
                 // capture those global options now.
                 // Note that an alias to an external command will not receive
@@ -315,6 +305,7 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                 let (expanded_args, _) = expand_aliases(config, new_args, already_expanded)?;
                 return Ok((expanded_args, global_args));
             }
+            (None, Err(e)) => return Err(e.into()),
         }
     };
 
@@ -327,28 +318,26 @@ fn config_configure(
     subcommand_args: &ArgMatches,
     global_args: GlobalArgs,
 ) -> CliResult {
-    let arg_target_dir = &subcommand_args
-        ._is_valid_arg("target-dir")
-        .then(|| subcommand_args.value_of_path("target-dir", config))
-        .flatten();
-    let verbose = global_args.verbose + args.occurrences_of("verbose") as u32;
+    let arg_target_dir = &subcommand_args.value_of_path("target-dir", config);
+    let verbose = global_args.verbose + args.verbose();
     // quiet is unusual because it is redefined in some subcommands in order
     // to provide custom help text.
-    let quiet = args.is_present("quiet")
-        || subcommand_args.is_valid_and_present("quiet")
-        || global_args.quiet;
+    let quiet = args.flag("quiet") || subcommand_args.flag("quiet") || global_args.quiet;
     let global_color = global_args.color; // Extract so it can take reference.
-    let color = args.value_of("color").or_else(|| global_color.as_deref());
-    let frozen = args.is_present("frozen") || global_args.frozen;
-    let locked = args.is_present("locked") || global_args.locked;
-    let offline = args.is_present("offline") || global_args.offline;
+    let color = args
+        .get_one::<String>("color")
+        .map(String::as_str)
+        .or_else(|| global_color.as_deref());
+    let frozen = args.flag("frozen") || global_args.frozen;
+    let locked = args.flag("locked") || global_args.locked;
+    let offline = args.flag("offline") || global_args.offline;
     let mut unstable_flags = global_args.unstable_flags;
-    if let Some(values) = args.values_of("unstable-features") {
-        unstable_flags.extend(values.map(|s| s.to_string()));
+    if let Some(values) = args.get_many::<String>("unstable-features") {
+        unstable_flags.extend(values.cloned());
     }
     let mut config_args = global_args.config_args;
-    if let Some(values) = args.values_of("config") {
-        config_args.extend(values.map(|s| s.to_string()));
+    if let Some(values) = args.get_many::<String>("config") {
+        config_args.extend(values.cloned());
     }
     config.configure(
         verbose,
@@ -369,8 +358,13 @@ fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatch
         return exec(config, subcommand_args);
     }
 
-    let mut ext_args: Vec<&str> = vec![cmd];
-    ext_args.extend(subcommand_args.values_of("").unwrap_or_default());
+    let mut ext_args: Vec<&OsStr> = vec![OsStr::new(cmd)];
+    ext_args.extend(
+        subcommand_args
+            .get_many::<OsString>("")
+            .unwrap_or_default()
+            .map(OsString::as_os_str),
+    );
     super::execute_external_subcommand(config, cmd, &ext_args)
 }
 
@@ -389,37 +383,42 @@ struct GlobalArgs {
 impl GlobalArgs {
     fn new(args: &ArgMatches) -> GlobalArgs {
         GlobalArgs {
-            verbose: args.occurrences_of("verbose") as u32,
-            quiet: args.is_present("quiet"),
-            color: args.value_of("color").map(|s| s.to_string()),
-            frozen: args.is_present("frozen"),
-            locked: args.is_present("locked"),
-            offline: args.is_present("offline"),
+            verbose: args.verbose(),
+            quiet: args.flag("quiet"),
+            color: args.get_one::<String>("color").cloned(),
+            frozen: args.flag("frozen"),
+            locked: args.flag("locked"),
+            offline: args.flag("offline"),
             unstable_flags: args
-                .values_of_lossy("unstable-features")
-                .unwrap_or_default(),
-            config_args: args
-                .values_of("config")
+                .get_many::<String>("unstable-features")
                 .unwrap_or_default()
-                .map(|s| s.to_string())
+                .cloned()
+                .collect(),
+            config_args: args
+                .get_many::<String>("config")
+                .unwrap_or_default()
+                .cloned()
                 .collect(),
         }
     }
 }
 
-fn cli() -> App {
+pub fn cli() -> Command {
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
         "cargo [+toolchain] [OPTIONS] [SUBCOMMAND]"
     } else {
         "cargo [OPTIONS] [SUBCOMMAND]"
     };
-    App::new("cargo")
+    Command::new("cargo")
         .allow_external_subcommands(true)
-        .setting(AppSettings::DeriveDisplayOrder | AppSettings::NoAutoVersion)
+        .allow_invalid_utf8_for_external_subcommands(true)
+        .setting(AppSettings::DeriveDisplayOrder)
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
         .disable_colored_help(true)
+        // Provide a custom help subcommand for calling into man pages
+        .disable_help_subcommand(true)
         .override_usage(usage)
         .help_template(
             "\
@@ -450,8 +449,8 @@ Some common cargo commands are (see all commands with --list):
 
 See 'cargo help <command>' for more information on a specific command.\n",
         )
-        .arg(opt("version", "Print version info and exit").short('V'))
-        .arg(opt("list", "List installed commands"))
+        .arg(flag("version", "Print version info and exit").short('V'))
+        .arg(flag("list", "List installed commands"))
         .arg(opt("explain", "Run `rustc --explain CODE`").value_name("CODE"))
         .arg(
             opt(
@@ -459,7 +458,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
                 "Use verbose output (-vv very verbose/build.rs output)",
             )
             .short('v')
-            .multiple_occurrences(true)
+            .action(ArgAction::Count)
             .global(true),
         )
         .arg_quiet()
@@ -468,26 +467,55 @@ See 'cargo help <command>' for more information on a specific command.\n",
                 .value_name("WHEN")
                 .global(true),
         )
-        .arg(opt("frozen", "Require Cargo.lock and cache are up to date").global(true))
-        .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
-        .arg(opt("offline", "Run without accessing the network").global(true))
-        .arg(
-            multi_opt(
-                "config",
-                "KEY=VALUE",
-                "Override a configuration value (unstable)",
-            )
-            .global(true),
-        )
+        .arg(flag("frozen", "Require Cargo.lock and cache are up to date").global(true))
+        .arg(flag("locked", "Require Cargo.lock is up to date").global(true))
+        .arg(flag("offline", "Run without accessing the network").global(true))
+        .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
         .arg(
             Arg::new("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
                 .short('Z')
                 .value_name("FLAG")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .global(true),
         )
         .subcommands(commands::builtin())
+}
+
+/// Delay loading [`Config`] until access.
+///
+/// In the common path, the [`Config`] is dependent on CLI parsing and shouldn't be loaded until
+/// after that is done but some other paths (like fix or earlier errors) might need access to it,
+/// so this provides a way to share the instance and the implementation across these different
+/// accesses.
+pub struct LazyConfig {
+    config: Option<Config>,
+}
+
+impl LazyConfig {
+    pub fn new() -> Self {
+        Self { config: None }
+    }
+
+    /// Get the config, loading it if needed
+    ///
+    /// On error, the process is terminated
+    pub fn get(&mut self) -> &Config {
+        self.get_mut()
+    }
+
+    /// Get the config, loading it if needed
+    ///
+    /// On error, the process is terminated
+    pub fn get_mut(&mut self) -> &mut Config {
+        self.config.get_or_insert_with(|| match Config::default() {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                let mut shell = Shell::new();
+                cargo::exit_with_error(e.into(), &mut shell)
+            }
+        })
+    }
 }
 
 #[test]

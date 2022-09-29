@@ -1,8 +1,7 @@
 use crate::command_prelude::*;
-use anyhow::Error;
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("test")
         // Subcommand aliases are handled in `aliased_command()`.
         // .alias("t")
@@ -19,7 +18,7 @@ pub fn cli() -> App {
                 .last(true),
         )
         .arg(
-            opt(
+            flag(
                 "quiet",
                 "Display one character per test instead of one line",
             )
@@ -37,9 +36,9 @@ pub fn cli() -> App {
             "Test all benches",
             "Test all targets",
         )
-        .arg(opt("doc", "Test only this library's documentation"))
-        .arg(opt("no-run", "Compile, but don't run tests"))
-        .arg(opt("no-fail-fast", "Run all tests regardless of failure"))
+        .arg(flag("doc", "Test only this library's documentation"))
+        .arg(flag("no-run", "Compile, but don't run tests"))
+        .arg(flag("no-fail-fast", "Run all tests regardless of failure"))
         .arg_package_spec(
             "Package to run tests for",
             "Test all packages in the workspace",
@@ -78,13 +77,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.
-    let test_name = args.value_of("TESTNAME");
-    let test_args = args.value_of("TESTNAME").into_iter();
-    let test_args = test_args.chain(args.values_of("args").unwrap_or_default());
-    let test_args = test_args.collect::<Vec<_>>();
+    let test_name = args.get_one::<String>("TESTNAME");
+    let test_args = args.get_one::<String>("TESTNAME").into_iter();
+    let test_args = test_args.chain(args.get_many::<String>("args").unwrap_or_default());
+    let test_args = test_args.map(String::as_str).collect::<Vec<_>>();
 
-    let no_run = args.is_present("no-run");
-    let doc = args.is_present("doc");
+    let no_run = args.flag("no-run");
+    let doc = args.flag("doc");
     if doc {
         if compile_opts.filter.is_specific() {
             return Err(
@@ -106,22 +105,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let ops = ops::TestOptions {
         no_run,
-        no_fail_fast: args.is_present("no-fail-fast"),
+        no_fail_fast: args.flag("no-fail-fast"),
         compile_opts,
     };
 
-    let err = ops::run_tests(&ws, &ops, &test_args)?;
-    match err {
-        None => Ok(()),
-        Some(err) => {
-            let context = anyhow::format_err!("{}", err.hint(&ws, &ops.compile_opts));
-            let e = match err.code {
-                // Don't show "process didn't exit successfully" for simple errors.
-                Some(i) if cargo_util::is_simple_exit_code(i) => CliError::new(context, i),
-                Some(i) => CliError::new(Error::from(err).context(context), i),
-                None => CliError::new(Error::from(err).context(context), 101),
-            };
-            Err(e)
-        }
-    }
+    ops::run_tests(&ws, &ops, &test_args)
 }

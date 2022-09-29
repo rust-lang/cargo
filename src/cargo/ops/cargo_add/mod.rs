@@ -1,16 +1,17 @@
 //! Core of cargo-add command
 
 mod crate_spec;
-mod dependency;
-mod manifest;
 
-use anyhow::Context;
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::VecDeque;
+use std::fmt::Write;
 use std::path::Path;
 
+use anyhow::Context as _;
 use cargo_util::paths;
 use indexmap::IndexSet;
+use itertools::Itertools;
 use termcolor::Color::Green;
 use termcolor::Color::Red;
 use termcolor::ColorSpec;
@@ -18,22 +19,24 @@ use toml_edit::Item as TomlItem;
 
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
+use crate::core::FeatureValue;
 use crate::core::Package;
+use crate::core::QueryKind;
 use crate::core::Registry;
 use crate::core::Shell;
+use crate::core::Summary;
 use crate::core::Workspace;
+use crate::util::toml_mut::dependency::Dependency;
+use crate::util::toml_mut::dependency::GitSource;
+use crate::util::toml_mut::dependency::MaybeWorkspace;
+use crate::util::toml_mut::dependency::PathSource;
+use crate::util::toml_mut::dependency::Source;
+use crate::util::toml_mut::dependency::WorkspaceSource;
+use crate::util::toml_mut::manifest::DepTable;
+use crate::util::toml_mut::manifest::LocalManifest;
 use crate::CargoResult;
 use crate::Config;
 use crate_spec::CrateSpec;
-use dependency::Dependency;
-use dependency::GitSource;
-use dependency::PathSource;
-use dependency::RegistrySource;
-use dependency::Source;
-use manifest::LocalManifest;
-
-use crate::ops::cargo_add::dependency::{MaybeWorkspace, WorkspaceSource};
-pub use manifest::DepTable;
 
 /// Information on what dependencies should be added
 #[derive(Clone, Debug)]
@@ -61,6 +64,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
 
     let manifest_path = options.spec.manifest_path().to_path_buf();
     let mut manifest = LocalManifest::try_new(&manifest_path)?;
+    let original_raw_manifest = manifest.to_string();
     let legacy = manifest.get_legacy_sections();
     if !legacy.is_empty() {
         anyhow::bail!(
@@ -97,7 +101,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             table_option.map_or(true, |table| is_sorted(table.iter().map(|(name, _)| name)))
         });
     for dep in deps {
-        print_msg(&mut options.config.shell(), &dep, &dep_table)?;
+        print_action_msg(&mut options.config.shell(), &dep, &dep_table)?;
         if let Some(Source::Path(src)) = dep.source() {
             if src.path == manifest.path.parent().unwrap_or_else(|| Path::new("")) {
                 anyhow::bail!(
@@ -122,10 +126,62 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                 inherited_features.iter().map(|s| s.as_str()).collect();
             unknown_features.extend(inherited_features.difference(&available_features).copied());
         }
+
         unknown_features.sort();
+
         if !unknown_features.is_empty() {
-            anyhow::bail!("unrecognized features: {unknown_features:?}");
+            let (mut activated, mut deactivated) = dep.features();
+            // Since the unknown features have been added to the DependencyUI we need to remove
+            // them to present the "correct" features that can be specified for the crate.
+            deactivated.retain(|f| !unknown_features.contains(f));
+            activated.retain(|f| !unknown_features.contains(f));
+
+            let mut message = format!(
+                "unrecognized feature{} for crate {}: {}\n",
+                if unknown_features.len() == 1 { "" } else { "s" },
+                dep.name,
+                unknown_features.iter().format(", "),
+            );
+            if activated.is_empty() && deactivated.is_empty() {
+                write!(message, "no features available for crate {}", dep.name)?;
+            } else {
+                if !deactivated.is_empty() {
+                    writeln!(
+                        message,
+                        "disabled features:\n    {}",
+                        deactivated
+                            .iter()
+                            .map(|s| s.to_string())
+                            .coalesce(|x, y| if x.len() + y.len() < 78 {
+                                Ok(format!("{x}, {y}"))
+                            } else {
+                                Err((x, y))
+                            })
+                            .into_iter()
+                            .format("\n    ")
+                    )?
+                }
+                if !activated.is_empty() {
+                    writeln!(
+                        message,
+                        "enabled features:\n    {}",
+                        activated
+                            .iter()
+                            .map(|s| s.to_string())
+                            .coalesce(|x, y| if x.len() + y.len() < 78 {
+                                Ok(format!("{x}, {y}"))
+                            } else {
+                                Err((x, y))
+                            })
+                            .into_iter()
+                            .format("\n    ")
+                    )?
+                }
+            }
+            anyhow::bail!(message.trim().to_owned());
         }
+
+        print_dep_table_msg(&mut options.config.shell(), &dep)?;
 
         manifest.insert_into_table(&dep_table, &dep)?;
         manifest.gc_dep(dep.toml_key());
@@ -138,6 +194,16 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             .and_then(TomlItem::as_table_like_mut)
         {
             table.sort_values();
+        }
+    }
+
+    if options.config.locked() {
+        let new_raw_manifest = manifest.to_string();
+        if original_raw_manifest != new_raw_manifest {
+            anyhow::bail!(
+                "the manifest file {} needs to be updated but --locked was passed to prevent this",
+                manifest.path.display()
+            );
         }
     }
 
@@ -188,7 +254,7 @@ fn resolve_dependency(
     section: &DepTable,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
-) -> CargoResult<Dependency> {
+) -> CargoResult<DependencyUI> {
     let crate_spec = arg
         .crate_spec
         .as_deref()
@@ -272,9 +338,7 @@ fn resolve_dependency(
                 // Overwrite with `crate_spec`
                 old_dep.source = selected_dep.source;
             }
-            old_dep = populate_dependency(old_dep, arg);
-            old_dep.available_features = selected_dep.available_features;
-            old_dep
+            populate_dependency(old_dep, arg)
         }
     } else {
         selected_dep
@@ -306,9 +370,7 @@ fn resolve_dependency(
                 ))?;
                 dependency.name = latest.name; // Normalize the name
             }
-            dependency = dependency
-                .set_source(latest.source.expect("latest always has a source"))
-                .set_available_features(latest.available_features);
+            dependency = dependency.set_source(latest.source.expect("latest always has a source"));
         }
     }
 
@@ -327,7 +389,25 @@ fn resolve_dependency(
         dependency = dependency.clear_version();
     }
 
-    dependency = populate_available_features(dependency, config, registry, ws)?;
+    let query = dependency.query(config)?;
+    let query = match query {
+        MaybeWorkspace::Workspace(_workspace) => {
+            let dep = find_workspace_dep(dependency.toml_key(), ws.root_manifest())?;
+            if let Some(features) = dep.features.clone() {
+                dependency = dependency.set_inherited_features(features);
+            }
+            let query = dep.query(config)?;
+            match query {
+                MaybeWorkspace::Workspace(_) => {
+                    unreachable!("This should have been caught when parsing a workspace root")
+                }
+                MaybeWorkspace::Other(query) => query,
+            }
+        }
+        MaybeWorkspace::Other(query) => query,
+    };
+
+    let dependency = populate_available_features(dependency, &query, registry)?;
 
     Ok(dependency)
 }
@@ -443,8 +523,7 @@ fn get_latest_dependency(
         }
         MaybeWorkspace::Other(query) => {
             let possibilities = loop {
-                let fuzzy = true;
-                match registry.query_vec(&query, fuzzy) {
+                match registry.query_vec(&query, QueryKind::Fuzzy) {
                     std::task::Poll::Ready(res) => {
                         break res?;
                     }
@@ -485,8 +564,8 @@ fn select_package(
         }
         MaybeWorkspace::Other(query) => {
             let possibilities = loop {
-                let fuzzy = false; // Returns all for path/git
-                match registry.query_vec(&query, fuzzy) {
+                // Exact to avoid returning all for path/git
+                match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
                         break res?;
                     }
@@ -571,36 +650,119 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
     dependency
 }
 
+/// Track presentation-layer information with the editable representation of a `[dependencies]`
+/// entry (Dependency)
+pub struct DependencyUI {
+    /// Editable representation of a `[depednencies]` entry
+    dep: Dependency,
+    /// The version of the crate that we pulled `available_features` from
+    available_version: Option<semver::Version>,
+    /// The widest set of features compatible with `Dependency`s version requirement
+    available_features: BTreeMap<String, Vec<String>>,
+}
+
+impl DependencyUI {
+    fn new(dep: Dependency) -> Self {
+        Self {
+            dep,
+            available_version: None,
+            available_features: Default::default(),
+        }
+    }
+
+    fn apply_summary(&mut self, summary: &Summary) {
+        self.available_version = Some(summary.version().clone());
+        self.available_features = summary
+            .features()
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.as_str().to_owned(),
+                    v.iter()
+                        .filter_map(|v| match v {
+                            FeatureValue::Feature(f) => Some(f.as_str().to_owned()),
+                            FeatureValue::Dep { .. } | FeatureValue::DepFeature { .. } => None,
+                        })
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .collect();
+    }
+
+    fn features(&self) -> (IndexSet<&str>, IndexSet<&str>) {
+        let mut activated: IndexSet<_> =
+            self.features.iter().flatten().map(|s| s.as_str()).collect();
+        if self.default_features().unwrap_or(true) {
+            activated.insert("default");
+        }
+        activated.extend(self.inherited_features.iter().flatten().map(|s| s.as_str()));
+        let mut walk: VecDeque<_> = activated.iter().cloned().collect();
+        while let Some(next) = walk.pop_front() {
+            walk.extend(
+                self.available_features
+                    .get(next)
+                    .into_iter()
+                    .flatten()
+                    .map(|s| s.as_str()),
+            );
+            activated.extend(
+                self.available_features
+                    .get(next)
+                    .into_iter()
+                    .flatten()
+                    .map(|s| s.as_str()),
+            );
+        }
+        activated.remove("default");
+        activated.sort();
+        let mut deactivated = self
+            .available_features
+            .keys()
+            .filter(|f| !activated.contains(f.as_str()) && *f != "default")
+            .map(|f| f.as_str())
+            .collect::<IndexSet<_>>();
+        deactivated.sort();
+        (activated, deactivated)
+    }
+}
+
+impl<'s> From<&'s Summary> for DependencyUI {
+    fn from(other: &'s Summary) -> Self {
+        let dep = Dependency::from(other);
+        let mut dep = Self::new(dep);
+        dep.apply_summary(other);
+        dep
+    }
+}
+
+impl std::fmt::Display for DependencyUI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.dep.fmt(f)
+    }
+}
+
+impl std::ops::Deref for DependencyUI {
+    type Target = Dependency;
+
+    fn deref(&self) -> &Self::Target {
+        &self.dep
+    }
+}
+
 /// Lookup available features
 fn populate_available_features(
-    mut dependency: Dependency,
-    config: &Config,
+    dependency: Dependency,
+    query: &crate::core::dependency::Dependency,
     registry: &mut PackageRegistry<'_>,
-    ws: &Workspace<'_>,
-) -> CargoResult<Dependency> {
+) -> CargoResult<DependencyUI> {
+    let mut dependency = DependencyUI::new(dependency);
+
     if !dependency.available_features.is_empty() {
         return Ok(dependency);
     }
 
-    let query = dependency.query(config)?;
-    let query = match query {
-        MaybeWorkspace::Workspace(_workspace) => {
-            let dep = find_workspace_dep(dependency.toml_key(), ws.root_manifest())?;
-            if let Some(features) = dep.features.clone() {
-                dependency = dependency.set_inherited_features(features);
-            }
-            let query = dep.query(config)?;
-            match query {
-                MaybeWorkspace::Workspace(_) => {
-                    unreachable!("This should have been caught when parsing a workspace root")
-                }
-                MaybeWorkspace::Other(query) => query,
-            }
-        }
-        MaybeWorkspace::Other(query) => query,
-    };
     let possibilities = loop {
-        match registry.query_vec(&query, true) {
+        match registry.query_vec(&query, QueryKind::Fuzzy) {
             std::task::Poll::Ready(res) => {
                 break res?;
             }
@@ -620,14 +782,12 @@ fn populate_available_features(
         .ok_or_else(|| {
             anyhow::format_err!("the crate `{dependency}` could not be found in registry index.")
         })?;
-    dependency = dependency.set_available_features_from_cargo(lowest_common_denominator.features());
+    dependency.apply_summary(&lowest_common_denominator);
 
     Ok(dependency)
 }
 
-fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoResult<()> {
-    use std::fmt::Write;
-
+fn print_action_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> CargoResult<()> {
     if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
         return Ok(());
     }
@@ -664,41 +824,38 @@ fn print_msg(shell: &mut Shell, dep: &Dependency, section: &[String]) -> CargoRe
     };
     write!(message, " {section}")?;
     write!(message, ".")?;
-    shell.status("Adding", message)?;
+    shell.status("Adding", message)
+}
 
-    let mut activated: IndexSet<_> = dep.features.iter().flatten().map(|s| s.as_str()).collect();
-    if dep.default_features().unwrap_or(true) {
-        activated.insert("default");
+fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()> {
+    if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
+        return Ok(());
     }
-    activated.extend(dep.inherited_features.iter().flatten().map(|s| s.as_str()));
-    let mut walk: VecDeque<_> = activated.iter().cloned().collect();
-    while let Some(next) = walk.pop_front() {
-        walk.extend(
-            dep.available_features
-                .get(next)
-                .into_iter()
-                .flatten()
-                .map(|s| s.as_str()),
-        );
-        activated.extend(
-            dep.available_features
-                .get(next)
-                .into_iter()
-                .flatten()
-                .map(|s| s.as_str()),
-        );
-    }
-    activated.remove("default");
-    activated.sort();
-    let mut deactivated = dep
-        .available_features
-        .keys()
-        .filter(|f| !activated.contains(f.as_str()) && *f != "default")
-        .collect::<Vec<_>>();
-    deactivated.sort();
+    let (activated, deactivated) = dep.features();
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
-        shell.write_stderr(format_args!("{}Features:\n", prefix), &ColorSpec::new())?;
+        let suffix = if let Some(version) = &dep.available_version {
+            let mut version = version.clone();
+            version.build = Default::default();
+            let version = version.to_string();
+            // Avoid displaying the version if it will visually look like the version req that we
+            // showed earlier
+            let version_req = dep
+                .version()
+                .and_then(|v| semver::VersionReq::parse(v).ok())
+                .and_then(|v| precise_version(&v));
+            if version_req.as_deref() != Some(version.as_str()) {
+                format!(" as of v{version}")
+            } else {
+                "".to_owned()
+            }
+        } else {
+            "".to_owned()
+        };
+        shell.write_stderr(
+            format_args!("{}Features{}:\n", prefix, suffix),
+            &ColorSpec::new(),
+        )?;
         for feat in activated {
             shell.write_stderr(&prefix, &ColorSpec::new())?;
             shell.write_stderr('+', &ColorSpec::new().set_bold(true).set_fg(Some(Green)))?;
@@ -753,4 +910,38 @@ fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Depen
         toml_key
     ))?;
     Dependency::from_toml(root_manifest.parent().unwrap(), toml_key, dep_item)
+}
+
+/// Convert a `semver::VersionReq` into a rendered `semver::Version` if all fields are fully
+/// specified.
+fn precise_version(version_req: &semver::VersionReq) -> Option<String> {
+    version_req
+        .comparators
+        .iter()
+        .filter(|c| {
+            matches!(
+                c.op,
+                // Only ops we can determine a precise version from
+                semver::Op::Exact
+                    | semver::Op::GreaterEq
+                    | semver::Op::LessEq
+                    | semver::Op::Tilde
+                    | semver::Op::Caret
+                    | semver::Op::Wildcard
+            )
+        })
+        .filter_map(|c| {
+            // Only do it when full precision is specified
+            c.minor.and_then(|minor| {
+                c.patch.map(|patch| semver::Version {
+                    major: c.major,
+                    minor,
+                    patch,
+                    pre: c.pre.clone(),
+                    build: Default::default(),
+                })
+            })
+        })
+        .max()
+        .map(|v| v.to_string())
 }

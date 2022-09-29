@@ -30,7 +30,7 @@ pub struct Timings<'cfg> {
     start_str: String,
     /// A summary of the root units.
     ///
-    /// Tuples of `(package_description, target_descrptions)`.
+    /// Tuples of `(package_description, target_descriptions)`.
     root_targets: Vec<(String, Vec<String>)>,
     /// The build profile.
     profile: String,
@@ -445,7 +445,7 @@ impl<'cfg> Timings<'cfg> {
             self.total_dirty,
             self.total_fresh + self.total_dirty,
             max_concurrency,
-            bcx.build_config.jobs,
+            bcx.jobs(),
             num_cpus,
             self.start_str,
             total_time,

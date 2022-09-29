@@ -17,7 +17,7 @@ pub enum ConfigFormat {
 
 impl ConfigFormat {
     /// For clap.
-    pub const POSSIBLE_VALUES: &'static [&'static str] = &["toml", "json", "json-value"];
+    pub const POSSIBLE_VALUES: [&'static str; 3] = ["toml", "json", "json-value"];
 }
 
 impl FromStr for ConfigFormat {

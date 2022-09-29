@@ -11,19 +11,23 @@ doctest = false
 anyhow = "1.0.34"
 cargo-test-macro = { path = "../cargo-test-macro" }
 cargo-util = { path = "../cargo-util" }
-snapbox = { version = "0.2.8", features = ["diff", "path"] }
+crates-io = { path = "../crates-io" }
+snapbox = { version = "0.3.0", features = ["diff", "path"] }
 filetime = "0.2"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
-git2 = "0.14.2"
+git2 = "0.15.0"
 glob = "0.3"
 itertools = "0.10.0"
 lazy_static = "1.0"
 remove_dir_all = "0.5"
 serde_json = "1.0"
-tar = { version = "0.4.18", default-features = false }
+tar = { version = "0.4.38", default-features = false }
 termcolor = "1.1.2"
 toml_edit = { version = "0.14.3", features = ["serde", "easy", "perf"] }
 url = "2.2.2"
+
+[target.'cfg(windows)'.dependencies]
+winapi = "0.3"
 
 [features]
 deny-warnings = []

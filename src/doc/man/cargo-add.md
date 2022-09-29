@@ -31,6 +31,11 @@ If no source is specified, then a best effort will be made to select one, includ
 
 When you add a package that is already present, the existing entry will be updated with the flags specified.
 
+Upon successful invocation, the enabled (`+`) and disabled (`-`) [features] of the specified
+dependency will be listed in the command's output.
+
+[features]: ../reference/features.md
+
 ## OPTIONS
 
 ### Source options

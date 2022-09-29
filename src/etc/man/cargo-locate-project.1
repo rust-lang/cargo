@@ -8,8 +8,14 @@ cargo\-locate\-project \- Print a JSON representation of a Cargo.toml file's loc
 .SH "SYNOPSIS"
 \fBcargo locate\-project\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
-This command will print a JSON object to stdout with the full path to the
-\fBCargo.toml\fR manifest.
+This command will print a JSON object to stdout with the full path to the manifest. The
+manifest is found by searching upward for a file named \fBCargo.toml\fR starting from the current
+working directory.
+.sp
+If the project happens to be a part of a workspace, the manifest of the project, rather than
+the workspace root, is output. This can be overriden by the \fB\-\-workspace\fR flag. The root
+workspace is found by traversing further upward or by using the field \fBpackage.workspace\fR after
+locating the manifest of a workspace member.
 .SH "OPTIONS"
 .sp
 \fB\-\-workspace\fR
@@ -85,6 +91,13 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
 .RE
 .sp
 \fB\-h\fR, 

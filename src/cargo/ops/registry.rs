@@ -23,6 +23,7 @@ use crate::core::resolver::CliFeatures;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
+use crate::ops::Packages;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
@@ -47,13 +48,13 @@ pub enum RegistryConfig {
 impl RegistryConfig {
     /// Returns `true` if the credential is [`None`].
     ///
-    /// [`None`]: Credential::None
+    /// [`None`]: Self::None
     pub fn is_none(&self) -> bool {
         matches!(self, Self::None)
     }
     /// Returns `true` if the credential is [`Token`].
     ///
-    /// [`Token`]: Credential::Token
+    /// [`Token`]: Self::Token
     pub fn is_token(&self) -> bool {
         matches!(self, Self::Token(..))
     }
@@ -79,7 +80,7 @@ pub struct PublishOpts<'cfg> {
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
-    pub jobs: Option<u32>,
+    pub jobs: Option<i32>,
     pub keep_going: bool,
     pub to_publish: ops::Packages,
     pub targets: Vec<String>,
@@ -90,7 +91,24 @@ pub struct PublishOpts<'cfg> {
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let specs = opts.to_publish.to_package_id_specs(ws)?;
+    if specs.len() > 1 {
+        bail!("the `-p` argument must be specified to select a single package to publish")
+    }
+    if Packages::Default == opts.to_publish && ws.is_virtual() {
+        bail!("the `-p` argument must be specified in the root of a virtual workspace")
+    }
+    let member_ids = ws.members().map(|p| p.package_id());
+    // Check that the spec matches exactly one member.
+    specs[0].query(member_ids)?;
     let mut pkgs = ws.members_with_features(&specs, &opts.cli_features)?;
+    // In `members_with_features_old`, it will add "current" package (determined by the cwd)
+    // So we need filter
+    pkgs = pkgs
+        .into_iter()
+        .filter(|(m, _)| specs.iter().any(|spec| spec.matches(m.package_id())))
+        .collect();
+    // Double check. It is safe theoretically, unless logic has updated.
+    assert_eq!(pkgs.len(), 1);
 
     let (pkg, cli_features) = pkgs.pop().unwrap();
 
@@ -513,6 +531,13 @@ fn registry(
         None
     };
     let handle = http_handle(config)?;
+    // Workaround for the sparse+https://index.crates.io replacement index. Use the non-replaced
+    // source_id so that the original (github) url is used when publishing a crate.
+    let sid = if sid.is_default_registry() {
+        SourceId::crates_io(config)?
+    } else {
+        sid
+    };
     Ok((Registry::new_handle(api_host, token, handle), reg_cfg, sid))
 }
 
@@ -896,10 +921,9 @@ pub fn yank(
     let (mut registry, _, _) =
         registry(config, token, index.as_deref(), reg.as_deref(), true, true)?;
 
+    let package_spec = format!("{}@{}", name, version);
     if undo {
-        config
-            .shell()
-            .status("Unyank", format!("{}:{}", name, version))?;
+        config.shell().status("Unyank", package_spec)?;
         registry.unyank(&name, &version).with_context(|| {
             format!(
                 "failed to undo a yank from the registry at {}",
@@ -907,9 +931,7 @@ pub fn yank(
             )
         })?;
     } else {
-        config
-            .shell()
-            .status("Yank", format!("{}:{}", name, version))?;
+        config.shell().status("Yank", package_spec)?;
         registry
             .yank(&name, &version)
             .with_context(|| format!("failed to yank from the registry at {}", registry.host()))?;

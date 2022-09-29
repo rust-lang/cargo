@@ -94,7 +94,10 @@ Caused by:
 }
 
 #[cargo_test]
-#[ignore] // dir-name is currently disabled
+// We are currently uncertain if dir-name will ever be exposed to the user.
+// The code for it still roughly exists, but only for the internal profiles.
+// This test was kept in case we ever want to enable support for it again.
+#[ignore = "dir-name is disabled"]
 fn invalid_dir_name() {
     let p = project()
         .file(
@@ -490,7 +493,7 @@ fn clean_custom_dirname() {
         )
         .run();
 
-    p.cargo("clean -p foo").masquerade_as_nightly_cargo().run();
+    p.cargo("clean -p foo").run();
 
     p.cargo("build --release")
         .with_stdout("")

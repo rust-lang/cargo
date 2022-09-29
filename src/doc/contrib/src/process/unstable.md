@@ -42,6 +42,32 @@ issues are filed, they can be easily tied together.
 [tracking issue]: https://github.com/rust-lang/cargo/labels/C-tracking-issue
 [tracking issue template]: https://github.com/rust-lang/cargo/issues/new?labels=C-tracking-issue&template=tracking_issue.md
 
+## Pre-Stabilization 
+
+Once an unstable feature is "complete", the search for users to test
+and give feedback begins. Testing notes should be written up to give users an
+idea of how to test the new feature. An example being the 
+[workspace inheritance testing notes] for workspace inheritance. Once testing
+notes have been written up you should make posts in various rust communities
+([rust subreddit], [users], [internals], etc). Example posts made for workspace
+inheritance: [reddit post], [users post], [internals post]. The unstable feature
+should also be added to [This Week in Rust]. This should be done by adding the
+label `call-for-testing` to the RFC for the feature and making a comment with a
+link to the testing notes and the tracking issue (as needed). If there is not an
+RFC, a pull request should be made to the [TWiR repo] adding the feature to the
+`Call for Testing` section ([example]).
+
+[workspace inheritance testing notes]: https://github.com/rust-lang/cargo/blob/6d6dd9d9be9c91390da620adf43581619c2fa90e/src/doc/src/reference/unstable.md#testing-notes
+[rust subreddit]: https://www.reddit.com/r/rust/
+[users]: https://users.rust-lang.org/
+[internals]: https://internals.rust-lang.org/
+[reddit post]: https://www.reddit.com/r/rust/comments/uo8zeh/help_test_workspace_inheritance_in_preparation/
+[users post]: https://users.rust-lang.org/t/help-test-workspace-inheritance-in-preparation-for-stablization/75582
+[internals post]: https://internals.rust-lang.org/t/help-test-workspace-inheritance-in-preparation-for-stablization/16618
+[This Week in Rust]: https://this-week-in-rust.org/
+[TWiR repo]: https://github.com/rust-lang/this-week-in-rust
+[example]: https://github.com/rust-lang/this-week-in-rust/pull/3256
+
 ## Stabilization
 
 After some period of time, typically measured in months, the feature can be

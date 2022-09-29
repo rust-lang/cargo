@@ -55,11 +55,11 @@ use std::fmt::Write as _;
 use std::io;
 use std::marker;
 use std::sync::Arc;
+use std::thread::{self, Scope};
 use std::time::Duration;
 
 use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
-use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, trace};
 use semver::Version;
@@ -162,7 +162,7 @@ struct DrainState<'cfg> {
     /// The list of jobs that we have not yet started executing, but have
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
     /// allow us to request jobserver tokens pretty early.
-    pending_queue: Vec<(Unit, Job)>,
+    pending_queue: Vec<(Unit, Job, usize)>,
     print: DiagnosticPrinter<'cfg>,
 
     /// How many jobs we've finished
@@ -556,29 +556,36 @@ impl<'cfg> JobQueue<'cfg> {
             .take()
             .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
-        crossbeam_utils::thread::scope(move |scope| {
-            match state.drain_the_queue(cx, plan, scope, &helper) {
+        thread::scope(
+            move |scope| match state.drain_the_queue(cx, plan, scope, &helper) {
                 Some(err) => Err(err),
                 None => Ok(()),
-            }
-        })
-        .expect("child threads shouldn't panic")
+            },
+        )
     }
 }
 
 impl<'cfg> DrainState<'cfg> {
-    fn spawn_work_if_possible(
+    fn spawn_work_if_possible<'s>(
         &mut self,
         cx: &mut Context<'_, '_>,
         jobserver_helper: &HelperThread,
-        scope: &Scope<'_>,
+        scope: &'s Scope<'s, '_>,
     ) -> CargoResult<()> {
         // Dequeue as much work as we can, learning about everything
         // possible that can run. Note that this is also the point where we
         // start requesting job tokens. Each job after the first needs to
         // request a token.
-        while let Some((unit, job)) = self.queue.dequeue() {
-            self.pending_queue.push((unit, job));
+        while let Some((unit, job, priority)) = self.queue.dequeue() {
+            // We want to keep the pieces of work in the `pending_queue` sorted
+            // by their priorities, and insert the current job at its correctly
+            // sorted position: following the lower priority jobs, and the ones
+            // with the same priority (since they were dequeued before the
+            // current one, we also keep that relation).
+            let idx = self
+                .pending_queue
+                .partition_point(|&(_, _, p)| p <= priority);
+            self.pending_queue.insert(idx, (unit, job, priority));
             if self.active.len() + self.pending_queue.len() > 1 {
                 jobserver_helper.request_token();
             }
@@ -587,8 +594,11 @@ impl<'cfg> DrainState<'cfg> {
         // Now that we've learned of all possible work that we can execute
         // try to spawn it so long as we've got a jobserver token which says
         // we're able to perform some parallel work.
+        // The `pending_queue` is sorted in ascending priority order, and we
+        // remove items from its end to schedule the highest priority items
+        // sooner.
         while self.has_extra_tokens() && !self.pending_queue.is_empty() {
-            let (unit, job) = self.pending_queue.remove(0);
+            let (unit, job, _) = self.pending_queue.pop().unwrap();
             *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
             if !cx.bcx.build_config.build_plan {
                 // Print out some nice progress information.
@@ -807,11 +817,11 @@ impl<'cfg> DrainState<'cfg> {
     ///
     /// This returns an Option to prevent the use of `?` on `Result` types
     /// because it is important for the loop to carefully handle errors.
-    fn drain_the_queue(
+    fn drain_the_queue<'s>(
         mut self,
         cx: &mut Context<'_, '_>,
         plan: &mut BuildPlan,
-        scope: &Scope<'_>,
+        scope: &'s Scope<'s, '_>,
         jobserver_helper: &HelperThread,
     ) -> Option<anyhow::Error> {
         trace!("queue: {:#?}", self.queue);
@@ -997,7 +1007,7 @@ impl<'cfg> DrainState<'cfg> {
     ///
     /// Fresh jobs block until finished (which should be very fast!), Dirty
     /// jobs will spawn a thread in the background and return immediately.
-    fn run(&mut self, unit: &Unit, job: Job, cx: &Context<'_, '_>, scope: &Scope<'_>) {
+    fn run<'s>(&mut self, unit: &Unit, job: Job, cx: &Context<'_, '_>, scope: &'s Scope<'s, '_>) {
         let id = JobId(self.next_id);
         self.next_id = self.next_id.checked_add(1).unwrap();
 
@@ -1072,7 +1082,7 @@ impl<'cfg> DrainState<'cfg> {
             }
             Freshness::Dirty => {
                 self.timings.add_dirty();
-                scope.spawn(move |_| {
+                scope.spawn(move || {
                     doit(JobState {
                         id,
                         messages: messages.clone(),

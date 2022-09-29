@@ -32,6 +32,26 @@ macro_rules! t {
     };
 }
 
+#[macro_export]
+macro_rules! curr_dir {
+    () => {
+        $crate::_curr_dir(std::path::Path::new(file!()));
+    };
+}
+
+#[doc(hidden)]
+pub fn _curr_dir(mut file_path: &'static Path) -> &'static Path {
+    if !file_path.exists() {
+        // HACK: Must be running in the rust-lang/rust workspace, adjust the paths accordingly.
+        let prefix = PathBuf::from("src").join("tools").join("cargo");
+        if let Ok(crate_relative) = file_path.strip_prefix(prefix) {
+            file_path = crate_relative
+        }
+    }
+    assert!(file_path.exists(), "{} does not exist", file_path.display());
+    file_path.parent().unwrap()
+}
+
 #[track_caller]
 pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
     let err = err.into();
@@ -549,6 +569,12 @@ impl Execs {
         self
     }
 
+    /// Writes the given lines to stdin.
+    pub fn with_stdin<S: ToString>(&mut self, expected: S) -> &mut Self {
+        self.expect_stdin = Some(expected.to_string());
+        self
+    }
+
     /// Verifies the exit code from the process.
     ///
     /// This is not necessary if the expected exit code is `0`.
@@ -780,9 +806,14 @@ impl Execs {
         p.build_command()
     }
 
-    pub fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
+    /// Enables nightly features for testing
+    ///
+    /// The list of reasons should be why nightly cargo is needed. If it is
+    /// becuase of an unstable feature put the name of the feature as the reason,
+    /// e.g. `&["print-im-a-teapot"]`
+    pub fn masquerade_as_nightly_cargo(&mut self, reasons: &[&str]) -> &mut Self {
         if let Some(ref mut p) = self.process_builder {
-            p.masquerade_as_nightly_cargo();
+            p.masquerade_as_nightly_cargo(reasons);
         }
         self
     }
@@ -800,7 +831,10 @@ impl Execs {
     #[track_caller]
     pub fn run(&mut self) {
         self.ran = true;
-        let p = (&self.process_builder).clone().unwrap();
+        let mut p = (&self.process_builder).clone().unwrap();
+        if let Some(stdin) = self.expect_stdin.take() {
+            p.stdin(stdin);
+        }
         if let Err(e) = self.match_process(&p) {
             panic_error(&format!("test failed running {}", p), e);
         }
@@ -1094,6 +1128,10 @@ pub fn rustc_host_env() -> String {
 
 pub fn is_nightly() -> bool {
     let vv = &RUSTC_INFO.verbose_version;
+    // CARGO_TEST_DISABLE_NIGHTLY is set in rust-lang/rust's CI so that all
+    // nightly-only tests are disabled there. Otherwise, it could make it
+    // difficult to land changes which would need to be made simultaneously in
+    // rust-lang/cargo and rust-lan/rust, which isn't possible.
     env::var("CARGO_TEST_DISABLE_NIGHTLY").is_err()
         && (vv.contains("-nightly") || vv.contains("-dev"))
 }
@@ -1110,17 +1148,20 @@ fn _process(t: &OsStr) -> ProcessBuilder {
 
 /// Enable nightly features for testing
 pub trait ChannelChanger {
-    fn masquerade_as_nightly_cargo(self) -> Self;
+    /// The list of reasons should be why nightly cargo is needed. If it is
+    /// becuase of an unstable feature put the name of the feature as the reason,
+    /// e.g. `&["print-im-a-teapot"]`.
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self;
 }
 
 impl ChannelChanger for &mut ProcessBuilder {
-    fn masquerade_as_nightly_cargo(self) -> Self {
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }
 }
 
 impl ChannelChanger for snapbox::cmd::Command {
-    fn masquerade_as_nightly_cargo(self) -> Self {
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }
 }
@@ -1168,7 +1209,7 @@ pub trait TestEnv: Sized {
             .current_dir(&paths::root())
             .env("HOME", paths::home())
             .env("CARGO_HOME", paths::home().join(".cargo"))
-            .env("__CARGO_TEST_ROOT", paths::root())
+            .env("__CARGO_TEST_ROOT", paths::global_root())
             // Force Cargo to think it's on the stable channel for all tests, this
             // should hopefully not surprise us as we add cargo features over time and
             // cargo rides the trains.
@@ -1233,13 +1274,13 @@ impl TestEnv for snapbox::cmd::Command {
 
 /// Test the cargo command
 pub trait CargoCommand {
-    fn cargo() -> Self;
+    fn cargo_ui() -> Self;
 }
 
 impl CargoCommand for snapbox::cmd::Command {
-    fn cargo() -> Self {
+    fn cargo_ui() -> Self {
         Self::new(cargo_exe())
-            .with_assert(compare::assert())
+            .with_assert(compare::assert_ui())
             .test_env()
     }
 }
@@ -1311,16 +1352,6 @@ pub fn slow_cpu_multiplier(main: u64) -> Duration {
             env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER").ok().and_then(|m| m.parse().ok()).unwrap_or(1);
     }
     Duration::from_secs(*SLOW_CPU_MULTIPLIER * main)
-}
-
-pub fn command_is_available(cmd: &str) -> bool {
-    if let Err(e) = process(cmd).arg("-V").exec_with_output() {
-        eprintln!("{} not available, skipping tests", cmd);
-        eprintln!("{:?}", e);
-        false
-    } else {
-        true
-    }
 }
 
 #[cfg(windows)]

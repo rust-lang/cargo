@@ -28,6 +28,46 @@ and stable releases.
 
 [`dist` bootstrap module]: https://github.com/rust-lang/rust/blob/master/src/bootstrap/dist.rs
 
+## Submodule updates
+
+Cargo is tracked in the [rust-lang/rust] repository using a [git submodule].
+It is updated manually about once a week by a Cargo team member.
+However, anyone is welcome to update it as needed.
+
+[@ehuss] has a tool called [subup](https://github.com/ehuss/subup) to automate the process of updating the submodule, updating the lockfile, running tests, and creating a PR.
+Running the tests ahead-of-time helps avoid long cycle times waiting for bors if there are any errors.
+Subup will also provide a message to include in the PR with a list of all PRs it covers.
+Posting this in the PR message also helps create reference links on each Cargo PR to the submodule update PR to help track when it gets merged.
+
+The following is an example of the command to run in a local clone of rust-lang/rust to run a certain set of tests of things that are likely to get broken by a Cargo update:
+
+```bash
+subup --up-branch update-cargo \
+    --commit-message "Update cargo" \
+    --test="src/tools/linkchecker tidy \
+        src/tools/cargo \
+        src/tools/rustfmt \
+        src/tools/rls" \
+    src/tools/cargo
+```
+
+If doing a [beta backport](#beta-backports), the command is similar, but needs to point to the correct branches:
+
+```bash
+subup --up-branch update-beta-cargo \
+    --rust-branch beta \
+    --set-config rust.channel=beta \
+    --commit-message "[beta] Update cargo" \
+    --test="src/tools/linkchecker tidy \
+        src/tools/cargo \
+        src/tools/rustfmt \
+        src/tools/rls" \
+    rust-1.63.0:src/tools/cargo
+```
+
+[@ehuss]: https://github.com/ehuss/
+[git submodule]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
+
 ## Version updates
 
 Shortly after each major release, a Cargo team member will post a PR to update
@@ -53,6 +93,23 @@ release**. It is rare that these get updated. Bumping these as-needed helps
 avoid churning incompatible version numbers. This process should be improved
 in the future!
 
+[@ehuss] has a tool called [cargo-new-release] to automate the process of doing a version bump.
+It runs through several steps:
+1. Creates a branch
+2. Updates the version numbers
+3. Creates a changelog for anything on the master branch that is not part of beta
+4. Creates a changelog for anything on the beta branch
+
+It opens a browser tab for every PR in order to review each change.
+It places each PR in the changelog with its title, but usually every PR should be rewritten to explain the change from the user's perspective.
+Each PR should also be categorized as an Addition, Change, Fix, or Nightly-only change.
+Most PRs are deleted, since they are not relevant to users of Cargo.
+For example, remove all PRs related to Cargo internals, infrastructure, documentation, error changes, refactorings, etc.
+Usually about half of the PRs get removed.
+This process usually takes @ehuss about an hour to finish.
+
+[@ehuss]: https://github.com/ehuss/
+[cargo-new-release]: https://github.com/ehuss/cargo-new-release
 [`crates/` directory]: https://github.com/rust-lang/cargo/tree/master/crates
 
 ## Docs publishing

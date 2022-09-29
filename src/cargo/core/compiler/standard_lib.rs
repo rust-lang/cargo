@@ -9,9 +9,12 @@ use crate::core::resolver::HasDevUnits;
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
+use crate::Config;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::PathBuf;
+
+use super::BuildConfig;
 
 /// Parse the `-Zbuild-std` flag.
 pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
@@ -31,13 +34,45 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
     crates.into_iter().map(|s| s.to_string()).collect()
 }
 
+pub(crate) fn std_crates(config: &Config, units: Option<&[Unit]>) -> Option<Vec<String>> {
+    let crates = config.cli_unstable().build_std.as_ref()?.clone();
+
+    // Only build libtest if it looks like it is needed.
+    let mut crates = crates.clone();
+    // If we know what units we're building, we can filter for libtest depending on the jobs.
+    if let Some(units) = units {
+        if units
+            .iter()
+            .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
+        {
+            // Only build libtest when libstd is built (libtest depends on libstd)
+            if crates.iter().any(|c| c == "std") && !crates.iter().any(|c| c == "test") {
+                crates.push("test".to_string());
+            }
+        }
+    } else {
+        // We don't know what jobs are going to be run, so download libtest just in case.
+        if !crates.iter().any(|c| c == "test") {
+            crates.push("test".to_string())
+        }
+    }
+
+    Some(crates)
+}
+
 /// Resolve the standard library dependencies.
 pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
     target_data: &RustcTargetData<'cfg>,
-    requested_targets: &[CompileKind],
+    build_config: &BuildConfig,
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
+    if build_config.build_plan {
+        ws.config()
+            .shell()
+            .warn("-Zbuild-std does not currently fully support --build-plan")?;
+    }
+
     let src_path = detect_sysroot_src_path(target_data)?;
     let to_patch = [
         "rustc-std-workspace-core",
@@ -114,7 +149,7 @@ pub fn resolve_std<'cfg>(
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
-        requested_targets,
+        &build_config.requested_kinds,
         &cli_features,
         &specs,
         HasDevUnits::No,

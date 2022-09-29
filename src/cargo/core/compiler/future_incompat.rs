@@ -1,7 +1,7 @@
 //! Support for future-incompatible warning reporting.
 
 use crate::core::compiler::BuildContext;
-use crate::core::{Dependency, PackageId, Workspace};
+use crate::core::{Dependency, PackageId, QueryKind, Workspace};
 use crate::sources::SourceConfigMap;
 use crate::util::{iter_join, CargoResult, Config};
 use anyhow::{bail, format_err, Context};
@@ -236,7 +236,7 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMa
     let mut report: BTreeMap<String, String> = BTreeMap::new();
     for per_package in per_package_reports {
         let package_spec = format!(
-            "{}:{}",
+            "{}@{}",
             per_package.package_id.name(),
             per_package.package_id.version()
         );
@@ -293,7 +293,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
                 Ok(dep) => dep,
                 Err(_) => return false,
             };
-            match source.query_vec(&dep) {
+            match source.query_vec(&dep, QueryKind::Exact) {
                 Poll::Ready(Ok(sum)) => {
                     summaries.push((pkg_id, sum));
                     false
@@ -415,10 +415,10 @@ You may want to consider updating them to a newer version to see if the issue ha
             let manifest = bcx.packages.get_one(*package_id).unwrap().manifest();
             format!(
                 "
-  - {name}
+  - {package_spec}
   - Repository: {url}
-  - Detailed warning command: `cargo report future-incompatibilities --id {id} --package {name}`",
-                name = format!("{}:{}", package_id.name(), package_id.version()),
+  - Detailed warning command: `cargo report future-incompatibilities --id {id} --package {package_spec}`",
+                package_spec = format!("{}@{}", package_id.name(), package_id.version()),
                 url = manifest
                     .metadata()
                     .repository

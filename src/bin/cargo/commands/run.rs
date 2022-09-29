@@ -4,7 +4,7 @@ use cargo::core::Verbosity;
 use cargo::ops::{self, CompileFilter, Packages};
 use cargo_util::ProcessError;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("run")
         // subcommand aliases are handled in aliased_command()
         // .alias("r")
@@ -13,7 +13,7 @@ pub fn cli() -> App {
         .arg_quiet()
         .arg(
             Arg::new("args")
-                .allow_invalid_utf8(true)
+                .value_parser(value_parser!(std::ffi::OsString))
                 .multiple_values(true),
         )
         .arg_targets_bin_example(
@@ -56,7 +56,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     }
 
-    if !args.is_present("example") && !args.is_present("bin") {
+    if !args.contains_id("example") && !args.contains_id("bin") {
         let default_runs: Vec<_> = compile_opts
             .spec
             .get_packages(&ws)?

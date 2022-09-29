@@ -321,7 +321,7 @@ fn specify_default_run() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -344,7 +344,7 @@ fn bogus_default_run() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -453,7 +453,7 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = []
@@ -503,7 +503,10 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-error: no example target named `a`
+error: no example target named `a`.
+Available example targets:
+    do_magic
+
 ",
         )
         .run();
@@ -528,7 +531,14 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
     let p = autodiscover_examples_project("2015", Some(false));
     p.cargo("run --example a")
         .with_status(101)
-        .with_stderr("error: no example target named `a`\n")
+        .with_stderr(
+            "\
+error: no example target named `a`.
+Available example targets:
+    do_magic
+
+",
+        )
         .run();
 }
 
@@ -552,7 +562,7 @@ fn autobins_disables() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             autobins = false
@@ -600,7 +610,14 @@ fn run_with_filename() {
 
     p.cargo("run --bin bin.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no bin target named `bin.rs`")
+        .with_stderr(
+            "\
+[ERROR] no bin target named `bin.rs`.
+Available bin targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("run --bin a.rs")
@@ -615,7 +632,14 @@ fn run_with_filename() {
 
     p.cargo("run --example example.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no example target named `example.rs`")
+        .with_stderr(
+            "\
+[ERROR] no example target named `example.rs`.
+Available example targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("run --example a.rs")
@@ -675,7 +699,7 @@ fn example_with_release_flag() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -780,7 +804,7 @@ fn run_dylib_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1054,7 +1078,7 @@ fn run_bin_different_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1124,7 +1148,7 @@ fn run_with_library_paths() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1183,7 +1207,7 @@ fn library_paths_sorted_alphabetically() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1368,7 +1392,7 @@ fn default_run_workspace() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.0.1"
                 default-run = "a"
@@ -1394,7 +1418,7 @@ fn run_link_system_path_macos() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             [lib]

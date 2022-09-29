@@ -125,7 +125,7 @@ formats; <code>--timings</code> without an argument will default to <code>--timi
 Specifying an output format (rather than the default) is unstable and requires
 <code>-Zunstable-options</code>. Valid output formats:</p>
 <ul>
-<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<li><code>html</code> (unstable, requires <code>-Zunstable-options</code>): Write a human-readable file <code>cargo-timing.html</code> to the
 <code>target/cargo-timings</code> directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
@@ -199,7 +199,7 @@ the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</cod
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
 contains embedded ANSI color codes for respecting rustc's default color
 scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
-<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
 JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
@@ -258,6 +258,12 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-run---config"><a class="option-anchor" href="#option-cargo-run---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
 <dt class="option-term" id="option-cargo-run--h"><a class="option-anchor" href="#option-cargo-run--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-run---help"><a class="option-anchor" href="#option-cargo-run---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -277,7 +283,9 @@ for more information about how toolchain overrides work.</dd>
 <dt class="option-term" id="option-cargo-run---jobs"><a class="option-anchor" href="#option-cargo-run---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value.
+Should not be 0.</dd>
 
 
 <dt class="option-term" id="option-cargo-run---keep-going"><a class="option-anchor" href="#option-cargo-run---keep-going"></a><code>--keep-going</code></dt>

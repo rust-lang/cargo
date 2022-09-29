@@ -27,11 +27,11 @@ following:
 SPEC Structure             | Example SPEC
 ---------------------------|--------------
 _name_                     | `bitflags`
-_name_`:`_version_         | `bitflags:1.0.4`
+_name_`@`_version_         | `bitflags@1.0.4`
 _url_                      | `https://github.com/rust-lang/cargo`
 _url_`#`_version_          | `https://github.com/rust-lang/cargo#0.33.0`
 _url_`#`_name_             | `https://github.com/rust-lang/crates.io-index#bitflags`
-_url_`#`_name_`:`_version_ | `https://github.com/rust-lang/cargo#crates-io:0.21.0`
+_url_`#`_name_`:`_version_ | `https://github.com/rust-lang/cargo#crates-io@0.21.0`
 
 ## OPTIONS
 
@@ -127,6 +127,12 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-pkgid---config"><a class="option-anchor" href="#option-cargo-pkgid---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
 <dt class="option-term" id="option-cargo-pkgid--h"><a class="option-anchor" href="#option-cargo-pkgid--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-pkgid---help"><a class="option-anchor" href="#option-cargo-pkgid---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -159,7 +165,7 @@ details on environment variables that Cargo reads.
 
 2. Retrieve package specification for version 1.0.0 of `foo`:
 
-       cargo pkgid foo:1.0.0
+       cargo pkgid foo@1.0.0
 
 3. Retrieve package specification for `foo` from crates.io:
 

@@ -59,6 +59,7 @@ c = "check"
 t = "test"
 r = "run"
 rr = "run --release"
+recursive_example = "rr --example recursions"
 space_example = ["run", "--release", "--", "\"command list\""]
 
 [build]
@@ -189,21 +190,77 @@ variable.
 
 Environment variables will take precedence over TOML configuration files.
 Currently only integer, boolean, string and some array values are supported to
-be defined by environment variables. Descriptions below indicate which keys
-support environment variables.
+be defined by environment variables. [Descriptions below](#configuration-keys)
+indicate which keys support environment variables and otherwise they are not
+supported due to [technicial issues](https://github.com/rust-lang/cargo/issues/5416).
 
 In addition to the system above, Cargo recognizes a few other specific
 [environment variables][env].
 
+### Command-line overrides
+
+Cargo also accepts arbitrary configuration overrides through the
+`--config` command-line option. The argument should be in TOML syntax of
+`KEY=VALUE`:
+
+```console
+cargo --config net.git-fetch-with-cli=true fetch
+```
+
+The `--config` option may be specified multiple times, in which case the
+values are merged in left-to-right order, using the same merging logic
+that is used when multiple configuration files apply. Configuration
+values specified this way take precedence over environment variables,
+which take precedence over configuration files.
+
+Some examples of what it looks like using Bourne shell syntax:
+
+```console
+# Most shells will require escaping.
+cargo --config http.proxy=\"http://example.com\" …
+
+# Spaces may be used.
+cargo --config "net.git-fetch-with-cli = true" …
+
+# TOML array example. Single quotes make it easier to read and write.
+cargo --config 'build.rustdocflags = ["--html-in-header", "header.html"]' …
+
+# Example of a complex TOML key.
+cargo --config "target.'cfg(all(target_arch = \"arm\", target_os = \"none\"))'.runner = 'my-runner'" …
+
+# Example of overriding a profile setting.
+cargo --config profile.dev.package.image.opt-level=3 …
+```
+
+The `--config` option can also be used to pass paths to extra
+configuration files that Cargo should use for a specific invocation.
+Options from configuration files loaded this way follow the same
+precedence rules as other options specified directly with `--config`.
+
 ### Config-relative paths
 
-Paths in config files may be absolute, relative, or a bare name without any
-path separators. Paths for executables without a path separator will use the
-`PATH` environment variable to search for the executable. Paths for
-non-executables will be relative to where the config value is defined. For
-config files, that is relative to the parent directory of the `.cargo`
-directory where the value was defined. For environment variables it is
-relative to the current working directory.
+Paths in config files may be absolute, relative, or a bare name without any path separators.
+Paths for executables without a path separator will use the `PATH` environment variable to search for the executable. 
+Paths for non-executables will be relative to where the config value is defined.
+
+In particular, rules are:
+
+* For environment variables, paths are relative to the current working directory.
+* For config values loaded directly from the [`--config KEY=VALUE`](#command-line-overrides) option,
+  paths are relative to the current working directory.
+* For config files, paths are relative to the parent directory of the directory where the config files were defined,
+  no matter those files are from either the [hierarchical probing](#hierarchical-structure)
+  or the [`--config <path>`](#command-line-overrides) option.
+
+> **Note:** To maintain consistency with existing `.cargo/config.toml` probing behavior,
+> it is by design that a path in a config file passed via `--config <path>`
+> is also relative to two levels up from the config file itself.
+>
+> To avoid unexpected results, the rule of thumb is putting your extra config files
+> at the same level of discovered `.cargo/config.toml` in your porject.
+> For instance, given a project `/my/project`, 
+> it is recommended to put config files under `/my/project/.cargo`
+> or a new directory at the same level, such as `/my/project/.config`.
 
 ```toml
 # Relative path examples.
@@ -295,6 +352,14 @@ r = "run"
 
 Aliases are not allowed to redefine existing built-in commands.
 
+Aliases are recursive:
+
+```toml
+[alias]
+rr = "run --release"
+recursive_example = "rr --example recursions"
+```
+
 #### `[build]`
 
 The `[build]` table controls build-time operations and compiler settings.
@@ -304,7 +369,9 @@ The `[build]` table controls build-time operations and compiler settings.
 * Default: number of logical CPUs
 * Environment: `CARGO_BUILD_JOBS`
 
-Sets the maximum number of compiler processes to run in parallel.
+Sets the maximum number of compiler processes to run in parallel. If negative,
+it sets the maximum number of compiler processes to the number of logical CPUs
+plus provided value. Should not be 0.
 
 Can be overridden with the `--jobs` CLI option.
 
@@ -321,7 +388,8 @@ Sets the executable to use for `rustc`.
 * Environment: `CARGO_BUILD_RUSTC_WRAPPER` or `RUSTC_WRAPPER`
 
 Sets a wrapper to execute instead of `rustc`. The first argument passed to the
-wrapper is the path to the actual `rustc`.
+wrapper is the path to the actual executable to use
+(i.e., `build.rustc`, if that is set, or `"rustc"` otherwise).
 
 ##### `build.rustc-workspace-wrapper`
 * Type: string (program path)
@@ -329,7 +397,8 @@ wrapper is the path to the actual `rustc`.
 * Environment: `CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER` or `RUSTC_WORKSPACE_WRAPPER`
 
 Sets a wrapper to execute instead of `rustc`, for workspace members only.
-The first argument passed to the wrapper is the path to the actual `rustc`.
+The first argument passed to the wrapper is the path to the actual
+executable to use (i.e., `build.rustc`, if that is set, or `"rustc"` otherwise).
 It affects the filename hash so that artifacts produced by the wrapper are cached separately.
 
 ##### `build.rustdoc`
@@ -340,15 +409,24 @@ It affects the filename hash so that artifacts produced by the wrapper are cache
 Sets the executable to use for `rustdoc`.
 
 ##### `build.target`
-* Type: string
+* Type: string or array of strings
 * Default: host platform
 * Environment: `CARGO_BUILD_TARGET`
 
-The default target platform triple to compile to.
+The default target platform triples to compile to.
 
-This may also be a relative path to a `.json` target spec file.
+This allows passing either a string or an array of strings. Each string value
+is a target platform triple. The selected build targets will be built for each
+of the selected architectures.
+
+The string value may also be a relative path to a `.json` target spec file.
 
 Can be overridden with the `--target` CLI option.
+
+```toml
+[build]
+target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
+```
 
 ##### `build.target-dir`
 * Type: string (path)
@@ -363,18 +441,19 @@ Can be overridden with the `--target-dir` CLI option.
 ##### `build.rustflags`
 * Type: string or array of strings
 * Default: none
-* Environment: `CARGO_BUILD_RUSTFLAGS` or `RUSTFLAGS`
+* Environment: `CARGO_BUILD_RUSTFLAGS` or `CARGO_ENCODED_RUSTFLAGS` or `RUSTFLAGS`
 
-Extra command-line flags to pass to `rustc`. The value may be a array of
+Extra command-line flags to pass to `rustc`. The value may be an array of
 strings or a space-separated string.
 
-There are three mutually exclusive sources of extra flags. They are checked in
+There are four mutually exclusive sources of extra flags. They are checked in
 order, with the first one being used:
 
-1. `RUSTFLAGS` environment variable.
-2. All matching `target.<triple>.rustflags` and `target.<cfg>.rustflags`
+1. `CARGO_ENCODED_RUSTFLAGS` environment variable.
+2. `RUSTFLAGS` environment variable.
+3. All matching `target.<triple>.rustflags` and `target.<cfg>.rustflags`
    config entries joined together.
-3. `build.rustflags` config value.
+4. `build.rustflags` config value.
 
 Additional flags may also be passed with the [`cargo rustc`] command.
 
@@ -399,16 +478,17 @@ appropriate profile setting.
 ##### `build.rustdocflags`
 * Type: string or array of strings
 * Default: none
-* Environment: `CARGO_BUILD_RUSTDOCFLAGS` or `RUSTDOCFLAGS`
+* Environment: `CARGO_BUILD_RUSTDOCFLAGS` or `CARGO_ENCODED_RUSTDOCFLAGS` or `RUSTDOCFLAGS`
 
-Extra command-line flags to pass to `rustdoc`. The value may be a array of
+Extra command-line flags to pass to `rustdoc`. The value may be an array of
 strings or a space-separated string.
 
-There are two mutually exclusive sources of extra flags. They are checked in
+There are three mutually exclusive sources of extra flags. They are checked in
 order, with the first one being used:
 
-1. `RUSTDOCFLAGS` environment variable.
-2. `build.rustdocflags` config value.
+1. `CARGO_ENCODED_RUSTDOCFLAGS` environment variable.
+2. `RUSTDOCFLAGS` environment variable.
+3. `build.rustdocflags` config value.
 
 Additional flags may also be passed with the [`cargo rustdoc`] command.
 
@@ -972,7 +1052,7 @@ the `<triple>` will take precedence. It is an error if more than one
 * Environment: `CARGO_TARGET_<triple>_RUSTFLAGS`
 
 Passes a set of custom flags to the compiler for this `<triple>`. The value
-may be a array of strings or a space-separated string.
+may be an array of strings or a space-separated string.
 
 See [`build.rustflags`](#buildrustflags) for more details on the different
 ways to specific extra flags.

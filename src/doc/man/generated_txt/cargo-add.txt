@@ -32,6 +32,10 @@ DESCRIPTION
        When you add a package that is already present, the existing entry will
        be updated with the flags specified.
 
+       Upon successful invocation, the enabled (+) and disabled (-) features
+       <https://doc.rust-lang.org/cargo/reference/features.md> of the specified
+       dependency will be listed in the command's output.
+
 OPTIONS
    Source options
        --git url
@@ -140,6 +144,14 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
 
        -h, --help
            Prints help information.

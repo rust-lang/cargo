@@ -6,6 +6,7 @@ cargo-yank - Remove a pushed crate from the index
 
 ## SYNOPSIS
 
+`cargo yank` [_options_] _crate_@_version_\
 `cargo yank` [_options_] `--version` _version_ [_crate_]
 
 ## DESCRIPTION
@@ -112,6 +113,12 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-yank---config"><a class="option-anchor" href="#option-cargo-yank---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
 <dt class="option-term" id="option-cargo-yank--h"><a class="option-anchor" href="#option-cargo-yank--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-yank---help"><a class="option-anchor" href="#option-cargo-yank---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -140,7 +147,7 @@ details on environment variables that Cargo reads.
 
 1. Yank a crate from the index:
 
-       cargo yank --version 1.0.7 foo
+       cargo yank foo@1.0.7
 
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-login(1)](cargo-login.html), [cargo-publish(1)](cargo-publish.html)

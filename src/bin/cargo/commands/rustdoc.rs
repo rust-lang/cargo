@@ -2,13 +2,13 @@ use cargo::ops::{self, DocOptions};
 
 use crate::command_prelude::*;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("rustdoc")
         .trailing_var_arg(true)
         .about("Build a package's documentation, using specified custom flags.")
         .arg_quiet()
         .arg(Arg::new("args").multiple_values(true))
-        .arg(opt(
+        .arg(flag(
             "open",
             "Opens the docs in a browser after the operation",
         ))
@@ -54,7 +54,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some(target_args)
     };
     let doc_opts = DocOptions {
-        open_result: args.is_present("open"),
+        open_result: args.flag("open"),
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;

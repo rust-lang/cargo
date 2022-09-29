@@ -48,7 +48,7 @@ how the feature works:
   ```toml
   [unstable]
   mtime-on-use = true
-  multitarget = true
+  build-std = ["core", "alloc"]
   ```
 
 Each new feature described below should explain how to use it.
@@ -68,7 +68,6 @@ Each new feature described below should explain how to use it.
     * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
     * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
     * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
-    * [workspace-inheritance](#workspace-inheritance) - Allow workspace members to share fields and dependencies
 * Output behavior
     * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
     * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
@@ -76,7 +75,6 @@ Each new feature described below should explain how to use it.
 * Compile behavior
     * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
     * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
-    * [multitarget](#multitarget) — Supports building for multiple targets at the same time.
     * [build-std](#build-std) — Builds the standard library instead of using pre-built binaries.
     * [build-std-features](#build-std-features) — Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
@@ -87,7 +85,6 @@ Each new feature described below should explain how to use it.
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Profile `strip` option](#profile-strip-option) — Forces the removal of debug information and symbols from executables.
     * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) - Allow build artifacts to be included into other build artifacts and build them for different targets.
@@ -96,13 +93,12 @@ Each new feature described below should explain how to use it.
     * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
     * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
 * Configuration
-    * [config-cli](#config-cli) — Adds the ability to pass configuration options on the command-line.
     * [config-include](#config-include) — Adds the ability for config files to include other files.
     * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
 * Registries
     * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
     * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
-    * [http-registry](#http-registry) — Adds support for fetching from http registries (`sparse+`)
+    * [sparse-registry](#sparse-registry) — Adds support for fetching from static-file HTTP registries (`sparse+`)
 
 ### allow-features
 
@@ -217,32 +213,6 @@ information from `.cargo/config.toml`. See the rustc issue for more information.
 
 ```sh
 cargo test --target foo -Zdoctest-xcompile
-```
-
-### multitarget
-* Tracking Issue: [#8176](https://github.com/rust-lang/cargo/issues/8176)
-
-This flag allows passing multiple `--target` flags to the `cargo` subcommand
-selected. When multiple `--target` flags are passed the selected build targets
-will be built for each of the selected architectures.
-
-For example to compile a library for both 32 and 64-bit:
-
-```
-cargo build --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
-```
-
-or running tests for both targets:
-
-```
-cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
-```
-
-This can also be specified in `.cargo/config.toml` files.
-
-```toml
-[build]
-target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 ```
 
 #### New `dir-name` attribute
@@ -438,25 +408,8 @@ like to stabilize it somehow!
 
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
 
-### crate-type
-* Tracking Issue: [#10083](https://github.com/rust-lang/cargo/issues/10083)
-* RFC: [#3180](https://github.com/rust-lang/rfcs/pull/3180)
-* Original Pull Request: [#10093](https://github.com/rust-lang/cargo/pull/10093)
-
-`cargo rustc --crate-type=lib,cdylib` forwards the `--crate-type` flag to `rustc`.
-This runs `rustc` with the corresponding
-[`--crate-type`](https://doc.rust-lang.org/rustc/command-line-arguments.html#--crate-type-a-list-of-types-of-crates-for-the-compiler-to-emit)
-flag, and compiling.
-
-When using it, it requires the `-Z unstable-options`
-command-line option:
-
-```console
-cargo rustc --crate-type lib,cdylib -Z unstable-options
-```
-
 ### keep-going
-* Tracking Issue: [#0](https://github.com/rust-lang/cargo/issues/10496)
+* Tracking Issue: [#10496](https://github.com/rust-lang/cargo/issues/10496)
 
 `cargo build --keep-going` (and similarly for `check`, `test` etc) will build as
 many crates in the dependency graph as possible, rather than aborting the build
@@ -473,40 +426,6 @@ The `-Z unstable-options` command-line option must be used in order to use
 
 ```console
 cargo check --keep-going -Z unstable-options
-```
-
-### config-cli
-* Tracking Issue: [#7722](https://github.com/rust-lang/cargo/issues/7722)
-
-The `--config` CLI option allows arbitrary config values to be passed
-in via the command-line. The argument should be in TOML syntax of KEY=VALUE:
-
-```console
-cargo +nightly -Zunstable-options --config net.git-fetch-with-cli=true fetch
-```
-
-The `--config` option may be specified multiple times, in which case the
-values are merged in left-to-right order, using the same merging logic that
-multiple config files use. CLI values take precedence over environment
-variables, which take precedence over config files.
-
-Some examples of what it looks like using Bourne shell syntax:
-
-```console
-# Most shells will require escaping.
-cargo --config http.proxy=\"http://example.com\" …
-
-# Spaces may be used.
-cargo --config "net.git-fetch-with-cli = true" …
-
-# TOML array example. Single quotes make it easier to read and write.
-cargo --config 'build.rustdocflags = ["--html-in-header", "header.html"]' …
-
-# Example of a complex TOML key.
-cargo --config "target.'cfg(all(target_arch = \"arm\", target_os = \"none\"))'.runner = 'my-runner'" …
-
-# Example of overriding a profile setting.
-cargo --config profile.dev.package.image.opt-level=3 …
 ```
 
 ### config-include
@@ -909,18 +828,18 @@ fn main() {
 }
 ```
 
-### http-registry
+### sparse-registry
 * Tracking Issue: [9069](https://github.com/rust-lang/cargo/issues/9069)
 * RFC: [#2789](https://github.com/rust-lang/rfcs/pull/2789)
 
-The `http-registry` feature allows cargo to interact with remote registries served
-over http rather than git. These registries can be identified by urls starting with
+The `sparse-registry` feature allows cargo to interact with remote registries served
+over plain HTTP rather than git. These registries can be identified by urls starting with
 `sparse+http://` or `sparse+https://`.
 
-When fetching index metadata over http, cargo only downloads the metadata for relevant
+When fetching index metadata over HTTP, Cargo only downloads the metadata for relevant
 crates, which can save significant time and bandwidth.
 
-The format of the http index is identical to a checkout of a git-based index.
+The format of the sparse index is identical to a checkout of a git-based index.
 
 ### credential-process
 * Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
@@ -1164,7 +1083,7 @@ The `filename` parameter is only available in the `[[bin]]` section of the manif
 ```toml
 cargo-features = ["different-binary-name"]
 
-[project]
+[package]
 name =  "foo"
 version = "0.0.1"
 
@@ -1188,192 +1107,52 @@ For instance:
 cargo doc -Z unstable-options -Z rustdoc-scrape-examples=examples
 ```
 
-### check-cfg-features
+### check-cfg
 
 * RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
+* Tracking Issue: [#10554](https://github.com/rust-lang/cargo/issues/10554)
 
-The `-Z check-cfg-features` argument tells Cargo to pass all possible features of a package to
-`rustc` and `rustdoc` unstable `--check-cfg` command line as `--check-cfg=values(feature, ...)`.
-This enables compile time checking of feature values in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
-Note than this command line options will probably become the default when stabilizing.
+`-Z check-cfg` command line enables compile time checking of name and values in `#[cfg]`, `cfg!`,
+`#[link]` and `#[cfg_attr]` with the `rustc` and `rustdoc` unstable `--check-cfg` command line.
+
+It's values are:
+ - `features`: enables features checking via `--check-cfg=values(feature, ...)`.
+    Note than this command line options will probably become the default when stabilizing.
+ - `names`: enables well known names checking via `--check-cfg=names()`.
+ - `values`: enables well known values checking via `--check-cfg=values()`.
+ - `output`: enable the use of `rustc-check-cfg` in build script.
+
 For instance:
 
 ```
-cargo check -Z unstable-options -Z check-cfg-features
+cargo check -Z unstable-options -Z check-cfg=features
+cargo check -Z unstable-options -Z check-cfg=names
+cargo check -Z unstable-options -Z check-cfg=values
+cargo check -Z unstable-options -Z check-cfg=features,names,values
 ```
 
-### check-cfg-well-known-names
+Or for `output`:
 
-* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
-
-The `-Z check-cfg-well-known-names` argument tells Cargo to activate `rustc` and `rustdoc` unstable
-`--check-cfg` command line as `--check-cfg=names()`.
-This enables compile time checking of well known names in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
-For instance:
-
-```
-cargo check -Z unstable-options -Z check-cfg-well-known-names
+```rust,no_run
+// build.rs
+println!("cargo:rustc-check-cfg=names(foo, bar)");
 ```
 
-### check-cfg-well-known-values
-
-* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
-
-The `-Z check-cfg-well-known-values` argument tells Cargo to activate `rustc` and `rustdoc` unstable
-`--check-cfg` command line as `--check-cfg=values()`.
-This enables compile time checking of well known values in `#[cfg]`, `cfg!` and `#[cfg_attr]`.
-For instance:
-
 ```
-cargo check -Z unstable-options -Z check-cfg-well-known-values
+cargo check -Z unstable-options -Z check-cfg=output
 ```
 
-### workspace-inheritance
+### `cargo:rustc-check-cfg=CHECK_CFG`
 
-* RFC: [#2906](https://github.com/rust-lang/rfcs/blob/master/text/2906-cargo-workspace-deduplicate.md)
-* Tracking Issue: [#8415](https://github.com/rust-lang/cargo/issues/8415)
+The `rustc-check-cfg` instruction tells Cargo to pass the given value to the
+`--check-cfg` flag to the compiler. This may be used for compile-time
+detection of unexpected conditional compilation name and/or values.
 
-### The `workspace.package` table
+This can only be used in combination with `-Zcheck-cfg=output` otherwise it is ignored
+with a warning.
 
-*Stabilization*: This would be in [`workspaces.md`][workspaces], under
-[The `workspace.metadata` table][workspace-metadata-table]
-
-The `workspace.package` table is where you define keys that can be
-inherited by members of a workspace. These keys can be inherited by
-defining them in the member package with `{key}.workspace = true`.
-
-Keys that are supported:
-
-|                |                 |
-|----------------|-----------------|
-| `authors`      | `categories`    |
-| `description`  | `documentation` |
-| `edition`      | `exclude`       |
-| `homepage`     | `include`       |
-| `keywords`     | `license`       |
-| `license-file` | `publish`       |
-| `readme`       | `repository`    |
-| `rust-version` | `version`       |
-
-- `license-file` and `readme` are relative to the workspace root
-- `include` and `exclude` are relative to your package root
-
-Example:
-```toml
-# [PROGECT_DIR]/Cargo.toml
-[workspace]
-memebers = ["bar"]
-
-[workspace.package]
-version = "1.2.3"
-authors = ["Nice Folks"]
-description = "..."
-documentation = "https://example.github.io/example"
-```
-
-```toml
-# [PROGECT_DIR]/bar/Cargo.toml
-[package]
-name = "bar"
-version.workspace = true
-authors.workspace = true
-description.workspace = true
-documentation.workspace = true
-```
-
-
-### The `workspace.dependencies` table
-
-The `workspace.dependencies` table is where you define dependencies to be
-inherited by members of a workspace. 
-
-Specifying a workspace dependency is similar to [package dependencies][specifying-dependencies] except:
-- Dependencies from this table cannot be declared as `optional`
-- [`features`][features] declared in this table are additive with the `features` from `[dependencies]`
-
-You can then [inherit the workspace dependency as a package dependency][inheriting-a-dependency-from-a-workspace]
-
-Example:
-```toml
-# [PROGECT_DIR]/Cargo.toml
-[workspace]
-memebers = ["bar"]
-
-[workspace.dependencies]
-dep = { version = "0.1", features = ["fancy"] }
-dep-build = "0.8"
-dep-dev = "0.5.2"
-```
-
-```toml
-# [PROGECT_DIR]/bar/Cargo.toml
-[project]
-name = "bar"
-version = "0.2.0"
-
-[dependencies]
-dep = { workspace = true, features = ["dancy"] }
-
-[build-dependencies]
-dep-build.workspace = true
-
-[dev-dependencies]
-dep-dev.workspace = true
-```
-
-[inheriting-a-dependency-from-a-workspace]: #inheriting-a-dependency-from-a-workspace
-[workspace-metadata-table]: workspaces.md#the-workspacemetadata-table
-[workspaces]: workspaces.md
-
-
-### Inheriting a dependency from a workspace
-
-*Stabilization*: This would be in [`specifying-dependencies.md`][specifying-dependencies],
-under [Renaming dependencies in Cargo.toml][renaming-dependencies-in-cargotoml]
-
-Dependencies can be inherited from a workspace by specifying the
-dependency in the workspace's [`[workspace.dependencies]`][workspace.dependencies] table.
-After that add it to the `[dependencies]` table with `dep.workspace = true`.
-
-The `workspace` key can be defined with:
-- [`optional`][optional]: Note that the`[workspace.dependencies]` table is not allowed to specify `optional`.
-- [`features`][features]: These are additive with the features declared in the `[workspace.dependencies]`
-
-The `workspace` key cannot be defined with:
-
-|                  |                    | 
-|------------------|--------------------|
-| `branch`         | `default-features` |
-| `git`            | `package`          |
-| `path`           | `registry`         |
-| `registry-index` | `rev`              |
-| `tag`            | `version`          |
-
-
-Dependencies in the `[dependencies]`, `[dev-dependencies]`, `[build-dependencies]`, and
-`[target."...".dependencies]` sections support the ability to reference the
-`[workspace.dependencies]` definition of dependencies.
-
-Example:
-```toml
-[dependencies]
-dep.workspace = true
-dep2 = { workspace = true, features = ["fancy"] }
-dep3 = { workspace = true, optional = true }
-dep4 = { workspace = true, optional = true, features = ["fancy"] }
-
-[build-dependencies]
-dep-build.workspace = true
-
-[dev-dependencies]
-dep-dev.workspace = true
-```
-
-[features]: features.md
-[optional]: features.md#optional-dependencies
-[workspace.dependencies]: #the-workspacedependencies-table
-[specifying-dependencies]: specifying-dependencies.md
-[renaming-dependencies-in-cargotoml]: specifying-dependencies.md#renaming-dependencies-in-cargotoml
+If you want to integrate with Cargo features, use `-Zcheck-cfg=features` instead of
+trying to do it manually with this option.
 
 ## Stabilized and removed features
 
@@ -1556,3 +1335,30 @@ See the [Features chapter](features.md#dependency-features) for more information
 The `-Ztimings` option has been stabilized as `--timings` in the 1.60 release.
 (`--timings=html` and the machine-readable `--timings=json` output remain
 unstable and require `-Zunstable-options`.)
+
+### config-cli
+
+The `--config` CLI option has been stabilized in the 1.63 release. See
+the [config documentation](config.html#command-line-overrides) for more
+information.
+
+### multitarget
+
+The `-Z multitarget` option has been stabilized in the 1.64 release.
+See [`build.target`](config.md#buildtarget) for more information about
+setting the default target platform triples.
+
+### crate-type
+
+The `--crate-type` flag for `cargo rustc` has been stabilized in the 1.64
+release. See the [`cargo rustc` documentation](../commands/cargo-rustc.md)
+for more information.
+
+
+### Workspace Inheritance
+
+Workspace Inheritance has been stabilized in the 1.64 release.
+See [workspace.package](workspaces.md#the-package-table), 
+[workspace.dependencies](workspaces.md#the-dependencies-table), 
+and [inheriting-a-dependency-from-a-workspace](specifying-dependencies.md#inheriting-a-dependency-from-a-workspace)
+for more information.

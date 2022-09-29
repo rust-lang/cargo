@@ -9,6 +9,9 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: read
+
 jobs:
   # Check Code style quickly by running `rustfmt` over all code
   rustfmt:
@@ -34,26 +37,35 @@ jobs:
     strategy:
       matrix:
         include:
-        - os: ubuntu-latest
+        - name: Linux x86_64 stable
+          os: ubuntu-latest
           rust: stable
           other: i686-unknown-linux-gnu
-        - os: ubuntu-latest
+        - name: Linux x86_64 beta
+          os: ubuntu-latest
           rust: beta
           other: i686-unknown-linux-gnu
-        - os: ubuntu-latest
+        - name: Linux x86_64 nightly
+          os: ubuntu-latest
           rust: nightly
           other: i686-unknown-linux-gnu
-        - os: macos-latest
+        - name: macOS x86_64 stable
+          os: macos-latest
           rust: stable
           other: x86_64-apple-ios
-        - os: windows-latest
+        - name: Windows x86_64 MSVC stable
+          os: windows-latest
           rust: stable-msvc
           other: i686-pc-windows-msvc
-        - os: windows-latest
+        - name: Windows x86_64 gnu nightly
+          os: windows-latest
           rust: nightly-gnu
           other: i686-pc-windows-gnu
+    name: Tests ${{ matrix.name }}
     steps:
     - uses: actions/checkout@v3
+    - name: Dump Environment
+      run: ci/dump-environment.sh
     - name: Update Rustup (temporary workaround)
       run: rustup self update
       shell: bash
@@ -97,6 +109,13 @@ jobs:
         # download all workspaces.
         cargo test --manifest-path benches/benchsuite/Cargo.toml --all-targets -- cargo
         cargo check --manifest-path benches/capture/Cargo.toml
+    # The testsuite generates a huge amount of data, and fetch-smoke-test was
+    # running out of disk space.
+    - name: Clear test output
+      run: |
+        df -h
+        rm -rf target/tmp
+        df -h
     - name: Fetch smoke test
       run: ci/fetch-smoke-test.sh
 
@@ -131,7 +150,9 @@ jobs:
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.5/mdbook-v0.4.5-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
-    - run: cargo doc --no-deps
+    - run: cargo doc --document-private-items --no-deps
+      env:
+        RUSTDOCFLAGS: -D warnings
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
     - run: |
         cd src/doc
@@ -140,6 +161,8 @@ jobs:
         sh linkcheck.sh --all cargo
 
   success:
+    permissions:
+      contents: none
     name: bors build finished
     needs: [docs, rustfmt, test, resolver, build_std]
     runs-on: ubuntu-latest
@@ -147,6 +170,8 @@ jobs:
     steps:
     - run: echo ok
   failure:
+    permissions:
+      contents: none
     name: bors build finished
     needs: [docs, rustfmt, test, resolver, build_std]
     runs-on: ubuntu-latest

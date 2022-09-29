@@ -138,7 +138,7 @@ impl TargetInfo {
         rustc: &Rustc,
         kind: CompileKind,
     ) -> CargoResult<TargetInfo> {
-        let rustflags = env_args(
+        let mut rustflags = env_args(
             config,
             requested_kinds,
             &rustc.host,
@@ -146,114 +146,140 @@ impl TargetInfo {
             kind,
             Flags::Rust,
         )?;
-        let extra_fingerprint = kind.fingerprint_hash();
-        let mut process = rustc.workspace_process();
-        process
-            .arg("-")
-            .arg("--crate-name")
-            .arg("___")
-            .arg("--print=file-names")
-            .args(&rustflags)
-            .env_remove("RUSTC_LOG");
+        let mut turn = 0;
+        loop {
+            let extra_fingerprint = kind.fingerprint_hash();
+            let mut process = rustc.workspace_process();
+            process
+                .arg("-")
+                .arg("--crate-name")
+                .arg("___")
+                .arg("--print=file-names")
+                .args(&rustflags)
+                .env_remove("RUSTC_LOG");
 
-        if let CompileKind::Target(target) = kind {
-            process.arg("--target").arg(target.rustc_target());
-        }
+            if let CompileKind::Target(target) = kind {
+                process.arg("--target").arg(target.rustc_target());
+            }
 
-        let crate_type_process = process.clone();
-        const KNOWN_CRATE_TYPES: &[CrateType] = &[
-            CrateType::Bin,
-            CrateType::Rlib,
-            CrateType::Dylib,
-            CrateType::Cdylib,
-            CrateType::Staticlib,
-            CrateType::ProcMacro,
-        ];
-        for crate_type in KNOWN_CRATE_TYPES.iter() {
-            process.arg("--crate-type").arg(crate_type.as_str());
-        }
-        let supports_split_debuginfo = rustc
-            .cached_output(
-                process.clone().arg("-Csplit-debuginfo=packed"),
-                extra_fingerprint,
-            )
-            .is_ok();
-
-        process.arg("--print=sysroot");
-        process.arg("--print=cfg");
-
-        let (output, error) = rustc
-            .cached_output(&process, extra_fingerprint)
-            .with_context(|| "failed to run `rustc` to learn about target-specific information")?;
-
-        let mut lines = output.lines();
-        let mut map = HashMap::new();
-        for crate_type in KNOWN_CRATE_TYPES {
-            let out = parse_crate_type(crate_type, &process, &output, &error, &mut lines)?;
-            map.insert(crate_type.clone(), out);
-        }
-
-        let line = match lines.next() {
-            Some(line) => line,
-            None => anyhow::bail!(
-                "output of --print=sysroot missing when learning about \
-                 target-specific information from rustc\n{}",
-                output_err_info(&process, &output, &error)
-            ),
-        };
-        let sysroot = PathBuf::from(line);
-        let sysroot_host_libdir = if cfg!(windows) {
-            sysroot.join("bin")
-        } else {
-            sysroot.join("lib")
-        };
-        let mut sysroot_target_libdir = sysroot.clone();
-        sysroot_target_libdir.push("lib");
-        sysroot_target_libdir.push("rustlib");
-        sysroot_target_libdir.push(match &kind {
-            CompileKind::Host => rustc.host.as_str(),
-            CompileKind::Target(target) => target.short_name(),
-        });
-        sysroot_target_libdir.push("lib");
-
-        let cfg = lines
-            .map(|line| Ok(Cfg::from_str(line)?))
-            .filter(TargetInfo::not_user_specific_cfg)
-            .collect::<CargoResult<Vec<_>>>()
-            .with_context(|| {
-                format!(
-                    "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
-                    output
+            let crate_type_process = process.clone();
+            const KNOWN_CRATE_TYPES: &[CrateType] = &[
+                CrateType::Bin,
+                CrateType::Rlib,
+                CrateType::Dylib,
+                CrateType::Cdylib,
+                CrateType::Staticlib,
+                CrateType::ProcMacro,
+            ];
+            for crate_type in KNOWN_CRATE_TYPES.iter() {
+                process.arg("--crate-type").arg(crate_type.as_str());
+            }
+            let supports_split_debuginfo = rustc
+                .cached_output(
+                    process.clone().arg("-Csplit-debuginfo=packed"),
+                    extra_fingerprint,
                 )
-            })?;
+                .is_ok();
 
-        Ok(TargetInfo {
-            crate_type_process,
-            crate_types: RefCell::new(map),
-            sysroot,
-            sysroot_host_libdir,
-            sysroot_target_libdir,
+            process.arg("--print=sysroot");
+            process.arg("--print=cfg");
+
+            let (output, error) = rustc
+                .cached_output(&process, extra_fingerprint)
+                .with_context(|| {
+                    "failed to run `rustc` to learn about target-specific information"
+                })?;
+
+            let mut lines = output.lines();
+            let mut map = HashMap::new();
+            for crate_type in KNOWN_CRATE_TYPES {
+                let out = parse_crate_type(crate_type, &process, &output, &error, &mut lines)?;
+                map.insert(crate_type.clone(), out);
+            }
+
+            let line = match lines.next() {
+                Some(line) => line,
+                None => anyhow::bail!(
+                    "output of --print=sysroot missing when learning about \
+                 target-specific information from rustc\n{}",
+                    output_err_info(&process, &output, &error)
+                ),
+            };
+            let sysroot = PathBuf::from(line);
+            let sysroot_host_libdir = if cfg!(windows) {
+                sysroot.join("bin")
+            } else {
+                sysroot.join("lib")
+            };
+            let mut sysroot_target_libdir = sysroot.clone();
+            sysroot_target_libdir.push("lib");
+            sysroot_target_libdir.push("rustlib");
+            sysroot_target_libdir.push(match &kind {
+                CompileKind::Host => rustc.host.as_str(),
+                CompileKind::Target(target) => target.short_name(),
+            });
+            sysroot_target_libdir.push("lib");
+
+            let cfg = lines
+                .map(|line| Ok(Cfg::from_str(line)?))
+                .filter(TargetInfo::not_user_specific_cfg)
+                .collect::<CargoResult<Vec<_>>>()
+                .with_context(|| {
+                    format!(
+                        "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
+                        output
+                    )
+                })?;
+
             // recalculate `rustflags` from above now that we have `cfg`
             // information
-            rustflags: env_args(
+            let new_flags = env_args(
                 config,
                 requested_kinds,
                 &rustc.host,
                 Some(&cfg),
                 kind,
                 Flags::Rust,
-            )?,
-            rustdocflags: env_args(
-                config,
-                requested_kinds,
-                &rustc.host,
-                Some(&cfg),
-                kind,
-                Flags::Rustdoc,
-            )?,
-            cfg,
-            supports_split_debuginfo,
-        })
+            )?;
+
+            // Tricky: `RUSTFLAGS` defines the set of active `cfg` flags, active
+            // `cfg` flags define which `.cargo/config` sections apply, and they
+            // in turn can affect `RUSTFLAGS`! This is a bona fide mutual
+            // dependency, and it can even diverge (see `cfg_paradox` test).
+            //
+            // So what we do here is running at most *two* iterations of
+            // fixed-point iteration, which should be enough to cover
+            // practically useful cases, and warn if that's not enough for
+            // convergence.
+            let reached_fixed_point = new_flags == rustflags;
+            if !reached_fixed_point && turn == 0 {
+                turn += 1;
+                rustflags = new_flags;
+                continue;
+            }
+            if !reached_fixed_point {
+                config.shell().warn("non-trivial mutual dependency between target-specific configuration and RUSTFLAGS")?;
+            }
+
+            return Ok(TargetInfo {
+                crate_type_process,
+                crate_types: RefCell::new(map),
+                sysroot,
+                sysroot_host_libdir,
+                sysroot_target_libdir,
+                rustflags,
+                rustdocflags: env_args(
+                    config,
+                    requested_kinds,
+                    &rustc.host,
+                    Some(&cfg),
+                    kind,
+                    Flags::Rustdoc,
+                )?,
+                cfg,
+                supports_split_debuginfo,
+            });
+        }
     }
 
     fn not_user_specific_cfg(cfg: &CargoResult<Cfg>) -> bool {
@@ -597,7 +623,7 @@ impl Flags {
 /// provided) for artifacts that are always built for the host (plugins, build scripts, ...).
 /// For those artifacts, _only_ `host.*.rustflags` is respected, and no other configuration
 /// sources, _regardless of the value of `target-applies-to-host`_. This is counterintuitive, but
-/// necessary to retain bacwkards compatibility with older versions of Cargo.
+/// necessary to retain backwards compatibility with older versions of Cargo.
 fn env_args(
     config: &Config,
     requested_kinds: &[CompileKind],

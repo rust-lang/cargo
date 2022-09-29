@@ -578,7 +578,7 @@ fn profile_selection_check_all_targets_test() {
     //   Pkg  Target  Profile    Action   Reason
     //   ---  ------  -------    ------   ------
     //   bar  lib     test*       link     For bdep
-    //   bar  lib     test-panic  metdata  For tests/benches
+    //   bar  lib     test-panic  metadata  For tests/benches
     //   bdep lib     test*       link     For foo build.rs
     //   foo  custom  test*       link     For build.rs
     //

@@ -149,8 +149,7 @@ fn env_no_override() {
         )
         .build();
 
-    p.cargo("run -Zconfigurable-env")
-        .masquerade_as_nightly_cargo()
+    p.cargo("run")
         .with_stdout_contains("CARGO_PKG_NAME:unchanged")
         .run();
 }

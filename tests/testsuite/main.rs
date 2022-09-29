@@ -28,6 +28,7 @@ mod cargo_features;
 mod cargo_targets;
 mod cfg;
 mod check;
+mod check_cfg;
 mod clean;
 mod collisions;
 mod concurrent;

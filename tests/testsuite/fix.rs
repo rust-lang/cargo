@@ -861,7 +861,7 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
     }
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr(&format!(
             "\
 [CHECKING] foo [..]
@@ -907,15 +907,11 @@ fn prepare_for_latest_stable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "fundamentally always nightly")]
 fn prepare_for_already_on_latest_unstable() {
     // During the period where a new edition is coming up, but not yet stable,
     // this test will check what happens if you are already on the latest. If
     // there is no next edition, it does nothing.
-    if !is_nightly() {
-        // This test is fundamentally always nightly.
-        return;
-    }
     let next_edition = match Edition::LATEST_UNSTABLE {
         Some(next) => next,
         None => {
@@ -942,7 +938,7 @@ fn prepare_for_already_on_latest_unstable() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\
@@ -1563,7 +1559,6 @@ fn fix_edition_2021() {
         )
         .build();
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [CHECKING] foo v0.1.0 [..]
@@ -1745,7 +1740,6 @@ fn fix_with_run_cargo_in_proc_macros() {
         )
         .build();
     p.cargo("fix --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr_does_not_contain("error: could not find .rs file in rustc args")
         .run();
 }
@@ -1782,10 +1776,7 @@ fn non_edition_lint_migration() {
         .with_stderr_contains("[..]unused_imports[..]")
         .with_stderr_contains("[..]std::str::from_utf8[..]")
         .run();
-    p.cargo("fix --edition --allow-no-vcs")
-        // Remove once --force-warn is stabilized
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("fix --edition --allow-no-vcs").run();
     let contents = p.read_file("src/lib.rs");
     // Check it does not remove the "unused" import.
     assert!(contents.contains("use std::str::from_utf8;"));

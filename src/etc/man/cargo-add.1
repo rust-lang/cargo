@@ -43,6 +43,9 @@ If no source is specified, then a best effort will be made to select one, includ
 .RE
 .sp
 When you add a package that is already present, the existing entry will be updated with the flags specified.
+.sp
+Upon successful invocation, the enabled (\fB+\fR) and disabled (\fB\-\fR) \fIfeatures\fR <https://doc.rust\-lang.org/cargo/reference/features.md> of the specified
+dependency will be listed in the command's output.
 .SH "OPTIONS"
 .SS "Source options"
 .sp
@@ -185,6 +188,13 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
 .RE
 .sp
 \fB\-h\fR, 

@@ -68,7 +68,7 @@ use std::time::Instant;
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
-use crate::core::{features, CliUnstable, Shell, SourceId, Workspace};
+use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::toml as cargo_toml;
@@ -202,6 +202,8 @@ pub struct Config {
     /// NOTE: this should be set before `configure()`. If calling this from an integration test,
     /// consider using `ConfigBuilder::enable_nightly_features` instead.
     pub nightly_features_allowed: bool,
+    /// WorkspaceRootConfigs that have been found
+    pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
 }
 
 impl Config {
@@ -285,6 +287,7 @@ impl Config {
             progress_config: ProgressConfig::default(),
             env_config: LazyCell::new(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
+            ws_roots: RefCell::new(HashMap::new()),
         }
     }
 
@@ -679,25 +682,25 @@ impl Config {
         }
     }
 
-    fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> bool {
+    /// Check if the [`Config`] contains a given [`ConfigKey`].
+    ///
+    /// See `ConfigMapAccess` for a description of `env_prefix_ok`.
+    fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> CargoResult<bool> {
         if self.env.contains_key(key.as_env_key()) {
-            return true;
+            return Ok(true);
         }
-        // See ConfigMapAccess for a description of this.
         if env_prefix_ok {
             let env_prefix = format!("{}_", key.as_env_key());
             if self.env.keys().any(|k| k.starts_with(&env_prefix)) {
-                return true;
+                return Ok(true);
             }
         }
-        if let Ok(o_cv) = self.get_cv(key) {
-            if o_cv.is_some() {
-                return true;
-            }
+        if self.get_cv(key)?.is_some() {
+            return Ok(true);
         }
         self.check_environment_key_case_mismatch(key);
 
-        false
+        Ok(false)
     }
 
     fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
@@ -892,7 +895,6 @@ impl Config {
             self.unstable_flags_cli = Some(unstable_flags.to_vec());
         }
         if !cli_config.is_empty() {
-            self.unstable_flags.fail_if_stable_opt("--config", 6699)?;
             self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
             self.merge_cli_args()?;
         }
@@ -1165,6 +1167,7 @@ impl Config {
             Some(cli_args) => cli_args,
             None => return Ok(loaded_args),
         };
+        let mut seen = HashSet::new();
         for arg in cli_args {
             let arg_as_path = self.cwd.join(arg);
             let tmp_table = if !arg.is_empty() && arg_as_path.exists() {
@@ -1175,9 +1178,8 @@ impl Config {
                         anyhow::format_err!("config path {:?} is not utf-8", arg_as_path)
                     })?
                     .to_string();
-                let value = CV::String(str_path, Definition::Cli);
-                let map = HashMap::from([("include".to_string(), value)]);
-                CV::Table(map, Definition::Cli)
+                self._load_file(&self.cwd().join(&str_path), &mut seen, true)
+                    .with_context(|| format!("failed to load config from `{}`", str_path))?
             } else {
                 // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
                 // expressions followed by a value that's not an "inline table"
@@ -2193,7 +2195,7 @@ pub struct CargoBuildConfig {
     pub target_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
-    pub jobs: Option<u32>,
+    pub jobs: Option<i32>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
     pub rustc_wrapper: Option<ConfigRelativePath>,
@@ -2246,13 +2248,7 @@ impl BuildTargetConfig {
         };
         let values = match &self.inner.val {
             BuildTargetConfigInner::One(s) => vec![map(s)],
-            BuildTargetConfigInner::Many(v) => {
-                if !config.cli_unstable().multitarget {
-                    bail!("specifying an array in `build.target` config value requires `-Zmultitarget`")
-                } else {
-                    v.iter().map(map).collect()
-                }
-            }
+            BuildTargetConfigInner::Many(v) => v.iter().map(map).collect(),
         };
         Ok(values)
     }

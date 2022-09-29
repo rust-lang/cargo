@@ -17,7 +17,7 @@ fn toml_deserialize_manifest_error() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -32,7 +32,7 @@ fn toml_deserialize_manifest_error() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -66,7 +66,7 @@ fn member_manifest_path_io_error() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -81,7 +81,7 @@ fn member_manifest_path_io_error() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -116,7 +116,7 @@ fn member_manifest_version_error() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -131,7 +131,7 @@ fn member_manifest_version_error() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []

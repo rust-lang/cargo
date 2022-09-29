@@ -47,7 +47,7 @@ impl ConfigBuilder {
         self
     }
 
-    /// Unconditionaly enable nightly features, even on stable channels.
+    /// Unconditionally enable nightly features, even on stable channels.
     pub fn nightly_features_allowed(&mut self, allowed: bool) -> &mut Self {
         self.enable_nightly_features = allowed;
         self
@@ -55,10 +55,6 @@ impl ConfigBuilder {
 
     /// Passes a `--config` flag.
     pub fn config_arg(&mut self, arg: impl Into<String>) -> &mut Self {
-        if !self.unstable.iter().any(|s| s == "unstable-options") {
-            // --config is current unstable
-            self.unstable_flag("unstable-options");
-        }
         self.config_args.push(arg.into());
         self
     }
@@ -1078,10 +1074,6 @@ Dotted key `ssl-version` attempted to extend non-table type (string)
 
 ",
     );
-    assert!(config
-        .get::<Option<SslVersionConfig>>("http.ssl-version")
-        .unwrap()
-        .is_none());
 }
 
 #[cargo_test]
@@ -1128,7 +1120,7 @@ unstable.print-im-a-teapot = true
 }
 
 #[cargo_test]
-/// Assert that atempting to set an unstable flag that doesn't exist via config
+/// Assert that attempting to set an unstable flag that doesn't exist via config
 /// is ignored on stable
 fn unstable_invalid_flag_ignored_on_stable() {
     write_config(

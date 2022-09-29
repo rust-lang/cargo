@@ -3,7 +3,7 @@
 use anyhow::Context as _;
 
 use super::Dependency;
-use super::RegistrySource;
+use crate::util::toml_mut::dependency::RegistrySource;
 use crate::util::validate_package_name;
 use crate::CargoResult;
 

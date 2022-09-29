@@ -120,7 +120,7 @@ fn load_config_table(config: &Config, prefix: &str) -> CargoResult<TargetConfig>
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
     let links_overrides = match config.get_table(&target_key)? {
-        Some(links) => parse_links_overrides(&target_key, links.val)?,
+        Some(links) => parse_links_overrides(&target_key, links.val, config)?,
         None => BTreeMap::new(),
     };
     Ok(TargetConfig {
@@ -134,8 +134,14 @@ fn load_config_table(config: &Config, prefix: &str) -> CargoResult<TargetConfig>
 fn parse_links_overrides(
     target_key: &ConfigKey,
     links: HashMap<String, CV>,
+    config: &Config,
 ) -> CargoResult<BTreeMap<String, BuildOutput>> {
     let mut links_overrides = BTreeMap::new();
+    let extra_check_cfg = match config.cli_unstable().check_cfg {
+        Some((_, _, _, output)) => output,
+        None => false,
+    };
+
     for (lib_name, value) in links {
         // Skip these keys, it shares the namespace with `TargetConfig`.
         match lib_name.as_str() {
@@ -199,6 +205,17 @@ fn parse_links_overrides(
                 "rustc-cfg" => {
                     let list = value.list(key)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
+                }
+                "rustc-check-cfg" => {
+                    if extra_check_cfg {
+                        let list = value.list(key)?;
+                        output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
+                    } else {
+                        config.shell().warn(format!(
+                            "target config `{}.{}` requires -Zcheck-cfg=output flag",
+                            target_key, key
+                        ))?;
+                    }
                 }
                 "rustc-env" => {
                     for (name, val) in value.table(key)?.0 {

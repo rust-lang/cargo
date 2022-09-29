@@ -1,6 +1,5 @@
 //! Tests for proc-macros.
 
-use cargo_test_support::is_nightly;
 use cargo_test_support::project;
 
 #[cargo_test]
@@ -203,13 +202,8 @@ fn impl_and_derive() {
     p.cargo("run").with_stdout("X { success: true }").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "plugins are unstable")]
 fn plugin_and_proc_macro() {
-    if !is_nightly() {
-        // plugins are unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",

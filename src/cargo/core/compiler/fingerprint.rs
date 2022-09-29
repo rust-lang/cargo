@@ -313,7 +313,6 @@
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
 use std::collections::hash_map::{Entry, HashMap};
-use std::convert::TryInto;
 use std::env;
 use std::hash::{self, Hash, Hasher};
 use std::io;
@@ -1831,7 +1830,7 @@ pub fn translate_dep_info(
 
     // This is a bit of a tricky statement, but here we're *removing* the
     // dependency on environment variables that were defined specifically for
-    // the command itself. Environment variables returend by `get_envs` includes
+    // the command itself. Environment variables returned by `get_envs` includes
     // environment variables like:
     //
     // * `OUT_DIR` if applicable

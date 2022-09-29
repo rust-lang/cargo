@@ -1,0 +1,10 @@
+      Adding foo (workspace) to dependencies.
+             Features as of v0.0.0:
+             + default-base
+             + default-merge-base
+             + default-test-base
+             + merge
+             + merge-base
+             + test
+             + test-base
+             - unrelated

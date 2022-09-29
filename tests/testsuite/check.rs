@@ -3,11 +3,10 @@
 use std::fmt::{self, Write};
 
 use cargo_test_support::install::exe;
-use cargo_test_support::is_nightly;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, git, project};
 
 #[cargo_test]
 fn check_success() {
@@ -862,7 +861,7 @@ fn check_keep_going() {
 
     // Due to -j1, without --keep-going only one of the two bins would be built.
     foo.cargo("check -j1 --keep-going -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["keep-going"])
         .with_status(101)
         .with_stderr_contains("error: ONE")
         .with_stderr_contains("error: TWO")
@@ -871,7 +870,18 @@ fn check_keep_going() {
 
 #[cargo_test]
 fn does_not_use_empty_rustc_wrapper() {
-    let p = project().file("src/lib.rs", "").build();
+    // An empty RUSTC_WRAPPER environment variable won't be used.
+    // The env var will also override the config, essentially unsetting it.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [build]
+                rustc-wrapper = "do-not-execute-me"
+            "#,
+        )
+        .build();
     p.cargo("check").env("RUSTC_WRAPPER", "").run();
 }
 
@@ -931,7 +941,7 @@ fn rustc_workspace_wrapper_includes_path_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -987,7 +997,7 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1015,86 +1025,152 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
-fn check_cfg_features() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
+fn warn_manifest_package_and_project() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
+                [project]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] manifest at `[CWD]` contains both `project` and `package`, this could become a hard error in the future
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn git_manifest_package_and_project() {
+    let p = project();
+    let git_project = git::new("bar", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+    });
+
+    let p = p
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar]
+                version = "0.0.1"
+                git  = '{}'
+
+            "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] git repository `[..]`
+[CHECKING] bar v0.0.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn warn_manifest_with_project() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
                 [project]
                 name = "foo"
-                version = "0.1.0"
-
-                [features]
-                f_a = []
-                f_b = []
+                version = "0.0.1"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -v -Z check-cfg-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr(
             "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
+[WARNING] manifest at `[CWD]` contains `[project]` instead of `[package]`, this could become a hard error in the future
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
-fn check_cfg_well_known_names() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
-
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("check -v -Z check-cfg-well-known-names")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'names()' [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
+fn git_manifest_with_project() {
+    let p = project();
+    let git_project = git::new("bar", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            "#,
         )
-        .run();
-}
+        .file("src/lib.rs", "")
+    });
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
-#[cargo_test]
-fn check_cfg_well_known_values() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
+    let p = p
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+                [dependencies.bar]
+                version = "0.0.1"
+                git  = '{}'
+
+            "#,
+                git_project.url()
+            ),
+        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -v -Z check-cfg-well-known-values")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr(
             "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values()' [..]
+[UPDATING] git repository `[..]`
+[CHECKING] bar v0.0.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )

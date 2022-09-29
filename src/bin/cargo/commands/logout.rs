@@ -1,7 +1,7 @@
 use crate::command_prelude::*;
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("logout")
         .about("Remove an API token from the registry locally")
         .arg_quiet()
@@ -16,6 +16,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             .fail_if_stable_command(config, "logout", 8933)?;
     }
     config.load_credentials()?;
-    ops::registry_logout(config, args.value_of("registry").map(String::from))?;
+    ops::registry_logout(config, args.get_one::<String>("registry").cloned())?;
     Ok(())
 }

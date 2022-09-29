@@ -1569,8 +1569,8 @@ fn ambiguous_name() {
             "\
 error: There are multiple `dep` packages in your project, and the specification `dep` is ambiguous.
 Please re-run this command with `-p <spec>` where `<spec>` is one of the following:
-  dep:1.0.0
-  dep:2.0.0
+  dep@1.0.0
+  dep@2.0.0
 ",
         )
         .with_status(101)

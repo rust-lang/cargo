@@ -1,0 +1,5 @@
+    Updating `dummy-registry` index
+      Adding your-face v99999.0.0 to dependencies.
+error: unrecognized feature for crate your-face: noze
+disabled features:
+    ears, eyes, mouth, nose

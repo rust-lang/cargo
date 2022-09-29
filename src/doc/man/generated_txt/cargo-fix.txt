@@ -210,7 +210,8 @@ OPTIONS
            Fix for the given architecture. The default is the host
            architecture. The general format of the triple is
            <arch><sub>-<vendor>-<sys>-<abi>. Run rustc --print target-list for
-           a list of supported targets.
+           a list of supported targets. This flag may be specified multiple
+           times.
 
            This may also be specified with the build.target config value
            <https://doc.rust-lang.org/cargo/reference/config.html>.
@@ -250,12 +251,13 @@ OPTIONS
            (rather than the default) is unstable and requires
            -Zunstable-options. Valid output formats:
 
-           o  html: Write a human-readable file cargo-timing.html to the
-              target/cargo-timings directory with a report of the compilation.
-              Also write a report to the same directory with a timestamp in the
-              filename if you want to look at older runs. HTML output is
-              suitable for human consumption only, and does not provide
-              machine-readable timing data.
+           o  html (unstable, requires -Zunstable-options): Write a
+              human-readable file cargo-timing.html to the target/cargo-timings
+              directory with a report of the compilation. Also write a report
+              to the same directory with a timestamp in the filename if you
+              want to look at older runs. HTML output is suitable for human
+              consumption only, and does not provide machine-readable timing
+              data.
 
            o  json (unstable, requires -Zunstable-options): Emit
               machine-readable JSON information about timing information.
@@ -316,7 +318,7 @@ OPTIONS
               rustc's default color scheme. Cannot be used with human or short.
 
            o  json-render-diagnostics: Instruct Cargo to not include rustc
-              diagnostics in in JSON messages printed, but instead Cargo itself
+              diagnostics in JSON messages printed, but instead Cargo itself
               should render the JSON diagnostics coming from rustc. Cargo's own
               JSON diagnostics and others coming from rustc are still emitted.
               Cannot be used with human or short.
@@ -360,6 +362,14 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
        -h, --help
            Prints help information.
 
@@ -372,7 +382,9 @@ OPTIONS
            Number of parallel jobs to run. May also be specified with the
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
-           the number of CPUs.
+           the number of logical CPUs. If negative, it sets the maximum number
+           of parallel jobs to the number of logical CPUs plus provided value.
+           Should not be 0.
 
        --keep-going
            Build as many crates in the dependency graph as possible, rather
