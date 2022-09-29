@@ -115,4 +115,5 @@ doc = false
 [features]
 deny-warnings = []
 vendored-openssl = ["openssl/vendored"]
+vendored-libgit2 = ["libgit2-sys/vendored"]
 pretty-env-logger = ["pretty_env_logger"]
