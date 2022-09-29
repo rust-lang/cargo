@@ -168,7 +168,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
         None => {
             let err = if cmd.starts_with('+') {
                 anyhow::format_err!(
-                    "no such subcommand: `{}`\n\n\t\
+                    "no such command: `{}`\n\n\t\
                     Cargo does not handle `+toolchain` directives.\n\t\
                     Did you mean to invoke `cargo` through `rustup` instead?",
                     cmd
@@ -178,7 +178,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
                 let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
 
                 anyhow::format_err!(
-                    "no such subcommand: `{}`{}\n\n\t\
+                    "no such command: `{}`{}\n\n\t\
                     View all installed commands with `cargo --list`",
                     cmd,
                     did_you_mean

@@ -1314,9 +1314,16 @@ fn run_multiple_packages() {
 
     cargo().with_stdout("foo").run();
 
-    cargo().arg("-p").arg("d1").arg("-p").arg("d2")
-                    .with_status(1)
-                    .with_stderr_contains("error: The argument '--package [<SPEC>...]' was provided more than once, but cannot be used multiple times").run();
+    cargo()
+        .arg("-p")
+        .arg("d1")
+        .arg("-p")
+        .arg("d2")
+        .with_status(1)
+        .with_stderr_contains(
+            "error: The argument '--package [<SPEC>]' was provided more than once, but cannot be used multiple times",
+        )
+        .run();
 
     cargo()
         .arg("-p")

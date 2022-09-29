@@ -9,7 +9,11 @@ pub fn cli() -> Command {
         .arg_required_else_help(true)
         .subcommand(
             subcommand("get")
-                .arg(Arg::new("key").help("The config key to display"))
+                .arg(
+                    Arg::new("key")
+                        .action(ArgAction::Set)
+                        .help("The config key to display"),
+                )
                 .arg(
                     opt("format", "Display format")
                         .value_parser(cargo_config::ConfigFormat::POSSIBLE_VALUES)

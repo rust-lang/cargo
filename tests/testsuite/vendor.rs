@@ -405,10 +405,9 @@ fn test_sync_argument() {
         .with_stderr("\
 error: Found argument 'test_vendor' which wasn't expected, or isn't valid in this context
 
-USAGE:
-    cargo[EXE] vendor [OPTIONS] [path]
+Usage: cargo[EXE] vendor [OPTIONS] [path]
 
-For more information try --help",
+For more information try '--help'",
         )
         .with_status(1)
         .run();

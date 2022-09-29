@@ -15,11 +15,11 @@ const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"
 pub fn cli() -> Command {
     subcommand("help")
         .about("Displays help for a cargo subcommand")
-        .arg(Arg::new("SUBCOMMAND"))
+        .arg(Arg::new("COMMAND").action(ArgAction::Set))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let subcommand = args.get_one::<String>("SUBCOMMAND");
+    let subcommand = args.get_one::<String>("COMMAND");
     if let Some(subcommand) = subcommand {
         if !try_help(config, subcommand)? {
             crate::execute_external_subcommand(

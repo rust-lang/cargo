@@ -8,13 +8,13 @@ pub fn cli() -> Command {
     subcommand("run")
         // subcommand aliases are handled in aliased_command()
         // .alias("r")
-        .trailing_var_arg(true)
         .about("Run a binary or example of the local package")
         .arg_quiet()
         .arg(
             Arg::new("args")
                 .value_parser(value_parser!(std::ffi::OsString))
-                .multiple_values(true),
+                .num_args(0..)
+                .trailing_var_arg(true),
         )
         .arg_targets_bin_example(
             "Name of the bin target to run",
