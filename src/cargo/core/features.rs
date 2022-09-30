@@ -931,10 +931,13 @@ impl CliUnstable {
             "host-config" => self.host_config = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "features" => {
-                // For now this is still allowed (there are still some
-                // unstable options like "compare"). This should be removed at
-                // some point, and migrate to a new -Z flag for any future
-                // things.
+                // `-Z features` has been stabilized since 1.51,
+                // but `-Z features=compare` is still allowed for convenience
+                // to validate that the feature resolver resolves features
+                // in the same way as the dependency resolver,
+                // until we feel confident to remove entirely.
+                //
+                // See rust-lang/cargo#11168
                 let feats = parse_features(v);
                 let stab_is_not_empty = feats.iter().any(|feat| {
                     matches!(
