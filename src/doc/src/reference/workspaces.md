@@ -106,9 +106,6 @@ The [`resolver`] key effects how a package that is depended on in multiple
 ways with different features are resolved. Some libraries depend on it being
 set to 2.
 
-An empty `[workspace]` table can be used with a `[package]` to conveniently
-create a workspace with the package and all of its path dependencies.
-
 ### Workspace selection
 
 When inside a subdirectory within the workspace, Cargo will automatically
