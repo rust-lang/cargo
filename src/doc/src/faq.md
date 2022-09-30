@@ -97,7 +97,7 @@ We support environments through the use of [profiles] to support:
 Yes!
 
 All commits to Cargo are required to pass the local test suite on Windows.
-If, however, you find a Windows issue, we consider it a bug, so [please file an
+If you encounter an issue while running on Windows, we consider it a bug, so [please file an
 issue][3].
 
 [3]: https://github.com/rust-lang/cargo/issues
