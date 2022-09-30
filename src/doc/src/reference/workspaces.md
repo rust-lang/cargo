@@ -68,7 +68,12 @@ you want to keep all the packages organized in separate directories.
 # [PROJECT_DIR]/Cargo.toml
 [workspace]
 members = ["hello_world"]
+resolver = "2"
 ```
+
+The [`resolver`] key here effects how a package that is depended on in multiple
+ways with different features are resolved. Some libraries depend on it being
+set to 2.
 
 ```toml
 # [PROJECT_DIR]/hello_world/Cargo.toml
@@ -77,6 +82,7 @@ name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
+
 
 ### The `members` and `exclude` fields 
 
@@ -87,7 +93,6 @@ the workspace:
 [workspace]
 members = ["member1", "path/to/member2", "crates/*"]
 exclude = ["crates/foo", "path/to/other"]
-resolver = "2"
 ```
 
 All [`path` dependencies] residing in the workspace directory automatically
@@ -101,10 +106,6 @@ The `exclude` key can be used to prevent paths from being included in a
 workspace. This can be useful if some path dependencies aren't desired to be
 in the workspace at all, or using a glob pattern and you want to remove a
 directory.
-
-The [`resolver`] key effects how a package that is depended on in multiple
-ways with different features are resolved. Some libraries depend on it being
-set to 2.
 
 ### Workspace selection
 
