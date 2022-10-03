@@ -1073,3 +1073,129 @@ feat3 = ["feat2"]
         )],
     );
 }
+
+#[cargo_test]
+fn namespaced_feature_together() {
+    // Check for an error when `dep:` is used with `/`
+    Package::new("bar", "1.0.0")
+        .feature("bar-feat", &[])
+        .publish();
+
+    // Non-optional shouldn't have extra err.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+
+                [features]
+                f1 = ["dep:bar/bar-feat"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
+  To fix this, remove the `dep:` prefix.
+",
+        )
+        .run();
+
+    // Weak dependency shouldn't have extra err.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = {version = "1.0", optional = true }
+
+            [features]
+            f1 = ["dep:bar?/bar-feat"]
+        "#,
+    );
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `f1` includes `dep:bar?/bar-feat` with both `dep:` and `/`
+  To fix this, remove the `dep:` prefix.
+",
+        )
+        .run();
+
+    // If dep: is already specified, shouldn't have extra err.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = {version = "1.0", optional = true }
+
+            [features]
+            f1 = ["dep:bar", "dep:bar/bar-feat"]
+        "#,
+    );
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
+  To fix this, remove the `dep:` prefix.
+",
+        )
+        .run();
+
+    // Only when the other 3 cases aren't true should it give some extra help.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = {version = "1.0", optional = true }
+
+            [features]
+            f1 = ["dep:bar/bar-feat"]
+        "#,
+    );
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
+  To fix this, remove the `dep:` prefix.
+  If the intent is to avoid creating an implicit feature `bar` for an optional \
+  dependency, then consider replacing this with two values:
+      \"dep:bar\", \"bar/bar-feat\"
+",
+        )
+        .run();
+}

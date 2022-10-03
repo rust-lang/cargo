@@ -277,6 +277,36 @@ fn build_feature_map(
                             feature
                         );
                     }
+
+                    // dep: cannot be combined with /
+                    if let Some(stripped_dep) = dep_name.strip_prefix("dep:") {
+                        let has_other_dep = explicitly_listed.contains(stripped_dep);
+                        let is_optional = dep_map
+                            .get(stripped_dep)
+                            .iter()
+                            .flat_map(|d| d.iter())
+                            .any(|d| d.is_optional());
+                        let extra_help = if *weak || has_other_dep || !is_optional {
+                            // In this case, the user should just remove dep:.
+                            // Note that "hiding" an optional dependency
+                            // wouldn't work with just a single `dep:foo?/bar`
+                            // because there would not be any way to enable
+                            // `foo`.
+                            String::new()
+                        } else {
+                            format!(
+                                "\nIf the intent is to avoid creating an implicit feature \
+                                 `{stripped_dep}` for an optional dependency, \
+                                 then consider replacing this with two values:\n    \
+                                 \"dep:{stripped_dep}\", \"{stripped_dep}/{dep_feature}\""
+                            )
+                        };
+                        bail!(
+                            "feature `{feature}` includes `{fv}` with both `dep:` and `/`\n\
+                            To fix this, remove the `dep:` prefix.{extra_help}"
+                        )
+                    }
+
                     // Validation of the feature name will be performed in the resolver.
                     if !is_any_dep {
                         bail!(
