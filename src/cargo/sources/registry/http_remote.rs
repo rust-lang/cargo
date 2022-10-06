@@ -503,7 +503,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             match fs::read(&config_json_path) {
                 Ok(raw_data) => match serde_json::from_slice(&raw_data) {
                     Ok(json) => {
-                        self.registry_config = Some(json);
+                        self.registry_config = self.source_id.override_registry_config(Some(json));
                         return Poll::Ready(Ok(self.registry_config.clone()));
                     }
                     Err(e) => log::debug!("failed to decode cached config.json: {}", e),

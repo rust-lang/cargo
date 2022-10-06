@@ -1,5 +1,5 @@
 use crate::core::PackageId;
-use crate::sources::registry::CRATES_IO_HTTP_INDEX;
+use crate::sources::registry::{RegistryConfig, CRATES_IO_HTTP_INDEX};
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
@@ -39,6 +39,9 @@ struct SourceIdInner {
     /// WARNING: this is not always set for alt-registries when the name is
     /// not known.
     name: Option<String>,
+    /// The registry config. This config is set by cargo config file and will
+    /// override config.json of the registry.
+    registry_config: Option<RegistryConfig>,
 }
 
 /// The possible kinds of code source. Along with `SourceIdInner`, this fully defines the
@@ -81,6 +84,27 @@ impl SourceId {
             url,
             precise: None,
             name: name.map(|n| n.into()),
+            registry_config: None,
+        });
+        Ok(source_id)
+    }
+
+    /// Creates a `SourceId` object from the kind, URL and a RegistryConfig.
+    ///
+    /// The provided RegistryConfig will override config.json of the registry.
+    fn new_with_registry_config(
+        kind: SourceKind,
+        url: Url,
+        name: Option<&str>,
+        registry_config: Option<RegistryConfig>,
+    ) -> CargoResult<SourceId> {
+        let source_id = SourceId::wrap(SourceIdInner {
+            kind,
+            canonical_url: CanonicalUrl::new(&url)?,
+            url,
+            precise: None,
+            name: name.map(|n| n.into()),
+            registry_config,
         });
         Ok(source_id)
     }
@@ -178,9 +202,27 @@ impl SourceId {
         SourceId::new(SourceKind::Registry, url.clone(), None)
     }
 
-    /// Creates a `SourceId` from a remote registry URL with given name.
-    pub fn for_alt_registry(url: &Url, name: &str) -> CargoResult<SourceId> {
-        SourceId::new(SourceKind::Registry, url.clone(), Some(name))
+    /// Creates a `SourceId` from a remote registry URL with given name and the optional
+    /// registry config(dl and api).
+    pub fn for_alt_registry(
+        url: &Url,
+        name: &str,
+        dl: Option<&str>,
+        api: Option<&str>,
+    ) -> CargoResult<SourceId> {
+        SourceId::new_with_registry_config(
+            SourceKind::Registry,
+            url.clone(),
+            Some(name),
+            if let Some(dl) = dl {
+                Some(RegistryConfig {
+                    dl: dl.into(),
+                    api: api.map(|api| api.into()),
+                })
+            } else {
+                None
+            },
+        )
     }
 
     /// Creates a SourceId from a local registry path.
@@ -228,6 +270,7 @@ impl SourceId {
             url,
             precise: None,
             name: Some(key.to_string()),
+            registry_config: None,
         }))
     }
 
@@ -292,6 +335,29 @@ impl SourceId {
     /// necessarily "remote". This just means it is not `local-registry`.
     pub fn is_remote_registry(self) -> bool {
         matches!(self.inner.kind, SourceKind::Registry)
+    }
+
+    /// Return `RegistryConfig` set by cargo config file.
+    pub fn get_registry_config(&self) -> Option<RegistryConfig> {
+        self.inner.registry_config.clone()
+    }
+
+    /// Override ori_config with the `RegistryConfig` which set by cargo config file,
+    /// return the overrided version of `RegistryConfig`.
+    pub fn override_registry_config(
+        &self,
+        ori_config: Option<RegistryConfig>,
+    ) -> Option<RegistryConfig> {
+        let registry_config = self.get_registry_config();
+        ori_config.map_or(registry_config.clone(), |mut v| {
+            if let Some(registry_config) = registry_config {
+                v.dl = registry_config.dl.clone();
+                if registry_config.api.is_some() {
+                    v.api = registry_config.api;
+                }
+            }
+            Some(v)
+        })
     }
 
     /// Returns `true` if this source from a Git repository.

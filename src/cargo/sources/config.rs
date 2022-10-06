@@ -33,6 +33,10 @@ struct SourceConfigDef {
     directory: Option<ConfigRelativePath>,
     /// A registry source. Value is a URL.
     registry: OptValue<String>,
+    /// A URL to download crates. Override the dl field in config.json.
+    dl: OptValue<String>,
+    /// A URL to for registry api. Override the api field value in config.json.
+    api: OptValue<String>,
     /// A local registry source.
     local_registry: Option<ConfigRelativePath>,
     /// A git source. Value is a URL.
@@ -216,7 +220,14 @@ restore the source replacement configuration to continue the build
         let mut srcs = Vec::new();
         if let Some(registry) = def.registry {
             let url = url(&registry, &format!("source.{}.registry", name))?;
-            srcs.push(SourceId::for_alt_registry(&url, &name)?);
+            let dl = def.dl.map(|v| v.val.clone());
+            let api = def.api.map(|v| v.val.clone());
+            srcs.push(SourceId::for_alt_registry(
+                &url,
+                &name,
+                dl.as_deref(),
+                api.as_deref(),
+            )?);
         }
         if let Some(local_registry) = def.local_registry {
             let path = local_registry.resolve_path(self.config);

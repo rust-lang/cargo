@@ -239,7 +239,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
             LoadResponse::Data { raw_data, .. } => {
                 trace!("config loaded");
-                Poll::Ready(Ok(Some(serde_json::from_slice(&raw_data)?)))
+                Poll::Ready(Ok(self
+                    .source_id
+                    .override_registry_config(Some(serde_json::from_slice(&raw_data)?))))
             }
             _ => Poll::Ready(Ok(None)),
         }
