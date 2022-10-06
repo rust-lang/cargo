@@ -25,6 +25,7 @@ mod cargo_command;
 mod cargo_config;
 mod cargo_env_config;
 mod cargo_features;
+mod cargo_remove;
 mod cargo_targets;
 mod cfg;
 mod check;
