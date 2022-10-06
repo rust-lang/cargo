@@ -921,8 +921,8 @@ fn publish_with_no_default_features() {
 
     p.cargo("publish --no-default-features")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("error: This crate requires `required` feature!")
         .with_status(101)
+        .with_stderr_contains("error: This crate requires `required` feature!")
         .run();
 }
 
@@ -964,8 +964,8 @@ fn publish_with_patch() {
     // Check that verify fails with patched crate which has new functionality.
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("[..]newfunc[..]")
         .with_status(101)
+        .with_stderr_contains("[..]newfunc[..]")
         .run();
 
     // Remove the usage of new functionality and try again.
