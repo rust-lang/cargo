@@ -20,7 +20,7 @@ fn check_with_invalid_artifact_dependency() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "unknown" }
             "#,
@@ -2261,5 +2261,58 @@ fn build_script_features_for_shared_dependency() {
 
     p.cargo("build -Z bindeps -v")
         .masquerade_as_nightly_cargo(&["bindeps"])
+        .run();
+}
+
+#[cargo_test]
+fn build_with_target_and_optional() {
+    // This is a incorrect behaviour got to be fixed.
+    // See rust-lang/cargo#10526
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                d1 = { path = "d1", artifact = "bin", optional = true, target = "$TARGET" }
+            "#
+            .replace("$TARGET", target),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let _b = include_bytes!(env!("CARGO_BIN_FILE_D1"));
+                }
+            "#,
+        )
+        .file(
+            "d1/Cargo.toml",
+            r#"
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                edition = "2021"
+            "#,
+        )
+        .file("d1/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Z bindeps -F d1 -v")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_contains(
+            "\
+[ERROR] environment variable `CARGO_BIN_FILE_D1` not defined
+",
+    )
+        .with_status(101)
         .run();
 }
