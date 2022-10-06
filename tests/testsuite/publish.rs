@@ -1047,7 +1047,6 @@ fn publish_checks_for_token_before_verify() {
     // Assert package verified successfully on dry run
     p.cargo("publish --dry-run")
         .replace_crates_io(registry.index_url())
-        .with_status(0)
         .with_stderr_contains("[VERIFYING] foo v0.0.1 ([CWD])")
         .run();
 }
