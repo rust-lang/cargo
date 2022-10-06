@@ -45,6 +45,7 @@ mod cargo_output_metadata;
 mod cargo_package;
 mod cargo_pkgid;
 mod cargo_read_manifest;
+pub mod cargo_remove;
 mod cargo_run;
 mod cargo_test;
 mod cargo_uninstall;
