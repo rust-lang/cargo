@@ -1,17 +1,16 @@
-//! Feature resolver.
+//! # Feature resolver
 //!
-//! This is a new feature resolver that runs independently of the main
+//! This is a [new feature resolver] that runs independently of the main
 //! dependency resolver. It has several options which can enable new feature
 //! resolution behavior.
 //!
 //! One of its key characteristics is that it can avoid unifying features for
-//! shared dependencies in some situations. See `FeatureOpts` for the
+//! shared dependencies in some situations. See [`FeatureOpts`] for the
 //! different behaviors that can be enabled. If no extra options are enabled,
 //! then it should behave exactly the same as the dependency resolver's
 //! feature resolution.
 //!
-//! The preferred way to engage this new resolver is via
-//! `resolve_ws_with_opts`.
+//! The preferred way to engage this new resolver is via [`resolve_ws_with_opts`].
 //!
 //! This does not *replace* feature resolution in the dependency resolver, but
 //! instead acts as a second pass which can *narrow* the features selected in
@@ -24,11 +23,19 @@
 //! we could experiment with that, but it seems unlikely to work or be all
 //! that helpful.
 //!
-//! There are many assumptions made about the dependency resolver. This
-//! feature resolver assumes validation has already been done on the feature
-//! maps, and doesn't do any validation itself. It assumes dev-dependencies
-//! within a dependency have been removed. There are probably other
-//! assumptions that I am forgetting.
+//! ## Assumptions
+//!
+//! There are many assumptions made about the dependency resolver:
+//!
+//! * Assumes feature validation has already been done during the construction
+//!   of feature maps, so the feature resolver doesn't do that validation at all.
+//! * Assumes `dev-dependencies` within a dependency have been removed
+//!   in the given [`Resolve`].
+//!
+//! There are probably other assumptions that I am forgetting.
+//!
+//! [new feature resolver]: https://doc.rust-lang.org/nightly/cargo/reference/resolver.html#feature-resolver-version-2
+//! [`resolve_ws_with_opts`]: crate::ops::resolve_ws_with_opts
 
 use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
 use crate::core::dependency::{ArtifactTarget, DepKind, Dependency};
@@ -42,7 +49,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
 /// The key used in various places to store features for a particular dependency.
-/// The actual discrimination happens with the `FeaturesFor` type.
+/// The actual discrimination happens with the [`FeaturesFor`] type.
 type PackageFeaturesKey = (PackageId, FeaturesFor);
 /// Map of activated features.
 type ActivateMap = HashMap<PackageFeaturesKey, BTreeSet<InternedString>>;
@@ -393,6 +400,12 @@ impl ResolvedFeatures {
 /// Key is `(pkg_id, for_host)`. Value is a set of features or dependencies removed.
 pub type DiffMap = BTreeMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 
+/// The new feature resolver that [`resolve`]s your project.
+///
+/// For more information, please see the [module-level documentation].
+///
+/// [`resolve`]: Self::resolve
+/// [module-level documentation]: crate::core::resolver::features
 pub struct FeatureResolver<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
     target_data: &'a RustcTargetData<'cfg>,
@@ -428,7 +441,7 @@ pub struct FeatureResolver<'a, 'cfg> {
 }
 
 impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
-    /// Runs the resolution algorithm and returns a new `ResolvedFeatures`
+    /// Runs the resolution algorithm and returns a new [`ResolvedFeatures`]
     /// with the result.
     pub fn resolve(
         ws: &Workspace<'cfg>,
@@ -495,6 +508,10 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         Ok(())
     }
 
+    /// Activates [`FeatureValue`]s on the given package.
+    ///
+    /// This is the main entrance into the recursion of feature activation
+    /// for a package.
     fn activate_pkg(
         &mut self,
         pkg_id: PackageId,
