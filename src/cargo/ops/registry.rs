@@ -28,7 +28,7 @@ use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_I
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::IntoUrl;
+use crate::util::{truncate_with_ellipsis, IntoUrl};
 use crate::{drop_print, drop_println, version};
 
 mod auth;
@@ -963,18 +963,6 @@ pub fn search(
     limit: u32,
     reg: Option<String>,
 ) -> CargoResult<()> {
-    fn truncate_with_ellipsis(s: &str, max_width: usize) -> String {
-        // We should truncate at grapheme-boundary and compute character-widths,
-        // yet the dependencies on unicode-segmentation and unicode-width are
-        // not worth it.
-        let mut chars = s.chars();
-        let mut prefix = (&mut chars).take(max_width - 1).collect::<String>();
-        if chars.next().is_some() {
-            prefix.push('…');
-        }
-        prefix
-    }
-
     let (mut registry, _, source_id) =
         registry(config, None, index.as_deref(), reg.as_deref(), false, false)?;
     let (crates, total_crates) = registry.search(query, limit).with_context(|| {

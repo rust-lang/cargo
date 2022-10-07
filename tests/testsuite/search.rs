@@ -78,7 +78,7 @@ postgres = \"0.17.3\"    # A native, synchronous PostgreSQL client
 fn setup() -> RegistryBuilder {
     RegistryBuilder::new()
         .http_api()
-        .add_responder("/api/v1/crates", |_| Response {
+        .add_responder("/api/v1/crates", |_, _| Response {
             code: 200,
             headers: vec![],
             body: SEARCH_API_RESPONSE.to_vec(),

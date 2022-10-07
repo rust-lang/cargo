@@ -11,6 +11,7 @@ use cargo_test_support::{git, install::cargo_home, t};
 use cargo_util::paths::remove_dir_all;
 use std::fs::{self, File};
 use std::path::Path;
+use std::sync::Mutex;
 
 fn cargo_http(p: &Project, s: &str) -> Execs {
     let mut e = p.cargo(s);
@@ -2737,6 +2738,60 @@ Caused by:
 
 Caused by:
   maximum limit reached when reading
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn sparse_retry() {
+    let fail_count = Mutex::new(0);
+    let _registry = RegistryBuilder::new()
+        .http_index()
+        .add_responder("/index/3/b/bar", move |req, server| {
+            let mut fail_count = fail_count.lock().unwrap();
+            if *fail_count < 2 {
+                *fail_count += 1;
+                server.internal_server_error(req)
+            } else {
+                server.index(req)
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = ">= 0.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+
+    cargo_http(&p, "build")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `[..]`, got 500
+body:
+internal server error
+warning: spurious network error (1 tries remaining): failed to get successful HTTP response from `[..]`, got 500
+body:
+internal server error
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[COMPILING] bar v0.0.1
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();

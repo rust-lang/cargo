@@ -1443,7 +1443,7 @@ fn api_error_json() {
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
-        .add_responder("/api/v1/crates/new", |_| Response {
+        .add_responder("/api/v1/crates/new", |_, _| Response {
             body: br#"{"errors": [{"detail": "you must be logged in"}]}"#.to_vec(),
             code: 403,
             headers: vec![],
@@ -1490,7 +1490,7 @@ fn api_error_200() {
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
-        .add_responder("/api/v1/crates/new", |_| Response {
+        .add_responder("/api/v1/crates/new", |_, _| Response {
             body: br#"{"errors": [{"detail": "max upload size is 123"}]}"#.to_vec(),
             code: 200,
             headers: vec![],
@@ -1537,7 +1537,7 @@ fn api_error_code() {
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
-        .add_responder("/api/v1/crates/new", |_| Response {
+        .add_responder("/api/v1/crates/new", |_, _| Response {
             body: br#"go away"#.to_vec(),
             code: 400,
             headers: vec![],
@@ -1590,7 +1590,7 @@ fn api_curl_error() {
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
-        .add_responder("/api/v1/crates/new", |_| {
+        .add_responder("/api/v1/crates/new", |_, _| {
             panic!("broke");
         })
         .build();
@@ -1639,7 +1639,7 @@ fn api_other_error() {
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
-        .add_responder("/api/v1/crates/new", |_| Response {
+        .add_responder("/api/v1/crates/new", |_, _| Response {
             body: b"\xff".to_vec(),
             code: 200,
             headers: vec![],
