@@ -1872,7 +1872,9 @@ fn env_vars_and_build_products_for_various_build_targets() {
 
 #[cargo_test]
 fn publish_artifact_dep() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
+
     Package::new("bar", "1.0.0").publish();
     Package::new("baz", "1.0.0").publish();
 
@@ -1900,6 +1902,15 @@ fn publish_artifact_dep() {
         )
         .file("src/lib.rs", "")
         .build();
+
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "")
+        .publish();
 
     p.cargo("publish -Z bindeps --no-verify")
         .replace_crates_io(registry.index_url())
