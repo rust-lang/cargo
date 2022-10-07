@@ -879,16 +879,8 @@ impl Package {
         self
     }
 
-    /// Call with `true` to publish a git dependency in a "local registry".
-    ///
-    /// The difference between this and [Package::local] is that this will
-    /// skip checksum generation as git dependencies do not have checksums.
-    ///
-    /// See `source-replacement.html#local-registry-sources` for more details
-    /// on local registries. See `local_registry.rs` for the tests that use
-    /// this.
-    pub fn local_from_git(&mut self, local: bool) -> &mut Package {
-        self.local = local;
+    /// Call with `true` to prevent a checksum being generated for the package.
+    pub fn skip_checksum(&mut self, local: bool) -> &mut Package {
         self.generate_checksum = !local;
         self
     }

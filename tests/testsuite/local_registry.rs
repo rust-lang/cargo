@@ -563,7 +563,8 @@ fn git_dependencies_do_not_require_a_checksum() {
     t!(fs::create_dir(&root.join(".cargo")));
 
     Package::new("bar", "0.0.1")
-        .local_from_git(true)
+        .local(true)
+        .skip_checksum(true)
         .file("src/lib.rs", "pub fn bar() {}")
         .publish();
 
