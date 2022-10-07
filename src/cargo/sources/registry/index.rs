@@ -858,7 +858,9 @@ impl IndexSummary {
             }
         }
         let mut summary = Summary::new(config, pkgid, deps, &features, links)?;
-        cksum.map(|cksum| summary.set_checksum(cksum));
+        if let Some(cksum) = cksum {
+            summary.set_checksum(cksum);
+        }
         Ok(IndexSummary {
             summary,
             yanked: yanked.unwrap_or(false),
