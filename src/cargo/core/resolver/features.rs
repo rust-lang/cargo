@@ -325,17 +325,10 @@ impl ResolvedFeatures {
     ///
     /// This handles dependencies disabled via `cfg` expressions and optional
     /// dependencies which are not enabled.
-    pub fn is_dep_activated(
-        &self,
-        pkg_id: PackageId,
-        features_for: FeaturesFor,
-        dep_name: InternedString,
-    ) -> bool {
-        let key = features_for.apply_opts(&self.opts);
-        self.activated_dependencies
-            .get(&(pkg_id, key))
-            .map(|deps| deps.contains(&dep_name))
-            .unwrap_or(false)
+    pub fn is_activated(&self, pkg_id: PackageId, features_for: FeaturesFor) -> bool {
+        log::trace!("is_activated {} {features_for}", pkg_id.name());
+        self.activated_features_unverified(pkg_id, features_for.apply_opts(&self.opts))
+            .is_some()
     }
 
     /// Variant of `activated_features` that returns `None` if this is
@@ -475,7 +468,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         }
         Ok(ResolvedFeatures {
             activated_features: r.activated_features,
-            activated_dependencies: r.activated_dependencies,
             opts: r.opts,
         })
     }

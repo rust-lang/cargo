@@ -2308,11 +2308,14 @@ fn build_with_target_and_optional() {
 
     p.cargo("build -Z bindeps -F d1 -v")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_contains(
+        .with_stderr(
             "\
-[ERROR] environment variable `CARGO_BIN_FILE_D1` not defined
+[COMPILING] d1 v0.0.1 [..]
+[RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
+[COMPILING] foo v0.0.1 [..]
+[RUNNING] `rustc --crate-name foo [..]--cfg[..]d1[..]
+[FINISHED] dev [..]
 ",
-    )
-        .with_status(101)
+        )
         .run();
 }
