@@ -15,7 +15,7 @@ pub fn cli() -> Command {
             Arg::new("args")
                 .help("Arguments for the test binary")
                 .num_args(0..)
-                .trailing_var_arg(true),
+                .last(true),
         )
         .arg(
             flag(

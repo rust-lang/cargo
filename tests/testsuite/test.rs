@@ -725,13 +725,101 @@ fn dont_run_examples() {
 }
 
 #[cargo_test]
-fn pass_through_command_line() {
+fn pass_through_escaped() {
     let p = project()
         .file(
             "src/lib.rs",
             "
-            #[test] fn foo() {}
-            #[test] fn bar() {}
+            /// ```rust
+            /// assert!(foo::foo());
+            /// ```
+            pub fn foo() -> bool {
+                true
+            }
+
+            /// ```rust
+            /// assert!(!foo::bar());
+            /// ```
+            pub fn bar() -> bool {
+                false
+            }
+
+            #[test] fn test_foo() {
+                assert!(foo());
+            }
+            #[test] fn test_bar() {
+                assert!(!bar());
+            }
+        ",
+        )
+        .build();
+
+    p.cargo("test -- bar")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[DOCTEST] foo
+",
+        )
+        .with_stdout_contains("running 1 test")
+        .with_stdout_contains("test test_bar ... ok")
+        .run();
+
+    p.cargo("test -- foo")
+        .with_stderr(
+            "\
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[DOCTEST] foo
+",
+        )
+        .with_stdout_contains("running 1 test")
+        .with_stdout_contains("test test_foo ... ok")
+        .run();
+
+    p.cargo("test -- foo bar")
+        .with_stderr(
+            "\
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[DOCTEST] foo
+",
+        )
+        .with_stdout_contains("running 2 tests")
+        .with_stdout_contains("test test_foo ... ok")
+        .with_stdout_contains("test test_bar ... ok")
+        .run();
+}
+
+// Unlike `pass_through_escaped`, doctests won't run when using `testname` as an optimization
+#[cargo_test]
+fn pass_through_testname() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+            /// ```rust
+            /// assert!(foo::foo());
+            /// ```
+            pub fn foo() -> bool {
+                true
+            }
+
+            /// ```rust
+            /// assert!(!foo::bar());
+            /// ```
+            pub fn bar() -> bool {
+                false
+            }
+
+            #[test] fn test_foo() {
+                assert!(foo());
+            }
+            #[test] fn test_bar() {
+                assert!(!bar());
+            }
         ",
         )
         .build();
@@ -745,7 +833,7 @@ fn pass_through_command_line() {
 ",
         )
         .with_stdout_contains("running 1 test")
-        .with_stdout_contains("test bar ... ok")
+        .with_stdout_contains("test test_bar ... ok")
         .run();
 
     p.cargo("test foo")
@@ -756,7 +844,19 @@ fn pass_through_command_line() {
 ",
         )
         .with_stdout_contains("running 1 test")
-        .with_stdout_contains("test foo ... ok")
+        .with_stdout_contains("test test_foo ... ok")
+        .run();
+
+    p.cargo("test foo -- bar")
+        .with_stderr(
+            "\
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+",
+        )
+        .with_stdout_contains("running 2 tests")
+        .with_stdout_contains("test test_foo ... ok")
+        .with_stdout_contains("test test_bar ... ok")
         .run();
 }
 

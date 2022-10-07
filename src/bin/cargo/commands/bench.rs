@@ -14,7 +14,7 @@ pub fn cli() -> Command {
             Arg::new("args")
                 .help("Arguments for the bench binary")
                 .num_args(0..)
-                .trailing_var_arg(true),
+                .last(true),
         )
         .arg_targets_all(
             "Benchmark only this package's library",
