@@ -209,6 +209,14 @@ fn simple_with_index() {
         .arg(registry.token())
         .arg("--index")
         .arg(registry.index_url().as_str())
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     validate_upload_foo();
@@ -325,6 +333,7 @@ The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
 #[cargo_test]
 fn dont_publish_dirty() {
     let registry = registry::init();
+
     let p = project().file("bar", "").build();
 
     let _ = git::repo(&paths::root().join("foo"))
@@ -388,6 +397,15 @@ fn publish_clean() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     validate_upload_foo_clean();
@@ -420,6 +438,15 @@ fn publish_in_sub_repo() {
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .cwd("bar")
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     validate_upload_foo_clean();
@@ -452,6 +479,15 @@ fn publish_when_ignored() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     publish::validate_upload(
@@ -494,6 +530,15 @@ fn ignore_when_crate_ignored() {
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .cwd("bar")
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     publish::validate_upload(
@@ -669,7 +714,17 @@ fn publish_allowed_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --registry alternative").run();
+    p.cargo("publish --registry alternative")
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
+        .run();
 
     publish::validate_alt_upload(
         CLEAN_FOO_JSON,
@@ -709,7 +764,18 @@ fn publish_implicitly_to_only_allowed_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish").run();
+    p.cargo("publish")
+        .with_stderr(
+            "\
+[NOTE] Found `alternative` as only allowed registry. Publishing to it automatically.
+[UPDATING] `alternative` index
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
+        .run();
 
     publish::validate_alt_upload(
         CLEAN_FOO_JSON,
@@ -820,6 +886,17 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] [..]
+[..]
+[PACKAGING] [..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 }
 
@@ -995,6 +1072,18 @@ fn publish_with_patch() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     publish::validate_upload(
@@ -1179,6 +1268,14 @@ fn publish_git_with_version() {
     p.cargo("run").with_stdout("2").run();
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.1.0 ([CWD])",
+        )
         .run();
 
     publish::validate_upload_with_contents(
@@ -2117,7 +2214,7 @@ fn http_api_not_noop() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2130,6 +2227,17 @@ fn http_api_not_noop() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     let p = project()
