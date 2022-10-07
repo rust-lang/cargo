@@ -768,6 +768,10 @@ pub fn registry_login(
         }
     };
 
+    if token.is_empty() {
+        bail!("please provide a non-empty token");
+    }
+
     if let RegistryConfig::Token(old_token) = &reg_cfg {
         if old_token == &token {
             config.shell().status("Login", "already logged in")?;
