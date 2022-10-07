@@ -133,10 +133,10 @@ See [..]
     validate_upload_foo();
 }
 
+// Check that the `token` key works at the root instead of under a
+// `[registry]` table.
 #[cargo_test]
 fn old_token_location() {
-    // Check that the `token` key works at the root instead of under a
-    // `[registry]` table.
     let registry = registry::init();
 
     let p = project()
@@ -787,9 +787,9 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
         .run();
 }
 
+// Explicitly setting `crates-io` in the publish list.
 #[cargo_test]
 fn publish_with_crates_io_explicit() {
-    // Explicitly setting `crates-io` in the publish list.
     let registry = registry::init();
 
     let p = project()
@@ -1100,10 +1100,10 @@ include `--registry crates-io` to use crates.io
         .run();
 }
 
+// A dependency with both `git` and `version`.
 #[cargo_test]
 fn publish_git_with_version() {
     let registry = registry::init();
-    // A dependency with both `git` and `version`.
     Package::new("dep1", "1.0.1")
         .file("src/lib.rs", "pub fn f() -> i32 {1}")
         .publish();
@@ -1345,10 +1345,10 @@ fn credentials_ambiguous_filename() {
     validate_upload_foo();
 }
 
+// --index will not load registry.token to avoid possibly leaking
+// crates.io token to another server.
 #[cargo_test]
 fn index_requires_token() {
-    // --index will not load registry.token to avoid possibly leaking
-    // crates.io token to another server.
     let registry = registry::init();
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
@@ -1380,9 +1380,9 @@ fn index_requires_token() {
         .run();
 }
 
+// publish with source replacement without --registry
 #[cargo_test]
 fn cratesio_source_replacement() {
-    // publish with source replacement without --registry
     registry::init();
     let p = project()
         .file(
@@ -1451,9 +1451,9 @@ Caused by:
         .run();
 }
 
+// Registry returns an API error.
 #[cargo_test]
 fn api_error_json() {
-    // Registry returns an API error.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -1498,9 +1498,9 @@ Caused by:
         .run();
 }
 
+// Registry returns an API error with a 200 status code.
 #[cargo_test]
 fn api_error_200() {
-    // Registry returns an API error with a 200 status code.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -1545,9 +1545,9 @@ Caused by:
         .run();
 }
 
+// Registry returns an error code without a JSON message.
 #[cargo_test]
 fn api_error_code() {
-    // Registry returns an error code without a JSON message.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -1598,9 +1598,9 @@ Caused by:
         .run();
 }
 
+// Registry has a network error.
 #[cargo_test]
 fn api_curl_error() {
-    // Registry has a network error.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -1647,9 +1647,9 @@ Caused by:
         .run();
 }
 
+// Registry returns an invalid response.
 #[cargo_test]
 fn api_other_error() {
-    // Registry returns an invalid response.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
