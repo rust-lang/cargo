@@ -66,7 +66,8 @@ fn publish_with_target() {
         return;
     }
 
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(

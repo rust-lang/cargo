@@ -85,20 +85,6 @@ fn validate_upload_li() {
     );
 }
 
-fn validate_upload_foo_clean() {
-    publish::validate_upload(
-        CLEAN_FOO_JSON,
-        "foo-0.0.1.crate",
-        &[
-            "Cargo.lock",
-            "Cargo.toml",
-            "Cargo.toml.orig",
-            "src/main.rs",
-            ".cargo_vcs_info.json",
-        ],
-    );
-}
-
 #[cargo_test]
 fn simple() {
     // HACK below allows us to use a local registry
@@ -148,7 +134,8 @@ See [..]
 // `[registry]` table.
 #[cargo_test]
 fn old_token_location() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -193,12 +180,14 @@ See [..]
         )
         .run();
 
-    validate_upload_foo();
+    // Skip `validate_upload_foo` as we just cared we got far enough for verify the token behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn simple_with_index() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -230,7 +219,8 @@ fn simple_with_index() {
         )
         .run();
 
-    validate_upload_foo();
+    // Skip `validate_upload_foo` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
@@ -388,7 +378,8 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 
 #[cargo_test]
 fn publish_clean() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project().build();
 
@@ -423,12 +414,14 @@ fn publish_clean() {
         )
         .run();
 
-    validate_upload_foo_clean();
+    // Skip `validate_upload_foo_clean` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn publish_in_sub_repo() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project().no_manifest().file("baz", "").build();
 
@@ -464,12 +457,14 @@ fn publish_in_sub_repo() {
         )
         .run();
 
-    validate_upload_foo_clean();
+    // Skip `validate_upload_foo_clean` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn publish_when_ignored() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project().file("baz", "").build();
 
@@ -505,23 +500,14 @@ fn publish_when_ignored() {
         )
         .run();
 
-    publish::validate_upload(
-        CLEAN_FOO_JSON,
-        "foo-0.0.1.crate",
-        &[
-            "Cargo.lock",
-            "Cargo.toml",
-            "Cargo.toml.orig",
-            "src/main.rs",
-            ".gitignore",
-            ".cargo_vcs_info.json",
-        ],
-    );
+    // Skip `validate_upload` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn ignore_when_crate_ignored() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project().no_manifest().file("bar/baz", "").build();
 
@@ -556,17 +542,8 @@ fn ignore_when_crate_ignored() {
         )
         .run();
 
-    publish::validate_upload(
-        CLEAN_FOO_JSON,
-        "foo-0.0.1.crate",
-        &[
-            "Cargo.lock",
-            "Cargo.toml",
-            "Cargo.toml.orig",
-            "src/main.rs",
-            "baz",
-        ],
-    );
+    // Skip `validate_upload` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
@@ -895,7 +872,8 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 // Explicitly setting `crates-io` in the publish list.
 #[cargo_test]
 fn publish_with_crates_io_explicit() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -941,7 +919,8 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 
 #[cargo_test]
 fn publish_with_select_features() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -986,7 +965,8 @@ fn publish_with_select_features() {
 
 #[cargo_test]
 fn publish_with_all_features() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -1515,7 +1495,8 @@ repository = "foo"
 
 #[cargo_test]
 fn credentials_ambiguous_filename() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let credentials_toml = paths::home().join(".cargo/credentials.toml");
     fs::write(credentials_toml, r#"token = "api-token""#).unwrap();
@@ -1548,8 +1529,6 @@ fn credentials_ambiguous_filename() {
 ",
         )
         .run();
-
-    validate_upload_foo();
 }
 
 // --index will not load registry.token to avoid possibly leaking
@@ -2105,7 +2084,8 @@ fn in_virtual_workspace() {
 
 #[cargo_test]
 fn in_virtual_workspace_with_p() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
