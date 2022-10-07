@@ -1040,6 +1040,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         }
     }
 
+    /// See [`ResolvedFeatures::activated_features`].
     fn activated_features(
         &self,
         pkg_id: PackageId,
@@ -1049,6 +1050,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         features.activated_features(pkg_id, features_for)
     }
 
+    /// See [`ResolvedFeatures::is_activated`].
     fn is_activated(&self, pkg_id: PackageId, features_for: FeaturesFor) -> bool {
         self.features().is_activated(pkg_id, features_for)
     }

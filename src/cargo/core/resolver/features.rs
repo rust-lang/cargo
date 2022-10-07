@@ -56,11 +56,9 @@ type ActivateMap = HashMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 
 /// Set of all activated features for all packages in the resolve graph.
 pub struct ResolvedFeatures {
+    /// Map of features activated for each package.
     activated_features: ActivateMap,
-    /// Optional dependencies that should be built.
-    ///
-    /// The value is the `name_in_toml` of the dependencies.
-    activated_dependencies: ActivateMap,
+    /// Options that change how the feature resolver operates.
     opts: FeatureOpts,
 }
 
@@ -321,10 +319,10 @@ impl ResolvedFeatures {
             .expect("activated_features for invalid package")
     }
 
-    /// Returns if the given dependency should be included.
+    /// Asks the resolved features if the given package should be included.
     ///
-    /// This handles dependencies disabled via `cfg` expressions and optional
-    /// dependencies which are not enabled.
+    /// One scenario to use this function is to deteremine a optional dependency
+    /// should be built or not.
     pub fn is_activated(&self, pkg_id: PackageId, features_for: FeaturesFor) -> bool {
         log::trace!("is_activated {} {features_for}", pkg_id.name());
         self.activated_features_unverified(pkg_id, features_for.apply_opts(&self.opts))
