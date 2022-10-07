@@ -681,10 +681,13 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 ref url,
                 ..
             } => {
+                // For sparse http registry the URL already contains the prefix.
                 if url.scheme().starts_with("sparse+") {
-                    write!(f, "{}", url)
+                    // e.g. sparse+http://example.com
+                    write!(f, "{url}")
                 } else {
-                    write!(f, "registry+{}", url)
+                    // e.g. registry+http://example.com
+                    write!(f, "registry+{url}")
                 }
             }
             SourceIdInner {
