@@ -289,7 +289,7 @@ fn resolve_dependency(
         } else {
             let mut source = crate::sources::GitSource::new(src.source_id()?, config)?;
             let packages = source.read_packages()?;
-            let package = infer_package(packages, &src)?;
+            let package = infer_package(packages, &src, true)?;
             Dependency::from(package.summary())
         };
         selected
@@ -314,7 +314,7 @@ fn resolve_dependency(
         } else {
             let source = crate::sources::PathSource::new(&path, src.source_id()?, config);
             let packages = source.read_packages()?;
-            let package = infer_package(packages, &src)?;
+            let package = infer_package(packages, &src, false)?;
             Dependency::from(package.summary())
         };
         selected
@@ -599,7 +599,11 @@ fn select_package(
     }
 }
 
-fn infer_package(mut packages: Vec<Package>, src: &dyn std::fmt::Display) -> CargoResult<Package> {
+fn infer_package(
+    mut packages: Vec<Package>,
+    src: &dyn std::fmt::Display,
+    is_git_source: bool,
+) -> CargoResult<Package> {
     let package = match packages.len() {
         0 => {
             anyhow::bail!("no packages found at `{src}`");
@@ -611,7 +615,24 @@ fn infer_package(mut packages: Vec<Package>, src: &dyn std::fmt::Display) -> Car
                 .map(|p| p.name().as_str().to_owned())
                 .collect();
             names.sort_unstable();
-            anyhow::bail!("multiple packages found at `{src}`: {}", names.join(", "));
+            anyhow::bail!(
+                "multiple packages found at `{src}`:\n    {}{}",
+                names
+                    .iter()
+                    .map(|s| s.to_string())
+                    .coalesce(|x, y| if x.len() + y.len() < 78 {
+                        Ok(format!("{x}, {y}"))
+                    } else {
+                        Err((x, y))
+                    })
+                    .into_iter()
+                    .format("\n    "),
+                if is_git_source {
+                    format!("\nTo disambiguate, run `cargo add --git {src} <crate>`")
+                } else {
+                    "".to_owned()
+                }
+            );
         }
     };
     Ok(package)
