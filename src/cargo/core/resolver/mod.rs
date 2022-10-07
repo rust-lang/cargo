@@ -147,10 +147,7 @@ pub fn resolve(
 
     let mut cksums = HashMap::new();
     for (summary, _) in cx.activations.values() {
-        let cksum = summary
-            .checksum()
-            .map(|s| s.to_string())
-            .filter(|s| !s.is_empty());
+        let cksum = summary.checksum().map(|s| s.to_string());
         cksums.insert(summary.package_id(), cksum);
     }
     let graph = cx.graph();

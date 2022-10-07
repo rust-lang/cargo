@@ -556,7 +556,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         self.requested_update = true;
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, checksum: Option<&str>) -> CargoResult<MaybeLock> {
+        let checksum = checksum.ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?;
         let registry_config = loop {
             match self.config()? {
                 Poll::Pending => self.block_until_ready()?,
