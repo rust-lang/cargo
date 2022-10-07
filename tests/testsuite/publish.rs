@@ -853,7 +853,18 @@ fn publish_with_select_features() {
 
     p.cargo("publish --features required")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])
+",
+        )
         .run();
 }
 
@@ -887,7 +898,18 @@ fn publish_with_all_features() {
 
     p.cargo("publish --all-features")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])
+",
+        )
         .run();
 }
 
@@ -1047,7 +1069,19 @@ fn publish_checks_for_token_before_verify() {
     // Assert package verified successfully on dry run
     p.cargo("publish --dry-run")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("[VERIFYING] foo v0.0.1 ([CWD])")
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 [..]
+[WARNING] aborting upload due to dry run
+",
+        )
         .run();
 }
 
@@ -1334,9 +1368,14 @@ fn credentials_ambiguous_filename() {
 
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
+[..]
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.0.1 [..]
 ",
         )
         .run();
