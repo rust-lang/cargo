@@ -225,6 +225,7 @@ fn simple_with_index() {
 
 #[cargo_test]
 fn git_deps() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -262,6 +263,7 @@ the `git` specification will be removed from the dependency declaration.
 
 #[cargo_test]
 fn path_dependency_no_version() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -301,6 +303,7 @@ the `path` specification will be removed from the dependency declaration.
 
 #[cargo_test]
 fn unpublishable_crate() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -333,6 +336,7 @@ The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
 
 #[cargo_test]
 fn dont_publish_dirty() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project().file("bar", "").build();
@@ -557,6 +561,7 @@ fn ignore_when_crate_ignored() {
 
 #[cargo_test]
 fn new_crate_rejected() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project().file("baz", "").build();
@@ -589,6 +594,7 @@ fn new_crate_rejected() {
 
 #[cargo_test]
 fn dry_run() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -993,6 +999,7 @@ fn publish_with_all_features() {
 
 #[cargo_test]
 fn publish_with_no_default_features() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -1485,7 +1492,9 @@ fn credentials_ambiguous_filename() {
 // crates.io token to another server.
 #[cargo_test]
 fn index_requires_token() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
+
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
 
@@ -1548,7 +1557,9 @@ include `--registry dummy-registry` or `--registry crates-io`
 
 #[cargo_test]
 fn publish_with_missing_readme() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -1881,6 +1892,7 @@ See [..]
 
 #[cargo_test]
 fn with_duplicate_spec_in_members() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -1977,6 +1989,7 @@ See [..]
 
 #[cargo_test]
 fn in_virtual_workspace() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -2063,6 +2076,7 @@ See [..]
 
 #[cargo_test]
 fn in_package_workspace_not_found() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -2107,6 +2121,7 @@ error: package ID specification `li` did not match any packages
 
 #[cargo_test]
 fn in_package_workspace_found_multiple() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -2164,6 +2179,7 @@ error: the `-p` argument must be specified to select a single package to publish
 #[cargo_test]
 // https://github.com/rust-lang/cargo/issues/10536
 fn publish_path_dependency_without_workspace() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
