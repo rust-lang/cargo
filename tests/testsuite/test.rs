@@ -760,6 +760,7 @@ fn pass_through_escaped() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[DOCTEST] foo
 ",
         )
         .with_stdout_contains("running 1 test")
@@ -771,6 +772,7 @@ fn pass_through_escaped() {
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[DOCTEST] foo
 ",
         )
         .with_stdout_contains("running 1 test")
@@ -782,6 +784,7 @@ fn pass_through_escaped() {
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[DOCTEST] foo
 ",
         )
         .with_stdout_contains("running 2 tests")
