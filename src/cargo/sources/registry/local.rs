@@ -129,7 +129,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // We don't actually need to download anything per-se, we just need to
         // verify the checksum matches the .crate file itself.
         let actual = Sha256::new().update_file(&crate_file)?.finish_hex();
-        if actual != checksum {
+        if actual != checksum && !checksum.is_empty() {
             anyhow::bail!("failed to verify the checksum of `{}`", pkg)
         }
 

@@ -2,7 +2,7 @@
 
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{registry_path, Package};
-use cargo_test_support::{basic_manifest, project, t};
+use cargo_test_support::{basic_manifest, git, path2url, project, t};
 use std::fs;
 
 fn setup() {
@@ -525,4 +525,75 @@ fn crates_io_registry_url_is_optional() {
         .run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
     p.cargo("test").run();
+}
+
+#[cargo_test]
+fn git_dependencies_do_not_require_a_checksum() {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+            .file("src/lib.rs", "pub fn bar() {}")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies.bar]
+                git = '{}'
+            "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    let root = paths::root();
+    t!(fs::create_dir(&root.join(".cargo")));
+
+    Package::new("bar", "0.0.1")
+        .local_from_git(true)
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
+
+    t!(fs::write(
+        root.join(".cargo/config"),
+        format!(
+            r#"
+            [source.my-awesome-git-registry]
+            git = '{}'
+            replace-with = 'my-awesome-local-registry'
+
+            [source.my-awesome-local-registry]
+            local-registry = 'registry'
+        "#,
+            git_project.url()
+        )
+    ));
+    p.cargo("clean").run();
+    p.cargo("build")
+        .with_stderr(&format!(
+            "[UNPACKING] bar v0.0.1 ([..])\n\
+             [COMPILING] bar v0.0.1 ({}#[..])\n\
+             [COMPILING] foo v0.0.1 ([CWD])\n\
+             [FINISHED] [..]\n",
+            path2url(&git_project.root())
+        ))
+        .run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("test").run();
+    let lockfile = t!(fs::read_to_string(p.root().join("Cargo.lock")));
+    // We only have one dependency, and it should not contain a checksum in the lockfile
+    assert!(!lockfile.contains("checksum"));
 }
