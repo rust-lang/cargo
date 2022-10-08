@@ -115,7 +115,7 @@ impl FileType {
             }
         };
 
-        format!("{}{}{}", self.prefix, name, self.suffix)
+        format!("{}{name}{}", self.prefix, self.suffix)
     }
 
     /// Creates a new instance representing a `.rmeta` file.
@@ -537,7 +537,7 @@ fn parse_crate_type(
 ) -> CargoResult<Option<(String, String)>> {
     let not_supported = error.lines().any(|line| {
         (line.contains("unsupported crate type") || line.contains("unknown crate type"))
-            && line.contains(&format!("crate type `{}`", crate_type))
+            && line.contains(&format!("crate type `{crate_type}`"))
     });
     if not_supported {
         return Ok(None);
@@ -565,7 +565,7 @@ fn parse_crate_type(
 
 /// Helper for creating an error message when parsing rustc output fails.
 fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
-    let mut result = format!("command was: {}\n", cmd);
+    let mut result = format!("command was: {cmd}\n");
     if !stdout.is_empty() {
         result.push_str("\n--- stdout\n");
         result.push_str(stdout);
@@ -707,7 +707,7 @@ fn rustflags_from_target(
         CompileKind::Host => host_triple,
         CompileKind::Target(target) => target.short_name(),
     };
-    let key = format!("target.{}.{}", target, flag.as_key());
+    let key = format!("target.{target}.{}", flag.as_key());
     if let Some(args) = config.get::<Option<StringList>>(&key)? {
         rustflags.extend(args.as_slice().iter().cloned());
     }

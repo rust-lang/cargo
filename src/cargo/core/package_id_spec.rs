@@ -89,7 +89,7 @@ impl PackageIdSpec {
         let i: Vec<_> = i.into_iter().collect();
         let spec = PackageIdSpec::parse(spec).with_context(|| {
             let suggestion = lev_distance::closest_msg(spec, i.iter(), |id| id.name().as_str());
-            format!("invalid package ID specification: `{}`{}", spec, suggestion)
+            format!("invalid package ID specification: `{spec}`{suggestion}")
         })?;
         spec.query(i)
     }
@@ -284,7 +284,7 @@ impl fmt::Display for PackageIdSpec {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
-                write!(f, "{}", url)?;
+                write!(f, "{url}")?;
                 if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
                     printed_name = true;
                     write!(f, "#{}", self.name)?;
@@ -296,7 +296,7 @@ impl fmt::Display for PackageIdSpec {
             }
         }
         if let Some(ref v) = self.version {
-            write!(f, "{}{}", if printed_name { "@" } else { "#" }, v)?;
+            write!(f, "{}{v}", if printed_name { "@" } else { "#" })?;
         }
         Ok(())
     }

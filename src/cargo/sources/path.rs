@@ -538,7 +538,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
         pkg.cloned()
             .map(MaybePackage::Ready)
-            .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
+            .ok_or_else(|| internal(format!("failed to find {id} in path source")))
     }
 
     fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
@@ -551,7 +551,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         // relative path to ensure that the fingerprint remains consistent
         // across entire project directory renames.
         let max_path = max_path.strip_prefix(&self.path).unwrap_or(&max_path);
-        Ok(format!("{} ({})", max, max_path.display()))
+        Ok(format!("{max} ({})", max_path.display()))
     }
 
     fn describe(&self) -> String {

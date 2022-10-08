@@ -316,7 +316,7 @@ impl<'cfg> Timings<'cfg> {
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
         let timings_path = cx.files().host_root().join("cargo-timings");
         paths::create_dir_all(&timings_path)?;
-        let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
+        let filename = timings_path.join(format!("cargo-timing-{timestamp}.html"));
         let mut f = BufWriter::new(paths::create(&filename)?);
         let roots: Vec<&str> = self
             .root_targets
@@ -371,7 +371,7 @@ impl<'cfg> Timings<'cfg> {
         let targets: Vec<String> = self
             .root_targets
             .iter()
-            .map(|(name, targets)| format!("{} ({})", name, targets.join(", ")))
+            .map(|(name, targets)| format!("{name} ({})", targets.join(", ")))
             .collect();
         let targets = targets.join("<br>");
         let time_human = if duration > 60.0 {
@@ -379,7 +379,7 @@ impl<'cfg> Timings<'cfg> {
         } else {
             "".to_string()
         };
-        let total_time = format!("{:.1}s{}", duration, time_human);
+        let total_time = format!("{duration:.1}s{time_human}");
         let max_concurrency = self.concurrency.iter().map(|c| c.active).max().unwrap();
         let num_cpus = available_parallelism()
             .map(|x| x.get().to_string())
@@ -558,7 +558,7 @@ impl<'cfg> Timings<'cfg> {
         for (i, unit) in units.iter().enumerate() {
             let codegen = match unit.codegen_time() {
                 None => "".to_string(),
-                Some((_rt, ctime, cent)) => format!("{:.1}s ({:.0}%)", ctime, cent),
+                Some((_rt, ctime, cent)) => format!("{ctime:.1}s ({cent:.0}%)"),
             };
             let features = unit.unit.features.join(", ");
             write!(

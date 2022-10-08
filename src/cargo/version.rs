@@ -62,7 +62,7 @@ pub fn version() -> VersionInfo {
         // this should continue to hold.
         let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() - 1;
         let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
-        format!("1.{}.{}", minor, patch)
+        format!("1.{minor}.{patch}")
     });
 
     let release_channel = option_env_str!("CFG_RELEASE_CHANNEL");

@@ -497,7 +497,7 @@ impl fmt::Display for EncodablePackageId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)?;
         if let Some(s) = &self.version {
-            write!(f, " {}", s)?;
+            write!(f, " {s}")?;
         }
         if let Some(s) = &self.source {
             write!(f, " ({})", s.as_url())?;

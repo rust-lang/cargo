@@ -1834,7 +1834,7 @@ fn simulated_docker_deps_stay_cached() {
                 if e.kind() == std::io::ErrorKind::PermissionDenied {
                     println!("PermissionDenied filetime on {:?}", entry.path());
                 } else {
-                    panic!("FileTime error on {:?}: {:?}", entry.path(), e);
+                    panic!("FileTime error on {:?}: {e:?}", entry.path());
                 }
             }
         }
@@ -1914,7 +1914,7 @@ fn metadata_change_invalidates() {
             .append(true)
             .open(p.root().join("Cargo.toml"))
             .unwrap();
-        writeln!(file, "{}", attr).unwrap();
+        writeln!(file, "{attr}").unwrap();
         p.cargo("build")
             .with_stderr_contains("[COMPILING] foo [..]")
             .run();
@@ -1937,7 +1937,7 @@ fn edition_change_invalidates() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("build").run();
-    p.change_file("Cargo.toml", &format!("{}edition = \"2018\"", MANIFEST));
+    p.change_file("Cargo.toml", &format!("{MANIFEST}edition = \"2018\""));
     p.cargo("build")
         .with_stderr_contains("[COMPILING] foo [..]")
         .run();

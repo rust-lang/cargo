@@ -149,10 +149,10 @@ impl<N: fmt::Display + Eq + Ord + Clone, E: Clone> fmt::Debug for Graph<N, E> {
         writeln!(fmt, "Graph {{")?;
 
         for (n, e) in &self.nodes {
-            writeln!(fmt, "  - {}", n)?;
+            writeln!(fmt, "  - {n}")?;
 
             for n in e.keys() {
-                writeln!(fmt, "    - {}", n)?;
+                writeln!(fmt, "    - {n}")?;
             }
         }
 

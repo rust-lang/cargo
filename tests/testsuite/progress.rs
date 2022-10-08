@@ -81,8 +81,8 @@ fn always_shows_progress() {
     const N: usize = 3;
     let mut deps = String::new();
     for i in 1..=N {
-        Package::new(&format!("dep{}", i), "1.0.0").publish();
-        deps.push_str(&format!("dep{} = \"1.0\"\n", i));
+        Package::new(&format!("dep{i}"), "1.0.0").publish();
+        deps.push_str(&format!("dep{i} = \"1.0\"\n"));
     }
 
     let p = project()
@@ -122,8 +122,8 @@ fn never_progress() {
     const N: usize = 3;
     let mut deps = String::new();
     for i in 1..=N {
-        Package::new(&format!("dep{}", i), "1.0.0").publish();
-        deps.push_str(&format!("dep{} = \"1.0\"\n", i));
+        Package::new(&format!("dep{i}"), "1.0.0").publish();
+        deps.push_str(&format!("dep{i} = \"1.0\"\n"));
     }
 
     let p = project()

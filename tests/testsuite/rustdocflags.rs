@@ -115,7 +115,7 @@ fn whitespace() {
         .env_remove("__CARGO_TEST_FORCE_ARGFILE") // Not applicable for argfile.
         .env(
             "RUSTDOCFLAGS",
-            format!("--crate-version {}", SPACED_VERSION),
+            format!("--crate-version {SPACED_VERSION}"),
         )
         .run();
 

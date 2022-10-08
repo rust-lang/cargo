@@ -7,7 +7,7 @@ use cargo_test_support::project;
 use cargo_test_support::registry::{self, api_path};
 
 fn setup(name: &str, content: Option<&str>) {
-    let dir = api_path().join(format!("api/v1/crates/{}", name));
+    let dir = api_path().join(format!("api/v1/crates/{name}"));
     dir.mkdir_p();
     if let Some(body) = content {
         fs::write(dir.join("owners"), body).unwrap();

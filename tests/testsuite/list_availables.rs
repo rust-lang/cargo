@@ -23,7 +23,7 @@ fn list_availables_test(command: &str, targets: u8) {
 
     if targets & EXAMPLE != 0 {
         full_project
-            .cargo(&format!("{} --example", command))
+            .cargo(&format!("{command} --example"))
             .with_stderr(
                 "\
 error: \"--example\" takes one argument.
@@ -39,7 +39,7 @@ Available examples:
 
     if targets & BIN != 0 {
         full_project
-            .cargo(&format!("{} --bin", command))
+            .cargo(&format!("{command} --bin"))
             .with_stderr(
                 "\
 error: \"--bin\" takes one argument.
@@ -54,7 +54,7 @@ Available binaries:
 
     if targets & BENCH != 0 {
         full_project
-            .cargo(&format!("{} --bench", command))
+            .cargo(&format!("{command} --bench"))
             .with_stderr(
                 "\
 error: \"--bench\" takes one argument.
@@ -70,7 +70,7 @@ Available benches:
 
     if targets & TEST != 0 {
         full_project
-            .cargo(&format!("{} --test", command))
+            .cargo(&format!("{command} --test"))
             .with_stderr(
                 "\
 error: \"--test\" takes one argument.
@@ -86,7 +86,7 @@ Available tests:
 
     if targets & PACKAGE != 0 {
         full_project
-            .cargo(&format!("{} -p", command))
+            .cargo(&format!("{command} -p"))
             .with_stderr(
                 "\
 [ERROR] \"--package <SPEC>\" requires a SPEC format value, \
@@ -106,7 +106,7 @@ Possible packages/workspace members:
 
     if targets & EXAMPLE != 0 {
         empty_project
-            .cargo(&format!("{} --example", command))
+            .cargo(&format!("{command} --example"))
             .with_stderr(
                 "\
 error: \"--example\" takes one argument.
@@ -120,7 +120,7 @@ No examples available.
 
     if targets & BIN != 0 {
         empty_project
-            .cargo(&format!("{} --bin", command))
+            .cargo(&format!("{command} --bin"))
             .with_stderr(
                 "\
 error: \"--bin\" takes one argument.
@@ -134,7 +134,7 @@ No binaries available.
 
     if targets & BENCH != 0 {
         empty_project
-            .cargo(&format!("{} --bench", command))
+            .cargo(&format!("{command} --bench"))
             .with_stderr(
                 "\
 error: \"--bench\" takes one argument.
@@ -148,7 +148,7 @@ No benches available.
 
     if targets & TEST != 0 {
         empty_project
-            .cargo(&format!("{} --test", command))
+            .cargo(&format!("{command} --test"))
             .with_stderr(
                 "\
 error: \"--test\" takes one argument.

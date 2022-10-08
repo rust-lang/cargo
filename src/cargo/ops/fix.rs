@@ -873,14 +873,14 @@ impl FixArgs {
         if let Some(edition) = self.enabled_edition {
             cmd.arg("--edition").arg(edition.to_string());
             if self.idioms && edition.supports_idiom_lint() {
-                cmd.arg(format!("-Wrust-{}-idioms", edition));
+                cmd.arg(format!("-Wrust-{edition}-idioms"));
             }
         }
 
         if let Some(edition) = self.prepare_for_edition {
             if edition.supports_compat_lint() {
                 cmd.arg("--force-warn")
-                    .arg(format!("rust-{}-compatibility", edition));
+                    .arg(format!("rust-{edition}-compatibility"));
             }
         }
     }

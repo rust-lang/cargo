@@ -506,7 +506,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
             "unwind" => PanicStrategy::Unwind,
             "abort" => PanicStrategy::Abort,
             // This should be validated in TomlProfile::validate
-            _ => panic!("Unexpected panic setting `{}`", panic),
+            _ => panic!("Unexpected panic setting `{panic}`"),
         };
     }
     if let Some(overflow_checks) = toml.overflow_checks {
@@ -1072,7 +1072,7 @@ fn merge_config_profiles(
 /// Helper for fetching a profile from config.
 fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<TomlProfile>> {
     let profile: Option<config::Value<TomlProfile>> =
-        ws.config().get(&format!("profile.{}", name))?;
+        ws.config().get(&format!("profile.{name}"))?;
     let profile = match profile {
         Some(profile) => profile,
         None => return Ok(None),

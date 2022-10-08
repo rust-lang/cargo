@@ -3142,7 +3142,7 @@ fn generate_good_d_files() {
     p.cargo("build -v").run();
 
     let dot_d_path = p.bin("meow").with_extension("d");
-    println!("*meow at* {:?}", dot_d_path);
+    println!("*meow at* {dot_d_path:?}");
     let dot_d = fs::read_to_string(&dot_d_path).unwrap();
 
     println!("*.d file content*: {}", &dot_d);
@@ -4273,7 +4273,7 @@ fn _rename_with_link_search_path(cross: bool) {
         );
     let p = p.build();
 
-    p.cargo(&format!("build{}", target_arg)).run();
+    p.cargo(&format!("build{target_arg}")).run();
 
     let p2 = project()
         .at("bar")
@@ -4353,7 +4353,7 @@ fn _rename_with_link_search_path(cross: bool) {
     remove_dir_all(p.root()).unwrap();
 
     // Everything should work the first time
-    p2.cargo(&format!("run{}", target_arg)).run();
+    p2.cargo(&format!("run{target_arg}")).run();
 
     // Now rename the root directory and rerun `cargo run`. Not only should we
     // not build anything but we also shouldn't crash.
@@ -4376,13 +4376,13 @@ fn _rename_with_link_search_path(cross: bool) {
         };
         i += 1;
         if !cfg!(windows) || error.kind() != io::ErrorKind::PermissionDenied || i > 10 {
-            panic!("failed to rename: {}", error);
+            panic!("failed to rename: {error}");
         }
-        println!("assuming {} is spurious, waiting to try again", error);
+        println!("assuming {error} is spurious, waiting to try again");
         thread::sleep(slow_cpu_multiplier(100));
     }
 
-    p2.cargo(&format!("run{}", target_arg))
+    p2.cargo(&format!("run{target_arg}"))
         .cwd(&new)
         .with_stderr(
             "\

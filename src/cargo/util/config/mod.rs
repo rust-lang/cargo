@@ -671,7 +671,7 @@ impl Config {
                 Ok(Some(Value {
                     val: value
                         .parse()
-                        .map_err(|e| ConfigError::new(format!("{}", e), definition.clone()))?,
+                        .map_err(|e| ConfigError::new(format!("{e}"), definition.clone()))?,
                     definition,
                 }))
             }
@@ -814,9 +814,9 @@ impl Config {
         let def = Definition::Environment(key.as_env_key().to_string());
         if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
-            let toml_s = format!("value={}", env_val);
+            let toml_s = format!("value={env_val}");
             let toml_v: toml::Value = toml::de::from_str(&toml_s).map_err(|e| {
-                ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
+                ConfigError::new(format!("could not parse TOML list: {e}"), def.clone())
             })?;
             let values = toml_v
                 .as_table()
@@ -1030,7 +1030,7 @@ impl Config {
         let includes = self.include_paths(cv, false)?;
         for (path, abs_path, def) in includes {
             let mut cv = self._load_file(&abs_path, seen, false).with_context(|| {
-                format!("failed to load config include `{}` from `{}`", path, def)
+                format!("failed to load config include `{path}` from `{def}`")
             })?;
             self.load_unmerged_include(&mut cv, seen, output)?;
             output.push(cv);
@@ -1112,7 +1112,7 @@ impl Config {
             self._load_file(&abs_path, seen, true)
                 .and_then(|include| root.merge(include, true))
                 .with_context(|| {
-                    format!("failed to load config include `{}` from `{}`", path, def)
+                    format!("failed to load config include `{path}` from `{def}`")
                 })?;
         }
         root.merge(value, true)?;
@@ -1179,7 +1179,7 @@ impl Config {
                     })?
                     .to_string();
                 self._load_file(&self.cwd().join(&str_path), &mut seen, true)
-                    .with_context(|| format!("failed to load config from `{}`", str_path))?
+                    .with_context(|| format!("failed to load config from `{str_path}`"))?
             } else {
                 // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
                 // expressions followed by a value that's not an "inline table"
@@ -1324,7 +1324,7 @@ impl Config {
         warn: bool,
     ) -> CargoResult<Option<PathBuf>> {
         let possible = dir.join(filename_without_extension);
-        let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
+        let possible_with_extension = dir.join(format!("{filename_without_extension}.toml"));
 
         if possible.exists() {
             if warn && possible_with_extension.exists() {
@@ -1385,7 +1385,7 @@ impl Config {
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         validate_package_name(registry, "registry name", "")?;
-        if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
+        if let Some(index) = self.get_string(&format!("registries.{registry}.index"))? {
             self.resolve_registry_index(&index).with_context(|| {
                 format!(
                     "invalid index URL for registry `{}` defined in {}",
@@ -1736,7 +1736,7 @@ impl ConfigError {
     fn with_key_context(self, key: &ConfigKey, definition: Definition) -> ConfigError {
         ConfigError {
             error: anyhow::Error::from(self)
-                .context(format!("could not load config key `{}`", key)),
+                .context(format!("could not load config key `{key}`")),
             definition: Some(definition),
         }
     }
@@ -1751,7 +1751,7 @@ impl std::error::Error for ConfigError {
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(definition) = &self.definition {
-            write!(f, "error in {}: {}", definition, self.error)
+            write!(f, "error in {definition}: {}", self.error)
         } else {
             self.error.fmt(f)
         }
@@ -1788,20 +1788,20 @@ pub enum ConfigValue {
 impl fmt::Debug for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CV::Integer(i, def) => write!(f, "{} (from {})", i, def),
-            CV::Boolean(b, def) => write!(f, "{} (from {})", b, def),
-            CV::String(s, def) => write!(f, "{} (from {})", s, def),
+            CV::Integer(i, def) => write!(f, "{i} (from {def})"),
+            CV::Boolean(b, def) => write!(f, "{b} (from {def})"),
+            CV::String(s, def) => write!(f, "{s} (from {def})"),
             CV::List(list, def) => {
                 write!(f, "[")?;
                 for (i, (s, def)) in list.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{} (from {})", s, def)?;
+                    write!(f, "{s} (from {def})")?;
                 }
-                write!(f, "] (from {})", def)
+                write!(f, "] (from {def})")
             }
-            CV::Table(table, _) => write!(f, "{:?}", table),
+            CV::Table(table, _) => write!(f, "{table:?}"),
         }
     }
 }
@@ -1825,7 +1825,7 @@ impl ConfigValue {
                 val.into_iter()
                     .map(|(key, value)| {
                         let value = CV::from_toml(def.clone(), value)
-                            .with_context(|| format!("failed to parse key `{}`", key))?;
+                            .with_context(|| format!("failed to parse key `{key}`"))?;
                         Ok((key, value))
                     })
                     .collect::<CargoResult<_>>()?,

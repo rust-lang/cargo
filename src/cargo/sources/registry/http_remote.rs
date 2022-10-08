@@ -236,7 +236,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             let data = download.data.take();
             let url = self.full_url(&download.path);
             let result = match download.retry.r#try(|| {
-                result.with_context(|| format!("failed to download from `{}`", url))?;
+                result.with_context(|| format!("failed to download from `{url}`"))?;
                 let code = handle.response_code()?;
                 // Keep this list of expected status codes in sync with the codes handled in `load`
                 if !matches!(code, 200 | 304 | 401 | 404 | 451) {
@@ -477,9 +477,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                             let mut index_version =
                                 downloads.pending[&token].0.index_version.borrow_mut();
                             if is_etag {
-                                *index_version = Some(format!("{}: {}", ETAG, value));
+                                *index_version = Some(format!("{ETAG}: {value}"));
                             } else if index_version.is_none() && is_lm {
-                                *index_version = Some(format!("{}: {}", LAST_MODIFIED, value));
+                                *index_version = Some(format!("{LAST_MODIFIED}: {value}"));
                             };
                         }
                     })

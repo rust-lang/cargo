@@ -41,14 +41,14 @@ fn print_available_targets(
     let targets = get_available_targets(filter_fn, ws, options)?;
 
     let mut output = String::new();
-    writeln!(output, "\"{}\" takes one argument.", option_name)?;
+    writeln!(output, "\"{option_name}\" takes one argument.")?;
 
     if targets.is_empty() {
-        writeln!(output, "No {} available.", plural_name)?;
+        writeln!(output, "No {plural_name} available.")?;
     } else {
-        writeln!(output, "Available {}:", plural_name)?;
+        writeln!(output, "Available {plural_name}:")?;
         for target in targets {
-            writeln!(output, "    {}", target)?;
+            writeln!(output, "    {target}")?;
         }
     }
     bail!("{}", output)
@@ -72,7 +72,7 @@ pub fn print_available_packages(ws: &Workspace<'_>) -> CargoResult<()> {
     } else {
         writeln!(output, "Possible packages/workspace members:")?;
         for package in packages {
-            writeln!(output, "    {}", package)?;
+            writeln!(output, "    {package}")?;
         }
     }
     bail!("{}", output)

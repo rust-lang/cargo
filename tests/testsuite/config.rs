@@ -174,7 +174,7 @@ pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
             if i == 0 {
                 e.to_string()
             } else {
-                format!("Caused by:\n  {}", e)
+                format!("Caused by:\n  {e}")
             }
         })
         .collect::<Vec<_>>()
@@ -1300,7 +1300,7 @@ fn overlapping_env_with_defaults_errors_out() {
         .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
         .build();
     let err = config.get::<Ambig>("ambig").err().unwrap();
-    assert!(format!("{}", err).contains("missing config key `ambig.debug`"));
+    assert!(format!("{err}").contains("missing config key `ambig.debug`"));
 
     let config = ConfigBuilder::new().env("CARGO_AMBIG_DEBUG", "5").build();
     let s: Ambig = config.get("ambig").unwrap();
@@ -1346,7 +1346,7 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
         .get::<PrefixContainer>("prefixcontainer")
         .err()
         .unwrap();
-    assert!(format!("{}", err).contains("missing config key `prefixcontainer.inn`"));
+    assert!(format!("{err}").contains("missing config key `prefixcontainer.inn`"));
     let config = ConfigBuilder::new()
         .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
         .env("CARGO_PREFIXCONTAINER_INN", "true")

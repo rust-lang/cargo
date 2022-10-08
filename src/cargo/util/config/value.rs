@@ -101,7 +101,7 @@ impl fmt::Display for Definition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Definition::Path(p) => p.display().fmt(f),
-            Definition::Environment(key) => write!(f, "environment variable `{}`", key),
+            Definition::Environment(key) => write!(f, "environment variable `{key}`"),
             Definition::Cli => write!(f, "--config cli option"),
         }
     }
@@ -219,7 +219,7 @@ impl<'de> de::Deserialize<'de> for Definition {
             0 => Ok(Definition::Path(value.into())),
             1 => Ok(Definition::Environment(value)),
             2 => Ok(Definition::Cli),
-            _ => panic!("unexpected discriminant {} value {}", discr, value),
+            _ => panic!("unexpected discriminant {discr} value {value}"),
         }
     }
 }

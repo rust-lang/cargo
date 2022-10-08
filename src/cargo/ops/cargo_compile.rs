@@ -1258,7 +1258,7 @@ fn generate_targets(
             let required_features = target.required_features().unwrap();
             let quoted_required_features: Vec<String> = required_features
                 .iter()
-                .map(|s| format!("`{}`", s))
+                .map(|s| format!("`{s}`"))
                 .collect();
             anyhow::bail!(
                 "target `{}` in package `{}` requires the features: {}\n\
@@ -1442,7 +1442,7 @@ pub fn resolve_all_features(
                 .activated_features_unverified(dep_id, features_for)
                 .unwrap_or_default()
             {
-                features.insert(format!("{}/{}", dep.name_in_toml(), feature));
+                features.insert(format!("{}/{feature}", dep.name_in_toml()));
             }
         }
     }
@@ -1475,7 +1475,7 @@ fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target>
                 .collect()
         }
         CompileMode::Doctest | CompileMode::Docscrape | CompileMode::RunCustomBuild => {
-            panic!("Invalid mode {:?}", mode)
+            panic!("Invalid mode {mode:?}")
         }
     }
 }
@@ -1554,7 +1554,7 @@ fn find_named_targets<'a>(
                 target_name,
             )?;
             if !targets.is_empty() {
-                writeln!(msg, "Available {} targets:", target_desc)?;
+                writeln!(msg, "Available {target_desc} targets:")?;
                 for target in targets {
                     writeln!(msg, "    {}", target.name())?;
                 }
@@ -1683,7 +1683,7 @@ fn traverse_and_share(
 
 /// Build `glob::Pattern` with informative context.
 fn build_glob(pat: &str) -> CargoResult<glob::Pattern> {
-    glob::Pattern::new(pat).with_context(|| format!("cannot build glob pattern from `{}`", pat))
+    glob::Pattern::new(pat).with_context(|| format!("cannot build glob pattern from `{pat}`"))
 }
 
 /// Emits "package not found" error.

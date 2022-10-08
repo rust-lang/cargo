@@ -3038,8 +3038,8 @@ fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
 
     p.cargo("build")
         .with_stderr_contains(
-        format!("[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `{}` platform target.\n
-        `build_dependencies` is ignored and not recommended for use in the future", host)
+        format!("[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `{host}` platform target.\n
+        `build_dependencies` is ignored and not recommended for use in the future")
         )
         .run();
 
@@ -3078,8 +3078,8 @@ fn cargo_platform_specific_dependency_dev_dependencies_conflicting_warning() {
 
     p.cargo("build")
         .with_stderr_contains(
-        format!("[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `{}` platform target.\n
-        `dev_dependencies` is ignored and not recommended for use in the future", host)
+        format!("[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `{host}` platform target.\n
+        `dev_dependencies` is ignored and not recommended for use in the future")
         )
         .run();
 
@@ -4670,9 +4670,9 @@ fn rustc_wrapper_relative() {
         .build();
     let wrapper = tools::echo_wrapper();
     let exe_name = wrapper.file_name().unwrap().to_str().unwrap();
-    let relative_path = format!("./{}", exe_name);
+    let relative_path = format!("./{exe_name}");
     fs::hard_link(&wrapper, p.root().join(exe_name)).unwrap();
-    let running = format!("[RUNNING] `[ROOT]/foo/./{} rustc[..]", exe_name);
+    let running = format!("[RUNNING] `[ROOT]/foo/./{exe_name} rustc[..]");
     p.cargo("build -v")
         .env("RUSTC_WRAPPER", &relative_path)
         .with_stderr_contains(&running)
@@ -4744,7 +4744,7 @@ fn cdylib_not_lifted() {
     };
 
     for file in files {
-        println!("checking: {}", file);
+        println!("checking: {file}");
         assert!(p.root().join("target/debug/deps").join(&file).is_file());
     }
 }
@@ -4782,7 +4782,7 @@ fn cdylib_final_outputs() {
     };
 
     for file in files {
-        println!("checking: {}", file);
+        println!("checking: {file}");
         assert!(p.root().join("target/debug").join(&file).is_file());
     }
 }
@@ -5100,7 +5100,7 @@ fn same_metadata_different_directory() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr_contains(format!("[..]{}[..]", metadata))
+        .with_stderr_contains(format!("[..]{metadata}[..]"))
         .run();
 }
 
@@ -5688,7 +5688,7 @@ fn pipelining_big_graph() {
         for x in &["a", "b"] {
             project = project
                 .file(
-                    &format!("{x}{n}/Cargo.toml", x = x, n = n),
+                    &format!("{x}{n}/Cargo.toml"),
                     &format!(
                         r#"
                             [package]
@@ -5703,7 +5703,7 @@ fn pipelining_big_graph() {
                         np1 = n + 1
                     ),
                 )
-                .file(&format!("{x}{n}/src/lib.rs", x = x, n = n), "");
+                .file(&format!("{x}{n}/src/lib.rs"), "");
         }
     }
 
@@ -6063,7 +6063,7 @@ fn close_output_during_drain() {
     drop(rustc_conn);
     match child.wait() {
         Ok(status) => assert!(!status.success()),
-        Err(e) => panic!("child wait failed: {}", e),
+        Err(e) => panic!("child wait failed: {e}"),
     }
 }
 

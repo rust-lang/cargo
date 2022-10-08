@@ -343,7 +343,7 @@ fn instead_of_url_printed() {
     let mut config = git2::Config::open(&config).unwrap();
     config
         .set_str(
-            &format!("url.http://{}/.insteadOf", addr),
+            &format!("url.http://{addr}/.insteadOf"),
             "https://foo.bar/",
         )
         .unwrap();

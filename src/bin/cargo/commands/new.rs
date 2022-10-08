@@ -24,7 +24,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     };
     config.shell().status(
         "Created",
-        format!("{} `{}` package", opts.kind, package_name),
+        format!("{} `{package_name}` package", opts.kind),
     )?;
     Ok(())
 }

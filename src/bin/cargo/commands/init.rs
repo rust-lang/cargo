@@ -17,6 +17,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let project_kind = ops::init(&opts, config)?;
     config
         .shell()
-        .status("Created", format!("{} package", project_kind))?;
+        .status("Created", format!("{project_kind} package"))?;
     Ok(())
 }

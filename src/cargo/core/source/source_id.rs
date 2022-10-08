@@ -253,7 +253,7 @@ impl SourceId {
 
     pub fn display_index(self) -> String {
         if self.is_crates_io() {
-            format!("{} index", CRATES_IO_DOMAIN)
+            format!("{CRATES_IO_DOMAIN} index")
         } else {
             format!("`{}` index", self.display_registry_name())
         }
@@ -504,7 +504,7 @@ impl fmt::Display for SourceId {
                 // because those are kind of expected to be URLs.
                 write!(f, "{}", self.inner.url)?;
                 if let Some(pretty) = reference.pretty_ref() {
-                    write!(f, "?{}", pretty)?;
+                    write!(f, "?{pretty}")?;
                 }
 
                 if let Some(ref s) = self.inner.precise {
@@ -678,19 +678,19 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 kind: SourceKind::Path,
                 ref url,
                 ..
-            } => write!(f, "path+{}", url),
+            } => write!(f, "path+{url}"),
             SourceIdInner {
                 kind: SourceKind::Git(ref reference),
                 ref url,
                 ref precise,
                 ..
             } => {
-                write!(f, "git+{}", url)?;
+                write!(f, "git+{url}")?;
                 if let Some(pretty) = reference.pretty_ref() {
-                    write!(f, "?{}", pretty)?;
+                    write!(f, "?{pretty}")?;
                 }
                 if let Some(precise) = precise.as_ref() {
-                    write!(f, "#{}", precise)?;
+                    write!(f, "#{precise}")?;
                 }
                 Ok(())
             }
@@ -712,12 +712,12 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 kind: SourceKind::LocalRegistry,
                 ref url,
                 ..
-            } => write!(f, "local-registry+{}", url),
+            } => write!(f, "local-registry+{url}"),
             SourceIdInner {
                 kind: SourceKind::Directory,
                 ref url,
                 ..
-            } => write!(f, "directory+{}", url),
+            } => write!(f, "directory+{url}"),
         }
     }
 }
@@ -741,9 +741,9 @@ pub struct PrettyRef<'a> {
 impl<'a> fmt::Display for PrettyRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
-            GitReference::Branch(ref b) => write!(f, "branch={}", b),
-            GitReference::Tag(ref s) => write!(f, "tag={}", s),
-            GitReference::Rev(ref s) => write!(f, "rev={}", s),
+            GitReference::Branch(ref b) => write!(f, "branch={b}"),
+            GitReference::Tag(ref s) => write!(f, "tag={s}"),
+            GitReference::Rev(ref s) => write!(f, "rev={s}"),
             GitReference::DefaultBranch => unreachable!(),
         }
     }

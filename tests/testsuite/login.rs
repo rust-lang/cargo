@@ -20,7 +20,7 @@ fn setup_new_credentials_at(config: PathBuf) {
     t!(fs::create_dir_all(config.parent().unwrap()));
     t!(fs::write(
         &config,
-        format!(r#"token = "{token}""#, token = ORIGINAL_TOKEN)
+        format!(r#"token = "{ORIGINAL_TOKEN}""#)
     ));
 }
 

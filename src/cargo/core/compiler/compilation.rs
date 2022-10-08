@@ -391,7 +391,7 @@ fn target_runner(
     let target = bcx.target_data.short_name(&kind);
 
     // try target.{}.runner
-    let key = format!("target.{}.runner", target);
+    let key = format!("target.{target}.runner");
 
     if let Some(v) = bcx.config.get::<Option<config::PathAndArgs>>(&key)? {
         let path = v.path.resolve_program(bcx.config);

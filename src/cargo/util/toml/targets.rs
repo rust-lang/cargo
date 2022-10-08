@@ -354,7 +354,7 @@ fn clean_bins(
 
     fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<PathBuf> {
         if !has_lib {
-            let path = package_root.join("src").join(format!("{}.rs", name));
+            let path = package_root.join("src").join(format!("{name}.rs"));
             if path.exists() {
                 return Some(path);
             }

@@ -228,7 +228,7 @@ impl Edition {
     /// for setting the edition.
     pub(crate) fn cmd_edition_arg(&self, cmd: &mut ProcessBuilder) {
         if *self != Edition::Edition2015 {
-            cmd.arg(format!("--edition={}", self));
+            cmd.arg(format!("--edition={self}"));
         }
         if !self.is_stable() {
             cmd.arg("-Z").arg("unstable-options");

@@ -27,7 +27,7 @@ fn tc_process(cmd: &str, toolchain: &str) -> ProcessBuilder {
         }
     } else {
         let mut cmd = process(cmd);
-        cmd.arg(format!("+{}", toolchain));
+        cmd.arg(format!("+{toolchain}"));
         cmd
     };
     // Reset PATH since `process` modifies it to remove rustup.
@@ -63,9 +63,9 @@ fn collect_all_toolchains() -> Vec<(Version, String)> {
     // I tend to have lots of toolchains installed, but I don't want to test
     // all of them (like dated nightlies, or toolchains for non-host targets).
     let valid_names = &[
-        format!("stable-{}", host),
-        format!("beta-{}", host),
-        format!("nightly-{}", host),
+        format!("stable-{host}"),
+        format!("beta-{host}"),
+        format!("nightly-{host}"),
     ];
 
     let output = ProcessBuilder::new("rustup")
@@ -361,7 +361,7 @@ fn new_features() {
                 .exec_with_output()
             {
                 Ok(_output) => {
-                    eprintln!("{} ok", toolchain);
+                    eprintln!("{toolchain} ok");
                     let bar = pkg_version("bar");
                     let baz = pkg_version("baz");
                     let new_baz_dep = pkg_version("new-baz-dep");
@@ -372,7 +372,7 @@ fn new_features() {
                     })
                 }
                 Err(e) => {
-                    eprintln!("{} err {}", toolchain, e);
+                    eprintln!("{toolchain} err {e}");
                     Err(e)
                 }
             }
@@ -410,7 +410,7 @@ fn new_features() {
                     ));
                 }
             } else {
-                panic!("{} unexpected error {}", toolchain, err);
+                panic!("{toolchain} unexpected error {err}");
             }
         };
 
@@ -443,7 +443,7 @@ fn new_features() {
                 }
             }
             Err(e) => {
-                tc_result.push(format!("unlocked build failed: {}", e));
+                tc_result.push(format!("unlocked build failed: {e}"));
             }
         }
 
@@ -456,7 +456,7 @@ fn new_features() {
                 check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
             }
             Err(e) => {
-                tc_result.push(format!("bar 1.0.0 locked build failed: {}", e));
+                tc_result.push(format!("bar 1.0.0 locked build failed: {e}"));
             }
         }
 
@@ -522,9 +522,9 @@ fn new_features() {
         if errs.is_empty() {
             continue;
         }
-        eprintln!("error: toolchain {} (version {}):", tc_name, tc_vers);
+        eprintln!("error: toolchain {tc_name} (version {tc_vers}):");
         for err in errs {
-            eprintln!("  {}", err);
+            eprintln!("  {err}");
         }
         has_err = true;
     }

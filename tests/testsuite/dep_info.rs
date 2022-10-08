@@ -22,7 +22,7 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
         .filter(|f| f.extension().is_none());
     let info_path = files
         .next()
-        .unwrap_or_else(|| panic!("expected 1 dep-info file at {}, found 0", fingerprint));
+        .unwrap_or_else(|| panic!("expected 1 dep-info file at {fingerprint}, found 0"));
     assert!(files.next().is_none(), "expected only 1 dep-info file");
     let dep_info = fs::read(&info_path).unwrap();
     let dep_info = &mut &dep_info[..];
@@ -195,7 +195,7 @@ fn dep_path_inside_target_has_correct_path() {
 
     let depinfo_path = &p.bin("a").with_extension("d");
 
-    assert!(depinfo_path.is_file(), "{:?}", depinfo_path);
+    assert!(depinfo_path.is_file(), "{depinfo_path:?}");
 
     let depinfo = p.read_file(depinfo_path.to_str().unwrap());
 
@@ -331,7 +331,7 @@ fn relative_depinfo_paths_ws() {
 
     assert_deps_contains(
         &p,
-        &format!("target/{}/debug/.fingerprint/foo-*/dep-bin-foo", host),
+        &format!("target/{host}/debug/.fingerprint/foo-*/dep-bin-foo"),
         &[
             (0, "src/main.rs"),
             (
@@ -342,8 +342,8 @@ fn relative_depinfo_paths_ws() {
                     paths::get_lib_extension("proc-macro")
                 ),
             ),
-            (1, &format!("{}/debug/deps/libbar-*.rlib", host)),
-            (1, &format!("{}/debug/deps/libregdep-*.rlib", host)),
+            (1, &format!("{host}/debug/deps/libbar-*.rlib")),
+            (1, &format!("{host}/debug/deps/libregdep-*.rlib")),
         ],
     );
 

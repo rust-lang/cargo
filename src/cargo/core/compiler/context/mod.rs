@@ -246,7 +246,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         for (lt, arg) in &output.linker_args {
                             if lt.applies_to(&unit.target) {
                                 args.push("-C".into());
-                                args.push(format!("link-arg={}", arg).into());
+                                args.push(format!("link-arg={arg}").into());
                             }
                         }
                     }

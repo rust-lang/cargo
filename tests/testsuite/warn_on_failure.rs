@@ -33,7 +33,7 @@ fn make_lib(lib_src: &str) {
                 WARNING1, WARNING2
             ),
         )
-        .file("src/lib.rs", &format!("fn f() {{ {} }}", lib_src))
+        .file("src/lib.rs", &format!("fn f() {{ {lib_src} }}"))
         .publish();
 }
 
@@ -51,7 +51,7 @@ fn make_upstream(main_src: &str) -> Project {
                 bar = "*"
             "#,
         )
-        .file("src/main.rs", &format!("fn main() {{ {} }}", main_src))
+        .file("src/main.rs", &format!("fn main() {{ {main_src} }}"))
         .build()
 }
 
@@ -83,8 +83,8 @@ fn no_warning_on_bin_failure() {
         .with_status(101)
         .with_stdout_does_not_contain("hidden stdout")
         .with_stderr_does_not_contain("hidden stderr")
-        .with_stderr_does_not_contain(&format!("[WARNING] {}", WARNING1))
-        .with_stderr_does_not_contain(&format!("[WARNING] {}", WARNING2))
+        .with_stderr_does_not_contain(&format!("[WARNING] {WARNING1}"))
+        .with_stderr_does_not_contain(&format!("[WARNING] {WARNING2}"))
         .with_stderr_contains("[UPDATING] `[..]` index")
         .with_stderr_contains("[DOWNLOADED] bar v0.0.1 ([..])")
         .with_stderr_contains("[COMPILING] bar v0.0.1")
@@ -105,7 +105,7 @@ fn warning_on_lib_failure() {
         .with_stderr_contains("[UPDATING] `[..]` index")
         .with_stderr_contains("[DOWNLOADED] bar v0.0.1 ([..])")
         .with_stderr_contains("[COMPILING] bar v0.0.1")
-        .with_stderr_contains(&format!("[WARNING] {}", WARNING1))
-        .with_stderr_contains(&format!("[WARNING] {}", WARNING2))
+        .with_stderr_contains(&format!("[WARNING] {WARNING1}"))
+        .with_stderr_contains(&format!("[WARNING] {WARNING2}"))
         .run();
 }

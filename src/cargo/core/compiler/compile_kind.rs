@@ -138,7 +138,7 @@ impl CompileTarget {
         // with different paths always produce the same result.
         let path = Path::new(name)
             .canonicalize()
-            .with_context(|| format!("target path {:?} is not a valid file", name))?;
+            .with_context(|| format!("target path {name:?} is not a valid file"))?;
 
         let name = path
             .into_os_string()

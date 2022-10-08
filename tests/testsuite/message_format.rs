@@ -14,7 +14,7 @@ fn cannot_specify_two() {
     let two_kinds = "error: cannot specify two kinds of `message-format` arguments\n";
     for a in formats.iter() {
         for b in formats.iter() {
-            p.cargo(&format!("build --message-format {},{}", a, b))
+            p.cargo(&format!("build --message-format {a},{b}"))
                 .with_status(101)
                 .with_stderr(two_kinds)
                 .run();

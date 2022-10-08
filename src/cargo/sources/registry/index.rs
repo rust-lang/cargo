@@ -270,10 +270,10 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summary = self.summaries(pkg.name(), &req, load)?;
         let summary = ready!(summary).next();
         Poll::Ready(Ok(summary
-            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
+            .ok_or_else(|| internal(format!("no hash listed for {pkg}")))?
             .summary
             .checksum()
-            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?))
+            .ok_or_else(|| internal(format!("no hash listed for {pkg}")))?))
     }
 
     /// Load a list of summaries for `name` package in this registry which

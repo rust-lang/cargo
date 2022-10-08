@@ -108,7 +108,7 @@ impl<'a> DiagnosticPrinter<'a> {
                 }
                 self.config.shell().status(
                     "Migrating",
-                    &format!("{} from {} edition to {}", file, from_edition, to_edition),
+                    &format!("{file} from {from_edition} edition to {to_edition}"),
                 )
             }
             Message::Fixing { file } => self
@@ -117,18 +117,18 @@ impl<'a> DiagnosticPrinter<'a> {
                 .verbose(|shell| shell.status("Fixing", file)),
             Message::Fixed { file, fixes } => {
                 let msg = if *fixes == 1 { "fix" } else { "fixes" };
-                let msg = format!("{} ({} {})", file, fixes, msg);
+                let msg = format!("{file} ({fixes} {msg})");
                 self.config.shell().status("Fixed", msg)
             }
             Message::ReplaceFailed { file, message } => {
-                let msg = format!("error applying suggestions to `{}`\n", file);
+                let msg = format!("error applying suggestions to `{file}`\n");
                 self.config.shell().warn(&msg)?;
                 write!(
                     self.config.shell().err(),
                     "The full error message was:\n\n> {}\n\n",
                     message,
                 )?;
-                write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                write!(self.config.shell().err(), "{PLEASE_REPORT_THIS_BUG}")?;
                 Ok(())
             }
             Message::FixFailed {
@@ -155,18 +155,18 @@ impl<'a> DiagnosticPrinter<'a> {
                          reported errors within these files:\n"
                     )?;
                     for file in files {
-                        writeln!(self.config.shell().err(), "  * {}", file)?;
+                        writeln!(self.config.shell().err(), "  * {file}")?;
                     }
                     writeln!(self.config.shell().err())?;
                 }
-                write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                write!(self.config.shell().err(), "{PLEASE_REPORT_THIS_BUG}")?;
                 if !errors.is_empty() {
                     writeln!(
                         self.config.shell().err(),
                         "The following errors were reported:"
                     )?;
                     for error in errors {
-                        write!(self.config.shell().err(), "{}", error)?;
+                        write!(self.config.shell().err(), "{error}")?;
                         if !error.ends_with('\n') {
                             writeln!(self.config.shell().err())?;
                         }

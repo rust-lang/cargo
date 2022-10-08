@@ -896,7 +896,7 @@ fn error_from_deep_recursion() -> Result<(), fmt::Error> {
     let mut big_macro = String::new();
     writeln!(big_macro, "macro_rules! m {{")?;
     for i in 0..130 {
-        writeln!(big_macro, "({}) => {{ m!({}); }};", i, i + 1)?;
+        writeln!(big_macro, "({i}) => {{ m!({}); }};", i + 1)?;
     }
     writeln!(big_macro, "}}")?;
     writeln!(big_macro, "m!(0);")?;

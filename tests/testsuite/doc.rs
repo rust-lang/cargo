@@ -770,10 +770,10 @@ fn doc_target() {
         .build();
 
     p.cargo("doc --verbose --target").arg(TARGET).run();
-    assert!(p.root().join(&format!("target/{}/doc", TARGET)).is_dir());
+    assert!(p.root().join(&format!("target/{TARGET}/doc")).is_dir());
     assert!(p
         .root()
-        .join(&format!("target/{}/doc/foo/index.html", TARGET))
+        .join(&format!("target/{TARGET}/doc/foo/index.html"))
         .is_file());
 }
 

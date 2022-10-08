@@ -7,7 +7,7 @@ use cargo_test_support::project;
 use cargo_test_support::registry;
 
 fn setup(name: &str, version: &str) {
-    let dir = registry::api_path().join(format!("api/v1/crates/{}/{}", name, version));
+    let dir = registry::api_path().join(format!("api/v1/crates/{name}/{version}"));
     dir.mkdir_p();
     fs::write(dir.join("yank"), r#"{"ok": true}"#).unwrap();
 }

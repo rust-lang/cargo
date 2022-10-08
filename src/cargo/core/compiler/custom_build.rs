@@ -393,19 +393,19 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                         warnings_in_case_of_panic.push(warning.to_owned());
                     }
                     if extra_verbose {
-                        state.stdout(format!("{}{}", prefix, stdout))?;
+                        state.stdout(format!("{prefix}{stdout}"))?;
                     }
                     Ok(())
                 },
                 &mut |stderr| {
                     if extra_verbose {
-                        state.stderr(format!("{}{}", prefix, stderr))?;
+                        state.stderr(format!("{prefix}{stderr}"))?;
                     }
                     Ok(())
                 },
                 true,
             )
-            .with_context(|| format!("failed to run custom build command for `{}`", pkg_descr));
+            .with_context(|| format!("failed to run custom build command for `{pkg_descr}`"));
 
         if let Err(error) = output {
             insert_warnings_in_build_outputs(
@@ -560,7 +560,7 @@ impl BuildOutput {
         let mut rerun_if_changed = Vec::new();
         let mut rerun_if_env_changed = Vec::new();
         let mut warnings = Vec::new();
-        let whence = format!("build script of `{}`", pkg_descr);
+        let whence = format!("build script of `{pkg_descr}`");
 
         for line in input.split(|b| *b == b'\n') {
             let line = match str::from_utf8(line) {
@@ -685,7 +685,7 @@ impl BuildOutput {
                     if extra_check_cfg {
                         check_cfgs.push(value.to_string());
                     } else {
-                        warnings.push(format!("cargo:{} requires -Zcheck-cfg=output flag", key));
+                        warnings.push(format!("cargo:{key} requires -Zcheck-cfg=output flag"));
                     }
                 }
                 "rustc-env" => {
@@ -826,11 +826,11 @@ fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> Carg
         })
         .collect();
     for dep in &meta_deps {
-        output.push(format!("use {};\n", dep));
+        output.push(format!("use {dep};\n"));
     }
     output.push("fn main() {\n".to_string());
     for dep in &meta_deps {
-        output.push(format!("    {}::metabuild();\n", dep));
+        output.push(format!("    {dep}::metabuild();\n"));
     }
     output.push("}\n".to_string());
     let output = output.join("");

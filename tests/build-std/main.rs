@@ -28,7 +28,7 @@ fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
 
     // And finally actually enable `build-std` for now
     let arg = match arg {
-        Some(s) => format!("-Zbuild-std={}", s),
+        Some(s) => format!("-Zbuild-std={s}"),
         None => "-Zbuild-std".to_string(),
     };
     e.arg(arg);

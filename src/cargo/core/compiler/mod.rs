@@ -361,14 +361,14 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 let warnings = match output_options.warnings_seen {
                     0 => String::new(),
                     1 => "; 1 warning emitted".to_string(),
-                    count => format!("; {} warnings emitted", count),
+                    count => format!("; {count} warnings emitted"),
                 };
                 let errors = match output_options.errors_seen {
                     0 => String::new(),
                     1 => " due to previous error".to_string(),
-                    count => format!(" due to {} previous errors", count),
+                    count => format!(" due to {count} previous errors"),
                 };
-                format!("could not compile `{}`{}{}", name, errors, warnings)
+                format!("could not compile `{name}`{errors}{warnings}")
             })?;
             // Exec should never return with success *and* generate an error.
             debug_assert_eq!(output_options.errors_seen, 0);
@@ -435,7 +435,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 // now, continue allowing it for cdylib only.
                 // See https://github.com/rust-lang/cargo/issues/9562
                 if lt.applies_to(target) && (key.0 == current_id || *lt == LinkType::Cdylib) {
-                    rustc.arg("-C").arg(format!("link-arg={}", arg));
+                    rustc.arg("-C").arg(format!("link-arg={arg}"));
                 }
             }
         }
@@ -534,7 +534,7 @@ fn add_plugin_deps(
     for (pkg_id, metadata) in &build_scripts.plugins {
         let output = build_script_outputs
             .get(*metadata)
-            .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", pkg_id)))?;
+            .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {pkg_id}")))?;
         search_path.append(&mut filter_dynamic_search_path(
             output.library_paths.iter(),
             root_output,
@@ -650,7 +650,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     }
 
     let metadata = cx.metadata_for_doc_units[unit];
-    rustdoc.arg("-C").arg(format!("metadata={}", metadata));
+    rustdoc.arg("-C").arg(format!("metadata={metadata}"));
 
     let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {
         let output_dir = cx.files().deps_dir(unit);
@@ -736,7 +736,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                 },
                 false,
             )
-            .with_context(|| format!("could not document `{}`", name))?;
+            .with_context(|| format!("could not document `{name}`"))?;
         Ok(())
     }))
 }
@@ -806,11 +806,11 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
         ) {
             // Terminal width explicitly provided - only useful for testing.
             (Some(Some(width)), _) => {
-                cmd.arg(format!("--diagnostic-width={}", width));
+                cmd.arg(format!("--diagnostic-width={width}"));
             }
             // Terminal width was not explicitly provided but flag was provided - common case.
             (Some(None), Some(width)) => {
-                cmd.arg(format!("--diagnostic-width={}", width));
+                cmd.arg(format!("--diagnostic-width={width}"));
             }
             // User didn't opt-in.
             _ => (),
@@ -879,7 +879,7 @@ fn build_base_args(
     }
 
     if opt_level.as_str() != "0" {
-        cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
+        cmd.arg("-C").arg(&format!("opt-level={opt_level}"));
     }
 
     if !rustflags.is_empty() {
@@ -887,7 +887,7 @@ fn build_base_args(
     }
 
     if *panic != PanicStrategy::Unwind {
-        cmd.arg("-C").arg(format!("panic={}", panic));
+        cmd.arg("-C").arg(format!("panic={panic}"));
     }
 
     cmd.args(&lto_args(cx, unit));
@@ -897,20 +897,20 @@ fn build_base_args(
     // we need to dynamically check if it's available.
     if cx.bcx.target_data.info(unit.kind).supports_split_debuginfo {
         if let Some(split) = split_debuginfo {
-            cmd.arg("-C").arg(format!("split-debuginfo={}", split));
+            cmd.arg("-C").arg(format!("split-debuginfo={split}"));
         }
     }
 
     if let Some(backend) = codegen_backend {
-        cmd.arg("-Z").arg(&format!("codegen-backend={}", backend));
+        cmd.arg("-Z").arg(&format!("codegen-backend={backend}"));
     }
 
     if let Some(n) = codegen_units {
-        cmd.arg("-C").arg(&format!("codegen-units={}", n));
+        cmd.arg("-C").arg(&format!("codegen-units={n}"));
     }
 
     if let Some(debuginfo) = debuginfo {
-        cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
+        cmd.arg("-C").arg(format!("debuginfo={debuginfo}"));
     }
 
     if let Some(args) = cx.bcx.extra_args_for(unit) {
@@ -959,9 +959,9 @@ fn build_base_args(
     cmd.args(&check_cfg_args(cx, unit));
 
     let meta = cx.files().metadata(unit);
-    cmd.arg("-C").arg(&format!("metadata={}", meta));
+    cmd.arg("-C").arg(&format!("metadata={meta}"));
     if cx.files().use_extra_filename(unit) {
-        cmd.arg("-C").arg(&format!("extra-filename=-{}", meta));
+        cmd.arg("-C").arg(&format!("extra-filename=-{meta}"));
     }
 
     if rpath {
@@ -994,7 +994,7 @@ fn build_base_args(
     }
 
     if strip != Strip::None {
-        cmd.arg("-C").arg(format!("strip={}", strip));
+        cmd.arg("-C").arg(format!("strip={strip}"));
     }
 
     if unit.is_std {
@@ -1023,7 +1023,7 @@ fn build_base_args(
             let name = bin_target
                 .binary_filename()
                 .unwrap_or(bin_target.name().to_string());
-            let key = format!("CARGO_BIN_EXE_{}", name);
+            let key = format!("CARGO_BIN_EXE_{name}");
             cmd.env(&key, exe_path);
         }
     }
@@ -1036,7 +1036,7 @@ fn features_args(unit: &Unit) -> Vec<OsString> {
 
     for feat in &unit.features {
         args.push(OsString::from("--cfg"));
-        args.push(OsString::from(format!("feature=\"{}\"", feat)));
+        args.push(OsString::from(format!("feature=\"{feat}\"")));
     }
 
     args
@@ -1090,7 +1090,7 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     };
     match cx.lto[unit] {
         lto::Lto::Run(None) => push("lto"),
-        lto::Lto::Run(Some(s)) => push(&format!("lto={}", s)),
+        lto::Lto::Run(Some(s)) => push(&format!("lto={s}")),
         lto::Lto::Off => {
             push("lto=off");
             push("embed-bitcode=no");

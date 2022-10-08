@@ -25,7 +25,7 @@ pub struct GitSource<'cfg> {
 
 impl<'cfg> GitSource<'cfg> {
     pub fn new(source_id: SourceId, config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
-        assert!(source_id.is_git(), "id is not git, id={}", source_id);
+        assert!(source_id.is_git(), "id is not git, id={source_id}");
 
         let remote = GitRemote::new(source_id.url());
         let ident = ident(&source_id);
@@ -35,7 +35,7 @@ impl<'cfg> GitSource<'cfg> {
             manifest_reference: source_id.git_reference().unwrap().clone(),
             locked_rev: match source_id.precise() {
                 Some(s) => Some(git2::Oid::from_str(s).with_context(|| {
-                    format!("precise value for git is not a git revision: {}", s)
+                    format!("precise value for git is not a git revision: {s}")
                 })?),
                 None => None,
             },
@@ -71,7 +71,7 @@ fn ident(id: &SourceId) -> String {
 
     let ident = if ident.is_empty() { "_empty" } else { ident };
 
-    format!("{}-{}", ident, short_hash(id.canonical_url()))
+    format!("{ident}-{}", short_hash(id.canonical_url()))
 }
 
 impl<'cfg> Debug for GitSource<'cfg> {
@@ -79,7 +79,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
         write!(f, "git repo at {}", self.remote.url())?;
 
         match self.manifest_reference.pretty_ref() {
-            Some(s) => write!(f, " ({})", s),
+            Some(s) => write!(f, " ({s})"),
             None => Ok(()),
         }
     }

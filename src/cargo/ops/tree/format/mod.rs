@@ -85,17 +85,17 @@ impl<'a> fmt::Display for Display<'a> {
 
                             let source_id = package.package_id().source_id();
                             if !source_id.is_crates_io() {
-                                write!(fmt, " ({})", source_id)?;
+                                write!(fmt, " ({source_id})")?;
                             }
                         }
                         Chunk::License => {
                             if let Some(license) = &package.manifest().metadata().license {
-                                write!(fmt, "{}", license)?;
+                                write!(fmt, "{license}")?;
                             }
                         }
                         Chunk::Repository => {
                             if let Some(repository) = &package.manifest().metadata().repository {
-                                write!(fmt, "{}", repository)?;
+                                write!(fmt, "{repository}")?;
                             }
                         }
                         Chunk::Features => {
@@ -118,14 +118,14 @@ impl<'a> fmt::Display for Display<'a> {
                 let for_node = self.graph.node(*node_index);
                 match for_node {
                     Node::Package { package_id, .. } => {
-                        write!(fmt, "{} feature \"{}\"", package_id.name(), name)?;
+                        write!(fmt, "{} feature \"{name}\"", package_id.name())?;
                         if self.graph.is_cli_feature(self.node_index) {
                             write!(fmt, " (command-line)")?;
                         }
                     }
                     // The node_index in Node::Feature must point to a package
                     // node, see `add_feature`.
-                    _ => panic!("unexpected feature node {:?}", for_node),
+                    _ => panic!("unexpected feature node {for_node:?}"),
                 }
             }
         }

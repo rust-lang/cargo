@@ -539,7 +539,7 @@ mod remote;
 fn short_name(id: SourceId) -> String {
     let hash = hex::short_hash(&id);
     let ident = id.url().host_str().unwrap_or("").to_string();
-    format!("{}-{}", ident, hash)
+    format!("{ident}-{hash}")
 }
 
 impl<'cfg> RegistrySource<'cfg> {
@@ -681,7 +681,7 @@ impl<'cfg> RegistrySource<'cfg> {
     fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
-            .with_context(|| format!("failed to unpack package `{}`", package))?;
+            .with_context(|| format!("failed to unpack package `{package}`"))?;
         let mut src = PathSource::new(&path, self.source_id, self.config);
         src.update()?;
         let mut pkg = match src.download(package)? {

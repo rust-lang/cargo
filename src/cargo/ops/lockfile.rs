@@ -135,7 +135,7 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
     }
 
     if let Some(version) = toml.get("version") {
-        out.push_str(&format!("version = {}\n\n", version));
+        out.push_str(&format!("version = {version}\n\n"));
     }
 
     let deps = toml["package"].as_array().unwrap();
@@ -218,7 +218,7 @@ fn emit_package(dep: &toml_edit::InlineTable, out: &mut String) {
             out.push_str("dependencies = [\n");
 
             for child in slice.iter() {
-                out.push_str(&format!(" {},\n", child));
+                out.push_str(&format!(" {child},\n"));
             }
 
             out.push_str("]\n");

@@ -732,14 +732,14 @@ fn preserve_top_comment() {
     lines.insert(2, "# some other comment");
     let mut lockfile = lines.join("\n");
     lockfile.push('\n'); // .lines/.join loses the last newline
-    println!("saving Cargo.lock contents:\n{}", lockfile);
+    println!("saving Cargo.lock contents:\n{lockfile}");
 
     p.change_file("Cargo.lock", &lockfile);
 
     p.cargo("update").run();
 
     let lockfile2 = p.read_lockfile();
-    println!("loaded Cargo.lock contents:\n{}", lockfile2);
+    println!("loaded Cargo.lock contents:\n{lockfile2}");
 
     assert_eq!(lockfile, lockfile2);
 }

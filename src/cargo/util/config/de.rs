@@ -338,7 +338,7 @@ impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
         // choice but to call `visit_some()` which would then fail if
         // CARGO_BUILD_TARGET isn't set. So we check for these prefixes and
         // disallow them here.
-        let env_prefix = format!("{}_", field).replace('-', "_");
+        let env_prefix = format!("{field}_").replace('-', "_");
         let env_prefix_ok = !self.fields.iter().any(|field| {
             let field = match field {
                 KeyKind::Normal(s) | KeyKind::CaseSensitive(s) => s.as_str(),

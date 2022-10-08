@@ -156,7 +156,7 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
 
 pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
-    let mut version_string = format!("cargo {}\n", version);
+    let mut version_string = format!("cargo {version}\n");
     if is_verbose {
         version_string.push_str(&format!("release: {}\n", version.version));
         if let Some(ref ci) = version.commit_info {

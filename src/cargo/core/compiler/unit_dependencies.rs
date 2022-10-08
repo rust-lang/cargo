@@ -183,7 +183,7 @@ fn attach_std_deps(
     if found {
         for (unit, deps) in std_unit_deps.into_iter() {
             if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
-                panic!("std unit collision with existing unit: {:?}", other_unit);
+                panic!("std unit collision with existing unit: {other_unit:?}");
             }
         }
     }
@@ -1053,7 +1053,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
     fn get(&self, id: PackageId) -> &'a Package {
         self.package_set
             .get_one(id)
-            .unwrap_or_else(|_| panic!("expected {} to be downloaded", id))
+            .unwrap_or_else(|_| panic!("expected {id} to be downloaded"))
     }
 
     /// Returns a filtered set of dependencies for the given unit.

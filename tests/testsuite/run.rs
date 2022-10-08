@@ -446,7 +446,7 @@ fn run_bin_example() {
 fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>) -> Project {
     let autoexamples = match autoexamples {
         None => "".to_string(),
-        Some(bool) => format!("autoexamples = {}", bool),
+        Some(bool) => format!("autoexamples = {bool}"),
     };
     project()
         .file(

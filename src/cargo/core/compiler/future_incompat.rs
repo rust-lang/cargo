@@ -250,7 +250,7 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMa
                 item.diagnostic
                     .rendered
                     .lines()
-                    .map(|l| format!("> {}\n", l)),
+                    .map(|l| format!("> {l}\n")),
             );
         }
     }

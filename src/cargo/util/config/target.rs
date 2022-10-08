@@ -85,7 +85,7 @@ pub(super) fn get_target_applies_to_host(config: &Config) -> CargoResult<bool> {
 /// Loads a single `[host]` table for the given triple.
 pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
     if config.cli_unstable().host_config {
-        let host_triple_prefix = format!("host.{}", triple);
+        let host_triple_prefix = format!("host.{triple}");
         let host_triple_key = ConfigKey::from_str(&host_triple_prefix);
         let host_prefix = match config.get_cv(&host_triple_key)? {
             Some(_) => host_triple_prefix,
@@ -104,7 +104,7 @@ pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<Tar
 
 /// Loads a single `[target]` table for the given triple.
 pub(super) fn load_target_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
-    load_config_table(config, &format!("target.{}", triple))
+    load_config_table(config, &format!("target.{triple}"))
 }
 
 /// Loads a single table for the given prefix.
@@ -114,9 +114,9 @@ fn load_config_table(config: &Config, prefix: &str) -> CargoResult<TargetConfig>
     // because it causes serde to use `deserialize_map` which means the config
     // deserializer does not know which keys to deserialize, which means
     // environment variables would not work.
-    let runner: OptValue<PathAndArgs> = config.get(&format!("{}.runner", prefix))?;
-    let rustflags: OptValue<StringList> = config.get(&format!("{}.rustflags", prefix))?;
-    let linker: OptValue<ConfigRelativePath> = config.get(&format!("{}.linker", prefix))?;
+    let runner: OptValue<PathAndArgs> = config.get(&format!("{prefix}.runner"))?;
+    let rustflags: OptValue<StringList> = config.get(&format!("{prefix}.rustflags"))?;
+    let linker: OptValue<ConfigRelativePath> = config.get(&format!("{prefix}.linker"))?;
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
     let links_overrides = match config.get_table(&target_key)? {
@@ -150,7 +150,7 @@ fn parse_links_overrides(
             _ => {}
         }
         let mut output = BuildOutput::default();
-        let table = value.table(&format!("{}.{}", target_key, lib_name))?.0;
+        let table = value.table(&format!("{target_key}.{lib_name}"))?.0;
         // We require deterministic order of evaluation, so we must sort the pairs by key first.
         let mut pairs = Vec::new();
         for (k, value) in table {
@@ -161,7 +161,7 @@ fn parse_links_overrides(
             match key.as_str() {
                 "rustc-flags" => {
                     let flags = value.string(key)?;
-                    let whence = format!("target config `{}.{}` (in {})", target_key, key, flags.1);
+                    let whence = format!("target config `{target_key}.{key}` (in {})", flags.1);
                     let (paths, links) = BuildOutput::parse_rustc_flags(flags.0, &whence)?;
                     output.library_paths.extend(paths);
                     output.library_links.extend(links);

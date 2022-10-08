@@ -13,7 +13,7 @@ pub trait Message: ser::Serialize {
         let json = serde_json::to_string(self).unwrap();
         assert!(json.starts_with("{\""));
         let reason = json!(self.reason());
-        format!("{{\"reason\":{},{}", reason, &json[1..])
+        format!("{{\"reason\":{reason},{}", &json[1..])
     }
 }
 

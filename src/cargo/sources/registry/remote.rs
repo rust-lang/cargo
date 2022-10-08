@@ -89,7 +89,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
                     let mut opts = git2::RepositoryInitOptions::new();
                     opts.external_template(false);
                     Ok(git2::Repository::init_opts(&path, &opts).with_context(|| {
-                        format!("failed to initialize index git repository (in {:?})", path)
+                        format!("failed to initialize index git repository (in {path:?})")
                     })?)
                 }
             }
@@ -290,7 +290,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let url = self.source_id.url();
         let repo = self.repo.borrow_mut().unwrap();
         git::fetch(repo, url.as_str(), &self.index_git_ref, self.config)
-            .with_context(|| format!("failed to fetch `{}`", url))?;
+            .with_context(|| format!("failed to fetch `{url}`"))?;
         self.config.updated_sources().insert(self.source_id);
 
         // Create a dummy file to record the mtime for when we updated the

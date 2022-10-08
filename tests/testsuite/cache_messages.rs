@@ -396,7 +396,7 @@ fn caching_large_output() {
 
     let mut expected = String::new();
     for i in 0..COUNT {
-        expected.push_str(&format!("test message {}\n", i));
+        expected.push_str(&format!("test message {i}\n"));
     }
 
     rustc.cargo("build").run();

@@ -109,7 +109,7 @@ fn one_install_should_be_bad() {
 fn multiple_registry_fetches() {
     let mut pkg = Package::new("bar", "1.0.2");
     for i in 0..10 {
-        let name = format!("foo{}", i);
+        let name = format!("foo{i}");
         Package::new(&name, "1.0.0").publish();
         pkg.dep(&name, "*");
     }
@@ -164,12 +164,12 @@ fn multiple_registry_fetches() {
     assert!(p
         .root()
         .join("a/target/debug")
-        .join(format!("foo{}", suffix))
+        .join(format!("foo{suffix}"))
         .is_file());
     assert!(p
         .root()
         .join("b/target/debug")
-        .join(format!("bar{}", suffix))
+        .join(format!("bar{suffix}"))
         .is_file());
 }
 

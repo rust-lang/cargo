@@ -111,7 +111,7 @@ pub fn read_manifest_from_str(
     })?;
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
-            warnings.add_warning(format!("unused manifest key: {}", key));
+            warnings.add_warning(format!("unused manifest key: {key}"));
             if key == "profiles.debug" {
                 warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
             }
@@ -639,7 +639,7 @@ impl TomlProfile {
             }
             "test" | "bench" => {
                 if self.panic.is_some() {
-                    warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
+                    warnings.push(format!("`panic` setting is ignored for `{name}` profile"))
                 }
             }
             _ => {}
@@ -2339,7 +2339,7 @@ impl TomlManifest {
                     .get_registry_index(url)
                     .or_else(|_| url.into_url())
                     .with_context(|| {
-                        format!("[patch] entry `{}` should be a URL or registry name", url)
+                        format!("[patch] entry `{url}` should be a URL or registry name")
                     })?,
             };
             patch.insert(

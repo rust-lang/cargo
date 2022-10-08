@@ -48,7 +48,7 @@ Caused by:
         assert: &dyn Fn(&mut cargo_test_support::Execs),
     ) {
         assert(
-            p.cargo(&format!("{} -Z bindeps", cmd))
+            p.cargo(&format!("{cmd} -Z bindeps"))
                 .masquerade_as_nightly_cargo(&["bindeps"]),
         );
         assert(&mut p.cargo(cmd));
@@ -2147,7 +2147,7 @@ fn assert_artifact_executable_output(
 
 fn build_script_output_string(p: &Project, package_name: &str) -> String {
     let paths = p
-        .glob(format!("target/debug/build/{}-*/output", package_name))
+        .glob(format!("target/debug/build/{package_name}-*/output"))
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
     assert_eq!(paths.len(), 1);

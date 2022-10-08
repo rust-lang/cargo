@@ -22,7 +22,7 @@ fn pkg(name: &str, vers: &str) {
         .file("src/lib.rs", "")
         .file(
             "src/main.rs",
-            &format!("extern crate {}; fn main() {{}}", name),
+            &format!("extern crate {name}; fn main() {{}}"),
         )
         .publish();
 }
@@ -1675,13 +1675,13 @@ fn git_repo_replace() {
     assert_ne!(old_rev, new_rev);
     assert!(fs::read_to_string(path.clone())
         .unwrap()
-        .contains(&format!("{}", old_rev)));
+        .contains(&format!("{old_rev}")));
     cargo_process("install --force --git")
         .arg(p.url().to_string())
         .run();
     assert!(fs::read_to_string(path)
         .unwrap()
-        .contains(&format!("{}", new_rev)));
+        .contains(&format!("{new_rev}")));
 }
 
 #[cargo_test]

@@ -438,7 +438,7 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
     let stderr = std::str::from_utf8(&output.stderr).unwrap();
     let mut matches = stderr.lines().filter(|line| {
         line.contains("Running")
-            && line.contains(&format!("--crate-name {} ", krate))
+            && line.contains(&format!("--crate-name {krate} "))
             && line.contains(krate_info)
     });
     let line = matches.next().unwrap_or_else(|| {

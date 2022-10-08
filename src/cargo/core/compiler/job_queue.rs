@@ -345,7 +345,7 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
 
     pub fn stdout(&self, stdout: String) -> CargoResult<()> {
         if let Some(dedupe) = self.output {
-            writeln!(dedupe.config.shell().out(), "{}", stdout)?;
+            writeln!(dedupe.config.shell().out(), "{stdout}")?;
         } else {
             self.messages.push_bounded(Message::Stdout(stdout));
         }
@@ -672,7 +672,7 @@ impl<'cfg> DrainState<'cfg> {
                 plan.update(&module_name, &cmd, &filenames)?;
             }
             Message::Stdout(out) => {
-                writeln!(cx.bcx.config.shell().out(), "{}", out)?;
+                writeln!(cx.bcx.config.shell().out(), "{out}")?;
             }
             Message::Stderr(err) => {
                 let mut shell = cx.bcx.config.shell();
@@ -899,7 +899,7 @@ impl<'cfg> DrainState<'cfg> {
                 success: errors.count == 0,
             }
             .to_json_string();
-            if let Err(e) = writeln!(shell.out(), "{}", msg) {
+            if let Err(e) = writeln!(shell.out(), "{msg}") {
                 self.handle_error(&mut shell, &mut errors, e);
             }
         }
@@ -978,26 +978,26 @@ impl<'cfg> DrainState<'cfg> {
         let pkg_name = unit.pkg.name();
         let target_name = unit.target.name();
         match unit.mode {
-            CompileMode::Doc { .. } => format!("{}(doc)", pkg_name),
-            CompileMode::RunCustomBuild => format!("{}(build)", pkg_name),
+            CompileMode::Doc { .. } => format!("{pkg_name}(doc)"),
+            CompileMode::RunCustomBuild => format!("{pkg_name}(build)"),
             CompileMode::Test | CompileMode::Check { test: true } => match unit.target.kind() {
-                TargetKind::Lib(_) => format!("{}(test)", target_name),
+                TargetKind::Lib(_) => format!("{target_name}(test)"),
                 TargetKind::CustomBuild => panic!("cannot test build script"),
-                TargetKind::Bin => format!("{}(bin test)", target_name),
-                TargetKind::Test => format!("{}(test)", target_name),
-                TargetKind::Bench => format!("{}(bench)", target_name),
+                TargetKind::Bin => format!("{target_name}(bin test)"),
+                TargetKind::Test => format!("{target_name}(test)"),
+                TargetKind::Bench => format!("{target_name}(bench)"),
                 TargetKind::ExampleBin | TargetKind::ExampleLib(_) => {
-                    format!("{}(example test)", target_name)
+                    format!("{target_name}(example test)")
                 }
             },
             _ => match unit.target.kind() {
                 TargetKind::Lib(_) => pkg_name.to_string(),
-                TargetKind::CustomBuild => format!("{}(build.rs)", pkg_name),
-                TargetKind::Bin => format!("{}(bin)", target_name),
-                TargetKind::Test => format!("{}(test)", target_name),
-                TargetKind::Bench => format!("{}(bench)", target_name),
+                TargetKind::CustomBuild => format!("{pkg_name}(build.rs)"),
+                TargetKind::Bin => format!("{target_name}(bin)"),
+                TargetKind::Test => format!("{target_name}(test)"),
+                TargetKind::Bench => format!("{target_name}(bench)"),
                 TargetKind::ExampleBin | TargetKind::ExampleLib(_) => {
-                    format!("{}(example)", target_name)
+                    format!("{target_name}(example)")
                 }
             },
         }
@@ -1110,7 +1110,7 @@ impl<'cfg> DrainState<'cfg> {
         if let Some(output) = outputs.get(metadata) {
             if !output.warnings.is_empty() {
                 if let Some(msg) = msg {
-                    writeln!(bcx.config.shell().err(), "{}\n", msg)?;
+                    writeln!(bcx.config.shell().err(), "{msg}\n")?;
                 }
 
                 for warning in output.warnings.iter() {
@@ -1153,12 +1153,12 @@ impl<'cfg> DrainState<'cfg> {
         message.push_str(") generated ");
         match count.0 {
             1 => message.push_str("1 warning"),
-            n => drop(write!(message, "{} warnings", n)),
+            n => drop(write!(message, "{n} warnings")),
         };
         match count.1 {
             0 => {}
             1 => message.push_str(" (1 duplicate)"),
-            n => drop(write!(message, " ({} duplicates)", n)),
+            n => drop(write!(message, " ({n} duplicates)")),
         }
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.

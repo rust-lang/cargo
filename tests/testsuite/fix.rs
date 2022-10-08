@@ -852,7 +852,7 @@ More details may be found at
 https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
 
 [FINISHED] [..]
-", next=next, latest_stable=latest_stable, prev=prev))
+"))
         .run();
 
     if !is_nightly() {
@@ -1014,7 +1014,7 @@ fn fix_overlapping() {
         .run();
 
     let contents = p.read_file("src/lib.rs");
-    println!("{}", contents);
+    println!("{contents}");
     assert!(contents.contains("crate::foo::<crate::A>()"));
 }
 

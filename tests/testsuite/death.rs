@@ -76,7 +76,7 @@ fn ctrl_c_kills_everyone() {
     for i in 0..10 {
         match fs::remove_dir_all(&p.root().join("target")) {
             Ok(()) => return,
-            Err(e) => println!("attempt {}: {}", i, e),
+            Err(e) => println!("attempt {i}: {e}"),
         }
         thread::sleep(slow_cpu_multiplier(100));
     }

@@ -328,8 +328,8 @@ compact_debug! {
                                 self.src_path.path().unwrap().to_path_buf(),
                                 self.edition,
                             ).inner,
-                            format!("lib_target({:?}, {:?}, {:?}, {:?})",
-                                    self.name, kinds, self.src_path, self.edition),
+                            format!("lib_target({:?}, {kinds:?}, {:?}, {:?})",
+                                    self.name, self.src_path, self.edition),
                         )
                     }
                     TargetKind::CustomBuild => {
@@ -341,8 +341,8 @@ compact_debug! {
                                         path.to_path_buf(),
                                         self.edition,
                                     ).inner,
-                                    format!("custom_build_target({:?}, {:?}, {:?})",
-                                            self.name, path, self.edition),
+                                    format!("custom_build_target({:?}, {path:?}, {:?})",
+                                            self.name, self.edition),
                                 )
                             }
                             TargetSourcePath::Metabuild => {
@@ -574,7 +574,7 @@ impl Manifest {
         target_dir
             .into_path_unlocked()
             .join(".metabuild")
-            .join(format!("metabuild-{}-{}.rs", self.name(), hash))
+            .join(format!("metabuild-{}-{hash}.rs", self.name()))
     }
 }
 

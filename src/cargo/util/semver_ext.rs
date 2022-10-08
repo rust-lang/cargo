@@ -56,7 +56,7 @@ impl OptVersionReq {
     }
 
     pub fn lock_to(&mut self, version: &Version) {
-        assert!(self.matches(version), "cannot lock {} to {}", self, version);
+        assert!(self.matches(version), "cannot lock {self} to {version}");
         use OptVersionReq::*;
         let version = version.clone();
         *self = match self {

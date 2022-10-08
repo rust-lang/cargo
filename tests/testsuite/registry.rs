@@ -2590,7 +2590,7 @@ fn package_lock_inside_package_is_overwritten() {
     let ok = cargo_home()
         .join("registry")
         .join("src")
-        .join(format!("-{}", hash))
+        .join(format!("-{hash}"))
         .join("bar-0.0.1")
         .join(".cargo-ok");
 
@@ -2628,7 +2628,7 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
     let pkg_root = cargo_home()
         .join("registry")
         .join("src")
-        .join(format!("-{}", hash))
+        .join(format!("-{hash}"))
         .join("bar-0.0.1");
     let ok = pkg_root.join(".cargo-ok");
     let librs = pkg_root.join("src/lib.rs");

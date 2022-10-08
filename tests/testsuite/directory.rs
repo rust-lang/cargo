@@ -41,7 +41,7 @@ struct Checksum {
 impl VendorPackage {
     fn new(name: &str) -> VendorPackage {
         VendorPackage {
-            p: Some(project().at(&format!("index/{}", name))),
+            p: Some(project().at(&format!("index/{name}"))),
             cksum: Checksum {
                 package: Some(String::new()),
                 files: HashMap::new(),

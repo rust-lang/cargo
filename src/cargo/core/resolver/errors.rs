@@ -259,7 +259,7 @@ pub(super) fn activation_error(
             let locked_version = dep
                 .version_req()
                 .locked_version()
-                .map(|v| format!(" (locked to {})", v))
+                .map(|v| format!(" (locked to {v})"))
                 .unwrap_or_default();
 
             let mut msg = format!(
@@ -421,7 +421,7 @@ pub(crate) fn describe_path<'a>(
             let locked_version = dep
                 .version_req()
                 .locked_version()
-                .map(|v| format!("(locked to {}) ", v))
+                .map(|v| format!("(locked to {v}) "))
                 .unwrap_or_default();
 
             write!(

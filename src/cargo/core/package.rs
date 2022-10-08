@@ -201,7 +201,7 @@ impl Package {
             .original()
             .prepare_for_publish(ws, self.root())?;
         let toml = toml::to_string_pretty(&manifest)?;
-        Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
+        Ok(format!("{MANIFEST_PREAMBLE}\n{toml}"))
     }
 
     /// Returns if package should include `Cargo.lock`.
@@ -678,7 +678,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// the package is ready and doesn't need to be downloaded.
     pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         self.start_inner(id)
-            .with_context(|| format!("failed to download `{}`", id))
+            .with_context(|| format!("failed to download `{id}`"))
     }
 
     fn start_inner(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
@@ -688,7 +688,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             .set
             .packages
             .get(&id)
-            .ok_or_else(|| internal(format!("couldn't find `{}` in package set", id)))?;
+            .ok_or_else(|| internal(format!("couldn't find `{id}` in package set")))?;
         if let Some(pkg) = slot.borrow() {
             return Ok(Some(pkg));
         }
@@ -699,7 +699,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let mut sources = self.set.sources.borrow_mut();
         let source = sources
             .get_mut(id.source_id())
-            .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
+            .ok_or_else(|| internal(format!("couldn't find source for `{id}`")))?;
         let pkg = source
             .download(id)
             .with_context(|| "unable to get packages from source")?;
@@ -1071,13 +1071,13 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         }
         let pending = self.pending.len();
         let mut msg = if pending == 1 {
-            format!("{} crate", pending)
+            format!("{pending} crate")
         } else {
-            format!("{} crates", pending)
+            format!("{pending} crates")
         };
         match why {
             WhyTick::Extracting(krate) => {
-                msg.push_str(&format!(", extracting {} ...", krate));
+                msg.push_str(&format!(", extracting {krate} ..."));
             }
             _ => {
                 let mut dur = Duration::new(0, 0);

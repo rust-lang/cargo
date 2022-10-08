@@ -118,7 +118,7 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
         if !opts.show_origin {
             return "".to_string();
         }
-        format!(" # {}", def)
+        format!(" # {def}")
     };
     match cv {
         CV::Boolean(val, def) => drop_println!(config, "{} = {}{}", key, val, origin(def)),

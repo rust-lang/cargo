@@ -240,10 +240,10 @@ impl Cache {
             let output = cmd.output()?;
             let stdout = String::from_utf8(output.stdout)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
+                .with_context(|| format!("`{cmd}` didn't return utf8 output"))?;
             let stderr = String::from_utf8(output.stderr)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
+                .with_context(|| format!("`{cmd}` didn't return utf8 output"))?;
             self.data.outputs.insert(
                 key,
                 Output {
@@ -265,7 +265,7 @@ impl Cache {
             Ok((output.stdout.clone(), output.stderr.clone()))
         } else {
             Err(ProcessError::new_raw(
-                &format!("process didn't exit successfully: {}", cmd),
+                &format!("process didn't exit successfully: {cmd}"),
                 output.code,
                 &output.status,
                 Some(output.stdout.as_ref()),

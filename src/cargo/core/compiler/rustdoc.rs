@@ -148,7 +148,7 @@ pub fn add_root_urls(
                         .replace("{pkg_name}", &dep.unit.pkg.name())
                         .replace("{version}", &dep.unit.pkg.version().to_string());
                     rustdoc.arg("--extern-html-root-url");
-                    rustdoc.arg(format!("{}={}", dep.unit.target.crate_name(), url));
+                    rustdoc.arg(format!("{}={url}", dep.unit.target.crate_name()));
                     unstable_opts = true;
                 }
             }
@@ -180,7 +180,7 @@ pub fn add_root_urls(
     if let Some(url) = std_url {
         for name in &["std", "core", "alloc", "proc_macro"] {
             rustdoc.arg("--extern-html-root-url");
-            rustdoc.arg(format!("{}={}", name, url));
+            rustdoc.arg(format!("{name}={url}"));
             unstable_opts = true;
         }
     }

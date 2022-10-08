@@ -450,7 +450,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                 // Don't hard error on remove.
                 self.config
                     .shell()
-                    .warn(format!("failed to remove orphan: {:?}", e))?;
+                    .warn(format!("failed to remove orphan: {e:?}"))?;
             }
 
             match tracker.save() {
@@ -850,7 +850,7 @@ fn remove_orphaned_bins(
                     ),
                 )?;
                 paths::remove_file(&full_path)
-                    .with_context(|| format!("failed to remove {:?}", full_path))?;
+                    .with_context(|| format!("failed to remove {full_path:?}"))?;
             }
         }
     }

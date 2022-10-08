@@ -311,7 +311,7 @@ fn acquire(
             }
         }
     }
-    let msg = format!("waiting for file lock on {}", msg);
+    let msg = format!("waiting for file lock on {msg}");
     config.shell().status_with_color("Blocking", &msg, Cyan)?;
 
     lock_block().with_context(|| format!("failed to lock file: {}", path.display()))?;

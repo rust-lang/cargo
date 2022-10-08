@@ -853,18 +853,18 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
             "".to_owned()
         };
         shell.write_stderr(
-            format_args!("{}Features{}:\n", prefix, suffix),
+            format_args!("{prefix}Features{suffix}:\n"),
             &ColorSpec::new(),
         )?;
         for feat in activated {
             shell.write_stderr(&prefix, &ColorSpec::new())?;
             shell.write_stderr('+', &ColorSpec::new().set_bold(true).set_fg(Some(Green)))?;
-            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
+            shell.write_stderr(format_args!(" {feat}\n"), &ColorSpec::new())?;
         }
         for feat in deactivated {
             shell.write_stderr(&prefix, &ColorSpec::new())?;
             shell.write_stderr('-', &ColorSpec::new().set_bold(true).set_fg(Some(Red)))?;
-            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
+            shell.write_stderr(format_args!(" {feat}\n"), &ColorSpec::new())?;
         }
     }
 

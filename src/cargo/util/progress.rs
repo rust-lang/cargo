@@ -219,7 +219,7 @@ impl<'cfg> State<'cfg> {
             let mut shell = self.config.shell();
             shell.set_needs_clear(false);
             shell.status_header(&self.name)?;
-            write!(shell.err(), "{}\r", line)?;
+            write!(shell.err(), "{line}\r")?;
             self.last_line = Some(line);
             shell.set_needs_clear(true);
         }
@@ -253,7 +253,7 @@ impl Format {
         let pct = if !pct.is_finite() { 0.0 } else { pct };
         let stats = match self.style {
             ProgressStyle::Percentage => format!(" {:6.02}%", pct * 100.0),
-            ProgressStyle::Ratio => format!(" {}/{}", cur, max),
+            ProgressStyle::Ratio => format!(" {cur}/{max}"),
             ProgressStyle::Indeterminate => String::new(),
         };
         let extra_len = stats.len() + 2 /* [ and ] */ + 15 /* status header */;

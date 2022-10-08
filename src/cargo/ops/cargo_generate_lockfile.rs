@@ -114,9 +114,9 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         //       the registry as well.
                         let precise = if dep.source_id().is_registry() {
                             semver::Version::parse(precise).with_context(|| {
-                                format!("invalid version format for precise version `{}`", precise)
+                                format!("invalid version format for precise version `{precise}`")
                             })?;
-                            format!("{}={}->{}", dep.name(), dep.version(), precise)
+                            format!("{}={}->{precise}", dep.name(), dep.version())
                         } else {
                             precise.to_string()
                         };
@@ -164,10 +164,10 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             print_change("Updating", msg, Green)?;
         } else {
             for package in removed.iter() {
-                print_change("Removing", format!("{}", package), Red)?;
+                print_change("Removing", format!("{package}"), Red)?;
             }
             for package in added.iter() {
-                print_change("Adding", format!("{}", package), Cyan)?;
+                print_change("Adding", format!("{package}"), Cyan)?;
             }
         }
     }

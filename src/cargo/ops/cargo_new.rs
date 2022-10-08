@@ -290,11 +290,11 @@ fn detect_source_paths_and_types(
             handling: H::Bin,
         },
         Test {
-            proposed_path: format!("src/{}.rs", name),
+            proposed_path: format!("src/{name}.rs"),
             handling: H::Detect,
         },
         Test {
-            proposed_path: format!("{}.rs", name),
+            proposed_path: format!("{name}.rs"),
             handling: H::Detect,
         },
         Test {
@@ -477,8 +477,8 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
             NewProjectKind::Lib
         };
         config.shell().warn(format!(
-            "file `{}` seems to be a {} file",
-            src_paths_types[0].relative_path, file_type
+            "file `{}` seems to be a {file_type} file",
+            src_paths_types[0].relative_path
         ))?;
         src_paths_types[0].bin = has_bin
     } else if src_paths_types.len() > 1 && !has_bin {

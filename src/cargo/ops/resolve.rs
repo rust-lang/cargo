@@ -111,7 +111,7 @@ pub fn resolve_ws_with_opts<'cfg>(
             {
                 ws.config()
                     .shell()
-                    .warn(format!("package replacement is not used: {}", replace_spec))?
+                    .warn(format!("package replacement is not used: {replace_spec}"))?
             }
 
             if dep.features().len() != 0 || !dep.uses_default_features() {
@@ -791,7 +791,7 @@ fn emit_warnings_of_unused_patches(
             {
                 use std::fmt::Write;
                 let mut msg = String::new();
-                writeln!(msg, "Patch `{}` {}", unused, MESSAGE)?;
+                writeln!(msg, "Patch `{unused}` {MESSAGE}")?;
                 write!(
                     msg,
                     "Perhaps you misspelled the source URL being patched.\n\
@@ -810,11 +810,11 @@ fn emit_warnings_of_unused_patches(
     if !unemitted_unused_patches.is_empty() {
         let warnings: Vec<_> = unemitted_unused_patches
             .iter()
-            .map(|pkgid| format!("Patch `{}` {}", pkgid, MESSAGE))
+            .map(|pkgid| format!("Patch `{pkgid}` {MESSAGE}"))
             .collect();
         ws.config()
             .shell()
-            .warn(format!("{}\n{}", warnings.join("\n"), UNUSED_PATCH_WARNING))?;
+            .warn(format!("{}\n{UNUSED_PATCH_WARNING}", warnings.join("\n")))?;
     }
 
     return Ok(());

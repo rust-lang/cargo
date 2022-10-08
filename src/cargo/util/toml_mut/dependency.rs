@@ -584,7 +584,7 @@ fn invalid_type(dep: &str, key: &str, actual: &str, expected: &str) -> anyhow::E
 impl std::fmt::Display for Dependency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(source) = self.source() {
-            write!(f, "{}@{}", self.name, source)
+            write!(f, "{}@{source}", self.name)
         } else {
             self.toml_key().fmt(f)
         }
@@ -872,7 +872,7 @@ impl std::fmt::Display for GitSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let git_ref = self.git_ref();
         if let Some(pretty_ref) = git_ref.pretty_ref() {
-            write!(f, "{}?{}", self.git, pretty_ref)
+            write!(f, "{}?{pretty_ref}", self.git)
         } else {
             write!(f, "{}", self.git)
         }

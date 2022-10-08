@@ -203,7 +203,7 @@ fn verify_dependencies(
                 // Consider making SourceId::kind a public type that we can
                 // exhaustively match on. Using match can help ensure that
                 // every kind is properly handled.
-                panic!("unexpected source kind for dependency {:?}", dep);
+                panic!("unexpected source kind for dependency {dep:?}");
             }
             // Block requests to send to crates.io with alt-registry deps.
             // This extra hostname check is mostly to assist with testing,
@@ -289,7 +289,7 @@ fn transmit(
         .as_ref()
         .map(|readme| {
             paths::read(&pkg.root().join(readme))
-                .with_context(|| format!("failed to read `readme` file for package `{}`", pkg))
+                .with_context(|| format!("failed to read `readme` file for package `{pkg}`"))
         })
         .transpose()?;
     if let Some(ref file) = *license_file {
@@ -470,7 +470,7 @@ fn registry(
             match src.config()? {
                 Poll::Pending => src
                     .block_until_ready()
-                    .with_context(|| format!("failed to update {}", sid))?,
+                    .with_context(|| format!("failed to update {sid}"))?,
                 Poll::Ready(cfg) => break cfg,
             }
         };
@@ -761,7 +761,7 @@ pub fn registry_logout(config: &Config, reg: Option<String>) -> CargoResult<()> 
     if reg_cfg.is_none() {
         config.shell().status(
             "Logout",
-            format!("not currently logged in to `{}`", reg_name),
+            format!("not currently logged in to `{reg_name}`"),
         )?;
         return Ok(());
     }
@@ -827,7 +827,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
         config
             .shell()
-            .status("Owner", format!("removing {:?} from crate {}", v, name))?;
+            .status("Owner", format!("removing {v:?} from crate {name}"))?;
         registry.remove_owners(&name, &v).with_context(|| {
             format!(
                 "failed to remove owners from crate `{}` on registry at {}",
@@ -883,7 +883,7 @@ pub fn yank(
     let (mut registry, _, _) =
         registry(config, token, index.as_deref(), reg.as_deref(), true, true)?;
 
-    let package_spec = format!("{}@{}", name, version);
+    let package_spec = format!("{name}@{version}");
     if undo {
         config.shell().status("Unyank", package_spec)?;
         registry.unyank(&name, &version).with_context(|| {
@@ -1020,7 +1020,7 @@ pub fn search(
             String::new()
         };
         let _ = config.shell().write_stdout(
-            format_args!("... and {} crates more{}\n", total_crates - limit, extra),
+            format_args!("... and {} crates more{extra}\n", total_crates - limit),
             &ColorSpec::new(),
         );
     }

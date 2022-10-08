@@ -408,15 +408,15 @@ impl fmt::Display for FeatureValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::FeatureValue::*;
         match self {
-            Feature(feat) => write!(f, "{}", feat),
-            Dep { dep_name } => write!(f, "dep:{}", dep_name),
+            Feature(feat) => write!(f, "{feat}"),
+            Dep { dep_name } => write!(f, "dep:{dep_name}"),
             DepFeature {
                 dep_name,
                 dep_feature,
                 weak,
             } => {
                 let weak = if *weak { "?" } else { "" };
-                write!(f, "{}{}/{}", dep_name, weak, dep_feature)
+                write!(f, "{dep_name}{weak}/{dep_feature}")
             }
         }
     }

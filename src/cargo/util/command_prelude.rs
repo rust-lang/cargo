@@ -311,7 +311,7 @@ pub trait ArgMatchesExt {
             Some(arg) => Some(arg.parse::<u32>().map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
-                    format!("Invalid value: could not parse `{}` as a number", arg),
+                    format!("Invalid value: could not parse `{arg}` as a number"),
                 )
             })?),
         };
@@ -324,7 +324,7 @@ pub trait ArgMatchesExt {
             Some(arg) => Some(arg.parse::<i32>().map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
-                    format!("Invalid value: could not parse `{}` as a number", arg),
+                    format!("Invalid value: could not parse `{arg}` as a number"),
                 )
             })?),
         };
@@ -651,7 +651,7 @@ pub trait ArgMatchesExt {
             "pijul" => VersionControl::Pijul,
             "fossil" => VersionControl::Fossil,
             "none" => VersionControl::NoVcs,
-            vcs => panic!("Impossible vcs: {:?}", vcs),
+            vcs => panic!("Impossible vcs: {vcs:?}"),
         });
         NewOptions::new(
             vcs,
@@ -778,7 +778,7 @@ pub fn ignore_unknown<T: Default>(r: Result<T, clap::parser::MatchesError>) -> T
         Ok(t) => t,
         Err(clap::parser::MatchesError::UnknownArgument { .. }) => Default::default(),
         Err(e) => {
-            panic!("Mismatch between definition and access: {}", e);
+            panic!("Mismatch between definition and access: {e}");
         }
     }
 }

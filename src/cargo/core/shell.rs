@@ -391,7 +391,7 @@ impl Shell {
         // Path may fail to serialize to JSON ...
         let encoded = serde_json::to_string(&obj)?;
         // ... but don't fail due to a closed pipe.
-        drop(writeln!(self.out(), "{}", encoded));
+        drop(writeln!(self.out(), "{encoded}"));
         Ok(())
     }
 }
@@ -418,26 +418,26 @@ impl ShellOut {
                 stderr.reset()?;
                 stderr.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
                 if justified {
-                    write!(stderr, "{:>12}", status)?;
+                    write!(stderr, "{status:>12}")?;
                 } else {
-                    write!(stderr, "{}", status)?;
+                    write!(stderr, "{status}")?;
                     stderr.set_color(ColorSpec::new().set_bold(true))?;
                     write!(stderr, ":")?;
                 }
                 stderr.reset()?;
                 match message {
-                    Some(message) => writeln!(stderr, " {}", message)?,
+                    Some(message) => writeln!(stderr, " {message}")?,
                     None => write!(stderr, " ")?,
                 }
             }
             ShellOut::Write(ref mut w) => {
                 if justified {
-                    write!(w, "{:>12}", status)?;
+                    write!(w, "{status:>12}")?;
                 } else {
-                    write!(w, "{}:", status)?;
+                    write!(w, "{status}:")?;
                 }
                 match message {
-                    Some(message) => writeln!(w, " {}", message)?,
+                    Some(message) => writeln!(w, " {message}")?,
                     None => write!(w, " ")?,
                 }
             }
@@ -451,11 +451,11 @@ impl ShellOut {
             ShellOut::Stream { ref mut stdout, .. } => {
                 stdout.reset()?;
                 stdout.set_color(&color)?;
-                write!(stdout, "{}", fragment)?;
+                write!(stdout, "{fragment}")?;
                 stdout.reset()?;
             }
             ShellOut::Write(ref mut w) => {
-                write!(w, "{}", fragment)?;
+                write!(w, "{fragment}")?;
             }
         }
         Ok(())
@@ -467,11 +467,11 @@ impl ShellOut {
             ShellOut::Stream { ref mut stderr, .. } => {
                 stderr.reset()?;
                 stderr.set_color(&color)?;
-                write!(stderr, "{}", fragment)?;
+                write!(stderr, "{fragment}")?;
                 stderr.reset()?;
             }
             ShellOut::Write(ref mut w) => {
-                write!(w, "{}", fragment)?;
+                write!(w, "{fragment}")?;
             }
         }
         Ok(())

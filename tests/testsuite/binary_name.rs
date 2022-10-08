@@ -72,7 +72,7 @@ fn binary_name1() {
 
     // Check if deps file exists.
     let deps_path = p.bin("007bar").with_extension("d");
-    assert!(deps_path.is_file(), "{:?}", bar_path);
+    assert!(deps_path.is_file(), "{bar_path:?}");
 
     let depinfo = p.read_file(deps_path.to_str().unwrap());
 

@@ -349,7 +349,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                             url,
                         )
                     })
-                    .with_context(|| format!("failed to resolve patches for `{}`", url))?;
+                    .with_context(|| format!("failed to resolve patches for `{url}`"))?;
 
                 debug!(
                     "patch summary is {:?} should_unlock={:?}",
@@ -366,7 +366,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                         dep.package_name(),
                         url
                     ))
-                    .context(format!("failed to resolve patches for `{}`", url));
+                    .context(format!("failed to resolve patches for `{url}`"));
                 }
                 unlocked_summaries.push(summary);
             }
@@ -455,7 +455,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         let source = self
             .source_config
             .load(source_id, &self.yanked_whitelist)
-            .with_context(|| format!("Unable to update {}", source_id))?;
+            .with_context(|| format!("Unable to update {source_id}"))?;
         assert_eq!(source.source_id(), source_id);
 
         if kind == Kind::Override {
@@ -723,7 +723,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         for (source_id, source) in self.sources.sources_mut() {
             source
                 .block_until_ready()
-                .with_context(|| format!("Unable to update {}", source_id))?;
+                .with_context(|| format!("Unable to update {source_id}"))?;
         }
         Ok(())
     }

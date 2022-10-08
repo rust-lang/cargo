@@ -125,7 +125,7 @@ fn uninstall_pkgid(
             if s.ends_with(env::consts::EXE_SUFFIX) {
                 s.to_string()
             } else {
-                format!("{}{}", s, env::consts::EXE_SUFFIX)
+                format!("{s}{}", env::consts::EXE_SUFFIX)
             }
         })
         .collect::<BTreeSet<_>>();

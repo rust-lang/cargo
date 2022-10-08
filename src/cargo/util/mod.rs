@@ -69,7 +69,7 @@ pub fn elapsed(duration: Duration) -> String {
     if secs >= 60 {
         format!("{}m {:02}s", secs / 60, secs % 60)
     } else {
-        format!("{}.{:02}s", secs, duration.subsec_nanos() / 10_000_000)
+        format!("{secs}.{:02}s", duration.subsec_nanos() / 10_000_000)
     }
 }
 
@@ -81,9 +81,9 @@ where
 {
     let mut it = iter.into_iter().peekable();
     while let Some(n) = it.next() {
-        write!(w, "{}", n)?;
+        write!(w, "{n}")?;
         if it.peek().is_some() {
-            write!(w, "{}", delim)?;
+            write!(w, "{delim}")?;
         }
     }
     Ok(())
@@ -105,7 +105,7 @@ pub fn indented_lines(text: &str) -> String {
             if line.is_empty() {
                 String::from("\n")
             } else {
-                format!("  {}\n", line)
+                format!("  {line}\n")
             }
         })
         .collect()

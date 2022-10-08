@@ -228,9 +228,9 @@ impl InstallTracker {
             // Format the error message.
             let mut msg = String::new();
             for (bin, p) in duplicates.iter() {
-                msg.push_str(&format!("binary `{}` already exists in destination", bin));
+                msg.push_str(&format!("binary `{bin}` already exists in destination"));
                 if let Some(p) = p.as_ref() {
-                    msg.push_str(&format!(" as part of `{}`\n", p));
+                    msg.push_str(&format!(" as part of `{p}`\n"));
                 } else {
                     msg.push('\n');
                 }
@@ -342,7 +342,7 @@ impl CrateListingV1 {
     fn remove(&mut self, pkg_id: PackageId, bins: &BTreeSet<String>) {
         let mut installed = match self.v1.entry(pkg_id) {
             btree_map::Entry::Occupied(e) => e,
-            btree_map::Entry::Vacant(..) => panic!("v1 unexpected missing `{}`", pkg_id),
+            btree_map::Entry::Vacant(..) => panic!("v1 unexpected missing `{pkg_id}`"),
         };
 
         for bin in bins {
@@ -451,7 +451,7 @@ impl CrateListingV2 {
     fn remove(&mut self, pkg_id: PackageId, bins: &BTreeSet<String>) {
         let mut info_entry = match self.installs.entry(pkg_id) {
             btree_map::Entry::Occupied(e) => e,
-            btree_map::Entry::Vacant(..) => panic!("v2 unexpected missing `{}`", pkg_id),
+            btree_map::Entry::Vacant(..) => panic!("v2 unexpected missing `{pkg_id}`"),
         };
 
         for bin in bins {
@@ -669,7 +669,7 @@ fn feature_set(features: &Rc<BTreeSet<FeatureValue>>) -> BTreeSet<String> {
 
 /// Helper to get the executable names from a filter.
 pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String> {
-    let to_exe = |name| format!("{}{}", name, env::consts::EXE_SUFFIX);
+    let to_exe = |name| format!("{name}{}", env::consts::EXE_SUFFIX);
     match filter {
         CompileFilter::Default { .. } => pkg
             .targets()

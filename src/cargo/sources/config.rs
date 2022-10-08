@@ -229,7 +229,7 @@ restore the source replacement configuration to continue the build
     fn add_config(&mut self, name: String, def: SourceConfigDef) -> CargoResult<()> {
         let mut srcs = Vec::new();
         if let Some(registry) = def.registry {
-            let url = url(&registry, &format!("source.{}.registry", name))?;
+            let url = url(&registry, &format!("source.{name}.registry"))?;
             srcs.push(SourceId::for_alt_registry(&url, &name)?);
         }
         if let Some(local_registry) = def.local_registry {
@@ -241,7 +241,7 @@ restore the source replacement configuration to continue the build
             srcs.push(SourceId::for_directory(&path)?);
         }
         if let Some(git) = def.git {
-            let url = url(&git, &format!("source.{}.git", name))?;
+            let url = url(&git, &format!("source.{name}.git"))?;
             let reference = match def.branch {
                 Some(b) => GitReference::Branch(b.val),
                 None => match def.tag {

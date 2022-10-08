@@ -69,8 +69,8 @@ fn simple_test() {
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .with_stderr_contains(&format!("[RUNNING] [..]{}[..]", t1))
-        .with_stderr_contains(&format!("[RUNNING] [..]{}[..]", t2))
+        .with_stderr_contains(&format!("[RUNNING] [..]{t1}[..]"))
+        .with_stderr_contains(&format!("[RUNNING] [..]{t2}[..]"))
         .run();
 }
 

@@ -58,13 +58,13 @@ fn installed_process(name: &str) -> Execs {
     // This copies the executable to a unique name so that it may be safely
     // replaced on Windows.  See Project::rename_run for details.
     let src = installed_exe(name);
-    let dst = installed_exe(&UNIQUE_ID.with(|my_id| format!("{}-{}", name, my_id)));
+    let dst = installed_exe(&UNIQUE_ID.with(|my_id| format!("{name}-{my_id}")));
     // Note: Cannot use copy. On Linux, file descriptors may be left open to
     // the executable as other tests in other threads are constantly spawning
     // new processes (see https://github.com/rust-lang/cargo/pull/5557 for
     // more).
     fs::rename(&src, &dst)
-        .unwrap_or_else(|e| panic!("Failed to rename `{:?}` to `{:?}`: {}", src, dst, e));
+        .unwrap_or_else(|e| panic!("Failed to rename `{src:?}` to `{dst:?}`: {e}"));
     // Leave behind a fake file so that reinstall duplicate check works.
     fs::write(src, "").unwrap();
     let p = process(dst);
@@ -83,7 +83,7 @@ fn validate_trackers(name: &str, version: &str, bins: &[&str]) {
     // Convert `bins` to a BTreeSet.
     let bins: BTreeSet<String> = bins
         .iter()
-        .map(|b| format!("{}{}", b, env::consts::EXE_SUFFIX))
+        .map(|b| format!("{b}{}", env::consts::EXE_SUFFIX))
         .collect();
     // Check every entry matches between v1 and v2.
     for (pkg_id_str, v1_bins) in v1_table {
@@ -396,7 +396,7 @@ fn change_target_rebuilds() {
         .arg(&target)
         .with_stderr_contains("[COMPILING] foo v1.0.0")
         .with_stderr_contains("[REPLACING] [..]foo[EXE]")
-        .with_stderr_contains(&format!("[..]--target {}[..]", target))
+        .with_stderr_contains(&format!("[..]--target {target}[..]"))
         .run();
 }
 

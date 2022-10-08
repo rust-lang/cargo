@@ -513,7 +513,7 @@ fn add_cli_features(
                 graph.cli_features.insert(index);
             }
             // This is enforced by CliFeatures.
-            FeatureValue::Dep { .. } => panic!("unexpected cli dep feature {}", fv),
+            FeatureValue::Dep { .. } => panic!("unexpected cli dep feature {fv}"),
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,

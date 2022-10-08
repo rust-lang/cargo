@@ -218,7 +218,7 @@ fn sync(
 
         config.shell().status(
             "Vendoring",
-            &format!("{} ({}) to {}", id, src.to_string_lossy(), dst.display()),
+            &format!("{id} ({}) to {}", src.to_string_lossy(), dst.display()),
         )?;
 
         let _ = fs::remove_dir_all(&dst);
@@ -226,7 +226,7 @@ fn sync(
         let paths = pathsource.list_files(pkg)?;
         let mut map = BTreeMap::new();
         cp_sources(src, &paths, &dst, &mut map, &mut tmp_buf)
-            .with_context(|| format!("failed to copy over vendored sources for: {}", id))?;
+            .with_context(|| format!("failed to copy over vendored sources for: {id}"))?;
 
         // Finally, emit the metadata about this package
         let json = serde_json::json!({
@@ -289,7 +289,7 @@ fn sync(
                 replace_with: merged_source_name.to_string(),
             }
         } else {
-            panic!("Invalid source ID: {}", source_id)
+            panic!("Invalid source ID: {source_id}")
         };
         config.insert(name, source);
     }
@@ -360,7 +360,7 @@ fn cp_sources(
 }
 
 fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoResult<String> {
-    let mut src = File::open(src_path).with_context(|| format!("failed to open {:?}", src_path))?;
+    let mut src = File::open(src_path).with_context(|| format!("failed to open {src_path:?}"))?;
     let mut dst_opts = OpenOptions::new();
     dst_opts.write(true).create(true).truncate(true);
     #[cfg(unix)]
@@ -368,25 +368,25 @@ fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoR
         use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
         let src_metadata = src
             .metadata()
-            .with_context(|| format!("failed to stat {:?}", src_path))?;
+            .with_context(|| format!("failed to stat {src_path:?}"))?;
         dst_opts.mode(src_metadata.mode());
     }
     let mut dst = dst_opts
         .open(dst_path)
-        .with_context(|| format!("failed to create {:?}", dst_path))?;
+        .with_context(|| format!("failed to create {dst_path:?}"))?;
     // Not going to bother setting mode on pre-existing files, since there
     // shouldn't be any under normal conditions.
     let mut cksum = Sha256::new();
     loop {
         let n = src
             .read(buf)
-            .with_context(|| format!("failed to read from {:?}", src_path))?;
+            .with_context(|| format!("failed to read from {src_path:?}"))?;
         if n == 0 {
             break Ok(cksum.finish_hex());
         }
         let data = &buf[..n];
         cksum.update(data);
         dst.write_all(data)
-            .with_context(|| format!("failed to write to {:?}", dst_path))?;
+            .with_context(|| format!("failed to write to {dst_path:?}"))?;
     }
 }

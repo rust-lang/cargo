@@ -97,7 +97,7 @@ fn check_builtin(subcommand: &str) -> Option<&str> {
 ///
 /// Returns None if the command wasn't found.
 fn extract_man(subcommand: &str, extension: &str) -> Option<Vec<u8>> {
-    let extract_name = OsString::from(format!("cargo-{}.{}", subcommand, extension));
+    let extract_name = OsString::from(format!("cargo-{subcommand}.{extension}"));
     let gz = GzDecoder::new(COMPRESSED_MAN);
     let mut ar = tar::Archive::new(gz);
     // Unwraps should be safe here, since this is a static archive generated
@@ -118,7 +118,7 @@ fn extract_man(subcommand: &str, extension: &str) -> Option<Vec<u8>> {
 /// Write the contents of a man page to disk and spawn the given command to
 /// display it.
 fn write_and_spawn(name: &str, contents: &[u8], command: &str) -> CargoResult<()> {
-    let prefix = format!("cargo-{}.", name);
+    let prefix = format!("cargo-{name}.");
     let mut tmp = tempfile::Builder::new().prefix(&prefix).tempfile()?;
     let f = tmp.as_file_mut();
     f.write_all(contents)?;

@@ -48,7 +48,7 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
 
 fn wrap_path(path: &Path) -> CargoResult<String> {
     path.to_str()
-        .ok_or_else(|| internal(format!("path `{:?}` not utf-8", path)))
+        .ok_or_else(|| internal(format!("path `{path:?}` not utf-8")))
         .map(|f| f.replace(" ", "\\ "))
 }
 
@@ -151,9 +151,9 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
 
                 // Otherwise write it all out
                 let mut outfile = BufWriter::new(paths::create(output_path)?);
-                write!(outfile, "{}:", target_fn)?;
+                write!(outfile, "{target_fn}:")?;
                 for dep in &deps {
-                    write!(outfile, " {}", dep)?;
+                    write!(outfile, " {dep}")?;
                 }
                 writeln!(outfile)?;
 

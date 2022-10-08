@@ -180,10 +180,10 @@ fn per_crate_target_test(
                     {}
                 "#,
                 default_target
-                    .map(|t| format!(r#"default-target = "{}""#, t))
+                    .map(|t| format!(r#"default-target = "{t}""#))
                     .unwrap_or(String::new()),
                 forced_target
-                    .map(|t| format!(r#"forced-target = "{}""#, t))
+                    .map(|t| format!(r#"forced-target = "{t}""#))
                     .unwrap_or(String::new()),
             ),
         )

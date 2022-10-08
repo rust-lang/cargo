@@ -476,7 +476,7 @@ fn assert_all_clean(build_dir: &Path) {
             continue;
         }
         if path.is_symlink() || path.is_file() {
-            panic!("{:?} was not cleaned", path);
+            panic!("{path:?} was not cleaned");
         }
     }
 }

@@ -1376,7 +1376,7 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-change
             pkg_fingerprint(cx.bcx, &unit.pkg).map_err(|err| {
                 let mut message = format!("failed to determine package fingerprint for build script for {}", unit.pkg);
                 if err.root_cause().is::<io::Error>() {
-                    message = format!("{}\n{}", message, IO_ERR_MESSAGE)
+                    message = format!("{message}\n{IO_ERR_MESSAGE}")
                 }
                 err.context(message)
             })

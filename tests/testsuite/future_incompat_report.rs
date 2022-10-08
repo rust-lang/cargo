@@ -218,11 +218,11 @@ fn test_multi_crate() {
     iter.find(|w| *w == "--id").unwrap();
     let id = iter
         .next()
-        .unwrap_or_else(|| panic!("Unexpected output:\n{}", stderr));
+        .unwrap_or_else(|| panic!("Unexpected output:\n{stderr}"));
     // Strip off the trailing '`' included in the output
     let id: String = id.chars().take_while(|c| *c != '`').collect();
 
-    p.cargo(&format!("report future-incompatibilities --id {}", id))
+    p.cargo(&format!("report future-incompatibilities --id {id}"))
         .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
         .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
         .run();

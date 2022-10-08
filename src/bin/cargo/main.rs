@@ -63,7 +63,7 @@ fn builtin_aliases_execs(cmd: &str) -> Option<&(&str, &str, &str)> {
 ///    try to get it as an array again.
 /// 3. If still cannot find any, finds one insides [`BUILTIN_ALIASES`].
 fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
-    let alias_name = format!("alias.{}", command);
+    let alias_name = format!("alias.{command}");
     let user_alias = match config.get_string(&alias_name) {
         Ok(Some(record)) => Some(
             record
@@ -155,7 +155,7 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
 }
 
 fn find_external_subcommand(config: &Config, cmd: &str) -> Option<PathBuf> {
-    let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
+    let command_exe = format!("cargo-{cmd}{}", env::consts::EXE_SUFFIX);
     search_directories(config)
         .iter()
         .map(|dir| dir.join(&command_exe))

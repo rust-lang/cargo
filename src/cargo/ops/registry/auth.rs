@@ -177,7 +177,7 @@ fn run_command(
             token = Some(buffer);
         }
         Action::Store(token) => {
-            writeln!(child.stdin.as_ref().unwrap(), "{}", token).with_context(|| {
+            writeln!(child.stdin.as_ref().unwrap(), "{token}").with_context(|| {
                 format!(
                     "failed to send token to registry credential process `{}`",
                     exe.display()

@@ -583,7 +583,7 @@ fn update_offline_cached() {
             .file("Cargo.toml", &basic_manifest("present_dep", vers))
             .file(
                 "src/lib.rs",
-                format!(r#"pub fn get_version()->&'static str {{ "{}" }}"#, vers).as_str(),
+                format!(r#"pub fn get_version()->&'static str {{ "{vers}" }}"#).as_str(),
             )
             .publish();
         // make package cached

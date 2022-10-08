@@ -170,7 +170,7 @@ fn cargo_read_manifest_default_readme() {
             .build();
 
         p.cargo("read-manifest")
-            .with_json(&manifest_output(&format!(r#""{}""#, readme)))
+            .with_json(&manifest_output(&format!(r#""{readme}""#)))
             .run();
     }
 }

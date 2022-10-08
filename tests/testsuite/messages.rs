@@ -36,7 +36,7 @@ pub fn raw_rustc_output(project: &Project, path: &str, extra: &[&str]) -> String
             // Eat blank line.
             match lines.next() {
                 None | Some("") => continue,
-                Some(s) => panic!("unexpected str {}", s),
+                Some(s) => panic!("unexpected str {s}"),
             }
         }
         result.push_str(line);
@@ -68,7 +68,7 @@ warning: `foo` (lib test) generated 1 warning (1 duplicate)
         rustc_message
     );
     p.cargo("test --no-run -j1")
-        .with_stderr(&format!("[COMPILING] foo [..]\n{}", expected_output))
+        .with_stderr(&format!("[COMPILING] foo [..]\n{expected_output}"))
         .run();
     // Run again, to check for caching behavior.
     p.cargo("test --no-run -j1")
@@ -112,7 +112,7 @@ warning: `foo` (lib test) generated 2 warnings (1 duplicate)
         lib_output, lib_test_output
     );
     p.cargo("test --no-run -j1")
-        .with_stderr(&format!("[COMPILING] foo v0.0.1 [..]\n{}", expected_output))
+        .with_stderr(&format!("[COMPILING] foo v0.0.1 [..]\n{expected_output}"))
         .run();
     // Run again, to check for caching behavior.
     p.cargo("test --no-run -j1")

@@ -275,7 +275,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.public_dependencies
             .get(&pkg)
             .map(|public_deps| public_deps.contains(&dep))
-            .unwrap_or_else(|| panic!("Unknown dependency {:?} for package {:?}", dep, pkg))
+            .unwrap_or_else(|| panic!("Unknown dependency {dep:?} for package {pkg:?}"))
     }
 
     pub fn query(&self, spec: &str) -> CargoResult<PackageId> {
@@ -346,7 +346,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         }
         match self.graph.edge(&from, &to) {
             Some(ret) => ret,
-            None => panic!("no Dependency listed for `{}` => `{}`", from, to),
+            None => panic!("no Dependency listed for `{from}` => `{to}`"),
         }
     }
 
@@ -389,7 +389,7 @@ impl fmt::Debug for Resolve {
         writeln!(fmt, "graph: {:?}", self.graph)?;
         writeln!(fmt, "\nfeatures: {{")?;
         for (pkg, features) in &self.features {
-            writeln!(fmt, "  {}: {:?}", pkg, features)?;
+            writeln!(fmt, "  {pkg}: {features:?}")?;
         }
         write!(fmt, "}}")
     }

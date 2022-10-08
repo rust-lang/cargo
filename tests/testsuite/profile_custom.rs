@@ -596,7 +596,7 @@ fn reserved_profile_names() {
         .run();
     // Not an exhaustive list, just a sample.
     for name in ["build", "cargo", "check", "rustc", "CaRgO_startswith"] {
-        p.cargo(&format!("build --profile={}", name))
+        p.cargo(&format!("build --profile={name}"))
             .with_status(101)
             .with_stderr(&format!(
                 "\

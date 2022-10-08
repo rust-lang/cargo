@@ -127,7 +127,7 @@ fn profile_override_bad_settings() {
 
         p.cargo("build")
             .with_status(101)
-            .with_stderr_contains(format!("Caused by:\n  {}", expected))
+            .with_stderr_contains(format!("Caused by:\n  {expected}"))
             .run();
     }
 }

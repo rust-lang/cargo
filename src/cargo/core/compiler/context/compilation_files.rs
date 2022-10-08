@@ -221,9 +221,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let name = unit.pkg.package_id().name();
         let meta = &self.metas[unit];
         if meta.use_extra_filename {
-            format!("{}-{}", name, meta.meta_hash)
+            format!("{name}-{}", meta.meta_hash)
         } else {
-            format!("{}-{}", name, self.target_short_hash(unit))
+            format!("{name}-{}", self.target_short_hash(unit))
         }
     }
 
@@ -270,7 +270,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         } else {
             ""
         };
-        let name = format!("{}{}{}-{}", prefix, flavor, kind, unit.target.name());
+        let name = format!("{prefix}{flavor}{kind}-{}", unit.target.name());
         self.fingerprint_dir(unit).join(name)
     }
 

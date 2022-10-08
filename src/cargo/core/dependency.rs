@@ -581,7 +581,7 @@ impl fmt::Display for ArtifactKind {
             ArtifactKind::Cdylib => "cdylib",
             ArtifactKind::Staticlib => "staticlib",
             ArtifactKind::AllBinaries => "bin",
-            ArtifactKind::SelectedBinary(bin_name) => return write!(f, "bin:{}", bin_name),
+            ArtifactKind::SelectedBinary(bin_name) => return write!(f, "bin:{bin_name}"),
         })
     }
 }

@@ -84,7 +84,7 @@ fn help_with_man_and_path(
     path: &Path,
 ) {
     let contents = if display_command == "man" {
-        fs::read_to_string(format!("src/etc/man/cargo-{}.1", actual_subcommand)).unwrap()
+        fs::read_to_string(format!("src/etc/man/cargo-{actual_subcommand}.1")).unwrap()
     } else {
         fs::read_to_string(format!(
             "src/doc/man/generated_txt/cargo-{}.txt",
@@ -104,7 +104,7 @@ fn help_with_man_and_path(
     if display_command.is_empty() {
         assert_eq!(stderr, "");
     } else {
-        assert_eq!(stderr, format!("custom {}\n", display_command));
+        assert_eq!(stderr, format!("custom {display_command}\n"));
     }
     let stdout = from_utf8(&output.stdout).unwrap();
     assert_eq!(stdout, contents);

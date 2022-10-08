@@ -126,7 +126,7 @@ pub fn package_one(
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
     let dir = ws.target_dir().join("package");
     let mut dst = {
-        let tmp = format!(".{}", filename);
+        let tmp = format!(".{filename}");
         dir.open_rw(&tmp, config, "package scratch space")?
     };
 
@@ -625,7 +625,7 @@ fn tar(
                 header.set_mtime(1);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, contents.as_bytes())
-                    .with_context(|| format!("could not archive source file `{}`", rel_str))?;
+                    .with_context(|| format!("could not archive source file `{rel_str}`"))?;
             }
         }
     }
@@ -873,7 +873,7 @@ fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
         }
         Ok(result)
     }
-    let result = wrap(path).with_context(|| format!("failed to verify output at {:?}", path))?;
+    let result = wrap(path).with_context(|| format!("failed to verify output at {path:?}"))?;
     Ok(result)
 }
 

@@ -3465,7 +3465,7 @@ fn git_with_force_push() {
     // This works by having a git dependency that is updated with an amend
     // commit, and tries with various forms (default branch, branch, rev,
     // tag).
-    let main = |text| format!(r#"pub fn f() {{ println!("{}"); }}"#, text);
+    let main = |text| format!(r#"pub fn f() {{ println!("{text}"); }}"#);
     let (git_project, repo) = git::new_repo("dep1", |project| {
         project
             .file("Cargo.toml", &basic_lib_manifest("dep1"))
@@ -3519,7 +3519,7 @@ fn git_with_force_push() {
         p.cargo("update").run();
         p.cargo("build").run();
         rename_annoyance += 1;
-        p.rename_run("foo", &format!("foo{}", rename_annoyance))
+        p.rename_run("foo", &format!("foo{rename_annoyance}"))
             .with_stdout(text)
             .run();
     };
@@ -3529,13 +3529,13 @@ fn git_with_force_push() {
 
     // Try with a rev.
     let head1 = find_head().id().to_string();
-    let extra = format!(", rev = \"{}\"", head1);
+    let extra = format!(", rev = \"{head1}\"");
     p.change_file("Cargo.toml", &manifest(&extra));
     verify("two");
     amend_commit("three");
     let head2 = find_head().id().to_string();
     assert_ne!(&head1, &head2);
-    let extra = format!(", rev = \"{}\"", head2);
+    let extra = format!(", rev = \"{head2}\"");
     p.change_file("Cargo.toml", &manifest(&extra));
     verify("three");
 

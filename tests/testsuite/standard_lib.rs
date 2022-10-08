@@ -138,11 +138,11 @@ fn enable_build_std(e: &mut Execs, setup: &Setup) {
     let libdir = format!("/lib/rustlib/{}/lib", rustc_host());
     e.env(
         "RUSTFLAGS",
-        format!("-Ldependency={}{}", setup.real_sysroot, libdir),
+        format!("-Ldependency={}{libdir}", setup.real_sysroot),
     );
     e.env(
         "RUSTDOCFLAGS",
-        format!("-Ldependency={}{}", setup.real_sysroot, libdir),
+        format!("-Ldependency={}{libdir}", setup.real_sysroot),
     );
 }
 
@@ -162,7 +162,7 @@ impl BuildStd for Execs {
 
     fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self {
         enable_build_std(self, setup);
-        self.arg(format!("-Zbuild-std={}", arg));
+        self.arg(format!("-Zbuild-std={arg}"));
         self
     }
 

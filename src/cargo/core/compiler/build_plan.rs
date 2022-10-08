@@ -132,7 +132,7 @@ impl BuildPlan {
         let id = self.invocation_map[invocation_name];
         let invocation =
             self.plan.invocations.get_mut(id).ok_or_else(|| {
-                internal(format!("couldn't find invocation for {}", invocation_name))
+                internal(format!("couldn't find invocation for {invocation_name}"))
             })?;
 
         invocation.update_cmd(cmd)?;

@@ -158,7 +158,7 @@ fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
             if as_err {
                 drop(shell.error(&err));
             } else {
-                drop(writeln!(shell.err(), "{}", err));
+                drop(writeln!(shell.err(), "{err}"));
             }
         } else {
             drop(writeln!(shell.err(), "\nCaused by:"));

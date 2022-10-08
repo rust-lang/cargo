@@ -190,21 +190,21 @@ impl GitReference {
             // Note that we resolve the named tag here in sync with where it's
             // fetched into via `fetch` below.
             GitReference::Tag(s) => (|| -> CargoResult<git2::Oid> {
-                let refname = format!("refs/remotes/origin/tags/{}", s);
+                let refname = format!("refs/remotes/origin/tags/{s}");
                 let id = repo.refname_to_id(&refname)?;
                 let obj = repo.find_object(id, None)?;
                 let obj = obj.peel(ObjectType::Commit)?;
                 Ok(obj.id())
             })()
-            .with_context(|| format!("failed to find tag `{}`", s))?,
+            .with_context(|| format!("failed to find tag `{s}`"))?,
 
             // Resolve the remote name since that's all we're configuring in
             // `fetch` below.
             GitReference::Branch(s) => {
-                let name = format!("origin/{}", s);
+                let name = format!("origin/{s}");
                 let b = repo
                     .find_branch(&name, git2::BranchType::Remote)
-                    .with_context(|| format!("failed to find branch `{}`", s))?;
+                    .with_context(|| format!("failed to find branch `{s}`"))?;
                 b.get()
                     .target()
                     .ok_or_else(|| anyhow::format_err!("branch `{}` did not have a target", s))?
@@ -429,7 +429,7 @@ impl<'a> GitCheckout<'a> {
             let reference = GitReference::Rev(head.to_string());
             cargo_config
                 .shell()
-                .status("Updating", format!("git submodule `{}`", url))?;
+                .status("Updating", format!("git submodule `{url}`"))?;
             fetch(&mut repo, &url, &reference, cargo_config).with_context(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
@@ -645,7 +645,7 @@ where
         if !ssh_agent_attempts.is_empty() {
             let names = ssh_agent_attempts
                 .iter()
-                .map(|s| format!("`{}`", s))
+                .map(|s| format!("`{s}`"))
                 .collect::<Vec<_>>()
                 .join(", ");
             msg.push_str(&format!(
@@ -761,7 +761,7 @@ pub fn with_fetch_options(
                         (UNITS[i], bytes / 1024_f32.powi(i as i32))
                     }
                     let (unit, rate) = format_bytes(counter.rate());
-                    format!(", {:.2}{}B/s", rate, unit)
+                    format!(", {rate:.2}{unit}B/s")
                 };
                 progress
                     .tick(stats.indexed_objects(), stats.total_objects(), &msg)
@@ -823,10 +823,10 @@ pub fn fetch(
         // For branches and tags we can fetch simply one reference and copy it
         // locally, no need to fetch other branches/tags.
         GitReference::Branch(b) => {
-            refspecs.push(format!("+refs/heads/{0}:refs/remotes/origin/{0}", b));
+            refspecs.push(format!("+refs/heads/{b}:refs/remotes/origin/{b}"));
         }
         GitReference::Tag(t) => {
-            refspecs.push(format!("+refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
+            refspecs.push(format!("+refs/tags/{t}:refs/remotes/origin/tags/{t}"));
         }
 
         GitReference::DefaultBranch => {
@@ -835,9 +835,9 @@ pub fn fetch(
 
         GitReference::Rev(rev) => {
             if rev.starts_with("refs/") {
-                refspecs.push(format!("+{0}:{0}", rev));
+                refspecs.push(format!("+{rev}:{rev}"));
             } else if let Some(oid_to_fetch) = oid_to_fetch {
-                refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
+                refspecs.push(format!("+{oid_to_fetch}:refs/commit/{oid_to_fetch}"));
             } else {
                 // We don't know what the rev will point to. To handle this
                 // situation we fetch all branches and tags, and then we pray
@@ -1143,7 +1143,7 @@ fn github_fast_path(
         let mut headers = List::new();
         headers.append("Accept: application/vnd.github.3.sha")?;
         if let Some(local_object) = local_object {
-            headers.append(&format!("If-None-Match: \"{}\"", local_object))?;
+            headers.append(&format!("If-None-Match: \"{local_object}\""))?;
         }
         headers
     })?;

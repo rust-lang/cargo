@@ -414,7 +414,7 @@ impl<'cfg> Workspace<'cfg> {
                     .get_registry_index(url)
                     .or_else(|_| url.into_url())
                     .with_context(|| {
-                        format!("[patch] entry `{}` should be a URL or registry name", url)
+                        format!("[patch] entry `{url}` should be a URL or registry name")
                     })?,
             };
             patch.insert(
@@ -442,7 +442,7 @@ impl<'cfg> Workspace<'cfg> {
         for message in warnings {
             self.config
                 .shell()
-                .warn(format!("[patch] in cargo config: {}", message))?
+                .warn(format!("[patch] in cargo config: {message}"))?
         }
 
         Ok(patch)
@@ -763,7 +763,7 @@ impl<'cfg> Workspace<'cfg> {
         };
         for (path, name) in candidates {
             self.find_path_deps(&path, root_manifest, true)
-                .with_context(|| format!("failed to load manifest for dependency `{}`", name))
+                .with_context(|| format!("failed to load manifest for dependency `{name}`"))
                 .map_err(|err| ManifestError::new(err, manifest_path.clone()))?;
         }
         Ok(())
@@ -1154,7 +1154,7 @@ impl<'cfg> Workspace<'cfg> {
                     }
                 }
                 // This should be enforced by CliFeatures.
-                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {feature}"),
                 FeatureValue::DepFeature {
                     dep_name,
                     dep_feature,
@@ -1270,7 +1270,7 @@ impl<'cfg> Workspace<'cfg> {
                         .map(|s| s.to_string())
                         .collect::<Vec<_>>()
                 }
-                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {feature}"),
                 FeatureValue::DepFeature {
                     dep_name,
                     dep_feature,
@@ -1292,7 +1292,7 @@ impl<'cfg> Workspace<'cfg> {
                         .map(|(name, features)| {
                             features
                                 .into_iter()
-                                .map(move |feature| format!("{}/{}", name, feature))
+                                .map(move |feature| format!("{name}/{feature}"))
                         })
                         .flatten();
 
@@ -1307,7 +1307,7 @@ impl<'cfg> Workspace<'cfg> {
                                     levenshtein_test(**optional_dependency, *dep_name)
                                 })
                                 .map(move |optional_dependency| {
-                                    format!("{}/{}", package.name(), optional_dependency)
+                                    format!("{}/{optional_dependency}", package.name())
                                 })
                         })
                         .flatten();
@@ -1323,7 +1323,7 @@ impl<'cfg> Workspace<'cfg> {
                                     levenshtein_test(**summary_feature, *dep_feature)
                                 })
                                 .map(move |summary_feature| {
-                                    format!("{}/{}", package.name(), summary_feature)
+                                    format!("{}/{summary_feature}", package.name())
                                 })
                         })
                         .flatten();
@@ -1429,7 +1429,7 @@ impl<'cfg> Workspace<'cfg> {
                     cwd_features.insert(feature.clone());
                 }
                 // This should be enforced by CliFeatures.
-                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {}", feature),
+                FeatureValue::Dep { .. } => panic!("unexpected dep: syntax {feature}"),
                 FeatureValue::DepFeature {
                     dep_name,
                     dep_feature,
