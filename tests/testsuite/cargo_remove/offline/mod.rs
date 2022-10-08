@@ -2,7 +2,6 @@ use cargo_test_support::compare::assert_ui;
 use cargo_test_support::curr_dir;
 use cargo_test_support::CargoCommand;
 use cargo_test_support::Project;
-use cargo_test_support::TestEnv;
 
 use crate::cargo_remove::init_registry;
 
@@ -14,9 +13,7 @@ fn case() {
     let cwd = &project_root;
 
     // run the metadata command to populate the cache
-    let cargo = std::env::var_os("CARGO").unwrap();
-    snapbox::cmd::Command::new(cargo)
-        .test_env()
+    snapbox::cmd::Command::cargo_ui()
         .arg("metadata")
         .current_dir(cwd)
         .assert()
