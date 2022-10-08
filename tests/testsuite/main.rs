@@ -118,6 +118,7 @@ mod rustdocflags;
 mod rustflags;
 mod search;
 mod shell_quoting;
+mod source_replacement;
 mod standard_lib;
 mod test;
 mod timings;

@@ -106,6 +106,7 @@ fn not_update() {
     drop(lock);
 
     cargo_process("search postgres")
+        .replace_crates_io(registry.index_url())
         .with_stdout_contains(SEARCH_RESULTS)
         .with_stderr("") // without "Updating ... index"
         .run();
@@ -113,9 +114,10 @@ fn not_update() {
 
 #[cargo_test]
 fn replace_default() {
-    let _server = setup().build();
+    let registry = setup().build();
 
     cargo_process("search postgres")
+        .replace_crates_io(registry.index_url())
         .with_stdout_contains(SEARCH_RESULTS)
         .with_stderr_contains("[..]Updating [..] index")
         .run();
@@ -143,22 +145,25 @@ fn multiple_query_params() {
 
 #[cargo_test]
 fn ignore_quiet() {
-    let _server = setup().build();
+    let registry = setup().build();
 
     cargo_process("search -q postgres")
+        .replace_crates_io(registry.index_url())
         .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
 
 #[cargo_test]
 fn colored_results() {
-    let _server = setup().build();
+    let registry = setup().build();
 
     cargo_process("search --color=never postgres")
+        .replace_crates_io(registry.index_url())
         .with_stdout_does_not_contain("[..]\x1b[[..]")
         .run();
 
     cargo_process("search --color=always postgres")
+        .replace_crates_io(registry.index_url())
         .with_stdout_contains("[..]\x1b[[..]")
         .run();
 }

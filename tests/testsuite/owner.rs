@@ -16,7 +16,7 @@ fn setup(name: &str, content: Option<&str>) {
 
 #[cargo_test]
 fn simple_list() {
-    registry::init();
+    let registry = registry::init();
     let content = r#"{
         "users": [
             {
@@ -47,7 +47,8 @@ fn simple_list() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -l --token sekrit")
+    p.cargo("owner -l")
+        .replace_crates_io(registry.index_url())
         .with_stdout(
             "\
 github:rust-lang:core (Core)
@@ -59,7 +60,7 @@ octocat
 
 #[cargo_test]
 fn simple_add() {
-    registry::init();
+    let registry = registry::init();
     setup("foo", None);
 
     let p = project()
@@ -77,10 +78,11 @@ fn simple_add() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -a username --token sekrit")
+    p.cargo("owner -a username")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
-            "    Updating `[..]` index
+            "    Updating crates.io index
 error: failed to invite owners to crate `foo` on registry at file://[..]
 
 Caused by:
@@ -91,7 +93,7 @@ Caused by:
 
 #[cargo_test]
 fn simple_remove() {
-    registry::init();
+    let registry = registry::init();
     setup("foo", None);
 
     let p = project()
@@ -109,10 +111,11 @@ fn simple_remove() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -r username --token sekrit")
+    p.cargo("owner -r username")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
-            "    Updating `[..]` index
+            "    Updating crates.io index
        Owner removing [\"username\"] from crate foo
 error: failed to remove owners from crate `foo` on registry at file://[..]
 

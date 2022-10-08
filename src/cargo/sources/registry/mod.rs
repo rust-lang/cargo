@@ -402,7 +402,7 @@ impl<'a> RegistryDependency<'a> {
 
         // In index, "registry" is null if it is from the same index.
         // In Cargo.toml, "registry" is None if it is from the default
-        if !id.is_default_registry() {
+        if !id.is_crates_io() {
             dep.set_registry_id(id);
         }
 

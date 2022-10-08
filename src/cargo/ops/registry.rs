@@ -209,7 +209,7 @@ fn verify_dependencies(
             // This extra hostname check is mostly to assist with testing,
             // but also prevents someone using `--index` to specify
             // something that points to crates.io.
-            if registry_src.is_default_registry() || registry.host_is_crates_io() {
+            if registry_src.is_crates_io() || registry.host_is_crates_io() {
                 bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
                        registries. `{}` needs to be published to crates.io before publishing this crate.\n\
                        (crate `{}` is pulled from {})",
@@ -391,6 +391,22 @@ pub fn registry_configuration(
     };
     // `registry.default` is handled in command-line parsing.
     let (token, process) = match registry {
+        Some("crates-io") | None => {
+            // Use crates.io default.
+            config.check_registry_index_not_set()?;
+            let token = config.get_string("registry.token")?.map(|p| p.val);
+            let process = if config.cli_unstable().credential_process {
+                let process =
+                    config.get::<Option<config::PathAndArgs>>("registry.credential-process")?;
+                if token.is_some() && process.is_some() {
+                    return err_both("registry.token", "registry.credential-process");
+                }
+                process
+            } else {
+                None
+            };
+            (token, process)
+        }
         Some(registry) => {
             let token_key = format!("registries.{registry}.token");
             let token = config.get_string(&token_key)?.map(|p| p.val);
@@ -404,22 +420,6 @@ pub fn registry_configuration(
                     process = config.get::<Option<config::PathAndArgs>>(&proc_key)?;
                 } else if process.is_some() && token.is_some() {
                     return err_both(&token_key, &proc_key);
-                }
-                process
-            } else {
-                None
-            };
-            (token, process)
-        }
-        None => {
-            // Use crates.io default.
-            config.check_registry_index_not_set()?;
-            let token = config.get_string("registry.token")?.map(|p| p.val);
-            let process = if config.cli_unstable().credential_process {
-                let process =
-                    config.get::<Option<config::PathAndArgs>>("registry.credential-process")?;
-                if token.is_some() && process.is_some() {
-                    return err_both("registry.token", "registry.credential-process");
                 }
                 process
             } else {
@@ -444,11 +444,9 @@ pub fn registry_configuration(
 ///
 /// * `token`: The token from the command-line. If not set, uses the token
 ///   from the config.
-/// * `index`: The index URL from the command-line. This is ignored if
-///   `registry` is set.
+/// * `index`: The index URL from the command-line.
 /// * `registry`: The registry name from the command-line. If neither
-///   `registry`, or `index` are set, then uses `crates-io`, honoring
-///   `[source]` replacement if defined.
+///   `registry`, or `index` are set, then uses `crates-io`.
 /// * `force_update`: If `true`, forces the index to be updated.
 /// * `validate_token`: If `true`, the token must be set.
 fn registry(
@@ -459,24 +457,8 @@ fn registry(
     force_update: bool,
     validate_token: bool,
 ) -> CargoResult<(Registry, RegistryConfig, SourceId)> {
-    if index.is_some() && registry.is_some() {
-        // Otherwise we would silently ignore one or the other.
-        bail!("both `--index` and `--registry` should not be set at the same time");
-    }
-    // Parse all configuration options
+    let (sid, sid_no_replacement) = get_source_id(config, index, registry)?;
     let reg_cfg = registry_configuration(config, registry)?;
-    let opt_index = registry
-        .map(|r| config.get_registry_index(r))
-        .transpose()?
-        .map(|u| u.to_string());
-    let sid = get_source_id(config, opt_index.as_deref().or(index), registry)?;
-    if !sid.is_remote_registry() {
-        bail!(
-            "{} does not support API commands.\n\
-             Check for a source-replacement in .cargo/config.",
-            sid
-        );
-    }
     let api_host = {
         let _lock = config.acquire_package_cache_lock()?;
         let mut src = RegistrySource::remote(sid, &HashSet::new(), config)?;
@@ -503,42 +485,18 @@ fn registry(
             }
             token
         } else {
-            // Check `is_default_registry` so that the crates.io index can
-            // change config.json's "api" value, and this won't affect most
-            // people. It will affect those using source replacement, but
-            // hopefully that's a relatively small set of users.
-            if token.is_none()
-                && reg_cfg.is_token()
-                && registry.is_none()
-                && !sid.is_default_registry()
-                && !crates_io::is_url_crates_io(&api_host)
-            {
-                config.shell().warn(
-                    "using `registry.token` config value with source \
-                        replacement is deprecated\n\
-                        This may become a hard error in the future; \
-                        see <https://github.com/rust-lang/cargo/issues/xxx>.\n\
-                        Use the --token command-line flag to remove this warning.",
-                )?;
-                reg_cfg.as_token().map(|t| t.to_owned())
-            } else {
-                let token =
-                    auth::auth_token(config, token.as_deref(), &reg_cfg, registry, &api_host)?;
-                Some(token)
-            }
+            let token = auth::auth_token(config, token.as_deref(), &reg_cfg, registry, &api_host)?;
+            Some(token)
         }
     } else {
         None
     };
     let handle = http_handle(config)?;
-    // Workaround for the sparse+https://index.crates.io replacement index. Use the non-replaced
-    // source_id so that the original (github) url is used when publishing a crate.
-    let sid = if sid.is_default_registry() {
-        SourceId::crates_io(config)?
-    } else {
-        sid
-    };
-    Ok((Registry::new_handle(api_host, token, handle), reg_cfg, sid))
+    Ok((
+        Registry::new_handle(api_host, token, handle),
+        reg_cfg,
+        sid_no_replacement,
+    ))
 }
 
 /// Creates a new HTTP handle with appropriate global configuration for cargo.
@@ -947,16 +905,45 @@ pub fn yank(
 /// Gets the SourceId for an index or registry setting.
 ///
 /// The `index` and `reg` values are from the command-line or config settings.
-/// If both are None, returns the source for crates.io.
-fn get_source_id(config: &Config, index: Option<&str>, reg: Option<&str>) -> CargoResult<SourceId> {
-    match (reg, index) {
-        (Some(r), _) => SourceId::alt_registry(config, r),
-        (_, Some(i)) => SourceId::for_registry(&i.into_url()?),
-        _ => {
-            let map = SourceConfigMap::new(config)?;
-            let src = map.load(SourceId::crates_io(config)?, &HashSet::new())?;
-            Ok(src.replaced_source_id())
+/// If both are None, and no source-replacement is configured, returns the source for crates.io.
+/// If both are None, and source replacement is configured, returns an error.
+///
+/// The source for crates.io may be GitHub, index.crates.io, or a test-only registry depending
+/// on configuration.
+///
+/// If `reg` is set, source replacement is not followed.
+///
+/// The return value is a pair of `SourceId`s: The first may be a built-in replacement of
+/// crates.io (such as index.crates.io), while the second is always the original source.
+fn get_source_id(
+    config: &Config,
+    index: Option<&str>,
+    reg: Option<&str>,
+) -> CargoResult<(SourceId, SourceId)> {
+    let sid = match (reg, index) {
+        (None, None) => SourceId::crates_io(config)?,
+        (Some(r), None) => SourceId::alt_registry(config, r)?,
+        (None, Some(i)) => SourceId::for_registry(&i.into_url()?)?,
+        (Some(_), Some(_)) => {
+            bail!("both `--index` and `--registry` should not be set at the same time")
         }
+    };
+    // Load source replacements that are built-in to Cargo.
+    let builtin_replacement_sid = SourceConfigMap::empty(config)?
+        .load(sid, &HashSet::new())?
+        .replaced_source_id();
+    let replacement_sid = SourceConfigMap::new(config)?
+        .load(sid, &HashSet::new())?
+        .replaced_source_id();
+    if reg.is_none() && index.is_none() && replacement_sid != builtin_replacement_sid {
+        // Neither --registry nor --index was passed and the user has configured source-replacement.
+        if let Some(replacement_name) = replacement_sid.alt_registry_key() {
+            bail!("crates-io is replaced with remote registry {replacement_name};\ninclude `--registry {replacement_name}` or `--registry crates-io`");
+        } else {
+            bail!("crates-io is replaced with non-remote-registry source {replacement_sid};\ninclude `--registry crates-io` to use crates.io");
+        }
+    } else {
+        Ok((builtin_replacement_sid, sid))
     }
 }
 
@@ -1024,7 +1011,7 @@ pub fn search(
             &ColorSpec::new(),
         );
     } else if total_crates > limit && limit >= search_max_limit {
-        let extra = if source_id.is_default_registry() {
+        let extra = if source_id.is_crates_io() {
             format!(
                 " (go to https://crates.io/search?q={} to see more)",
                 percent_encode(query.as_bytes(), NON_ALPHANUMERIC)

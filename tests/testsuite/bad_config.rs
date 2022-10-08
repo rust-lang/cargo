@@ -1,6 +1,6 @@
 //! Tests for some invalid .cargo/config files.
 
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project, rustc_host};
 
 #[cargo_test]
@@ -62,6 +62,7 @@ Caused by:
 
 #[cargo_test]
 fn bad3() {
+    let registry = registry::init();
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -75,6 +76,7 @@ fn bad3() {
     Package::new("foo", "1.0.0").publish();
 
     p.cargo("publish -v")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
             "\
@@ -113,6 +115,7 @@ Caused by:
 
 #[cargo_test]
 fn bad6() {
+    let registry = registry::init();
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -126,6 +129,7 @@ fn bad6() {
     Package::new("foo", "1.0.0").publish();
 
     p.cargo("publish -v")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
             "\

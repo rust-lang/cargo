@@ -107,7 +107,7 @@ Caused by:
 
 #[cargo_test]
 fn inherit_own_workspace_fields() {
-    registry::init();
+    let registry = registry::init();
 
     let p = project().build();
 
@@ -160,7 +160,9 @@ fn inherit_own_workspace_fields() {
         .file("bar.txt", "") // should be included when packaging
         .build();
 
-    p.cargo("publish --token sekrit").run();
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -231,6 +233,7 @@ repository = "https://gitlab.com/rust-lang/rust"
 
 #[cargo_test]
 fn inherit_own_dependencies() {
+    let registry = registry::init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -284,7 +287,9 @@ fn inherit_own_dependencies() {
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
-    p.cargo("publish --token sekrit").run();
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -298,7 +303,6 @@ fn inherit_own_dependencies() {
               "kind": "normal",
               "name": "dep",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^0.1"
             },
@@ -308,7 +312,6 @@ fn inherit_own_dependencies() {
               "kind": "dev",
               "name": "dep-dev",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^0.5.2"
             },
@@ -318,7 +321,6 @@ fn inherit_own_dependencies() {
               "kind": "build",
               "name": "dep-build",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^0.8"
             }
@@ -366,6 +368,7 @@ version = "0.8"
 
 #[cargo_test]
 fn inherit_own_detailed_dependencies() {
+    let registry = registry::init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -408,7 +411,9 @@ fn inherit_own_detailed_dependencies() {
     p.cargo("check").run();
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
-    p.cargo("publish --token sekrit").run();
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -422,7 +427,6 @@ fn inherit_own_detailed_dependencies() {
               "kind": "normal",
               "name": "dep",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^0.1.2"
             }
@@ -560,7 +564,7 @@ fn inherited_dependencies_union_features() {
 
 #[cargo_test]
 fn inherit_workspace_fields() {
-    registry::init();
+    let registry = registry::init();
 
     let p = project().build();
 
@@ -624,7 +628,10 @@ fn inherit_workspace_fields() {
         .file("bar/bar.txt", "") // should be included when packaging
         .build();
 
-    p.cargo("publish --token sekrit").cwd("bar").run();
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .cwd("bar")
+        .run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -701,6 +708,7 @@ repository = "https://gitlab.com/rust-lang/rust"
 
 #[cargo_test]
 fn inherit_dependencies() {
+    let registry = registry::init();
     let p = project()
         .file(
             "Cargo.toml",
@@ -755,7 +763,10 @@ fn inherit_dependencies() {
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
-    p.cargo("publish --token sekrit").cwd("bar").run();
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .cwd("bar")
+        .run();
     publish::validate_upload_with_contents(
         r#"
         {
@@ -769,7 +780,6 @@ fn inherit_dependencies() {
               "kind": "normal",
               "name": "dep",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^0.1"
             },
@@ -779,7 +789,6 @@ fn inherit_dependencies() {
               "kind": "dev",
               "name": "dep-dev",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^0.5.2"
             },
@@ -789,7 +798,6 @@ fn inherit_dependencies() {
               "kind": "build",
               "name": "dep-build",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^0.8"
             }

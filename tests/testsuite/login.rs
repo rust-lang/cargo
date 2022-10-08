@@ -93,15 +93,19 @@ fn registry_credentials() {
 
 #[cargo_test]
 fn empty_login_token() {
-    let _registry = RegistryBuilder::new().build();
+    let registry = RegistryBuilder::new()
+        .no_configure_registry()
+        .no_configure_token()
+        .build();
     setup_new_credentials();
 
     cargo_process("login")
+        .replace_crates_io(registry.index_url())
         .with_stdout("please paste the API Token found on [..]/me below")
         .with_stdin("\t\n")
         .with_stderr(
             "\
-[UPDATING] `dummy-registry` index
+[UPDATING] crates.io index
 [ERROR] please provide a non-empty token
 ",
         )
@@ -109,6 +113,7 @@ fn empty_login_token() {
         .run();
 
     cargo_process("login")
+        .replace_crates_io(registry.index_url())
         .arg("")
         .with_stderr(
             "\

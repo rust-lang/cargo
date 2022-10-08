@@ -128,7 +128,7 @@ pub fn add_root_urls(
                     if !sid.is_registry() {
                         return false;
                     }
-                    if sid.is_default_registry() {
+                    if sid.is_crates_io() {
                         return registry == CRATES_IO_REGISTRY;
                     }
                     if let Some(index_url) = name2url.get(registry) {

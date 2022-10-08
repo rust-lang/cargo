@@ -1872,7 +1872,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
 
 #[cargo_test]
 fn publish_artifact_dep() {
-    registry::init();
+    let registry = registry::init();
     Package::new("bar", "1.0.0").publish();
     Package::new("baz", "1.0.0").publish();
 
@@ -1901,7 +1901,8 @@ fn publish_artifact_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish -Z bindeps --no-verify --token sekrit")
+    p.cargo("publish -Z bindeps --no-verify")
+        .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
@@ -1924,7 +1925,6 @@ fn publish_artifact_dep() {
               "kind": "normal",
               "name": "bar",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^1.0"
             },
@@ -1934,7 +1934,6 @@ fn publish_artifact_dep() {
               "kind": "build",
               "name": "baz",
               "optional": false,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^1.0"
             }
