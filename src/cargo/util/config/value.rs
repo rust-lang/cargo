@@ -59,7 +59,7 @@ pub enum Definition {
     /// Defined in an environment variable, includes the environment key.
     Environment(String),
     /// Passed in on the command line.
-    /// A path is attached if the config value is a path to a config file.
+    /// A path is attached when the config value is a path to a config file.
     Cli(Option<PathBuf>),
 }
 
