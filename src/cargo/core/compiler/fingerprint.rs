@@ -559,10 +559,12 @@ pub struct Fingerprint {
 }
 
 /// Indication of the status on the filesystem for a particular unit.
+#[derive(Default)]
 enum FsStatus {
     /// This unit is to be considered stale, even if hash information all
     /// matches. The filesystem inputs have changed (or are missing) and the
     /// unit needs to subsequently be recompiled.
+    #[default]
     Stale,
 
     /// This unit is up-to-date. All outputs and their corresponding mtime are
@@ -576,12 +578,6 @@ impl FsStatus {
             FsStatus::UpToDate { .. } => true,
             FsStatus::Stale => false,
         }
-    }
-}
-
-impl Default for FsStatus {
-    fn default() -> FsStatus {
-        FsStatus::Stale
     }
 }
 
