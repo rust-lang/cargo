@@ -1,0 +1,36 @@
+[package]
+name = "cargo-remove-test-fixture"
+version = "0.1.0"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[build-dependencies]
+semver = "0.1.0"
+
+[dependencies]
+docopt = "0.6"
+rustc-serialize = "0.4"
+semver = "0.1"
+toml = "0.1"
+clippy = "0.4"
+
+[dev-dependencies]
+regex = "0.1.1"
+serde = "1.0.90"
+toml = "0.2.3"
+docopt = "0.6"
+
+[features]
+std = ["serde/std", "semver/std"]
+
+[profile.dev.package.docopt]
+opt-level = 3
+
+[profile.dev.package."toml@0.1.0"]
+opt-level = 3
+
+[profile.release.package.toml]
+opt-level = 1
+overflow-checks = false
