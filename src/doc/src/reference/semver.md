@@ -88,6 +88,7 @@ considered incompatible.
         * [Possibly-breaking: introducing a new function type parameter](#fn-generic-new)
         * [Minor: generalizing a function to use generics (supporting original type)](#fn-generalize-compatible)
         * [Major: generalizing a function to use generics with type mismatch](#fn-generalize-mismatch)
+        * [Minor: making an `unsafe` function safe](#fn-unsafe-safe)
     * Attributes
         * [Major: switching from `no_std` support to requiring `std`](#attr-no-std-to-std)
         * [Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields](#attr-adding-non-exhaustive)
@@ -1080,6 +1081,73 @@ fn main() {
 }
 ```
 
+<a id="fn-unsafe-safe"></a>
+### Minor: making an `unsafe` function safe
+
+It is not a breaking change to make a previously `unsafe` function safe, as in
+the example below.
+
+Going the other way (making a safe function `unsafe`) is a breaking change.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub unsafe fn foo() {}
+
+///////////////////////////////////////////////////////////
+// After
+pub fn foo() {}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+use updated_crate::foo;
+
+unsafe fn bar(f: unsafe fn()) {
+    f()
+}
+
+fn main() {
+    unsafe { foo() }; // The `unused_unsafe` lint will trigger here
+    unsafe { bar(foo) };
+}
+```
+
+Making an a previously `unsafe` associated function or method on structs /
+enums safe is also a minor change, while the same is not true for associated
+function on traits:
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub trait Foo {
+    unsafe fn foo();
+}
+
+///////////////////////////////////////////////////////////
+// After
+pub trait Foo {
+    fn foo();
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Foo;
+
+struct Bar;
+
+impl Foo for Bar {
+    unsafe fn foo() {} // Error: method `foo` has an incompatible type for trait
+}
+```
+
+Note that local crates that have specified `#![deny(warnings)]` (which is an
+[anti-pattern][deny warnings]) will break, since they've explicitly opted out
+of Rust's stability guarantees.
+
 <a id="attr-no-std-to-std"></a>
 ### Major: switching from `no_std` support to requiring `std`
 
@@ -1487,3 +1555,4 @@ document what your commitments are.
 [SemVer]: https://semver.org/
 [struct literal]: ../../reference/expressions/struct-expr.html
 [wildcard patterns]: ../../reference/patterns.html#wildcard-pattern
+[deny warnings]: https://rust-unofficial.github.io/patterns/anti_patterns/deny-warnings.html
