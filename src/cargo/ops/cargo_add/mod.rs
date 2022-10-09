@@ -289,7 +289,7 @@ fn resolve_dependency(
         } else {
             let mut source = crate::sources::GitSource::new(src.source_id()?, config)?;
             let packages = source.read_packages()?;
-            let package = infer_package(packages, &src, true)?;
+            let package = infer_package_for_git_source(packages, &src)?;
             Dependency::from(package.summary())
         };
         selected
@@ -313,8 +313,10 @@ fn resolve_dependency(
             selected
         } else {
             let source = crate::sources::PathSource::new(&path, src.source_id()?, config);
-            let packages = source.read_packages()?;
-            let package = infer_package(packages, &src, false)?;
+            let mut packages = source.read_packages()?;
+            let package = packages
+                .pop()
+                .ok_or(anyhow::anyhow!("no packages found at `{src}`"))?;
             Dependency::from(package.summary())
         };
         selected
@@ -599,10 +601,9 @@ fn select_package(
     }
 }
 
-fn infer_package(
+fn infer_package_for_git_source(
     mut packages: Vec<Package>,
     src: &dyn std::fmt::Display,
-    is_git_source: bool,
 ) -> CargoResult<Package> {
     let package = match packages.len() {
         0 => {
@@ -616,7 +617,7 @@ fn infer_package(
                 .collect();
             names.sort_unstable();
             anyhow::bail!(
-                "multiple packages found at `{src}`:\n    {}{}",
+                "multiple packages found at `{src}`:\n    {}\nTo disambiguate, run `cargo add --git {src} <package>`",
                 names
                     .iter()
                     .map(|s| s.to_string())
@@ -627,11 +628,6 @@ fn infer_package(
                     })
                     .into_iter()
                     .format("\n    "),
-                if is_git_source {
-                    format!("\nTo disambiguate, run `cargo add --git {src} <crate>`")
-                } else {
-                    "".to_owned()
-                }
             );
         }
     };
