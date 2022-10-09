@@ -256,7 +256,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn cli_include_take_prioirty_over_env() {
+fn cli_include_take_priority_over_env() {
     write_config_at(".cargo/include.toml", "k='include'");
 
     // k=env
