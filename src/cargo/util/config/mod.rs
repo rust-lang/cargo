@@ -2127,9 +2127,10 @@ pub struct CargoFutureIncompatConfig {
     frequency: Option<CargoFutureIncompatFrequencyConfig>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum CargoFutureIncompatFrequencyConfig {
+    #[default]
     Always,
     Never,
 }
@@ -2143,12 +2144,6 @@ impl CargoFutureIncompatConfig {
             Always => true,
             Never => false,
         }
-    }
-}
-
-impl Default for CargoFutureIncompatFrequencyConfig {
-    fn default() -> Self {
-        Self::Always
     }
 }
 
@@ -2270,18 +2265,13 @@ pub struct ProgressConfig {
     pub width: Option<usize>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ProgressWhen {
+    #[default]
     Auto,
     Never,
     Always,
-}
-
-impl Default for ProgressWhen {
-    fn default() -> ProgressWhen {
-        ProgressWhen::Auto
-    }
 }
 
 fn progress_or_string<'de, D>(deserializer: D) -> Result<Option<ProgressConfig>, D::Error>
