@@ -549,7 +549,7 @@ impl<'cfg> RegistrySource<'cfg> {
         config: &'cfg Config,
     ) -> CargoResult<RegistrySource<'cfg>> {
         let name = short_name(source_id);
-        let ops = if source_id.url().scheme().starts_with("sparse+") {
+        let ops = if source_id.is_sparse() {
             Box::new(http_remote::HttpRegistry::new(source_id, config, &name)?) as Box<_>
         } else {
             Box::new(remote::RemoteRegistry::new(source_id, config, &name)) as Box<_>

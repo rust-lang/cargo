@@ -9,7 +9,7 @@ use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::network::Retry;
-use crate::util::{internal, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
+use crate::util::{internal, Config, Filesystem, Progress, ProgressStyle};
 use anyhow::Context;
 use cargo_util::paths;
 use curl::easy::{HttpVersion, List};
@@ -137,19 +137,15 @@ impl<'cfg> HttpRegistry<'cfg> {
         let url = source_id.url().as_str();
         // Ensure the url ends with a slash so we can concatenate paths.
         if !url.ends_with('/') {
-            anyhow::bail!("registry url must end in a slash `/`: {url}")
+            anyhow::bail!("sparse registry url must end in a slash `/`: sparse+{url}")
         }
-        let url = url
-            .trim_start_matches("sparse+")
-            .into_url()
-            .expect("a url with the protocol stripped should still be valid");
 
         Ok(HttpRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            url,
+            url: source_id.url().to_owned(),
             multi: Multi::new(),
             multiplexing: false,
             downloads: Downloads {
