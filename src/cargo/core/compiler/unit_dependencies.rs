@@ -1,8 +1,8 @@
-//! Constructs the dependency graph for compilation.
+//! # Constructs the dependency graph for compilation
 //!
 //! Rust code is typically organized as a set of Cargo packages. The
 //! dependencies between the packages themselves are stored in the
-//! `Resolve` struct. However, we can't use that information as is for
+//! [`Resolve`] struct. However, we can't use that information as is for
 //! compilation! A package typically contains several targets, or crates,
 //! and these targets has inter-dependencies. For example, you need to
 //! compile the `lib` target before the `bin` one, and you need to compile
@@ -13,7 +13,7 @@
 //! is exactly what this module is doing! Well, almost exactly: another
 //! complication is that we might want to compile the same target several times
 //! (for example, with and without tests), so we actually build a dependency
-//! graph of `Unit`s, which capture these properties.
+//! graph of [`Unit`]s, which capture these properties.
 
 use std::collections::{HashMap, HashSet};
 
@@ -35,23 +35,27 @@ use crate::CargoResult;
 
 const IS_NO_ARTIFACT_DEP: Option<&'static Artifact> = None;
 
-/// Collection of stuff used while creating the `UnitGraph`.
+/// Collection of stuff used while creating the [`UnitGraph`].
 struct State<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
     config: &'cfg Config,
+    /// Stores the result of building the [`UnitGraph`].
     unit_dependencies: UnitGraph,
     package_set: &'a PackageSet<'cfg>,
     usr_resolve: &'a Resolve,
     usr_features: &'a ResolvedFeatures,
+    /// Like `usr_resolve` but for building standard library (`-Zbuild-std`).
     std_resolve: Option<&'a Resolve>,
+    /// Like `usr_features` but for building standard library (`-Zbuild-std`).
     std_features: Option<&'a ResolvedFeatures>,
-    /// This flag is `true` while generating the dependencies for the standard
-    /// library.
+    /// `true` while generating the dependencies for the standard library.
     is_std: bool,
+    /// The mode we are compiling in. Used for preventing from building lib thrice.
     global_mode: CompileMode,
     target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
+    // Units for `-Zrustdoc-scrape-examples`.
     scrape_units: &'a [Unit],
 
     /// A set of edges in `unit_dependencies` where (a, b) means that the
@@ -73,6 +77,9 @@ impl IsArtifact {
     }
 }
 
+/// Then entry point for building a dependency graph of compilation units.
+///
+/// You can find some information for arguments from doc of [`State`].
 pub fn build_unit_dependencies<'a, 'cfg>(
     ws: &'a Workspace<'cfg>,
     package_set: &'a PackageSet<'cfg>,
@@ -1015,6 +1022,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
 }
 
 impl<'a, 'cfg> State<'a, 'cfg> {
+    /// Gets `std_resolve` during building std, otherwise `usr_resolve`.
     fn resolve(&self) -> &'a Resolve {
         if self.is_std {
             self.std_resolve.unwrap()
@@ -1023,6 +1031,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         }
     }
 
+    /// Gets `std_features` during building std, otherwise `usr_features`.
     fn features(&self) -> &'a ResolvedFeatures {
         if self.is_std {
             self.std_features.unwrap()

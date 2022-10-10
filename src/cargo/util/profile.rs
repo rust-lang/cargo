@@ -1,3 +1,9 @@
+//! # An internal profiler for Cargo itself
+//!
+//! > **Note**: This might not be the module you are looking for.
+//! > For information about how Cargo handles compiler flags with profiles,
+//! > please see the module [`cargo::core::profiles`](crate::core::profiles).
+
 use std::cell::RefCell;
 use std::env;
 use std::fmt;
