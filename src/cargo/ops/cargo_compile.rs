@@ -1,26 +1,33 @@
-//! The Cargo "compile" operation.
+//! # The Cargo "compile" operation
 //!
 //! This module contains the entry point for starting the compilation process
 //! for commands like `build`, `test`, `doc`, `rustc`, etc.
 //!
-//! The `compile` function will do all the work to compile a workspace. A
+//! The [`compile`] function will do all the work to compile a workspace. A
 //! rough outline is:
 //!
-//! - Resolve the dependency graph (see `ops::resolve`).
-//! - Download any packages needed (see `PackageSet`).
+//! - Resolve the dependency graph (see [`ops::resolve`]).
+//! - Download any packages needed (see [`PackageSet`]).
 //! - Generate a list of top-level "units" of work for the targets the user
-//!   requested on the command-line. Each `Unit` corresponds to a compiler
-//!   invocation. This is done in this module (`generate_targets`).
-//! - Build the graph of `Unit` dependencies (see
-//!   `core::compiler::context::unit_dependencies`).
-//! - Create a `Context` which will perform the following steps:
-//!     - Prepare the `target` directory (see `Layout`).
+//!   requested on the command-line. Each [`Unit`] corresponds to a compiler
+//!   invocation. This is done in this module ([`generate_targets`]).
+//! - Build the graph of `Unit` dependencies (see [`unit_dependencies`]).
+//! - Create a [`Context`] which will perform the following steps:
+//!     - Prepare the `target` directory (see [`Layout`]).
 //!     - Create a job queue (see `JobQueue`). The queue checks the
 //!       fingerprint of each `Unit` to determine if it should run or be
 //!       skipped.
 //!     - Execute the queue. Each leaf in the queue's dependency graph is
 //!       executed, and then removed from the graph when finished. This
 //!       repeats until the queue is empty.
+//!
+//! **Note**: "target" inside this module generally refers to ["Cargo Target"],
+//! which corresponds to artifact that will be built in a package. Not to be
+//! confused with target-triple or target architecture.
+//!
+//! [`unit_dependencies`]: crate::core::compiler::unit_dependencies
+//! [`Layout`]: crate::core::compiler::Layout
+//! ["Cargo Target"]: https://doc.rust-lang.org/nightly/cargo/reference/cargo-targets.html
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
@@ -50,9 +57,9 @@ use anyhow::{bail, Context as _};
 
 /// Contains information about how a package should be compiled.
 ///
-/// Note on distinction between `CompileOptions` and `BuildConfig`:
+/// Note on distinction between `CompileOptions` and [`BuildConfig`]:
 /// `BuildConfig` contains values that need to be retained after
-/// `BuildContext` is created. The other fields are no longer necessary. Think
+/// [`BuildContext`] is created. The other fields are no longer necessary. Think
 /// of it as `CompileOptions` are high-level settings requested on the
 /// command-line, and `BuildConfig` are low-level settings for actually
 /// driving `rustc`.
@@ -105,15 +112,28 @@ impl CompileOptions {
     }
 }
 
+/// Represents the selected pacakges that will be built.
+///
+/// Generally, it represents the combination of all `-p` flag. When working within
+/// a workspace, `--exclude` and `--workspace` flags also contribute to it.
 #[derive(PartialEq, Eq, Debug)]
 pub enum Packages {
+    /// Pacakges selected by default. Ususally means no flag provided.
     Default,
+    /// Opt in all packages.
+    ///
+    /// As of the time of this writing, it only works on opting in all workspace mebeer
     All,
+    /// Opt out of packages passed in.
+    ///
+    /// As of the time of this writing, it only works on opting out workspace members.
     OptOut(Vec<String>),
+    /// A sequence of hand-picked packages that will be built. Normally done by `-p` flag.
     Packages(Vec<String>),
 }
 
 impl Packages {
+    /// Creates a `Packages` from flags which are generally equivalent to command line flags.
     pub fn from_flags(all: bool, exclude: Vec<String>, package: Vec<String>) -> CargoResult<Self> {
         Ok(match (all, exclude.len(), package.len()) {
             (false, 0, 0) => Packages::Default,
@@ -124,7 +144,7 @@ impl Packages {
         })
     }
 
-    /// Converts selected packages from a workspace to `PackageIdSpec`s.
+    /// Converts selected packages to [`PackageIdSpec`]s.
     pub fn to_package_id_specs(&self, ws: &Workspace<'_>) -> CargoResult<Vec<PackageIdSpec>> {
         let specs = match self {
             Packages::All => ws
@@ -186,7 +206,7 @@ impl Packages {
         Ok(specs)
     }
 
-    /// Gets a list of selected packages from a workspace.
+    /// Gets a list of selected Packages.
     pub fn get_packages<'ws>(&self, ws: &'ws Workspace<'_>) -> CargoResult<Vec<&'ws Package>> {
         let packages: Vec<_> = match self {
             Packages::Default => ws.default_members().collect(),
@@ -232,6 +252,7 @@ impl Packages {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+/// Indicates whether or not the library target gets included.
 pub enum LibRule {
     /// Include the library, fail if not present
     True,
@@ -242,18 +263,28 @@ pub enum LibRule {
 }
 
 #[derive(Debug)]
+/// Indicates which Cargo targets will be selected to be built.
 pub enum FilterRule {
+    /// All included.
     All,
+    /// Just a subset of Cargo targets based on names given.
     Just(Vec<String>),
 }
 
+/// Filter to apply to the root package to select which Cargo targets will be built.
+/// (examples, bins, benches, tests, ...)
+///
+/// The actual filter process happens inside [`generate_targets`].
 #[derive(Debug)]
 pub enum CompileFilter {
+    /// The default set of Cargo targets.
     Default {
         /// Flag whether targets can be safely skipped when required-features are not satisfied.
         required_features_filterable: bool,
     },
+    /// Only includes a subset of all Cargo targets.
     Only {
+        /// Include all Cargo targets.
         all_targets: bool,
         lib: LibRule,
         bins: FilterRule,
@@ -263,13 +294,18 @@ pub enum CompileFilter {
     },
 }
 
+/// Compiles!
+///
+/// This uses the [`DefaultExecutor`]. To use a custom [`Executor`], see [`compile_with_exec`].
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<Compilation<'a>> {
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     compile_with_exec(ws, options, &exec)
 }
 
-/// Like `compile` but allows specifying a custom `Executor` that will be able to intercept build
-/// calls and add custom logic. `compile` uses `DefaultExecutor` which just passes calls through.
+/// Like [`compile`] but allows specifying a custom [`Executor`]
+/// that will be able to intercept build calls and add custom logic.
+///
+/// [`compile`] uses [`DefaultExecutor`] which just passes calls through.
 pub fn compile_with_exec<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions,
@@ -279,6 +315,7 @@ pub fn compile_with_exec<'a>(
     compile_ws(ws, options, exec)
 }
 
+/// Like [`compile_with_exec`] but without warnings from manifest parsing.
 pub fn compile_ws<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions,
@@ -295,6 +332,9 @@ pub fn compile_ws<'a>(
     cx.compile(exec)
 }
 
+/// Executes `rustc --print <VALUE>`.
+///
+/// * `print_opt_value` is the VALUE passed through.
 pub fn print<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions,
@@ -326,6 +366,10 @@ pub fn print<'a>(
     Ok(())
 }
 
+/// Prepares all required information for the actual compilation.
+///
+/// For how it works and what data it collects,
+/// please see the [module-level documentation](self).
 pub fn create_bcx<'a, 'cfg>(
     ws: &'a Workspace<'cfg>,
     options: &'a CompileOptions,

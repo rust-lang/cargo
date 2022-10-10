@@ -241,6 +241,17 @@ _cargo() {
                     _arguments -s -S $common $manifest
                         ;;
 
+                remove | rm)
+                    _arguments -s -A "^--" $common $manifest \
+                        "--dev[remove as a dev dependency]" \
+                        "--build[remove as a build dependency]" \
+                        "--target=[remove as a dependency from the given target platform]" \
+                        "--dry-run[don't actually write the manifest]" \
+                        '(-p --package)'{-p+,--package=}'[package to remove from]:package:_cargo_package_names' \
+                        '1: :_guard "^-*" "crate name"' \
+                        '*:args:_default'
+                        ;;
+
                 run | r)
                     _arguments -s -S $common $parallel $features $msgfmt $triple $target $manifest \
                         '--example=[name of the bin target]:name:_cargo_example_names' \
