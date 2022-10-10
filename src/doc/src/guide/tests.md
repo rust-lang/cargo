@@ -32,7 +32,7 @@ $ cargo test foo
 This will run any test with `foo` in its name.
 
 `cargo test` runs additional checks as well. It will compile any examples
-you’ve included to ensure they are still compiles. It also run documentation
+you’ve included to ensure they still compile. It also runs documentation
 tests to ensure your code samples from documentation comments compiles.
 Please see the [testing guide][testing] in the Rust documentation for a general
 view of writing and organizing tests. See [Cargo Targets: Tests] to learn more
