@@ -2704,6 +2704,24 @@ fn http_requires_z_flag() {
 }
 
 #[cargo_test]
+fn protocol_sparse_requires_z_flag() {
+    cargo_process("install bar")
+        .with_status(101)
+        .env("CARGO_REGISTRIES_CRATES_IO_PROTOCOL", "sparse")
+        .with_stderr("[ERROR] usage of sparse registries requires `-Z sparse-registry`")
+        .run()
+}
+
+#[cargo_test]
+fn protocol() {
+    cargo_process("install bar")
+        .with_status(101)
+        .env("CARGO_REGISTRIES_CRATES_IO_PROTOCOL", "invalid")
+        .with_stderr("[ERROR] unsupported registry protocol `invalid` (defined in environment variable `CARGO_REGISTRIES_CRATES_IO_PROTOCOL`)")
+        .run()
+}
+
+#[cargo_test]
 fn http_requires_trailing_slash() {
     cargo_process("-Z sparse-registry install bar --index sparse+https://index.crates.io")
         .masquerade_as_nightly_cargo(&["sparse-registry"])

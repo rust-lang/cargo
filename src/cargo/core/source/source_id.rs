@@ -2,7 +2,7 @@ use crate::core::PackageId;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::sources::{GitSource, PathSource, RegistrySource};
-use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
+use crate::util::{config, CanonicalUrl, CargoResult, Config, IntoUrl};
 use log::trace;
 use serde::de;
 use serde::ser;
@@ -215,13 +215,28 @@ impl SourceId {
     /// Returns the `SourceId` corresponding to the main repository, using the
     /// sparse HTTP index if allowed.
     pub fn crates_io_maybe_sparse_http(config: &Config) -> CargoResult<SourceId> {
-        if config.cli_unstable().sparse_registry {
+        if Self::crates_io_is_sparse(config)? {
             config.check_registry_index_not_set()?;
             let url = CRATES_IO_HTTP_INDEX.into_url().unwrap();
             SourceId::new(SourceKind::Registry, url, Some(CRATES_IO_REGISTRY))
         } else {
             Self::crates_io(config)
         }
+    }
+
+    /// Returns whether to access crates.io over the sparse protocol.
+    pub fn crates_io_is_sparse(config: &Config) -> CargoResult<bool> {
+        let proto: Option<config::Value<String>> = config.get("registries.crates-io.protocol")?;
+        let is_sparse = match proto.as_ref().map(|v| v.val.as_str()) {
+            Some("sparse") => true,
+            Some("git") => false,
+            Some(unknown) => anyhow::bail!(
+                "unsupported registry protocol `{unknown}` (defined in {})",
+                proto.as_ref().unwrap().definition
+            ),
+            None => config.cli_unstable().sparse_registry,
+        };
+        Ok(is_sparse)
     }
 
     /// Gets the `SourceId` associated with given name of the remote registry.
