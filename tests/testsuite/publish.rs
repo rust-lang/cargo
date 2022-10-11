@@ -133,10 +133,10 @@ See [..]
     validate_upload_foo();
 }
 
+// Check that the `token` key works at the root instead of under a
+// `[registry]` table.
 #[cargo_test]
 fn old_token_location() {
-    // Check that the `token` key works at the root instead of under a
-    // `[registry]` table.
     let registry = registry::init();
 
     let p = project()
@@ -209,6 +209,14 @@ fn simple_with_index() {
         .arg(registry.token())
         .arg("--index")
         .arg(registry.index_url().as_str())
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     validate_upload_foo();
@@ -325,6 +333,7 @@ The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
 #[cargo_test]
 fn dont_publish_dirty() {
     let registry = registry::init();
+
     let p = project().file("bar", "").build();
 
     let _ = git::repo(&paths::root().join("foo"))
@@ -388,6 +397,15 @@ fn publish_clean() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     validate_upload_foo_clean();
@@ -420,6 +438,15 @@ fn publish_in_sub_repo() {
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .cwd("bar")
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     validate_upload_foo_clean();
@@ -452,6 +479,15 @@ fn publish_when_ignored() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     publish::validate_upload(
@@ -494,6 +530,15 @@ fn ignore_when_crate_ignored() {
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .cwd("bar")
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     publish::validate_upload(
@@ -669,7 +714,17 @@ fn publish_allowed_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --registry alternative").run();
+    p.cargo("publish --registry alternative")
+        .with_stderr(
+            "\
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
+        .run();
 
     publish::validate_alt_upload(
         CLEAN_FOO_JSON,
@@ -709,7 +764,18 @@ fn publish_implicitly_to_only_allowed_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish").run();
+    p.cargo("publish")
+        .with_stderr(
+            "\
+[NOTE] Found `alternative` as only allowed registry. Publishing to it automatically.
+[UPDATING] `alternative` index
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
+        .run();
 
     publish::validate_alt_upload(
         CLEAN_FOO_JSON,
@@ -787,9 +853,9 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
         .run();
 }
 
+// Explicitly setting `crates-io` in the publish list.
 #[cargo_test]
 fn publish_with_crates_io_explicit() {
-    // Explicitly setting `crates-io` in the publish list.
     let registry = registry::init();
 
     let p = project()
@@ -820,6 +886,17 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] [..]
+[..]
+[PACKAGING] [..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 }
 
@@ -853,7 +930,18 @@ fn publish_with_select_features() {
 
     p.cargo("publish --features required")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])
+",
+        )
         .run();
 }
 
@@ -887,7 +975,18 @@ fn publish_with_all_features() {
 
     p.cargo("publish --all-features")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])
+",
+        )
         .run();
 }
 
@@ -921,8 +1020,8 @@ fn publish_with_no_default_features() {
 
     p.cargo("publish --no-default-features")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("error: This crate requires `required` feature!")
         .with_status(101)
+        .with_stderr_contains("error: This crate requires `required` feature!")
         .run();
 }
 
@@ -964,8 +1063,8 @@ fn publish_with_patch() {
     // Check that verify fails with patched crate which has new functionality.
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains("[..]newfunc[..]")
         .with_status(101)
+        .with_stderr_contains("[..]newfunc[..]")
         .run();
 
     // Remove the usage of new functionality and try again.
@@ -973,6 +1072,18 @@ fn publish_with_patch() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     publish::validate_upload(
@@ -1047,8 +1158,19 @@ fn publish_checks_for_token_before_verify() {
     // Assert package verified successfully on dry run
     p.cargo("publish --dry-run")
         .replace_crates_io(registry.index_url())
-        .with_status(0)
-        .with_stderr_contains("[VERIFYING] foo v0.0.1 ([CWD])")
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 [..]
+[WARNING] aborting upload due to dry run
+",
+        )
         .run();
 }
 
@@ -1100,10 +1222,10 @@ include `--registry crates-io` to use crates.io
         .run();
 }
 
+// A dependency with both `git` and `version`.
 #[cargo_test]
 fn publish_git_with_version() {
     let registry = registry::init();
-    // A dependency with both `git` and `version`.
     Package::new("dep1", "1.0.1")
         .file("src/lib.rs", "pub fn f() -> i32 {1}")
         .publish();
@@ -1146,6 +1268,14 @@ fn publish_git_with_version() {
     p.cargo("run").with_stdout("2").run();
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.1.0 ([CWD])",
+        )
         .run();
 
     publish::validate_upload_with_contents(
@@ -1335,9 +1465,14 @@ fn credentials_ambiguous_filename() {
 
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
+[..]
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1345,10 +1480,10 @@ fn credentials_ambiguous_filename() {
     validate_upload_foo();
 }
 
+// --index will not load registry.token to avoid possibly leaking
+// crates.io token to another server.
 #[cargo_test]
 fn index_requires_token() {
-    // --index will not load registry.token to avoid possibly leaking
-    // crates.io token to another server.
     let registry = registry::init();
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
@@ -1380,9 +1515,9 @@ fn index_requires_token() {
         .run();
 }
 
+// publish with source replacement without --registry
 #[cargo_test]
 fn cratesio_source_replacement() {
-    // publish with source replacement without --registry
     registry::init();
     let p = project()
         .file(
@@ -1451,9 +1586,9 @@ Caused by:
         .run();
 }
 
+// Registry returns an API error.
 #[cargo_test]
 fn api_error_json() {
-    // Registry returns an API error.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -1498,9 +1633,9 @@ Caused by:
         .run();
 }
 
+// Registry returns an API error with a 200 status code.
 #[cargo_test]
 fn api_error_200() {
-    // Registry returns an API error with a 200 status code.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -1545,9 +1680,9 @@ Caused by:
         .run();
 }
 
+// Registry returns an error code without a JSON message.
 #[cargo_test]
 fn api_error_code() {
-    // Registry returns an error code without a JSON message.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -1598,9 +1733,9 @@ Caused by:
         .run();
 }
 
+// Registry has a network error.
 #[cargo_test]
 fn api_curl_error() {
-    // Registry has a network error.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -1647,9 +1782,9 @@ Caused by:
         .run();
 }
 
+// Registry returns an invalid response.
 #[cargo_test]
 fn api_other_error() {
-    // Registry returns an invalid response.
     let _registry = registry::RegistryBuilder::new()
         .alternative()
         .http_api()
@@ -2079,7 +2214,7 @@ fn http_api_not_noop() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -2092,6 +2227,17 @@ fn http_api_not_noop() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[..]
+[..]
+[..]
+[..]
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])",
+        )
         .run();
 
     let p = project()
