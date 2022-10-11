@@ -91,7 +91,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 replace_with: None,
             },
         )?;
-        if config.cli_unstable().sparse_registry {
+        if SourceId::crates_io_is_sparse(config)? {
             base.add(
                 CRATES_IO_REGISTRY,
                 SourceConfig {
