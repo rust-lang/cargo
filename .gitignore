@@ -11,5 +11,6 @@ rustc
 __pycache__
 .idea/
 .vscode/
+.fleet/
 *.iml
 *.swp
