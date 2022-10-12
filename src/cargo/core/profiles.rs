@@ -1,3 +1,26 @@
+//! # Profiles: built-in and customizable compiler flag presets
+//!
+//! [`Profiles`] is a collections of built-in profiles, and profiles defined
+//! in the root manifest and configurations.
+//!
+//! To start using a profile, most of the time you start from [`Profiles::new`],
+//! which does the followings:
+//!
+//! - Create a `Profiles` by merging profiles from configs onto the profile
+//!   from root mainfest (see [`merge_config_profiles`]).
+//! - Add built-in profiles onto it (see [`Profiles::add_root_profiles`]).
+//! - Process profile inheritance for each profiles. (see [`Profiles::add_maker`]).
+//!
+//! Then you can query a [`Profile`] via [`Profiles::get_profile`], which respects
+//! the profile overriden hierarchy described in below. The [`Profile`] you get
+//! is basically an immutable struct containing the compiler flag presets.
+//!
+//! ## Profile overridden hierarchy
+//!
+//! Profile settings can be overridden for specific packages and build-time crates.
+//! The precedence is explained in [`ProfileMaker`].
+//! The algorithm happens within [`ProfileMaker::get_profile`].
+
 use crate::core::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
@@ -11,6 +34,10 @@ use std::hash::Hash;
 use std::{cmp, env, fmt, hash};
 
 /// Collection of all profiles.
+///
+/// To get a specific [`Profile`], you usually create this and call [`get_profile`] then.
+///
+/// [`get_profile`]: Profiles::get_profile
 #[derive(Clone, Debug)]
 pub struct Profiles {
     /// Incremental compilation can be overridden globally via:
@@ -355,12 +382,13 @@ impl Profiles {
 /// An object used for handling the profile hierarchy.
 ///
 /// The precedence of profiles are (first one wins):
+///
 /// - Profiles in `.cargo/config` files (using same order as below).
-/// - [profile.dev.package.name] -- a named package.
-/// - [profile.dev.package."*"] -- this cannot apply to workspace members.
-/// - [profile.dev.build-override] -- this can only apply to `build.rs` scripts
+/// - `[profile.dev.package.name]` -- a named package.
+/// - `[profile.dev.package."*"]` -- this cannot apply to workspace members.
+/// - `[profile.dev.build-override]` -- this can only apply to `build.rs` scripts
 ///   and their dependencies.
-/// - [profile.dev]
+/// - `[profile.dev]`
 /// - Default (hard-coded) values.
 #[derive(Debug, Clone)]
 struct ProfileMaker {
@@ -636,6 +664,7 @@ impl cmp::PartialEq for Profile {
 }
 
 impl Profile {
+    /// Returns a built-in `dev` profile.
     fn default_dev() -> Profile {
         Profile {
             name: InternedString::new("dev"),
@@ -648,6 +677,7 @@ impl Profile {
         }
     }
 
+    /// Returns a built-in `release` profile.
     fn default_release() -> Profile {
         Profile {
             name: InternedString::new("release"),
@@ -797,9 +827,7 @@ pub struct UnitFor {
     /// build.rs` is HOST=true, HOST_FEATURES=false for the same reasons that
     /// foo's build script is set that way.
     host_features: bool,
-    /// How Cargo processes the `panic` setting or profiles. This is done to
-    /// handle test/benches inheriting from dev/release, as well as forcing
-    /// `for_host` units to always unwind.
+    /// How Cargo processes the `panic` setting or profiles.
     panic_setting: PanicSetting,
 
     /// The compile kind of the root unit for which artifact dependencies are built.
@@ -821,6 +849,13 @@ pub struct UnitFor {
     artifact_target_for_features: Option<CompileTarget>,
 }
 
+/// How Cargo processes the `panic` setting or profiles.
+///
+/// This is done to handle test/benches inheriting from dev/release,
+/// as well as forcing `for_host` units to always unwind.
+/// It also interacts with [`-Z panic-abort-tests`].
+///
+/// [`-Z panic-abort-tests`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#panic-abort-tests
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 enum PanicSetting {
     /// Used to force a unit to always be compiled with the `panic=unwind`
