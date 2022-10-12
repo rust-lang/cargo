@@ -1116,8 +1116,8 @@ fn main() {
 }
 ```
 
-Making an a previously `unsafe` associated function or method on structs /
-enums safe is also a minor change, while the same is not true for associated
+Making a previously `unsafe` associated function or method on structs / enums
+safe is also a minor change, while the same is not true for associated
 function on traits:
 
 ```rust,ignore
