@@ -4905,3 +4905,29 @@ for more information about build script outputs.
         )
         .run();
 }
+
+#[cargo_test]
+fn custom_build_closes_stdin() {
+    // Ensure stdin is closed to prevent deadlock.
+    // See https://github.com/rust-lang/cargo/issues/11196
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() {
+                let mut line = String::new();
+                std::io::stdin().read_line(&mut line).unwrap();
+            }"#,
+        )
+        .build();
+    p.cargo("build").run();
+}
