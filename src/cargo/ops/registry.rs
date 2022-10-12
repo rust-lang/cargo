@@ -142,7 +142,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         }
     }
 
-    let (mut registry, _reg_cfg, reg_id) = registry(
+    let (mut registry, _reg_cfg, reg_ids) = registry(
         opts.config,
         opts.token.clone(),
         opts.index.as_deref(),
@@ -150,7 +150,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         true,
         !opts.dry_run,
     )?;
-    verify_dependencies(pkg, &registry, reg_id)?;
+    verify_dependencies(pkg, &registry, reg_ids.original)?;
 
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
@@ -180,7 +180,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         pkg,
         tarball.file(),
         &mut registry,
-        reg_id,
+        reg_ids.original,
         opts.dry_run,
     )?;
 
@@ -456,12 +456,12 @@ fn registry(
     registry: Option<&str>,
     force_update: bool,
     validate_token: bool,
-) -> CargoResult<(Registry, RegistryConfig, SourceId)> {
-    let (sid, sid_no_replacement) = get_source_id(config, index, registry)?;
+) -> CargoResult<(Registry, RegistryConfig, RegistrySourceIds)> {
+    let source_ids = get_source_id(config, index, registry)?;
     let reg_cfg = registry_configuration(config, registry)?;
     let api_host = {
         let _lock = config.acquire_package_cache_lock()?;
-        let mut src = RegistrySource::remote(sid, &HashSet::new(), config)?;
+        let mut src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), config)?;
         // Only update the index if the config is not available or `force` is set.
         if force_update {
             src.invalidate_cache()
@@ -470,13 +470,14 @@ fn registry(
             match src.config()? {
                 Poll::Pending => src
                     .block_until_ready()
-                    .with_context(|| format!("failed to update {}", sid))?,
+                    .with_context(|| format!("failed to update {}", source_ids.replacement))?,
                 Poll::Ready(cfg) => break cfg,
             }
         };
 
-        cfg.and_then(|cfg| cfg.api)
-            .ok_or_else(|| format_err!("{} does not support API commands", sid))?
+        cfg.and_then(|cfg| cfg.api).ok_or_else(|| {
+            format_err!("{} does not support API commands", source_ids.replacement)
+        })?
     };
     let token = if validate_token {
         if index.is_some() {
@@ -495,7 +496,7 @@ fn registry(
     Ok((
         Registry::new_handle(api_host, token, handle),
         reg_cfg,
-        sid_no_replacement,
+        source_ids,
     ))
 }
 
@@ -919,7 +920,7 @@ fn get_source_id(
     config: &Config,
     index: Option<&str>,
     reg: Option<&str>,
-) -> CargoResult<(SourceId, SourceId)> {
+) -> CargoResult<RegistrySourceIds> {
     let sid = match (reg, index) {
         (None, None) => SourceId::crates_io(config)?,
         (Some(r), None) => SourceId::alt_registry(config, r)?,
@@ -943,8 +944,24 @@ fn get_source_id(
             bail!("crates-io is replaced with non-remote-registry source {replacement_sid};\ninclude `--registry crates-io` to use crates.io");
         }
     } else {
-        Ok((builtin_replacement_sid, sid))
+        Ok(RegistrySourceIds {
+            original: sid,
+            replacement: builtin_replacement_sid,
+        })
     }
+}
+
+struct RegistrySourceIds {
+    /// Use when looking up the auth token, or writing out `Cargo.lock`
+    original: SourceId,
+    /// Use when interacting with the source (querying / publishing , etc)
+    ///
+    /// The source for crates.io may be replaced by a built-in source for accessing crates.io with
+    /// the sparse protocol, or a source for the testing framework (when the replace_crates_io
+    /// function is used)
+    ///
+    /// User-defined source replacement is not applied.
+    replacement: SourceId,
 }
 
 pub fn search(
@@ -954,7 +971,7 @@ pub fn search(
     limit: u32,
     reg: Option<String>,
 ) -> CargoResult<()> {
-    let (mut registry, _, source_id) =
+    let (mut registry, _, source_ids) =
         registry(config, None, index.as_deref(), reg.as_deref(), false, false)?;
     let (crates, total_crates) = registry.search(query, limit).with_context(|| {
         format!(
@@ -1011,7 +1028,7 @@ pub fn search(
             &ColorSpec::new(),
         );
     } else if total_crates > limit && limit >= search_max_limit {
-        let extra = if source_id.is_crates_io() {
+        let extra = if source_ids.original.is_crates_io() {
             format!(
                 " (go to https://crates.io/search?q={} to see more)",
                 percent_encode(query.as_bytes(), NON_ALPHANUMERIC)
