@@ -1468,7 +1468,7 @@ pub fn resolve_all_features(
     package_id: PackageId,
 ) -> HashSet<String> {
     let mut features: HashSet<String> = resolved_features
-        .activated_features(package_id, FeaturesFor::NormalOrDevOrArtifactTarget(None))
+        .activated_features(package_id, FeaturesFor::NormalOrDev)
         .iter()
         .map(|s| s.to_string())
         .collect();

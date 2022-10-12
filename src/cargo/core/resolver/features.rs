@@ -102,30 +102,29 @@ pub enum ForceAllTargets {
     No,
 }
 
-/// Flag to indicate if features are requested for a build dependency or not.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
+/// Flag to indicate if features are requested for a certain type of dependency.
+///
+/// This is primarily used for constructing a [`PackageFeaturesKey`] to decouple
+/// activated features of the same package with different types of dependency.
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum FeaturesFor {
-    /// If `Some(target)` is present, we represent an artifact target.
-    /// Otherwise any other normal or dev dependency.
-    NormalOrDevOrArtifactTarget(Option<CompileTarget>),
+    /// Normal or dev dependency.
+    #[default]
+    NormalOrDev,
     /// Build dependency or proc-macro.
     HostDep,
-}
-
-impl Default for FeaturesFor {
-    fn default() -> Self {
-        FeaturesFor::NormalOrDevOrArtifactTarget(None)
-    }
+    /// Any dependency with both artifact and target specified.
+    ///
+    /// That is, `dep = { …, artifact = <crate-type>, target = <triple> }`
+    ArtifactDep(CompileTarget),
 }
 
 impl std::fmt::Display for FeaturesFor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FeaturesFor::HostDep => f.write_str("host"),
-            FeaturesFor::NormalOrDevOrArtifactTarget(Some(target)) => {
-                f.write_str(&target.rustc_target())
-            }
-            FeaturesFor::NormalOrDevOrArtifactTarget(None) => Ok(()),
+            FeaturesFor::ArtifactDep(target) => f.write_str(&target.rustc_target()),
+            FeaturesFor::NormalOrDev => Ok(()),
         }
     }
 }
@@ -135,7 +134,7 @@ impl FeaturesFor {
         if for_host {
             FeaturesFor::HostDep
         } else {
-            FeaturesFor::NormalOrDevOrArtifactTarget(None)
+            FeaturesFor::NormalOrDev
         }
     }
 
@@ -144,12 +143,12 @@ impl FeaturesFor {
         artifact_target: Option<CompileTarget>,
     ) -> FeaturesFor {
         match artifact_target {
-            Some(target) => FeaturesFor::NormalOrDevOrArtifactTarget(Some(target)),
+            Some(target) => FeaturesFor::ArtifactDep(target),
             None => {
                 if for_host {
                     FeaturesFor::HostDep
                 } else {
-                    FeaturesFor::NormalOrDevOrArtifactTarget(None)
+                    FeaturesFor::NormalOrDev
                 }
             }
         }
@@ -786,11 +785,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     self.target_data
                         .dep_platform_activated(dep, CompileKind::Host)
                 }
-                (_, FeaturesFor::NormalOrDevOrArtifactTarget(None)) => self
+                (_, FeaturesFor::NormalOrDev) => self
                     .requested_targets
                     .iter()
                     .any(|kind| self.target_data.dep_platform_activated(dep, *kind)),
-                (_, FeaturesFor::NormalOrDevOrArtifactTarget(Some(target))) => self
+                (_, FeaturesFor::ArtifactDep(target)) => self
                     .target_data
                     .dep_platform_activated(dep, CompileKind::Target(target)),
             }
@@ -849,7 +848,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                                 artifact.is_lib(),
                                 artifact.target().map(|target| match target {
                                     ArtifactTarget::Force(target) => {
-                                        vec![FeaturesFor::NormalOrDevOrArtifactTarget(Some(target))]
+                                        vec![FeaturesFor::ArtifactDep(target)]
                                     }
                                     ArtifactTarget::BuildDependencyAssumeTarget => self
                                         .requested_targets
@@ -857,9 +856,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                                         .filter_map(|kind| match kind {
                                             CompileKind::Host => None,
                                             CompileKind::Target(target) => {
-                                                Some(FeaturesFor::NormalOrDevOrArtifactTarget(
-                                                    Some(*target),
-                                                ))
+                                                Some(FeaturesFor::ArtifactDep(*target))
                                             }
                                         })
                                         .collect(),
