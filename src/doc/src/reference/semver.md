@@ -88,7 +88,7 @@ considered incompatible.
         * [Possibly-breaking: introducing a new function type parameter](#fn-generic-new)
         * [Minor: generalizing a function to use generics (supporting original type)](#fn-generalize-compatible)
         * [Major: generalizing a function to use generics with type mismatch](#fn-generalize-mismatch)
-        * [Minor: making an `unsafe` function safe](#fn-unsafe-safe)
+        * [Possibly-breaking: making an `unsafe` function safe](#fn-unsafe-safe)
     * Attributes
         * [Major: switching from `no_std` support to requiring `std`](#attr-no-std-to-std)
         * [Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields](#attr-adding-non-exhaustive)
@@ -1082,10 +1082,12 @@ fn main() {
 ```
 
 <a id="fn-unsafe-safe"></a>
-### Minor: making an `unsafe` function safe
+### Possibly-breaking: making an `unsafe` function safe
 
-It is not a breaking change to make a previously `unsafe` function safe, as in
-the example below.
+A previously `unsafe` function can be made safe without breaking code. Note
+however that it will likely cause the [`unused_unsafe`][unused_unsafe] lint
+to trigger as in the example below, which will cause local crates that have
+specified `#![deny(warnings)]` to stop compiling.
 
 Going the other way (making a safe function `unsafe`) is a breaking change.
 
@@ -1101,7 +1103,7 @@ pub unsafe fn foo() {}
 pub fn foo() {}
 
 ///////////////////////////////////////////////////////////
-// Example use of the library that will safely work.
+// Example use of the library that will trigger a lint.
 use updated_crate::foo;
 
 unsafe fn bar(f: unsafe fn()) {
@@ -1143,10 +1145,6 @@ impl Foo for Bar {
     unsafe fn foo() {} // Error: method `foo` has an incompatible type for trait
 }
 ```
-
-Note that local crates that have specified `#![deny(warnings)]` (which is an
-[anti-pattern][deny warnings]) will break, since they've explicitly opted out
-of Rust's stability guarantees.
 
 <a id="attr-no-std-to-std"></a>
 ### Major: switching from `no_std` support to requiring `std`
@@ -1555,4 +1553,4 @@ document what your commitments are.
 [SemVer]: https://semver.org/
 [struct literal]: ../../reference/expressions/struct-expr.html
 [wildcard patterns]: ../../reference/patterns.html#wildcard-pattern
-[deny warnings]: https://rust-unofficial.github.io/patterns/anti_patterns/deny-warnings.html
+[unused_unsafe]: ../../rustc/lints/listing/warn-by-default.html#unused-unsafe
