@@ -55,6 +55,8 @@ enum SourceKind {
     Path,
     /// A remote registry.
     Registry,
+    /// A sparse registry.
+    SparseRegistry,
     /// A local filesystem-based registry.
     LocalRegistry,
     /// A directory-based registry.
@@ -100,6 +102,20 @@ impl SourceId {
         SourceId { inner }
     }
 
+    fn remote_source_kind(url: &Url) -> (SourceKind, Url) {
+        if url.as_str().starts_with("sparse+") {
+            let url = url
+                .to_string()
+                .strip_prefix("sparse+")
+                .expect("we just found that prefix")
+                .into_url()
+                .expect("a valid url without a protocol specifier should still be valid");
+            (SourceKind::SparseRegistry, url)
+        } else {
+            (SourceKind::Registry, url.to_owned())
+        }
+    }
+
     /// Parses a source URL and returns the corresponding ID.
     ///
     /// ## Example
@@ -142,8 +158,8 @@ impl SourceId {
                     .with_precise(Some("locked".to_string())))
             }
             "sparse" => {
-                let url = string.into_url()?;
-                Ok(SourceId::new(SourceKind::Registry, url, None)?
+                let url = url.into_url()?;
+                Ok(SourceId::new(SourceKind::SparseRegistry, url, None)?
                     .with_precise(Some("locked".to_string())))
             }
             "path" => {
@@ -180,12 +196,14 @@ impl SourceId {
     /// Use [`SourceId::for_alt_registry`] if a name can provided, which
     /// generates better messages for cargo.
     pub fn for_registry(url: &Url) -> CargoResult<SourceId> {
-        SourceId::new(SourceKind::Registry, url.clone(), None)
+        let (kind, url) = Self::remote_source_kind(url);
+        SourceId::new(kind, url, None)
     }
 
     /// Creates a `SourceId` from a remote registry URL with given name.
     pub fn for_alt_registry(url: &Url, name: &str) -> CargoResult<SourceId> {
-        SourceId::new(SourceKind::Registry, url.clone(), Some(name))
+        let (kind, url) = Self::remote_source_kind(url);
+        SourceId::new(kind, url, Some(name))
     }
 
     /// Creates a SourceId from a local registry path.
@@ -218,7 +236,7 @@ impl SourceId {
         if Self::crates_io_is_sparse(config)? {
             config.check_registry_index_not_set()?;
             let url = CRATES_IO_HTTP_INDEX.into_url().unwrap();
-            SourceId::new(SourceKind::Registry, url, Some(CRATES_IO_REGISTRY))
+            SourceId::new(SourceKind::SparseRegistry, url, Some(CRATES_IO_REGISTRY))
         } else {
             Self::crates_io(config)
         }
@@ -245,8 +263,9 @@ impl SourceId {
             return Self::crates_io(config);
         }
         let url = config.get_registry_index(key)?;
+        let (kind, url) = Self::remote_source_kind(&url);
         Ok(SourceId::wrap(SourceIdInner {
-            kind: SourceKind::Registry,
+            kind,
             canonical_url: CanonicalUrl::new(&url)?,
             url,
             precise: None,
@@ -313,8 +332,13 @@ impl SourceId {
     pub fn is_registry(self) -> bool {
         matches!(
             self.inner.kind,
-            SourceKind::Registry | SourceKind::LocalRegistry
+            SourceKind::Registry | SourceKind::SparseRegistry | SourceKind::LocalRegistry
         )
+    }
+
+    /// Returns `true` if this source is from a sparse registry.
+    pub fn is_sparse(self) -> bool {
+        matches!(self.inner.kind, SourceKind::SparseRegistry)
     }
 
     /// Returns `true` if this source is a "remote" registry.
@@ -322,7 +346,10 @@ impl SourceId {
     /// "remote" may also mean a file URL to a git index, so it is not
     /// necessarily "remote". This just means it is not `local-registry`.
     pub fn is_remote_registry(self) -> bool {
-        matches!(self.inner.kind, SourceKind::Registry)
+        matches!(
+            self.inner.kind,
+            SourceKind::Registry | SourceKind::SparseRegistry
+        )
     }
 
     /// Returns `true` if this source from a Git repository.
@@ -346,11 +373,9 @@ impl SourceId {
                 };
                 Ok(Box::new(PathSource::new(&path, self, config)))
             }
-            SourceKind::Registry => Ok(Box::new(RegistrySource::remote(
-                self,
-                yanked_whitelist,
-                config,
-            )?)),
+            SourceKind::Registry | SourceKind::SparseRegistry => Ok(Box::new(
+                RegistrySource::remote(self, yanked_whitelist, config)?,
+            )),
             SourceKind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,
@@ -397,7 +422,7 @@ impl SourceId {
     /// Returns `true` if the remote registry is the standard <https://crates.io>.
     pub fn is_crates_io(self) -> bool {
         match self.inner.kind {
-            SourceKind::Registry => {}
+            SourceKind::Registry | SourceKind::SparseRegistry => {}
             _ => return false,
         }
         let url = self.inner.url.as_str();
@@ -529,7 +554,9 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
-            SourceKind::Registry => write!(f, "registry `{}`", self.display_registry_name()),
+            SourceKind::Registry | SourceKind::SparseRegistry => {
+                write!(f, "registry `{}`", self.display_registry_name())
+            }
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
         }
@@ -643,6 +670,10 @@ impl Ord for SourceKind {
             (SourceKind::Registry, _) => Ordering::Less,
             (_, SourceKind::Registry) => Ordering::Greater,
 
+            (SourceKind::SparseRegistry, SourceKind::SparseRegistry) => Ordering::Equal,
+            (SourceKind::SparseRegistry, _) => Ordering::Less,
+            (_, SourceKind::SparseRegistry) => Ordering::Greater,
+
             (SourceKind::LocalRegistry, SourceKind::LocalRegistry) => Ordering::Equal,
             (SourceKind::LocalRegistry, _) => Ordering::Less,
             (_, SourceKind::LocalRegistry) => Ordering::Greater,
@@ -714,14 +745,14 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 ref url,
                 ..
             } => {
-                // For sparse http registry the URL already contains the prefix.
-                if url.scheme().starts_with("sparse+") {
-                    // e.g. sparse+http://example.com
-                    write!(f, "{url}")
-                } else {
-                    // e.g. registry+http://example.com
-                    write!(f, "registry+{url}")
-                }
+                write!(f, "registry+{url}")
+            }
+            SourceIdInner {
+                kind: SourceKind::SparseRegistry,
+                ref url,
+                ..
+            } => {
+                write!(f, "sparse+{url}")
             }
             SourceIdInner {
                 kind: SourceKind::LocalRegistry,

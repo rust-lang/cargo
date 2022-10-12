@@ -2723,10 +2723,10 @@ fn protocol() {
 
 #[cargo_test]
 fn http_requires_trailing_slash() {
-    cargo_process("-Z sparse-registry install bar --index sparse+https://index.crates.io")
+    cargo_process("-Z sparse-registry install bar --index sparse+https://invalid.crates.io/test")
         .masquerade_as_nightly_cargo(&["sparse-registry"])
         .with_status(101)
-        .with_stderr("[ERROR] registry url must end in a slash `/`: sparse+https://index.crates.io")
+        .with_stderr("[ERROR] sparse registry url must end in a slash `/`: sparse+https://invalid.crates.io/test")
         .run()
 }
 
