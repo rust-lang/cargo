@@ -686,6 +686,7 @@ unstable_cli_options!(
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),
     terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
+    publish_timeout: bool = ("Enable the `publish.timeout` key in .cargo/config.toml file"),
     unstable_options: bool = ("Allow the usage of unstable options"),
     // TODO(wcrichto): move scrape example configuration into Cargo.toml before stabilization
     // See: https://github.com/rust-lang/cargo/pull/9525#discussion_r728470927
@@ -930,6 +931,7 @@ impl CliUnstable {
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "host-config" => self.host_config = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
+            "publish-timeout" => self.publish_timeout = parse_empty(k, v)?,
             "features" => {
                 // `-Z features` has been stabilized since 1.51,
                 // but `-Z features=compare` is still allowed for convenience
