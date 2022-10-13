@@ -380,7 +380,7 @@ fn new_default_edition() {
 #[cargo_test]
 fn new_with_bad_edition() {
     cargo_process("new --edition something_else foo")
-        .with_stderr_contains("error: \"something_else\" isn't a valid value[..]")
+        .with_stderr_contains("error: 'something_else' isn't a valid value[..]")
         .with_status(1)
         .run();
 }
