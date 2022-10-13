@@ -262,12 +262,13 @@ To pass the arguments to the subcommand, remove `--`",
             }
             (None, Ok(None)) => {}
             (None, Ok(Some(alias))) => {
-                // Check if this alias is shadowing an external subcommand
+                // Check if a user-defined alias is shadowing an external subcommand
                 // (binary of the form `cargo-<subcommand>`)
                 // Currently this is only a warning, but after a transition period this will become
                 // a hard error.
-                if let Some(path) = super::find_external_subcommand(config, cmd) {
-                    config.shell().warn(format!(
+                if super::builtin_aliases_execs(cmd).is_none() {
+                    if let Some(path) = super::find_external_subcommand(config, cmd) {
+                        config.shell().warn(format!(
                         "\
 user-defined alias `{}` is shadowing an external subcommand found at: `{}`
 This was previously accepted but is being phased out; it will become a hard error in a future release.
@@ -275,6 +276,7 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                         cmd,
                         path.display(),
                     ))?;
+                    }
                 }
 
                 let mut alias = alias
