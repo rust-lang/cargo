@@ -97,7 +97,6 @@ Each new feature described below should explain how to use it.
 * Registries
     * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
     * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
-    * [sparse-registry](#sparse-registry) — Adds support for fetching from static-file HTTP registries (`sparse+`)
     * [publish-timeout](#publish-timeout) — Controls the timeout between uploading the crate and being available in the index
     * [registry-auth](#registry-auth) — Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
 
@@ -792,32 +791,6 @@ fn main() {
 }
 ```
 
-### sparse-registry
-* Tracking Issue: [9069](https://github.com/rust-lang/cargo/issues/9069)
-* RFC: [#2789](https://github.com/rust-lang/rfcs/pull/2789)
-
-The `sparse-registry` feature allows cargo to interact with remote registries served
-over plain HTTP rather than git. These registries can be identified by urls starting with
-`sparse+http://` or `sparse+https://`.
-
-When fetching index metadata over HTTP, Cargo only downloads the metadata for relevant
-crates, which can save significant time and bandwidth.
-
-The format of the sparse index is identical to a checkout of a git-based index.
-
-The `registries.crates-io.protocol` config option can be used to set the default protocol
-for crates.io. This option requires `-Z sparse-registry` to be enabled.
-
-* `sparse` — Use sparse index.
-* `git` — Use git index.
-* If the option is unset, it will be sparse index if `-Z sparse-registry` is enabled,
-  otherwise it will be git index.
-
-Cargo locally caches the crate metadata files, and captures an `ETag` or `Last-Modified` 
-HTTP header from the server for each entry. When refreshing crate metadata, Cargo will
-send the `If-None-Match` or `If-Modified-Since` header to allow the server to respond
-with HTTP 304 if the local cache is valid, saving time and bandwidth.
-
 ### publish-timeout
 * Tracking Issue: [11222](https://github.com/rust-lang/cargo/issues/11222)
 
@@ -1456,3 +1429,8 @@ for more information.
 The `-Z terminal-width` option has been stabilized in the 1.68 release.
 The terminal width is always passed to the compiler when running from a
 terminal where Cargo can automatically detect the width.
+
+### sparse-registry
+
+Sparse registry support has been stabilized in the 1.68 release.
+See [Registry Protocols](registries.md#registry-protocols) for more information.

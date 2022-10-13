@@ -681,7 +681,7 @@ unstable_cli_options!(
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
-    sparse_registry: bool = ("Support plain-HTTP-based crate registries"),
+    sparse_registry: bool = ("Use the sparse protocol when accessing crates.io"),
     registry_auth: bool = ("Authentication for alternative registries, and generate registry authentication tokens using asymmetric cryptography"),
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
@@ -750,6 +750,11 @@ const STABILISED_MULTITARGET: &str = "Multiple `--target` options are now always
 
 const STABILIZED_TERMINAL_WIDTH: &str =
     "The -Zterminal-width option is now always enabled for terminal output.";
+
+const STABILISED_SPARSE_REGISTRY: &str = "This flag currently still sets the default protocol\
+    to `sparse` when accessing crates.io. However, this will be removed in the future. \n\
+    The stable equivalent is to set the config value `registries.crates-io.protocol = 'sparse'`\n\
+    or environment variable `CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse`";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -948,7 +953,12 @@ impl CliUnstable {
             "multitarget" => stabilized_warn(k, "1.64", STABILISED_MULTITARGET),
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => stabilized_warn(k, "1.68", STABILIZED_TERMINAL_WIDTH),
-            "sparse-registry" => self.sparse_registry = parse_empty(k, v)?,
+            "sparse-registry" => {
+                // Once sparse-registry becomes the default for crates.io, `sparse_registry` should
+                // be removed entirely from `CliUnstable`.
+                stabilized_warn(k, "1.68", STABILISED_SPARSE_REGISTRY);
+                self.sparse_registry = parse_empty(k, v)?;
+            }
             "registry-auth" => self.registry_auth = parse_empty(k, v)?,
             "namespaced-features" => stabilized_warn(k, "1.60", STABILISED_NAMESPACED_FEATURES),
             "weak-dep-features" => stabilized_warn(k, "1.60", STABILIZED_WEAK_DEP_FEATURES),

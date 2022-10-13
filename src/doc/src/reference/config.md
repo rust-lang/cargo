@@ -892,6 +892,20 @@ commands like [`cargo publish`] that require authentication.
 
 Can be overridden with the `--token` command-line option.
 
+##### `registries.crates-io.protocol`
+* Type: string
+* Default: `git`
+* Environment: `CARGO_REGISTRIES_CRATES_IO_PROTOCOL`
+
+Specifies the protocol used to access crates.io. Allowed values are `git` or `sparse`.
+
+`git` causes Cargo to clone the entire index of all packages ever published to [crates.io] from <https://github.com/rust-lang/crates.io-index/>.
+This can have performance implications due to the size of the index.
+`sparse` is a newer protocol which uses HTTPS to download only what is necessary from <https://index.crates.io/>.
+This can result in a significant performance improvement for resolving new dependencies in most situations.
+
+More information about registry protocols may be found in the [Registries chapter](registries.md).
+
 #### `[registry]`
 
 The `[registry]` table controls the default registry used when one is not

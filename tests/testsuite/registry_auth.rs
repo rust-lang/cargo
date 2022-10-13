@@ -5,8 +5,7 @@ use cargo_test_support::{project, Execs, Project};
 
 fn cargo(p: &Project, s: &str) -> Execs {
     let mut e = p.cargo(s);
-    e.masquerade_as_nightly_cargo(&["sparse-registry", "registry-auth"])
-        .arg("-Zsparse-registry")
+    e.masquerade_as_nightly_cargo(&["registry-auth"])
         .arg("-Zregistry-auth");
     e
 }
@@ -165,8 +164,7 @@ fn warn_both_asymmetric_and_token() {
         .build();
 
     p.cargo("publish --no-verify --registry alternative")
-        .masquerade_as_nightly_cargo(&["credential-process", "sparse-registry", "registry-auth"])
-        .arg("-Zsparse-registry")
+        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
         .arg("-Zregistry-auth")
         .with_status(101)
         .with_stderr(
@@ -210,9 +208,8 @@ fn warn_both_asymmetric_and_credential_process() {
         .build();
 
     p.cargo("publish --no-verify --registry alternative")
-        .masquerade_as_nightly_cargo(&["credential-process", "sparse-registry", "registry-auth"])
+        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
         .arg("-Zcredential-process")
-        .arg("-Zsparse-registry")
         .arg("-Zregistry-auth")
         .with_status(101)
         .with_stderr(

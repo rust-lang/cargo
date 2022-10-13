@@ -22,7 +22,9 @@ table has a key for each registry, for example:
 my-registry = { index = "https://my-intranet:8080/git/index" }
 ```
 
-The `index` key should be a URL to a git repository with the registry's index.
+The `index` key should be a URL to a git repository with the registry's index or a
+Cargo sparse registry URL with the `sparse+` prefix.
+
 A crate can then depend on a crate from another registry by specifying the
 `registry` key and a value of the registry's name in that dependency's entry
 in `Cargo.toml`:
@@ -98,6 +100,21 @@ has a separate table for each registry, for example:
 token = "854DvwSlUwEHtIo3kWy6x7UCPKHfzCmy"
 ```
 
+### Registry Protocols
+Cargo supports two remote registry protocols: `git` and `sparse`. If the registry
+index URL starts with `sparse+`, Cargo uses the sparse protocol. Otherwise
+Cargo uses the `git` protocol.
+
+The `git` protocol stores index metadata in a git repository and requires Cargo to clone
+the entire repo.
+
+The `sparse` protocol fetches individual metadata files using plain HTTP requests.
+Since Cargo only downloads the metadata for relevant crates, the `sparse` protocol can
+save significant time and bandwidth.
+
+The [crates.io] registry supports both protocols. The protocol for crates.io is
+controlled via the [`registries.crates-io.protocol`] config key.
+
 [Source Replacement]: source-replacement.md
 [Running a Registry]: running-a-registry.md
 [`cargo publish`]: ../commands/cargo-publish.md
@@ -105,6 +122,8 @@ token = "854DvwSlUwEHtIo3kWy6x7UCPKHfzCmy"
 [`cargo login`]: ../commands/cargo-login.md
 [config]: config.md
 [crates.io]: https://crates.io/
+[`registries.crates-io.protocol`]: config.md#registriescrates-ioprotocol
+
 
 <script>
 (function() {
