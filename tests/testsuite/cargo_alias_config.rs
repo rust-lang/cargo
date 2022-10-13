@@ -151,6 +151,30 @@ fn dependent_alias() {
 }
 
 #[cargo_test]
+fn builtin_alias_shadowing_external_subcommand() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .executable("cargo-t", "")
+        .build();
+
+    let mut paths: Vec<_> = env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect();
+    paths.push(p.root());
+    let path = env::join_paths(paths).unwrap();
+
+    p.cargo("t")
+        .env("PATH", &path)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] unittests src/main.rs [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn alias_shadowing_external_subcommand() {
     let echo = echo_subcommand();
     let p = project()
