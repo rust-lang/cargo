@@ -231,4 +231,4 @@ details on environment variables that Cargo reads.
        cargo add serde serde_json -F serde/derive
 
 ## SEE ALSO
-[cargo(1)](cargo.html)
+[cargo(1)](cargo.html), [cargo-remove(1)](cargo-remove.html)
