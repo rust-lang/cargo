@@ -83,7 +83,7 @@ Example uses:
         ])
         .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
-        .next_help_heading("SOURCE")
+        .next_help_heading("Source")
         .args([
             clap::Arg::new("path")
                 .long("path")
@@ -131,7 +131,7 @@ This is the catch all, handling hashes to named references in remote repositorie
                 .value_name("NAME")
                 .help("Package registry for this dependency"),
         ])
-        .next_help_heading("SECTION")
+        .next_help_heading("Section")
         .args([
             flag("dev",
                 "Add as development dependency")

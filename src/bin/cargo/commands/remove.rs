@@ -20,7 +20,7 @@ pub fn cli() -> clap::Command {
         .arg_manifest_path()
         .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
-        .next_help_heading("SECTION")
+        .next_help_heading("Section")
         .args([
             clap::Arg::new("dev")
                 .long("dev")
