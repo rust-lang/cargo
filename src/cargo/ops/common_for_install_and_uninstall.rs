@@ -7,10 +7,12 @@ use std::rc::Rc;
 use std::task::Poll;
 
 use anyhow::{bail, format_err, Context as _};
+use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 use toml_edit::easy as toml;
 
 use crate::core::compiler::Freshness;
+use crate::core::Target;
 use crate::core::{Dependency, FeatureValue, Package, PackageId, QueryKind, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
@@ -690,20 +692,17 @@ pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String>
             ref examples,
             ..
         } => {
-            let all_bins: Vec<String> = bins.try_collect().unwrap_or_else(|| {
-                pkg.targets()
+            let collect = |rule: &_, f: fn(&Target) -> _| match rule {
+                FilterRule::All => pkg
+                    .targets()
                     .iter()
-                    .filter(|t| t.is_bin())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
-            let all_examples: Vec<String> = examples.try_collect().unwrap_or_else(|| {
-                pkg.targets()
-                    .iter()
-                    .filter(|t| t.is_exe_example())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
+                    .filter(|t| f(t))
+                    .map(|t| t.name().into())
+                    .collect(),
+                FilterRule::Just(targets) => targets.clone(),
+            };
+            let all_bins = collect(bins, Target::is_bin);
+            let all_examples = collect(examples, Target::is_exe_example);
 
             all_bins
                 .iter()

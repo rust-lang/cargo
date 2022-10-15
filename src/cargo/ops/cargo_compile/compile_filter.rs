@@ -87,13 +87,6 @@ impl FilterRule {
         }
     }
 
-    pub fn try_collect(&self) -> Option<Vec<String>> {
-        match *self {
-            FilterRule::All => None,
-            FilterRule::Just(ref targets) => Some(targets.clone()),
-        }
-    }
-
     /// Checks if any specified target name contains glob patterns.
     pub(crate) fn contains_glob_patterns(&self) -> bool {
         match self {
