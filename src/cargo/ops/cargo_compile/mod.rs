@@ -626,10 +626,47 @@ fn traverse_and_share(
         Some(to_host) if to_host == unit.kind => CompileKind::Host,
         _ => unit.kind,
     };
+
+    let mut profile = unit.profile.clone();
+
+    // If this is a build dependency, and it's not shared with runtime dependencies, we can weaken
+    // its debuginfo level to optimize build times.
+    if unit.kind.is_host() && to_host.is_some() && profile.debuginfo.is_deferred() {
+        // We create a "probe" test to see if a unit with the same explicit debuginfo level exists
+        // in the graph. This is the level we'd expect if it was set manually, or a default set by
+        // a profile for a runtime dependency: its canonical value.
+        let canonical_debuginfo = profile.debuginfo.finalize();
+        let mut canonical_profile = profile.clone();
+        canonical_profile.debuginfo = canonical_debuginfo;
+        let explicit_unit_probe = interner.intern(
+            &unit.pkg,
+            &unit.target,
+            canonical_profile,
+            to_host.unwrap(),
+            unit.mode,
+            unit.features.clone(),
+            unit.is_std,
+            unit.dep_hash,
+            unit.artifact,
+            unit.artifact_target_for_features,
+        );
+
+        // We can now turn the deferred value into its actual final value.
+        profile.debuginfo = if unit_graph.contains_key(&explicit_unit_probe) {
+            // The unit is present in both build time and runtime subgraphs: we canonicalize its
+            // level to the other unit's, thus ensuring reuse between the two to optimize build times.
+            canonical_debuginfo
+        } else {
+            // The unit is only present in the build time subgraph, we can weaken its debuginfo
+            // level to optimize build times.
+            canonical_debuginfo.weaken()
+        }
+    }
+
     let new_unit = interner.intern(
         &unit.pkg,
         &unit.target,
-        unit.profile.clone(),
+        profile,
         new_kind,
         unit.mode,
         unit.features.clone(),

@@ -438,6 +438,24 @@ impl ProfileMaker {
             // well as enabling parallelism by not constraining codegen units.
             profile.opt_level = InternedString::new("0");
             profile.codegen_units = None;
+
+            // For build dependencies, we usually don't need debuginfo, and
+            // removing it will compile faster, much like the default opt-level
+            // of 0 is chosen for faster builds. However, that can conflict with
+            // a unit graph optimization, reusing units that are shared between
+            // build dependencies and runtime dependencies: when the runtime
+            // target is the same as the build host, we only need to build a
+            // dependency once and reuse the results, instead of building twice.
+            // If we then also change the default debuginfo level for build
+            // dependencies, we can lose the sharing: build dependencies will be
+            // built without debuginfo, while runtime dependencies require it by
+            // default. So we allow cargo to weaken the debuginfo level: only if
+            // there is not sharing already, will we disable debuginfo: if there
+            // is no sharing, we will use the preferred value, and if there is
+            // sharing we will use the explicit value set.
+            if let Some(debuginfo) = profile.debuginfo.to_option() {
+                profile.debuginfo = DebugInfo::Deferred(debuginfo);
+            }
         }
         // ... and next comes any other sorts of overrides specified in
         // profiles, such as `[profile.release.build-override]` or
@@ -750,6 +768,23 @@ impl DebugInfo {
     /// for a common operation on the usual `Option` representation.
     pub(crate) fn is_turned_on(&self) -> bool {
         self.to_option().unwrap_or(0) != 0
+    }
+
+    pub(crate) fn is_deferred(&self) -> bool {
+        matches!(self, DebugInfo::Deferred(_))
+    }
+
+    /// Force the deferred, preferred, debuginfo level to a finalized explicit value.
+    pub(crate) fn finalize(self) -> Self {
+        match self {
+            DebugInfo::Deferred(v) => DebugInfo::Explicit(v),
+            _ => self,
+        }
+    }
+
+    /// Reset to the lowest level: no debuginfo.
+    pub(crate) fn weaken(self) -> Self {
+        DebugInfo::None
     }
 }
 
