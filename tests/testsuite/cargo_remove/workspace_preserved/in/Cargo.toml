@@ -1,0 +1,5 @@
+[workspace]
+members = [ "my-package", "my-other-package" ]
+
+[workspace.dependencies]
+semver = "0.1.0"

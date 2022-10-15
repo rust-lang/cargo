@@ -22,6 +22,9 @@ mod target;
 mod target_build;
 mod target_dev;
 mod update_lock_file;
+mod workspace;
+mod workspace_non_virtual;
+mod workspace_preserved;
 
 fn init_registry() {
     cargo_test_support::registry::init();
