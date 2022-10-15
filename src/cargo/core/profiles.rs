@@ -276,7 +276,7 @@ impl Profiles {
         // platform which has a stable `-Csplit-debuginfo` option for rustc,
         // and it's typically much faster than running `dsymutil` on all builds
         // in incremental cases.
-        if let Some(debug) = profile.debuginfo {
+        if let Some(debug) = profile.debuginfo.to_option() {
             if profile.split_debuginfo.is_none() && debug > 0 {
                 let target = match &kind {
                     CompileKind::Host => self.rustc_host.as_str(),
@@ -515,9 +515,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.codegen_units = toml.codegen_units;
     }
     match toml.debug {
-        Some(U32OrBool::U32(debug)) => profile.debuginfo = Some(debug),
-        Some(U32OrBool::Bool(true)) => profile.debuginfo = Some(2),
-        Some(U32OrBool::Bool(false)) => profile.debuginfo = None,
+        Some(U32OrBool::U32(debug)) => profile.debuginfo = DebugInfo::Explicit(debug),
+        Some(U32OrBool::Bool(true)) => profile.debuginfo = DebugInfo::Explicit(2),
+        Some(U32OrBool::Bool(false)) => profile.debuginfo = DebugInfo::None,
         None => {}
     }
     if let Some(debug_assertions) = toml.debug_assertions {
@@ -578,7 +578,7 @@ pub struct Profile {
     pub codegen_backend: Option<InternedString>,
     // `None` means use rustc default.
     pub codegen_units: Option<u32>,
-    pub debuginfo: Option<u32>,
+    pub debuginfo: DebugInfo,
     pub split_debuginfo: Option<InternedString>,
     pub debug_assertions: bool,
     pub overflow_checks: bool,
@@ -600,7 +600,7 @@ impl Default for Profile {
             lto: Lto::Bool(false),
             codegen_backend: None,
             codegen_units: None,
-            debuginfo: None,
+            debuginfo: DebugInfo::None,
             debug_assertions: false,
             split_debuginfo: None,
             overflow_checks: false,
@@ -669,7 +669,7 @@ impl Profile {
         Profile {
             name: InternedString::new("dev"),
             root: ProfileRoot::Debug,
-            debuginfo: Some(2),
+            debuginfo: DebugInfo::Explicit(2),
             debug_assertions: true,
             overflow_checks: true,
             incremental: true,
@@ -705,6 +705,86 @@ impl Profile {
             self.panic,
             self.strip,
         )
+    }
+}
+
+/// The debuginfo level in a given profile. This is semantically an
+/// `Option<u32>`, and should be used as so via the `to_option` method for all
+/// intents and purposes:
+/// - `DebugInfo::None` corresponds to `None`
+/// - `DebugInfo::Explicit(u32)` and `DebugInfo::Deferred` correspond to
+///   `Option<u32>::Some`
+///
+/// Internally, it's used to model a debuginfo level whose value can be deferred
+/// for optimization purposes: host dependencies usually don't need the same
+/// level as target dependencies. For dependencies that are shared between the
+/// two however, that value also affects reuse: different debuginfo levels would
+/// cause to build a unit twice. By deferring the choice until we know
+/// whether to choose the optimized value or the default value, we can make sure
+/// the unit is only built once and the unit graph is still optimized.
+#[derive(Debug, Copy, Clone)]
+pub enum DebugInfo {
+    /// No debuginfo
+    None,
+    /// A debuginfo level that is explicitly set.
+    Explicit(u32),
+    /// For internal purposes: a deferred debuginfo level that can be optimized
+    /// away but has a default value otherwise.
+    /// Behaves like `Explicit` in all situations except when dependencies are
+    /// shared between build dependencies and runtime dependencies. The former
+    /// case can be optimized, in all other situations this level value will be
+    /// the one to use.
+    Deferred(u32),
+}
+
+impl DebugInfo {
+    /// The main way to interact with this debuginfo level, turning it into an Option.
+    pub fn to_option(&self) -> Option<u32> {
+        match self {
+            DebugInfo::None => None,
+            DebugInfo::Explicit(v) | DebugInfo::Deferred(v) => Some(*v),
+        }
+    }
+
+    /// Returns true if the debuginfo level is high enough (at least 1). Helper
+    /// for a common operation on the usual `Option` representation.
+    pub(crate) fn is_turned_on(&self) -> bool {
+        self.to_option().unwrap_or(0) != 0
+    }
+}
+
+impl serde::Serialize for DebugInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_option().serialize(serializer)
+    }
+}
+
+impl PartialEq for DebugInfo {
+    fn eq(&self, other: &DebugInfo) -> bool {
+        self.to_option().eq(&other.to_option())
+    }
+}
+
+impl Eq for DebugInfo {}
+
+impl Hash for DebugInfo {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_option().hash(state);
+    }
+}
+
+impl PartialOrd for DebugInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.to_option().partial_cmp(&other.to_option())
+    }
+}
+
+impl Ord for DebugInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.to_option().cmp(&other.to_option())
     }
 }
 
