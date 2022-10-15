@@ -1,3 +1,5 @@
+//! See [`Packages`].
+
 use std::collections::BTreeSet;
 
 use crate::core::Package;

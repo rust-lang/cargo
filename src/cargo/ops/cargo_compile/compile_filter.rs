@@ -1,3 +1,5 @@
+//! Filters and their rules to select which Cargo targets will be built.
+
 use crate::core::compiler::CompileMode;
 use crate::core::{Target, TargetKind};
 use crate::util::restricted_names::is_glob_pattern;
@@ -27,7 +29,10 @@ pub enum FilterRule {
 ///
 /// The actual filter process happens inside [`generate_targets`].
 ///
+/// Not to be confused with [`Packages`], which opts in packages to be built.
+///
 /// [`generate_targets`]: super::generate_targets
+/// [`Packages`]: crate::ops::Packages
 #[derive(Debug)]
 pub enum CompileFilter {
     /// The default set of Cargo targets.
@@ -56,10 +61,15 @@ impl FilterRule {
         }
     }
 
+    /// Creates a filter with no rule.
+    ///
+    /// In the current Cargo implementation, filter without a rule implies
+    /// Cargo will follows the default behaviour to filter targets.
     pub fn none() -> FilterRule {
         FilterRule::Just(Vec::new())
     }
 
+    /// Checks if a target definition matches this filter rule.
     fn matches(&self, target: &Target) -> bool {
         match *self {
             FilterRule::All => true,
@@ -67,6 +77,9 @@ impl FilterRule {
         }
     }
 
+    /// Check if a filter is specific.
+    ///
+    /// Only filters without rules are considered as not specific.
     fn is_specific(&self) -> bool {
         match *self {
             FilterRule::All => true,
@@ -81,6 +94,7 @@ impl FilterRule {
         }
     }
 
+    /// Checks if any specified target name contains glob patterns.
     pub(crate) fn contains_glob_patterns(&self) -> bool {
         match self {
             FilterRule::All => false,
@@ -274,6 +288,7 @@ impl CompileFilter {
         )
     }
 
+    /// Checks if any specified target name contains glob patterns.
     pub(crate) fn contains_glob_patterns(&self) -> bool {
         match self {
             CompileFilter::Default { .. } => false,
