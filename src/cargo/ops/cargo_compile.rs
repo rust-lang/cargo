@@ -29,7 +29,7 @@
 //! [`Layout`]: crate::core::compiler::Layout
 //! ["Cargo Target"]: https://doc.rust-lang.org/nightly/cargo/reference/cargo-targets.html
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -44,7 +44,7 @@ use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
-use crate::core::{PackageId, PackageIdSpec, SourceId, TargetKind, Workspace};
+use crate::core::{PackageId, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
@@ -53,7 +53,12 @@ use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{closest_msg, profile, CargoResult, StableHasher};
 
-use anyhow::{bail, Context as _};
+mod compile_filter;
+pub use compile_filter::{CompileFilter, FilterRule, LibRule};
+
+mod packages;
+use packages::build_glob;
+pub use packages::Packages;
 
 /// Contains information about how a package should be compiled.
 ///
@@ -110,188 +115,6 @@ impl CompileOptions {
             honor_rust_version: true,
         })
     }
-}
-
-/// Represents the selected pacakges that will be built.
-///
-/// Generally, it represents the combination of all `-p` flag. When working within
-/// a workspace, `--exclude` and `--workspace` flags also contribute to it.
-#[derive(PartialEq, Eq, Debug)]
-pub enum Packages {
-    /// Pacakges selected by default. Ususally means no flag provided.
-    Default,
-    /// Opt in all packages.
-    ///
-    /// As of the time of this writing, it only works on opting in all workspace members.
-    All,
-    /// Opt out of packages passed in.
-    ///
-    /// As of the time of this writing, it only works on opting out workspace members.
-    OptOut(Vec<String>),
-    /// A sequence of hand-picked packages that will be built. Normally done by `-p` flag.
-    Packages(Vec<String>),
-}
-
-impl Packages {
-    /// Creates a `Packages` from flags which are generally equivalent to command line flags.
-    pub fn from_flags(all: bool, exclude: Vec<String>, package: Vec<String>) -> CargoResult<Self> {
-        Ok(match (all, exclude.len(), package.len()) {
-            (false, 0, 0) => Packages::Default,
-            (false, 0, _) => Packages::Packages(package),
-            (false, _, _) => anyhow::bail!("--exclude can only be used together with --workspace"),
-            (true, 0, _) => Packages::All,
-            (true, _, _) => Packages::OptOut(exclude),
-        })
-    }
-
-    /// Converts selected packages to [`PackageIdSpec`]s.
-    pub fn to_package_id_specs(&self, ws: &Workspace<'_>) -> CargoResult<Vec<PackageIdSpec>> {
-        let specs = match self {
-            Packages::All => ws
-                .members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .collect(),
-            Packages::OptOut(opt_out) => {
-                let (mut patterns, mut names) = opt_patterns_and_names(opt_out)?;
-                let specs = ws
-                    .members()
-                    .filter(|pkg| {
-                        !names.remove(pkg.name().as_str()) && !match_patterns(pkg, &mut patterns)
-                    })
-                    .map(Package::package_id)
-                    .map(PackageIdSpec::from_package_id)
-                    .collect();
-                let warn = |e| ws.config().shell().warn(e);
-                emit_package_not_found(ws, names, true).or_else(warn)?;
-                emit_pattern_not_found(ws, patterns, true).or_else(warn)?;
-                specs
-            }
-            Packages::Packages(packages) if packages.is_empty() => {
-                vec![PackageIdSpec::from_package_id(ws.current()?.package_id())]
-            }
-            Packages::Packages(opt_in) => {
-                let (mut patterns, packages) = opt_patterns_and_names(opt_in)?;
-                let mut specs = packages
-                    .iter()
-                    .map(|p| PackageIdSpec::parse(p))
-                    .collect::<CargoResult<Vec<_>>>()?;
-                if !patterns.is_empty() {
-                    let matched_pkgs = ws
-                        .members()
-                        .filter(|pkg| match_patterns(pkg, &mut patterns))
-                        .map(Package::package_id)
-                        .map(PackageIdSpec::from_package_id);
-                    specs.extend(matched_pkgs);
-                }
-                emit_pattern_not_found(ws, patterns, false)?;
-                specs
-            }
-            Packages::Default => ws
-                .default_members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .collect(),
-        };
-        if specs.is_empty() {
-            if ws.is_virtual() {
-                bail!(
-                    "manifest path `{}` contains no package: The manifest is virtual, \
-                     and the workspace has no members.",
-                    ws.root().display()
-                )
-            }
-            bail!("no packages to compile")
-        }
-        Ok(specs)
-    }
-
-    /// Gets a list of selected [`Package`]s.
-    pub fn get_packages<'ws>(&self, ws: &'ws Workspace<'_>) -> CargoResult<Vec<&'ws Package>> {
-        let packages: Vec<_> = match self {
-            Packages::Default => ws.default_members().collect(),
-            Packages::All => ws.members().collect(),
-            Packages::OptOut(opt_out) => {
-                let (mut patterns, mut names) = opt_patterns_and_names(opt_out)?;
-                let packages = ws
-                    .members()
-                    .filter(|pkg| {
-                        !names.remove(pkg.name().as_str()) && !match_patterns(pkg, &mut patterns)
-                    })
-                    .collect();
-                emit_package_not_found(ws, names, true)?;
-                emit_pattern_not_found(ws, patterns, true)?;
-                packages
-            }
-            Packages::Packages(opt_in) => {
-                let (mut patterns, mut names) = opt_patterns_and_names(opt_in)?;
-                let packages = ws
-                    .members()
-                    .filter(|pkg| {
-                        names.remove(pkg.name().as_str()) || match_patterns(pkg, &mut patterns)
-                    })
-                    .collect();
-                emit_package_not_found(ws, names, false)?;
-                emit_pattern_not_found(ws, patterns, false)?;
-                packages
-            }
-        };
-        Ok(packages)
-    }
-
-    /// Returns whether or not the user needs to pass a `-p` flag to target a
-    /// specific package in the workspace.
-    pub fn needs_spec_flag(&self, ws: &Workspace<'_>) -> bool {
-        match self {
-            Packages::Default => ws.default_members().count() > 1,
-            Packages::All => ws.members().count() > 1,
-            Packages::Packages(_) => true,
-            Packages::OptOut(_) => true,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-/// Indicates whether or not the library target gets included.
-pub enum LibRule {
-    /// Include the library, fail if not present
-    True,
-    /// Include the library if present
-    Default,
-    /// Exclude the library
-    False,
-}
-
-#[derive(Debug)]
-/// Indicates which Cargo targets will be selected to be built.
-pub enum FilterRule {
-    /// All included.
-    All,
-    /// Just a subset of Cargo targets based on names given.
-    Just(Vec<String>),
-}
-
-/// Filter to apply to the root package to select which Cargo targets will be built.
-/// (examples, bins, benches, tests, ...)
-///
-/// The actual filter process happens inside [`generate_targets`].
-#[derive(Debug)]
-pub enum CompileFilter {
-    /// The default set of Cargo targets.
-    Default {
-        /// Flag whether targets can be safely skipped when required-features are not satisfied.
-        required_features_filterable: bool,
-    },
-    /// Only includes a subset of all Cargo targets.
-    Only {
-        /// Include all Cargo targets.
-        all_targets: bool,
-        lib: LibRule,
-        bins: FilterRule,
-        examples: FilterRule,
-        tests: FilterRule,
-        benches: FilterRule,
-    },
 }
 
 /// Compiles!
@@ -557,7 +380,7 @@ pub fn create_bcx<'a, 'cfg>(
                     FilterRule::none(),
                 ),
                 _ => {
-                    bail!(
+                    anyhow::bail!(
                         r#"-Z rustdoc-scrape-examples must take "all" or "examples" as an argument"#
                     )
                 }
@@ -751,252 +574,6 @@ pub fn create_bcx<'a, 'cfg>(
     )?;
 
     Ok(bcx)
-}
-
-impl FilterRule {
-    pub fn new(targets: Vec<String>, all: bool) -> FilterRule {
-        if all {
-            FilterRule::All
-        } else {
-            FilterRule::Just(targets)
-        }
-    }
-
-    pub fn none() -> FilterRule {
-        FilterRule::Just(Vec::new())
-    }
-
-    fn matches(&self, target: &Target) -> bool {
-        match *self {
-            FilterRule::All => true,
-            FilterRule::Just(ref targets) => targets.iter().any(|x| *x == target.name()),
-        }
-    }
-
-    fn is_specific(&self) -> bool {
-        match *self {
-            FilterRule::All => true,
-            FilterRule::Just(ref targets) => !targets.is_empty(),
-        }
-    }
-
-    pub fn try_collect(&self) -> Option<Vec<String>> {
-        match *self {
-            FilterRule::All => None,
-            FilterRule::Just(ref targets) => Some(targets.clone()),
-        }
-    }
-
-    pub(crate) fn contains_glob_patterns(&self) -> bool {
-        match self {
-            FilterRule::All => false,
-            FilterRule::Just(targets) => targets.iter().any(is_glob_pattern),
-        }
-    }
-}
-
-impl CompileFilter {
-    /// Constructs a filter from raw command line arguments.
-    pub fn from_raw_arguments(
-        lib_only: bool,
-        bins: Vec<String>,
-        all_bins: bool,
-        tsts: Vec<String>,
-        all_tsts: bool,
-        exms: Vec<String>,
-        all_exms: bool,
-        bens: Vec<String>,
-        all_bens: bool,
-        all_targets: bool,
-    ) -> CompileFilter {
-        if all_targets {
-            return CompileFilter::new_all_targets();
-        }
-        let rule_lib = if lib_only {
-            LibRule::True
-        } else {
-            LibRule::False
-        };
-        let rule_bins = FilterRule::new(bins, all_bins);
-        let rule_tsts = FilterRule::new(tsts, all_tsts);
-        let rule_exms = FilterRule::new(exms, all_exms);
-        let rule_bens = FilterRule::new(bens, all_bens);
-
-        CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
-    }
-
-    /// Constructs a filter from underlying primitives.
-    pub fn new(
-        rule_lib: LibRule,
-        rule_bins: FilterRule,
-        rule_tsts: FilterRule,
-        rule_exms: FilterRule,
-        rule_bens: FilterRule,
-    ) -> CompileFilter {
-        if rule_lib == LibRule::True
-            || rule_bins.is_specific()
-            || rule_tsts.is_specific()
-            || rule_exms.is_specific()
-            || rule_bens.is_specific()
-        {
-            CompileFilter::Only {
-                all_targets: false,
-                lib: rule_lib,
-                bins: rule_bins,
-                examples: rule_exms,
-                benches: rule_bens,
-                tests: rule_tsts,
-            }
-        } else {
-            CompileFilter::Default {
-                required_features_filterable: true,
-            }
-        }
-    }
-
-    /// Constructs a filter that includes all targets.
-    pub fn new_all_targets() -> CompileFilter {
-        CompileFilter::Only {
-            all_targets: true,
-            lib: LibRule::Default,
-            bins: FilterRule::All,
-            examples: FilterRule::All,
-            benches: FilterRule::All,
-            tests: FilterRule::All,
-        }
-    }
-
-    /// Constructs a filter that includes all test targets.
-    ///
-    /// Being different from the behavior of [`CompileFilter::Default`], this
-    /// function only recognizes test targets, which means cargo might compile
-    /// all targets with `tested` flag on, whereas [`CompileFilter::Default`]
-    /// may include additional example targets to ensure they can be compiled.
-    ///
-    /// Note that the actual behavior is subject to `filter_default_targets`
-    /// and `generate_targets` though.
-    pub fn all_test_targets() -> Self {
-        Self::Only {
-            all_targets: false,
-            lib: LibRule::Default,
-            bins: FilterRule::none(),
-            examples: FilterRule::none(),
-            tests: FilterRule::All,
-            benches: FilterRule::none(),
-        }
-    }
-
-    /// Constructs a filter that includes lib target only.
-    pub fn lib_only() -> Self {
-        Self::Only {
-            all_targets: false,
-            lib: LibRule::True,
-            bins: FilterRule::none(),
-            examples: FilterRule::none(),
-            tests: FilterRule::none(),
-            benches: FilterRule::none(),
-        }
-    }
-
-    /// Constructs a filter that includes the given binary. No more. No less.
-    pub fn single_bin(bin: String) -> Self {
-        Self::Only {
-            all_targets: false,
-            lib: LibRule::False,
-            bins: FilterRule::new(vec![bin], false),
-            examples: FilterRule::none(),
-            tests: FilterRule::none(),
-            benches: FilterRule::none(),
-        }
-    }
-
-    /// Indicates if Cargo needs to build any dev dependency.
-    pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
-        match mode {
-            CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
-            CompileMode::Check { test: true } => true,
-            CompileMode::Build
-            | CompileMode::Doc { .. }
-            | CompileMode::Docscrape
-            | CompileMode::Check { test: false } => match *self {
-                CompileFilter::Default { .. } => false,
-                CompileFilter::Only {
-                    ref examples,
-                    ref tests,
-                    ref benches,
-                    ..
-                } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
-            },
-            CompileMode::RunCustomBuild => panic!("Invalid mode"),
-        }
-    }
-
-    /// Selects targets for "cargo run". for logic to select targets for other
-    /// subcommands, see `generate_targets` and `filter_default_targets`.
-    pub fn target_run(&self, target: &Target) -> bool {
-        match *self {
-            CompileFilter::Default { .. } => true,
-            CompileFilter::Only {
-                ref lib,
-                ref bins,
-                ref examples,
-                ref tests,
-                ref benches,
-                ..
-            } => {
-                let rule = match *target.kind() {
-                    TargetKind::Bin => bins,
-                    TargetKind::Test => tests,
-                    TargetKind::Bench => benches,
-                    TargetKind::ExampleBin | TargetKind::ExampleLib(..) => examples,
-                    TargetKind::Lib(..) => {
-                        return match *lib {
-                            LibRule::True => true,
-                            LibRule::Default => true,
-                            LibRule::False => false,
-                        };
-                    }
-                    TargetKind::CustomBuild => return false,
-                };
-                rule.matches(target)
-            }
-        }
-    }
-
-    pub fn is_specific(&self) -> bool {
-        match *self {
-            CompileFilter::Default { .. } => false,
-            CompileFilter::Only { .. } => true,
-        }
-    }
-
-    pub fn is_all_targets(&self) -> bool {
-        matches!(
-            *self,
-            CompileFilter::Only {
-                all_targets: true,
-                ..
-            }
-        )
-    }
-
-    pub(crate) fn contains_glob_patterns(&self) -> bool {
-        match self {
-            CompileFilter::Default { .. } => false,
-            CompileFilter::Only {
-                bins,
-                examples,
-                tests,
-                benches,
-                ..
-            } => {
-                bins.contains_glob_patterns()
-                    || examples.contains_glob_patterns()
-                    || tests.contains_glob_patterns()
-                    || benches.contains_glob_patterns()
-            }
-        }
-    }
 }
 
 /// A proposed target.
@@ -1723,89 +1300,6 @@ fn traverse_and_share(
     assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
     new_graph.entry(new_unit.clone()).or_insert(new_deps);
     new_unit
-}
-
-/// Build `glob::Pattern` with informative context.
-fn build_glob(pat: &str) -> CargoResult<glob::Pattern> {
-    glob::Pattern::new(pat).with_context(|| format!("cannot build glob pattern from `{}`", pat))
-}
-
-/// Emits "package not found" error.
-///
-/// > This function should be used only in package selection processes such like
-/// `Packages::to_package_id_specs` and `Packages::get_packages`.
-fn emit_package_not_found(
-    ws: &Workspace<'_>,
-    opt_names: BTreeSet<&str>,
-    opt_out: bool,
-) -> CargoResult<()> {
-    if !opt_names.is_empty() {
-        anyhow::bail!(
-            "{}package(s) `{}` not found in workspace `{}`",
-            if opt_out { "excluded " } else { "" },
-            opt_names.into_iter().collect::<Vec<_>>().join(", "),
-            ws.root().display(),
-        )
-    }
-    Ok(())
-}
-
-/// Emits "glob pattern not found" error.
-///
-/// > This function should be used only in package selection processes such like
-/// `Packages::to_package_id_specs` and `Packages::get_packages`.
-fn emit_pattern_not_found(
-    ws: &Workspace<'_>,
-    opt_patterns: Vec<(glob::Pattern, bool)>,
-    opt_out: bool,
-) -> CargoResult<()> {
-    let not_matched = opt_patterns
-        .iter()
-        .filter(|(_, matched)| !*matched)
-        .map(|(pat, _)| pat.as_str())
-        .collect::<Vec<_>>();
-    if !not_matched.is_empty() {
-        anyhow::bail!(
-            "{}package pattern(s) `{}` not found in workspace `{}`",
-            if opt_out { "excluded " } else { "" },
-            not_matched.join(", "),
-            ws.root().display(),
-        )
-    }
-    Ok(())
-}
-
-/// Checks whether a package matches any of a list of glob patterns generated
-/// from `opt_patterns_and_names`.
-///
-/// > This function should be used only in package selection processes such like
-/// `Packages::to_package_id_specs` and `Packages::get_packages`.
-fn match_patterns(pkg: &Package, patterns: &mut Vec<(glob::Pattern, bool)>) -> bool {
-    patterns.iter_mut().any(|(m, matched)| {
-        let is_matched = m.matches(pkg.name().as_str());
-        *matched |= is_matched;
-        is_matched
-    })
-}
-
-/// Given a list opt-in or opt-out package selection strings, generates two
-/// collections that represent glob patterns and package names respectively.
-///
-/// > This function should be used only in package selection processes such like
-/// `Packages::to_package_id_specs` and `Packages::get_packages`.
-fn opt_patterns_and_names(
-    opt: &[String],
-) -> CargoResult<(Vec<(glob::Pattern, bool)>, BTreeSet<&str>)> {
-    let mut opt_patterns = Vec::new();
-    let mut opt_names = BTreeSet::new();
-    for x in opt.iter() {
-        if is_glob_pattern(x) {
-            opt_patterns.push((build_glob(x)?, false));
-        } else {
-            opt_names.insert(String::as_str(x));
-        }
-    }
-    Ok((opt_patterns, opt_names))
 }
 
 /// Removes duplicate CompileMode::Doc units that would cause problems with
