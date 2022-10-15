@@ -1477,7 +1477,7 @@ fn reuse_panic_pm() {
         .with_stderr_unordered(
             "\
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
 [COMPILING] somepm [..]
 [RUNNING] `rustc --crate-name somepm [..]
