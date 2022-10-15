@@ -428,17 +428,13 @@ pub fn create_bcx<'a, 'cfg>(
         // Rebuild the unit graph, replacing the explicit host targets with
         // CompileKind::Host, removing `artifact_target_for_features` and merging any dependencies
         // shared with build and artifact dependencies.
-        let new_graph = rebuild_unit_graph_shared(
+        (units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
             interner,
             unit_graph,
             &units,
             &scrape_units,
             host_kind_requested.then_some(explicit_host_kind),
         );
-        // This would be nicer with destructuring assignment.
-        units = new_graph.0;
-        scrape_units = new_graph.1;
-        unit_graph = new_graph.2;
     }
 
     let mut extra_compiler_args = HashMap::new();
