@@ -617,8 +617,17 @@ fn traverse_and_share(
             }
         })
         .collect();
+    // Here, we have recursively traversed this unit's dependencies, and hashed them: we can
+    // finalize the dep hash.
     let new_dep_hash = dep_hash.finish();
-    let new_kind = match to_host {
+
+    // This is the key part of the sharing process: if the unit is a runtime dependency, whose
+    // target is the same as the host, we canonicalize the compile kind to `CompileKind::Host`.
+    // A possible host dependency counterpart to this unit would have that kind, and if such a unit
+    // exists in the current `unit_graph`, they will unify in the new unit graph map `new_graph`.
+    // The resulting unit graph will have be optimized with less units, thanks to sharing these host
+    // dependencies.
+    let canonical_kind = match to_host {
         Some(to_host) if to_host == unit.kind => CompileKind::Host,
         _ => unit.kind,
     };
@@ -663,7 +672,7 @@ fn traverse_and_share(
         &unit.pkg,
         &unit.target,
         profile,
-        new_kind,
+        canonical_kind,
         unit.mode,
         unit.features.clone(),
         unit.is_std,
