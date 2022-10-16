@@ -86,8 +86,6 @@ pub struct CompileOptions {
     pub target_rustc_args: Option<Vec<String>>,
     /// Crate types to be passed to rustc (single target only)
     pub target_rustc_crate_types: Option<Vec<String>>,
-    /// Extra arguments passed to all selected targets for rustdoc.
-    pub local_rustdoc_args: Option<Vec<String>>,
     /// Whether the `--document-private-items` flags was specified and should
     /// be forwarded to `rustdoc`.
     pub rustdoc_document_private_items: bool,
@@ -110,7 +108,6 @@ impl CompileOptions {
             target_rustdoc_args: None,
             target_rustc_args: None,
             target_rustc_crate_types: None,
-            local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             honor_rust_version: true,
         })
@@ -206,7 +203,6 @@ pub fn create_bcx<'a, 'cfg>(
         ref target_rustdoc_args,
         ref target_rustc_args,
         ref target_rustc_crate_types,
-        ref local_rustdoc_args,
         rustdoc_document_private_items,
         honor_rust_version,
     } = *options;
@@ -481,32 +477,25 @@ pub fn create_bcx<'a, 'cfg>(
         extra_compiler_args.insert(units[0].clone(), args);
     }
 
-    for unit in &units {
-        if unit.mode.is_doc() || unit.mode.is_doc_test() {
-            let mut extra_args = local_rustdoc_args.clone();
-
-            // Add `--document-private-items` rustdoc flag if requested or if
-            // the target is a binary. Binary crates get their private items
-            // documented by default.
-            if rustdoc_document_private_items || unit.target.is_bin() {
-                let mut args = extra_args.take().unwrap_or_default();
-                args.push("--document-private-items".into());
-                if unit.target.is_bin() {
-                    // This warning only makes sense if it's possible to document private items
-                    // sometimes and ignore them at other times. But cargo consistently passes
-                    // `--document-private-items`, so the warning isn't useful.
-                    args.push("-Arustdoc::private-intra-doc-links".into());
-                }
-                extra_args = Some(args);
-            }
-
-            if let Some(args) = extra_args {
-                extra_compiler_args
-                    .entry(unit.clone())
-                    .or_default()
-                    .extend(args);
-            }
+    for unit in units
+        .iter()
+        .filter(|unit| unit.mode.is_doc() || unit.mode.is_doc_test())
+        .filter(|unit| rustdoc_document_private_items || unit.target.is_bin())
+    {
+        // Add `--document-private-items` rustdoc flag if requested or if
+        // the target is a binary. Binary crates get their private items
+        // documented by default.
+        let mut args = vec!["--document-private-items".into()];
+        if unit.target.is_bin() {
+            // This warning only makes sense if it's possible to document private items
+            // sometimes and ignore them at other times. But cargo consistently passes
+            // `--document-private-items`, so the warning isn't useful.
+            args.push("-Arustdoc::private-intra-doc-links".into());
         }
+        extra_compiler_args
+            .entry(unit.clone())
+            .or_default()
+            .extend(args);
     }
 
     if honor_rust_version {
