@@ -625,7 +625,7 @@ fn traverse_and_share(
     // target is the same as the host, we canonicalize the compile kind to `CompileKind::Host`.
     // A possible host dependency counterpart to this unit would have that kind, and if such a unit
     // exists in the current `unit_graph`, they will unify in the new unit graph map `new_graph`.
-    // The resulting unit graph will have be optimized with less units, thanks to sharing these host
+    // The resulting unit graph will be optimized with less units, thanks to sharing these host
     // dependencies.
     let canonical_kind = match to_host {
         Some(to_host) if to_host == unit.kind => CompileKind::Host,
@@ -638,12 +638,12 @@ fn traverse_and_share(
     // its debuginfo level to optimize build times.
     if unit.kind.is_host() && to_host.is_some() && profile.debuginfo.is_deferred() {
         // We create a "probe" test to see if a unit with the same explicit debuginfo level exists
-        // in the graph. This is the level we'd expect if it was set manually, or a default set by
-        // a profile for a runtime dependency: its canonical value.
+        // in the graph. This is the level we'd expect if it was set manually or the default value
+        // set by a profile for a runtime dependency: its canonical value.
         let canonical_debuginfo = profile.debuginfo.finalize();
         let mut canonical_profile = profile.clone();
         canonical_profile.debuginfo = canonical_debuginfo;
-        let explicit_unit_probe = interner.intern(
+        let unit_probe = interner.intern(
             &unit.pkg,
             &unit.target,
             canonical_profile,
@@ -657,7 +657,7 @@ fn traverse_and_share(
         );
 
         // We can now turn the deferred value into its actual final value.
-        profile.debuginfo = if unit_graph.contains_key(&explicit_unit_probe) {
+        profile.debuginfo = if unit_graph.contains_key(&unit_probe) {
             // The unit is present in both build time and runtime subgraphs: we canonicalize its
             // level to the other unit's, thus ensuring reuse between the two to optimize build times.
             canonical_debuginfo

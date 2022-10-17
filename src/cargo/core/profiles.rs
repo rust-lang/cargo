@@ -440,19 +440,15 @@ impl ProfileMaker {
             profile.codegen_units = None;
 
             // For build dependencies, we usually don't need debuginfo, and
-            // removing it will compile faster, much like the default opt-level
-            // of 0 is chosen for faster builds. However, that can conflict with
+            // removing it will compile faster. However, that can conflict with
             // a unit graph optimization, reusing units that are shared between
             // build dependencies and runtime dependencies: when the runtime
             // target is the same as the build host, we only need to build a
             // dependency once and reuse the results, instead of building twice.
-            // If we then also change the default debuginfo level for build
-            // dependencies, we can lose the sharing: build dependencies will be
-            // built without debuginfo, while runtime dependencies require it by
-            // default. So we allow cargo to weaken the debuginfo level: only if
-            // there is not sharing already, will we disable debuginfo: if there
-            // is no sharing, we will use the preferred value, and if there is
-            // sharing we will use the explicit value set.
+            // We defer the choice of the debuginfo level until we can check if
+            // a unit is shared. If that's the case, we'll use the deferred value
+            // below so the unit can be reused, otherwise we can avoid emitting
+            // the unit's debuginfo.
             if let Some(debuginfo) = profile.debuginfo.to_option() {
                 profile.debuginfo = DebugInfo::Deferred(debuginfo);
             }
@@ -726,9 +722,10 @@ impl Profile {
     }
 }
 
-/// The debuginfo level in a given profile. This is semantically an
-/// `Option<u32>`, and should be used as so via the `to_option` method for all
-/// intents and purposes:
+/// The debuginfo level setting.
+///
+/// This is semantically an `Option<u32>`, and should be used as so via the
+/// [DebugInfo::to_option] method for all intents and purposes:
 /// - `DebugInfo::None` corresponds to `None`
 /// - `DebugInfo::Explicit(u32)` and `DebugInfo::Deferred` correspond to
 ///   `Option<u32>::Some`
@@ -742,16 +739,19 @@ impl Profile {
 /// the unit is only built once and the unit graph is still optimized.
 #[derive(Debug, Copy, Clone)]
 pub enum DebugInfo {
-    /// No debuginfo
+    /// No debuginfo level was set.
     None,
-    /// A debuginfo level that is explicitly set.
+    /// A debuginfo level that is explicitly set, by a profile or a user.
     Explicit(u32),
     /// For internal purposes: a deferred debuginfo level that can be optimized
-    /// away but has a default value otherwise.
-    /// Behaves like `Explicit` in all situations except when dependencies are
-    /// shared between build dependencies and runtime dependencies. The former
-    /// case can be optimized, in all other situations this level value will be
-    /// the one to use.
+    /// away, but has this value otherwise.
+    ///
+    /// Behaves like `Explicit` in all situations except for the default build
+    /// dependencies profile: whenever a build dependency is not shared with
+    /// runtime dependencies, this level is weakened to a lower level that is
+    /// faster to build (see [DebugInfo::weaken]).
+    ///
+    /// In all other situations, this level value will be the one to use.
     Deferred(u32),
 }
 
