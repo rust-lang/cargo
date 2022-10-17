@@ -252,6 +252,19 @@ pub trait CommandExt: Sized {
             .require_equals(true),
         )
     }
+
+    fn arg_rustflags(self) -> Self {
+        self._arg(
+            multi_opt(
+                "rustflags",
+                "RUSTFLAGS",
+                "Space separated list of RUSTFLAGS (unstable) to enable for the package. Requires a `;` to terminate this option."
+            )
+            .min_values(1)
+            .allow_hyphen_values(true)
+            .value_terminator(";")
+        )
+    }
 }
 
 impl CommandExt for Command {
@@ -584,6 +597,7 @@ pub trait ArgMatchesExt {
         let opts = CompileOptions {
             build_config,
             cli_features: self.cli_features()?,
+            rustflags: self.rustflags(config)?,
             spec,
             filter: CompileFilter::from_raw_arguments(
                 self.flag("lib"),
@@ -626,6 +640,22 @@ pub trait ArgMatchesExt {
             self.flag("all-features"),
             !self.flag("no-default-features"),
         )
+    }
+
+    fn rustflags(&self, config: &Config) -> CargoResult<Vec<InternedString>> {
+        let mut rustflags = Vec::new();
+
+        if self._contains("rustflags") {
+            config.cli_unstable().fail_if_stable_opt("--rustflags", 0)?;
+
+            rustflags.extend(
+                self._values_of("rustflags")
+                    .iter()
+                    .map(InternedString::from),
+            );
+        }
+
+        Ok(rustflags)
     }
 
     fn compile_options_for_single_package(

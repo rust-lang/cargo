@@ -822,6 +822,7 @@ fn run_verify(
                 CompileMode::Build,
             )?,
             cli_features: opts.cli_features.clone(),
+            rustflags: Vec::new(),
             spec: ops::Packages::Packages(Vec::new()),
             filter: ops::CompileFilter::Default {
                 required_features_filterable: true,

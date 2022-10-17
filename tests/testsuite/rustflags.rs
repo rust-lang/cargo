@@ -2,7 +2,7 @@
 
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_lib_manifest, basic_manifest, paths, project, project_in_home, rustc_host,
+    basic_lib_manifest, basic_manifest, cross_compile, paths, project, project_in_home, rustc_host,
 };
 use std::fs;
 
@@ -1669,5 +1669,367 @@ fn host_config_rustflags_with_target() {
         .arg("-Zunstable-options")
         .arg("--config")
         .arg("host.rustflags=[\"--cfg=foo\"]")
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] [..]-C instrument-coverage[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_multiple() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg("-C")
+        .arg("strip=debuginfo")
+        .arg(";")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] [..]-C instrument-coverage -C strip=debuginfo[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_with_dependency() {
+    Package::new("bar", "0.1.0")
+        .file(
+            "src/lib.rs",
+            r#"pub fn print_hello_world() {
+                println!("Hello, World!");
+            }"#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn print() {
+                bar::print_hello_world();
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index[..]
+[DOWNLOADING] crates ...[..]
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)[..]
+[COMPILING] bar v0.1.0[..]
+[RUNNING] [..]
+[COMPILING] foo v0.1.0 ([..])
+[RUNNING] [..]-C instrument-coverage[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_build_script() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            pub fn main() {
+                println!("");
+            }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr_line_without(
+            &["[RUNNING] `rustc --crate-name build_script_build"],
+            &["-C instrument-coverage"],
+        )
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_proc_macro() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [lib]
+            proc-macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..] -C instrument-coverage[..]")
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_proc_macro_dependency() {
+    Package::new("bar", "0.1.0").proc_macro(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr_line_without(
+            &["[RUNNING] `rustc --crate-name bar"],
+            &["-C instrument-coverage"],
+        )
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "workspace"
+            version = "0.0.1"
+
+            [workspace]
+            members = ["foo", "bar"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr_unordered(
+            "\
+[COMPILING] workspace v0.0.1 ([..])
+[RUNNING] `rustc --crate-name workspace [..] -C instrument-coverage[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_virtual_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr_unordered(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[COMPILING] bar v0.0.1 ([..])
+[RUNNING] `rustc --crate-name foo [..] -C instrument-coverage[..]
+[RUNNING] `rustc --crate-name bar [..] -C instrument-coverage[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_multiple_artifacts() {
+    let p = project()
+        .file("examples/example.rs", "pub fn main() { }")
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "pub fn main() { }")
+        .file("src/bin/bin1.rs", "pub fn main() { }")
+        .build();
+
+    p.cargo("test -v")
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr_unordered(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc --crate-name foo [..] --crate-type lib [..] -C instrument-coverage[..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..] --test [..] -C instrument-coverage[..]
+[RUNNING] `rustc --crate-name bin1 [..] --test [..] -C instrument-coverage[..]
+[RUNNING] `rustc --crate-name foo src/main.rs [..] --test [..] -C instrument-coverage[..]
+[RUNNING] `rustc --crate-name example [..] -C instrument-coverage[..]
+[FINISHED] test [..]
+[RUNNING] [..]
+[RUNNING] [..]
+[RUNNING] [..]
+[DOCTEST] [..]
+[RUNNING] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn command_line_rustflags_cross_compile() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo(&format!("build --target {} -v", target))
+        .masquerade_as_nightly_cargo(&["rustflags"])
+        .arg("-Zunstable-options")
+        .arg("--rustflags")
+        .arg("-C")
+        .arg("instrument-coverage")
+        .arg(";")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc --crate-name foo [..] -C instrument-coverage[..]
+[FINISHED] [..]
+",
+        )
         .run();
 }
