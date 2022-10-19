@@ -500,6 +500,7 @@ Caused by:
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[PACKAGED] [..]
 ",
         )
         .run();

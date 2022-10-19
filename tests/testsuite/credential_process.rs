@@ -134,6 +134,7 @@ Only one of these values may be set, remove one or the other to proceed.
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
 [UPDATING] [..]
 ",
@@ -208,6 +209,7 @@ fn publish() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
 [UPDATING] [..]
 ",

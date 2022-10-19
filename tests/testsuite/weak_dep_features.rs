@@ -568,6 +568,7 @@ fn publish() {
 [VERIFYING] foo v0.1.0 [..]
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
 [UPDATING] [..]
 ",
