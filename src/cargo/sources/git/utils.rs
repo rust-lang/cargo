@@ -3,7 +3,7 @@
 
 use crate::core::GitReference;
 use crate::util::errors::CargoResult;
-use crate::util::{network, Config, IntoUrl, MetricsCounter, Progress};
+use crate::util::{human_readable_bytes, network, Config, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
@@ -755,13 +755,8 @@ pub fn with_fetch_options(
                         counter.add(stats.received_bytes(), now);
                         last_update = now;
                     }
-                    fn format_bytes(bytes: f32) -> (&'static str, f32) {
-                        static UNITS: [&str; 5] = ["", "Ki", "Mi", "Gi", "Ti"];
-                        let i = (bytes.log2() / 10.0).min(4.0) as usize;
-                        (UNITS[i], bytes / 1024_f32.powi(i as i32))
-                    }
-                    let (unit, rate) = format_bytes(counter.rate());
-                    format!(", {:.2}{}B/s", rate, unit)
+                    let (rate, unit) = human_readable_bytes(counter.rate() as u64);
+                    format!(", {:.2}{}/s", rate, unit)
                 };
                 progress
                     .tick(stats.indexed_objects(), stats.total_objects(), &msg)
