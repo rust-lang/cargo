@@ -40,7 +40,7 @@ pub struct ProcessBuilder {
     /// See [`ProcessBuilder::retry_with_argfile`] for more information.
     retry_with_argfile: bool,
     /// Data to write to stdin.
-    stdin: Vec<u8>,
+    stdin: Option<Vec<u8>>,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -82,7 +82,7 @@ impl ProcessBuilder {
             jobserver: None,
             display_env_vars: false,
             retry_with_argfile: false,
-            stdin: Vec::new(),
+            stdin: None,
         }
     }
 
@@ -212,7 +212,7 @@ impl ProcessBuilder {
 
     /// Sets a value that will be written to stdin of the process on launch.
     pub fn stdin<T: Into<Vec<u8>>>(&mut self, stdin: T) -> &mut Self {
-        self.stdin = stdin.into();
+        self.stdin = Some(stdin.into());
         self
     }
 
@@ -284,18 +284,22 @@ impl ProcessBuilder {
     fn _output(&self) -> io::Result<Output> {
         if !debug_force_argfile(self.retry_with_argfile) {
             let mut cmd = self.build_command();
-            match piped(&mut cmd).spawn() {
+            match piped(&mut cmd, self.stdin.is_some()).spawn() {
                 Err(ref e) if self.should_retry_with_argfile(e) => {}
                 Err(e) => return Err(e),
                 Ok(mut child) => {
-                    child.stdin.take().unwrap().write_all(&self.stdin)?;
+                    if let Some(stdin) = &self.stdin {
+                        child.stdin.take().unwrap().write_all(stdin)?;
+                    }
                     return child.wait_with_output();
                 }
             }
         }
         let (mut cmd, argfile) = self.build_command_with_argfile()?;
-        let mut child = piped(&mut cmd).spawn()?;
-        child.stdin.take().unwrap().write_all(&self.stdin)?;
+        let mut child = piped(&mut cmd, self.stdin.is_some()).spawn()?;
+        if let Some(stdin) = &self.stdin {
+            child.stdin.take().unwrap().write_all(stdin)?;
+        }
         let output = child.wait_with_output();
         close_tempfile_and_log_error(argfile);
         output
@@ -340,14 +344,14 @@ impl ProcessBuilder {
 
         let spawn = |mut cmd| {
             if !debug_force_argfile(self.retry_with_argfile) {
-                match piped(&mut cmd).spawn() {
+                match piped(&mut cmd, false).spawn() {
                     Err(ref e) if self.should_retry_with_argfile(e) => {}
                     Err(e) => return Err(e),
                     Ok(child) => return Ok((child, None)),
                 }
             }
             let (mut cmd, argfile) = self.build_command_with_argfile()?;
-            Ok((piped(&mut cmd).spawn()?, Some(argfile)))
+            Ok((piped(&mut cmd, false).spawn()?, Some(argfile)))
         };
 
         let status = (|| {
@@ -541,11 +545,15 @@ fn debug_force_argfile(retry_enabled: bool) -> bool {
     cfg!(debug_assertions) && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok() && retry_enabled
 }
 
-/// Creates new pipes for stderr, stdout and stdin.
-fn piped(cmd: &mut Command) -> &mut Command {
+/// Creates new pipes for stderr, stdout, and optionally stdin.
+fn piped(cmd: &mut Command, pipe_stdin: bool) -> &mut Command {
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .stdin(Stdio::piped())
+        .stdin(if pipe_stdin {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
 }
 
 fn close_tempfile_and_log_error(file: NamedTempFile) {

@@ -381,7 +381,7 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     package: Option<String>,
     public: Option<bool>,
 
-    /// One ore more of 'bin', 'cdylib', 'staticlib', 'bin:<name>'.
+    /// One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.
     artifact: Option<StringOrVec>,
     /// If set, the artifact should also be a dependency
     lib: Option<bool>,
