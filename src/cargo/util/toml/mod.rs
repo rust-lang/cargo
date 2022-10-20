@@ -1521,8 +1521,7 @@ impl TomlManifest {
                     d.rev.take();
                     // registry specifications are elaborated to the index URL
                     if let Some(registry) = d.registry.take() {
-                        let src = SourceId::alt_registry(config, &registry)?;
-                        d.registry_index = Some(src.url().to_string());
+                        d.registry_index = Some(config.get_registry_index(&registry)?.to_string());
                     }
                     Ok(TomlDependency::Detailed(d))
                 }
