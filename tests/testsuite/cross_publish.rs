@@ -46,6 +46,7 @@ fn simple_cross_package() {
 [VERIFYING] foo v0.0.0 ([CWD])
 [COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -109,6 +110,7 @@ fn publish_with_target() {
 [VERIFYING] foo v0.0.0 ([CWD])
 [COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.0.0 ([CWD])
 [UPDATING] crates.io index
 ",

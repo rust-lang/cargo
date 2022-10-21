@@ -77,6 +77,7 @@ fn package_lockfile() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -135,6 +136,7 @@ src/main.rs
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo src/main.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -232,6 +234,7 @@ fn note_resolve_changes() {
 [UPDATING] `[..]` index
 [NOTE] package `multi v0.1.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/multi`
 [NOTE] package `patched v1.0.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/patched`
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -251,7 +254,12 @@ fn outdated_lock_version_change_does_not_warn() {
     p.change_file("Cargo.toml", &pl_manifest("foo", "0.2.0", ""));
 
     p.cargo("package --no-verify")
-        .with_stderr("[PACKAGING] foo v0.2.0 ([..])")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.2.0 ([..])
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
         .run();
 }
 
@@ -301,6 +309,7 @@ fn no_warn_workspace_extras() {
             "\
 [PACKAGING] a v0.1.0 ([..])
 [UPDATING] `[..]` index
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -334,6 +343,7 @@ fn warn_package_with_yanked() {
 [UPDATING] `[..]` index
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
     `crates-io`, consider updating to a version that is not yanked
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -450,6 +460,7 @@ src/main.rs
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo src/main.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -476,6 +487,7 @@ fn ignore_lockfile_inner() {
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
+[PACKAGED] 6 files, [..] ([..] compressed)
 ",
         )
         .run();

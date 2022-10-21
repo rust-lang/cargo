@@ -39,6 +39,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -77,6 +78,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -103,6 +105,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -129,6 +132,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -158,6 +162,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -198,6 +203,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -239,6 +245,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -488,6 +495,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] some_dir/file_deep_4
 [ARCHIVING] some_dir/file_deep_5
 [ARCHIVING] src/main.rs
+[PACKAGED] 15 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -555,6 +563,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] foo.txt
 [ARCHIVING] src/main.rs
+[PACKAGED] 7 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -708,6 +717,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -775,6 +785,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1788,6 +1799,7 @@ fn invalid_license_file_path() {
 Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
 This may become a hard error in the future.
 [PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1835,6 +1847,7 @@ subdir/LICENSE
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
 [ARCHIVING] subdir/LICENSE
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1891,6 +1904,7 @@ src/lib.rs
 [VERIFYING] foo v1.0.0 [..]
 [COMPILING] foo v1.0.0 [..]
 [FINISHED] [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1949,6 +1963,7 @@ src/lib.rs
 [VERIFYING] foo v1.0.0 [..]
 [COMPILING] foo v1.0.0 [..]
 [FINISHED] [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1994,6 +2009,7 @@ fn package_restricted_windows() {
 [PACKAGING] foo [..]
 [VERIFYING] foo [..]
 [COMPILING] foo [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [FINISHED] [..]
 ",
         )
@@ -2367,12 +2383,14 @@ See [..]
 [VERIFYING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] bar v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();

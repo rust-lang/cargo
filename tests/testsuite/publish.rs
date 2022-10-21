@@ -122,6 +122,7 @@ fn simple() {
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] [..]
 ",
@@ -176,6 +177,7 @@ fn old_token_location() {
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] [..]
 ",
@@ -213,6 +215,7 @@ fn simple_with_index() {
         .arg(registry.index_url().as_str())
         .with_stderr(
             "\
+[..]
 [..]
 [..]
 [..]
@@ -414,6 +417,7 @@ fn publish_clean() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
+[..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] [..]
 ",
@@ -457,6 +461,7 @@ fn publish_in_sub_repo() {
 [..]
 [..]
 [VERIFYING] foo v0.0.1 ([CWD])
+[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -504,6 +509,7 @@ fn publish_when_ignored() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
+[..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] [..]
 ",
@@ -546,6 +552,7 @@ fn ignore_when_crate_ignored() {
 [..]
 [..]
 [VERIFYING] foo v0.0.1 ([CWD])
+[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -622,6 +629,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
 [WARNING] aborting upload due to dry run
 ",
@@ -739,6 +747,7 @@ fn publish_allowed_registry() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
+[..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] `alternative` index
 ",
@@ -801,6 +810,7 @@ fn publish_implicitly_to_only_allowed_registry() {
 [UPDATING] `alternative` index
 [..]
 [VERIFYING] foo v0.0.1 ([CWD])
+[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -928,6 +938,7 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
+[..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] crates.io index
 ",
@@ -975,6 +986,7 @@ fn publish_with_select_features() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
+[..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] crates.io index
 ",
@@ -1020,6 +1032,7 @@ fn publish_with_all_features() {
 [..]
 [..]
 [VERIFYING] foo v0.0.1 ([CWD])
+[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -1132,6 +1145,7 @@ fn publish_with_patch() {
 [..]
 [..]
 [..]
+[..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] crates.io index
 ",
@@ -1217,6 +1231,7 @@ fn publish_checks_for_token_before_verify() {
 [..]
 [..]
 [VERIFYING] foo v0.0.1 ([CWD])
+[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 [..]
@@ -1334,6 +1349,7 @@ fn publish_git_with_version() {
         .replace_crates_io(registry.index_url())
         .with_stderr(
             "\
+[..]
 [..]
 [..]
 [..]
@@ -1466,6 +1482,7 @@ fn publish_dev_dep_no_version() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.1.0 [..]
 [UPDATING] crates.io index
 ",
@@ -1546,6 +1563,7 @@ fn credentials_ambiguous_filename() {
         .with_stderr(
             "\
 [WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
+[..]
 [..]
 [..]
 [..]
@@ -1653,6 +1671,7 @@ fn publish_with_missing_readme() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.1.0 [..]
 [ERROR] failed to read `readme` file for package `foo v0.1.0 ([ROOT]/foo)`
 
@@ -1704,6 +1723,7 @@ fn api_error_json() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 [..]
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -1751,6 +1771,7 @@ fn api_error_200() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 [..]
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -1798,6 +1819,7 @@ fn api_error_code() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 [..]
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -1853,6 +1875,7 @@ fn api_curl_error() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 [..]
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -1900,6 +1923,7 @@ fn api_other_error() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.0.1 [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 [..]
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -1959,6 +1983,7 @@ fn in_package_workspace() {
 [WARNING] manifest has no documentation, homepage or repository.
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
 [UPDATING] crates.io index
 ",
@@ -2065,6 +2090,7 @@ fn in_package_workspace_with_members_with_features_old() {
 [WARNING] manifest has no documentation, homepage or repository.
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
 [UPDATING] crates.io index
 ",
@@ -2156,6 +2182,7 @@ fn in_virtual_workspace_with_p() {
 [WARNING] manifest has no documentation, homepage or repository.
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
 [UPDATING] crates.io index
 ",
@@ -2342,6 +2369,7 @@ fn http_api_not_noop() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
+[..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPDATING] [..]
 ",
@@ -2423,6 +2451,7 @@ fn wait_for_publish() {
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] delay v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.1 ([CWD])
 [UPDATING] crates.io index
 [WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
@@ -2513,6 +2542,7 @@ fn wait_for_publish_underscore() {
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] delay_with_underscore v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay_with_underscore v0.0.1 ([CWD])
 [UPDATING] crates.io index
 [WAITING] on `delay_with_underscore` to propagate to crates.io index (ctrl-c to wait asynchronously)
@@ -2583,6 +2613,7 @@ fn skip_wait_for_publish() {
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
         )
