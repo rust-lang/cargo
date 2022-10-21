@@ -43,7 +43,7 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
             crate::drop_print!(
                 config,
                 "{}",
-                &toml::to_string_pretty(&vendor_config).unwrap()
+                &toml::to_string_pretty(&vendor_config).unwrap().trim_start()
             );
         }
     }
