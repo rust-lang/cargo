@@ -36,13 +36,19 @@ pub struct RemoteRegistry<'cfg> {
 
 impl<'cfg> RemoteRegistry<'cfg> {
     pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> RemoteRegistry<'cfg> {
+        let index_git_ref = if source_id.is_crates_io() {
+            // We only need HEAD or master, but GitHub has told us that asking for more is more efficient on their servers.
+            GitReference::Branch("*".to_owned())
+        } else {
+            // TODO: we should probably make this configurable
+            GitReference::DefaultBranch
+        };
         RemoteRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            // TODO: we should probably make this configurable
-            index_git_ref: GitReference::DefaultBranch,
+            index_git_ref,
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
@@ -97,7 +103,13 @@ impl<'cfg> RemoteRegistry<'cfg> {
     fn head(&self) -> CargoResult<git2::Oid> {
         if self.head.get().is_none() {
             let repo = self.repo()?;
-            let oid = self.index_git_ref.resolve(repo)?;
+            let oid = if self.source_id.is_crates_io() {
+                // GitReference::DefaultBranch gets HEAD directly,
+                // but our refsec only asked for branches so we need to look for master directly.
+                GitReference::Rev("refs/remotes/origin/master".to_owned()).resolve(repo)?
+            } else {
+                self.index_git_ref.resolve(repo)?
+            };
             self.head.set(Some(oid));
         }
         Ok(self.head.get().unwrap())
