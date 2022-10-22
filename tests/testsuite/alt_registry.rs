@@ -1337,3 +1337,51 @@ source = "sparse+http://[..]/"
 checksum = "f6a200a9339fef960979d94d5c99cbbfd899b6f5a396a55d9775089119050203""#,
     );
 }
+
+#[cargo_test]
+fn publish_with_transitive_dep() {
+    let _alt1 = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative_named("Alt-1")
+        .build();
+    let _alt2 = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative_named("Alt-2")
+        .build();
+
+    let p1 = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.5.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p1.cargo("publish -Zsparse-registry --registry Alt-1")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
+        .run();
+
+    let p2 = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.6.0"
+                publish = ["Alt-2"]
+
+                [dependencies]
+                a = { version = "0.5.0", registry = "Alt-1" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p2.cargo("publish -Zsparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
+        .run();
+}
