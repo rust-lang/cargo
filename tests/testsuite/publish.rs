@@ -325,7 +325,7 @@ fn unpublishable_crate() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
+`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
 ",
         )
         .run();
@@ -684,7 +684,7 @@ fn publish_empty_list() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-The registry `alternative` is not listed in the `publish` value in Cargo.toml.
+`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
 ",
         )
         .run();
@@ -848,7 +848,7 @@ fn block_publish_no_registry() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-The registry `alternative` is not listed in the `publish` value in Cargo.toml.
+`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
 ",
         )
         .run();
