@@ -134,7 +134,13 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         let reg_name = publish_registry
             .clone()
             .unwrap_or_else(|| CRATES_IO_REGISTRY.to_string());
-        if !allowed_registries.contains(&reg_name) {
+        if allowed_registries.is_empty() {
+            bail!(
+                "`{}` cannot be published.\n\
+                 `publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.",
+                pkg.name(),
+            );
+        } else if !allowed_registries.contains(&reg_name) {
             bail!(
                 "`{}` cannot be published.\n\
                  The registry `{}` is not listed in the `publish` value in Cargo.toml.",
