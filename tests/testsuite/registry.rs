@@ -2827,3 +2827,117 @@ internal server error
         )
         .run();
 }
+
+#[cargo_test]
+fn deleted_entry() {
+    // Checks the behavior when a package is removed from the index.
+    // This is done occasionally on crates.io to handle things like
+    // copyright takedowns.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // First, test removing a single version, but leaving an older version.
+    Package::new("bar", "0.1.0").publish();
+    let bar_path = Path::new("3/b/bar");
+    let bar_reg_path = registry_path().join(&bar_path);
+    let old_index = fs::read_to_string(&bar_reg_path).unwrap();
+    Package::new("bar", "0.1.1").publish();
+    p.cargo("tree")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.1 (registry `dummy-registry`)
+",
+        )
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+└── bar v0.1.1
+",
+        )
+        .run();
+
+    // Remove 0.1.1
+    fs::remove_file(paths::root().join("dl/bar/0.1.1/download")).unwrap();
+    let repo = git2::Repository::open(registry_path()).unwrap();
+    let mut index = repo.index().unwrap();
+    fs::write(&bar_reg_path, &old_index).unwrap();
+    index.add_path(&bar_path).unwrap();
+    index.write().unwrap();
+    git::commit(&repo);
+
+    // With `Cargo.lock` unchanged, it shouldn't have an impact.
+    p.cargo("tree")
+        .with_stderr("")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+└── bar v0.1.1
+",
+        )
+        .run();
+
+    // Regenerating Cargo.lock should switch to old version.
+    fs::remove_file(p.root().join("Cargo.lock")).unwrap();
+    p.cargo("tree")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+",
+        )
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+└── bar v0.1.0
+",
+        )
+        .run();
+
+    // Remove the package entirely.
+    fs::remove_file(paths::root().join("dl/bar/0.1.0/download")).unwrap();
+    let mut index = repo.index().unwrap();
+    index.remove(&bar_path, 0).unwrap();
+    index.write().unwrap();
+    git::commit(&repo);
+    fs::remove_file(&bar_reg_path).unwrap();
+
+    // With `Cargo.lock` unchanged, it shouldn't have an impact.
+    p.cargo("tree")
+        .with_stderr("")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+└── bar v0.1.0
+",
+        )
+        .run();
+
+    // Regenerating Cargo.lock should fail.
+    fs::remove_file(p.root().join("Cargo.lock")).unwrap();
+    p.cargo("tree")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+error: no matching package named `bar` found
+location searched: registry `crates-io`
+required by package `foo v0.1.0 ([ROOT]/foo)`
+",
+        )
+        .with_status(101)
+        .run();
+}
