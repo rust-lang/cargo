@@ -581,7 +581,6 @@ impl Summaries {
                 return Poll::Ready(Ok(cached_summaries));
             }
             LoadResponse::NotFound => {
-                debug_assert!(cached_summaries.is_none());
                 if let Err(e) = fs::remove_file(cache_path) {
                     if e.kind() != ErrorKind::NotFound {
                         log::debug!("failed to remove from cache: {}", e);
