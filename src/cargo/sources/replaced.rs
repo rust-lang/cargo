@@ -100,11 +100,17 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     }
 
     fn describe(&self) -> String {
-        format!(
-            "{} (which is replacing {})",
-            self.inner.describe(),
-            self.to_replace
-        )
+        if self.replace_with.is_crates_io() && self.to_replace.is_crates_io() {
+            // Built-in source replacement of crates.io for sparse registry or tests
+            // doesn't need duplicate description (crates.io replacing crates.io).
+            self.inner.describe()
+        } else {
+            format!(
+                "{} (which is replacing {})",
+                self.inner.describe(),
+                self.to_replace
+            )
+        }
     }
 
     fn is_replaced(&self) -> bool {

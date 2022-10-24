@@ -428,7 +428,10 @@ impl SourceId {
         let url = self.inner.url.as_str();
         url == CRATES_IO_INDEX
             || url == CRATES_IO_HTTP_INDEX
-            || std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS").as_deref() == Ok(url)
+            || std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS")
+                .as_deref()
+                .map(|u| u.trim_start_matches("sparse+"))
+                == Ok(url)
     }
 
     /// Hashes `self`.

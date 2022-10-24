@@ -2319,13 +2319,13 @@ fn wait_for_publish() {
         .with_status(0)
         .with_stderr(
             "\
-[UPDATING] `crates-io` index
+[UPDATING] crates.io index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] delay v0.0.1 ([CWD])
 [UPLOADING] delay v0.0.1 ([CWD])
-[UPDATING] `crates-io` index
-[WAITING] on `delay` to propagate to `crates-io` index (which is replacing registry `crates-io`) (ctrl-c to wait asynchronously)
+[UPDATING] crates.io index
+[WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
 ",
         )
         .run();
@@ -2416,13 +2416,13 @@ fn wait_for_publish_underscore() {
         .with_status(0)
         .with_stderr(
             "\
-[UPDATING] `crates-io` index
+[UPDATING] crates.io index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] delay_with_underscore v0.0.1 ([CWD])
 [UPLOADING] delay_with_underscore v0.0.1 ([CWD])
-[UPDATING] `crates-io` index
-[WAITING] on `delay_with_underscore` to propagate to `crates-io` index (which is replacing registry `crates-io`) (ctrl-c to wait asynchronously)
+[UPDATING] crates.io index
+[WAITING] on `delay_with_underscore` to propagate to crates.io index (ctrl-c to wait asynchronously)
 ",
         )
         .run();
