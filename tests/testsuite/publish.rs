@@ -655,7 +655,7 @@ fn registry_not_in_publish_list() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-The registry `alternative` is not listed in the `publish` value in Cargo.toml.
+The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 ",
         )
         .run();
@@ -819,7 +819,7 @@ fn publish_fail_with_no_registry_specified() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
+The registry `crates-io` is not listed in the `package.publish` value in Cargo.toml.
 ",
         )
         .run();
@@ -880,7 +880,7 @@ fn publish_with_crates_io_explicit() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-The registry `alternative` is not listed in the `publish` value in Cargo.toml.
+The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 ",
         )
         .run();

@@ -143,7 +143,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         } else if !allowed_registries.contains(&reg_name) {
             bail!(
                 "`{}` cannot be published.\n\
-                 The registry `{}` is not listed in the `publish` value in Cargo.toml.",
+                 The registry `{}` is not listed in the `package.publish` value in Cargo.toml.",
                 pkg.name(),
                 reg_name
             );
