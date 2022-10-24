@@ -52,6 +52,21 @@ In this tree, \fBmyproject\fR depends on \fBlog\fR with the \fBserde\fR feature.
 turn depends on \fBcfg\-if\fR with "default" features. When using \fB\-e features\fR it
 can be helpful to use \fB\-i\fR flag to show how the features flow into a package.
 See the examples below for more detail.
+.SS "Feature Unification"
+This command shows a graph much closer to a feature\-unified graph Cargo will
+build, rather than what you list in \fBCargo.toml\fR\&. For instance, if you specify
+the same dependency in both \fB[dependencies]\fR and \fB[dev\-dependencies]\fR but with
+different features on. This command may merge all features and show a \fB(*)\fR on
+one of the dependency to indicate the duplicate.
+.sp
+As a result, for a mostly equivalent overview of what \fBcargo build\fR does,
+\fBcargo tree \-e normal,build\fR is pretty close; for a mostly equivalent overview
+of what \fBcargo test\fR does, \fBcargo tree\fR is pretty close. However, it doesn't
+guarantee the exact equivalence to what Cargo is going to build, since a
+compilation is complex and depends on lots of different factors.
+.sp
+To learm more about feature unification, check out this
+\fIdedicated section\fR <https://doc.rust\-lang.org/cargo/reference/features.html#feature\-unification>\&.
 .SH "OPTIONS"
 .SS "Tree Options"
 .sp
