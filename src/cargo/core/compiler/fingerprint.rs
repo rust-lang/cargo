@@ -1194,7 +1194,7 @@ impl StaleItem {
             } => {
                 info!("stale: changed {:?}", stale);
                 info!("          (vs) {:?}", reference);
-                info!("               {:?} != {:?}", reference_mtime, stale_mtime);
+                info!("               {:?} < {:?}", reference_mtime, stale_mtime);
             }
             StaleItem::ChangedEnv {
                 var,
