@@ -235,7 +235,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                 result.with_context(|| format!("failed to download from `{}`", url))?;
                 let code = handle.response_code()?;
                 // Keep this list of expected status codes in sync with the codes handled in `load`
-                if !matches!(code, 200 | 304 | 401 | 404 | 451) {
+                if !matches!(code, 200 | 304 | 410 | 404 | 451) {
                     let url = handle.effective_url()?.unwrap_or(&url);
                     return Err(HttpNotSuccessful {
                         code,
