@@ -123,7 +123,7 @@ fn run_command(
 
     let mut cmd = Command::new(&exe);
     cmd.args(args)
-        .env("CARGO", config.cargo_exe()?)
+        .env(crate::CARGO_ENV, config.cargo_exe()?)
         .env("CARGO_REGISTRY_NAME", name)
         .env("CARGO_REGISTRY_API_URL", api_url);
     match action {

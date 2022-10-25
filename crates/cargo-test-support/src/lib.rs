@@ -410,8 +410,10 @@ impl Project {
     /// Example:
     ///     p.cargo("build --bin foo").run();
     pub fn cargo(&self, cmd: &str) -> Execs {
-        let mut execs = self.process(&cargo_exe());
+        let cargo = cargo_exe();
+        let mut execs = self.process(&cargo);
         if let Some(ref mut p) = execs.process_builder {
+            p.env("CARGO", cargo);
             p.arg_line(cmd);
         }
         execs
@@ -1328,7 +1330,9 @@ impl ArgLine for snapbox::cmd::Command {
 }
 
 pub fn cargo_process(s: &str) -> Execs {
-    let mut p = process(&cargo_exe());
+    let cargo = cargo_exe();
+    let mut p = process(&cargo);
+    p.env("CARGO", cargo);
     p.arg_line(s);
     execs().with_process_builder(p)
 }

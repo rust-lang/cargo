@@ -23,6 +23,12 @@ system:
 * `CARGO_TARGET_DIR` — Location of where to place all generated artifacts,
   relative to the current working directory. See [`build.target-dir`] to set
   via config.
+* `CARGO` - If set, Cargo will forward this value instead of setting it
+  to its own auto-detected path when it builds crates and when it
+  executes build scripts and external subcommands. This value is not
+  directly executed by Cargo, and should always point at a command that
+  behaves exactly like `cargo`, as that's what users of the variable
+  will be expecting.
 * `RUSTC` — Instead of running `rustc`, Cargo will execute this specified
   compiler instead. See [`build.rustc`] to set via config.
 * `RUSTC_WRAPPER` — Instead of simply running `rustc`, Cargo will execute this
