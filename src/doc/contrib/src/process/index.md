@@ -95,18 +95,19 @@ implemented.
 The Cargo project uses several bots:
 
 * [GitHub Actions] are used to automatically run all tests for each PR.
-* [rust-highfive] automatically assigns reviewers for PRs.
+* [triagebot] automatically assigns reviewers for PRs, see [Assignment] for
+  how to configure.
 * [bors] is used to merge PRs. See [The merging process].
 * [triagebot] is used for assigning issues to non-members, see [Issue
   assignment](#issue-assignment).
 * [rfcbot] is used for making asynchronous decisions by team members.
 
-[rust-highfive]: https://github.com/rust-highfive
 [bors]: https://buildbot2.rust-lang.org/homu/
 [The merging process]: working-on-cargo.md#the-merging-process
 [GitHub Actions]: https://github.com/features/actions
 [triagebot]: https://github.com/rust-lang/triagebot/wiki
 [rfcbot]: https://github.com/rust-lang/rfcbot-rs
+[Assignment]: https://github.com/rust-lang/triagebot/wiki/Assignment
 
 ## Issue assignment
 
