@@ -416,7 +416,7 @@ fn activate_deps_loop(
                     // global cache which lists sets of packages where, when
                     // activated, the dependency is unresolvable.
                     //
-                    // If any our our frame's dependencies fit in that bucket,
+                    // If any our frame's dependencies fit in that bucket,
                     // aka known unresolvable, then we extend our own set of
                     // conflicting activations with theirs. We can do this
                     // because the set of conflicts we found implies the

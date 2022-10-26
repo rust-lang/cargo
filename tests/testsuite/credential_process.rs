@@ -139,7 +139,7 @@ Only one of these values may be set, remove one or the other to proceed.
 /// * Create a simple `foo` project to run the test against.
 /// * Configure the credential-process config.
 ///
-/// Returns returns the simple `foo` project to test against and the API server handle.
+/// Returns the simple `foo` project to test against and the API server handle.
 fn get_token_test() -> (Project, TestRegistry) {
     // API server that checks that the token is included correctly.
     let server = registry::RegistryBuilder::new()

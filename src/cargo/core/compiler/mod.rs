@@ -1436,7 +1436,7 @@ fn on_stderr_line_inner(
                 let rendered = if options.color {
                     msg.rendered
                 } else {
-                    // Strip only fails if the the Writer fails, which is Cursor
+                    // Strip only fails if the Writer fails, which is Cursor
                     // on a Vec, which should never fail.
                     strip_ansi_escapes::strip(&msg.rendered)
                         .map(|v| String::from_utf8(v).expect("utf8"))

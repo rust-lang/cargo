@@ -272,7 +272,7 @@ impl<'cfg> Timings<'cfg> {
             Some(state) => state,
             None => return,
         };
-        // Don't take samples too too frequently, even if requested.
+        // Don't take samples too frequently, even if requested.
         let now = Instant::now();
         if self.last_cpu_recording.elapsed() < Duration::from_millis(100) {
             return;

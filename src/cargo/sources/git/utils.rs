@@ -808,7 +808,7 @@ pub fn fetch(
 
     // We reuse repositories quite a lot, so before we go through and update the
     // repo check to see if it's a little too old and could benefit from a gc.
-    // In theory this shouldn't be too too expensive compared to the network
+    // In theory this shouldn't be too expensive compared to the network
     // request we're about to issue.
     maybe_gc_repo(repo)?;
 

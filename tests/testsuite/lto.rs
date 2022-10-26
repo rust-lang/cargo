@@ -482,7 +482,7 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
 fn cdylib_and_rlib() {
     let p = project_with_dep("'cdylib', 'rlib'");
     let output = p.cargo("build --release -v").exec_with_output().unwrap();
-    // `registry` is ObjectAndBitcode because because it needs Object for the
+    // `registry` is ObjectAndBitcode because it needs Object for the
     // rlib, and Bitcode for the cdylib (which doesn't support LTO).
     verify_lto(
         &output,

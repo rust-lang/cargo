@@ -636,7 +636,7 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     // it from backups, then rename it to the desired name. If we created the
     // directory directly where it should be and then excluded it from backups
     // we would risk a situation where cargo is interrupted right after the directory
-    // creation but before the exclusion the the directory would remain non-excluded from
+    // creation but before the exclusion the directory would remain non-excluded from
     // backups because we only perform exclusion right after we created the directory
     // ourselves.
     //
@@ -651,7 +651,7 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     // the directory being created concurrently by another thread or process as success,
     // hence the check below to follow the existing behavior. If we get an error at
     // rename() and suddently the directory (which didn't exist a moment earlier) exists
-    // we can infer from it it's another cargo process doing work.
+    // we can infer from it's another cargo process doing work.
     if let Err(e) = fs::rename(tempdir.path(), path) {
         if !path.exists() {
             return Err(anyhow::Error::from(e));
