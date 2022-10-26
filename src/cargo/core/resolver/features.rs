@@ -57,6 +57,9 @@ type ActivateMap = HashMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 /// Set of all activated features for all packages in the resolve graph.
 pub struct ResolvedFeatures {
     /// Map of features activated for each package.
+    ///
+    /// The presence of each key also means the package itself is activated,
+    /// even its associated set contains no features.
     activated_features: ActivateMap,
     /// Options that change how the feature resolver operates.
     opts: FeatureOpts,
@@ -406,8 +409,14 @@ pub struct FeatureResolver<'a, 'cfg> {
     /// Options that change how the feature resolver operates.
     opts: FeatureOpts,
     /// Map of features activated for each package.
+    ///
+    /// The presence of each key also means the package itself is activated,
+    /// even its associated set contains no features.
     activated_features: ActivateMap,
     /// Map of optional dependencies activated for each package.
+    ///
+    /// The key is the package having their dependencies activated.
+    /// The value comes from `dep_name` part of the feature syntax `dep:dep_name`.
     activated_dependencies: ActivateMap,
     /// Keeps track of which packages have had its dependencies processed.
     /// Used to avoid cycles, and to speed up processing.
@@ -497,10 +506,10 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         Ok(())
     }
 
-    /// Activates [`FeatureValue`]s on the given package.
+    /// Activates a list of [`FeatureValue`] for a given package.
     ///
-    /// This is the main entrance into the recursion of feature activation
-    /// for a package.
+    /// This is the main entrance into the recursion of feature activation for a package.
+    /// Other `activate_*` functions would be called inside this function accordingly.
     fn activate_pkg(
         &mut self,
         pkg_id: PackageId,
@@ -508,9 +517,13 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         fvs: &[FeatureValue],
     ) -> CargoResult<()> {
         log::trace!("activate_pkg {} {}", pkg_id.name(), fk);
-        // Add an empty entry to ensure everything is covered. This is intended for
-        // finding bugs where the resolver missed something it should have visited.
-        // Remove this in the future if `activated_features` uses an empty default.
+        // Cargo must insert an empty set here as the presence of an (empty) set
+        // also means that the dependency is activated.
+        // This `is_activated` behavior for dependencies was previously depends on field
+        // `activated_dependencies`, which is less useful after rust-lang/cargo#11183.
+        //
+        // That is, we may keep or remove `activated_dependencies` in the future
+        // if figuring out it can completely be replaced with `activated_features`.
         self.activated_features
             .entry((pkg_id, fk.apply_opts(&self.opts)))
             .or_insert_with(BTreeSet::new);
