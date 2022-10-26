@@ -81,6 +81,15 @@ impl CfgExpr {
         }
     }
 
+    pub fn is_valid_key(key: &str) -> bool {
+        if key.starts_with("cfg(") && key.ends_with(')') {
+            let cfg = &key[4..key.len() - 1];
+            CfgExpr::from_str(cfg).is_ok()
+        } else {
+            false
+        }
+    }
+
     pub fn matches(&self, cfg: &[Cfg]) -> bool {
         match *self {
             CfgExpr::Not(ref e) => !e.matches(cfg),

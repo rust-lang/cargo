@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
@@ -398,6 +398,7 @@ fn target_runner(
         return Ok(Some((path, v.args)));
     }
 
+    let mut invalid_cfgs: HashSet<String> = HashSet::default();
     // try target.'cfg(...)'.runner
     let target_cfg = bcx.target_data.info(kind).cfg();
     let mut cfgs = bcx
@@ -405,7 +406,14 @@ fn target_runner(
         .target_cfgs()?
         .iter()
         .filter_map(|(key, cfg)| cfg.runner.as_ref().map(|runner| (key, runner)))
-        .filter(|(key, _runner)| CfgExpr::matches_key(key, target_cfg));
+        .filter(|(key, _runner)| {
+            if !CfgExpr::is_valid_key(key) {
+                invalid_cfgs.insert(key.to_string());
+                return false;
+            }
+            CfgExpr::matches_key(key, target_cfg)
+        });
+
     let matching_runner = cfgs.next();
     if let Some((key, runner)) = cfgs.next() {
         anyhow::bail!(
@@ -417,6 +425,13 @@ fn target_runner(
             key,
             runner.definition
         );
+    }
+    if !invalid_cfgs.is_empty() {
+        bcx.config.shell().warn(format!(
+            "invalid target configuration key{}: {}",
+            if invalid_cfgs.len() == 1 { "" } else { "s" },
+            invalid_cfgs.into_iter().collect::<Vec<_>>().join(", ")
+        ))?;
     }
     Ok(matching_runner.map(|(_k, runner)| {
         (
