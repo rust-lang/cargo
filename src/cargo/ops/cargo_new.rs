@@ -261,6 +261,18 @@ fn check_name(
     Ok(())
 }
 
+/// Checks if the path contains any invalid PATH env characters.
+fn check_path(path: &Path, shell: &mut Shell) -> CargoResult<()> {
+    if path.to_string_lossy().contains(&[';', ':', '"'][..]) {
+        shell.warn(format!(
+            "the path `{}` contains invalid PATH characters (usually `:`, `;`, or `\"`)\n\
+            It is recommended to use a different name to avoid problems.",
+            path.to_string_lossy()
+        ))?;
+    }
+    Ok(())
+}
+
 fn detect_source_paths_and_types(
     package_path: &Path,
     package_name: &str,
@@ -421,6 +433,8 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     }
 
+    check_path(path, &mut config.shell())?;
+
     let is_bin = opts.kind.is_bin();
 
     let name = get_name(path, opts)?;
@@ -457,6 +471,8 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     if path.join("Cargo.toml").exists() {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
+
+    check_path(path, &mut config.shell())?;
 
     let name = get_name(path, opts)?;
 

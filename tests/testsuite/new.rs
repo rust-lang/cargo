@@ -529,3 +529,17 @@ Caused by:
         )
         .run();
 }
+
+#[cfg(unix)]
+#[cargo_test]
+fn path_with_invalid_character() {
+    cargo_process("new --name testing test:ing")
+        .with_stderr(
+            "\
+[WARNING] the path `[CWD]/test:ing` contains invalid PATH characters (usually `:`, `;`, or `\"`)
+It is recommended to use a different name to avoid problems.
+[CREATED] binary (application) `testing` package
+",
+        )
+        .run();
+}

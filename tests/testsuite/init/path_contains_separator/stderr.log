@@ -1,0 +1,3 @@
+warning: the path `[ROOT]/case/test:ing/.` contains PATH separators (usually `:` or `:`)
+It is recommended to use a different name to avoid problems.
+     Created binary (application) package
