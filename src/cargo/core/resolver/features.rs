@@ -67,7 +67,7 @@ pub struct ResolvedFeatures {
 /// Options for how the feature resolver works.
 #[derive(Default)]
 pub struct FeatureOpts {
-    /// Build deps and proc-macros will not share share features with other dep kinds,
+    /// Build deps and proc-macros will not share features with other dep kinds,
     /// and so won't artifact targets.
     /// In other terms, if true, features associated with certain kinds of dependencies
     /// will only be unified together.

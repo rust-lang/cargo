@@ -1493,7 +1493,7 @@ fn build_script_local_fingerprints(
                     // figure out a better scheme where a package fingerprint
                     // may be a string (like for a registry) or a list of files
                     // (like for a path dependency). Those list of files would
-                    // be stored here rather than the the mtime of them.
+                    // be stored here rather than the mtime of them.
                     Some(f) => {
                         let s = f()?;
                         debug!(
