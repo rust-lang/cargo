@@ -333,6 +333,7 @@ fn config_configure(
     let frozen = args.flag("frozen") || global_args.frozen;
     let locked = args.flag("locked") || global_args.locked;
     let offline = args.flag("offline") || global_args.offline;
+    let absolute_paths = args.flag("absolute-paths") || global_args.offline;
     let mut unstable_flags = global_args.unstable_flags;
     if let Some(values) = args.get_many::<String>("unstable-features") {
         unstable_flags.extend(values.cloned());
@@ -351,6 +352,7 @@ fn config_configure(
         arg_target_dir,
         &unstable_flags,
         &config_args,
+        absolute_paths,
     )?;
     Ok(())
 }
@@ -470,6 +472,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(flag("frozen", "Require Cargo.lock and cache are up to date").global(true))
         .arg(flag("locked", "Require Cargo.lock is up to date").global(true))
         .arg(flag("offline", "Run without accessing the network").global(true))
+        .arg(flag("absolute-paths", "Use absolute paths when calling rust").global(true))
         .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
         .arg(
             Arg::new("unstable-features")

@@ -90,6 +90,7 @@ impl ConfigBuilder {
             &None,
             &self.unstable,
             &self.config_args,
+            false,
         )?;
         Ok(config)
     }

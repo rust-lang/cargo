@@ -224,3 +224,26 @@ dependencies; the dependency on `baz` was either added or\
         )
         .run();
 }
+
+#[cargo_test]
+fn absolute_path_tests() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() { failure }")
+        .build();
+
+    println!("{}", foo.root().to_str().unwrap());
+    foo.cargo("--absolute-paths build")
+        .with_stderr_contains("[..]--> [ROOT]/foo/src/main.rs:1:13[..]")
+        .with_stderr_contains("[COMPILING] foo v0.0.1 ([ROOT]/foo)")
+        .with_status(101)
+        .run();
+}

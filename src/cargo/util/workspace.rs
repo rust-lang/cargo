@@ -116,8 +116,12 @@ pub fn path_args(ws: &Workspace<'_>, unit: &Unit) -> (PathBuf, PathBuf) {
     };
     assert!(src.is_absolute());
     if unit.pkg.package_id().source_id().is_path() {
-        if let Ok(path) = src.strip_prefix(ws_root) {
-            return (path.to_path_buf(), ws_root.to_path_buf());
+        if ws.config().absolute_paths() {
+            return (src, ws_root.to_path_buf());
+        } else {
+            if let Ok(path) = src.strip_prefix(ws_root) {
+                return (path.to_path_buf(), ws_root.to_path_buf());
+            }
         }
     }
     (src, unit.pkg.root().to_path_buf())

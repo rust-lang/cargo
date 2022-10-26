@@ -200,6 +200,8 @@ pub struct Config {
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
     env_config: LazyCell<EnvConfig>,
+    /// Use absolute paths when invoking rustc
+    absolute_paths: bool,
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
@@ -274,6 +276,7 @@ impl Config {
             frozen: false,
             locked: false,
             offline: false,
+            absolute_paths: false,
             jobserver: unsafe {
                 if GLOBAL_JOBSERVER.is_null() {
                     None
@@ -896,6 +899,7 @@ impl Config {
         target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
         cli_config: &[String],
+        absolute_paths: bool,
     ) -> CargoResult<()> {
         for warning in self
             .unstable_flags
@@ -961,6 +965,7 @@ impl Config {
                 .and_then(|n| n.offline)
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
+        self.absolute_paths = absolute_paths;
 
         self.load_unstable_flags_from_config()?;
 
@@ -1012,6 +1017,10 @@ impl Config {
 
     pub fn lock_update_allowed(&self) -> bool {
         !self.frozen && !self.locked
+    }
+
+    pub fn absolute_paths(&self) -> bool {
+        self.absolute_paths
     }
 
     /// Loads configuration from the filesystem.
