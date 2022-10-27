@@ -643,6 +643,9 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.useragent(&format!("cargo {}", version()))?;
     }
 
+    // Empty string accept encoding expands to the encodings supported by the current libcurl.
+    handle.accept_encoding("")?;
+
     fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
         let version = match s {
             "default" => SslVersion::Default,
