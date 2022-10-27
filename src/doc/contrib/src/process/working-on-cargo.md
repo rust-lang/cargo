@@ -110,7 +110,7 @@ open a Pull Request
   #1234 to the PR. When the PR is merged, GitHub will automatically close the
   issue.
 
-The [rust-highfive] bot will automatically assign a reviewer for the PR. It
+[`@rustbot`] will automatically assign a reviewer for the PR. It
 may take at least a few days for someone to respond. If you don't get a
 response in over a week, feel free to ping the assigned reviewer.
 
@@ -162,7 +162,6 @@ more information on how Cargo releases are made.
 [how-to-clone]: https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository
 [Testing chapter]: ../tests/index.md
 [GitHub's keywords]: https://docs.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
-[rust-highfive]: https://github.com/rust-highfive
 [bors]: https://buildbot2.rust-lang.org/homu/
 [`@bors`]: https://github.com/bors
 [homu-cargo]: https://buildbot2.rust-lang.org/homu/queue/cargo
