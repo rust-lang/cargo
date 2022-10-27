@@ -18,18 +18,18 @@ use tempfile::Builder as TempFileBuilder;
 /// environment variable this is will be used for, which is included in the
 /// error message.
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> Result<OsString> {
-    env::join_paths(paths.iter())
-        .with_context(|| {
-            let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
-            format!("failed to join path array: {:?}", paths)
-        })
-        .with_context(|| {
-            format!(
-                "failed to join search paths together\n\
-                     Does ${} have an unterminated quote character?",
-                env
-            )
-        })
+    env::join_paths(paths.iter()).with_context(|| {
+        let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
+        format!(
+            "failed to join paths from `${}` together\
+                 \n    \
+                 If you set `${}` manually, check if it contains an unterminated quote character \
+                 or path separators (usually `:` or `:`). Please avoid using them.\
+                 \n\n    \
+                 Otherwise, check if any of paths listed contain one of those characters: {:?}",
+            env, env, paths
+        )
+    })
 }
 
 /// Returns the name of the environment variable used for searching for
