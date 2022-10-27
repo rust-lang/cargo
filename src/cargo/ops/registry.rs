@@ -192,7 +192,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.dry_run,
     )?;
     if !opts.dry_run {
-        const DEFAULT_TIMEOUT: u64 = 0;
+        const DEFAULT_TIMEOUT: u64 = 60;
         let timeout = if opts.config.cli_unstable().publish_timeout {
             let timeout: Option<u64> = opts.config.get("publish.timeout")?;
             timeout.unwrap_or(DEFAULT_TIMEOUT)

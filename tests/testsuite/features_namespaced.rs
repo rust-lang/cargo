@@ -858,7 +858,9 @@ bar v1.0.0
 
 #[cargo_test]
 fn publish_no_implicit() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
+
     // Does not include implicit features or dep: syntax on publish.
     Package::new("opt-dep1", "1.0.0").publish();
     Package::new("opt-dep2", "1.0.0").publish();
@@ -885,6 +887,15 @@ fn publish_no_implicit() {
         .file("src/lib.rs", "")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -892,6 +903,7 @@ fn publish_no_implicit() {
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();
@@ -971,7 +983,9 @@ feat = ["opt-dep1"]
 
 #[cargo_test]
 fn publish() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
+
     // Publish behavior with explicit dep: syntax.
     Package::new("bar", "1.0.0").publish();
     let p = project()
@@ -997,6 +1011,15 @@ fn publish() {
         .file("src/lib.rs", "")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -1007,6 +1030,7 @@ fn publish() {
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();

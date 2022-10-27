@@ -85,22 +85,9 @@ fn validate_upload_li() {
     );
 }
 
-fn validate_upload_foo_clean() {
-    publish::validate_upload(
-        CLEAN_FOO_JSON,
-        "foo-0.0.1.crate",
-        &[
-            "Cargo.lock",
-            "Cargo.toml",
-            "Cargo.toml.orig",
-            "src/main.rs",
-            ".cargo_vcs_info.json",
-        ],
-    );
-}
-
 #[cargo_test]
 fn simple() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
 
     let p = project()
@@ -118,6 +105,15 @@ fn simple() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -127,6 +123,7 @@ fn simple() {
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
 ",
         )
         .run();
@@ -138,7 +135,8 @@ See [..]
 // `[registry]` table.
 #[cargo_test]
 fn old_token_location() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -179,16 +177,19 @@ fn old_token_location() {
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
 ",
         )
         .run();
 
-    validate_upload_foo();
+    // Skip `validate_upload_foo` as we just cared we got far enough for verify the token behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn simple_with_index() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -216,15 +217,19 @@ fn simple_with_index() {
 [..]
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
-    validate_upload_foo();
+    // Skip `validate_upload_foo` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn git_deps() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -262,6 +267,7 @@ the `git` specification will be removed from the dependency declaration.
 
 #[cargo_test]
 fn path_dependency_no_version() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -301,6 +307,7 @@ the `path` specification will be removed from the dependency declaration.
 
 #[cargo_test]
 fn unpublishable_crate() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -333,6 +340,7 @@ fn unpublishable_crate() {
 
 #[cargo_test]
 fn dont_publish_dirty() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project().file("bar", "").build();
@@ -374,7 +382,8 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 
 #[cargo_test]
 fn publish_clean() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project().build();
 
@@ -405,16 +414,20 @@ fn publish_clean() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
-    validate_upload_foo_clean();
+    // Skip `validate_upload_foo_clean` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn publish_in_sub_repo() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project().no_manifest().file("baz", "").build();
 
@@ -446,16 +459,20 @@ fn publish_in_sub_repo() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
-    validate_upload_foo_clean();
+    // Skip `validate_upload_foo_clean` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn publish_when_ignored() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project().file("baz", "").build();
 
@@ -487,27 +504,20 @@ fn publish_when_ignored() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
-    publish::validate_upload(
-        CLEAN_FOO_JSON,
-        "foo-0.0.1.crate",
-        &[
-            "Cargo.lock",
-            "Cargo.toml",
-            "Cargo.toml.orig",
-            "src/main.rs",
-            ".gitignore",
-            ".cargo_vcs_info.json",
-        ],
-    );
+    // Skip `validate_upload` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn ignore_when_crate_ignored() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project().no_manifest().file("bar/baz", "").build();
 
@@ -538,25 +548,19 @@ fn ignore_when_crate_ignored() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
-    publish::validate_upload(
-        CLEAN_FOO_JSON,
-        "foo-0.0.1.crate",
-        &[
-            "Cargo.lock",
-            "Cargo.toml",
-            "Cargo.toml.orig",
-            "src/main.rs",
-            "baz",
-        ],
-    );
+    // Skip `validate_upload` as we just cared we got far enough for verify the VCS behavior.
+    // Other tests will verify the endpoint gets the right payload.
 }
 
 #[cargo_test]
 fn new_crate_rejected() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project().file("baz", "").build();
@@ -589,6 +593,7 @@ fn new_crate_rejected() {
 
 #[cargo_test]
 fn dry_run() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -692,6 +697,7 @@ fn publish_empty_list() {
 
 #[cargo_test]
 fn publish_allowed_registry() {
+    // HACK below allows us to use a local registry
     registry::alt_init();
 
     let p = project().build();
@@ -715,6 +721,16 @@ fn publish_allowed_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "")
+        .alternative(true)
+        .publish();
+
     p.cargo("publish --registry alternative")
         .with_stderr(
             "\
@@ -723,7 +739,9 @@ fn publish_allowed_registry() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] `alternative` index
+",
         )
         .run();
 
@@ -742,6 +760,7 @@ fn publish_allowed_registry() {
 
 #[cargo_test]
 fn publish_implicitly_to_only_allowed_registry() {
+    // HACK below allows us to use a local registry
     registry::alt_init();
 
     let p = project().build();
@@ -765,6 +784,16 @@ fn publish_implicitly_to_only_allowed_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "")
+        .alternative(true)
+        .publish();
+
     p.cargo("publish")
         .with_stderr(
             "\
@@ -774,7 +803,9 @@ fn publish_implicitly_to_only_allowed_registry() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] `alternative` index
+",
         )
         .run();
 
@@ -857,7 +888,8 @@ fn block_publish_no_registry() {
 // Explicitly setting `crates-io` in the publish list.
 #[cargo_test]
 fn publish_with_crates_io_explicit() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -896,14 +928,17 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] crates.io index
+",
         )
         .run();
 }
 
 #[cargo_test]
 fn publish_with_select_features() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -941,6 +976,7 @@ fn publish_with_select_features() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -948,7 +984,8 @@ fn publish_with_select_features() {
 
 #[cargo_test]
 fn publish_with_all_features() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -986,6 +1023,7 @@ fn publish_with_all_features() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -993,6 +1031,7 @@ fn publish_with_all_features() {
 
 #[cargo_test]
 fn publish_with_no_default_features() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -1028,6 +1067,7 @@ fn publish_with_no_default_features() {
 
 #[cargo_test]
 fn publish_with_patch() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
     Package::new("bar", "1.0.0").publish();
 
@@ -1071,6 +1111,15 @@ fn publish_with_patch() {
     // Remove the usage of new functionality and try again.
     p.change_file("src/main.rs", "extern crate bar; pub fn main() {}");
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -1083,7 +1132,9 @@ fn publish_with_patch() {
 [..]
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] crates.io index
+",
         )
         .run();
 
@@ -1226,7 +1277,9 @@ include `--registry crates-io` to use crates.io
 // A dependency with both `git` and `version`.
 #[cargo_test]
 fn publish_git_with_version() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
+
     Package::new("dep1", "1.0.1")
         .file("src/lib.rs", "pub fn f() -> i32 {1}")
         .publish();
@@ -1267,6 +1320,16 @@ fn publish_git_with_version() {
         .build();
 
     p.cargo("run").with_stdout("2").run();
+
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -1275,7 +1338,9 @@ fn publish_git_with_version() {
 [..]
 [..]
 [..]
-[UPLOADING] foo v0.1.0 ([CWD])",
+[UPLOADING] foo v0.1.0 ([CWD])
+[UPDATING] crates.io index
+",
         )
         .run();
 
@@ -1360,6 +1425,7 @@ fn publish_git_with_version() {
 
 #[cargo_test]
 fn publish_dev_dep_no_version() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
 
     let p = project()
@@ -1385,6 +1451,15 @@ fn publish_dev_dep_no_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -1392,6 +1467,7 @@ fn publish_dev_dep_no_version() {
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -1444,7 +1520,8 @@ repository = "foo"
 
 #[cargo_test]
 fn credentials_ambiguous_filename() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let credentials_toml = paths::home().join(".cargo/credentials.toml");
     fs::write(credentials_toml, r#"token = "api-token""#).unwrap();
@@ -1474,18 +1551,19 @@ fn credentials_ambiguous_filename() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 [..]
+[UPDATING] crates.io index
 ",
         )
         .run();
-
-    validate_upload_foo();
 }
 
 // --index will not load registry.token to avoid possibly leaking
 // crates.io token to another server.
 #[cargo_test]
 fn index_requires_token() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
+
     let credentials = paths::home().join(".cargo/credentials");
     fs::remove_file(&credentials).unwrap();
 
@@ -1548,7 +1626,9 @@ include `--registry dummy-registry` or `--registry crates-io`
 
 #[cargo_test]
 fn publish_with_missing_readme() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -1835,6 +1915,7 @@ Caused by:
 
 #[cargo_test]
 fn in_package_workspace() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
 
     let p = project()
@@ -1863,6 +1944,13 @@ fn in_package_workspace() {
         .file("li/src/main.rs", "fn main() {}")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("li", "0.0.1").file("src/lib.rs", "").publish();
+
     p.cargo("publish -p li --no-verify")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -1872,6 +1960,7 @@ fn in_package_workspace() {
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [UPLOADING] li v0.0.1 ([CWD]/li)
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -1881,6 +1970,7 @@ See [..]
 
 #[cargo_test]
 fn with_duplicate_spec_in_members() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -1932,6 +2022,7 @@ fn with_duplicate_spec_in_members() {
 
 #[cargo_test]
 fn in_package_workspace_with_members_with_features_old() {
+    // HACK below allows us to use a local registry
     let registry = registry::init();
 
     let p = project()
@@ -1959,6 +2050,13 @@ fn in_package_workspace_with_members_with_features_old() {
         .file("li/src/main.rs", "fn main() {}")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("li", "0.0.1").file("src/lib.rs", "").publish();
+
     p.cargo("publish -p li --no-verify")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -1968,6 +2066,7 @@ fn in_package_workspace_with_members_with_features_old() {
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [UPLOADING] li v0.0.1 ([CWD]/li)
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -1977,6 +2076,7 @@ See [..]
 
 #[cargo_test]
 fn in_virtual_workspace() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -2012,7 +2112,8 @@ fn in_virtual_workspace() {
 
 #[cargo_test]
 fn in_virtual_workspace_with_p() {
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -2056,6 +2157,7 @@ fn in_virtual_workspace_with_p() {
 See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [UPLOADING] li v0.0.1 ([CWD]/li)
+[UPDATING] crates.io index
 ",
         )
         .run();
@@ -2063,6 +2165,7 @@ See [..]
 
 #[cargo_test]
 fn in_package_workspace_not_found() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -2107,6 +2210,7 @@ error: package ID specification `li` did not match any packages
 
 #[cargo_test]
 fn in_package_workspace_found_multiple() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -2164,6 +2268,7 @@ error: the `-p` argument must be specified to select a single package to publish
 #[cargo_test]
 // https://github.com/rust-lang/cargo/issues/10536
 fn publish_path_dependency_without_workspace() {
+    // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
     let p = project()
@@ -2237,7 +2342,9 @@ fn http_api_not_noop() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [..]
 [..]
-[UPLOADING] foo v0.0.1 ([CWD])",
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] [..]
+",
         )
         .run();
 
@@ -2304,17 +2411,10 @@ fn wait_for_publish() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            "
-                [publish]
-                timeout = 60
-                ",
-        )
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry -Z publish-timeout")
-        .masquerade_as_nightly_cargo(&["sparse-registry", "publish-timeout"])
+    p.cargo("publish --no-verify -Z sparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(
@@ -2401,17 +2501,10 @@ fn wait_for_publish_underscore() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            "
-                [publish]
-                timeout = 60
-                ",
-        )
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry -Z publish-timeout")
-        .masquerade_as_nightly_cargo(&["sparse-registry", "publish-timeout"])
+    p.cargo("publish --no-verify -Z sparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(

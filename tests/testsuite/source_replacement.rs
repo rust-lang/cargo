@@ -206,7 +206,8 @@ fn publish_with_replacement() {
     p.cargo("publish --registry crates-io")
         .replace_crates_io(crates_io.index_url())
         .with_stderr(
-            "[UPDATING] crates.io index
+            "\
+[UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
@@ -217,7 +218,9 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [COMPILING] bar v1.0.0
 [COMPILING] foo v0.0.1 ([..]foo-0.0.1)
 [FINISHED] dev [..]
-[UPLOADING] foo v0.0.1 ([..])",
+[UPLOADING] foo v0.0.1 ([..])
+[UPDATING] crates.io index
+",
         )
         .run();
 }

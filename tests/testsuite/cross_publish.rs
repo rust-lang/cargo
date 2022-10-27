@@ -66,7 +66,8 @@ fn publish_with_target() {
         return;
     }
 
-    let registry = registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -109,6 +110,7 @@ fn publish_with_target() {
 [COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [UPLOADING] foo v0.0.0 ([CWD])
+[UPDATING] crates.io index
 ",
         )
         .run();

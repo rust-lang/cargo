@@ -1,6 +1,6 @@
 //! Tests for credential-process.
 
-use cargo_test_support::registry::TestRegistry;
+use cargo_test_support::registry::{Package, TestRegistry};
 use cargo_test_support::{basic_manifest, cargo_process, paths, project, registry, Project};
 use std::fs;
 
@@ -94,6 +94,16 @@ fn warn_both_token_and_process() {
         .file("src/lib.rs", "")
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "")
+        .alternative(true)
+        .publish();
+
     p.cargo("publish --no-verify --registry alternative -Z credential-process")
         .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
@@ -125,6 +135,7 @@ Only one of these values may be set, remove one or the other to proceed.
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();
@@ -198,6 +209,7 @@ fn publish() {
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPDATING] [..]
 ",
         )
         .run();
