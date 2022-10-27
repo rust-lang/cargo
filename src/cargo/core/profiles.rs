@@ -683,6 +683,8 @@ impl Profile {
             name: InternedString::new("release"),
             root: ProfileRoot::Release,
             opt_level: InternedString::new("3"),
+            lto: Lto::Bool(true),
+            codegen_units: Some(1),
             ..Profile::default()
         }
     }
