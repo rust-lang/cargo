@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
@@ -8,6 +8,7 @@ use std::str::{self, FromStr};
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
+use itertools::Itertools;
 use lazycell::LazyCell;
 use log::{debug, trace};
 use semver::{self, VersionReq};
@@ -1737,12 +1738,24 @@ impl TomlManifest {
             debug!("manifest has no build targets");
         }
 
-        if let Err(e) = unique_build_targets(&targets, package_root) {
-            warnings.push(format!(
-                "file found to be present in multiple \
-                 build targets: {}",
-                e
-            ));
+        if let Err(conflict_targets) = unique_build_targets(&targets, package_root) {
+            conflict_targets
+                .iter()
+                .for_each(|(target_path, conflicts)| {
+                    warnings.push(format!(
+                        "file `{}` found to be present in multiple \
+                 build targets:\n{}",
+                        target_path.display().to_string(),
+                        conflicts
+                            .iter()
+                            .map(|t| format!(
+                                "  * `{}` target `{}`",
+                                t.kind().description(),
+                                t.name(),
+                            ))
+                            .join("\n")
+                    ));
+                })
         }
 
         if let Some(links) = &package.links {
@@ -2442,16 +2455,27 @@ fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
 
 /// Checks a list of build targets, and ensures the target names are unique within a vector.
 /// If not, the name of the offending build target is returned.
-fn unique_build_targets(targets: &[Target], package_root: &Path) -> Result<(), String> {
-    let mut seen = HashSet::new();
+fn unique_build_targets(
+    targets: &[Target],
+    package_root: &Path,
+) -> Result<(), HashMap<PathBuf, Vec<Target>>> {
+    let mut source_targets = HashMap::<_, Vec<_>>::new();
     for target in targets {
         if let TargetSourcePath::Path(path) = target.src_path() {
             let full = package_root.join(path);
-            if !seen.insert(full.clone()) {
-                return Err(full.display().to_string());
-            }
+            source_targets.entry(full).or_default().push(target.clone());
         }
     }
+
+    let conflict_targets = source_targets
+        .into_iter()
+        .filter(|(_, targets)| targets.len() > 1)
+        .collect::<HashMap<_, _>>();
+
+    if !conflict_targets.is_empty() {
+        return Err(conflict_targets);
+    }
+
     Ok(())
 }
 
