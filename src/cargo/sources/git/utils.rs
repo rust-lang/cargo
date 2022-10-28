@@ -812,6 +812,8 @@ pub fn fetch(
     // request we're about to issue.
     maybe_gc_repo(repo)?;
 
+    clean_repo_temp_files(repo);
+
     // Translate the reference desired here into an actual list of refspecs
     // which need to get fetched. Additionally record if we're fetching tags.
     let mut refspecs = Vec::new();
@@ -999,6 +1001,43 @@ fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
 
     // Alright all else failed, let's start over.
     reinitialize(repo)
+}
+
+/// Removes temporary files left from previous activity.
+///
+/// If libgit2 is interrupted while indexing pack files, it will leave behind
+/// some temporary files that it doesn't clean up. These can be quite large in
+/// size, so this tries to clean things up.
+///
+/// This intentionally ignores errors. This is only an opportunistic cleaning,
+/// and we don't really care if there are issues (there's unlikely anything
+/// that can be done).
+///
+/// The git CLI has similar behavior (its temp files look like
+/// `objects/pack/tmp_pack_9kUSA8`). Those files are normally deleted via `git
+/// prune` which is run by `git gc`. However, it doesn't know about libgit2's
+/// filenames, so they never get cleaned up.
+fn clean_repo_temp_files(repo: &git2::Repository) {
+    let path = repo.path().join("objects/pack/pack_git2_*");
+    let pattern = match path.to_str() {
+        Some(p) => p,
+        None => {
+            log::warn!("cannot convert {path:?} to a string");
+            return;
+        }
+    };
+    let paths = match glob::glob(pattern) {
+        Ok(paths) => paths,
+        Err(_) => return,
+    };
+    for path in paths {
+        if let Ok(path) = path {
+            match paths::remove_file(&path) {
+                Ok(_) => log::debug!("removed stale temp git file {path:?}"),
+                Err(e) => log::warn!("failed to remove {path:?} while cleaning temp files: {e}"),
+            }
+        }
+    }
 }
 
 fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
