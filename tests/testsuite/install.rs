@@ -2031,3 +2031,41 @@ fn install_semver_metadata() {
         )
         .run();
 }
+
+#[cargo_test]
+fn no_auto_fix_note() {
+    Package::new("auto_fix", "0.0.1")
+        .file("src/lib.rs", "use std::io;")
+        .file(
+            "src/main.rs",
+            &format!("extern crate {}; use std::io; fn main() {{}}", "auto_fix"),
+        )
+        .publish();
+
+    // This should not contain a suggestion to run `cargo fix`
+    //
+    // This is checked by matching the full output as `with_stderr_does_not_contain`
+    // can be brittle
+    cargo_process("install auto_fix")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] auto_fix v0.0.1 (registry [..])
+[INSTALLING] auto_fix v0.0.1
+[COMPILING] auto_fix v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/auto_fix[EXE]
+[INSTALLED] package `auto_fix v0.0.1` (executable `auto_fix[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "auto_fix");
+
+    cargo_process("uninstall auto_fix")
+        .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/auto_fix[EXE]")
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "auto_fix");
+}
