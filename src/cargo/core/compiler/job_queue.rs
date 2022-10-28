@@ -129,12 +129,8 @@ struct DrainState<'cfg> {
     messages: Arc<Queue<Message>>,
     /// Diagnostic deduplication support.
     diag_dedupe: DiagDedupe<'cfg>,
-    /// Count of warnings, used to print a summary after the job succeeds.
-    ///
-    /// First value is the total number of warnings, and the second value is
-    /// the number that were suppressed because they were duplicates of a
-    /// previous warning.
-    warning_count: HashMap<JobId, (usize, usize)>,
+    /// Count of warnings, used to print a summary after the job succeeds
+    warning_count: HashMap<JobId, WarningCount>,
     active: HashMap<JobId, Unit>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
@@ -168,6 +164,50 @@ struct DrainState<'cfg> {
     /// How many jobs we've finished
     finished: usize,
     per_package_future_incompat_reports: Vec<FutureIncompatReportPackage>,
+}
+
+/// Count of warnings, used to print a summary after the job succeeds
+#[derive(Default)]
+pub struct WarningCount {
+    /// total number of warnings
+    pub total: usize,
+    /// number of warnings that were suppressed because they
+    /// were duplicates of a previous warning
+    pub duplicates: usize,
+    /// number of fixable warnings set to `NotAllowed`
+    /// if any errors have been seen ofr the current
+    /// target
+    pub fixable: FixableWarnings,
+}
+
+impl WarningCount {
+    /// If an error is seen this should be called
+    /// to set `fixable` to `NotAllowed`
+    fn disallow_fixable(&mut self) {
+        self.fixable = FixableWarnings::NotAllowed;
+    }
+
+    /// Checks fixable if warnings are allowed
+    /// fixable warnings are allowed if no
+    /// errors have been seen for the current
+    /// target. If an error was seen `fixable`
+    /// will be `NotAllowed`.
+    fn fixable_allowed(&self) -> bool {
+        match &self.fixable {
+            FixableWarnings::NotAllowed => false,
+            _ => true,
+        }
+    }
+}
+
+/// Used to keep track of how many fixable warnings there are
+/// and if fixable warnings are allowed
+#[derive(Default)]
+pub enum FixableWarnings {
+    NotAllowed,
+    #[default]
+    Zero,
+    Positive(usize),
 }
 
 pub struct ErrorsDuringDrain {
@@ -311,10 +351,12 @@ enum Message {
         id: JobId,
         level: String,
         diag: String,
+        fixable: bool,
     },
     WarningCount {
         id: JobId,
         emitted: bool,
+        fixable: bool,
     },
     FixDiagnostic(diagnostic_server::Message),
     Token(io::Result<Acquired>),
@@ -363,13 +405,14 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
         Ok(())
     }
 
-    pub fn emit_diag(&self, level: String, diag: String) -> CargoResult<()> {
+    pub fn emit_diag(&self, level: String, diag: String, fixable: bool) -> CargoResult<()> {
         if let Some(dedupe) = self.output {
             let emitted = dedupe.emit_diag(&diag)?;
             if level == "warning" {
                 self.messages.push(Message::WarningCount {
                     id: self.id,
                     emitted,
+                    fixable,
                 });
             }
         } else {
@@ -377,6 +420,7 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
                 id: self.id,
                 level,
                 diag,
+                fixable,
             });
         }
         Ok(())
@@ -679,14 +723,28 @@ impl<'cfg> DrainState<'cfg> {
                 shell.print_ansi_stderr(err.as_bytes())?;
                 shell.err().write_all(b"\n")?;
             }
-            Message::Diagnostic { id, level, diag } => {
+            Message::Diagnostic {
+                id,
+                level,
+                diag,
+                fixable,
+            } => {
                 let emitted = self.diag_dedupe.emit_diag(&diag)?;
                 if level == "warning" {
-                    self.bump_warning_count(id, emitted);
+                    self.bump_warning_count(id, emitted, fixable);
+                }
+                if level == "error" {
+                    let cnts = self.warning_count.entry(id).or_default();
+                    // If there is an error, the `cargo fix` message should not show
+                    cnts.disallow_fixable();
                 }
             }
-            Message::WarningCount { id, emitted } => {
-                self.bump_warning_count(id, emitted);
+            Message::WarningCount {
+                id,
+                emitted,
+                fixable,
+            } => {
+                self.bump_warning_count(id, emitted, fixable);
             }
             Message::FixDiagnostic(msg) => {
                 self.print.print(&msg)?;
@@ -1127,19 +1185,34 @@ impl<'cfg> DrainState<'cfg> {
         Ok(())
     }
 
-    fn bump_warning_count(&mut self, id: JobId, emitted: bool) {
+    fn bump_warning_count(&mut self, id: JobId, emitted: bool, fixable: bool) {
         let cnts = self.warning_count.entry(id).or_default();
-        cnts.0 += 1;
+        cnts.total += 1;
         if !emitted {
-            cnts.1 += 1;
+            cnts.duplicates += 1;
+        // Don't add to fixable if it's already been emitted
+        } else if fixable {
+            // Do not add anything to the fixable warning count if
+            // is `NotAllowed` since that indicates there was an
+            // error while building this `Unit`
+            if cnts.fixable_allowed() {
+                cnts.fixable = match cnts.fixable {
+                    FixableWarnings::NotAllowed => FixableWarnings::NotAllowed,
+                    FixableWarnings::Zero => FixableWarnings::Positive(1),
+                    FixableWarnings::Positive(fixable) => FixableWarnings::Positive(fixable + 1),
+                };
+            }
         }
     }
 
     /// Displays a final report of the warnings emitted by a particular job.
     fn report_warning_count(&mut self, config: &Config, id: JobId) {
         let count = match self.warning_count.remove(&id) {
-            Some(count) => count,
-            None => return,
+            // An error could add an entry for a `Unit`
+            // with 0 warnings but having fixable
+            // warnings be disallowed
+            Some(count) if count.total > 0 => count,
+            None | Some(_) => return,
         };
         let unit = &self.active[&id];
         let mut message = format!("`{}` ({}", unit.pkg.name(), unit.target.description_named());
@@ -1151,14 +1224,46 @@ impl<'cfg> DrainState<'cfg> {
             message.push_str(" doc");
         }
         message.push_str(") generated ");
-        match count.0 {
+        match count.total {
             1 => message.push_str("1 warning"),
             n => drop(write!(message, "{} warnings", n)),
         };
-        match count.1 {
+        match count.duplicates {
             0 => {}
             1 => message.push_str(" (1 duplicate)"),
             n => drop(write!(message, " ({} duplicates)", n)),
+        }
+        // Only show the `cargo fix` message if its a local `Unit`
+        if unit.is_local() && config.nightly_features_allowed {
+            // Do not show this if there are any errors or no fixable warnings
+            if let FixableWarnings::Positive(fixable) = count.fixable {
+                // `cargo fix` doesnt have an option for custom builds
+                if !unit.target.is_custom_build() {
+                    let mut command = {
+                        let named = unit.target.description_named();
+                        // if its a lib we need to add the package to fix
+                        if unit.target.is_lib() {
+                            format!("{} -p {}", named, unit.pkg.name())
+                        } else {
+                            named
+                        }
+                    };
+                    if unit.mode.is_rustc_test()
+                        && !(unit.target.is_test() || unit.target.is_bench())
+                    {
+                        command.push_str(" --tests");
+                    }
+                    let mut suggestions = format!("{} suggestion", fixable);
+                    if fixable > 1 {
+                        suggestions.push_str("s")
+                    }
+                    drop(write!(
+                        message,
+                        " (run `cargo fix --{}` to apply {})",
+                        command, suggestions
+                    ))
+                }
+            }
         }
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.

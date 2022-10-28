@@ -61,6 +61,7 @@ use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, iter_join_onto, profile};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
+use rustfix::diagnostics::{Applicability, Diagnostic};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
@@ -1420,7 +1421,10 @@ fn on_stderr_line_inner(
                 rendered: String,
                 message: String,
                 level: String,
+                // `children: Vec<Diagnostic>` if we need to check them recursively
+                children: Vec<Diagnostic>,
             }
+
             if let Ok(mut msg) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
                 if msg.message.starts_with("aborting due to")
                     || msg.message.ends_with("warning emitted")
@@ -1443,8 +1447,19 @@ fn on_stderr_line_inner(
                         .expect("strip should never fail")
                 };
                 if options.show_diagnostics {
+                    let machine_applicable: bool = msg
+                        .children
+                        .iter()
+                        .map(|child| {
+                            child
+                                .spans
+                                .iter()
+                                .filter_map(|span| span.suggestion_applicability)
+                                .any(|app| app == Applicability::MachineApplicable)
+                        })
+                        .any(|b| b);
                     count_diagnostic(&msg.level, options);
-                    state.emit_diag(msg.level, rendered)?;
+                    state.emit_diag(msg.level, rendered, machine_applicable)?;
                 }
                 return Ok(true);
             }
