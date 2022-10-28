@@ -56,11 +56,12 @@ type ActivateMap = HashMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 
 /// Set of all activated features for all packages in the resolve graph.
 pub struct ResolvedFeatures {
-    activated_features: ActivateMap,
-    /// Optional dependencies that should be built.
+    /// Map of features activated for each package.
     ///
-    /// The value is the `name_in_toml` of the dependencies.
-    activated_dependencies: ActivateMap,
+    /// The presence of each key also means the package itself is activated,
+    /// even its associated set contains no features.
+    activated_features: ActivateMap,
+    /// Options that change how the feature resolver operates.
     opts: FeatureOpts,
 }
 
@@ -321,21 +322,14 @@ impl ResolvedFeatures {
             .expect("activated_features for invalid package")
     }
 
-    /// Returns if the given dependency should be included.
+    /// Asks the resolved features if the given package should be included.
     ///
-    /// This handles dependencies disabled via `cfg` expressions and optional
-    /// dependencies which are not enabled.
-    pub fn is_dep_activated(
-        &self,
-        pkg_id: PackageId,
-        features_for: FeaturesFor,
-        dep_name: InternedString,
-    ) -> bool {
-        let key = features_for.apply_opts(&self.opts);
-        self.activated_dependencies
-            .get(&(pkg_id, key))
-            .map(|deps| deps.contains(&dep_name))
-            .unwrap_or(false)
+    /// One scenario to use this function is to deteremine a optional dependency
+    /// should be built or not.
+    pub fn is_activated(&self, pkg_id: PackageId, features_for: FeaturesFor) -> bool {
+        log::trace!("is_activated {} {features_for}", pkg_id.name());
+        self.activated_features_unverified(pkg_id, features_for.apply_opts(&self.opts))
+            .is_some()
     }
 
     /// Variant of `activated_features` that returns `None` if this is
@@ -415,8 +409,14 @@ pub struct FeatureResolver<'a, 'cfg> {
     /// Options that change how the feature resolver operates.
     opts: FeatureOpts,
     /// Map of features activated for each package.
+    ///
+    /// The presence of each key also means the package itself is activated,
+    /// even its associated set contains no features.
     activated_features: ActivateMap,
     /// Map of optional dependencies activated for each package.
+    ///
+    /// The key is the package having their dependencies activated.
+    /// The value comes from `dep_name` part of the feature syntax `dep:dep_name`.
     activated_dependencies: ActivateMap,
     /// Keeps track of which packages have had its dependencies processed.
     /// Used to avoid cycles, and to speed up processing.
@@ -475,7 +475,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         }
         Ok(ResolvedFeatures {
             activated_features: r.activated_features,
-            activated_dependencies: r.activated_dependencies,
             opts: r.opts,
         })
     }
@@ -507,10 +506,10 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         Ok(())
     }
 
-    /// Activates [`FeatureValue`]s on the given package.
+    /// Activates a list of [`FeatureValue`] for a given package.
     ///
-    /// This is the main entrance into the recursion of feature activation
-    /// for a package.
+    /// This is the main entrance into the recursion of feature activation for a package.
+    /// Other `activate_*` functions would be called inside this function accordingly.
     fn activate_pkg(
         &mut self,
         pkg_id: PackageId,
@@ -518,9 +517,13 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         fvs: &[FeatureValue],
     ) -> CargoResult<()> {
         log::trace!("activate_pkg {} {}", pkg_id.name(), fk);
-        // Add an empty entry to ensure everything is covered. This is intended for
-        // finding bugs where the resolver missed something it should have visited.
-        // Remove this in the future if `activated_features` uses an empty default.
+        // Cargo must insert an empty set here as the presence of an (empty) set
+        // also means that the dependency is activated.
+        // This `is_activated` behavior for dependencies was previously depends on field
+        // `activated_dependencies`, which is less useful after rust-lang/cargo#11183.
+        //
+        // That is, we may keep or remove `activated_dependencies` in the future
+        // if figuring out it can completely be replaced with `activated_features`.
         self.activated_features
             .entry((pkg_id, fk.apply_opts(&self.opts)))
             .or_insert_with(BTreeSet::new);

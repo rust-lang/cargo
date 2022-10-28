@@ -1040,6 +1040,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         }
     }
 
+    /// See [`ResolvedFeatures::activated_features`].
     fn activated_features(
         &self,
         pkg_id: PackageId,
@@ -1049,14 +1050,9 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         features.activated_features(pkg_id, features_for)
     }
 
-    fn is_dep_activated(
-        &self,
-        pkg_id: PackageId,
-        features_for: FeaturesFor,
-        dep_name: InternedString,
-    ) -> bool {
-        self.features()
-            .is_dep_activated(pkg_id, features_for, dep_name)
+    /// See [`ResolvedFeatures::is_activated`].
+    fn is_activated(&self, pkg_id: PackageId, features_for: FeaturesFor) -> bool {
+        self.features().is_activated(pkg_id, features_for)
     }
 
     fn get(&self, id: PackageId) -> &'a Package {
@@ -1071,7 +1067,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         let kind = unit.kind;
         self.resolve()
             .deps(pkg_id)
-            .filter_map(|(id, deps)| {
+            .filter_map(|(dep_id, deps)| {
                 assert!(!deps.is_empty());
                 let deps: Vec<_> = deps
                     .iter()
@@ -1103,8 +1099,8 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         // If this is an optional dependency, and the new feature resolver
                         // did not enable it, don't include it.
                         if dep.is_optional() {
-                            let features_for = unit_for.map_to_features_for(dep.artifact());
-                            if !self.is_dep_activated(pkg_id, features_for, dep.name_in_toml()) {
+                            let dep_features_for = unit_for.map_to_features_for(dep.artifact());
+                            if !self.is_activated(dep_id, dep_features_for) {
                                 return false;
                             }
                         }
@@ -1117,7 +1113,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                 if deps.is_empty() {
                     None
                 } else {
-                    Some((id, deps))
+                    Some((dep_id, deps))
                 }
             })
             .collect()
