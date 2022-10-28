@@ -678,6 +678,24 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
                 handle.ssl_min_max_version(min_version, max_version)?;
             }
         }
+    } else if cfg!(windows) {
+        // This is a temporary workaround for some bugs with libcurl and
+        // schannel and TLS 1.3.
+        //
+        // Our libcurl on Windows is usually built with schannel.
+        // On Windows 11 (or Windows Server 2022), libcurl recently (late
+        // 2022) gained support for TLS 1.3 with schannel, and it now defaults
+        // to 1.3. Unfortunately there have been some bugs with this.
+        // https://github.com/curl/curl/issues/9431 is the most recent. Once
+        // that has been fixed, and some time has passed where we can be more
+        // confident that the 1.3 support won't cause issues, this can be
+        // removed.
+        //
+        // Windows 10 is unaffected. libcurl does not support TLS 1.3 on
+        // Windows 10. (Windows 10 sorta had support, but it required enabling
+        // an advanced option in the registry which was buggy, and libcurl
+        // does runtime checks to prevent it.)
+        handle.ssl_min_max_version(SslVersion::Default, SslVersion::Tlsv12)?;
     }
 
     if let Some(true) = http.debug {
