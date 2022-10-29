@@ -32,8 +32,8 @@ immediately.
 
 ### Before publishing a new crate
 
-Keep in mind that crate names on [crates.io] are allocated on a first-come-first-
-serve basis. Once a crate name is taken, it cannot be used for another crate.
+Keep in mind that crate names on [crates.io] are allocated on a first-come-first-serve
+basis. Once a crate name is taken, it cannot be used for another crate.
 
 Check out the [metadata you can specify](manifest.md) in `Cargo.toml` to
 ensure your crate can be discovered more easily! Before publishing, make sure

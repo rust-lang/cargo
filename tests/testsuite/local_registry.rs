@@ -33,7 +33,7 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -63,6 +63,44 @@ fn simple() {
 }
 
 #[cargo_test]
+fn not_found() {
+    setup();
+    // Publish a package so that the directory hierarchy is created.
+    // Note, however, that we declare a dependency on baZ.
+    Package::new("bar", "0.0.1").local(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                baz = "0.0.1"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate baz; pub fn foo() { baz::bar(); }",
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] no matching package named `baz` found
+location searched: registry `crates-io`
+required by package `foo v0.0.1 ([..]/foo)`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn depend_on_yanked() {
     setup();
     Package::new("bar", "0.0.1").local(true).publish();
@@ -71,7 +109,7 @@ fn depend_on_yanked() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -114,7 +152,7 @@ fn multiple_versions() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -166,7 +204,7 @@ fn multiple_names() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -220,7 +258,7 @@ fn interdependent() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -270,7 +308,7 @@ fn path_dep_rewritten() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "baz"
                 version = "0.1.0"
                 authors = []
@@ -288,7 +326,7 @@ fn path_dep_rewritten() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -332,7 +370,7 @@ fn invalid_dir_bad() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -391,7 +429,7 @@ fn different_directory_replacing_the_registry_is_bad() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -460,7 +498,7 @@ fn crates_io_registry_url_is_optional() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []

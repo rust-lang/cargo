@@ -955,7 +955,7 @@ explicit type arguments.
 <a id="fn-generalize-compatible"></a>
 ### Minor: generalizing a function to use generics (supporting original type)
 
-The type of an parameter to a function, or its return value, can be
+The type of a parameter to a function, or its return value, can be
 *generalized* to use generics, including by introducing a new type parameter,
 as long as it can be instantiated to the original type. For example, the
 following changes are allowed:

@@ -1,0 +1,4 @@
+error: multiple possible binary sources found:
+  main.rs
+  case.rs
+cannot automatically generate Cargo.toml as the main target would be ambiguous

@@ -1,6 +1,5 @@
 //! Tests for git support.
 
-use std::env;
 use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
@@ -13,13 +12,6 @@ use std::thread;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 use cargo_test_support::{sleep_ms, t, Project};
-
-fn disable_git_cli() -> bool {
-    // mingw git on Windows does not support Windows-style file URIs.
-    // Appveyor in the rust repo has that git up front in the PATH instead
-    // of Git-for-Windows, which causes this to fail.
-    env::var("CARGO_TEST_DISABLE_GIT_CLI") == Ok("1".to_string())
-}
 
 #[cargo_test]
 fn cargo_compile_simple_git_dep() {
@@ -42,7 +34,7 @@ fn cargo_compile_simple_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -110,7 +102,7 @@ fn cargo_compile_git_dep_branch() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -186,7 +178,7 @@ fn cargo_compile_git_dep_tag() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -259,7 +251,7 @@ fn cargo_compile_git_dep_pull_request() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.0"
 
@@ -299,7 +291,7 @@ fn cargo_compile_with_nested_paths() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
 
                     name = "dep1"
                     version = "0.5.0"
@@ -341,7 +333,7 @@ fn cargo_compile_with_nested_paths() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -389,7 +381,7 @@ fn cargo_compile_with_malformed_nested_paths() {
             .file(
                 "vendor/dep3/Cargo.toml",
                 r#"
-                [project]
+                [package]
                 name = "dep3"
                 version = "0.5.0"
                 [dependencies]
@@ -404,7 +396,7 @@ fn cargo_compile_with_malformed_nested_paths() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -464,7 +456,7 @@ fn cargo_compile_with_meta_package() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -515,7 +507,7 @@ fn cargo_compile_with_short_ssh_git() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -574,7 +566,7 @@ fn two_revs_same_deps() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.0"
                     authors = []
@@ -650,7 +642,7 @@ fn recompilation() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -911,7 +903,7 @@ fn dep_with_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -937,6 +929,73 @@ fn dep_with_submodule() {
 [UPDATING] git repository [..]
 [UPDATING] git submodule `file://[..]/dep2`
 [COMPILING] dep1 [..]
+[COMPILING] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dep_with_relative_submodule() {
+    let foo = project();
+    let base = git::new("base", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                r#"
+            [package]
+            name = "base"
+            version = "0.5.0"
+
+            [dependencies]
+            deployment.path = "deployment"
+        "#,
+            )
+            .file(
+                "src/lib.rs",
+                r#"
+            pub fn dep() {
+                deployment::deployment_func();
+            }
+            "#,
+            )
+    });
+    let _deployment = git::new("deployment", |project| {
+        project
+            .file("src/lib.rs", "pub fn deployment_func() {}")
+            .file("Cargo.toml", &basic_lib_manifest("deployment"))
+    });
+
+    let base_repo = git2::Repository::open(&base.root()).unwrap();
+    git::add_submodule(&base_repo, "../deployment", Path::new("deployment"));
+    git::commit(&base_repo);
+
+    let project = foo
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.5.0"
+
+                    [dependencies.base]
+                    git = '{}'
+                "#,
+                base.url()
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() {  }")
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] git repository [..]
+[UPDATING] git submodule `file://[..]/deployment`
+[COMPILING] deployment [..]
+[COMPILING] base [..]
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
@@ -977,7 +1036,7 @@ fn dep_with_bad_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1024,6 +1083,123 @@ Caused by:
 }
 
 #[cargo_test]
+fn dep_with_skipped_submodule() {
+    // Ensure we skip dependency submodules if their update strategy is `none`.
+    let qux = git::new("qux", |project| {
+        project.no_manifest().file("README", "skip me")
+    });
+
+    let bar = git::new("bar", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
+            .file("src/lib.rs", "")
+    });
+
+    // `qux` is a submodule of `bar`, but we don't want to update it.
+    let repo = git2::Repository::open(&bar.root()).unwrap();
+    git::add_submodule(&repo, qux.url().as_str(), Path::new("qux"));
+
+    let mut conf = git2::Config::open(&bar.root().join(".gitmodules")).unwrap();
+    conf.set_str("submodule.qux.update", "none").unwrap();
+
+    git::add(&repo);
+    git::commit(&repo);
+
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.0"
+                    authors = []
+
+                    [dependencies.bar]
+                    git = "{}"
+                "#,
+                bar.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    foo.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] git repository `file://[..]/bar`
+[SKIPPING] git submodule `file://[..]/qux` [..]
+[COMPILING] bar [..]
+[COMPILING] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn ambiguous_published_deps() {
+    let project = project();
+    let git_project = git::new("dep", |project| {
+        project
+            .file(
+                "aaa/Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "bar"
+                    version = "0.5.0"
+                    publish = true
+                "#
+                ),
+            )
+            .file("aaa/src/lib.rs", "")
+            .file(
+                "bbb/Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "bar"
+                    version = "0.5.0"
+                    publish = true
+                "#
+                ),
+            )
+            .file("bbb/src/lib.rs", "")
+    });
+
+    let p = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = ["wycats@example.com"]
+
+                    [dependencies.bar]
+                    git = '{}'
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {  }")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("run")
+        .with_stderr(
+            "\
+[WARNING] skipping duplicate package `bar` found at `[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn two_deps_only_update_one() {
     let project = project();
     let git1 = git::new("dep1", |project| {
@@ -1042,7 +1218,7 @@ fn two_deps_only_update_one() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1114,7 +1290,7 @@ fn stale_cached_version() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.0"
                     authors = []
@@ -1209,7 +1385,7 @@ fn dep_with_changed_submodule() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = ["wycats@example.com"]
@@ -1315,7 +1491,7 @@ fn dev_deps_with_testing() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1433,7 +1609,7 @@ fn git_name_not_always_needed() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1476,7 +1652,7 @@ fn git_repo_changing_no_rebuild() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "p1"
                     version = "0.5.0"
                     authors = []
@@ -1516,7 +1692,7 @@ fn git_repo_changing_no_rebuild() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "p2"
                     version = "0.5.0"
                     authors = []
@@ -1552,7 +1728,7 @@ fn git_dep_build_cmd() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -1572,7 +1748,7 @@ fn git_dep_build_cmd() {
             .file(
                 "bar/Cargo.toml",
                 r#"
-                    [project]
+                    [package]
 
                     name = "bar"
                     version = "0.5.0"
@@ -1628,7 +1804,7 @@ fn fetch_downloads() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1663,7 +1839,7 @@ fn warnings_in_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1725,7 +1901,7 @@ fn update_ambiguous() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1750,8 +1926,8 @@ fn update_ambiguous() {
 is ambiguous.
 Please re-run this command with `-p <spec>` where `<spec>` is one of the \
 following:
-  bar:0.[..].0
-  bar:0.[..].0
+  bar@0.[..].0
+  bar@0.[..].0
 ",
         )
         .run();
@@ -1772,7 +1948,7 @@ fn update_one_dep_in_repo_with_many_deps() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1845,7 +2021,7 @@ fn switch_deps_does_not_update_transitive() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1879,7 +2055,7 @@ fn switch_deps_does_not_update_transitive() {
         "Cargo.toml",
         &format!(
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1929,7 +2105,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1979,7 +2155,7 @@ fn switch_sources() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1992,7 +2168,7 @@ fn switch_sources() {
             "b/Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "b"
                     version = "0.5.0"
                     authors = []
@@ -2021,7 +2197,7 @@ fn switch_sources() {
         "b/Cargo.toml",
         &format!(
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -2052,7 +2228,7 @@ fn dont_require_submodules_are_checked_out() {
         p.file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2090,7 +2266,7 @@ fn doctest_same_name() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "a"
                     version = "0.5.0"
                     authors = []
@@ -2247,6 +2423,8 @@ fn add_a_git_dep() {
 
     p.cargo("build").run();
 
+    assert!(paths::home().join(".cargo/git/CACHEDIR.TAG").is_file());
+
     p.change_file(
         "a/Cargo.toml",
         &format!(
@@ -2369,7 +2547,7 @@ fn invalid_git_dependency_manifest() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
 
                     name = "dep1"
                     version = "0.5.0"
@@ -2397,7 +2575,7 @@ fn invalid_git_dependency_manifest() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
 
                     name = "foo"
                     version = "0.5.0"
@@ -2443,7 +2621,7 @@ Caused by:
     |
   8 |                     categories = [\"algorithms\"]
     |                     ^
-  Duplicate key `categories` in table `project`
+  Duplicate key `categories` in table `package`
 
 ",
             path2url(&git_root),
@@ -2499,7 +2677,7 @@ fn failed_submodule_checkout() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -2531,11 +2709,8 @@ fn failed_submodule_checkout() {
     t.join().unwrap();
 }
 
-#[cargo_test]
+#[cargo_test(requires_git)]
 fn use_the_cli() {
-    if disable_git_cli() {
-        return;
-    }
     let project = project();
     let git_project = git::new("dep1", |project| {
         project
@@ -2548,7 +2723,7 @@ fn use_the_cli() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -2580,6 +2755,7 @@ fn use_the_cli() {
 ";
 
     project.cargo("build -v").with_stderr(stderr).run();
+    assert!(paths::home().join(".cargo/git/CACHEDIR.TAG").is_file());
 }
 
 #[cargo_test]
@@ -2599,7 +2775,7 @@ fn templatedir_doesnt_cause_problems() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "fo"
                     version = "0.5.0"
                     authors = []
@@ -2634,11 +2810,8 @@ fn templatedir_doesnt_cause_problems() {
     p.cargo("build").run();
 }
 
-#[cargo_test]
+#[cargo_test(requires_git)]
 fn git_with_cli_force() {
-    if disable_git_cli() {
-        return;
-    }
     // Supports a force-pushed repo.
     let git_project = git::new("dep1", |project| {
         project
@@ -2650,7 +2823,7 @@ fn git_with_cli_force() {
             "Cargo.toml",
             &format!(
                 r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 edition = "2018"
@@ -2694,11 +2867,8 @@ fn git_with_cli_force() {
     p.rename_run("foo", "foo2").with_stdout("two").run();
 }
 
-#[cargo_test]
+#[cargo_test(requires_git)]
 fn git_fetch_cli_env_clean() {
-    if disable_git_cli() {
-        return;
-    }
     // This tests that git-fetch-with-cli works when GIT_DIR environment
     // variable is set (for whatever reason).
     let git_dep = git::new("dep1", |project| {
@@ -2882,7 +3052,7 @@ fn default_not_master() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     [dependencies]
@@ -2922,7 +3092,7 @@ fn historical_lockfile_works() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
 
@@ -2979,7 +3149,7 @@ fn historical_lockfile_works_with_vendor() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
 
@@ -3033,7 +3203,7 @@ fn two_dep_forms() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     [dependencies]
@@ -3048,7 +3218,7 @@ fn two_dep_forms() {
             "a/Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "a"
                     version = "0.5.0"
                     [dependencies]
@@ -3304,7 +3474,7 @@ fn git_with_force_push() {
     let manifest = |extra| {
         format!(
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 edition = "2018"
@@ -3389,4 +3559,63 @@ fn git_with_force_push() {
     verify("awesome-three");
     amend_commit("awesome-four");
     verify("awesome-four");
+}
+
+#[cargo_test]
+fn corrupted_checkout() {
+    // Test what happens if the checkout is corrupted somehow.
+    _corrupted_checkout(false);
+}
+
+#[cargo_test]
+fn corrupted_checkout_with_cli() {
+    // Test what happens if the checkout is corrupted somehow with git cli.
+    _corrupted_checkout(true);
+}
+
+fn _corrupted_checkout(with_cli: bool) {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch").run();
+
+    let mut paths = t!(glob::glob(
+        paths::home()
+            .join(".cargo/git/checkouts/dep1-*/*")
+            .to_str()
+            .unwrap()
+    ));
+    let path = paths.next().unwrap().unwrap();
+    let ok = path.join(".cargo-ok");
+
+    // Deleting this file simulates an interrupted checkout.
+    t!(fs::remove_file(&ok));
+
+    // This should refresh the checkout.
+    let mut e = p.cargo("fetch");
+    if with_cli {
+        e.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
+    }
+    e.run();
+    assert!(ok.exists());
 }

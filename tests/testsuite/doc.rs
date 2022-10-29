@@ -4,7 +4,7 @@ use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
-use cargo_test_support::{is_nightly, rustc_host, symlink_supported, tools};
+use cargo_test_support::{rustc_host, symlink_supported, tools};
 use std::fs;
 use std::str;
 
@@ -748,12 +748,8 @@ fn doc_same_name() {
     p.cargo("doc").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "no_core, lang_items requires nightly")]
 fn doc_target() {
-    if !is_nightly() {
-        // no_core, lang_items requires nightly.
-        return;
-    }
     const TARGET: &str = "arm-unknown-linux-gnueabihf";
 
     let p = project()
@@ -1114,7 +1110,7 @@ fn doc_all_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -1250,7 +1246,7 @@ fn doc_all_member_dependency_same_name() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
 
@@ -1310,13 +1306,8 @@ fn doc_workspace_open_help_message() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zextern-html-root-url is unstable")]
 fn doc_extern_map_local() {
-    if !is_nightly() {
-        // -Zextern-html-root-url is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1332,7 +1323,7 @@ fn doc_extern_map_local() {
 
     p.cargo("doc -v --no-deps -Zrustdoc-map --open")
         .env("BROWSER", tools::echo())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.1.0 [..]
@@ -2050,13 +2041,8 @@ fn crate_versions_flag_is_overridden() {
     asserts(output_documentation());
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zdoctest-in-workspace is unstable")]
 fn doc_test_in_workspace() {
-    if !is_nightly() {
-        // -Zdoctest-in-workspace is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2071,7 +2057,7 @@ fn doc_test_in_workspace() {
         .file(
             "crate-a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "crate-a"
                 version = "0.1.0"
             "#,
@@ -2087,7 +2073,7 @@ fn doc_test_in_workspace() {
         .file(
             "crate-b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "crate-b"
                 version = "0.1.0"
             "#,
@@ -2102,7 +2088,7 @@ fn doc_test_in_workspace() {
         )
         .build();
     p.cargo("test -Zdoctest-in-workspace --doc -vv")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["doctest-in-workspace"])
         .with_stderr_contains("[DOCTEST] crate-a")
         .with_stdout_contains(
             "
@@ -2346,7 +2332,7 @@ fn doc_fingerprint_unusual_behavior() {
     p.change_file("src/lib.rs", "// changed2");
     fs::write(real_doc.join("somefile"), "test").unwrap();
     p.cargo("doc -Z skip-rustdoc-fingerprint")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["skip-rustdoc-fingerprint"])
         .with_stderr(
             "[DOCUMENTING] foo [..]\n\
              [FINISHED] [..]",
@@ -2357,13 +2343,8 @@ fn doc_fingerprint_unusual_behavior() {
     assert!(real_doc.join("somefile").exists());
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_basic() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2379,7 +2360,7 @@ fn scrape_examples_basic() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr(
             "\
 [..] foo v0.0.1 ([CWD])
@@ -2397,13 +2378,8 @@ fn scrape_examples_basic() {
     assert!(p.build_dir().join("doc/src/ex/ex.rs.html").exists());
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_avoid_build_script_cycle() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         // package with build dependency
         .file(
@@ -2440,17 +2416,17 @@ fn scrape_examples_avoid_build_script_cycle() {
         .build();
 
     p.cargo("doc --all -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
 
+// FIXME: This test is broken with latest nightly 2022-08-02.
+// The example is calling a function from a proc-macro, but proc-macros don't
+// export functions. It is not clear what this test is trying to exercise.
+// #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
+#[ignore = "broken, needs fixing"]
 #[cargo_test]
 fn scrape_examples_complex_reverse_dependencies() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2502,17 +2478,12 @@ fn scrape_examples_complex_reverse_dependencies() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_crate_with_dash() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2528,19 +2499,15 @@ fn scrape_examples_crate_with_dash() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
     let doc_html = p.read_file("target/doc/da_sh/fn.foo.html");
     assert!(doc_html.contains("Examples found in repository"));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_missing_flag() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2554,19 +2521,14 @@ fn scrape_examples_missing_flag() {
         .file("src/lib.rs", "//! These are the docs!")
         .build();
     p.cargo("doc -Zrustdoc-scrape-examples")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_status(101)
         .with_stderr("error: -Z rustdoc-scrape-examples must take [..] an argument")
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_configure_profile() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2585,7 +2547,7 @@ fn scrape_examples_configure_profile() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
     let doc_html = p.read_file("target/doc/foo/fn.foo.html");
@@ -2593,13 +2555,8 @@ fn scrape_examples_configure_profile() {
     assert!(doc_html.contains("More examples"));
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn scrape_examples_issue_10545() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2641,7 +2598,7 @@ fn scrape_examples_issue_10545() {
         .build();
 
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
 
@@ -2783,39 +2740,23 @@ fn doc_lib_false_dep() {
     assert!(!p.build_dir().join("doc/bar").exists());
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
-fn doc_check_cfg_features() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustdoc command line
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-
-                [features]
-                default = ["f_a"]
-                f_a = []
-                f_b = []
-            "#,
-        )
-        .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
-        .build();
-
-    p.cargo("doc -v -Z check-cfg-features")
-        .masquerade_as_nightly_cargo()
+fn link_to_private_item() {
+    let main = r#"
+    //! [bar]
+    #[allow(dead_code)]
+    fn bar() {}
+    "#;
+    let p = project().file("src/lib.rs", main).build();
+    p.cargo("doc")
+        .with_stderr_contains("[..] documentation for `foo` links to private item `bar`")
+        .run();
+    // Check that binaries don't emit a private_intra_doc_links warning.
+    fs::rename(p.root().join("src/lib.rs"), p.root().join("src/main.rs")).unwrap();
+    p.cargo("doc")
         .with_stderr(
-            "\
-[DOCUMENTING] foo v0.1.0 [..]
-[RUNNING] `rustdoc [..] --check-cfg 'values(feature, \"default\", \"f_a\", \"f_b\")' [..]
-[FINISHED] [..]
-",
+            "[DOCUMENTING] foo [..]\n\
+             [FINISHED] [..]",
         )
         .run();
 }

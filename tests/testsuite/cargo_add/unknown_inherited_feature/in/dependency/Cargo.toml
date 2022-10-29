@@ -1,0 +1,20 @@
+[package]
+name = "foo"
+version = "0.0.0"
+
+[features]
+default-base = []
+default-test-base = []
+default-merge-base = []
+long-feature-name-because-of-formatting-reasons = []
+default = [
+    "default-base",
+    "default-test-base",
+    "default-merge-base",
+    "long-feature-name-because-of-formatting-reasons",
+]
+test-base = []
+test = ["test-base", "default-test-base"]
+merge-base = []
+merge = ["merge-base", "default-merge-base"]
+unrelated = []

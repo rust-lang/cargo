@@ -1,0 +1,13 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[features]
+default = ["your-face"]
+other = ["your-face/nose"]
+
+[dependencies]
+your-face = { version = "99999.0.0", optional = true }
+my-package2 = { version = "0.4.1", optional = true }

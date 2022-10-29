@@ -1,8 +1,7 @@
 //! Tests for `include` config field.
 
 use super::config::{assert_error, write_config, write_config_at, ConfigBuilder};
-use cargo_test_support::{no_such_file_err_msg, paths, project};
-use std::fs;
+use cargo_test_support::{no_such_file_err_msg, project};
 
 #[cargo_test]
 fn gated() {
@@ -72,7 +71,7 @@ fn works_with_cli() {
         )
         .run();
     p.cargo("build -v -Z config-include")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["config-include"])
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 [..]
@@ -257,32 +256,29 @@ Caused by:
 }
 
 #[cargo_test]
-fn cli_path() {
-    // --config path_to_file
-    fs::write(paths::root().join("myconfig.toml"), "key = 123").unwrap();
+fn cli_include_take_priority_over_env() {
+    write_config_at(".cargo/include.toml", "k='include'");
+
+    // k=env
+    let config = ConfigBuilder::new().env("CARGO_K", "env").build();
+    assert_eq!(config.get::<String>("k").unwrap(), "env");
+
+    // k=env
+    // --config 'include=".cargo/include.toml"'
     let config = ConfigBuilder::new()
-        .cwd(paths::root())
+        .env("CARGO_K", "env")
         .unstable_flag("config-include")
-        .config_arg("myconfig.toml")
+        .config_arg("include='.cargo/include.toml'")
         .build();
-    assert_eq!(config.get::<u32>("key").unwrap(), 123);
+    assert_eq!(config.get::<String>("k").unwrap(), "include");
 
+    // k=env
+    // --config '.cargo/foo.toml'
+    write_config_at(".cargo/foo.toml", "include='include.toml'");
     let config = ConfigBuilder::new()
+        .env("CARGO_K", "env")
         .unstable_flag("config-include")
-        .config_arg("missing.toml")
-        .build_err();
-    assert_error(
-        config.unwrap_err(),
-        "\
-failed to parse value from --config argument `missing.toml` as a dotted key expression
-
-Caused by:
-  TOML parse error at line 1, column 13
-  |
-1 | missing.toml
-  |             ^
-Unexpected end of input
-Expected `.` or `=`
-",
-    );
+        .config_arg(".cargo/foo.toml")
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "include");
 }

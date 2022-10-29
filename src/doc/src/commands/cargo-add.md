@@ -31,6 +31,11 @@ If no source is specified, then a best effort will be made to select one, includ
 
 When you add a package that is already present, the existing entry will be updated with the flags specified.
 
+Upon successful invocation, the enabled (`+`) and disabled (`-`) [features] of the specified
+dependency will be listed in the command's output.
+
+[features]: ../reference/features.md
+
 ## OPTIONS
 
 ### Source options
@@ -91,6 +96,10 @@ which is defined by the <code>registry.default</code> config key which defaults 
 ### Dependency options
 
 <dl>
+
+<dt class="option-term" id="option-cargo-add---dry-run"><a class="option-anchor" href="#option-cargo-add---dry-run"></a><code>--dry-run</code></dt>
+<dd class="option-desc">Don't actually write the manifest</dd>
+
 
 <dt class="option-term" id="option-cargo-add---rename"><a class="option-anchor" href="#option-cargo-add---rename"></a><code>--rename</code> <em>name</em></dt>
 <dd class="option-desc"><a href="../reference/specifying-dependencies.html#renaming-dependencies-in-cargotoml">Rename</a> the dependency.</dd>
@@ -163,6 +172,36 @@ terminal.</li>
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
 
 
+
+<dt class="option-term" id="option-cargo-add--p"><a class="option-anchor" href="#option-cargo-add--p"></a><code>-p</code> <em>spec</em></dt>
+<dt class="option-term" id="option-cargo-add---package"><a class="option-anchor" href="#option-cargo-add---package"></a><code>--package</code> <em>spec</em></dt>
+<dd class="option-desc">Add dependencies to only the specified package.</dd>
+
+
+<dt class="option-term" id="option-cargo-add---frozen"><a class="option-anchor" href="#option-cargo-add---frozen"></a><code>--frozen</code></dt>
+<dt class="option-term" id="option-cargo-add---locked"><a class="option-anchor" href="#option-cargo-add---locked"></a><code>--locked</code></dt>
+<dd class="option-desc">Either of these flags requires that the <code>Cargo.lock</code> file is
+up-to-date. If the lock file is missing, or it needs to be updated, Cargo will
+exit with an error. The <code>--frozen</code> flag also prevents Cargo from
+attempting to access the network to determine if it is out-of-date.</p>
+<p>These may be used in environments where you want to assert that the
+<code>Cargo.lock</code> file is up-to-date (such as a CI build) or want to avoid network
+access.</dd>
+
+
+<dt class="option-term" id="option-cargo-add---offline"><a class="option-anchor" href="#option-cargo-add---offline"></a><code>--offline</code></dt>
+<dd class="option-desc">Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.</p>
+<p>Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
+offline.</p>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
+
+
 </dl>
 
 ### Common Options
@@ -175,6 +214,12 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-add---config"><a class="option-anchor" href="#option-cargo-add---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
 
 
 <dt class="option-term" id="option-cargo-add--h"><a class="option-anchor" href="#option-cargo-add--h"></a><code>-h</code></dt>
@@ -220,4 +265,4 @@ details on environment variables that Cargo reads.
        cargo add serde serde_json -F serde/derive
 
 ## SEE ALSO
-[cargo(1)](cargo.html)
+[cargo(1)](cargo.html), [cargo-remove(1)](cargo-remove.html)

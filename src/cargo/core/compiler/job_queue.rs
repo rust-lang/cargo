@@ -55,11 +55,11 @@ use std::fmt::Write as _;
 use std::io;
 use std::marker;
 use std::sync::Arc;
+use std::thread::{self, Scope};
 use std::time::Duration;
 
 use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
-use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, trace};
 use semver::Version;
@@ -129,12 +129,8 @@ struct DrainState<'cfg> {
     messages: Arc<Queue<Message>>,
     /// Diagnostic deduplication support.
     diag_dedupe: DiagDedupe<'cfg>,
-    /// Count of warnings, used to print a summary after the job succeeds.
-    ///
-    /// First value is the total number of warnings, and the second value is
-    /// the number that were suppressed because they were duplicates of a
-    /// previous warning.
-    warning_count: HashMap<JobId, (usize, usize)>,
+    /// Count of warnings, used to print a summary after the job succeeds
+    warning_count: HashMap<JobId, WarningCount>,
     active: HashMap<JobId, Unit>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
@@ -162,12 +158,56 @@ struct DrainState<'cfg> {
     /// The list of jobs that we have not yet started executing, but have
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
     /// allow us to request jobserver tokens pretty early.
-    pending_queue: Vec<(Unit, Job)>,
+    pending_queue: Vec<(Unit, Job, usize)>,
     print: DiagnosticPrinter<'cfg>,
 
     /// How many jobs we've finished
     finished: usize,
     per_package_future_incompat_reports: Vec<FutureIncompatReportPackage>,
+}
+
+/// Count of warnings, used to print a summary after the job succeeds
+#[derive(Default)]
+pub struct WarningCount {
+    /// total number of warnings
+    pub total: usize,
+    /// number of warnings that were suppressed because they
+    /// were duplicates of a previous warning
+    pub duplicates: usize,
+    /// number of fixable warnings set to `NotAllowed`
+    /// if any errors have been seen ofr the current
+    /// target
+    pub fixable: FixableWarnings,
+}
+
+impl WarningCount {
+    /// If an error is seen this should be called
+    /// to set `fixable` to `NotAllowed`
+    fn disallow_fixable(&mut self) {
+        self.fixable = FixableWarnings::NotAllowed;
+    }
+
+    /// Checks fixable if warnings are allowed
+    /// fixable warnings are allowed if no
+    /// errors have been seen for the current
+    /// target. If an error was seen `fixable`
+    /// will be `NotAllowed`.
+    fn fixable_allowed(&self) -> bool {
+        match &self.fixable {
+            FixableWarnings::NotAllowed => false,
+            _ => true,
+        }
+    }
+}
+
+/// Used to keep track of how many fixable warnings there are
+/// and if fixable warnings are allowed
+#[derive(Default)]
+pub enum FixableWarnings {
+    NotAllowed,
+    #[default]
+    Zero,
+    Positive(usize),
 }
 
 pub struct ErrorsDuringDrain {
@@ -311,10 +351,12 @@ enum Message {
         id: JobId,
         level: String,
         diag: String,
+        fixable: bool,
     },
     WarningCount {
         id: JobId,
         emitted: bool,
+        fixable: bool,
     },
     FixDiagnostic(diagnostic_server::Message),
     Token(io::Result<Acquired>),
@@ -363,13 +405,14 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
         Ok(())
     }
 
-    pub fn emit_diag(&self, level: String, diag: String) -> CargoResult<()> {
+    pub fn emit_diag(&self, level: String, diag: String, fixable: bool) -> CargoResult<()> {
         if let Some(dedupe) = self.output {
             let emitted = dedupe.emit_diag(&diag)?;
             if level == "warning" {
                 self.messages.push(Message::WarningCount {
                     id: self.id,
                     emitted,
+                    fixable,
                 });
             }
         } else {
@@ -377,6 +420,7 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
                 id: self.id,
                 level,
                 diag,
+                fixable,
             });
         }
         Ok(())
@@ -556,29 +600,36 @@ impl<'cfg> JobQueue<'cfg> {
             .take()
             .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
-        crossbeam_utils::thread::scope(move |scope| {
-            match state.drain_the_queue(cx, plan, scope, &helper) {
+        thread::scope(
+            move |scope| match state.drain_the_queue(cx, plan, scope, &helper) {
                 Some(err) => Err(err),
                 None => Ok(()),
-            }
-        })
-        .expect("child threads shouldn't panic")
+            },
+        )
     }
 }
 
 impl<'cfg> DrainState<'cfg> {
-    fn spawn_work_if_possible(
+    fn spawn_work_if_possible<'s>(
         &mut self,
         cx: &mut Context<'_, '_>,
         jobserver_helper: &HelperThread,
-        scope: &Scope<'_>,
+        scope: &'s Scope<'s, '_>,
     ) -> CargoResult<()> {
         // Dequeue as much work as we can, learning about everything
         // possible that can run. Note that this is also the point where we
         // start requesting job tokens. Each job after the first needs to
         // request a token.
-        while let Some((unit, job)) = self.queue.dequeue() {
-            self.pending_queue.push((unit, job));
+        while let Some((unit, job, priority)) = self.queue.dequeue() {
+            // We want to keep the pieces of work in the `pending_queue` sorted
+            // by their priorities, and insert the current job at its correctly
+            // sorted position: following the lower priority jobs, and the ones
+            // with the same priority (since they were dequeued before the
+            // current one, we also keep that relation).
+            let idx = self
+                .pending_queue
+                .partition_point(|&(_, _, p)| p <= priority);
+            self.pending_queue.insert(idx, (unit, job, priority));
             if self.active.len() + self.pending_queue.len() > 1 {
                 jobserver_helper.request_token();
             }
@@ -587,8 +638,11 @@ impl<'cfg> DrainState<'cfg> {
         // Now that we've learned of all possible work that we can execute
         // try to spawn it so long as we've got a jobserver token which says
         // we're able to perform some parallel work.
+        // The `pending_queue` is sorted in ascending priority order, and we
+        // remove items from its end to schedule the highest priority items
+        // sooner.
         while self.has_extra_tokens() && !self.pending_queue.is_empty() {
-            let (unit, job) = self.pending_queue.remove(0);
+            let (unit, job, _) = self.pending_queue.pop().unwrap();
             *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
             if !cx.bcx.build_config.build_plan {
                 // Print out some nice progress information.
@@ -669,14 +723,28 @@ impl<'cfg> DrainState<'cfg> {
                 shell.print_ansi_stderr(err.as_bytes())?;
                 shell.err().write_all(b"\n")?;
             }
-            Message::Diagnostic { id, level, diag } => {
+            Message::Diagnostic {
+                id,
+                level,
+                diag,
+                fixable,
+            } => {
                 let emitted = self.diag_dedupe.emit_diag(&diag)?;
                 if level == "warning" {
-                    self.bump_warning_count(id, emitted);
+                    self.bump_warning_count(id, emitted, fixable);
+                }
+                if level == "error" {
+                    let cnts = self.warning_count.entry(id).or_default();
+                    // If there is an error, the `cargo fix` message should not show
+                    cnts.disallow_fixable();
                 }
             }
-            Message::WarningCount { id, emitted } => {
-                self.bump_warning_count(id, emitted);
+            Message::WarningCount {
+                id,
+                emitted,
+                fixable,
+            } => {
+                self.bump_warning_count(id, emitted, fixable);
             }
             Message::FixDiagnostic(msg) => {
                 self.print.print(&msg)?;
@@ -807,11 +875,11 @@ impl<'cfg> DrainState<'cfg> {
     ///
     /// This returns an Option to prevent the use of `?` on `Result` types
     /// because it is important for the loop to carefully handle errors.
-    fn drain_the_queue(
+    fn drain_the_queue<'s>(
         mut self,
         cx: &mut Context<'_, '_>,
         plan: &mut BuildPlan,
-        scope: &Scope<'_>,
+        scope: &'s Scope<'s, '_>,
         jobserver_helper: &HelperThread,
     ) -> Option<anyhow::Error> {
         trace!("queue: {:#?}", self.queue);
@@ -997,7 +1065,7 @@ impl<'cfg> DrainState<'cfg> {
     ///
     /// Fresh jobs block until finished (which should be very fast!), Dirty
     /// jobs will spawn a thread in the background and return immediately.
-    fn run(&mut self, unit: &Unit, job: Job, cx: &Context<'_, '_>, scope: &Scope<'_>) {
+    fn run<'s>(&mut self, unit: &Unit, job: Job, cx: &Context<'_, '_>, scope: &'s Scope<'s, '_>) {
         let id = JobId(self.next_id);
         self.next_id = self.next_id.checked_add(1).unwrap();
 
@@ -1072,7 +1140,7 @@ impl<'cfg> DrainState<'cfg> {
             }
             Freshness::Dirty => {
                 self.timings.add_dirty();
-                scope.spawn(move |_| {
+                scope.spawn(move || {
                     doit(JobState {
                         id,
                         messages: messages.clone(),
@@ -1117,19 +1185,34 @@ impl<'cfg> DrainState<'cfg> {
         Ok(())
     }
 
-    fn bump_warning_count(&mut self, id: JobId, emitted: bool) {
+    fn bump_warning_count(&mut self, id: JobId, emitted: bool, fixable: bool) {
         let cnts = self.warning_count.entry(id).or_default();
-        cnts.0 += 1;
+        cnts.total += 1;
         if !emitted {
-            cnts.1 += 1;
+            cnts.duplicates += 1;
+        // Don't add to fixable if it's already been emitted
+        } else if fixable {
+            // Do not add anything to the fixable warning count if
+            // is `NotAllowed` since that indicates there was an
+            // error while building this `Unit`
+            if cnts.fixable_allowed() {
+                cnts.fixable = match cnts.fixable {
+                    FixableWarnings::NotAllowed => FixableWarnings::NotAllowed,
+                    FixableWarnings::Zero => FixableWarnings::Positive(1),
+                    FixableWarnings::Positive(fixable) => FixableWarnings::Positive(fixable + 1),
+                };
+            }
         }
     }
 
     /// Displays a final report of the warnings emitted by a particular job.
     fn report_warning_count(&mut self, config: &Config, id: JobId) {
         let count = match self.warning_count.remove(&id) {
-            Some(count) => count,
-            None => return,
+            // An error could add an entry for a `Unit`
+            // with 0 warnings but having fixable
+            // warnings be disallowed
+            Some(count) if count.total > 0 => count,
+            None | Some(_) => return,
         };
         let unit = &self.active[&id];
         let mut message = format!("`{}` ({}", unit.pkg.name(), unit.target.description_named());
@@ -1141,14 +1224,46 @@ impl<'cfg> DrainState<'cfg> {
             message.push_str(" doc");
         }
         message.push_str(") generated ");
-        match count.0 {
+        match count.total {
             1 => message.push_str("1 warning"),
             n => drop(write!(message, "{} warnings", n)),
         };
-        match count.1 {
+        match count.duplicates {
             0 => {}
             1 => message.push_str(" (1 duplicate)"),
             n => drop(write!(message, " ({} duplicates)", n)),
+        }
+        // Only show the `cargo fix` message if its a local `Unit`
+        if unit.is_local() && config.nightly_features_allowed {
+            // Do not show this if there are any errors or no fixable warnings
+            if let FixableWarnings::Positive(fixable) = count.fixable {
+                // `cargo fix` doesnt have an option for custom builds
+                if !unit.target.is_custom_build() {
+                    let mut command = {
+                        let named = unit.target.description_named();
+                        // if its a lib we need to add the package to fix
+                        if unit.target.is_lib() {
+                            format!("{} -p {}", named, unit.pkg.name())
+                        } else {
+                            named
+                        }
+                    };
+                    if unit.mode.is_rustc_test()
+                        && !(unit.target.is_test() || unit.target.is_bench())
+                    {
+                        command.push_str(" --tests");
+                    }
+                    let mut suggestions = format!("{} suggestion", fixable);
+                    if fixable > 1 {
+                        suggestions.push_str("s")
+                    }
+                    drop(write!(
+                        message,
+                        " (run `cargo fix --{}` to apply {})",
+                        command, suggestions
+                    ))
+                }
+            }
         }
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.

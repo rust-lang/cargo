@@ -30,7 +30,7 @@ pub struct Timings<'cfg> {
     start_str: String,
     /// A summary of the root units.
     ///
-    /// Tuples of `(package_description, target_descrptions)`.
+    /// Tuples of `(package_description, target_descriptions)`.
     root_targets: Vec<(String, Vec<String>)>,
     /// The build profile.
     profile: String,
@@ -272,7 +272,7 @@ impl<'cfg> Timings<'cfg> {
             Some(state) => state,
             None => return,
         };
-        // Don't take samples too too frequently, even if requested.
+        // Don't take samples too frequently, even if requested.
         let now = Instant::now();
         if self.last_cpu_recording.elapsed() < Duration::from_millis(100) {
             return;
@@ -445,7 +445,7 @@ impl<'cfg> Timings<'cfg> {
             self.total_dirty,
             self.total_fresh + self.total_dirty,
             max_concurrency,
-            bcx.build_config.jobs,
+            bcx.jobs(),
             num_cpus,
             self.start_str,
             total_time,

@@ -4,6 +4,7 @@ NAME
        cargo-yank - Remove a pushed crate from the index
 
 SYNOPSIS
+       cargo yank [options] crate@version
        cargo yank [options] --version version [crate]
 
 DESCRIPTION
@@ -84,6 +85,14 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
        -h, --help
            Prints help information.
 
@@ -104,7 +113,7 @@ EXIT STATUS
 EXAMPLES
        1. Yank a crate from the index:
 
-              cargo yank --version 1.0.7 foo
+              cargo yank foo@1.0.7
 
 SEE ALSO
        cargo(1), cargo-login(1), cargo-publish(1)

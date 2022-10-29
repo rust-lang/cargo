@@ -73,6 +73,8 @@ _cargo()
 	local opt__pkgid="$opt_common $opt_mani $opt_lock $opt_pkg"
 	local opt__publish="$opt_common $opt_mani $opt_feat $opt_lock $opt_parallel --allow-dirty --dry-run --token --no-verify --index --registry --target --target-dir"
 	local opt__read_manifest="$opt_help $opt_quiet $opt_verbose $opt_mani $opt_color $opt_lock --no-deps"
+	local opt__remove="$opt_common $opt_pkg $opt_lock $opt_mani --dry-run --dev --build --target"
+	local opt__rm="$opt__remove"
 	local opt__report="$opt_help $opt_verbose $opt_color future-incompat future-incompatibilities"
 	local opt__report__future_incompat="$opt_help $opt_verbose $opt_color $opt_pkg --id"
 	local opt__run="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_parallel --message-format --target --bin --example --release --target-dir --profile"
@@ -138,7 +140,7 @@ _cargo()
 			--target)
 				COMPREPLY=( $( compgen -W "$(_get_targets)" -- "$cur" ) )
 				;;
-			--target-dir)
+			--target-dir|--path)
 				_filedir -d
 				;;
 			help)

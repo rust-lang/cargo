@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
 
-pub fn builtin() -> Vec<App> {
+pub fn builtin() -> Vec<Command> {
     vec![
         add::cli(),
         bench::cli(),
@@ -13,6 +13,7 @@ pub fn builtin() -> Vec<App> {
         fix::cli(),
         generate_lockfile::cli(),
         git_checkout::cli(),
+        help::cli(),
         init::cli(),
         install::cli(),
         locate_project::cli(),
@@ -25,6 +26,7 @@ pub fn builtin() -> Vec<App> {
         pkgid::cli(),
         publish::cli(),
         read_manifest::cli(),
+        remove::cli(),
         report::cli(),
         run::cli(),
         rustc::cli(),
@@ -54,6 +56,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResu
         "fix" => fix::exec,
         "generate-lockfile" => generate_lockfile::exec,
         "git-checkout" => git_checkout::exec,
+        "help" => help::exec,
         "init" => init::exec,
         "install" => install::exec,
         "locate-project" => locate_project::exec,
@@ -66,6 +69,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResu
         "pkgid" => pkgid::exec,
         "publish" => publish::exec,
         "read-manifest" => read_manifest::exec,
+        "remove" => remove::exec,
         "report" => report::exec,
         "run" => run::exec,
         "rustc" => rustc::exec,
@@ -108,6 +112,7 @@ pub mod package;
 pub mod pkgid;
 pub mod publish;
 pub mod read_manifest;
+pub mod remove;
 pub mod report;
 pub mod run;
 pub mod rustc;

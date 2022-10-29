@@ -28,10 +28,11 @@ cargo bench \-\- foo \-\-exact
 .fi
 .RE
 .sp
-Benchmarks are built with the \fB\-\-test\fR option to \fBrustc\fR which creates an
-executable with a \fBmain\fR function that automatically runs all functions
-annotated with the \fB#[bench]\fR attribute. Cargo passes the \fB\-\-bench\fR flag to
-the test harness to tell it to run only benchmarks.
+Benchmarks are built with the \fB\-\-test\fR option to \fBrustc\fR which creates a
+special executable by linking your code with libtest. The executable
+automatically runs all functions annotated with the \fB#[bench]\fR attribute.
+Cargo passes the \fB\-\-bench\fR flag to the test harness to tell it to run
+only benchmarks.
 .sp
 The libtest harness may be disabled by setting \fBharness = false\fR in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fR
@@ -143,6 +144,15 @@ them from being benchmarked by default. Target selection options that take a
 target by name ignore the \fBbench\fR flag and will always benchmark the given
 target.
 .sp
+Binary targets are automatically built if there is an integration test or
+benchmark being selected to benchmark. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The \fBCARGO_BIN_EXE_<name>\fR
+\fIenvironment variable\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html#environment\-variables\-cargo\-sets\-for\-crates>
+is set when the integration test is built so that it can use the
+\fI\f(BIenv\fI macro\fR <https://doc.rust\-lang.org/std/macro.env.html> to locate the
+executable.
+.sp
 Passing target selection flags will benchmark only the specified
 targets. 
 .sp
@@ -247,7 +257,7 @@ Do not activate the \fBdefault\fR feature of the selected packages.
 .RS 4
 Benchmark for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets.
+list of supported targets. This flag may be specified multiple times.
 .sp
 This may also be specified with the \fBbuild.target\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -278,7 +288,7 @@ Specifying an output format (rather than the default) is unstable and requires
 \fB\-Zunstable\-options\fR\&. Valid output formats:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the
+\h'-04'\(bu\h'+02'\fBhtml\fR (unstable, requires \fB\-Zunstable\-options\fR): Write a human\-readable file \fBcargo\-timing.html\fR to the
 \fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
@@ -381,7 +391,7 @@ scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
+\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
 JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
@@ -434,6 +444,13 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -454,7 +471,9 @@ Rust test harness runs benchmarks serially in a single thread.
 .RS 4
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
-the number of CPUs.
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value.
+Should not be 0.
 .RE
 .sp
 \fB\-\-keep\-going\fR

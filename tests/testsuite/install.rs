@@ -5,7 +5,7 @@ use std::io::prelude::*;
 
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
-use cargo_test_support::registry::{self, registry_path, registry_url, Package};
+use cargo_test_support::registry::{self, registry_path, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, no_such_file_err_msg, project, project_in, symlink_supported, t,
 };
@@ -133,10 +133,11 @@ fn simple_with_message_format() {
 
 #[cargo_test]
 fn with_index() {
+    let registry = registry::init();
     pkg("foo", "0.0.1");
 
     cargo_process("install foo --index")
-        .arg(registry_url().to_string())
+        .arg(registry.index_url().as_str())
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -1382,12 +1383,59 @@ fn vers_precise() {
 }
 
 #[cargo_test]
-fn version_too() {
+fn version_precise() {
     pkg("foo", "0.1.1");
     pkg("foo", "0.1.2");
 
     cargo_process("install foo --version 0.1.1")
         .with_stderr_contains("[DOWNLOADED] foo v0.1.1 (registry [..])")
+        .run();
+}
+
+#[cargo_test]
+fn inline_version_precise() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install foo@0.1.1")
+        .with_stderr_contains("[DOWNLOADED] foo v0.1.1 (registry [..])")
+        .run();
+}
+
+#[cargo_test]
+fn inline_version_multiple() {
+    pkg("foo", "0.1.0");
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+    pkg("bar", "0.2.0");
+    pkg("bar", "0.2.1");
+    pkg("bar", "0.2.2");
+
+    cargo_process("install foo@0.1.1 bar@0.2.1")
+        .with_stderr_contains("[DOWNLOADED] foo v0.1.1 (registry [..])")
+        .with_stderr_contains("[DOWNLOADED] bar v0.2.1 (registry [..])")
+        .run();
+}
+
+#[cargo_test]
+fn inline_version_without_name() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install @0.1.1")
+        .with_status(101)
+        .with_stderr("error: missing crate name for `@0.1.1`")
+        .run();
+}
+
+#[cargo_test]
+fn inline_and_explicit_version() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install foo@0.1.1 --version 0.1.1")
+        .with_status(101)
+        .with_stderr("error: cannot specify both `@0.1.1` and `--version`")
         .run();
 }
 
@@ -1400,8 +1448,7 @@ fn not_both_vers_and_version() {
         .with_status(1)
         .with_stderr_contains(
             "\
-error: The argument '--version <VERSION>' was provided more than once, \
-but cannot be used multiple times
+error: The argument '--version <VERSION>' was provided more than once, but cannot be used multiple times
 ",
         )
         .run();
@@ -1428,7 +1475,7 @@ fn uninstall_multiple_and_specifying_bin() {
 }
 
 #[cargo_test]
-fn uninstall_with_empty_pakcage_option() {
+fn uninstall_with_empty_package_option() {
     cargo_process("uninstall -p")
         .with_status(101)
         .with_stderr(
@@ -1604,7 +1651,7 @@ fn install_empty_argument() {
         .arg("")
         .with_status(1)
         .with_stderr_contains(
-            "[ERROR] The argument '<crate>...' requires a value but none was supplied",
+            "[ERROR] The argument '[crate]...' requires a value but none was supplied",
         )
         .run();
 }
@@ -1707,7 +1754,9 @@ fn install_ignores_unstable_table_in_local_cargo_config() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("install bar").masquerade_as_nightly_cargo().run();
+    p.cargo("install bar")
+        .masquerade_as_nightly_cargo(&["build-std"])
+        .run();
     assert_has_installed_exe(cargo_home(), "bar");
 }
 
@@ -1981,4 +2030,42 @@ fn install_semver_metadata() {
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn no_auto_fix_note() {
+    Package::new("auto_fix", "0.0.1")
+        .file("src/lib.rs", "use std::io;")
+        .file(
+            "src/main.rs",
+            &format!("extern crate {}; use std::io; fn main() {{}}", "auto_fix"),
+        )
+        .publish();
+
+    // This should not contain a suggestion to run `cargo fix`
+    //
+    // This is checked by matching the full output as `with_stderr_does_not_contain`
+    // can be brittle
+    cargo_process("install auto_fix")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] auto_fix v0.0.1 (registry [..])
+[INSTALLING] auto_fix v0.0.1
+[COMPILING] auto_fix v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/auto_fix[EXE]
+[INSTALLED] package `auto_fix v0.0.1` (executable `auto_fix[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "auto_fix");
+
+    cargo_process("uninstall auto_fix")
+        .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/auto_fix[EXE]")
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "auto_fix");
 }

@@ -2,11 +2,11 @@ use crate::command_prelude::*;
 
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("init")
         .about("Create a new cargo package in an existing directory")
         .arg_quiet()
-        .arg(Arg::new("path").default_value("."))
+        .arg(Arg::new("path").action(ArgAction::Set).default_value("."))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .arg_new_opts()
         .after_help("Run `cargo help init` for more detailed information.\n")

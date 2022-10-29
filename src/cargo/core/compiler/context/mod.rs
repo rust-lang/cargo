@@ -92,7 +92,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let jobserver = match bcx.config.jobserver_from_env() {
             Some(c) => c.clone(),
             None => {
-                let client = Client::new(bcx.build_config.jobs as usize)
+                let client = Client::new(bcx.jobs() as usize)
                     .with_context(|| "failed to create jobserver")?;
                 client.acquire_raw()?;
                 client
@@ -224,7 +224,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let mut unstable_opts = false;
                 let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 args.extend(compiler::lto_args(&self, unit));
-                args.extend(compiler::features_args(&self, unit));
+                args.extend(compiler::features_args(unit));
                 args.extend(compiler::check_cfg_args(&self, unit));
 
                 let script_meta = self.find_build_script_metadata(unit);
@@ -233,6 +233,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         for cfg in &output.cfgs {
                             args.push("--cfg".into());
                             args.push(cfg.into());
+                        }
+
+                        if !output.check_cfgs.is_empty() {
+                            args.push("-Zunstable-options".into());
+                            for check_cfg in &output.check_cfgs {
+                                args.push("--check-cfg".into());
+                                args.push(check_cfg.into());
+                            }
                         }
 
                         for (lt, arg) in &output.linker_args {
@@ -595,7 +603,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn new_jobserver(&mut self) -> CargoResult<Client> {
-        let tokens = self.bcx.build_config.jobs as usize;
+        let tokens = self.bcx.jobs() as usize;
         let client = Client::new(tokens).with_context(|| "failed to create jobserver")?;
 
         // Drain the client fully

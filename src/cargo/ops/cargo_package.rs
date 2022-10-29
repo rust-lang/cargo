@@ -5,6 +5,7 @@ use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::task::Poll;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::CliFeatures;
@@ -13,7 +14,7 @@ use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::toml::TomlManifest;
-use crate::util::{self, restricted_names, Config, FileLock};
+use crate::util::{self, human_readable_bytes, restricted_names, Config, FileLock};
 use crate::{drop_println, ops};
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -29,7 +30,7 @@ pub struct PackageOpts<'cfg> {
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
-    pub jobs: Option<u32>,
+    pub jobs: Option<i32>,
     pub keep_going: bool,
     pub to_package: ops::Packages,
     pub targets: Vec<String>,
@@ -109,6 +110,8 @@ pub fn package_one(
 
     let ar_files = build_ar_list(ws, pkg, src_files, vcs_info)?;
 
+    let filecount = ar_files.len();
+
     if opts.list {
         for ar_file in ar_files {
             drop_println!(config, "{}", ar_file.rel_str);
@@ -137,7 +140,7 @@ pub fn package_one(
         .shell()
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
-    tar(ws, pkg, ar_files, dst.file(), &filename)
+    let uncompressed_size = tar(ws, pkg, ar_files, dst.file(), &filename)
         .with_context(|| "failed to prepare local package for uploading")?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
@@ -149,6 +152,22 @@ pub fn package_one(
     let dst_path = dst.parent().join(&filename);
     fs::rename(&src_path, &dst_path)
         .with_context(|| "failed to move temporary tarball into final location")?;
+
+    let dst_metadata = dst
+        .file()
+        .metadata()
+        .with_context(|| format!("could not learn metadata for: `{}`", dst_path.display()))?;
+    let compressed_size = dst_metadata.len();
+
+    let uncompressed = human_readable_bytes(uncompressed_size);
+    let compressed = human_readable_bytes(compressed_size);
+
+    let message = format!(
+        "{} files, {:.1}{} ({:.1}{} compressed)",
+        filecount, uncompressed.0, uncompressed.1, compressed.0, compressed.1,
+    );
+    // It doesn't really matter if this fails.
+    drop(config.shell().status("Packaged", message));
 
     return Ok(Some(dst));
 }
@@ -374,7 +393,12 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     if let Some(orig_resolve) = orig_resolve {
         compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
     }
-    check_yanked(config, &pkg_set, &new_resolve)?;
+    check_yanked(
+        config,
+        &pkg_set,
+        &new_resolve,
+        "consider updating to a version that is not yanked",
+    )?;
 
     ops::resolve_to_string(&tmp_ws, &mut new_resolve)
 }
@@ -561,13 +585,16 @@ fn check_repo_state(
     }
 }
 
+/// Compresses and packages a list of [`ArchiveFile`]s and writes into the given file.
+///
+/// Returns the uncompressed size of the contents of the new archive file.
 fn tar(
     ws: &Workspace<'_>,
     pkg: &Package,
     ar_files: Vec<ArchiveFile>,
     dst: &File,
     filename: &str,
-) -> CargoResult<()> {
+) -> CargoResult<u64> {
     // Prepare the encoder and its header.
     let filename = Path::new(filename);
     let encoder = GzBuilder::new()
@@ -580,6 +607,8 @@ fn tar(
 
     let base_name = format!("{}-{}", pkg.name(), pkg.version());
     let base_path = Path::new(&base_name);
+
+    let mut uncompressed_size = 0;
     for ar_file in ar_files {
         let ArchiveFile {
             rel_path,
@@ -605,6 +634,7 @@ fn tar(
                     .with_context(|| {
                         format!("could not archive source file `{}`", disk_path.display())
                     })?;
+                uncompressed_size += metadata.len() as u64;
             }
             FileContents::Generated(generated_kind) => {
                 let contents = match generated_kind {
@@ -620,13 +650,14 @@ fn tar(
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, contents.as_bytes())
                     .with_context(|| format!("could not archive source file `{}`", rel_str))?;
+                uncompressed_size += contents.len() as u64;
             }
         }
     }
 
     let encoder = ar.into_inner()?;
     encoder.finish()?;
-    Ok(())
+    Ok(uncompressed_size)
 }
 
 /// Generate warnings when packaging Cargo.lock, and the resolve have changed.
@@ -716,22 +747,45 @@ fn compare_resolve(
     Ok(())
 }
 
-fn check_yanked(config: &Config, pkg_set: &PackageSet<'_>, resolve: &Resolve) -> CargoResult<()> {
+pub fn check_yanked(
+    config: &Config,
+    pkg_set: &PackageSet<'_>,
+    resolve: &Resolve,
+    hint: &str,
+) -> CargoResult<()> {
     // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
     let _lock = config.acquire_package_cache_lock()?;
 
     let mut sources = pkg_set.sources_mut();
-    for pkg_id in resolve.iter() {
-        if let Some(source) = sources.get_mut(pkg_id.source_id()) {
-            if source.is_yanked(pkg_id)? {
-                config.shell().warn(format!(
-                    "package `{}` in Cargo.lock is yanked in registry `{}`, \
-                     consider updating to a version that is not yanked",
-                    pkg_id,
-                    pkg_id.source_id().display_registry_name()
-                ))?;
+    let mut pending: Vec<PackageId> = resolve.iter().collect();
+    let mut results = Vec::new();
+    for (_id, source) in sources.sources_mut() {
+        source.invalidate_cache();
+    }
+    while !pending.is_empty() {
+        pending.retain(|pkg_id| {
+            if let Some(source) = sources.get_mut(pkg_id.source_id()) {
+                match source.is_yanked(*pkg_id) {
+                    Poll::Ready(result) => results.push((*pkg_id, result)),
+                    Poll::Pending => return true,
+                }
             }
+            false
+        });
+        for (_id, source) in sources.sources_mut() {
+            source.block_until_ready()?;
+        }
+    }
+
+    for (pkg_id, is_yanked) in results {
+        if is_yanked? {
+            config.shell().warn(format!(
+                "package `{}` in Cargo.lock is yanked in registry `{}`, {}",
+                pkg_id,
+                pkg_id.source_id().display_registry_name(),
+                hint
+            ))?;
         }
     }
     Ok(())
@@ -800,7 +854,6 @@ fn run_verify(
             target_rustdoc_args: None,
             target_rustc_args: rustc_args,
             target_rustc_crate_types: None,
-            local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             honor_rust_version: true,
         },

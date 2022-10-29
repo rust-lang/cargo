@@ -36,6 +36,25 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
 }
 
 pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
+    // Currently this is only a warning, but after a transition period this will become
+    // a hard error.
+    // See https://github.com/rust-lang/cargo/issues/10919#issuecomment-1214464756.
+    // We should declare the `precise` and `aggressive` arguments
+    // require the `package` argument in the clap.
+    if opts.aggressive && opts.to_update.is_empty() {
+        ws.config().shell().warn(
+            "aggressive is only supported with \"--package <SPEC>\", \
+        this will become a hard error in a future release.",
+        )?;
+    }
+
+    if opts.precise.is_some() && opts.to_update.is_empty() {
+        ws.config().shell().warn(
+            "precise is only supported with \"--package <SPEC>\", \
+        this will become a hard error in a future release.",
+        )?;
+    }
+
     if opts.aggressive && opts.precise.is_some() {
         anyhow::bail!("cannot specify both aggressive and precise simultaneously")
     }

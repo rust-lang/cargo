@@ -209,7 +209,7 @@ fn resolve_with_registry<'cfg>(
     Ok(resolve)
 }
 
-/// Resolves all dependencies for a package using an optional previous instance.
+/// Resolves all dependencies for a package using an optional previous instance
 /// of resolve to guide the resolution process.
 ///
 /// This also takes an optional hash set, `to_avoid`, which is a list of package
@@ -386,21 +386,19 @@ pub fn resolve_with_previous<'cfg>(
     let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
     let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
-    // In the case where a previous instance of resolve is available, we
-    // want to lock as many packages as possible to the previous version
-    // without disturbing the graph structure.
+
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        register_previous_locks(ws, registry, r, &keep, dev_deps);
-    }
 
-    // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
-    for r in previous {
-        for id in r.iter() {
-            if keep(&id) {
-                debug!("attempting to prefer {}", id);
-                version_prefs.prefer_package_id(id);
-            }
+        // In the case where a previous instance of resolve is available, we
+        // want to lock as many packages as possible to the previous version
+        // without disturbing the graph structure.
+        register_previous_locks(ws, registry, r, &keep, dev_deps);
+
+        // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
+        for id in r.iter().filter(keep) {
+            debug!("attempting to prefer {}", id);
+            version_prefs.prefer_package_id(id);
         }
     }
 
@@ -408,6 +406,12 @@ pub fn resolve_with_previous<'cfg>(
         registry.lock_patches();
     }
 
+    // Some packages are already loaded when setting up a workspace. This
+    // makes it so anything that was already loaded will not be loaded again.
+    // Without this there were cases where members would be parsed multiple times
+    ws.preload(registry);
+
+    // In case any members were not already loaded or the Workspace is_ephemeral.
     for member in ws.members() {
         registry.add_sources(Some(member.package_id().source_id()))?;
     }
@@ -790,7 +794,7 @@ fn emit_warnings_of_unused_patches(
                 writeln!(msg, "Patch `{}` {}", unused, MESSAGE)?;
                 write!(
                     msg,
-                    "Perhaps you misspell the source URL being patched.\n\
+                    "Perhaps you misspelled the source URL being patched.\n\
                     Possible URLs for `[patch.<URL>]`:",
                 )?;
                 for id in ids.iter() {

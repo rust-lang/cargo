@@ -4,7 +4,7 @@ use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
+use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project, project_in};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::remove_dir_all;
 use std::env;
@@ -18,7 +18,7 @@ fn custom_build_script_failed() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -50,7 +50,7 @@ fn custom_build_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -67,7 +67,7 @@ fn custom_build_env_vars() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -404,7 +404,7 @@ fn custom_build_env_var_rustc_linker_host_target() {
     // only if build.rs succeeds, despite linker binary not existing.
     p.cargo("build -Z target-applies-to-host --target")
         .arg(&target)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .run();
 }
 
@@ -440,7 +440,7 @@ fn custom_build_env_var_rustc_linker_host_target_env() {
     p.cargo("build -Z target-applies-to-host --target")
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
         .arg(&target)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .run();
 }
 
@@ -465,7 +465,7 @@ fn custom_build_invalid_host_config_feature_flag() {
     // build.rs should fail due to -Zhost-config being set without -Ztarget-applies-to-host
     p.cargo("build -Z host-config --target")
         .arg(&target)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["host-config"])
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -498,7 +498,7 @@ fn custom_build_linker_host_target_with_bad_host_config() {
     // build.rs should fail due to bad host linker being set
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
-            .masquerade_as_nightly_cargo()
+            .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
             .with_status(101)
             .with_stderr_contains(
                 "\
@@ -533,7 +533,7 @@ fn custom_build_linker_bad_host() {
     // build.rs should fail due to bad host linker being set
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
-            .masquerade_as_nightly_cargo()
+            .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
             .with_status(101)
             .with_stderr_contains(
                 "\
@@ -570,7 +570,7 @@ fn custom_build_linker_bad_host_with_arch() {
     // build.rs should fail due to bad host linker being set
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
-            .masquerade_as_nightly_cargo()
+            .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
             .with_status(101)
             .with_stderr_contains(
                 "\
@@ -616,7 +616,7 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
     // assertion should succeed since it's still passed the target linker
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
         .arg(&target)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .run();
 }
 
@@ -646,7 +646,7 @@ fn custom_build_linker_bad_cross_arch_host() {
     // build.rs should fail due to bad host linker being set
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
             .arg(&target)
-            .masquerade_as_nightly_cargo()
+            .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
             .with_status(101)
             .with_stderr_contains(
                 "\
@@ -664,7 +664,7 @@ fn custom_build_script_wrong_rustc_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -694,7 +694,7 @@ fn custom_build_script_rustc_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -708,7 +708,7 @@ fn custom_build_script_rustc_flags() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -753,7 +753,7 @@ fn custom_build_script_rustc_flags_no_space() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -767,7 +767,7 @@ fn custom_build_script_rustc_flags_no_space() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -812,7 +812,7 @@ fn links_no_build_cmd() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -843,7 +843,7 @@ fn links_duplicates() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -859,7 +859,7 @@ fn links_duplicates() {
         .file(
             "a-sys/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a-sys"
                 version = "0.5.0"
                 authors = []
@@ -947,7 +947,7 @@ fn links_duplicates_deep_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -963,7 +963,7 @@ fn links_duplicates_deep_dependency() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -978,7 +978,7 @@ fn links_duplicates_deep_dependency() {
         .file(
             "a/a-sys/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a-sys"
                 version = "0.5.0"
                 authors = []
@@ -1013,7 +1013,7 @@ fn overrides_and_links() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1051,7 +1051,7 @@ fn overrides_and_links() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1086,7 +1086,7 @@ fn unused_overrides() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1118,7 +1118,7 @@ fn links_passes_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1142,7 +1142,7 @@ fn links_passes_env_vars() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1175,7 +1175,7 @@ fn only_rerun_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1211,7 +1211,7 @@ fn rebuild_continues_to_pass_env_vars() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1239,7 +1239,7 @@ fn rebuild_continues_to_pass_env_vars() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -1279,7 +1279,7 @@ fn testing_and_such() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1344,7 +1344,7 @@ fn propagation_of_l_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1356,7 +1356,7 @@ fn propagation_of_l_flags() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1375,7 +1375,7 @@ fn propagation_of_l_flags() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -1415,7 +1415,7 @@ fn propagation_of_l_flags_new() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1427,7 +1427,7 @@ fn propagation_of_l_flags_new() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1450,7 +1450,7 @@ fn propagation_of_l_flags_new() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -1489,7 +1489,7 @@ fn build_deps_simple() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1533,7 +1533,7 @@ fn build_deps_not_for_normal() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1579,7 +1579,7 @@ fn build_cmd_with_a_build_cmd() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1601,7 +1601,7 @@ fn build_cmd_with_a_build_cmd() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1657,7 +1657,7 @@ fn out_dir_is_preserved() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1737,7 +1737,7 @@ fn output_separate_lines() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1775,7 +1775,7 @@ fn output_separate_lines_new() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1789,10 +1789,13 @@ fn output_separate_lines_new() {
                 fn main() {
                     println!("cargo:rustc-link-search=foo");
                     println!("cargo:rustc-link-lib=static=foo");
+                    println!("cargo:rustc-link-lib=bar");
+                    println!("cargo:rustc-link-search=bar");
                 }
             "#,
         )
         .build();
+    // The order of the arguments passed to rustc is important.
     p.cargo("build -v")
         .with_status(101)
         .with_stderr_contains(
@@ -1800,7 +1803,7 @@ fn output_separate_lines_new() {
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]/foo-[..]/build-script-build`
-[RUNNING] `rustc --crate-name foo [..] -L foo -l static=foo`
+[RUNNING] `rustc --crate-name foo [..] -L foo -L bar -l static=foo -l bar`
 [ERROR] could not find native static library [..]
 ",
         )
@@ -1814,7 +1817,7 @@ fn code_generation() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1871,7 +1874,7 @@ fn release_with_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1896,7 +1899,7 @@ fn build_script_only() {
         .file(
             "Cargo.toml",
             r#"
-                  [project]
+                  [package]
                   name = "foo"
                   version = "0.0.0"
                   authors = []
@@ -1924,7 +1927,7 @@ fn shared_dep_with_a_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1974,7 +1977,7 @@ fn transitive_dep_host() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2026,7 +2029,7 @@ fn test_a_lib_with_a_build_command() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2069,7 +2072,7 @@ fn test_dev_dep_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2082,7 +2085,7 @@ fn test_dev_dep_build_script() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2280,7 +2283,7 @@ fn test_duplicate_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -2344,7 +2347,7 @@ fn cfg_override() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2711,7 +2714,7 @@ fn flags_go_into_tests() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2725,7 +2728,7 @@ fn flags_go_into_tests() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -2737,7 +2740,7 @@ fn flags_go_into_tests() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2792,7 +2795,7 @@ fn diamond_passes_args_only_once() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2807,7 +2810,7 @@ fn diamond_passes_args_only_once() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -2820,7 +2823,7 @@ fn diamond_passes_args_only_once() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -2832,7 +2835,7 @@ fn diamond_passes_args_only_once() {
         .file(
             "c/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "c"
                 version = "0.5.0"
                 authors = []
@@ -2876,7 +2879,7 @@ fn adding_an_override_invalidates() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2937,7 +2940,7 @@ fn changing_an_override_invalidates() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2999,7 +3002,7 @@ fn fresh_builds_possible_with_link_libs() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3051,7 +3054,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3107,7 +3110,7 @@ fn generate_good_d_files() {
         .file(
             "awoo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "awoo"
                 version = "0.5.0"
                 build = "build.rs"
@@ -3126,7 +3129,7 @@ fn generate_good_d_files() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "meow"
                 version = "0.5.0"
                 [dependencies]
@@ -3179,12 +3182,75 @@ fn generate_good_d_files() {
 }
 
 #[cargo_test]
+fn generate_good_d_files_for_external_tools() {
+    // This tests having a relative paths going out of the
+    // project root in config's dep-info-basedir
+    let p = project_in("rust_things")
+        .file(
+            "awoo/Cargo.toml",
+            r#"
+                [package]
+                name = "awoo"
+                version = "0.5.0"
+                build = "build.rs"
+            "#,
+        )
+        .file("awoo/src/lib.rs", "")
+        .file(
+            "awoo/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                    println!("cargo:rerun-if-changed=barkbarkbark");
+                }
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "meow"
+                version = "0.5.0"
+                [dependencies]
+                awoo = { path = "awoo" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [build]
+                dep-info-basedir="../.."
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").run();
+
+    let dot_d_path = p.bin("meow").with_extension("d");
+    let dot_d = fs::read_to_string(&dot_d_path).unwrap();
+
+    println!("*.d file content with dep-info-basedir*: {}", &dot_d);
+
+    assert_match_exact(
+        concat!(
+            "rust_things/foo/target/debug/meow[EXE]:",
+            " rust_things/foo/awoo/barkbarkbark",
+            " rust_things/foo/awoo/build.rs",
+            " rust_things/foo/awoo/src/lib.rs",
+            " rust_things/foo/src/main.rs",
+        ),
+        &dot_d,
+    );
+}
+
+#[cargo_test]
 fn rebuild_only_on_explicit_paths() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3295,7 +3361,7 @@ fn doctest_receives_build_link_args() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3307,7 +3373,7 @@ fn doctest_receives_build_link_args() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -3339,7 +3405,7 @@ fn please_respect_the_dag() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3361,7 +3427,7 @@ fn please_respect_the_dag() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -3391,7 +3457,7 @@ fn non_utf8_output() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3428,7 +3494,7 @@ fn custom_target_dir() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3448,7 +3514,7 @@ fn custom_target_dir() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -3468,7 +3534,7 @@ fn panic_abort_with_build_scripts() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3488,7 +3554,7 @@ fn panic_abort_with_build_scripts() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -3506,7 +3572,7 @@ fn panic_abort_with_build_scripts() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -3530,7 +3596,7 @@ fn warnings_emitted() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3570,7 +3636,7 @@ fn warnings_emitted_when_build_script_panics() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3612,7 +3678,7 @@ fn warnings_hidden_for_upstream() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -3626,7 +3692,7 @@ fn warnings_hidden_for_upstream() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3671,7 +3737,7 @@ fn warnings_printed_on_vv() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -3685,7 +3751,7 @@ fn warnings_printed_on_vv() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3723,7 +3789,7 @@ fn output_shows_on_vv() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3767,7 +3833,7 @@ fn links_with_dots() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -3989,7 +4055,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "dep1"
                 version = "0.1.0"
                 authors = []
@@ -4010,7 +4076,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "dep2"
                 version = "0.1.0"
                 authors = []
@@ -4031,7 +4097,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "dep3"
                 version = "0.1.0"
                 authors = []
@@ -4052,7 +4118,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "dep4"
                 version = "0.1.0"
                 authors = []
@@ -4074,7 +4140,7 @@ fn deterministic_rustc_dependency_flags() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -4106,7 +4172,7 @@ fn links_duplicates_with_cycle() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -4125,7 +4191,7 @@ fn links_duplicates_with_cycle() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -4138,7 +4204,7 @@ fn links_duplicates_with_cycle() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -4170,8 +4236,10 @@ fn rename_with_link_search_path() {
 }
 
 #[cargo_test]
-// Don't have a cdylib cross target on macos.
-#[cfg_attr(target_os = "macos", ignore)]
+#[cfg_attr(
+    target_os = "macos",
+    ignore = "don't have a cdylib cross target on macos"
+)]
 fn rename_with_link_search_path_cross() {
     if cross_compile::disabled() {
         return;
@@ -4190,7 +4258,7 @@ fn _rename_with_link_search_path(cross: bool) {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -4331,7 +4399,7 @@ fn optional_build_script_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -4804,7 +4872,7 @@ fn duplicate_script_with_extra_env() {
     if cargo_test_support::is_nightly() {
         p.cargo("test --workspace -Z doctest-xcompile --doc --target")
             .arg(&target)
-            .masquerade_as_nightly_cargo()
+            .masquerade_as_nightly_cargo(&["doctest-xcompile"])
             .with_stdout_contains("test src/lib.rs - (line 2) ... ok")
             .run();
     }
@@ -4836,4 +4904,30 @@ for more information about build script outputs.
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn custom_build_closes_stdin() {
+    // Ensure stdin is closed to prevent deadlock.
+    // See https://github.com/rust-lang/cargo/issues/11196
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() {
+                let mut line = String::new();
+                std::io::stdin().read_line(&mut line).unwrap();
+            }"#,
+        )
+        .build();
+    p.cargo("build").run();
 }

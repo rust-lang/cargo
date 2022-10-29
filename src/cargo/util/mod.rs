@@ -6,14 +6,15 @@ pub use self::config::{homedir, Config, ConfigValue};
 pub(crate) use self::counter::MetricsCounter;
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;
-pub use self::errors::{internal, CargoResult, CliResult, Test};
-pub use self::errors::{CargoTestError, CliError};
+pub use self::errors::CliError;
+pub use self::errors::{internal, CargoResult, CliResult};
 pub use self::flock::{FileLock, Filesystem};
 pub use self::graph::Graph;
 pub use self::hasher::StableHasher;
 pub use self::hex::{hash_u64, short_hash, to_hex};
 pub use self::into_url::IntoUrl;
 pub use self::into_url_with_base::IntoUrlWithBase;
+pub(crate) use self::io::LimitErrorReader;
 pub use self::lev_distance::{closest, closest_msg, lev_distance};
 pub use self::lockserver::{LockServer, LockServerClient, LockServerStarted};
 pub use self::progress::{Progress, ProgressStyle};
@@ -44,6 +45,7 @@ pub mod important_paths;
 pub mod interning;
 pub mod into_url;
 mod into_url_with_base;
+mod io;
 pub mod job;
 pub mod lev_distance;
 mod lockserver;
@@ -57,6 +59,7 @@ pub mod rustc;
 mod semver_ext;
 pub mod to_semver;
 pub mod toml;
+pub mod toml_mut;
 mod vcs;
 mod workspace;
 
@@ -68,6 +71,15 @@ pub fn elapsed(duration: Duration) -> String {
     } else {
         format!("{}.{:02}s", secs, duration.subsec_nanos() / 10_000_000)
     }
+}
+
+/// Formats a number of bytes into a human readable SI-prefixed size.
+/// Returns a tuple of `(quantity, units)`.
+pub fn human_readable_bytes(bytes: u64) -> (f32, &'static str) {
+    static UNITS: [&str; 7] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
+    let bytes = bytes as f32;
+    let i = ((bytes.log2() / 10.0) as usize).min(UNITS.len() - 1);
+    (bytes / 1024_f32.powi(i as i32), UNITS[i])
 }
 
 pub fn iter_join_onto<W, I, T>(mut w: W, iter: I, delim: &str) -> fmt::Result
@@ -106,4 +118,50 @@ pub fn indented_lines(text: &str) -> String {
             }
         })
         .collect()
+}
+
+pub fn truncate_with_ellipsis(s: &str, max_width: usize) -> String {
+    // We should truncate at grapheme-boundary and compute character-widths,
+    // yet the dependencies on unicode-segmentation and unicode-width are
+    // not worth it.
+    let mut chars = s.chars();
+    let mut prefix = (&mut chars).take(max_width - 1).collect::<String>();
+    if chars.next().is_some() {
+        prefix.push('…');
+    }
+    prefix
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_human_readable_bytes() {
+        assert_eq!(human_readable_bytes(0), (0., "B"));
+        assert_eq!(human_readable_bytes(8), (8., "B"));
+        assert_eq!(human_readable_bytes(1000), (1000., "B"));
+        assert_eq!(human_readable_bytes(1024), (1., "KiB"));
+        assert_eq!(human_readable_bytes(1024 * 420 + 512), (420.5, "KiB"));
+        assert_eq!(human_readable_bytes(1024 * 1024), (1., "MiB"));
+        assert_eq!(
+            human_readable_bytes(1024 * 1024 + 1024 * 256),
+            (1.25, "MiB")
+        );
+        assert_eq!(human_readable_bytes(1024 * 1024 * 1024), (1., "GiB"));
+        assert_eq!(
+            human_readable_bytes((1024. * 1024. * 1024. * 3.1415) as u64),
+            (3.1415, "GiB")
+        );
+        assert_eq!(human_readable_bytes(1024 * 1024 * 1024 * 1024), (1., "TiB"));
+        assert_eq!(
+            human_readable_bytes(1024 * 1024 * 1024 * 1024 * 1024),
+            (1., "PiB")
+        );
+        assert_eq!(
+            human_readable_bytes(1024 * 1024 * 1024 * 1024 * 1024 * 1024),
+            (1., "EiB")
+        );
+        assert_eq!(human_readable_bytes(u64::MAX), (16., "EiB"));
+    }
 }

@@ -29,6 +29,7 @@ in `Cargo.toml`:
 [package]
 name = "my-project"
 version = "0.1.0"
+edition = "2021"
 
 [dependencies]
 other-crate = { version = "1.0", registry = "my-registry" }
@@ -320,9 +321,10 @@ visit the registry's website to obtain a token, and Cargo can store the token
 using the [`cargo login`] command, or by passing the token on the
 command-line.
 
-Responses use a 200 response code for both success and errors. Cargo looks at
-the JSON response to determine if there was success or failure. Failure
-responses have a JSON object with the following structure:
+Responses use the 200 response code for success.
+Errors should use an appropriate response code, such as 404.
+Failure
+responses should have a JSON object with the following structure:
 
 ```javascript
 {
@@ -336,10 +338,10 @@ responses have a JSON object with the following structure:
 }
 ```
 
-Servers may also respond with a 404 response code to indicate the requested
-resource is not found (for example, an unknown crate name). However, using a
-200 response with an `errors` object allows a registry to provide a more
-detailed error message if desired.
+If the response has this structure Cargo will display the detailed message to the user, even if the response code is 200.
+If the response code indicates an error and the content does not have this structure, Cargo will display to the user a
+ message intended to help debugging the server error. A server returning an `errors` object allows a registry to provide a more
+detailed or user-centric error message.
 
 For backwards compatibility, servers should ignore any unexpected query
 parameters or JSON fields. If a JSON field is missing, it should be assumed to

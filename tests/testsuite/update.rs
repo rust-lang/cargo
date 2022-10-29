@@ -344,7 +344,6 @@ fn change_package_version() {
 
 #[cargo_test]
 fn update_precise() {
-    Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").publish();
     Package::new("serde", "0.2.1").publish();
 
@@ -387,6 +386,150 @@ fn update_precise() {
             "\
 [UPDATING] `[..]` index
 [UPDATING] serde v0.2.1 -> v0.2.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_precise_do_not_force_update_deps() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.2.1").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.2.2").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde:0.2.1 --precise 0.2.2")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.2.1 -> v0.2.2
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_precise_without_package() {
+    Package::new("serde", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    Package::new("serde", "0.2.1").publish();
+    Package::new("serde", "0.3.0").publish();
+
+    p.cargo("update --precise 0.3.0")
+        .with_stderr(
+            "\
+[WARNING] precise is only supported with \"--package <SPEC>\", this will become a hard error in a future release.
+[UPDATING] `[..]` index
+[UPDATING] serde v0.2.0 -> v0.2.1
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_aggressive() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.2.1").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.2.2").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde:0.2.1 --aggressive")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] log v0.1.0 -> v0.1.1
+[UPDATING] serde v0.2.1 -> v0.2.2
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_aggressive_without_package() {
+    Package::new("serde", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    Package::new("serde", "0.2.1").publish();
+
+    p.cargo("update --aggressive")
+        .with_stderr(
+            "\
+[WARNING] aggressive is only supported with \"--package <SPEC>\", this will become a hard error in a future release.
+[UPDATING] `[..]` index
+[UPDATING] serde v0.2.0 -> v0.2.1
 ",
         )
         .run();

@@ -15,7 +15,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -31,7 +31,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -109,7 +109,7 @@ fn cargo_compile_with_root_dev_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -151,7 +151,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -199,7 +199,7 @@ fn cargo_compile_with_transitive_dev_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -215,7 +215,7 @@ fn cargo_compile_with_transitive_dev_deps() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -260,7 +260,7 @@ fn no_rebuild_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -308,7 +308,7 @@ fn deep_dependencies_trigger_rebuild() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -322,7 +322,7 @@ fn deep_dependencies_trigger_rebuild() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -395,7 +395,7 @@ fn no_rebuild_two_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -411,7 +411,7 @@ fn no_rebuild_two_deps() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -447,7 +447,7 @@ fn nested_deps_recompile() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -492,7 +492,7 @@ fn error_message_for_missing_manifest() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -657,7 +657,7 @@ fn path_dep_build_cmd() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -673,7 +673,7 @@ fn path_dep_build_cmd() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "bar"
                 version = "0.5.0"
@@ -732,7 +732,7 @@ fn dev_deps_no_rebuild_lib() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -782,7 +782,7 @@ fn custom_target_no_rebuild() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -798,7 +798,7 @@ fn custom_target_no_rebuild() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -840,7 +840,7 @@ fn override_and_depend() {
         .file(
             "a/a1/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a1"
                 version = "0.5.0"
                 authors = []
@@ -854,7 +854,7 @@ fn override_and_depend() {
         .file(
             "b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -870,6 +870,7 @@ fn override_and_depend() {
         .cwd("b")
         .with_stderr(
             "\
+[WARNING] skipping duplicate package `a2` found at `[..]`
 [COMPILING] a2 v0.5.0 ([..])
 [COMPILING] a1 v0.5.0 ([..])
 [COMPILING] b v0.5.0 ([..])
@@ -914,7 +915,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "top"
                 version = "0.5.0"
                 authors = []
@@ -929,7 +930,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         .file(
             "foo/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -948,7 +949,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
     p.change_file(
         "foo/Cargo.toml",
         r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.5.0"
             authors = []
@@ -980,7 +981,7 @@ fn workspace_produces_rlib() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "top"
                 version = "0.5.0"
                 authors = []

@@ -1,0 +1,7 @@
+      Adding foo (workspace) to dependencies.
+error: unrecognized feature for crate foo: not_recognized
+disabled features:
+    merge, merge-base, unrelated
+enabled features:
+    default-base, default-merge-base, default-test-base
+    long-feature-name-because-of-formatting-reasons, test, test-base

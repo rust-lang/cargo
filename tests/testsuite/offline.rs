@@ -12,7 +12,7 @@ fn offline_unused_target_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
             [dependencies]
@@ -40,7 +40,7 @@ fn offline_missing_optional() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
             [dependencies]
@@ -104,7 +104,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
 
@@ -121,7 +121,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.1.0"
 
@@ -151,7 +151,7 @@ fn cargo_compile_offline_not_try_update() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.1.0"
 
@@ -204,7 +204,7 @@ fn compile_offline_without_maxvers_cached() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
 
@@ -220,7 +220,7 @@ fn compile_offline_without_maxvers_cached() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
 
@@ -257,7 +257,7 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
             "Cargo.toml",
             r#"
 
-            [project]
+            [package]
             name = "foo"
             version = "0.5.0"
             authors = ["chabapok@example.com"]
@@ -298,7 +298,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
 
@@ -337,7 +337,7 @@ fn update_offline_not_cached() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -393,7 +393,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-                [project]
+                [package]
                 name = "cache_git_dep"
                 version = "0.5.0"
 
@@ -413,7 +413,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         "Cargo.toml",
         &format!(
             r#"
-            [project]
+            [package]
             name = "cache_git_dep"
             version = "0.5.0"
 
@@ -432,7 +432,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
             "Cargo.toml",
             &format!(
                 r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
 
@@ -470,7 +470,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         "Cargo.toml",
         &format!(
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.5.0"
 
@@ -591,7 +591,7 @@ fn update_offline_cached() {
             "Cargo.toml",
             format!(
                 r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -609,7 +609,7 @@ fn update_offline_cached() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
 

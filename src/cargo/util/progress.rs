@@ -15,6 +15,7 @@ pub struct Progress<'cfg> {
 pub enum ProgressStyle {
     Percentage,
     Ratio,
+    Indeterminate,
 }
 
 struct Throttle {
@@ -253,6 +254,7 @@ impl Format {
         let stats = match self.style {
             ProgressStyle::Percentage => format!(" {:6.02}%", pct * 100.0),
             ProgressStyle::Ratio => format!(" {}/{}", cur, max),
+            ProgressStyle::Indeterminate => String::new(),
         };
         let extra_len = stats.len() + 2 /* [ and ] */ + 15 /* status header */;
         let display_width = match self.width().checked_sub(extra_len) {

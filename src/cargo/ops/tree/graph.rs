@@ -325,8 +325,8 @@ fn add_pkg(
     let node_features = resolved_features.activated_features(package_id, features_for);
     let node_kind = match features_for {
         FeaturesFor::HostDep => CompileKind::Host,
-        FeaturesFor::NormalOrDevOrArtifactTarget(Some(target)) => CompileKind::Target(target),
-        FeaturesFor::NormalOrDevOrArtifactTarget(None) => requested_kind,
+        FeaturesFor::ArtifactDep(target) => CompileKind::Target(target),
+        FeaturesFor::NormalOrDev => requested_kind,
     };
     let node = Node::Package {
         package_id,
@@ -365,11 +365,7 @@ fn add_pkg(
                 if dep.is_optional() {
                     // If the new feature resolver does not enable this
                     // optional dep, then don't use it.
-                    if !resolved_features.is_dep_activated(
-                        package_id,
-                        features_for,
-                        dep.name_in_toml(),
-                    ) {
+                    if !resolved_features.is_activated(dep_id, features_for) {
                         return false;
                     }
                 }

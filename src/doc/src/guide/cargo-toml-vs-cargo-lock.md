@@ -43,7 +43,8 @@ could happen. There could be more commits to `regex` in the meantime, and my
 build would include new commits while yours would not. Therefore, we would
 get different builds. This would be bad because we want reproducible builds.
 
-We could fix this problem by putting a `rev` line in our `Cargo.toml`:
+We could fix this problem by defining a specific `rev` value in our `Cargo.toml`,
+so Cargo could know exactly which revision to use when building the package:
 
 ```toml
 [dependencies]

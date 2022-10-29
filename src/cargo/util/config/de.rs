@@ -80,7 +80,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        if self.config.has_key(&self.key, self.env_prefix_ok) {
+        if self.config.has_key(&self.key, self.env_prefix_ok)? {
             visitor.visit_some(self)
         } else {
             // Treat missing values as `None`.
@@ -473,7 +473,13 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
             Definition::Environment(env) => {
                 seed.deserialize(Tuple2Deserializer(1i32, env.as_str()))
             }
-            Definition::Cli => seed.deserialize(Tuple2Deserializer(2i32, "")),
+            Definition::Cli(path) => {
+                let str = path
+                    .as_ref()
+                    .map(|p| p.to_string_lossy())
+                    .unwrap_or_default();
+                seed.deserialize(Tuple2Deserializer(2i32, str))
+            }
         }
     }
 }

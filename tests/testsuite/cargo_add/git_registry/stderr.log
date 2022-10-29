@@ -1,0 +1,6 @@
+    Updating git repository `[ROOTURL]/versioned-package`
+      Adding versioned-package (git) to dependencies.
+error: failed to parse manifest at `[ROOT]/case/Cargo.toml`
+
+Caused by:
+  dependency (versioned-package) specification is ambiguous. Only one of `git` or `registry` is allowed.

@@ -1,0 +1,6 @@
+# Output generated from src/doc/man
+#
+# The goal is to help people find the right file to edit
+src/doc/man/generated_txt
+src/doc/src/commands
+src/etc/man

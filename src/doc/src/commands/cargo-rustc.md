@@ -1,6 +1,7 @@
 # cargo-rustc(1)
 
 
+
 ## NAME
 
 cargo-rustc - Compile the current package, and pass extra options to the compiler
@@ -52,6 +53,16 @@ format.</dd>
 
 When no target selection options are given, `cargo rustc` will build all
 binary and library targets of the selected package.
+
+Binary targets are automatically built if there is an integration test or
+benchmark being selected to build. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The `CARGO_BIN_EXE_<name>`
+[environment variable](../reference/environment-variables.html#environment-variables-cargo-sets-for-crates)
+is set when the integration test is built so that it can use the
+[`env` macro](https://doc.rust-lang.org/std/macro.env.html) to locate the
+executable.
+
 
 Passing target selection flags will build only the specified
 targets. 
@@ -159,7 +170,7 @@ be specified multiple times, which enables all specified features.</dd>
 <dt class="option-term" id="option-cargo-rustc---target"><a class="option-anchor" href="#option-cargo-rustc---target"></a><code>--target</code> <em>triple</em></dt>
 <dd class="option-desc">Build for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -204,7 +215,7 @@ formats; <code>--timings</code> without an argument will default to <code>--timi
 Specifying an output format (rather than the default) is unstable and requires
 <code>-Zunstable-options</code>. Valid output formats:</p>
 <ul>
-<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<li><code>html</code> (unstable, requires <code>-Zunstable-options</code>): Write a human-readable file <code>cargo-timing.html</code> to the
 <code>target/cargo-timings</code> directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
@@ -214,6 +225,17 @@ information about timing information.</li>
 </ul></dd>
 
 
+
+
+<dt class="option-term" id="option-cargo-rustc---crate-type"><a class="option-anchor" href="#option-cargo-rustc---crate-type"></a><code>--crate-type</code> <em>crate-type</em></dt>
+<dd class="option-desc">Build for the given crate type. This flag accepts a comma-separated list of
+1 or more crate types, of which the allowed values are the same as <code>crate-type</code>
+field in the manifest for configurating a Cargo target. See
+<a href="../reference/cargo-targets.html#the-crate-type-field"><code>crate-type</code> field</a>
+for possible values.</p>
+<p>If the manifest contains a list, and <code>--crate-type</code> is provided,
+the command-line argument value will override what is in the manifest.</p>
+<p>This flag only works when building a <code>lib</code> or <code>example</code> library target.</dd>
 
 
 </dl>
@@ -278,7 +300,7 @@ the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</cod
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
 contains embedded ANSI color codes for respecting rustc's default color
 scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
-<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
 JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
@@ -337,6 +359,12 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-rustc---config"><a class="option-anchor" href="#option-cargo-rustc---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
 <dt class="option-term" id="option-cargo-rustc--h"><a class="option-anchor" href="#option-cargo-rustc--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-rustc---help"><a class="option-anchor" href="#option-cargo-rustc---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -356,7 +384,9 @@ for more information about how toolchain overrides work.</dd>
 <dt class="option-term" id="option-cargo-rustc---jobs"><a class="option-anchor" href="#option-cargo-rustc---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value.
+Should not be 0.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---keep-going"><a class="option-anchor" href="#option-cargo-rustc---keep-going"></a><code>--keep-going</code></dt>
@@ -395,6 +425,10 @@ details on environment variables that Cargo reads.
    the size of every type:
 
        cargo rustc --lib -- -Z print-type-sizes
+
+3. Override `crate-type` field in Cargo.toml with command-line option:
+
+       cargo rustc --lib --crate-type lib,cdylib
 
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-build(1)](cargo-build.html), [rustc(1)](https://doc.rust-lang.org/rustc/index.html)

@@ -3,7 +3,7 @@
 ### Is the plan to use GitHub as a package repository?
 
 No. The plan for Cargo is to use [crates.io], like npm or Rubygems do with
-npmjs.org and rubygems.org.
+[npmjs.com][1] and [rubygems.org][3].
 
 We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
@@ -23,8 +23,9 @@ central registry model as well as a Git-based model, and most packages
 are downloaded through the registry in those ecosystems, with an
 important minority of packages making use of git-based packages.
 
-[1]: https://www.npmjs.org
+[1]: https://www.npmjs.com
 [2]: https://bundler.io
+[3]: https://rubygems.org
 
 Some of the advantages that make a central registry popular in other
 languages include:
@@ -96,7 +97,7 @@ We support environments through the use of [profiles] to support:
 Yes!
 
 All commits to Cargo are required to pass the local test suite on Windows.
-If, however, you find a Windows issue, we consider it a bug, so [please file an
+If you encounter an issue while running on Windows, we consider it a bug, so [please file an
 issue][3].
 
 [3]: https://github.com/rust-lang/cargo/issues
@@ -135,9 +136,9 @@ picture to decide what versions of dependencies should be used.
 with wildcard dependency constraints.**
 
 While libraries _can_, strictly speaking, they should not. A version requirement
-of `*` says “This will work with every version ever,” which is never going
+of `*` says “This will work with every version ever”, which is never going
 to be true. Libraries should always specify the range that they do work with,
-even if it’s something as general as “every 1.x.y version.”
+even if it’s something as general as “every 1.x.y version”.
 
 ### Why `Cargo.toml`?
 

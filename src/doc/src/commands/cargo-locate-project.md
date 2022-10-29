@@ -10,8 +10,14 @@ cargo-locate-project - Print a JSON representation of a Cargo.toml file's locati
 
 ## DESCRIPTION
 
-This command will print a JSON object to stdout with the full path to the
-`Cargo.toml` manifest.
+This command will print a JSON object to stdout with the full path to the manifest. The
+manifest is found by searching upward for a file named `Cargo.toml` starting from the current
+working directory.
+
+If the project happens to be a part of a workspace, the manifest of the project, rather than
+the workspace root, is output. This can be overriden by the `--workspace` flag. The root
+workspace is found by traversing further upward or by using the field `package.workspace` after
+locating the manifest of a workspace member.
 
 ## OPTIONS
 
@@ -85,6 +91,12 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-locate-project---config"><a class="option-anchor" href="#option-cargo-locate-project---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
 
 
 <dt class="option-term" id="option-cargo-locate-project--h"><a class="option-anchor" href="#option-cargo-locate-project--h"></a><code>-h</code></dt>

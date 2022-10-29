@@ -2,12 +2,12 @@
 
 use std::fmt::{self, Write};
 
+use crate::messages::raw_rustc_output;
 use cargo_test_support::install::exe;
-use cargo_test_support::is_nightly;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_bin_manifest, basic_manifest, git, project};
 
 #[cargo_test]
 fn check_success() {
@@ -862,7 +862,7 @@ fn check_keep_going() {
 
     // Due to -j1, without --keep-going only one of the two bins would be built.
     foo.cargo("check -j1 --keep-going -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["keep-going"])
         .with_status(101)
         .with_stderr_contains("error: ONE")
         .with_stderr_contains("error: TWO")
@@ -871,7 +871,18 @@ fn check_keep_going() {
 
 #[cargo_test]
 fn does_not_use_empty_rustc_wrapper() {
-    let p = project().file("src/lib.rs", "").build();
+    // An empty RUSTC_WRAPPER environment variable won't be used.
+    // The env var will also override the config, essentially unsetting it.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [build]
+                rustc-wrapper = "do-not-execute-me"
+            "#,
+        )
+        .build();
     p.cargo("check").env("RUSTC_WRAPPER", "").run();
 }
 
@@ -931,7 +942,7 @@ fn rustc_workspace_wrapper_includes_path_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -987,7 +998,7 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -1015,88 +1026,424 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
-fn check_cfg_features() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
+fn warn_manifest_package_and_project() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
+                [project]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] manifest at `[CWD]` contains both `project` and `package`, this could become a hard error in the future
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn git_manifest_package_and_project() {
+    let p = project();
+    let git_project = git::new("bar", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+    });
+
+    let p = p
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar]
+                version = "0.0.1"
+                git  = '{}'
+
+            "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] git repository `[..]`
+[CHECKING] bar v0.0.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn warn_manifest_with_project() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
                 [project]
                 name = "foo"
-                version = "0.1.0"
-
-                [features]
-                f_a = []
-                f_b = []
+                version = "0.0.1"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -v -Z check-cfg-features")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr(
             "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values(feature, \"f_a\", \"f_b\")' [..]
+[WARNING] manifest at `[CWD]` contains `[project]` instead of `[package]`, this could become a hard error in the future
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
-fn check_cfg_well_known_names() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
+fn git_manifest_with_project() {
+    let p = project();
+    let git_project = git::new("bar", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+    });
 
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+    let p = p
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies.bar]
+                version = "0.0.1"
+                git  = '{}'
+
+            "#,
+                git_project.url()
+            ),
+        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -v -Z check-cfg-well-known-names")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stderr(
             "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'names()' [..]
+[UPDATING] git repository `[..]`
+[CHECKING] bar v0.0.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
-fn check_cfg_well_known_values() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustc command line
-        return;
-    }
-
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
-        .file("src/main.rs", "fn main() {}")
+fn check_fixable_warning() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "use std::io;")
         .build();
 
-    p.cargo("check -v -Z check-cfg-well-known-values")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[CHECKING] foo v0.1.0 [..]
-[RUNNING] `rustc [..] --check-cfg 'values()' [..]
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr_contains("[..] (run `cargo fix --lib -p foo` to apply 1 suggestion)")
+        .run();
+}
+
+#[cargo_test]
+fn check_fixable_not_nightly() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "use std::io;")
+        .build();
+
+    let rustc_message = raw_rustc_output(&foo, "src/lib.rs", &[]);
+    let expected_output = format!(
+        "\
+[CHECKING] foo v0.0.1 ([..])
+{}\
+[WARNING] `foo` (lib) generated 1 warning
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
+        rustc_message
+    );
+    foo.cargo("check").with_stderr(expected_output).run();
+}
+
+#[cargo_test]
+fn check_fixable_test_warning() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
         )
+        .file(
+            "src/lib.rs",
+            "\
+mod tests {
+    #[test]
+    fn t1() {
+        use std::io;
+    }
+}
+            ",
+        )
+        .build();
+
+    foo.cargo("check --all-targets")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr_contains("[..] (run `cargo fix --lib -p foo --tests` to apply 1 suggestion)")
+        .run();
+    foo.cargo("fix --lib -p foo --tests --allow-no-vcs").run();
+    assert!(!foo.read_file("src/lib.rs").contains("use std::io;"));
+}
+
+#[cargo_test]
+fn check_fixable_error_no_fix() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "use std::io;\n#[derive(Debug(x))]\nstruct Foo;",
+        )
+        .build();
+
+    let rustc_message = raw_rustc_output(&foo, "src/lib.rs", &[]);
+    let expected_output = format!(
+        "\
+[CHECKING] foo v0.0.1 ([..])
+{}\
+[WARNING] `foo` (lib) generated 1 warning
+[ERROR] could not compile `foo` due to previous error; 1 warning emitted
+",
+        rustc_message
+    );
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_status(101)
+        .with_stderr(expected_output)
+        .run();
+}
+
+#[cargo_test]
+fn check_fixable_warning_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("foo/src/lib.rs", "use std::io;")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+
+                [dependencies]
+                foo = { path = "../foo" }
+            "#,
+        )
+        .file("bar/src/lib.rs", "use std::io;")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr_contains("[..] (run `cargo fix --lib -p foo` to apply 1 suggestion)")
+        .with_stderr_contains("[..] (run `cargo fix --lib -p bar` to apply 1 suggestion)")
+        .run();
+}
+
+#[cargo_test]
+fn check_fixable_example() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn hello() -> &'static str {
+                "hello"
+            }
+
+            pub fn main() {
+                println!("{}", hello())
+            }
+            "#,
+        )
+        .file("examples/ex1.rs", "use std::fmt; fn main() {}")
+        .build();
+    p.cargo("check --all-targets")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr_contains("[..] (run `cargo fix --example \"ex1\"` to apply 1 suggestion)")
+        .run();
+}
+
+#[cargo_test(nightly, reason = "bench")]
+fn check_fixable_bench() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+            #![feature(test)]
+            #[cfg(test)]
+            extern crate test;
+
+            fn hello() -> &'static str {
+                "hello"
+            }
+
+            pub fn main() {
+                println!("{}", hello())
+            }
+
+            #[bench]
+            fn bench_hello(_b: &mut test::Bencher) {
+                use std::io;
+                assert_eq!(hello(), "hello")
+            }
+            "#,
+        )
+        .file(
+            "benches/bench.rs",
+            "
+            #![feature(test)]
+            extern crate test;
+
+            #[bench]
+            fn bench(_b: &mut test::Bencher) { use std::fmt; }
+        ",
+        )
+        .build();
+    p.cargo("check --all-targets")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr_contains("[..] (run `cargo fix --bench \"bench\"` to apply 1 suggestion)")
+        .run();
+}
+
+#[cargo_test(nightly, reason = "bench")]
+fn check_fixable_mixed() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+            #![feature(test)]
+            #[cfg(test)]
+            extern crate test;
+
+            fn hello() -> &'static str {
+                "hello"
+            }
+
+            pub fn main() {
+                println!("{}", hello())
+            }
+
+            #[bench]
+            fn bench_hello(_b: &mut test::Bencher) {
+                use std::io;
+                assert_eq!(hello(), "hello")
+            }
+            #[test]
+            fn t1() {
+                use std::fmt;
+            }
+            "#,
+        )
+        .file("examples/ex1.rs", "use std::fmt; fn main() {}")
+        .file(
+            "benches/bench.rs",
+            "
+            #![feature(test)]
+            extern crate test;
+
+            #[bench]
+            fn bench(_b: &mut test::Bencher) { use std::fmt; }
+        ",
+        )
+        .build();
+    p.cargo("check --all-targets")
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr_contains("[..] (run `cargo fix --bin \"foo\" --tests` to apply 2 suggestions)")
+        .with_stderr_contains("[..] (run `cargo fix --example \"ex1\"` to apply 1 suggestion)")
+        .with_stderr_contains("[..] (run `cargo fix --bench \"bench\"` to apply 1 suggestion)")
         .run();
 }

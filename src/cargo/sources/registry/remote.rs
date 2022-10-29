@@ -15,7 +15,7 @@ use std::fs::File;
 use std::mem;
 use std::path::Path;
 use std::str;
-use std::task::Poll;
+use std::task::{ready, Poll};
 
 /// A remote registry is a registry that lives at a remote URL (such as
 /// crates.io). The git index is cloned locally, and `.crate` files are
@@ -32,7 +32,6 @@ pub struct RemoteRegistry<'cfg> {
     head: Cell<Option<git2::Oid>>,
     current_sha: Cell<Option<InternedString>>,
     needs_update: bool, // Does this registry need to be updated?
-    updated: bool,      // Has this registry been updated this session?
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
@@ -49,7 +48,6 @@ impl<'cfg> RemoteRegistry<'cfg> {
             head: Cell::new(None),
             current_sha: Cell::new(None),
             needs_update: false,
-            updated: false,
         }
     }
 
@@ -141,6 +139,14 @@ impl<'cfg> RemoteRegistry<'cfg> {
         self.current_sha.set(Some(sha));
         Some(sha)
     }
+
+    fn is_updated(&self) -> bool {
+        self.config.updated_sources().contains(&self.source_id)
+    }
+
+    fn mark_updated(&self) {
+        self.config.updated_sources().insert(self.source_id);
+    }
 }
 
 const LAST_UPDATED_FILE: &str = ".last-updated";
@@ -163,10 +169,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     // Older versions of Cargo used the single value of the hash of the HEAD commit as a `index_version`.
     // This is technically correct but a little too conservative. If a new commit is fetched all cached
     // files need to be regenerated even if a particular file was not changed.
-    // Cargo now reads the `index_version` in two parts the cache file is considered valid if `index_version`
-    // ends with the hash of the HEAD commit OR if it starts with the hash of the file's contents.
-    // In the future cargo can write cached files with `index_version` = `git_file_hash + ":" + `git_commit_hash`,
-    // but for now it still uses `git_commit_hash` to be compatible with older Cargoes.
+    // However if an old cargo has written such a file we still know how to read it, as long as we check for that hash value.
+    //
+    // Cargo now uses a hash of the file's contents as provided by git.
     fn load(
         &mut self,
         _root: &Path,
@@ -178,10 +183,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         }
         // Check if the cache is valid.
         let git_commit_hash = self.current_version();
-        if let (Some(c), Some(i)) = (git_commit_hash, index_version) {
-            if i.ends_with(c.as_str()) {
-                return Poll::Ready(Ok(LoadResponse::CacheValid));
-            }
+        if index_version.is_some() && index_version == git_commit_hash.as_deref() {
+            // This file was written by an old version of cargo, but it is still up-to-date.
+            return Poll::Ready(Ok(LoadResponse::CacheValid));
         }
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
@@ -190,18 +194,16 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             registry: &RemoteRegistry<'_>,
             path: &Path,
             index_version: Option<&str>,
-            git_commit_hash: Option<&str>,
         ) -> CargoResult<LoadResponse> {
             let repo = registry.repo()?;
             let tree = registry.tree()?;
             let entry = tree.get_path(path);
             let entry = entry?;
-            let git_file_hash = entry.id().to_string();
+            let git_file_hash = Some(entry.id().to_string());
 
-            if let Some(i) = index_version {
-                if i.starts_with(git_file_hash.as_str()) {
-                    return Ok(LoadResponse::CacheValid);
-                }
+            // Check if the cache is valid.
+            if index_version.is_some() && index_version == git_file_hash.as_deref() {
+                return Ok(LoadResponse::CacheValid);
             }
 
             let object = entry.to_object(repo)?;
@@ -212,15 +214,13 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
             Ok(LoadResponse::Data {
                 raw_data: blob.content().to_vec(),
-                index_version: git_commit_hash.map(String::from),
-                // TODO: When the reading code has been stable for long enough (Say 8/2022)
-                // change to `git_file_hash + ":" + git_commit_hash`
+                index_version: git_file_hash,
             })
         }
 
-        match load_helper(&self, path, index_version, git_commit_hash.as_deref()) {
+        match load_helper(&self, path, index_version) {
             Ok(result) => Poll::Ready(Ok(result)),
-            Err(_) if !self.updated => {
+            Err(_) if !self.is_updated() => {
                 // If git returns an error and we haven't updated the repo, return
                 // pending to allow an update to try again.
                 self.needs_update = true;
@@ -242,13 +242,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         debug!("loading config");
         self.prepare()?;
         self.config.assert_package_cache_locked(&self.index_path);
-        match self.load(Path::new(""), Path::new("config.json"), None)? {
-            Poll::Ready(LoadResponse::Data { raw_data, .. }) => {
+        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
+            LoadResponse::Data { raw_data, .. } => {
                 trace!("config loaded");
                 Poll::Ready(Ok(Some(serde_json::from_slice(&raw_data)?)))
             }
-            Poll::Ready(_) => Poll::Ready(Ok(None)),
-            Poll::Pending => Poll::Pending,
+            _ => Poll::Ready(Ok(None)),
         }
     }
 
@@ -257,19 +256,20 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             return Ok(());
         }
 
-        self.updated = true;
         self.needs_update = false;
+
+        // Make sure the index is only updated once per session since it is an
+        // expensive operation. This generally only happens when the resolver
+        // is run multiple times, such as during `cargo publish`.
+        if self.is_updated() {
+            return Ok(());
+        }
+        self.mark_updated();
 
         if self.config.offline() {
             return Ok(());
         }
         if self.config.cli_unstable().no_index_update {
-            return Ok(());
-        }
-        // Make sure the index is only updated once per session since it is an
-        // expensive operation. This generally only happens when the resolver
-        // is run multiple times, such as during `cargo publish`.
-        if self.config.updated_sources().contains(&self.source_id) {
             return Ok(());
         }
 
@@ -298,7 +298,6 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let repo = self.repo.borrow_mut().unwrap();
         git::fetch(repo, url.as_str(), &self.index_git_ref, self.config)
             .with_context(|| format!("failed to fetch `{}`", url))?;
-        self.config.updated_sources().insert(self.source_id);
 
         // Create a dummy file to record the mtime for when we updated the
         // index.
@@ -308,13 +307,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn invalidate_cache(&mut self) {
-        if !self.updated {
-            self.needs_update = true;
-        }
+        // To fully invalidate, undo `mark_updated`s work
+        self.needs_update = true;
     }
 
     fn is_updated(&self) -> bool {
-        self.updated
+        self.is_updated()
     }
 
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {

@@ -1,6 +1,6 @@
 use anyhow::Error;
 
-use crate::util::errors::{CargoResult, HttpNot200};
+use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::Config;
 use std::task::Poll;
 
@@ -31,6 +31,7 @@ impl<'a> Retry<'a> {
         })
     }
 
+    /// Returns `Ok(None)` for operations that should be re-tried.
     pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> CargoResult<Option<T>> {
         match f() {
             Err(ref e) if maybe_spurious(e) && self.remaining > 0 => {
@@ -73,7 +74,7 @@ fn maybe_spurious(err: &Error) -> bool {
             return true;
         }
     }
-    if let Some(not_200) = err.downcast_ref::<HttpNot200>() {
+    if let Some(not_200) = err.downcast_ref::<HttpNotSuccessful>() {
         if 500 <= not_200.code && not_200.code < 600 {
             return true;
         }
@@ -114,14 +115,16 @@ fn with_retry_repeats_the_call_then_works() {
     use crate::core::Shell;
 
     //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
-    let error1 = HttpNot200 {
+    let error1 = HttpNotSuccessful {
         code: 501,
         url: "Uri".to_string(),
+        body: Vec::new(),
     }
     .into();
-    let error2 = HttpNot200 {
+    let error2 = HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
+        body: Vec::new(),
     }
     .into();
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
@@ -137,14 +140,16 @@ fn with_retry_finds_nested_spurious_errors() {
 
     //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
     //String error messages are not considered spurious
-    let error1 = anyhow::Error::from(HttpNot200 {
+    let error1 = anyhow::Error::from(HttpNotSuccessful {
         code: 501,
         url: "Uri".to_string(),
+        body: Vec::new(),
     });
     let error1 = anyhow::Error::from(error1.context("A non-spurious wrapping err"));
-    let error2 = anyhow::Error::from(HttpNot200 {
+    let error2 = anyhow::Error::from(HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
+        body: Vec::new(),
     });
     let error2 = anyhow::Error::from(error2.context("A second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];

@@ -1225,7 +1225,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .build();
 
     p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(
             "\
@@ -1236,13 +1236,13 @@ fn update_dependency_mtime_does_not_rebuild() {
         .run();
     // This does not make new files, but it does update the mtime of the dependency.
     p.cargo("build -p bar -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
@@ -1256,7 +1256,7 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     // So a cleaner can remove files associated with a fingerprint
     // if all the files in the fingerprint's folder are older then a time stamp without
     // effecting any builds that happened since that time stamp.
-    let mut cleand = false;
+    let mut cleaned = false;
     dir.push(".fingerprint");
     for fing in fs::read_dir(&dir).unwrap() {
         let fing = fing.unwrap();
@@ -1270,12 +1270,12 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
             println!("remove: {:?}", fing.path());
             // a real cleaner would remove the big files in deps and build as well
             // but fingerprint is sufficient for our tests
-            cleand = true;
+            cleaned = true;
         } else {
         }
     }
     assert!(
-        cleand,
+        cleaned,
         "called fingerprint_cleaner, but there was nothing to remove"
     );
 }
@@ -1303,10 +1303,10 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .build();
 
     p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .run();
     p.cargo("build -Z mtime-on-use --features a")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -1322,18 +1322,18 @@ fn fingerprint_cleaner_does_not_rebuild() {
     }
     // This does not make new files, but it does update the mtime.
     p.cargo("build -Z mtime-on-use --features a")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use --features a")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // But this should be cleaned and so need a rebuild
     p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -1966,7 +1966,7 @@ fn rename_with_path_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -1979,7 +1979,7 @@ fn rename_with_path_deps() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
@@ -1992,7 +1992,7 @@ fn rename_with_path_deps() {
         .file(
             "a/b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "b"
                 version = "0.5.0"
                 authors = []
@@ -2023,7 +2023,7 @@ fn move_target_directory_with_path_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -2035,7 +2035,7 @@ fn move_target_directory_with_path_deps() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []

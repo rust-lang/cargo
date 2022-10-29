@@ -68,16 +68,16 @@ _cargo() {
             case ${words[1]} in
                 add)
                     _arguments -s -A "^--" $common $manifest $registry \
-                        {-F+,--features=}'[specify features to activate]:feature'
-                        "--default-features[enable the default features]"
-                        "--no-default-features[don't enable the default features]"
-                        "--optional[mark the dependency as optional]"
-                        "--no-optional[mark the dependency as required]"
-                        "--dev[add as a dev dependency]"
-                        "--build[add as a build dependency]"
-                        "--target=[add as a dependency to the given target platform]"
-                        "--rename=[rename the dependency]"
-                        "--dry-run[don't actually write the manifest]"
+                        {-F+,--features=}'[specify features to activate]:feature' \
+                        "--default-features[enable the default features]" \
+                        "--no-default-features[don't enable the default features]" \
+                        "--optional[mark the dependency as optional]" \
+                        "--no-optional[mark the dependency as required]" \
+                        "--dev[add as a dev dependency]" \
+                        "--build[add as a build dependency]" \
+                        "--target=[add as a dependency to the given target platform]" \
+                        "--rename=[rename the dependency]" \
+                        "--dry-run[don't actually write the manifest]" \
                         '--branch=[branch to use when adding from git]:branch' \
                         '--git=[specify URL from which to add the crate]:url:_urls' \
                         '--path=[local filesystem path to crate to add]: :_directories' \
@@ -168,21 +168,21 @@ _cargo() {
                         '(-f --force)'{-f,--force}'[force overwriting of existing crates or binaries]' \
                         '--bin=[only install the specified binary]:binary' \
                         '--branch=[branch to use when installing from git]:branch' \
-                        '--debug[build in debug mode instead of release mode]' \
+                        '--debug[Build in debug mode (with the "dev" profile) instead of release mode]' \
                         '--example=[install the specified example instead of binaries]:example:_cargo_example_names' \
                         '--git=[specify URL from which to install the crate]:url:_urls' \
                         '--path=[local filesystem path to crate to install]: :_directories' \
                         '--rev=[specific commit to use when installing from git]:commit' \
                         '--root=[directory to install packages into]: :_directories' \
                         '--tag=[tag to use when installing from git]:tag' \
-                        '--version='[version to install from crates.io]:version' \
+                        '--version=[version to install from crates.io]:version' \
                         '--list[list all installed packages and their versions]' \
                         '*: :_guard "^-*" "crate"'
                         ;;
 
                 locate-project)
                     _arguments -s -S $common $manifest \
-                        '--message-format=[specify output representation]:output representation [json]:(json plain)'
+                        '--message-format=[specify output representation]:output representation [json]:(json plain)' \
                         '--workspace[locate Cargo.toml of the workspace root]'
                         ;;
 
@@ -239,6 +239,17 @@ _cargo() {
 
                 read-manifest)
                     _arguments -s -S $common $manifest
+                        ;;
+
+                remove | rm)
+                    _arguments -s -A "^--" $common $manifest \
+                        "--dev[remove as a dev dependency]" \
+                        "--build[remove as a build dependency]" \
+                        "--target=[remove as a dependency from the given target platform]" \
+                        "--dry-run[don't actually write the manifest]" \
+                        '(-p --package)'{-p+,--package=}'[package to remove from]:package:_cargo_package_names' \
+                        '1: :_guard "^-*" "crate name"' \
+                        '*:args:_default'
                         ;;
 
                 run | r)

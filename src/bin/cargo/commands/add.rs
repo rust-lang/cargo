@@ -1,3 +1,4 @@
+use cargo::sources::CRATES_IO_REGISTRY;
 use indexmap::IndexMap;
 use indexmap::IndexSet;
 
@@ -6,28 +7,27 @@ use cargo::core::FeatureValue;
 use cargo::ops::cargo_add::add;
 use cargo::ops::cargo_add::AddOptions;
 use cargo::ops::cargo_add::DepOp;
-use cargo::ops::cargo_add::DepTable;
+use cargo::ops::resolve_ws;
 use cargo::util::command_prelude::*;
 use cargo::util::interning::InternedString;
+use cargo::util::toml_mut::manifest::DepTable;
 use cargo::CargoResult;
 
-pub fn cli() -> clap::Command<'static> {
+pub fn cli() -> Command {
     clap::Command::new("add")
-        .setting(clap::AppSettings::DeriveDisplayOrder)
         .about("Add dependencies to a Cargo.toml manifest file")
         .override_usage(
             "\
-    cargo add [OPTIONS] <DEP>[@<VERSION>] ...
-    cargo add [OPTIONS] --path <PATH> ...
-    cargo add [OPTIONS] --git <URL> ..."
+       cargo add [OPTIONS] <DEP>[@<VERSION>] ...
+       cargo add [OPTIONS] --path <PATH> ...
+       cargo add [OPTIONS] --git <URL> ..."
         )
         .after_help("Run `cargo help add` for more detailed information.\n")
         .group(clap::ArgGroup::new("selected").multiple(true).required(true))
         .args([
             clap::Arg::new("crates")
-                .takes_value(true)
                 .value_name("DEP_ID")
-                .multiple_occurrences(true)
+                .num_args(0..)
                 .help("Reference to a package to add as a dependency")
                 .long_help(
                 "Reference to a package to add as a dependency
@@ -37,30 +37,25 @@ You can reference a package by:
 - `<name>@<version-req>`, like `cargo add serde@1` or `cargo add serde@=1.0.38`"
             )
                 .group("selected"),
-            clap::Arg::new("no-default-features")
-                .long("no-default-features")
-                .help("Disable the default features"),
-            clap::Arg::new("default-features")
-                .long("default-features")
-                .help("Re-enable the default features")
+            flag("no-default-features",
+                "Disable the default features"),
+            flag("default-features",
+                "Re-enable the default features")
                 .overrides_with("no-default-features"),
             clap::Arg::new("features")
                 .short('F')
                 .long("features")
-                .takes_value(true)
                 .value_name("FEATURES")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Space or comma separated list of features to activate"),
-            clap::Arg::new("optional")
-                .long("optional")
-                .help("Mark the dependency as optional")
+            flag("optional",
+                "Mark the dependency as optional")
                 .long_help("Mark the dependency as optional
 
 The package name will be exposed as feature of your crate.")
                 .conflicts_with("dev"),
-            clap::Arg::new("no-optional")
-                .long("no-optional")
-                .help("Mark the dependency as required")
+            flag("no-optional",
+                "Mark the dependency as required")
                 .long_help("Mark the dependency as required
 
 The package will be removed from your features.")
@@ -68,7 +63,7 @@ The package will be removed from your features.")
                 .overrides_with("optional"),
             clap::Arg::new("rename")
                 .long("rename")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("NAME")
                 .help("Rename the dependency")
                 .long_help("Rename the dependency
@@ -82,27 +77,24 @@ Example uses:
             clap::Arg::new("package")
                 .short('p')
                 .long("package")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("SPEC")
                 .help("Package to modify"),
-            clap::Arg::new("offline")
-                .long("offline")
-                .help("Run without accessing the network")
         ])
         .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
-        .next_help_heading("SOURCE")
+        .next_help_heading("Source")
         .args([
             clap::Arg::new("path")
                 .long("path")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("PATH")
                 .help("Filesystem path to local crate to add")
                 .group("selected")
                 .conflicts_with("git"),
             clap::Arg::new("git")
                 .long("git")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("URI")
                 .help("Git repository location")
                 .long_help("Git repository location
@@ -111,21 +103,21 @@ Without any other information, cargo will use latest commit on the main branch."
                 .group("selected"),
             clap::Arg::new("branch")
                 .long("branch")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("BRANCH")
                 .help("Git branch to download the crate from")
                 .requires("git")
                 .group("git-ref"),
             clap::Arg::new("tag")
                 .long("tag")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("TAG")
                 .help("Git tag to download the crate from")
                 .requires("git")
                 .group("git-ref"),
             clap::Arg::new("rev")
                 .long("rev")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("REV")
                 .help("Git reference to download the crate from")
                 .long_help("Git reference to download the crate from
@@ -135,39 +127,37 @@ This is the catch all, handling hashes to named references in remote repositorie
                 .group("git-ref"),
             clap::Arg::new("registry")
                 .long("registry")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("NAME")
                 .help("Package registry for this dependency"),
         ])
-        .next_help_heading("SECTION")
+        .next_help_heading("Section")
         .args([
-            clap::Arg::new("dev")
-                .long("dev")
-                .help("Add as development dependency")
+            flag("dev",
+                "Add as development dependency")
                 .long_help("Add as development dependency
 
 Dev-dependencies are not used when compiling a package for building, but are used for compiling tests, examples, and benchmarks.
 
 These dependencies are not propagated to other packages which depend on this package.")
                 .group("section"),
-            clap::Arg::new("build")
-                .long("build")
-                .help("Add as build dependency")
+            flag("build",
+                "Add as build dependency")
                 .long_help("Add as build dependency
 
 Build-dependencies are the only dependencies available for use by build scripts (`build.rs` files).")
                 .group("section"),
             clap::Arg::new("target")
                 .long("target")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_name("TARGET")
-                .forbid_empty_values(true)
+                .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .help("Add as dependency to the given target platform")
         ])
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let dry_run = args.is_present("dry-run");
+    let dry_run = args.dry_run();
     let section = parse_section(args);
 
     let ws = args.workspace(config)?;
@@ -202,25 +192,34 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     };
     add(&ws, &options)?;
 
+    if !dry_run {
+        // Reload the workspace since we've changed dependencies
+        let ws = args.workspace(config)?;
+        resolve_ws(&ws)?;
+    }
+
     Ok(())
 }
 
 fn parse_dependencies(config: &Config, matches: &ArgMatches) -> CargoResult<Vec<DepOp>> {
-    let path = matches.value_of("path");
-    let git = matches.value_of("git");
-    let branch = matches.value_of("branch");
-    let rev = matches.value_of("rev");
-    let tag = matches.value_of("tag");
-    let rename = matches.value_of("rename");
-    let registry = matches.registry(config)?;
+    let path = matches.get_one::<String>("path");
+    let git = matches.get_one::<String>("git");
+    let branch = matches.get_one::<String>("branch");
+    let rev = matches.get_one::<String>("rev");
+    let tag = matches.get_one::<String>("tag");
+    let rename = matches.get_one::<String>("rename");
+    let registry = match matches.registry(config)? {
+        Some(reg) if reg == CRATES_IO_REGISTRY => None,
+        reg => reg,
+    };
     let default_features = default_features(matches);
     let optional = optional(matches);
 
     let mut crates = matches
-        .values_of("crates")
+        .get_many::<String>("crates")
         .into_iter()
         .flatten()
-        .map(|c| (Some(String::from(c)), None))
+        .map(|c| (Some(c.clone()), None))
         .collect::<IndexMap<_, _>>();
     let mut infer_crate_name = false;
     if crates.is_empty() {
@@ -232,9 +231,10 @@ fn parse_dependencies(config: &Config, matches: &ArgMatches) -> CargoResult<Vec<
         }
     }
     for feature in matches
-        .values_of("features")
+        .get_many::<String>("features")
         .into_iter()
         .flatten()
+        .map(String::as_str)
         .flat_map(parse_feature)
     {
         let parsed_value = FeatureValue::new(InternedString::new(feature));
@@ -310,16 +310,13 @@ fn parse_dependencies(config: &Config, matches: &ArgMatches) -> CargoResult<Vec<
 
 fn default_features(matches: &ArgMatches) -> Option<bool> {
     resolve_bool_arg(
-        matches.is_present("default-features"),
-        matches.is_present("no-default-features"),
+        matches.flag("default-features"),
+        matches.flag("no-default-features"),
     )
 }
 
 fn optional(matches: &ArgMatches) -> Option<bool> {
-    resolve_bool_arg(
-        matches.is_present("optional"),
-        matches.is_present("no-optional"),
-    )
+    resolve_bool_arg(matches.flag("optional"), matches.flag("no-optional"))
 }
 
 fn resolve_bool_arg(yes: bool, no: bool) -> Option<bool> {
@@ -332,9 +329,9 @@ fn resolve_bool_arg(yes: bool, no: bool) -> Option<bool> {
 }
 
 fn parse_section(matches: &ArgMatches) -> DepTable {
-    let kind = if matches.is_present("dev") {
+    let kind = if matches.flag("dev") {
         DepKind::Development
-    } else if matches.is_present("build") {
+    } else if matches.flag("build") {
         DepKind::Build
     } else {
         DepKind::Normal
@@ -342,7 +339,7 @@ fn parse_section(matches: &ArgMatches) -> DepTable {
 
     let mut table = DepTable::new().set_kind(kind);
 
-    if let Some(target) = matches.value_of("target") {
+    if let Some(target) = matches.get_one::<String>("target") {
         assert!(!target.is_empty(), "Target specification may not be empty");
         table = table.set_target(target);
     }

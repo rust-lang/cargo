@@ -4,17 +4,17 @@ use cargo::core::Verbosity;
 use cargo::ops::{self, CompileFilter, Packages};
 use cargo_util::ProcessError;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("run")
         // subcommand aliases are handled in aliased_command()
         // .alias("r")
-        .trailing_var_arg(true)
         .about("Run a binary or example of the local package")
         .arg_quiet()
         .arg(
             Arg::new("args")
-                .allow_invalid_utf8(true)
-                .multiple_values(true),
+                .value_parser(value_parser!(std::ffi::OsString))
+                .num_args(0..)
+                .trailing_var_arg(true),
         )
         .arg_targets_bin_example(
             "Name of the bin target to run",
@@ -56,7 +56,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     }
 
-    if !args.is_present("example") && !args.is_present("bin") {
+    if !args.contains_id("example") && !args.contains_id("bin") {
         let default_runs: Vec<_> = compile_opts
             .spec
             .get_packages(&ws)?

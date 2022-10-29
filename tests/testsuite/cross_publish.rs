@@ -46,6 +46,7 @@ fn simple_cross_package() {
 [VERIFYING] foo v0.0.0 ([CWD])
 [COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -66,7 +67,8 @@ fn publish_with_target() {
         return;
     }
 
-    registry::init();
+    // `publish` generally requires a remote registry
+    let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -97,17 +99,20 @@ fn publish_with_target() {
 
     let target = cross_compile::alternate();
 
-    p.cargo("publish --token sekrit")
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
         .arg("--target")
         .arg(&target)
         .with_stderr(
             "\
-[UPDATING] `dummy-registry` index
+[UPDATING] crates.io index
 [PACKAGING] foo v0.0.0 ([CWD])
 [VERIFYING] foo v0.0.0 ([CWD])
 [COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.0.0 ([CWD])
+[UPDATING] crates.io index
 ",
         )
         .run();

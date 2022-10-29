@@ -60,7 +60,7 @@ struct VendorConfig {
 #[serde(rename_all = "lowercase", untagged)]
 enum VendorSource {
     Directory {
-        directory: PathBuf,
+        directory: String,
     },
     Registry {
         registry: Option<String>,
@@ -252,13 +252,13 @@ fn sync(
 
     // replace original sources with vendor
     for source_id in sources {
-        let name = if source_id.is_default_registry() {
+        let name = if source_id.is_crates_io() {
             CRATES_IO_REGISTRY.to_string()
         } else {
             source_id.url().to_string()
         };
 
-        let source = if source_id.is_default_registry() {
+        let source = if source_id.is_crates_io() {
             VendorSource::Registry {
                 registry: None,
                 replace_with: merged_source_name.to_string(),
@@ -298,7 +298,10 @@ fn sync(
         config.insert(
             merged_source_name.to_string(),
             VendorSource::Directory {
-                directory: opts.destination.to_path_buf(),
+                // Windows-flavour paths are valid here on Windows but Unix.
+                // This backslash normalization is for making output paths more
+                // cross-platform compatible.
+                directory: opts.destination.to_string_lossy().replace("\\", "/"),
             },
         );
     } else if !dest_dir_already_exists {

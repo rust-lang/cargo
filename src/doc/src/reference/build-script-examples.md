@@ -49,6 +49,7 @@ Here we can see that we have a `build.rs` build script and our binary in
 [package]
 name = "hello-from-generated-code"
 version = "0.1.0"
+edition = "2021"
 ```
 
 Let’s see what’s inside the build script:

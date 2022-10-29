@@ -1,0 +1,6 @@
+^/somefile
+
+# Added by cargo
+
+^target/
+^Cargo.lock$

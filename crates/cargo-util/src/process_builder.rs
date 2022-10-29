@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
-use std::io;
+use std::io::{self, Write};
 use std::iter::once;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Output, Stdio};
@@ -39,6 +39,8 @@ pub struct ProcessBuilder {
     /// `true` to retry with an argfile if hitting "command line too big" error.
     /// See [`ProcessBuilder::retry_with_argfile`] for more information.
     retry_with_argfile: bool,
+    /// Data to write to stdin.
+    stdin: Option<Vec<u8>>,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -80,6 +82,7 @@ impl ProcessBuilder {
             jobserver: None,
             display_env_vars: false,
             retry_with_argfile: false,
+            stdin: None,
         }
     }
 
@@ -207,6 +210,12 @@ impl ProcessBuilder {
         self
     }
 
+    /// Sets a value that will be written to stdin of the process on launch.
+    pub fn stdin<T: Into<Vec<u8>>>(&mut self, stdin: T) -> &mut Self {
+        self.stdin = Some(stdin.into());
+        self
+    }
+
     fn should_retry_with_argfile(&self, err: &io::Error) -> bool {
         self.retry_with_argfile && imp::command_line_too_big(err)
     }
@@ -275,14 +284,23 @@ impl ProcessBuilder {
     fn _output(&self) -> io::Result<Output> {
         if !debug_force_argfile(self.retry_with_argfile) {
             let mut cmd = self.build_command();
-            match piped(&mut cmd).spawn() {
+            match piped(&mut cmd, self.stdin.is_some()).spawn() {
                 Err(ref e) if self.should_retry_with_argfile(e) => {}
                 Err(e) => return Err(e),
-                Ok(child) => return child.wait_with_output(),
+                Ok(mut child) => {
+                    if let Some(stdin) = &self.stdin {
+                        child.stdin.take().unwrap().write_all(stdin)?;
+                    }
+                    return child.wait_with_output();
+                }
             }
         }
         let (mut cmd, argfile) = self.build_command_with_argfile()?;
-        let output = piped(&mut cmd).spawn()?.wait_with_output();
+        let mut child = piped(&mut cmd, self.stdin.is_some()).spawn()?;
+        if let Some(stdin) = &self.stdin {
+            child.stdin.take().unwrap().write_all(stdin)?;
+        }
+        let output = child.wait_with_output();
         close_tempfile_and_log_error(argfile);
         output
     }
@@ -326,14 +344,14 @@ impl ProcessBuilder {
 
         let spawn = |mut cmd| {
             if !debug_force_argfile(self.retry_with_argfile) {
-                match piped(&mut cmd).spawn() {
+                match piped(&mut cmd, false).spawn() {
                     Err(ref e) if self.should_retry_with_argfile(e) => {}
                     Err(e) => return Err(e),
                     Ok(child) => return Ok((child, None)),
                 }
             }
             let (mut cmd, argfile) = self.build_command_with_argfile()?;
-            Ok((piped(&mut cmd).spawn()?, Some(argfile)))
+            Ok((piped(&mut cmd, false).spawn()?, Some(argfile)))
         };
 
         let status = (|| {
@@ -457,7 +475,7 @@ impl ProcessBuilder {
         Ok((cmd, tmp))
     }
 
-    /// Builds a command from `ProcessBuilder` for everythings but not `args`.
+    /// Builds a command from `ProcessBuilder` for everything but not `args`.
     fn build_command_without_args(&self) -> Command {
         let mut command = {
             let mut iter = self.wrappers.iter().rev().chain(once(&self.program));
@@ -527,11 +545,15 @@ fn debug_force_argfile(retry_enabled: bool) -> bool {
     cfg!(debug_assertions) && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok() && retry_enabled
 }
 
-/// Creates new pipes for stderr and stdout. Ignores stdin.
-fn piped(cmd: &mut Command) -> &mut Command {
+/// Creates new pipes for stderr, stdout, and optionally stdin.
+fn piped(cmd: &mut Command, pipe_stdin: bool) -> &mut Command {
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .stdin(Stdio::null())
+        .stdin(if pipe_stdin {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
 }
 
 fn close_tempfile_and_log_error(file: NamedTempFile) {

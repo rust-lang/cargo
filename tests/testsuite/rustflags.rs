@@ -297,7 +297,7 @@ fn env_rustflags_build_script_with_target_doesnt_apply_to_host_kind() {
 
     let host = rustc_host();
     p.cargo("build --target")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg(host)
         .arg("-Ztarget-applies-to-host")
         .env("RUSTFLAGS", "--cfg foo")
@@ -1072,7 +1072,7 @@ fn target_rustflags_not_for_build_scripts_with_target() {
     // Enabling -Ztarget-applies-to-host should not make a difference without the config setting
     p.cargo("build --target")
         .arg(host)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .run();
 
@@ -1092,7 +1092,7 @@ fn target_rustflags_not_for_build_scripts_with_target() {
     );
     p.cargo("build --target")
         .arg(host)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .run();
 }
@@ -1129,12 +1129,12 @@ fn build_rustflags_for_build_scripts() {
 
     // Enabling -Ztarget-applies-to-host should not make a difference without the config setting
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .run();
     p.cargo("build --target")
         .arg(host)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .with_status(101)
         .with_stderr_contains("[..]assertion failed[..]")
@@ -1152,14 +1152,14 @@ fn build_rustflags_for_build_scripts() {
         ",
     );
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .with_status(101)
         .with_stderr_contains("[..]assertion failed[..]")
         .run();
     p.cargo("build --target")
         .arg(host)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .with_status(101)
         .with_stderr_contains("[..]assertion failed[..]")
@@ -1194,7 +1194,7 @@ fn host_rustflags_for_build_scripts() {
 
     p.cargo("build --target")
         .arg(host)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .arg("-Ztarget-applies-to-host")
         .arg("-Zhost-config")
         .run();
@@ -1663,7 +1663,7 @@ fn host_config_rustflags_with_target() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .arg("-Zhost-config")
         .arg("-Ztarget-applies-to-host")
         .arg("-Zunstable-options")

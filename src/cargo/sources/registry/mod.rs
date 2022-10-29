@@ -167,6 +167,7 @@ use std::path::{Path, PathBuf};
 use std::task::Poll;
 
 use anyhow::Context as _;
+use cargo_util::paths::exclude_from_backups_and_indexing;
 use flate2::read::GzDecoder;
 use log::debug;
 use semver::Version;
@@ -175,16 +176,19 @@ use tar::Archive;
 
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Package, PackageId, QueryKind, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
 use crate::util::network::PollExt;
-use crate::util::{restricted_names, CargoResult, Config, Filesystem, OptVersionReq};
+use crate::util::{
+    restricted_names, CargoResult, Config, Filesystem, LimitErrorReader, OptVersionReq,
+};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
+pub const CRATES_IO_HTTP_INDEX: &str = "https://index.crates.io/";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
 pub const CRATES_IO_DOMAIN: &str = "crates.io";
 const CRATE_TEMPLATE: &str = "{crate}";
@@ -192,6 +196,7 @@ const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
+const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024;
 
 /// A "source" for a local (see `local::LocalRegistry`) or remote (see
 /// `remote::RemoteRegistry`) registry.
@@ -397,7 +402,7 @@ impl<'a> RegistryDependency<'a> {
 
         // In index, "registry" is null if it is from the same index.
         // In Cargo.toml, "registry" is None if it is from the default
-        if !id.is_default_registry() {
+        if !id.is_crates_io() {
             dep.set_registry_id(id);
         }
 
@@ -544,14 +549,12 @@ impl<'cfg> RegistrySource<'cfg> {
         config: &'cfg Config,
     ) -> CargoResult<RegistrySource<'cfg>> {
         let name = short_name(source_id);
-        let ops = if source_id.url().scheme().starts_with("sparse+") {
-            if !config.cli_unstable().http_registry {
-                anyhow::bail!("Usage of HTTP-based registries requires `-Z http-registry`");
-            }
-            Box::new(http_remote::HttpRegistry::new(source_id, config, &name)) as Box<_>
+        let ops = if source_id.is_sparse() {
+            Box::new(http_remote::HttpRegistry::new(source_id, config, &name)?) as Box<_>
         } else {
             Box::new(remote::RemoteRegistry::new(source_id, config, &name)) as Box<_>
         };
+
         Ok(RegistrySource::new(
             source_id,
             config,
@@ -615,6 +618,7 @@ impl<'cfg> RegistrySource<'cfg> {
             }
         }
         let gz = GzDecoder::new(tarball);
+        let gz = LimitErrorReader::new(gz, max_unpack_size());
         let mut tar = Archive::new(gz);
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
@@ -639,6 +643,13 @@ impl<'cfg> RegistrySource<'cfg> {
                     prefix
                 )
             }
+            // Prevent unpacking the lockfile from the crate itself.
+            if entry_path
+                .file_name()
+                .map_or(false, |p| p == PACKAGE_SOURCE_LOCK)
+            {
+                continue;
+            }
             // Unpacking failed
             let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
             if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
@@ -654,16 +665,14 @@ impl<'cfg> RegistrySource<'cfg> {
                 .with_context(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
 
-        // The lock file is created after unpacking so we overwrite a lock file
-        // which may have been extracted from the package.
+        // Now that we've finished unpacking, create and write to the lock file to indicate that
+        // unpacking was successful.
         let mut ok = OpenOptions::new()
-            .create(true)
+            .create_new(true)
             .read(true)
             .write(true)
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
-
-        // Write to the lock file to indicate that unpacking was successful.
         write!(ok, "ok")?;
 
         Ok(unpack_dir.to_path_buf())
@@ -701,12 +710,18 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
+    fn query(
+        &mut self,
+        dep: &Dependency,
+        kind: QueryKind,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
         // If this is a precise dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if dep.source_id().precise().is_some() && !self.ops.is_updated() {
+        if kind == QueryKind::Exact && dep.source_id().precise().is_some() && !self.ops.is_updated()
+        {
             debug!("attempting query without update");
             let mut called = false;
             let pend =
@@ -731,19 +746,14 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
         self.index
             .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                if dep.matches(&s) {
+                let matched = match kind {
+                    QueryKind::Exact => dep.matches(&s),
+                    QueryKind::Fuzzy => true,
+                };
+                if matched {
                     f(s);
                 }
             })
-    }
-
-    fn fuzzy_query(
-        &mut self,
-        dep: &Dependency,
-        f: &mut dyn FnMut(Summary),
-    ) -> Poll<CargoResult<()>> {
-        self.index
-            .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, f)
     }
 
     fn supports_checksums(&self) -> bool {
@@ -801,18 +811,41 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         self.yanked_whitelist.extend(pkgs);
     }
 
-    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
-        self.invalidate_cache();
-        loop {
-            match self.index.is_yanked(pkg, &mut *self.ops)? {
-                Poll::Ready(yanked) => return Ok(yanked),
-                Poll::Pending => self.block_until_ready()?,
-            }
-        }
+    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
+        self.index.is_yanked(pkg, &mut *self.ops)
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
+        // Before starting to work on the registry, make sure that
+        // `<cargo_home>/registry` is marked as excluded from indexing and
+        // backups. Older versions of Cargo didn't do this, so we do it here
+        // regardless of whether `<cargo_home>` exists.
+        //
+        // This does not use `create_dir_all_excluded_from_backups_atomic` for
+        // the same reason: we want to exclude it even if the directory already
+        // exists.
+        //
+        // IO errors in creating and marking it are ignored, e.g. in case we're on a
+        // read-only filesystem.
+        let registry_base = self.config.registry_base_path();
+        let _ = registry_base.create_dir();
+        exclude_from_backups_and_indexing(&registry_base.into_path_unlocked());
+
         self.ops.block_until_ready()
+    }
+}
+
+/// For integration test only.
+#[inline]
+fn max_unpack_size() -> u64 {
+    const VAR: &str = "__CARGO_TEST_MAX_UNPACK_SIZE";
+    if cfg!(debug_assertions) && std::env::var(VAR).is_ok() {
+        std::env::var(VAR)
+            .unwrap()
+            .parse()
+            .expect("a max unpack size in bytes")
+    } else {
+        MAX_UNPACK_SIZE
     }
 }
 

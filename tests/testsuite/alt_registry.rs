@@ -1,9 +1,9 @@
 //! Tests for alternative registries.
 
-use cargo::util::IntoUrl;
+use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::publish::validate_alt_upload;
-use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{basic_manifest, git, paths, project};
+use cargo_test_support::registry::{self, Package, RegistryBuilder};
+use cargo_test_support::{basic_manifest, paths, project};
 use std::fs;
 
 #[cargo_test]
@@ -13,7 +13,7 @@ fn depend_on_alt_registry() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -62,7 +62,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -104,7 +104,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -146,7 +146,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -190,7 +190,7 @@ fn registry_and_path_dep_works() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -224,7 +224,7 @@ fn registry_incompatible_with_git() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -248,14 +248,13 @@ fn registry_incompatible_with_git() {
 
 #[cargo_test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
-    registry::alt_init();
-    let fakeio_path = paths::root().join("fake.io");
-    let fakeio_url = fakeio_path.into_url().unwrap();
+    let crates_io = registry::init();
+    let _alternative = RegistryBuilder::new().alternative().build();
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -265,41 +264,22 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
             "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            ".cargo/config",
-            &format!(
-                r#"
-                    [registries.fakeio]
-                    index = "{}"
-                "#,
-                fakeio_url
-            ),
-        )
         .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    // Since this can't really call plain `publish` without fetching the real
-    // crates.io index, create a fake one that points to the real crates.io.
-    git::repo(&fakeio_path)
-        .file(
-            "config.json",
-            r#"
-                {"dl": "https://crates.io/api/v1/crates", "api": "https://crates.io"}
-            "#,
-        )
-        .build();
-
-    // Login so that we have the token available
-    p.cargo("login --registry fakeio TOKEN").run();
-
-    p.cargo("publish --registry fakeio")
+    p.cargo("publish")
+        .replace_crates_io(crates_io.index_url())
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
 
-    p.cargo("publish --token sekrit --index")
-        .arg(fakeio_url.to_string())
+    p.cargo("publish")
+        .replace_crates_io(crates_io.index_url())
+        .arg("--token")
+        .arg(crates_io.token())
+        .arg("--index")
+        .arg(crates_io.index_url().as_str())
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
@@ -312,7 +292,7 @@ fn publish_with_registry_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -376,7 +356,7 @@ fn alt_registry_and_crates_io_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -479,7 +459,7 @@ fn publish_with_crates_io_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = ["me"]
@@ -616,7 +596,7 @@ fn bad_registry_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -660,18 +640,8 @@ Caused by:
 
 #[cargo_test]
 fn no_api() {
-    registry::alt_init();
+    let _registry = RegistryBuilder::new().alternative().no_api().build();
     Package::new("bar", "0.0.1").alternative(true).publish();
-    // Configure without `api`.
-    let repo = git2::Repository::open(registry::alt_registry_path()).unwrap();
-    let cfg_path = registry::alt_registry_path().join("config.json");
-    fs::write(
-        cfg_path,
-        format!(r#"{{"dl": "{}"}}"#, registry::alt_dl_url()),
-    )
-    .unwrap();
-    git::add(&repo);
-    git::commit(&repo);
 
     // First check that a dependency works.
     let p = project()
@@ -1052,7 +1022,7 @@ fn unknown_registry() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1221,13 +1191,11 @@ fn registries_index_relative_url() {
     )
     .unwrap();
 
-    registry::init();
-
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1270,13 +1238,11 @@ fn registries_index_relative_path_not_allowed() {
     )
     .unwrap();
 
-    registry::init();
-
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1322,4 +1288,100 @@ fn both_index_and_registry() {
             )
             .run();
     }
+}
+
+#[cargo_test]
+fn sparse_lockfile() {
+    let _registry = registry::RegistryBuilder::new()
+        .http_index()
+        .alternative()
+        .build();
+    Package::new("foo", "0.1.0").alternative(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "a"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                foo = { registry = 'alternative', version = '0.1.0'}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("-Zsparse-registry generate-lockfile")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
+        .run();
+    assert_match_exact(
+        &p.read_lockfile(),
+        r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "a"
+version = "0.5.0"
+dependencies = [
+ "foo",
+]
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+source = "sparse+http://[..]/"
+checksum = "f6a200a9339fef960979d94d5c99cbbfd899b6f5a396a55d9775089119050203""#,
+    );
+}
+
+#[cargo_test]
+fn publish_with_transitive_dep() {
+    let _alt1 = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative_named("Alt-1")
+        .build();
+    let _alt2 = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative_named("Alt-2")
+        .build();
+
+    let p1 = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.5.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p1.cargo("publish -Zsparse-registry --registry Alt-1")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
+        .run();
+
+    let p2 = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.6.0"
+                publish = ["Alt-2"]
+
+                [dependencies]
+                a = { version = "0.5.0", registry = "Alt-1" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p2.cargo("publish -Zsparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
+        .run();
 }

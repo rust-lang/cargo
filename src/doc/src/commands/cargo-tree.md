@@ -53,6 +53,23 @@ turn depends on `cfg-if` with "default" features. When using `-e features` it
 can be helpful to use `-i` flag to show how the features flow into a package.
 See the examples below for more detail.
 
+### Feature Unification
+
+This command shows a graph much closer to a feature-unified graph Cargo will
+build, rather than what you list in `Cargo.toml`. For instance, if you specify
+the same dependency in both `[dependencies]` and `[dev-dependencies]` but with
+different features on. This command may merge all features and show a `(*)` on
+one of the dependency to indicate the duplicate.
+
+As a result, for a mostly equivalent overview of what `cargo build` does,
+`cargo tree -e normal,build` is pretty close; for a mostly equivalent overview
+of what `cargo test` does, `cargo tree` is pretty close. However, it doesn't
+guarantee the exact equivalence to what Cargo is going to build, since a
+compilation is complex and depends on lots of different factors.
+
+To learm more about feature unification, check out this
+[dedicated section](../reference/features.html#feature-unification).
+
 ## OPTIONS
 
 ### Tree Options
@@ -311,6 +328,12 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-tree---config"><a class="option-anchor" href="#option-cargo-tree---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
 
 
 <dt class="option-term" id="option-cargo-tree--h"><a class="option-anchor" href="#option-cargo-tree--h"></a><code>-h</code></dt>

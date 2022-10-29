@@ -20,7 +20,7 @@ fn cargo_process(s: &str) -> cargo_test_support::Execs {
 #[cargo_test]
 fn gated() {
     cargo_process("config get")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
         .with_stderr("\
 error: the `cargo config` command is unstable, pass `-Z unstable-options` to enable it
@@ -73,7 +73,7 @@ fn get_toml() {
     let sub_folder = common_setup();
     cargo_process("config get -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_ALIAS_BAR", "cat dog")
         .env("CARGO_BUILD_JOBS", "100")
         // The weird forward slash in the linux line is due to testsuite normalization.
@@ -99,7 +99,7 @@ target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\"
     // Env keys work if they are specific.
     cargo_process("config get build.jobs -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_JOBS", "100")
         .with_stdout("build.jobs = 100")
         .with_stderr("")
@@ -108,7 +108,7 @@ target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\"
     // Array value.
     cargo_process("config get build.rustflags -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stdout("build.rustflags = [\"--flag-directory\", \"--flag-global\"]")
         .with_stderr("")
         .run();
@@ -116,7 +116,7 @@ target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\"
     // Sub-table
     cargo_process("config get profile -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stdout(
             "\
 profile.dev.opt-level = 3
@@ -129,7 +129,7 @@ profile.dev.package.foo.opt-level = 1
     // Specific profile entry.
     cargo_process("config get profile.dev.opt-level -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stdout("profile.dev.opt-level = 3")
         .with_stderr("")
         .run();
@@ -137,7 +137,7 @@ profile.dev.package.foo.opt-level = 1
     // A key that isn't set.
     cargo_process("config get build.rustc -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
         .with_stdout("")
         .with_stderr("error: config value `build.rustc` is not set")
@@ -146,7 +146,7 @@ profile.dev.package.foo.opt-level = 1
     // A key that is not part of Cargo's config schema.
     cargo_process("config get not.set -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
         .with_stdout("")
         .with_stderr("error: config value `not.set` is not set")
@@ -196,7 +196,7 @@ fn get_json() {
     let sub_folder = common_setup();
     cargo_process("config get --format=json -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_ALIAS_BAR", "cat dog")
         .env("CARGO_BUILD_JOBS", "100")
         .with_json(all_json)
@@ -213,7 +213,7 @@ CARGO_HOME=[ROOT]/home/.cargo
     // json-value is the same for the entire root table
     cargo_process("config get --format=json-value -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_json(all_json)
         .with_stderr(
             "\
@@ -225,7 +225,7 @@ CARGO_HOME=[ROOT]/home/.cargo
 
     cargo_process("config get --format=json build.jobs -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_json(
             r#"
             {"build": {"jobs": 99}}
@@ -236,7 +236,7 @@ CARGO_HOME=[ROOT]/home/.cargo
 
     cargo_process("config get --format=json-value build.jobs -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stdout("99")
         .with_stderr("")
         .run();
@@ -247,7 +247,7 @@ fn show_origin_toml() {
     let sub_folder = common_setup();
     cargo_process("config get --show-origin -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stdout(
             "\
 alias.foo = \"abc --xyz\" # [ROOT]/home/.cargo/config.toml
@@ -273,7 +273,7 @@ target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\" # [ROOT]/home/.carg
 
     cargo_process("config get --show-origin build.rustflags -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_RUSTFLAGS", "env1 env2")
         .with_stdout(
             "\
@@ -294,7 +294,7 @@ fn show_origin_toml_cli() {
     let sub_folder = common_setup();
     cargo_process("config get --show-origin build.jobs -Zunstable-options --config build.jobs=123")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_JOBS", "1")
         .with_stdout("build.jobs = 123 # --config cli option")
         .with_stderr("")
@@ -303,7 +303,7 @@ fn show_origin_toml_cli() {
     cargo_process("config get --show-origin build.rustflags -Zunstable-options --config")
         .arg("build.rustflags=[\"cli1\",\"cli2\"]")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_RUSTFLAGS", "env1 env2")
         .with_stdout(
             "\
@@ -326,7 +326,7 @@ fn show_origin_json() {
     let sub_folder = common_setup();
     cargo_process("config get --show-origin --format=json -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
         .with_stderr("error: the `json` format does not support --show-origin, try the `toml` format instead")
         .run();
@@ -337,7 +337,7 @@ fn unmerged_toml() {
     let sub_folder = common_setup();
     cargo_process("config get --merged=no -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_ALIAS_BAR", "cat dog")
         .env("CARGO_BUILD_JOBS", "100")
         .with_stdout(
@@ -368,7 +368,7 @@ target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\"
 
     cargo_process("config get --merged=no build.rustflags -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_RUSTFLAGS", "env1 env2")
         .with_stdout(
             "\
@@ -388,14 +388,14 @@ build.rustflags = [\"--flag-global\"]
 
     cargo_process("config get --merged=no does.not.exist -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stderr("")
         .with_stderr("")
         .run();
 
     cargo_process("config get --merged=no build.rustflags.extra -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
         .with_stderr(
             "error: expected table for configuration key `build.rustflags`, \
@@ -410,7 +410,7 @@ fn unmerged_toml_cli() {
     cargo_process("config get --merged=no build.rustflags -Zunstable-options --config")
         .arg("build.rustflags=[\"cli1\",\"cli2\"]")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_RUSTFLAGS", "env1 env2")
         .with_stdout(
             "\
@@ -437,7 +437,7 @@ fn unmerged_json() {
     let sub_folder = common_setup();
     cargo_process("config get --merged=no --format=json -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
         .with_stderr(
             "error: the `json` format does not support --merged=no, try the `toml` format instead",
@@ -468,14 +468,14 @@ fn includes() {
 
     cargo_process("config get build.rustflags -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
         .with_stdout(r#"build.rustflags = ["--flag-other", "--flag-directory", "--flag-global"]"#)
         .with_stderr("")
         .run();
 
     cargo_process("config get build.rustflags --show-origin -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
         .with_stdout(
             "\
 build.rustflags = [
@@ -490,7 +490,7 @@ build.rustflags = [
 
     cargo_process("config get --merged=no -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
         .with_stdout(
             "\
 # Environment variables

@@ -7,11 +7,13 @@ use std::rc::Rc;
 use std::task::Poll;
 
 use anyhow::{bail, format_err, Context as _};
+use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 use toml_edit::easy as toml;
 
 use crate::core::compiler::Freshness;
-use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
+use crate::core::Target;
+use crate::core::{Dependency, FeatureValue, Package, PackageId, QueryKind, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
@@ -540,7 +542,7 @@ where
     }
 
     let deps = loop {
-        match source.query_vec(&dep)? {
+        match source.query_vec(&dep, QueryKind::Exact)? {
             Poll::Ready(deps) => break deps,
             Poll::Pending => source.block_until_ready()?,
         }
@@ -553,8 +555,20 @@ where
         None => {
             let is_yanked: bool = if dep.version_req().is_exact() {
                 let version: String = dep.version_req().to_string();
-                PackageId::new(dep.package_name(), &version[1..], source.source_id())
-                    .map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false))
+                if let Ok(pkg_id) =
+                    PackageId::new(dep.package_name(), &version[1..], source.source_id())
+                {
+                    source.invalidate_cache();
+                    loop {
+                        match source.is_yanked(pkg_id) {
+                            Poll::Ready(Ok(is_yanked)) => break is_yanked,
+                            Poll::Ready(Err(_)) => break false,
+                            Poll::Pending => source.block_until_ready()?,
+                        }
+                    }
+                } else {
+                    false
+                }
             } else {
                 false
             };
@@ -678,20 +692,17 @@ pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String>
             ref examples,
             ..
         } => {
-            let all_bins: Vec<String> = bins.try_collect().unwrap_or_else(|| {
-                pkg.targets()
+            let collect = |rule: &_, f: fn(&Target) -> _| match rule {
+                FilterRule::All => pkg
+                    .targets()
                     .iter()
-                    .filter(|t| t.is_bin())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
-            let all_examples: Vec<String> = examples.try_collect().unwrap_or_else(|| {
-                pkg.targets()
-                    .iter()
-                    .filter(|t| t.is_exe_example())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
+                    .filter(|t| f(t))
+                    .map(|t| t.name().into())
+                    .collect(),
+                FilterRule::Just(targets) => targets.clone(),
+            };
+            let all_bins = collect(bins, Target::is_bin);
+            let all_examples = collect(examples, Target::is_exe_example);
 
             all_bins
                 .iter()

@@ -211,7 +211,7 @@ impl fmt::Display for PackageId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} v{}", self.inner.name, self.inner.version)?;
 
-        if !self.inner.source_id.is_default_registry() {
+        if !self.inner.source_id.is_crates_io() {
             write!(f, " ({})", self.inner.source_id)?;
         }
 

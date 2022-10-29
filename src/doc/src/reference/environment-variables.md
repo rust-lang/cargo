@@ -9,6 +9,11 @@ with them:
 You can override these environment variables to change Cargo's behavior on your
 system:
 
+* `CARGO_LOG` - Cargo uses the [`env_logger`] crate to display debug log messages.
+  The `CARGO_LOG` environment variable can be set to enable debug logging,
+  with a value such as `trace`, `debug`, or `warn`.
+  Usually it is only used during debugging. For more details refer to the
+  [Debug logging].
 * `CARGO_HOME` — Cargo maintains a local cache of the registry index and of
   git checkouts of crates. By default these are stored under `$HOME/.cargo`
   (`%USERPROFILE%\.cargo` on Windows), but this variable overrides the
@@ -21,15 +26,18 @@ system:
 * `RUSTC` — Instead of running `rustc`, Cargo will execute this specified
   compiler instead. See [`build.rustc`] to set via config.
 * `RUSTC_WRAPPER` — Instead of simply running `rustc`, Cargo will execute this
-  specified wrapper instead, passing as its command-line arguments the rustc
-  invocation, with the first argument being `rustc`. Useful to set up a build
-  cache tool such as `sccache`. See [`build.rustc-wrapper`] to set via config.
-* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, Cargo will
-  execute this specified wrapper instead for workspace members only, passing
+  specified wrapper, passing as its command-line arguments the rustc
+  invocation, with the first argument being the path to the actual rustc.
+  Useful to set up a build cache tool such as `sccache`. See
+  [`build.rustc-wrapper`] to set via config. Setting this to the empty string
+  overwrites the config and resets cargo to not use a wrapper.
+* `RUSTC_WORKSPACE_WRAPPER` — Instead of simply running `rustc`, for workspace
+  members Cargo will execute this specified wrapper, passing
   as its command-line arguments the rustc invocation, with the first argument
-  being `rustc`. It affects the filename hash so that artifacts produced by
-  the wrapper are cached separately. See [`build.rustc-workspace-wrapper`]
-  to set via config.
+  being the path to the actual rustc. It affects the filename hash
+  so that artifacts produced by the wrapper are cached separately.
+  See [`build.rustc-workspace-wrapper`] to set via config. Setting this to the empty string
+  overwrites the config and resets cargo to not use a wrapper for workspace members.
 * `RUSTDOC` — Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead. See [`build.rustdoc`] to set via config.
 * `RUSTDOCFLAGS` — A space-separated list of custom flags to pass to all `rustdoc`
@@ -37,15 +45,17 @@ system:
   useful for passing a flag to *all* `rustdoc` instances. See
   [`build.rustdocflags`] for some more ways to set flags. This string is
   split by whitespace; for a more robust encoding of multiple arguments,
-  set `CARGO_ENCODED_RUSTDOCFLAGS` instead with arguments separated by
-  `0x1f` (ASCII Unit Separator).
+  see `CARGO_ENCODED_RUSTDOCFLAGS`.
+* `CARGO_ENCODED_RUSTDOCFLAGS` -  A list of custom flags separated by `0x1f`
+  (ASCII Unit Separator) to pass to all `rustdoc` invocations that Cargo performs.
 * `RUSTFLAGS` — A space-separated list of custom flags to pass to all compiler
   invocations that Cargo performs. In contrast with [`cargo rustc`], this is
   useful for passing a flag to *all* compiler instances. See
   [`build.rustflags`] for some more ways to set flags. This string is
   split by whitespace; for a more robust encoding of multiple arguments,
-  set `CARGO_ENCODED_RUSTFLAGS` instead with arguments separated by
-  `0x1f` (ASCII Unit Separator).
+  see `CARGO_ENCODED_RUSTFLAGS`.
+* `CARGO_ENCODED_RUSTFLAGS` - A list of custom flags separated by `0x1f`
+  (ASCII Unit Separator) to pass to all compiler invocations that Cargo performs.
 * `CARGO_INCREMENTAL` — If this is set to 1 then Cargo will force [incremental
   compilation] to be enabled for the current compilation, and when set to 0 it
   will force disabling it. If this env var isn't present then cargo's defaults
@@ -65,9 +75,9 @@ system:
 
 #### Configuration environment variables
 
-Cargo reads environment variables for configuration values. See the
-[configuration chapter][config-env] for more details. In summary, the
-supported environment variables are:
+Cargo reads environment variables for some configuration values.
+See the [configuration chapter][config-env] for more details.
+In summary, the supported environment variables are:
 
 * `CARGO_ALIAS_<name>` — Command aliases, see [`alias`].
 * `CARGO_BUILD_JOBS` — Number of parallel jobs, see [`build.jobs`].
@@ -82,7 +92,7 @@ supported environment variables are:
 * `CARGO_BUILD_INCREMENTAL` — Incremental compilation, see [`build.incremental`].
 * `CARGO_BUILD_DEP_INFO_BASEDIR` — Dep-info relative directory, see [`build.dep-info-basedir`].
 * `CARGO_CARGO_NEW_VCS` — The default source control system with [`cargo new`], see [`cargo-new.vcs`].
-* `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` - How often we should generate a future incompat report notifcation, see [`future-incompat-report.frequency`].
+* `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` - How often we should generate a future incompat report notification, see [`future-incompat-report.frequency`].
 * `CARGO_HTTP_DEBUG` — Enables HTTP debugging, see [`http.debug`].
 * `CARGO_HTTP_PROXY` — Enables HTTP proxy, see [`http.proxy`].
 * `CARGO_HTTP_TIMEOUT` — The HTTP timeout, see [`http.timeout`].
@@ -212,6 +222,9 @@ corresponding environment variable is set to the empty string, `""`.
 * `CARGO_PKG_REPOSITORY` — The repository from the manifest of your package.
 * `CARGO_PKG_LICENSE` — The license from the manifest of your package.
 * `CARGO_PKG_LICENSE_FILE` — The license file from the manifest of your package.
+* `CARGO_PKG_RUST_VERSION` — The Rust version from the manifest of your package.
+  Note that this is the minimum Rust version supported by the package, not the
+  current Rust version.
 * `CARGO_CRATE_NAME` — The name of the crate that is currently being compiled.
 * `CARGO_BIN_NAME` — The name of the binary that is currently being compiled (if it is a binary). This name does not include any file extension, such as `.exe`.
 * `OUT_DIR` — If the package has a build script, this is set to the folder where the build
@@ -361,6 +374,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
   the environment; scripts should use `CARGO_ENCODED_RUSTFLAGS` instead.
 * `CARGO_PKG_<var>` - The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
 
+[`env_logger`]: https://docs.rs/env_logger
+[debug logging]: https://doc.crates.io/contrib/architecture/console.html#debug-logging
 [unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [windows-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [target family]: ../../reference/conditional-compilation.html#target_family
