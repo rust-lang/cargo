@@ -259,7 +259,9 @@ fn cargo_compile_duplicate_build_targets() {
     p.cargo("build")
         .with_stderr(
             "\
-warning: file found to be present in multiple build targets: [..]main.rs
+warning: file `[..]main.rs` found to be present in multiple build targets:
+  * `lib` target `main`
+  * `bin` target `foo`
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
