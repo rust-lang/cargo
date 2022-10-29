@@ -218,6 +218,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [COMPILING] bar v1.0.0
 [COMPILING] foo v0.0.1 ([..]foo-0.0.1)
 [FINISHED] dev [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.0.1 ([..])
 [UPDATING] crates.io index
 ",

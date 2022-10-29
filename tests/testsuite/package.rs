@@ -39,6 +39,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -77,6 +78,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -103,6 +105,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -129,6 +132,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -158,6 +162,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -198,6 +203,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -239,6 +245,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -488,6 +495,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] some_dir/file_deep_4
 [ARCHIVING] some_dir/file_deep_5
 [ARCHIVING] src/main.rs
+[PACKAGED] 15 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -555,6 +563,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] foo.txt
 [ARCHIVING] src/main.rs
+[PACKAGED] 7 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -708,6 +717,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -775,6 +785,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1788,6 +1799,7 @@ fn invalid_license_file_path() {
 Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
 This may become a hard error in the future.
 [PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1835,6 +1847,7 @@ subdir/LICENSE
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
 [ARCHIVING] subdir/LICENSE
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1891,6 +1904,7 @@ src/lib.rs
 [VERIFYING] foo v1.0.0 [..]
 [COMPILING] foo v1.0.0 [..]
 [FINISHED] [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1949,6 +1963,7 @@ src/lib.rs
 [VERIFYING] foo v1.0.0 [..]
 [COMPILING] foo v1.0.0 [..]
 [FINISHED] [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1994,6 +2009,7 @@ fn package_restricted_windows() {
 [PACKAGING] foo [..]
 [VERIFYING] foo [..]
 [COMPILING] foo [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [FINISHED] [..]
 ",
         )
@@ -2367,12 +2383,14 @@ See [..]
 [VERIFYING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] bar v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -2449,5 +2467,298 @@ version = "0.1.0"
         "baz-0.1.0.crate",
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[("Cargo.toml", &rewritten_toml)],
+    );
+}
+
+fn verify_packaged_status_line(
+    output: std::process::Output,
+    num_files: usize,
+    uncompressed_size: u64,
+    compressed_size: u64,
+) {
+    use cargo::util::human_readable_bytes;
+
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let mut packaged_lines = stderr
+        .lines()
+        .filter(|line| line.trim().starts_with("Packaged"));
+    let packaged_line = packaged_lines
+        .next()
+        .expect("`Packaged` status line should appear in stderr");
+    assert!(
+        packaged_lines.next().is_none(),
+        "Only one `Packaged` status line should appear in stderr"
+    );
+    let size_info = packaged_line.trim().trim_start_matches("Packaged").trim();
+    let uncompressed = human_readable_bytes(uncompressed_size);
+    let compressed = human_readable_bytes(compressed_size);
+    let expected = format!(
+        "{} files, {:.1}{} ({:.1}{} compressed)",
+        num_files, uncompressed.0, uncompressed.1, compressed.0, compressed.1
+    );
+    assert_eq!(size_info, expected);
+}
+
+#[cargo_test]
+fn basic_filesizes() {
+    let cargo_toml_orig_contents = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#;
+    let main_rs_contents = r#"fn main() { println!("🦀"); }"#;
+    let cargo_toml_contents = format!(
+        r#"{}
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+exclude = ["*.txt"]
+description = "foo"
+license = "MIT"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    let cargo_lock_contents = r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+"#;
+    let p = project()
+        .file("Cargo.toml", cargo_toml_orig_contents)
+        .file("src/main.rs", main_rs_contents)
+        .file("src/bar.txt", "Ignored text file contents") // should be ignored when packaging
+        .build();
+
+    let uncompressed_size = (cargo_toml_orig_contents.len()
+        + main_rs_contents.len()
+        + cargo_toml_contents.len()
+        + cargo_lock_contents.len()) as u64;
+    let output = p.cargo("package").exec_with_output().unwrap();
+
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let compressed_size = f.metadata().unwrap().len();
+    verify_packaged_status_line(output, 4, uncompressed_size, compressed_size);
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[
+            ("Cargo.lock", cargo_lock_contents),
+            ("Cargo.toml", &cargo_toml_contents),
+            ("Cargo.toml.orig", cargo_toml_orig_contents),
+            ("src/main.rs", main_rs_contents),
+        ],
+    );
+}
+
+#[cargo_test]
+fn larger_filesizes() {
+    let cargo_toml_orig_contents = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#;
+    let lots_of_crabs = std::iter::repeat("🦀").take(1337).collect::<String>();
+    let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
+    let bar_txt_contents = "This file is relatively uncompressible, to increase the compressed
+        package size beyond 1KiB.
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
+        ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+        ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+        reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
+        sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est
+        laborum.";
+    let cargo_toml_contents = format!(
+        r#"{}
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+description = "foo"
+license = "MIT"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    let cargo_lock_contents = r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+"#;
+    let p = project()
+        .file("Cargo.toml", cargo_toml_orig_contents)
+        .file("src/main.rs", &main_rs_contents)
+        .file("src/bar.txt", bar_txt_contents)
+        .build();
+
+    let uncompressed_size = (cargo_toml_orig_contents.len()
+        + main_rs_contents.len()
+        + cargo_toml_contents.len()
+        + cargo_lock_contents.len()
+        + bar_txt_contents.len()) as u64;
+
+    let output = p.cargo("package").exec_with_output().unwrap();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/bar.txt
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let compressed_size = f.metadata().unwrap().len();
+    verify_packaged_status_line(output, 5, uncompressed_size, compressed_size);
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/bar.txt",
+            "src/main.rs",
+        ],
+        &[
+            ("Cargo.lock", cargo_lock_contents),
+            ("Cargo.toml", &cargo_toml_contents),
+            ("Cargo.toml.orig", cargo_toml_orig_contents),
+            ("src/bar.txt", bar_txt_contents),
+            ("src/main.rs", &main_rs_contents),
+        ],
+    );
+}
+
+#[cargo_test]
+fn symlink_filesizes() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let cargo_toml_orig_contents = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#;
+    let lots_of_crabs = std::iter::repeat("🦀").take(1337).collect::<String>();
+    let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
+    let bar_txt_contents = "This file is relatively uncompressible, to increase the compressed
+        package size beyond 1KiB.
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
+        ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+        ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+        reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
+        sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est
+        laborum.";
+    let cargo_toml_contents = format!(
+        r#"{}
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+description = "foo"
+license = "MIT"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    let cargo_lock_contents = r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+"#;
+
+    let p = project()
+        .file("Cargo.toml", cargo_toml_orig_contents)
+        .file("src/main.rs", &main_rs_contents)
+        .file("bla/bar.txt", bar_txt_contents)
+        .symlink("src/main.rs", "src/main.rs.bak")
+        .symlink_dir("bla", "foo")
+        .build();
+
+    let uncompressed_size = (cargo_toml_orig_contents.len()
+        + main_rs_contents.len() * 2
+        + cargo_toml_contents.len()
+        + cargo_lock_contents.len()
+        + bar_txt_contents.len() * 2) as u64;
+
+    let output = p.cargo("package").exec_with_output().unwrap();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+bla/bar.txt
+foo/bar.txt
+src/main.rs
+src/main.rs.bak
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let compressed_size = f.metadata().unwrap().len();
+    verify_packaged_status_line(output, 7, uncompressed_size, compressed_size);
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "bla/bar.txt",
+            "foo/bar.txt",
+            "src/main.rs",
+            "src/main.rs.bak",
+        ],
+        &[
+            ("Cargo.lock", cargo_lock_contents),
+            ("Cargo.toml", &cargo_toml_contents),
+            ("Cargo.toml.orig", cargo_toml_orig_contents),
+            ("bla/bar.txt", bar_txt_contents),
+            ("foo/bar.txt", bar_txt_contents),
+            ("src/main.rs", &main_rs_contents),
+            ("src/main.rs.bak", &main_rs_contents),
+        ],
     );
 }

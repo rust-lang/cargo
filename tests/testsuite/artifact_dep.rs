@@ -1919,6 +1919,7 @@ fn publish_artifact_dep() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
 [UPDATING] [..]
 ",

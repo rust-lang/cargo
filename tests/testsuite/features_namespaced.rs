@@ -902,6 +902,7 @@ fn publish_no_implicit() {
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
 [UPDATING] [..]
 ",
@@ -1029,6 +1030,7 @@ fn publish() {
 [VERIFYING] foo v0.1.0 [..]
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
 [UPDATING] [..]
 ",
