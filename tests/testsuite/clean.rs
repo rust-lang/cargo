@@ -2,7 +2,8 @@
 
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_manifest, git, main_file, project, project_in, rustc_host,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, git, main_file, project, project_in,
+    rustc_host,
 };
 use glob::GlobError;
 use std::env;
@@ -96,26 +97,66 @@ fn clean_multiple_packages_in_glob_char_path() {
         .build();
     let foo_path = &p.build_dir().join("debug").join("deps");
 
+    #[cfg(not(target_env = "msvc"))]
+    let file_glob = "foo-*";
+
+    #[cfg(target_env = "msvc")]
+    let file_glob = "foo.pdb";
+
     // Assert that build artifacts are produced
     p.cargo("build").run();
-    assert_ne!(get_build_artifacts(foo_path).len(), 0);
+    assert_ne!(get_build_artifacts(foo_path, file_glob).len(), 0);
 
     // Assert that build artifacts are destroyed
     p.cargo("clean -p foo").run();
-    assert_eq!(get_build_artifacts(foo_path).len(), 0);
+    assert_eq!(get_build_artifacts(foo_path, file_glob).len(), 0);
 }
 
-fn get_build_artifacts(path: &PathBuf) -> Vec<Result<PathBuf, GlobError>> {
+#[cargo_test]
+fn clean_p_only_cleans_specified_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "foo",
+                    "foo_core",
+                ]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_lib_manifest("foo"))
+        .file("foo/src/lib.rs", "//! foo")
+        .file("foo_core/Cargo.toml", &basic_lib_manifest("foo_core"))
+        .file("foo_core/src/lib.rs", "//! foo_core")
+        .build();
+
+    let deps_path = &p.build_dir().join("debug").join("deps");
+    let foo_glob = "foo-*";
+    let foo_core_glob = "foo_core-*";
+
+    p.cargo("build -p foo -p foo_core").run();
+
+    // Artifacts present for both after building
+    assert!(!get_build_artifacts(deps_path, foo_glob).is_empty());
+    let num_foo_core_artifacts = get_build_artifacts(deps_path, foo_core_glob).len();
+    assert_ne!(num_foo_core_artifacts, 0);
+
+    p.cargo("clean -p foo").run();
+
+    // Cleaning `foo` leaves artifacts for `foo_core`
+    assert!(get_build_artifacts(deps_path, foo_glob).is_empty());
+    assert_eq!(
+        num_foo_core_artifacts,
+        get_build_artifacts(deps_path, foo_core_glob).len()
+    );
+}
+
+fn get_build_artifacts(path: &PathBuf, file_glob: &str) -> Vec<Result<PathBuf, GlobError>> {
     let pattern = path.to_str().expect("expected utf-8 path");
     let pattern = glob::Pattern::escape(pattern);
 
-    #[cfg(not(target_env = "msvc"))]
-    const FILE: &str = "foo-*";
-
-    #[cfg(target_env = "msvc")]
-    const FILE: &str = "foo.pdb";
-
-    let path = PathBuf::from(pattern).join(FILE);
+    let path = PathBuf::from(pattern).join(file_glob);
     let path = path.to_str().expect("expected utf-8 path");
     glob::glob(path)
         .expect("expected glob to run")
