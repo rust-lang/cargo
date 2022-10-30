@@ -1281,6 +1281,7 @@ fn check_fixable_error_no_fix() {
 {}\
 [WARNING] `foo` (lib) generated 1 warning
 [ERROR] could not compile `foo` due to previous error; 1 warning emitted
+[NOTE] for more details, run again with '--verbose'
 ",
         rustc_message
     );

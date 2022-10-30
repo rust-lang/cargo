@@ -879,6 +879,7 @@ fn compile_failure() {
         .with_stderr_contains(
             "\
 [ERROR] could not compile `foo` due to previous error
+[NOTE] for more details, run again with '--verbose'
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be \
     found at `[..]target`
 ",

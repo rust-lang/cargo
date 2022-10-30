@@ -137,6 +137,7 @@ fn deduplicate_errors() {
             "\
 [COMPILING] foo v0.0.1 [..]
 {}error: could not compile `foo` due to previous error
+[NOTE] for more details, run again with '--verbose'
 ",
             rustc_message
         ))
