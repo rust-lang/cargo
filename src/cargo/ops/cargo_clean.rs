@@ -232,25 +232,13 @@ fn escape_glob_path(pattern: &Path) -> CargoResult<String> {
     Ok(glob::Pattern::escape(pattern))
 }
 
+/// Glob remove artifacts for the provided `package`
+///
+/// Make sure the artifact is for `package` and not another crate that is prefixed by
+/// `package` by getting the original name stripped of the trailing hash and possible
+/// extension
 fn rm_rf_package_glob_containing_hash(
     package: &str,
-    pattern: &Path,
-    config: &Config,
-    progress: &mut dyn CleaningProgressBar,
-) -> CargoResult<()> {
-    rm_rf_glob_helper(Some(package), pattern, config, progress)
-}
-
-fn rm_rf_glob(
-    pattern: &Path,
-    config: &Config,
-    progress: &mut dyn CleaningProgressBar,
-) -> CargoResult<()> {
-    rm_rf_glob_helper(None, pattern, config, progress)
-}
-
-fn rm_rf_glob_helper(
-    package: Option<&str>,
     pattern: &Path,
     config: &Config,
     progress: &mut dyn CleaningProgressBar,
@@ -262,23 +250,33 @@ fn rm_rf_glob_helper(
     for path in glob::glob(pattern)? {
         let path = path?;
 
-        // Make sure the artifact is for `package` and not another crate that is prefixed by
-        // `package` by getting the original name stripped of the trialing hash and possible
-        // extension
-        if let Some(package) = package {
-            let pkg_name = path
-                .file_name()
-                .and_then(std::ffi::OsStr::to_str)
-                .and_then(|artifact| artifact.rsplit_once('-'))
-                .expect("artifact name is valid UTF-8 and contains at least one hyphen")
-                .0;
+        let pkg_name = path
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .and_then(|artifact| artifact.rsplit_once('-'))
+            .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?
+            .0;
 
-            if pkg_name != package {
-                continue;
-            }
+        if pkg_name != package {
+            continue;
         }
 
         rm_rf(&path, config, progress)?;
+    }
+    Ok(())
+}
+
+fn rm_rf_glob(
+    pattern: &Path,
+    config: &Config,
+    progress: &mut dyn CleaningProgressBar,
+) -> CargoResult<()> {
+    // TODO: Display utf8 warning to user?  Or switch to globset?
+    let pattern = pattern
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?;
+    for path in glob::glob(pattern)? {
+        rm_rf(&path?, config, progress)?;
     }
     Ok(())
 }
