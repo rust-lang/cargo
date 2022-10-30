@@ -65,6 +65,7 @@ use log::{debug, trace};
 use semver::Version;
 
 use super::context::OutputFile;
+use super::custom_build::Diagnostic;
 use super::job::{
     Freshness::{self, Dirty, Fresh},
     Job,
@@ -783,8 +784,7 @@ impl<'cfg> DrainState<'cfg> {
                 match result {
                     Ok(()) => self.finish(id, &unit, artifact, cx)?,
                     Err(error) => {
-                        let msg = "The following warnings were emitted during compilation:";
-                        self.emit_warnings(Some(msg), &unit, cx)?;
+                        self.emit_diagnostics(&unit, cx)?;
                         self.back_compat_notice(cx, &unit)?;
                         return Err(ErrorToHandle {
                             error,
@@ -1153,12 +1153,8 @@ impl<'cfg> DrainState<'cfg> {
         }
     }
 
-    fn emit_warnings(
-        &mut self,
-        msg: Option<&str>,
-        unit: &Unit,
-        cx: &mut Context<'_, '_>,
-    ) -> CargoResult<()> {
+    /// Print warnings and errors
+    fn emit_diagnostics(&mut self, unit: &Unit, cx: &mut Context<'_, '_>) -> CargoResult<()> {
         let outputs = cx.build_script_outputs.lock().unwrap();
         let metadata = match cx.find_build_script_metadata(unit) {
             Some(metadata) => metadata,
@@ -1166,18 +1162,10 @@ impl<'cfg> DrainState<'cfg> {
         };
         let bcx = &mut cx.bcx;
         if let Some(output) = outputs.get(metadata) {
-            if !output.warnings.is_empty() {
-                if let Some(msg) = msg {
-                    writeln!(bcx.config.shell().err(), "{}\n", msg)?;
-                }
-
-                for warning in output.warnings.iter() {
-                    bcx.config.shell().warn(warning)?;
-                }
-
-                if msg.is_some() {
-                    // Output an empty line.
-                    writeln!(bcx.config.shell().err())?;
+            for diag in output.diagnostics.iter() {
+                match diag {
+                    Diagnostic::Warning(warning) => bcx.config.shell().warn(warning)?,
+                    Diagnostic::Error(error) => bcx.config.shell().error(error)?,
                 }
             }
         }
@@ -1278,7 +1266,7 @@ impl<'cfg> DrainState<'cfg> {
         cx: &mut Context<'_, '_>,
     ) -> CargoResult<()> {
         if unit.mode.is_run_custom_build() && unit.show_warnings(cx.bcx.config) {
-            self.emit_warnings(None, unit, cx)?;
+            self.emit_diagnostics(unit, cx)?;
         }
         let unlocked = self.queue.finish(unit, &artifact);
         match artifact {

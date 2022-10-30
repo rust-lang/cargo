@@ -47,6 +47,48 @@ Caused by:
 }
 
 #[cargo_test]
+fn custom_build_script_failed_custom_error() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() {
+            println!("cargo:error=failed");
+            println!("cargo:error=error2");
+            std::process::exit(101);
+        }"#,
+        )
+        .build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[ERROR] failed
+[ERROR] error2
+[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+
+Caused by:
+  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)
+  --- stdout
+  cargo:error=failed
+  cargo:error=error2",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_env_vars() {
     let p = project()
         .file(
