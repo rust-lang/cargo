@@ -38,7 +38,7 @@ fn custom_build_script_failed() {
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+[ERROR] could not build `foo` due to a custom build script failure
 
 Caused by:
   process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
@@ -77,13 +77,8 @@ fn custom_build_script_failed_custom_error() {
 [COMPILING] foo v0.5.0 ([CWD])
 [ERROR] failed
 [ERROR] error2
-[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
-
-Caused by:
-  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)
-  --- stdout
-  cargo:error=failed
-  cargo:error=error2",
+[ERROR] could not build `foo` due to 2 previous errors
+[NOTE] for more details, run again with '--verbose'",
         )
         .run();
 }

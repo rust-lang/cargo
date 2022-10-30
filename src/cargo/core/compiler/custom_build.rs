@@ -7,6 +7,7 @@ use crate::core::{profiles::ProfileRoot, PackageId, Target};
 use crate::util::errors::CargoResult;
 use crate::util::machine_message::{self, Message};
 use crate::util::{internal, profile};
+use crate::VerboseError;
 use anyhow::{bail, Context as _};
 use cargo_platform::Cfg;
 use cargo_util::paths;
@@ -310,6 +311,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         })
         .collect::<Vec<_>>();
     let library_name = unit.pkg.library().map(|t| t.crate_name());
+    let package_name = unit.pkg.name();
     let pkg_descr = unit.pkg.to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let id = unit.pkg.package_id();
@@ -397,35 +399,63 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         let timestamp = paths::set_invocation_time(&script_run_dir)?;
         let prefix = format!("[{} {}] ", id.name(), id.version());
         let mut diagnostics = Vec::new();
-        let output = cmd
-            .exec_with_streaming(
-                &mut |stdout| {
-                    if let Some(warning) = stdout.strip_prefix(CARGO_WARNING) {
-                        diagnostics.push(Diagnostic::Warning(warning.to_owned()));
-                    } else if let Some(error) = stdout.strip_prefix(CARGO_ERROR) {
-                        diagnostics.push(Diagnostic::Error(error.to_owned()));
-                    }
-                    if extra_verbose {
-                        state.stdout(format!("{}{}", prefix, stdout))?;
-                    }
-                    Ok(())
-                },
-                &mut |stderr| {
-                    if extra_verbose {
-                        state.stderr(format!("{}{}", prefix, stderr))?;
-                    }
-                    Ok(())
-                },
-                true,
-            )
-            .with_context(|| format!("failed to run custom build command for `{}`", pkg_descr));
+        let script_result = cmd.exec_with_streaming(
+            &mut |stdout| {
+                if let Some(warning) = stdout.strip_prefix(CARGO_WARNING) {
+                    diagnostics.push(Diagnostic::Warning(warning.to_owned()));
+                } else if let Some(error) = stdout.strip_prefix(CARGO_ERROR) {
+                    diagnostics.push(Diagnostic::Error(error.to_owned()));
+                }
+                if extra_verbose {
+                    state.stdout(format!("{}{}", prefix, stdout))?;
+                }
+                Ok(())
+            },
+            &mut |stderr| {
+                if extra_verbose {
+                    state.stderr(format!("{}{}", prefix, stderr))?;
+                }
+                Ok(())
+            },
+            true,
+        );
 
-        if let Err(error) = output {
-            insert_warnings_in_build_outputs(build_script_outputs, id, metadata_hash, diagnostics);
-            return Err(error);
-        }
+        let output = match script_result {
+            Ok(output) => output,
+            Err(mut error) => {
+                let errors_seen = diagnostics
+                    .iter()
+                    .filter(|diag| matches!(diag, Diagnostic::Error { .. }))
+                    .count();
+                let warnings_seen = diagnostics.len() - errors_seen;
+                if errors_seen > 0 {
+                    // Hides the full stdout/stderr printout unless verbose flag is used
+                    error = anyhow::Error::from(VerboseError::new(error));
+                }
 
-        let output = output.unwrap();
+                let errors = match errors_seen {
+                    0 => " due to a custom build script failure".to_string(),
+                    1 => " due to the previous error".to_string(),
+                    count => format!(" due to {count} previous errors"),
+                };
+                let warnings = match warnings_seen {
+                    0 => String::new(),
+                    1 => "; 1 warning emitted".to_string(),
+                    count => format!("; {count} warnings emitted"),
+                };
+
+                insert_warnings_in_build_outputs(
+                    build_script_outputs,
+                    id,
+                    metadata_hash,
+                    diagnostics,
+                );
+
+                return Err(error.context(format!(
+                    "could not build `{package_name}`{errors}{warnings}"
+                )));
+            }
+        };
 
         // After the build command has finished running, we need to be sure to
         // remember all of its output so we can later discover precisely what it
