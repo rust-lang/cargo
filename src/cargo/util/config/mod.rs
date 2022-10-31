@@ -71,8 +71,9 @@ use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::toml as cargo_toml;
 use crate::util::validate_package_name;
+use crate::util::CanonicalUrl;
+use crate::util::{internal, toml as cargo_toml};
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
@@ -145,6 +146,8 @@ pub struct Config {
     shell: RefCell<Shell>,
     /// A collection of configuration options
     values: LazyCell<HashMap<String, ConfigValue>>,
+    /// A collection of configuration options from the credentials file
+    credential_values: LazyCell<HashMap<String, ConfigValue>>,
     /// CLI config values, passed in via `configure`.
     cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
@@ -188,6 +191,9 @@ pub struct Config {
     upper_case_env: HashMap<String, String>,
     /// Tracks which sources have been updated to avoid multiple updates.
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
+    /// Cache of credentials from configuration or credential providers.
+    /// Maps from url to credential value.
+    credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, String>>>,
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
@@ -267,6 +273,7 @@ impl Config {
             cwd,
             search_stop_path: None,
             values: LazyCell::new(),
+            credential_values: LazyCell::new(),
             cli_config: None,
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
@@ -291,6 +298,7 @@ impl Config {
             env,
             upper_case_env,
             updated_sources: LazyCell::new(),
+            credential_cache: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
             future_incompat_config: LazyCell::new(),
@@ -459,6 +467,13 @@ impl Config {
             .borrow_mut()
     }
 
+    /// Cached credentials from credential providers or configuration.
+    pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, String>> {
+        self.credential_cache
+            .borrow_with(|| RefCell::new(HashMap::new()))
+            .borrow_mut()
+    }
+
     /// Gets all config values from disk.
     ///
     /// This will lazy-load the values as necessary. Callers are responsible
@@ -475,10 +490,11 @@ impl Config {
     /// entries. This doesn't respect environment variables. You should avoid
     /// using this if possible.
     pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
-        match self.values.borrow_mut() {
-            Some(map) => Ok(map),
-            None => bail!("config values not loaded yet"),
-        }
+        let _ = self.values()?;
+        Ok(self
+            .values
+            .borrow_mut()
+            .expect("already loaded config values"))
     }
 
     // Note: this is used by RLS, not Cargo.
@@ -555,8 +571,21 @@ impl Config {
     /// This does NOT look at environment variables. See `get_cv_with_env` for
     /// a variant that supports environment variables.
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
+        if let Some(vals) = self.credential_values.borrow() {
+            let val = self.get_cv_helper(key, vals)?;
+            if val.is_some() {
+                return Ok(val);
+            }
+        }
+        self.get_cv_helper(key, self.values()?)
+    }
+
+    fn get_cv_helper(
+        &self,
+        key: &ConfigKey,
+        vals: &HashMap<String, ConfigValue>,
+    ) -> CargoResult<Option<ConfigValue>> {
         log::trace!("get cv {:?}", key);
-        let vals = self.values()?;
         if key.is_root() {
             // Returning the entire root table (for example `cargo config get`
             // with no key). The definition here shouldn't matter.
@@ -1350,8 +1379,6 @@ impl Config {
             CV::Table(table, _def) => table,
             _ => unreachable!(),
         };
-        // Force values to be loaded.
-        let _ = self.values()?;
         let values = self.values_mut()?;
         for (key, value) in loaded_map.into_iter() {
             match values.entry(key) {
@@ -1482,7 +1509,17 @@ impl Config {
     }
 
     /// Loads credentials config from the credentials file, if present.
-    pub fn load_credentials(&mut self) -> CargoResult<()> {
+    ///
+    /// The credentials are loaded into a separate field to enable them
+    /// to be lazy-loaded after the main configuration has been loaded,
+    /// without requiring `mut` access to the `Config`.
+    ///
+    /// If the credentials are already loaded, this function does nothing.
+    pub fn load_credentials(&self) -> CargoResult<()> {
+        if self.credential_values.filled() {
+            return Ok(());
+        }
+
         let home_path = self.home_path.clone().into_path_unlocked();
         let credentials = match self.get_file_path(&home_path, "credentials", true)? {
             Some(credentials) => credentials,
@@ -1506,20 +1543,24 @@ impl Config {
             }
         }
 
+        let mut credential_values = HashMap::new();
         if let CV::Table(map, _) = value {
-            let base_map = self.values_mut()?;
+            let base_map = self.values()?;
             for (k, v) in map {
-                match base_map.entry(k) {
-                    Vacant(entry) => {
-                        entry.insert(v);
+                let entry = match base_map.get(&k) {
+                    Some(base_entry) => {
+                        let mut entry = base_entry.clone();
+                        entry.merge(v, true)?;
+                        entry
                     }
-                    Occupied(mut entry) => {
-                        entry.get_mut().merge(v, true)?;
-                    }
-                }
+                    None => v,
+                };
+                credential_values.insert(k, entry);
             }
         }
-
+        self.credential_values
+            .fill(credential_values)
+            .expect("was not filled at beginning of the function");
         Ok(())
     }
 
@@ -2041,8 +2082,17 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
 pub fn save_credentials(
     cfg: &Config,
     token: Option<String>,
-    registry: Option<&str>,
+    registry: &SourceId,
 ) -> CargoResult<()> {
+    let registry = if registry.is_crates_io() {
+        None
+    } else {
+        let name = registry
+            .alt_registry_key()
+            .ok_or_else(|| internal("can't save credentials for anonymous registry"))?;
+        Some(name)
+    };
+
     // If 'credentials.toml' exists, we should write to that, otherwise
     // use the legacy 'credentials'. There's no need to print the warning
     // here, because it would already be printed at load time.

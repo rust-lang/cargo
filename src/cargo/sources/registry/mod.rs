@@ -250,6 +250,10 @@ pub struct RegistryConfig {
     /// operations like yanks, owner modifications, publish new crates, etc.
     /// If this is None, the registry does not support API commands.
     pub api: Option<String>,
+
+    /// Whether all operations require authentication.
+    #[serde(default)]
+    pub auth_required: bool,
 }
 
 /// The maximum version of the `v` field in the index this version of cargo
@@ -417,6 +421,7 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
+/// Result from loading data from a registry.
 pub enum LoadResponse {
     /// The cache is valid. The cached data should be used.
     CacheValid,
@@ -527,7 +532,11 @@ pub enum MaybeLock {
     ///
     /// `descriptor` is just a text string to display to the user of what is
     /// being downloaded.
-    Download { url: String, descriptor: String },
+    Download {
+        url: String,
+        descriptor: String,
+        authorization: Option<String>,
+    },
 }
 
 mod download;
@@ -548,6 +557,7 @@ impl<'cfg> RegistrySource<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
     ) -> CargoResult<RegistrySource<'cfg>> {
+        assert!(source_id.is_remote_registry());
         let name = short_name(source_id);
         let ops = if source_id.is_sparse() {
             Box::new(http_remote::HttpRegistry::new(source_id, config, &name)?) as Box<_>
@@ -782,9 +792,15 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         };
         match self.ops.download(package, hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
-            MaybeLock::Download { url, descriptor } => {
-                Ok(MaybePackage::Download { url, descriptor })
-            }
+            MaybeLock::Download {
+                url,
+                descriptor,
+                authorization,
+            } => Ok(MaybePackage::Download {
+                url,
+                descriptor,
+                authorization,
+            }),
         }
     }
 

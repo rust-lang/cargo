@@ -17,17 +17,17 @@ impl Credential for MacKeychain {
         env!("CARGO_PKG_NAME")
     }
 
-    fn get(&self, registry_name: &str, _api_url: &str) -> Result<String, Error> {
+    fn get(&self, index_url: &str) -> Result<String, Error> {
         let keychain = SecKeychain::default().unwrap();
-        let service_name = registry(registry_name);
+        let service_name = registry(index_url);
         let (pass, _item) = keychain.find_generic_password(&service_name, ACCOUNT)?;
         String::from_utf8(pass.as_ref().to_vec())
             .map_err(|_| "failed to convert token to UTF8".into())
     }
 
-    fn store(&self, registry_name: &str, _api_url: &str, token: &str) -> Result<(), Error> {
+    fn store(&self, index_url: &str, token: &str, name: Option<&str>) -> Result<(), Error> {
         let keychain = SecKeychain::default().unwrap();
-        let service_name = registry(registry_name);
+        let service_name = registry(name.unwrap_or(index_url));
         if let Ok((_pass, mut item)) = keychain.find_generic_password(&service_name, ACCOUNT) {
             item.set_password(token.as_bytes())?;
         } else {
@@ -36,9 +36,9 @@ impl Credential for MacKeychain {
         Ok(())
     }
 
-    fn erase(&self, registry_name: &str, _api_url: &str) -> Result<(), Error> {
+    fn erase(&self, index_url: &str) -> Result<(), Error> {
         let keychain = SecKeychain::default().unwrap();
-        let service_name = registry(registry_name);
+        let service_name = registry(index_url);
         let (_pass, item) = keychain.find_generic_password(&service_name, ACCOUNT)?;
         item.delete();
         Ok(())

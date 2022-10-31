@@ -3,13 +3,13 @@
 //! See [`HttpRegistry`] for details.
 
 use crate::core::{PackageId, SourceId};
-use crate::ops;
+use crate::ops::{self};
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::network::Retry;
-use crate::util::{internal, Config, Filesystem, Progress, ProgressStyle};
+use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use anyhow::Context;
 use cargo_util::paths;
 use curl::easy::{HttpVersion, List};
@@ -18,14 +18,20 @@ use log::{debug, trace};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::task::{ready, Poll};
 use std::time::Duration;
 use url::Url;
 
-const ETAG: &'static str = "ETag";
-const LAST_MODIFIED: &'static str = "Last-Modified";
+// HTTP headers
+const ETAG: &'static str = "etag";
+const LAST_MODIFIED: &'static str = "last-modified";
+const WWW_AUTHENTICATE: &'static str = "www-authenticate";
+const IF_NONE_MATCH: &'static str = "if-none-match";
+const IF_MODIFIED_SINCE: &'static str = "if-modified-since";
+
 const UNKNOWN: &'static str = "Unknown";
 
 /// A registry served by the HTTP-based registry API.
@@ -77,6 +83,12 @@ pub struct HttpRegistry<'cfg> {
 
     /// Cached registry configuration.
     registry_config: Option<RegistryConfig>,
+
+    /// Should we include the authorization header?
+    auth_required: bool,
+
+    /// Url to get a token for the registry.
+    login_url: Option<Url>,
 }
 
 /// Helper for downloading crates.
@@ -112,17 +124,31 @@ struct Download<'cfg> {
     /// Actual downloaded data, updated throughout the lifetime of this download.
     data: RefCell<Vec<u8>>,
 
-    /// ETag or Last-Modified header received from the server (if any).
-    index_version: RefCell<Option<String>>,
+    /// HTTP headers.
+    header_map: RefCell<Headers>,
 
     /// Logic used to track retrying this download if it's a spurious failure.
     retry: Retry<'cfg>,
 }
 
+#[derive(Default)]
+struct Headers {
+    last_modified: Option<String>,
+    etag: Option<String>,
+    www_authenticate: Vec<String>,
+}
+
+enum StatusCode {
+    Success,
+    NotModified,
+    NotFound,
+    Unauthorized,
+}
+
 struct CompletedDownload {
-    response_code: u32,
+    response_code: StatusCode,
     data: Vec<u8>,
-    index_version: String,
+    header_map: Headers,
 }
 
 impl<'cfg> HttpRegistry<'cfg> {
@@ -165,6 +191,8 @@ impl<'cfg> HttpRegistry<'cfg> {
             requested_update: false,
             fetch_started: false,
             registry_config: None,
+            auth_required: false,
+            login_url: None,
         })
     }
 
@@ -235,24 +263,27 @@ impl<'cfg> HttpRegistry<'cfg> {
                 result.with_context(|| format!("failed to download from `{}`", url))?;
                 let code = handle.response_code()?;
                 // Keep this list of expected status codes in sync with the codes handled in `load`
-                if !matches!(code, 200 | 304 | 410 | 404 | 451) {
-                    let url = handle.effective_url()?.unwrap_or(&url);
-                    return Err(HttpNotSuccessful {
-                        code,
-                        url: url.to_owned(),
-                        body: data,
+                let code = match code {
+                    200 => StatusCode::Success,
+                    304 => StatusCode::NotModified,
+                    401 => StatusCode::Unauthorized,
+                    404 | 410 | 451 => StatusCode::NotFound,
+                    code => {
+                        let url = handle.effective_url()?.unwrap_or(&url);
+                        return Err(HttpNotSuccessful {
+                            code,
+                            url: url.to_owned(),
+                            body: data,
+                        }
+                        .into());
                     }
-                    .into());
-                }
-                Ok(data)
+                };
+                Ok((data, code))
             }) {
-                Ok(Some(data)) => Ok(CompletedDownload {
-                    response_code: handle.response_code()?,
+                Ok(Some((data, code))) => Ok(CompletedDownload {
+                    response_code: code,
                     data,
-                    index_version: download
-                        .index_version
-                        .take()
-                        .unwrap_or_else(|| UNKNOWN.to_string()),
+                    header_map: download.header_map.take(),
                 }),
                 Ok(None) => {
                     // retry the operation
@@ -299,6 +330,69 @@ impl<'cfg> HttpRegistry<'cfg> {
             false
         }
     }
+
+    fn check_registry_auth_unstable(&self) -> CargoResult<()> {
+        if self.auth_required && !self.config.cli_unstable().registry_auth {
+            anyhow::bail!("authenticated registries require `-Z registry-auth`");
+        }
+        Ok(())
+    }
+
+    /// Get the cached registry configuration, if it exists.
+    fn config_cached(&mut self) -> CargoResult<Option<&RegistryConfig>> {
+        if self.registry_config.is_some() {
+            return Ok(self.registry_config.as_ref());
+        }
+        let config_json_path = self
+            .assert_index_locked(&self.index_path)
+            .join("config.json");
+        match fs::read(&config_json_path) {
+            Ok(raw_data) => match serde_json::from_slice(&raw_data) {
+                Ok(json) => {
+                    self.registry_config = Some(json);
+                }
+                Err(e) => log::debug!("failed to decode cached config.json: {}", e),
+            },
+            Err(e) => {
+                if e.kind() != ErrorKind::NotFound {
+                    log::debug!("failed to read config.json cache: {}", e)
+                }
+            }
+        }
+        Ok(self.registry_config.as_ref())
+    }
+
+    /// Get the registry configuration.
+    fn config(&mut self) -> Poll<CargoResult<&RegistryConfig>> {
+        debug!("loading config");
+        let index_path = self.assert_index_locked(&self.index_path);
+        let config_json_path = index_path.join("config.json");
+        if self.is_fresh(Path::new("config.json")) && self.config_cached()?.is_some() {
+            return Poll::Ready(Ok(self.registry_config.as_ref().unwrap()));
+        }
+
+        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
+            LoadResponse::Data {
+                raw_data,
+                index_version: _,
+            } => {
+                trace!("config loaded");
+                self.registry_config = Some(serde_json::from_slice(&raw_data)?);
+                if paths::create_dir_all(&config_json_path.parent().unwrap()).is_ok() {
+                    if let Err(e) = fs::write(&config_json_path, &raw_data) {
+                        log::debug!("failed to write config.json cache: {}", e);
+                    }
+                }
+                Poll::Ready(Ok(self.registry_config.as_ref().unwrap()))
+            }
+            LoadResponse::NotFound => {
+                Poll::Ready(Err(anyhow::anyhow!("config.json not found in registry")))
+            }
+            LoadResponse::CacheValid => Poll::Ready(Err(crate::util::internal(
+                "config.json is never stored in the index cache",
+            ))),
+        }
+    }
 }
 
 impl<'cfg> RegistryData for HttpRegistry<'cfg> {
@@ -340,30 +434,42 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 return Poll::Ready(Ok(LoadResponse::CacheValid));
             }
         } else if self.fresh.contains(path) {
+            // We have no cached copy of this file, and we already downloaded it.
             debug!(
                 "cache did not contain previously downloaded file {}",
                 path.display()
             );
+            return Poll::Ready(Ok(LoadResponse::NotFound));
         }
 
         if let Some(result) = self.downloads.results.remove(path) {
             let result =
                 result.with_context(|| format!("download of {} failed", path.display()))?;
-            debug!(
-                "index file downloaded with status code {}",
-                result.response_code
-            );
-            trace!("index file version: {}", result.index_version);
 
-            if !self.fresh.insert(path.to_path_buf()) {
-                debug!("downloaded the index file `{}` twice", path.display())
-            }
+            assert!(
+                self.fresh.insert(path.to_path_buf()),
+                "downloaded the index file `{}` twice",
+                path.display()
+            );
 
             // The status handled here need to be kept in sync with the codes handled
             // in `handle_completed_downloads`
             match result.response_code {
-                200 => {}
-                304 => {
+                StatusCode::Success => {
+                    let response_index_version = if let Some(etag) = result.header_map.etag {
+                        format!("{}: {}", ETAG, etag)
+                    } else if let Some(lm) = result.header_map.last_modified {
+                        format!("{}: {}", LAST_MODIFIED, lm)
+                    } else {
+                        UNKNOWN.to_string()
+                    };
+                    trace!("index file version: {}", response_index_version);
+                    return Poll::Ready(Ok(LoadResponse::Data {
+                        raw_data: result.data,
+                        index_version: Some(response_index_version),
+                    }));
+                }
+                StatusCode::NotModified => {
                     // Not Modified: the data in the cache is still the latest.
                     if index_version.is_none() {
                         return Poll::Ready(Err(anyhow::anyhow!(
@@ -372,28 +478,69 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     }
                     return Poll::Ready(Ok(LoadResponse::CacheValid));
                 }
-                404 | 410 | 451 => {
+                StatusCode::NotFound => {
                     // The crate was not found or deleted from the registry.
                     return Poll::Ready(Ok(LoadResponse::NotFound));
                 }
-                code => {
-                    return Err(internal(format!("unexpected HTTP status code {code}"))).into();
+                StatusCode::Unauthorized
+                    if !self.auth_required && path == Path::new("config.json") =>
+                {
+                    debug!("re-attempting request for config.json with authorization included.");
+                    self.fresh.remove(path);
+                    self.auth_required = true;
+
+                    // Look for a `www-authenticate` header with the `Cargo` scheme.
+                    for header in &result.header_map.www_authenticate {
+                        for challenge in http_auth::ChallengeParser::new(header) {
+                            match challenge {
+                                Ok(challenge) if challenge.scheme.eq_ignore_ascii_case("Cargo") => {
+                                    // Look for the `login_url` parameter.
+                                    for (param, value) in challenge.params {
+                                        if param.eq_ignore_ascii_case("login_url") {
+                                            self.login_url = Some(value.to_unescaped().into_url()?);
+                                        }
+                                    }
+                                }
+                                Ok(challenge) => {
+                                    debug!("ignoring non-Cargo challenge: {}", challenge.scheme)
+                                }
+                                Err(e) => debug!("failed to parse challenge: {}", e),
+                            }
+                        }
+                    }
+                }
+                StatusCode::Unauthorized => {
+                    let err = Err(HttpNotSuccessful {
+                        code: 401,
+                        body: result.data,
+                        url: self.full_url(path),
+                    }
+                    .into());
+                    if self.auth_required {
+                        return Poll::Ready(err.context(auth::AuthorizationError {
+                            sid: self.source_id.clone(),
+                            login_url: self.login_url.clone(),
+                            reason: auth::AuthorizationErrorReason::TokenRejected,
+                        }));
+                    } else {
+                        return Poll::Ready(err);
+                    }
                 }
             }
+        }
 
-            return Poll::Ready(Ok(LoadResponse::Data {
-                raw_data: result.data,
-                index_version: Some(result.index_version),
-            }));
+        if path != Path::new("config.json") {
+            self.auth_required = ready!(self.config()?).auth_required;
+        } else if !self.auth_required {
+            // Check if there's a cached config that says auth is required.
+            // This allows avoiding the initial unauthenticated request to probe.
+            if let Some(config) = self.config_cached()? {
+                self.auth_required = config.auth_required;
+            }
         }
 
         // Looks like we're going to have to do a network request.
         self.start_fetch()?;
-
-        // Load the registry config.
-        if self.registry_config.is_none() && path != Path::new("config.json") {
-            ready!(self.config()?);
-        }
 
         let mut handle = ops::http_handle(self.config)?;
         let full_url = self.full_url(path);
@@ -418,18 +565,30 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // reduces the number of connections done to a more manageable state.
         handle.pipewait(true)?;
 
-        // Make sure we don't send data back if it's the same as we have in the index.
         let mut headers = List::new();
+        // Include a header to identify the protocol. This allows the server to
+        // know that Cargo is attempting to use the sparse protocol.
+        headers.append("cargo-protocol: version=1")?;
+        headers.append("accept: text/plain")?;
+
+        // If we have a cached copy of the file, include IF_NONE_MATCH or IF_MODIFIED_SINCE header.
         if let Some(index_version) = index_version {
             if let Some((key, value)) = index_version.split_once(':') {
                 match key {
-                    ETAG => headers.append(&format!("If-None-Match: {}", value.trim()))?,
+                    ETAG => headers.append(&format!("{}: {}", IF_NONE_MATCH, value.trim()))?,
                     LAST_MODIFIED => {
-                        headers.append(&format!("If-Modified-Since: {}", value.trim()))?
+                        headers.append(&format!("{}: {}", IF_MODIFIED_SINCE, value.trim()))?
                     }
                     _ => debug!("unexpected index version: {}", index_version),
                 }
             }
+        }
+        if self.auth_required {
+            self.check_registry_auth_unstable()?;
+            let authorization =
+                auth::auth_token(self.config, &self.source_id, self.login_url.as_ref())?;
+            headers.append(&format!("Authorization: {}", authorization))?;
+            trace!("including authorization for {}", full_url);
         }
         handle.http_headers(headers)?;
 
@@ -465,21 +624,17 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // And ditto for the header function.
         handle.header_function(move |buf| {
             if let Some((tag, value)) = Self::handle_http_header(buf) {
-                let is_etag = tag.eq_ignore_ascii_case(ETAG);
-                let is_lm = tag.eq_ignore_ascii_case(LAST_MODIFIED);
-                if is_etag || is_lm {
-                    tls::with(|downloads| {
-                        if let Some(downloads) = downloads {
-                            let mut index_version =
-                                downloads.pending[&token].0.index_version.borrow_mut();
-                            if is_etag {
-                                *index_version = Some(format!("{}: {}", ETAG, value));
-                            } else if index_version.is_none() && is_lm {
-                                *index_version = Some(format!("{}: {}", LAST_MODIFIED, value));
-                            };
+                tls::with(|downloads| {
+                    if let Some(downloads) = downloads {
+                        let mut header_map = downloads.pending[&token].0.header_map.borrow_mut();
+                        match tag.to_ascii_lowercase().as_str() {
+                            LAST_MODIFIED => header_map.last_modified = Some(value.to_string()),
+                            ETAG => header_map.etag = Some(value.to_string()),
+                            WWW_AUTHENTICATE => header_map.www_authenticate.push(value.to_string()),
+                            _ => {}
                         }
-                    })
-                }
+                    }
+                });
             }
 
             true
@@ -487,9 +642,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         let dl = Download {
             token,
-            data: RefCell::new(Vec::new()),
             path: path.to_path_buf(),
-            index_version: RefCell::new(None),
+            data: RefCell::new(Vec::new()),
+            header_map: Default::default(),
             retry: Retry::new(self.config)?,
         };
 
@@ -502,46 +657,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 
     fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
-        if self.registry_config.is_some() {
-            return Poll::Ready(Ok(self.registry_config.clone()));
-        }
-        debug!("loading config");
-        let index_path = self.config.assert_package_cache_locked(&self.index_path);
-        let config_json_path = index_path.join("config.json");
-        if self.is_fresh(Path::new("config.json")) {
-            match fs::read(&config_json_path) {
-                Ok(raw_data) => match serde_json::from_slice(&raw_data) {
-                    Ok(json) => {
-                        self.registry_config = Some(json);
-                        return Poll::Ready(Ok(self.registry_config.clone()));
-                    }
-                    Err(e) => log::debug!("failed to decode cached config.json: {}", e),
-                },
-                Err(e) => log::debug!("failed to read config.json cache: {}", e),
-            }
-        }
-
-        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
-            LoadResponse::Data {
-                raw_data,
-                index_version: _,
-            } => {
-                trace!("config loaded");
-                self.registry_config = Some(serde_json::from_slice(&raw_data)?);
-                if paths::create_dir_all(&config_json_path.parent().unwrap()).is_ok() {
-                    if let Err(e) = fs::write(&config_json_path, &raw_data) {
-                        log::debug!("failed to write config.json cache: {}", e);
-                    }
-                }
-                Poll::Ready(Ok(self.registry_config.clone()))
-            }
-            LoadResponse::NotFound => {
-                Poll::Ready(Err(anyhow::anyhow!("config.json not found in registry")))
-            }
-            LoadResponse::CacheValid => {
-                panic!("config.json is not stored in the index cache")
-            }
-        }
+        let cfg = ready!(self.config()?).clone();
+        self.check_registry_auth_unstable()?;
+        Poll::Ready(Ok(Some(cfg)))
     }
 
     fn invalidate_cache(&mut self) {
@@ -557,7 +675,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         let registry_config = loop {
             match self.config()? {
                 Poll::Pending => self.block_until_ready()?,
-                Poll::Ready(cfg) => break cfg.unwrap(),
+                Poll::Ready(cfg) => break cfg.to_owned(),
             }
         };
         download::download(

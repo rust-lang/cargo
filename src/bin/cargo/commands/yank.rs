@@ -23,8 +23,6 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    config.load_credentials()?;
-
     let registry = args.registry(config)?;
 
     let (krate, version) = resolve_crate(

@@ -326,7 +326,7 @@
 - Added `-Zcheck-cfg=output` to support build-scripts declaring their
   supported set of `cfg` values with `cargo:rustc-check-cfg`.
   [#10539](https://github.com/rust-lang/cargo/pull/10539)
-- `-Z http-registry` now uses https://index.crates.io/ when accessing crates-io.
+- `-Z sparse-registry` now uses https://index.crates.io/ when accessing crates-io.
   [#10725](https://github.com/rust-lang/cargo/pull/10725)
 - Fixed formatting of `.workspace` key in `cargo add` for workspace inheritance.
   [#10705](https://github.com/rust-lang/cargo/pull/10705)

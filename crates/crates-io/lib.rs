@@ -21,6 +21,8 @@ pub struct Registry {
     token: Option<String>,
     /// Curl handle for issuing requests.
     handle: Easy,
+    /// Whether to include the authorization token with all requests.
+    auth_required: bool,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -199,11 +201,17 @@ impl Registry {
     /// handle.useragent("my_crawler (example.com/info)");
     /// let mut reg = Registry::new_handle(String::from("https://crates.io"), None, handle);
     /// ```
-    pub fn new_handle(host: String, token: Option<String>, handle: Easy) -> Registry {
+    pub fn new_handle(
+        host: String,
+        token: Option<String>,
+        handle: Easy,
+        auth_required: bool,
+    ) -> Registry {
         Registry {
             host,
             token,
             handle,
+            auth_required,
         }
     }
 
@@ -377,7 +385,7 @@ impl Registry {
         headers.append("Accept: application/json")?;
         headers.append("Content-Type: application/json")?;
 
-        if authorized == Auth::Authorized {
+        if self.auth_required || authorized == Auth::Authorized {
             let token = match self.token.as_ref() {
                 Some(s) => s,
                 None => bail!("no upload token found, please run `cargo login`"),

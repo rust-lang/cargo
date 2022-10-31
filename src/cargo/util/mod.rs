@@ -29,6 +29,7 @@ pub use self::workspace::{
     print_available_examples, print_available_packages, print_available_tests,
 };
 
+pub mod auth;
 mod canonical_url;
 pub mod command_prelude;
 pub mod config;

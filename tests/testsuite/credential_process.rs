@@ -38,7 +38,8 @@ fn gated() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[ERROR] no upload token found, please run `cargo login` or pass `--token`
+[ERROR] no token found, please run `cargo login`
+or use environment variable CARGO_REGISTRY_TOKEN
 ",
         )
         .run();
@@ -57,7 +58,8 @@ fn gated() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[ERROR] no upload token found, please run `cargo login` or pass `--token`
+[ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 ",
         )
         .run();
@@ -109,8 +111,8 @@ fn warn_both_token_and_process() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] both `registries.alternative.token` and `registries.alternative.credential-process` \
-were specified in the config\n\
+[UPDATING] [..]
+[ERROR] both `token` and `credential-process` were specified in the config for registry `alternative`.
 Only one of these values may be set, remove one or the other to proceed.
 ",
         )
@@ -238,7 +240,7 @@ fn basic_unsupported() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
+[UPDATING] crates.io index
 [ERROR] credential process `false` cannot be used to log in, \
 the credential-process configuration value must pass the \
 `{action}` argument in the config to support this command
@@ -271,20 +273,19 @@ fn login() {
         .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
         .file(
             "src/main.rs",
-            &r#"
+                r#"
                 use std::io::Read;
 
-                fn main() {
-                    assert_eq!(std::env::var("CARGO_REGISTRY_NAME").unwrap(), "crates-io");
-                    assert_eq!(std::env::var("CARGO_REGISTRY_API_URL").unwrap(), "__API__");
+                fn main() {{
+                    assert_eq!(std::env::var("CARGO_REGISTRY_NAME_OPT").unwrap(), "crates-io");
+                    assert_eq!(std::env::var("CARGO_REGISTRY_INDEX_URL").unwrap(), "https://github.com/rust-lang/crates.io-index");
                     assert_eq!(std::env::args().skip(1).next().unwrap(), "store");
                     let mut buffer = String::new();
                     std::io::stdin().read_to_string(&mut buffer).unwrap();
                     assert_eq!(buffer, "abcdefg\n");
                     std::fs::write("token-store", buffer).unwrap();
-                }
-            "#
-            .replace("__API__", server.api_url().as_str()),
+                }}
+            "#,
         )
         .build();
     cred_proj.cargo("build").run();
@@ -329,16 +330,16 @@ fn logout() {
         .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
         .file(
             "src/main.rs",
-            r#"
+                r#"
                 use std::io::Read;
 
-                fn main() {
-                    assert_eq!(std::env::var("CARGO_REGISTRY_NAME").unwrap(), "crates-io");
+                fn main() {{
+                    assert_eq!(std::env::var("CARGO_REGISTRY_NAME_OPT").unwrap(), "crates-io");
+                    assert_eq!(std::env::var("CARGO_REGISTRY_INDEX_URL").unwrap(), "https://github.com/rust-lang/crates.io-index");
                     assert_eq!(std::env::args().skip(1).next().unwrap(), "erase");
                     std::fs::write("token-store", "").unwrap();
-                    eprintln!("token for `{}` has been erased!",
-                        std::env::var("CARGO_REGISTRY_NAME").unwrap());
-                }
+                    eprintln!("token for `crates-io` has been erased!")
+                }}
             "#,
         )
         .build();
@@ -362,9 +363,8 @@ fn logout() {
         .replace_crates_io(server.index_url())
         .with_stderr(
             "\
-[UPDATING] [..]
 token for `crates-io` has been erased!
-[LOGOUT] token for `crates.io` has been removed from local storage
+[LOGOUT] token for `crates-io` has been removed from local storage
 ",
         )
         .run();

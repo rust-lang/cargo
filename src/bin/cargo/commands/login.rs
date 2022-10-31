@@ -17,8 +17,8 @@ pub fn cli() -> Command {
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     ops::registry_login(
         config,
-        args.get_one::<String>("token").cloned(),
-        args.get_one::<String>("registry").cloned(),
+        args.get_one("token").map(String::as_str),
+        args.get_one("registry").map(String::as_str),
     )?;
     Ok(())
 }

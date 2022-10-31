@@ -29,6 +29,12 @@ fn setup_http() -> TestRegistry {
 }
 
 #[cargo_test]
+fn test_server_stops() {
+    let server = setup_http();
+    server.join(); // ensure the server fully shuts down
+}
+
+#[cargo_test]
 fn simple_http() {
     let _server = setup_http();
     simple(cargo_http);
@@ -1114,7 +1120,7 @@ fn login_with_token_on_stdin() {
         .run();
     cargo_process("login")
         .replace_crates_io(registry.index_url())
-        .with_stdout("please paste the API Token found on [..]/me below")
+        .with_stdout("please paste the token found on [..]/me below")
         .with_stdin("some token")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();

@@ -162,8 +162,8 @@ fn old_token_location() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_contains(
-            "[ERROR] no upload token found, \
-            please run `cargo login` or pass `--token`",
+            "[ERROR] no token found, \
+            please run `cargo login`",
         )
         .run();
 
@@ -1214,10 +1214,7 @@ fn publish_checks_for_token_before_verify() {
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_status(101)
-        .with_stderr_contains(
-            "[ERROR] no upload token found, \
-            please run `cargo login` or pass `--token`",
-        )
+        .with_stderr_contains("[ERROR] no token found, please run `cargo login`")
         .with_stderr_does_not_contain("[VERIFYING] foo v0.0.1 ([CWD])")
         .run();
 
@@ -1562,8 +1559,8 @@ fn credentials_ambiguous_filename() {
         .replace_crates_io(registry.index_url())
         .with_stderr(
             "\
-[WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
 [..]
+[WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
 [..]
 [..]
 [..]
@@ -1605,7 +1602,6 @@ fn index_requires_token() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] [..]
 [ERROR] command-line argument --index requires --token to be specified
 ",
         )
@@ -2410,7 +2406,6 @@ fn wait_for_first_publish() {
         .add_responder("/index/de/la/delay", move |req, server| {
             let mut lock = arc.lock().unwrap();
             *lock += 1;
-            // if the package name contains _ or -
             if *lock <= 1 {
                 server.not_found(req)
             } else {
@@ -2495,8 +2490,7 @@ fn wait_for_first_publish_underscore() {
         .add_responder("/index/de/la/delay_with_underscore", move |req, server| {
             let mut lock = arc.lock().unwrap();
             *lock += 1;
-            // package names with - or _ hit the responder twice per cargo invocation
-            if *lock <= 2 {
+            if *lock <= 1 {
                 server.not_found(req)
             } else {
                 server.index(req)
@@ -2540,8 +2534,7 @@ See [..]
 
     // Verify the repsponder has been pinged
     let lock = arc2.lock().unwrap();
-    // NOTE: package names with - or _ hit the responder twice per cargo invocation
-    assert_eq!(*lock, 3);
+    assert_eq!(*lock, 2);
     drop(lock);
 
     let p = project()
