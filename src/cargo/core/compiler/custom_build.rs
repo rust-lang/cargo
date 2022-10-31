@@ -17,8 +17,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
-const CARGO_WARNING: &str = "cargo:warning=";
-const CARGO_ERROR: &str = "cargo:error=";
+const CARGO_LINE_PREFIX: &str = "cargo:";
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash, Default)]
@@ -401,10 +400,28 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         let mut diagnostics = Vec::new();
         let script_result = cmd.exec_with_streaming(
             &mut |stdout| {
-                if let Some(warning) = stdout.strip_prefix(CARGO_WARNING) {
-                    diagnostics.push(Diagnostic::Warning(warning.to_owned()));
-                } else if let Some(error) = stdout.strip_prefix(CARGO_ERROR) {
-                    diagnostics.push(Diagnostic::Error(error.to_owned()));
+                let kv = stdout.strip_prefix(CARGO_LINE_PREFIX).and_then(|kv| {
+                    let mut kv = kv.splitn(2, '=');
+                    Some((kv.next()?, kv.next()?))
+                });
+                if let Some((key, value)) = kv {
+                    match key {
+                        "warning" => diagnostics.push(Diagnostic::Warning(value.to_owned())),
+                        "error" => diagnostics.push(Diagnostic::Error(value.to_owned())),
+                        "warning+" => {
+                            if let Some(Diagnostic::Warning(msg)) = diagnostics.last_mut() {
+                                msg.push_str("\n  ");
+                                msg.push_str(value);
+                            }
+                        }
+                        "error+" => {
+                            if let Some(Diagnostic::Error(msg)) = diagnostics.last_mut() {
+                                msg.push_str("\n  ");
+                                msg.push_str(value);
+                            }
+                        }
+                        _ => {}
+                    }
                 }
                 if extra_verbose {
                     state.stdout(format!("{}{}", prefix, stdout))?;
@@ -775,6 +792,12 @@ impl BuildOutput {
                 }
                 // "error" is not parsed here for backwards compatibility, and because this function is for successful outputs
                 "warning" => diagnostics.push(Diagnostic::Warning(value.to_string())),
+                "warning+" => {
+                    if let Some(Diagnostic::Warning(msg)) = diagnostics.last_mut() {
+                        msg.push_str("\n  ");
+                        msg.push_str(&value);
+                    }
+                }
                 "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),
                 "rerun-if-env-changed" => rerun_if_env_changed.push(value.to_string()),
                 _ => metadata.push((key.to_string(), value.to_string())),

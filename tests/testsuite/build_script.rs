@@ -65,7 +65,12 @@ fn custom_build_script_failed_custom_error() {
             "build.rs",
             r#"fn main() {
             println!("cargo:error=failed");
+            println!("cargo:error+=because oops");
+            println!("cargo:warning=multi");
+            println!("cargo:warning+=line");
+            println!("cargo:warning+=warning");
             println!("cargo:error=error2");
+            println!("cargo:warning+=this one has nothing to append to");
             std::process::exit(101);
         }"#,
         )
@@ -76,8 +81,12 @@ fn custom_build_script_failed_custom_error() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [ERROR] failed
+  because oops
+[WARNING] multi
+  line
+  warning
 [ERROR] error2
-[ERROR] could not build `foo` due to 2 previous errors
+[ERROR] could not build `foo` due to 2 previous errors; 1 warning emitted
 [NOTE] for more details, run again with '--verbose'",
         )
         .run();
