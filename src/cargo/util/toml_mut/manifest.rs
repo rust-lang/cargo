@@ -246,7 +246,7 @@ impl std::fmt::Display for Manifest {
 }
 
 /// An editable Cargo manifest that is available locally.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LocalManifest {
     /// Path to the manifest.
     pub path: PathBuf,

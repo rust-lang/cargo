@@ -1,9 +1,12 @@
 use cargo::core::dependency::DepKind;
+use cargo::core::Workspace;
 use cargo::ops::cargo_remove::remove;
 use cargo::ops::cargo_remove::RemoveOptions;
 use cargo::ops::resolve_ws;
 use cargo::util::command_prelude::*;
 use cargo::util::toml_mut::manifest::DepTable;
+use cargo::util::toml_mut::manifest::LocalManifest;
+use cargo::CargoResult;
 
 pub fn cli() -> clap::Command {
     clap::Command::new("remove")
@@ -85,6 +88,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     remove(&options)?;
 
     if !dry_run {
+        // Clean up workspace dependencies
+        gc_workspace(&workspace, &options.dependencies)?;
+
         // Reload the workspace since we've changed dependencies
         let ws = args.workspace(config)?;
         resolve_ws(&ws)?;
@@ -113,4 +119,51 @@ fn parse_section(args: &ArgMatches) -> DepTable {
     }
 
     table
+}
+
+/// Clean up workspace dependencies which no longer have a reference to them.
+fn gc_workspace(workspace: &Workspace<'_>, dependencies: &[String]) -> CargoResult<()> {
+    let mut manifest: toml_edit::Document =
+        cargo_util::paths::read(workspace.root_manifest())?.parse()?;
+
+    let members = workspace
+        .members()
+        .map(|p| LocalManifest::try_new(p.manifest_path()))
+        .collect::<CargoResult<Vec<_>>>()?;
+
+    for dep in dependencies {
+        if !dep_in_workspace(dep, &members) {
+            remove_workspace_dep(dep, &mut manifest);
+        }
+    }
+
+    cargo_util::paths::write(workspace.root_manifest(), manifest.to_string().as_bytes())?;
+
+    Ok(())
+}
+
+/// Get whether or not a dependency is depended upon in a workspace.
+fn dep_in_workspace(dep: &str, members: &[LocalManifest]) -> bool {
+    members.iter().any(|manifest| {
+        manifest.get_sections().iter().any(|(_, table)| {
+            table
+                .as_table_like()
+                .unwrap()
+                .get(dep)
+                .and_then(|t| t.get("workspace"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+        })
+    })
+}
+
+/// Remove a dependency from a workspace manifest.
+fn remove_workspace_dep(dep: &str, ws_manifest: &mut toml_edit::Document) {
+    if let Some(toml_edit::Item::Table(table)) = ws_manifest
+        .get_mut("workspace")
+        .and_then(|t| t.get_mut("dependencies"))
+    {
+        table.set_implicit(true);
+        table.remove(dep);
+    }
 }
