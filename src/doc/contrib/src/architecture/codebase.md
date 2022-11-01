@@ -12,7 +12,7 @@ This is a very high-level overview of the Cargo codebase.
   — Every major operation is implemented here. This is where the binary CLI
   usually calls into to perform the appropriate action.
 
-    * [`src/cargo/ops/cargo_compile.rs`](https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/cargo_compile.rs)
+    * [`src/cargo/ops/cargo_compile/mod.rs`](https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/cargo_compile/mod.rs)
       — This is the entry point for all the compilation commands. This is a
       good place to start if you want to follow how compilation starts and
       flows to completion.
