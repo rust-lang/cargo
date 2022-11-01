@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::thread;
 
 use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 use cargo_test_support::{sleep_ms, t, Project};
 
@@ -3618,4 +3619,36 @@ fn _corrupted_checkout(with_cli: bool) {
     }
     e.run();
     assert!(ok.exists());
+}
+
+#[cargo_test]
+fn cleans_temp_pack_files() {
+    // Checks that cargo removes temp files left by libgit2 when it is
+    // interrupted (see clean_repo_temp_files).
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch").run();
+    // Simulate what happens when libgit2 is interrupted while indexing a pack file.
+    let tmp_path = super::git_gc::find_index().join(".git/objects/pack/pack_git2_91ab40da04fdc2e7");
+    fs::write(&tmp_path, "test").unwrap();
+    let mut perms = fs::metadata(&tmp_path).unwrap().permissions();
+    perms.set_readonly(true);
+    fs::set_permissions(&tmp_path, perms).unwrap();
+
+    // Trigger an index update.
+    p.cargo("generate-lockfile").run();
+    assert!(!tmp_path.exists());
 }
