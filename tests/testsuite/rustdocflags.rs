@@ -148,9 +148,8 @@ fn not_affected_by_target_rustflags() {
         .with_stderr_contains("[RUNNING] `rustc [..] -D missing-docs[..]`")
         .run();
 
-    // This is wrong behaviour. `cargo doc` shouldn't fail.
+    // `cargo doc` shouldn't fail.
     p.cargo("doc -v")
-        .with_status(101)
-        .with_stderr_contains("[RUNNING] `rustdoc [..] -D missing-docs[..]`")
+        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`")
         .run();
 }

@@ -749,9 +749,15 @@ fn rustflags_from_target(
             .target_cfgs()?
             .iter()
             .filter_map(|(key, cfg)| {
-                cfg.rustflags
-                    .as_ref()
-                    .map(|rustflags| (key, &rustflags.val))
+                match flag {
+                    Flags::Rust => cfg
+                        .rustflags
+                        .as_ref()
+                        .map(|rustflags| (key, &rustflags.val)),
+                    // `target.cfg(…).rustdocflags` is currently not supported.
+                    // In fact, neither is `target.<triple>.rustdocflags`.
+                    Flags::Rustdoc => None,
+                }
             })
             .filter(|(key, _rustflags)| CfgExpr::matches_key(key, target_cfg))
             .for_each(|(_key, cfg_rustflags)| {
