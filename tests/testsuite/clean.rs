@@ -2,8 +2,7 @@
 
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, git, main_file, project, project_in,
-    rustc_host,
+    basic_bin_manifest, basic_manifest, git, main_file, project, project_in, rustc_host,
 };
 use glob::GlobError;
 use std::env;
@@ -112,46 +111,6 @@ fn clean_multiple_packages_in_glob_char_path() {
     assert_eq!(get_build_artifacts(foo_path, file_glob).len(), 0);
 }
 
-#[cargo_test]
-fn clean_p_only_cleans_specified_package() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [workspace]
-                members = [
-                    "foo",
-                    "foo_core",
-                ]
-            "#,
-        )
-        .file("foo/Cargo.toml", &basic_lib_manifest("foo"))
-        .file("foo/src/lib.rs", "//! foo")
-        .file("foo_core/Cargo.toml", &basic_lib_manifest("foo_core"))
-        .file("foo_core/src/lib.rs", "//! foo_core")
-        .build();
-
-    let deps_path = &p.build_dir().join("debug").join("deps");
-    let foo_glob = "foo-*";
-    let foo_core_glob = "foo_core-*";
-
-    p.cargo("build -p foo -p foo_core").run();
-
-    // Artifacts present for both after building
-    assert!(!get_build_artifacts(deps_path, foo_glob).is_empty());
-    let num_foo_core_artifacts = get_build_artifacts(deps_path, foo_core_glob).len();
-    assert_ne!(num_foo_core_artifacts, 0);
-
-    p.cargo("clean -p foo").run();
-
-    // Cleaning `foo` leaves artifacts for `foo_core`
-    assert!(get_build_artifacts(deps_path, foo_glob).is_empty());
-    assert_eq!(
-        num_foo_core_artifacts,
-        get_build_artifacts(deps_path, foo_core_glob).len()
-    );
-}
-
 fn get_build_artifacts(path: &PathBuf, file_glob: &str) -> Vec<Result<PathBuf, GlobError>> {
     let pattern = path.to_str().expect("expected utf-8 path");
     let pattern = glob::Pattern::escape(pattern);
@@ -162,6 +121,86 @@ fn get_build_artifacts(path: &PathBuf, file_glob: &str) -> Vec<Result<PathBuf, G
         .expect("expected glob to run")
         .into_iter()
         .collect::<Vec<Result<PathBuf, GlobError>>>()
+}
+
+#[cargo_test]
+fn clean_p_only_cleans_specified_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "foo",
+                    "foo_core",
+                    "foo-base",
+                ]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "//! foo")
+        .file("foo_core/Cargo.toml", &basic_manifest("foo_core", "0.1.0"))
+        .file("foo_core/src/lib.rs", "//! foo_core")
+        .file("foo-base/Cargo.toml", &basic_manifest("foo-base", "0.1.0"))
+        .file("foo-base/src/lib.rs", "//! foo-base")
+        .build();
+
+    let fingerprint_path = &p.build_dir().join("debug").join(".fingerprint");
+
+    p.cargo("build -p foo -p foo_core -p foo-base").run();
+
+    let mut fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Artifacts present for all after building
+    assert!(fingerprint_names.iter().any(|e| e == "foo"));
+    let num_foo_core_artifacts = fingerprint_names
+        .iter()
+        .filter(|&e| e == "foo_core")
+        .count();
+    assert_ne!(num_foo_core_artifacts, 0);
+    let num_foo_base_artifacts = fingerprint_names
+        .iter()
+        .filter(|&e| e == "foo-base")
+        .count();
+    assert_ne!(num_foo_base_artifacts, 0);
+
+    p.cargo("clean -p foo").run();
+
+    fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Cleaning `foo` leaves artifacts for the others
+    assert!(!fingerprint_names.iter().any(|e| e == "foo"));
+    assert_eq!(
+        fingerprint_names
+            .iter()
+            .filter(|&e| e == "foo_core")
+            .count(),
+        num_foo_core_artifacts,
+    );
+    assert_eq!(
+        fingerprint_names
+            .iter()
+            .filter(|&e| e == "foo-base")
+            .count(),
+        num_foo_core_artifacts,
+    );
+}
+
+fn get_fingerprints_without_hashes(fingerprint_path: &Path) -> Vec<String> {
+    std::fs::read_dir(fingerprint_path)
+        .expect("Build dir should be readable")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| {
+            let name = entry.file_name();
+            let name = name
+                .into_string()
+                .expect("fingerprint name should be UTF-8");
+            name.rsplit_once('-')
+                .expect("Name should contain at least one hyphen")
+                .0
+                .to_owned()
+        })
+        .collect()
 }
 
 #[cargo_test]
