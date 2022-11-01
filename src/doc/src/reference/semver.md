@@ -18,7 +18,7 @@ See also [rust-semverver], which is an experimental tool that attempts to
 programmatically check compatibility rules.
 
 [Change categories]: #change-categories
-[rust-semverver]: https://github.com/rust-dev-tools/rust-semverver
+[rust-semverver]: https://github.com/rust-lang/rust-semverver
 [SemVer compatibility]: resolver.md#semver-compatibility
 
 ## Change categories
