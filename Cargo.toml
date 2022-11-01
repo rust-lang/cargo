@@ -25,7 +25,7 @@ curl = { version = "0.4.44", features = ["http2"] }
 curl-sys = "0.4.58"
 env_logger = "0.9.0"
 pretty_env_logger = { version = "0.4", optional = true }
-anyhow = "1.0"
+anyhow = "1.0.47"
 filetime = "0.2.9"
 flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
 git2 = "0.15.0"
