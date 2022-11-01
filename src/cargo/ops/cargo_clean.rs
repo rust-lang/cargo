@@ -141,7 +141,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
             let dir = escape_glob_path(layout.fingerprint())?;
-            rm_rf_glob(&Path::new(&dir).join(&pkg_dir), config, &mut progress)?;
+            rm_rf_package_glob_containing_hash(
+                &pkg.name(),
+                &Path::new(&dir).join(&pkg_dir),
+                config,
+                &mut progress,
+            )?;
         }
 
         for target in pkg.targets() {
@@ -149,7 +154,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                 // Get both the build_script_build and the output directory.
                 for (_, layout) in &layouts_with_host {
                     let dir = escape_glob_path(layout.build())?;
-                    rm_rf_glob(&Path::new(&dir).join(&pkg_dir), config, &mut progress)?;
+                    rm_rf_package_glob_containing_hash(
+                        &pkg.name(),
+                        &Path::new(&dir).join(&pkg_dir),
+                        config,
+                        &mut progress,
+                    )?;
                 }
                 continue;
             }
@@ -220,6 +230,40 @@ fn escape_glob_path(pattern: &Path) -> CargoResult<String> {
         .to_str()
         .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?;
     Ok(glob::Pattern::escape(pattern))
+}
+
+/// Glob remove artifacts for the provided `package`
+///
+/// Make sure the artifact is for `package` and not another crate that is prefixed by
+/// `package` by getting the original name stripped of the trailing hash and possible
+/// extension
+fn rm_rf_package_glob_containing_hash(
+    package: &str,
+    pattern: &Path,
+    config: &Config,
+    progress: &mut dyn CleaningProgressBar,
+) -> CargoResult<()> {
+    // TODO: Display utf8 warning to user?  Or switch to globset?
+    let pattern = pattern
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?;
+    for path in glob::glob(pattern)? {
+        let path = path?;
+
+        let pkg_name = path
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .and_then(|artifact| artifact.rsplit_once('-'))
+            .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?
+            .0;
+
+        if pkg_name != package {
+            continue;
+        }
+
+        rm_rf(&path, config, progress)?;
+    }
+    Ok(())
 }
 
 fn rm_rf_glob(
