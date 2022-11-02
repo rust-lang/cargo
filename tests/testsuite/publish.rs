@@ -2579,7 +2579,7 @@ fn wait_for_subsequent_publish() {
             let mut lock = arc.lock().unwrap();
             *lock += 1;
             // if the package name contains _ or -
-            if *lock <= 1 {
+            if *lock <= 2 {
                 server.not_found(req)
             } else {
                 server.index(req)
@@ -2628,7 +2628,7 @@ See [..]
 
     // Verify the responder has been pinged
     let lock = arc2.lock().unwrap();
-    assert_eq!(*lock, 2);
+    assert_eq!(*lock, 3);
     drop(lock);
 
     let p = project()
