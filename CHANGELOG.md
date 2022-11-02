@@ -75,6 +75,8 @@
 - Scanning the package directory now ignores errors from broken
   but excluded symlink files.
   [#11008](https://github.com/rust-lang/cargo/pull/11008)
+- Fixed deadlock when build scripts are waiting for input on stdin.
+  [#11257](https://github.com/rust-lang/cargo/pull/11257)
 
 ### Nightly
 
