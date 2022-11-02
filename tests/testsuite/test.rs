@@ -3485,6 +3485,19 @@ fn cargo_test_env() {
         .with_stderr_contains(cargo.to_str().unwrap())
         .with_stdout_contains("test env_test ... ok")
         .run();
+
+    // Check that `cargo test` propagates the environment's $CARGO
+    let rustc = cargo_util::paths::resolve_executable("rustc".as_ref())
+        .unwrap()
+        .canonicalize()
+        .unwrap();
+    let rustc = rustc.to_str().unwrap();
+    p.cargo("test --lib -- --nocapture")
+        // we use rustc since $CARGO is only used if it points to a path that exists
+        .env(cargo::CARGO_ENV, rustc)
+        .with_stderr_contains(rustc)
+        .with_stdout_contains("test env_test ... ok")
+        .run();
 }
 
 #[cargo_test]

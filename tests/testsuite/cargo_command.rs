@@ -335,12 +335,25 @@ fn cargo_subcommand_env() {
 
     let cargo = cargo_exe().canonicalize().unwrap();
     let mut path = path();
-    path.push(target_dir);
+    path.push(target_dir.clone());
     let path = env::join_paths(path.iter()).unwrap();
 
     cargo_process("envtest")
         .env("PATH", &path)
         .with_stdout(cargo.to_str().unwrap())
+        .run();
+
+    // Check that subcommands inherit an overriden $CARGO
+    let envtest_bin = target_dir
+        .join("cargo-envtest")
+        .with_extension(std::env::consts::EXE_EXTENSION)
+        .canonicalize()
+        .unwrap();
+    let envtest_bin = envtest_bin.to_str().unwrap();
+    cargo_process("envtest")
+        .env("PATH", &path)
+        .env(cargo::CARGO_ENV, &envtest_bin)
+        .with_stdout(envtest_bin)
         .run();
 }
 

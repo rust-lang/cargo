@@ -4,9 +4,11 @@ use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project, project_in};
+use cargo_test_support::{
+    basic_manifest, cargo_exe, cross_compile, is_coarse_mtime, project, project_in,
+};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
-use cargo_util::paths::remove_dir_all;
+use cargo_util::paths::{self, remove_dir_all};
 use std::env;
 use std::fs;
 use std::io;
@@ -80,8 +82,15 @@ fn custom_build_env_vars() {
         )
         .file("bar/src/lib.rs", "pub fn hello() {}");
 
+    let cargo = cargo_exe().canonicalize().unwrap();
+    let cargo = cargo.to_str().unwrap();
+    let rustc = paths::resolve_executable("rustc".as_ref())
+        .unwrap()
+        .canonicalize()
+        .unwrap();
+    let rustc = rustc.to_str().unwrap();
     let file_content = format!(
-        r#"
+        r##"
             use std::env;
             use std::path::Path;
 
@@ -107,7 +116,12 @@ fn custom_build_env_vars() {
 
                 let _feat = env::var("CARGO_FEATURE_FOO").unwrap();
 
-                let _cargo = env::var("CARGO").unwrap();
+                let cargo = env::var("CARGO").unwrap();
+                if env::var_os("CHECK_CARGO_IS_RUSTC").is_some() {{
+                    assert_eq!(cargo, r#"{rustc}"#);
+                }} else {{
+                    assert_eq!(cargo, r#"{cargo}"#);
+                }}
 
                 let rustc = env::var("RUSTC").unwrap();
                 assert_eq!(rustc, "rustc");
@@ -124,7 +138,7 @@ fn custom_build_env_vars() {
                 let rustflags = env::var("CARGO_ENCODED_RUSTFLAGS").unwrap();
                 assert_eq!(rustflags, "");
             }}
-        "#,
+        "##,
         p.root()
             .join("target")
             .join("debug")
@@ -135,6 +149,11 @@ fn custom_build_env_vars() {
     let p = p.file("bar/build.rs", &file_content).build();
 
     p.cargo("build --features bar_feat").run();
+    p.cargo("build --features bar_feat")
+        // we use rustc since $CARGO is only used if it points to a path that exists
+        .env("CHECK_CARGO_IS_RUSTC", "1")
+        .env(cargo::CARGO_ENV, rustc)
+        .run();
 }
 
 #[cargo_test]
