@@ -2419,12 +2419,6 @@ fn wait_for_publish() {
         })
         .build();
 
-    // The sparse-registry test server does not know how to publish on its own.
-    // So let us call publish for it.
-    Package::new("delay", "0.0.1")
-        .file("src/lib.rs", "")
-        .publish();
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2509,12 +2503,6 @@ fn wait_for_publish_underscore() {
             }
         })
         .build();
-
-    // The sparse-registry test server does not know how to publish on its own.
-    // So let us call publish for it.
-    Package::new("delay_with_underscore", "0.0.1")
-        .file("src/lib.rs", "")
-        .publish();
 
     let p = project()
         .file(
