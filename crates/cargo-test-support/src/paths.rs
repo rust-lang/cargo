@@ -141,7 +141,7 @@ impl CargoPathExt for Path {
         // actually performing the removal, but we don't care all that much
         // for our tests.
         if meta.is_dir() {
-            if let Err(e) = remove_dir_all::remove_dir_all(self) {
+            if let Err(e) = fs::remove_dir_all(self) {
                 panic!("failed to remove {:?}: {:?}", self, e)
             }
         } else if let Err(e) = fs::remove_file(self) {
