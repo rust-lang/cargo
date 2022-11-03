@@ -313,10 +313,7 @@ fn resolve_dependency(
             selected
         } else {
             let source = crate::sources::PathSource::new(&path, src.source_id()?, config);
-            let mut packages = source.read_packages()?;
-            let package = packages
-                .pop()
-                .ok_or(anyhow::anyhow!("no packages found at `{src}`"))?;
+            let package = source.read_packages()?.pop().expect("at least one package");
             Dependency::from(package.summary())
         };
         selected
@@ -606,9 +603,7 @@ fn infer_package_for_git_source(
     src: &dyn std::fmt::Display,
 ) -> CargoResult<Package> {
     let package = match packages.len() {
-        0 => {
-            anyhow::bail!("no packages found at `{src}`");
-        }
+        0 => unreachable!(),
         1 => packages.pop().expect("match ensured element is present"),
         _ => {
             let mut names: Vec<_> = packages
