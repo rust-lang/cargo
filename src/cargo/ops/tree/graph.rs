@@ -365,7 +365,11 @@ fn add_pkg(
                 if dep.is_optional() {
                     // If the new feature resolver does not enable this
                     // optional dep, then don't use it.
-                    if !resolved_features.is_activated(dep_id, features_for) {
+                    if !resolved_features.is_dep_activated(
+                        package_id,
+                        features_for,
+                        dep.name_in_toml(),
+                    ) {
                         return false;
                     }
                 }
