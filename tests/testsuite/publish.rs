@@ -2398,7 +2398,7 @@ fn http_api_not_noop() {
 }
 
 #[cargo_test]
-fn wait_for_publish() {
+fn wait_for_first_publish() {
     // Counter for number of tries before the package is "published"
     let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
     let arc2 = arc.clone();
@@ -2418,12 +2418,6 @@ fn wait_for_publish() {
             }
         })
         .build();
-
-    // The sparse-registry test server does not know how to publish on its own.
-    // So let us call publish for it.
-    Package::new("delay", "0.0.1")
-        .file("src/lib.rs", "")
-        .publish();
 
     let p = project()
         .file(
@@ -2489,7 +2483,7 @@ See [..]
 /// the responder twice per cargo invocation. If that ever gets changed
 /// this test will need to be changed accordingly.
 #[cargo_test]
-fn wait_for_publish_underscore() {
+fn wait_for_first_publish_underscore() {
     // Counter for number of tries before the package is "published"
     let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
     let arc2 = arc.clone();
@@ -2509,12 +2503,6 @@ fn wait_for_publish_underscore() {
             }
         })
         .build();
-
-    // The sparse-registry test server does not know how to publish on its own.
-    // So let us call publish for it.
-    Package::new("delay_with_underscore", "0.0.1")
-        .file("src/lib.rs", "")
-        .publish();
 
     let p = project()
         .file(
@@ -2566,6 +2554,93 @@ See [..]
                 authors = []
                 [dependencies]
                 delay_with_underscore = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Z sparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
+        .with_status(0)
+        .run();
+}
+
+#[cargo_test]
+fn wait_for_subsequent_publish() {
+    // Counter for number of tries before the package is "published"
+    let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+    let arc2 = arc.clone();
+
+    // Registry returns an invalid response.
+    let registry = registry::RegistryBuilder::new()
+        .http_index()
+        .http_api()
+        .add_responder("/index/de/la/delay", move |req, server| {
+            let mut lock = arc.lock().unwrap();
+            *lock += 1;
+            // if the package name contains _ or -
+            if *lock <= 2 {
+                server.not_found(req)
+            } else {
+                server.index(req)
+            }
+        })
+        .build();
+
+    // Publish an earlier version
+    Package::new("delay", "0.0.1")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "delay"
+                version = "0.0.2"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify -Z sparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
+        .replace_crates_io(registry.index_url())
+        .with_status(0)
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] delay v0.0.2 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
+[UPLOADING] delay v0.0.2 ([CWD])
+[UPDATING] crates.io index
+[WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
+",
+        )
+        .run();
+
+    // Verify the responder has been pinged
+    let lock = arc2.lock().unwrap();
+    assert_eq!(*lock, 3);
+    drop(lock);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                [dependencies]
+                delay = "0.0.2"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
