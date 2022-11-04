@@ -2750,10 +2750,12 @@ fn reach_max_unpack_size() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
+    // Size of bar.crate is around 180 bytes.
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build")
         .env("__CARGO_TEST_MAX_UNPACK_SIZE", "8") // hit 8 bytes limit and boom!
+        .env("__CARGO_TEST_MAX_UNPACK_RATIO", "0")
         .with_status(101)
         .with_stderr(
             "\
@@ -2770,6 +2772,18 @@ Caused by:
 
 Caused by:
   maximum limit reached when reading
+",
+        )
+        .run();
+
+    // Restore to the default ratio and it should compile.
+    p.cargo("build")
+        .env("__CARGO_TEST_MAX_UNPACK_SIZE", "8")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [..]
 ",
         )
         .run();
