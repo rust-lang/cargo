@@ -80,6 +80,13 @@ jobs:
 
     # Deny warnings on CI to avoid warnings getting into the codebase.
     - run: cargo test --features 'deny-warnings'
+    # The testsuite generates a huge amount of data, and fetch-smoke-test was
+    # running out of disk space.
+    - name: Clear test output
+      run: |
+        df -h
+        rm -rf target/tmp
+        df -h
     - name: Check operability of rustc invocation with argfile
       env:
         __CARGO_TEST_FORCE_ARGFILE: 1
@@ -111,7 +118,7 @@ jobs:
         cargo check --manifest-path benches/capture/Cargo.toml
     # The testsuite generates a huge amount of data, and fetch-smoke-test was
     # running out of disk space.
-    - name: Clear test output
+    - name: Clear benchmark output
       run: |
         df -h
         rm -rf target/tmp
