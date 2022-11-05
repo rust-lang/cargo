@@ -5,9 +5,29 @@
 
 ### Added
 
+- `cargo remove` now cleans up the root workspace manifest after a 
+  successful removal of an inherited dependency from a workspace member.
+  [#11242](https://github.com/rust-lang/cargo/pull/11242)
+- `cargo package` and `cargo publish` now report total and compressed crate size
+  after packaging.
+  [#11270](https://github.com/rust-lang/cargo/pull/11270)
+- Suggests `cargo fix` when some compilation warnings/errors can be auto-fixed.
+  [#10989](https://github.com/rust-lang/cargo/pull/10989)
+
 ### Changed
 
+- ❗ Cargo now reuses the value of `$CARGO` if it's already set in the environment,
+  and forwards the value when executing external subcommands and build scripts.
+  [#11285](https://github.com/rust-lang/cargo/pull/11285)
+- Updated the internal HTTP library libcurl with various fixes and updates.
+  [#11307](https://github.com/rust-lang/cargo/pull/11307)
+  [#11326](https://github.com/rust-lang/cargo/pull/11326)
+
 ### Fixed
+
+- Fixed `cargo clean` for removing fingerprints and build script
+  artifacts of only the requested package
+  [#10621](https://github.com/rust-lang/cargo/pull/10621)
 
 ### Nightly only
 
