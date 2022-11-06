@@ -2472,3 +2472,74 @@ fn all_features_merges_with_features() {
         .with_stdout("it works")
         .run();
 }
+
+#[cargo_test]
+fn dep_with_optional_host_deps_activated() {
+    // To prevent regression like rust-lang/cargo#11330
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                serde = { path = "serde", features = ["derive", "build"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "serde/Cargo.toml",
+            r#"
+                [package]
+                name = "serde"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                serde_derive = { path = "../serde_derive", optional = true }
+
+                [build-dependencies]
+                serde_build = { path = "../serde_build", optional = true }
+
+                [features]
+                derive = ["dep:serde_derive"]
+                build = ["dep:serde_build"]
+            "#,
+        )
+        .file("serde/src/lib.rs", "")
+        .file("serde/build.rs", "fn main() {}")
+        .file(
+            "serde_derive/Cargo.toml",
+            r#"
+                [package]
+                name = "serde_derive"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("serde_derive/src/lib.rs", "")
+        .file(
+            "serde_build/Cargo.toml",
+            &basic_manifest("serde_build", "0.1.0"),
+        )
+        .file("serde_build/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[COMPILING] serde_build v0.1.0 ([CWD]/serde_build)
+[COMPILING] serde_derive v0.1.0 ([CWD]/serde_derive)
+[COMPILING] serde v0.1.0 ([CWD]/serde)
+[CHECKING] foo v0.1.0 ([CWD])
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
