@@ -4,8 +4,7 @@ use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::{config, CanonicalUrl, CargoResult, Config, IntoUrl};
 use log::trace;
-use serde::de;
-use serde::ser;
+use serde::{de, ser, Serialize};
 use std::cmp::{self, Ordering};
 use std::collections::HashSet;
 use std::fmt::{self, Formatter};
@@ -64,7 +63,7 @@ enum SourceKind {
 }
 
 /// Information to find a specific commit in a Git repository.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub enum GitReference {
     /// From a tag.
     Tag(String),

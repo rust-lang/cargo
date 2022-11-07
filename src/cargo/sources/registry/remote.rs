@@ -29,7 +29,6 @@ pub struct RemoteRegistry<'cfg> {
     config: &'cfg Config,
     tree: RefCell<Option<git2::Tree<'static>>>,
     repo: LazyCell<git2::Repository>,
-    head: Cell<Option<git2::Oid>>,
     current_sha: Cell<Option<InternedString>>,
     needs_update: bool, // Does this registry need to be updated?
 }
@@ -45,7 +44,6 @@ impl<'cfg> RemoteRegistry<'cfg> {
             index_git_ref: GitReference::DefaultBranch,
             tree: RefCell::new(None),
             repo: LazyCell::new(),
-            head: Cell::new(None),
             current_sha: Cell::new(None),
             needs_update: false,
         }
@@ -94,15 +92,6 @@ impl<'cfg> RemoteRegistry<'cfg> {
         })
     }
 
-    fn head(&self) -> CargoResult<git2::Oid> {
-        if self.head.get().is_none() {
-            let repo = self.repo()?;
-            let oid = self.index_git_ref.resolve(repo)?;
-            self.head.set(Some(oid));
-        }
-        Ok(self.head.get().unwrap())
-    }
-
     fn tree(&self) -> CargoResult<Ref<'_, git2::Tree<'_>>> {
         {
             let tree = self.tree.borrow();
@@ -111,8 +100,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
             }
         }
         let repo = self.repo()?;
-        let commit = repo.find_commit(self.head()?)?;
-        let tree = commit.tree()?;
+        let oid = self.index_git_ref.resolve_to_object(repo)?;
+        let tree = repo.find_object(oid, None)?.peel_to_tree()?;
 
         // Unfortunately in libgit2 the tree objects look like they've got a
         // reference to the repository object which means that a tree cannot
@@ -135,7 +124,9 @@ impl<'cfg> RemoteRegistry<'cfg> {
         if let Some(sha) = self.current_sha.get() {
             return Some(sha);
         }
-        let sha = InternedString::new(&self.head().ok()?.to_string());
+        let repo = self.repo().ok()?;
+        let oid = self.index_git_ref.resolve_to_commit(repo).ok()?;
+        let sha = InternedString::new(&oid.to_string());
         self.current_sha.set(Some(sha));
         Some(sha)
     }
@@ -284,7 +275,6 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.config.http()?;
 
         self.prepare()?;
-        self.head.set(None);
         *self.tree.borrow_mut() = None;
         self.current_sha.set(None);
         let path = self.config.assert_package_cache_locked(&self.index_path);

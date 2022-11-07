@@ -9,14 +9,13 @@ use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
 use git2::{self, ErrorClass, ObjectType, Oid};
 use log::{debug, info};
-use serde::ser;
-use serde::Serialize;
+use serde::{ser, Deserialize, Serialize};
 use std::borrow::Cow;
 use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::str;
+use std::str::{self, FromStr};
 use std::time::{Duration, Instant};
 use url::Url;
 
@@ -26,6 +25,17 @@ where
     S: ser::Serializer,
 {
     s.collect_str(t)
+}
+
+fn deserialize_str<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    T: FromStr,
+    <T as FromStr>::Err: fmt::Display,
+    D: serde::Deserializer<'de>,
+{
+    let buf = String::deserialize(deserializer)?;
+
+    FromStr::from_str(&buf).map_err(serde::de::Error::custom)
 }
 
 pub struct GitShortID(git2::Buf);
@@ -78,8 +88,25 @@ impl GitRemote {
         &self.url
     }
 
-    pub fn rev_for(&self, path: &Path, reference: &GitReference) -> CargoResult<git2::Oid> {
-        reference.resolve(&self.db_at(path)?.repo)
+    /// Finds the Oid associated with the reference. The result is guaranteed to be on disk.
+    /// But may not be the object the reference points to!
+    /// For example, the reference points to a Commit and this may return the Tree that commit points do.
+    pub fn rev_to_object_for(
+        &self,
+        path: &Path,
+        reference: &GitReference,
+    ) -> CargoResult<git2::Oid> {
+        reference.resolve_to_object(&self.db_at(path)?.repo)
+    }
+
+    /// Finds the Oid of the Commit the reference points to. But the result may not be on disk!
+    /// For example, the reference points to a Commit and we have only cloned the Tree.
+    pub fn rev_to_commit_for(
+        &self,
+        path: &Path,
+        reference: &GitReference,
+    ) -> CargoResult<git2::Oid> {
+        reference.resolve_to_commit(&self.db_at(path)?.repo)
     }
 
     pub fn checkout(
@@ -104,7 +131,7 @@ impl GitRemote {
                     }
                 }
                 None => {
-                    if let Ok(rev) = reference.resolve(&db.repo) {
+                    if let Ok(rev) = reference.resolve_to_object(&db.repo) {
                         return Ok((db, rev));
                     }
                 }
@@ -123,7 +150,7 @@ impl GitRemote {
             .context(format!("failed to clone into: {}", into.display()))?;
         let rev = match locked_rev {
             Some(rev) => rev,
-            None => reference.resolve(&repo)?,
+            None => reference.resolve_to_object(&repo)?,
         };
 
         Ok((
@@ -179,13 +206,65 @@ impl GitDatabase {
         self.repo.revparse_single(&oid.to_string()).is_ok()
     }
 
-    pub fn resolve(&self, r: &GitReference) -> CargoResult<git2::Oid> {
-        r.resolve(&self.repo)
+    pub fn resolve_to_object(&self, r: &GitReference) -> CargoResult<git2::Oid> {
+        r.resolve_to_object(&self.repo)
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+struct ShallowDataBlob {
+    #[serde(serialize_with = "serialize_str")]
+    #[serde(deserialize_with = "deserialize_str")]
+    tree: git2::Oid,
+    #[serde(serialize_with = "serialize_str")]
+    #[serde(deserialize_with = "deserialize_str")]
+    etag: git2::Oid,
+}
+
+#[test]
+fn check_with_git_hub() {
+    panic!(
+        r#"nonstandard shallow clone may be worse than a full check out. 
+    This test is here to make sure we do not merge until we have official signoff from GitHub"#
+    )
+}
+
 impl GitReference {
-    pub fn resolve(&self, repo: &git2::Repository) -> CargoResult<git2::Oid> {
+    /// Finds the Oid associated with the reference. The result is guaranteed to be on disk.
+    /// But may not be the object the reference points to!
+    /// For example, the reference points to a Commit and this may return the Tree that commit points do.
+    pub fn resolve_to_object(&self, repo: &git2::Repository) -> CargoResult<git2::Oid> {
+        // Check if Cargo has done a nonstandard shallow clone
+        if let Some(shallow_data) = self.find_shallow_blob(repo) {
+            Ok(shallow_data.tree)
+        } else {
+            self.resolve_by_git(repo)
+        }
+    }
+    /// Finds the Oid of the Commit the reference points to. But the result may not be on disk!
+    /// For example, the reference points to a Commit and we have only cloned the Tree.
+    pub fn resolve_to_commit(&self, repo: &git2::Repository) -> CargoResult<git2::Oid> {
+        // Check if Cargo has done a nonstandard shallow clone
+        if let Some(shallow_data) = self.find_shallow_blob(repo) {
+            return Ok(shallow_data.etag);
+        } else {
+            self.resolve_by_git(repo)
+        }
+    }
+
+    fn find_shallow_blob(&self, repo: &git2::Repository) -> Option<ShallowDataBlob> {
+        repo.find_reference(
+            &(format!(
+                "refs/cargo-{}",
+                serde_json::to_string(self).expect("why cant we make json of this")
+            )),
+        )
+        .ok()
+        .and_then(|re| re.peel_to_blob().ok())
+        .and_then(|blob| serde_json::from_slice(blob.content()).ok())
+    }
+
+    fn resolve_by_git(&self, repo: &git2::Repository) -> CargoResult<git2::Oid> {
         let id = match self {
             // Note that we resolve the named tag here in sync with where it's
             // fetched into via `fetch` below.
@@ -707,10 +786,17 @@ fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> Ca
     opts.progress(|_, cur, max| {
         drop(pb.tick(cur, max, ""));
     });
-    debug!("doing reset");
-    repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
-    debug!("reset done");
-    Ok(())
+    if obj.as_tree().is_some() {
+        debug!("doing reset for Cargo nonstandard shallow clone");
+        repo.checkout_tree(obj, Some(&mut opts))?;
+        debug!("reset done");
+        Ok(())
+    } else {
+        debug!("doing reset");
+        repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
+        debug!("reset done");
+        Ok(())
+    }
 }
 
 pub fn with_fetch_options(
@@ -816,32 +902,44 @@ pub fn fetch(
     // The `+` symbol on the refspec means to allow a forced (fast-forward)
     // update which is needed if there is ever a force push that requires a
     // fast-forward.
-    match reference {
-        // For branches and tags we can fetch simply one reference and copy it
-        // locally, no need to fetch other branches/tags.
-        GitReference::Branch(b) => {
-            refspecs.push(format!("+refs/heads/{0}:refs/remotes/origin/{0}", b));
-        }
-        GitReference::Tag(t) => {
-            refspecs.push(format!("+refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
+    if let Some(oid_to_fetch) = oid_to_fetch {
+        // GitHub told us exactly the min needed to fetch. So we can go ahead and do a Cargo nonstandard shallow clone.
+        refspecs.push(format!("+{0}", oid_to_fetch));
+    } else {
+        // In some cases we have Cargo nonstandard shallow cloned this repo before, but cannot do it now.
+        // Mostly if GitHub is now rate limiting us. If so, remove the info about the shallow clone.
+        if let Ok(mut refe) = repo.find_reference(&format!(
+            "refs/cargo-{}",
+            serde_json::to_string(reference).expect("why cant we make json of this")
+        )) {
+            let _ = refe.delete();
         }
 
-        GitReference::DefaultBranch => {
-            refspecs.push(String::from("+HEAD:refs/remotes/origin/HEAD"));
-        }
+        match reference {
+            // For branches and tags we can fetch simply one reference and copy it
+            // locally, no need to fetch other branches/tags.
+            GitReference::Branch(b) => {
+                refspecs.push(format!("+refs/heads/{0}:refs/remotes/origin/{0}", b));
+            }
+            GitReference::Tag(t) => {
+                refspecs.push(format!("+refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
+            }
 
-        GitReference::Rev(rev) => {
-            if rev.starts_with("refs/") {
-                refspecs.push(format!("+{0}:{0}", rev));
-            } else if let Some(oid_to_fetch) = oid_to_fetch {
-                refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
-            } else {
-                // We don't know what the rev will point to. To handle this
-                // situation we fetch all branches and tags, and then we pray
-                // it's somewhere in there.
-                refspecs.push(String::from("+refs/heads/*:refs/remotes/origin/*"));
+            GitReference::DefaultBranch => {
                 refspecs.push(String::from("+HEAD:refs/remotes/origin/HEAD"));
-                tags = true;
+            }
+
+            GitReference::Rev(rev) => {
+                if rev.starts_with("refs/") {
+                    refspecs.push(format!("+{0}:{0}", rev));
+                } else {
+                    // We don't know what the rev will point to. To handle this
+                    // situation we fetch all branches and tags, and then we pray
+                    // it's somewhere in there.
+                    refspecs.push(String::from("+refs/heads/*:refs/remotes/origin/*"));
+                    refspecs.push(String::from("+HEAD:refs/remotes/origin/HEAD"));
+                    tags = true;
+                }
             }
         }
     }
@@ -1105,7 +1203,7 @@ fn github_fast_path(
         return Ok(FastPathRev::Indeterminate);
     }
 
-    let local_object = reference.resolve(repo).ok();
+    let local_object = reference.resolve_to_commit(repo).ok();
 
     let github_branch_name = match reference {
         GitReference::Branch(branch) => branch,
@@ -1175,7 +1273,7 @@ fn github_fast_path(
     handle.useragent("cargo")?;
     handle.http_headers({
         let mut headers = List::new();
-        headers.append("Accept: application/vnd.github.3.sha")?;
+        headers.append("Accept: application/vnd.github+json")?;
         if let Some(local_object) = local_object {
             headers.append(&format!("If-None-Match: \"{}\"", local_object))?;
         }
@@ -1195,8 +1293,44 @@ fn github_fast_path(
     if response_code == 304 {
         Ok(FastPathRev::UpToDate)
     } else if response_code == 200 {
-        let oid_to_fetch = str::from_utf8(&response_body)?.parse::<Oid>()?;
-        Ok(FastPathRev::NeedsFetch(oid_to_fetch))
+        #[derive(Debug, Deserialize)]
+        struct GithubFastPathJsonResponse {
+            #[serde(serialize_with = "serialize_str")]
+            #[serde(deserialize_with = "deserialize_str")]
+            sha: git2::Oid,
+            commit: GithubCommitJsonResponse,
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct GithubCommitJsonResponse {
+            tree: GithubTreeJsonResponse,
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct GithubTreeJsonResponse {
+            #[serde(serialize_with = "serialize_str")]
+            #[serde(deserialize_with = "deserialize_str")]
+            sha: git2::Oid,
+        }
+
+        let data: GithubFastPathJsonResponse = serde_json::from_slice(&response_body)?;
+        // We can do a Cargo nonstandard shallow clone, so record the relevant information.
+        let bytes = serde_json::to_string(&ShallowDataBlob {
+            tree: data.commit.tree.sha,
+            etag: data.sha,
+        })
+        .expect("why cant we make json of this");
+        let shallow_blob = repo.blob(bytes.as_bytes())?;
+        repo.reference(
+            &format!(
+                "refs/cargo-{}",
+                serde_json::to_string(reference).expect("why cant we make json of this")
+            ),
+            shallow_blob,
+            true,
+            "",
+        )?;
+        Ok(FastPathRev::NeedsFetch(data.commit.tree.sha))
     } else {
         // Usually response_code == 404 if the repository does not exist, and
         // response_code == 422 if exists but GitHub is unable to resolve the
