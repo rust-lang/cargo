@@ -253,15 +253,22 @@ impl GitReference {
     }
 
     fn find_shallow_blob(&self, repo: &git2::Repository) -> Option<ShallowDataBlob> {
-        repo.find_reference(
-            &(format!(
-                "refs/cargo-{}",
-                serde_json::to_string(self).expect("why cant we make json of this")
-            )),
-        )
-        .ok()
-        .and_then(|re| re.peel_to_blob().ok())
-        .and_then(|blob| serde_json::from_slice(blob.content()).ok())
+        let mut name = format!(
+            "refs/cargo-{}",
+            serde_json::to_string(self).expect("why cant we make json of this")
+        );
+        let shallow_blob = repo
+            .find_reference(&name)
+            .ok()
+            .and_then(|re| re.peel_to_blob().ok())
+            .and_then(|blob| serde_json::from_slice(blob.content()).ok())?;
+        // A nonstandard shallow clone should also have a reference to keep `git gc` from removing the tree.
+        name = name + "Tree";
+        let tree = repo.find_reference(&name).ok()?;
+        if tree.target()? != shallow_blob.tree {
+            return None;
+        }
+        shallow_blob
     }
 
     fn resolve_by_git(&self, repo: &git2::Repository) -> CargoResult<git2::Oid> {
@@ -904,14 +911,20 @@ pub fn fetch(
     // fast-forward.
     if let Some(oid_to_fetch) = oid_to_fetch {
         // GitHub told us exactly the min needed to fetch. So we can go ahead and do a Cargo nonstandard shallow clone.
-        refspecs.push(format!("+{0}", oid_to_fetch));
+        refspecs.push(oid_to_fetch);
     } else {
         // In some cases we have Cargo nonstandard shallow cloned this repo before, but cannot do it now.
         // Mostly if GitHub is now rate limiting us. If so, remove the info about the shallow clone.
-        if let Ok(mut refe) = repo.find_reference(&format!(
+        let mut name = format!(
             "refs/cargo-{}",
             serde_json::to_string(reference).expect("why cant we make json of this")
-        )) {
+        );
+        if let Ok(mut refe) = repo.find_reference(&name) {
+            let _ = refe.delete();
+        }
+        // And remove the reference that keeps `git gc` from cleaning the tree.
+        name = name + "Tree";
+        if let Ok(mut refe) = repo.find_reference(&name) {
             let _ = refe.delete();
         }
 
@@ -1170,9 +1183,9 @@ enum FastPathRev {
     /// The local rev (determined by `reference.resolve(repo)`) is already up to
     /// date with what this rev resolves to on GitHub's server.
     UpToDate,
-    /// The following SHA must be fetched in order for the local rev to become
+    /// The following refspec must be fetched in order for the local rev to become
     /// up to date.
-    NeedsFetch(Oid),
+    NeedsFetch(String),
     /// Don't know whether local rev is up to date. We'll fetch _all_ branches
     /// and tags from the server and see what happens.
     Indeterminate,
@@ -1321,16 +1334,17 @@ fn github_fast_path(
         })
         .expect("why cant we make json of this");
         let shallow_blob = repo.blob(bytes.as_bytes())?;
-        repo.reference(
-            &format!(
-                "refs/cargo-{}",
-                serde_json::to_string(reference).expect("why cant we make json of this")
-            ),
-            shallow_blob,
-            true,
-            "",
-        )?;
-        Ok(FastPathRev::NeedsFetch(data.commit.tree.sha))
+        let mut name = format!(
+            "refs/cargo-{}",
+            serde_json::to_string(reference).expect("why cant we make json of this")
+        );
+        repo.reference(&name, shallow_blob, true, "")?;
+        // Make a refspec to fetch the tree derectly, with a reference so that `git gc` does not clean it up.
+        Ok(FastPathRev::NeedsFetch(format!(
+            "+{}:{}Tree",
+            data.commit.tree.sha,
+            name
+        )))
     } else {
         // Usually response_code == 404 if the repository does not exist, and
         // response_code == 422 if exists but GitHub is unable to resolve the
