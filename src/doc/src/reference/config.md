@@ -240,7 +240,7 @@ precedence rules as other options specified directly with `--config`.
 ### Config-relative paths
 
 Paths in config files may be absolute, relative, or a bare name without any path separators.
-Paths for executables without a path separator will use the `PATH` environment variable to search for the executable. 
+Paths for executables without a path separator will use the `PATH` environment variable to search for the executable.
 Paths for non-executables will be relative to where the config value is defined.
 
 In particular, rules are:
@@ -258,7 +258,7 @@ In particular, rules are:
 >
 > To avoid unexpected results, the rule of thumb is putting your extra config files
 > at the same level of discovered `.cargo/config.toml` in your porject.
-> For instance, given a project `/my/project`, 
+> For instance, given a project `/my/project`,
 > it is recommended to put config files under `/my/project/.cargo`
 > or a new directory at the same level, such as `/my/project/.config`.
 
@@ -348,6 +348,7 @@ c = "check"
 d = "doc"
 t = "test"
 r = "run"
+rm = "remove"
 ```
 
 Aliases are not allowed to redefine existing built-in commands.
