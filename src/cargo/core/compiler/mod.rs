@@ -903,10 +903,7 @@ fn build_base_args(
             .bcx
             .target_data
             .info(unit.kind)
-            .support_split_debuginfo
-            .iter()
-            .find(|sup| sup.as_str() == split.as_str())
-            .is_some()
+            .supports_debuginfo_split(split)
         {
             cmd.arg("-C").arg(format!("split-debuginfo={}", split));
         }
