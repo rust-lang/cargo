@@ -19,15 +19,17 @@ use tempfile::Builder as TempFileBuilder;
 /// error message.
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> Result<OsString> {
     env::join_paths(paths.iter()).with_context(|| {
-        let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
+        let paths = paths.iter()
+            .map(|s| s.as_ref().to_string_lossy())
+            .map(|s| format!("  \"{s}\""))
+            .collect::<Vec<String>>()
+            .join(",\n");
+
         format!(
-            "failed to join paths from `${}` together\
-                 \n    \
-                 If you set `${}` manually, check if it contains an unterminated quote character \
-                 or path separators (usually `:` or `:`). Please avoid using them.\
-                 \n\n    \
-                 Otherwise, check if any of paths listed contain one of those characters: {:?}",
-            env, env, paths
+            "failed to join paths from `${env}` together\n\
+                 If you set `${env}` manually, check if it contains an unterminated quote character \
+                 or path separators (usually `:` or `;`). Please avoid using them. \
+                 Otherwise, check if any of paths listed below contain one of those characters:\n{paths}"
         )
     })
 }

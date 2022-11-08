@@ -28,6 +28,7 @@ mod mercurial_autodetect;
 mod multibin_project_name_clash;
 #[cfg(not(windows))]
 mod no_filename;
+#[cfg(unix)]
 mod path_contains_separator;
 mod pijul_autodetect;
 mod reserved_name;
