@@ -787,14 +787,14 @@ the command line) target.
 * Tracking Issue: [#9096](https://github.com/rust-lang/cargo/pull/9096)
 * Original Pull Request: [#9992](https://github.com/rust-lang/cargo/pull/9992)
 
-Allow Cargo packages to depend on `bin`, `cdylib`, and `staticlib` crates, 
+Allow Cargo packages to depend on `bin`, `cdylib`, and `staticlib` crates,
 and use the artifacts built by those crates at compile time.
 
 Run `cargo` with `-Z bindeps` to enable this functionality.
 
 **Example:** use _cdylib_ artifact in build script
 
-The `Cargo.toml` in the consuming package, building the `bar` library as `cdylib` 
+The `Cargo.toml` in the consuming package, building the `bar` library as `cdylib`
 for a specific build target…
 
 ```toml
@@ -841,6 +841,13 @@ When fetching index metadata over HTTP, Cargo only downloads the metadata for re
 crates, which can save significant time and bandwidth.
 
 The format of the sparse index is identical to a checkout of a git-based index.
+
+The `registries.crates-io.protocol` config option can be used to set the default protocol
+for crates.io. This option requires `-Z sparse-registry` to be enabled.
+
+* `sparse` — Use sparse index.
+* `git` — Use git index.
+* If the option is unset, it will be sparse index if `-Z sparse-registry` is enabled, otherwise it will be git index.
 
 ### publish-timeout
 * Tracking Issue: [11222](https://github.com/rust-lang/cargo/issues/11222)
@@ -1376,7 +1383,7 @@ for more information.
 ### Workspace Inheritance
 
 Workspace Inheritance has been stabilized in the 1.64 release.
-See [workspace.package](workspaces.md#the-package-table), 
-[workspace.dependencies](workspaces.md#the-dependencies-table), 
+See [workspace.package](workspaces.md#the-package-table),
+[workspace.dependencies](workspaces.md#the-dependencies-table),
 and [inheriting-a-dependency-from-a-workspace](specifying-dependencies.md#inheriting-a-dependency-from-a-workspace)
 for more information.
