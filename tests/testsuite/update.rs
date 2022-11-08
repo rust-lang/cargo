@@ -453,11 +453,15 @@ fn update_precise_without_package() {
     Package::new("serde", "0.3.0").publish();
 
     p.cargo("update --precise 0.3.0")
+        .with_status(1)
         .with_stderr(
             "\
-[WARNING] precise is only supported with \"--package <SPEC>\", this will become a hard error in a future release.
-[UPDATING] `[..]` index
-[UPDATING] serde v0.2.0 -> v0.2.1
+[ERROR] The following required arguments were not provided:
+  --package [<SPEC>]
+
+Usage: cargo[EXE] update --package [<SPEC>] --precise <PRECISE>
+
+For more information try '--help'
 ",
         )
         .run();
@@ -525,11 +529,15 @@ fn update_aggressive_without_package() {
     Package::new("serde", "0.2.1").publish();
 
     p.cargo("update --aggressive")
+        .with_status(1)
         .with_stderr(
             "\
-[WARNING] aggressive is only supported with \"--package <SPEC>\", this will become a hard error in a future release.
-[UPDATING] `[..]` index
-[UPDATING] serde v0.2.0 -> v0.2.1
+[ERROR] The following required arguments were not provided:
+  --package [<SPEC>]
+
+Usage: cargo[EXE] update --package [<SPEC>] --aggressive
+
+For more information try '--help'
 ",
         )
         .run();
