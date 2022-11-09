@@ -469,6 +469,7 @@ impl Drop for HttpServerHandle {
 }
 
 /// Request to the test http server
+#[derive(Clone)]
 pub struct Request {
     pub url: Url,
     pub method: String,
