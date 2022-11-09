@@ -2570,20 +2570,25 @@ fn wait_for_subsequent_publish() {
     // Counter for number of tries before the package is "published"
     let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
     let arc2 = arc.clone();
+    let publish_req = Arc::new(Mutex::new(None));
+    let publish_req2 = publish_req.clone();
 
-    // Registry returns an invalid response.
     let registry = registry::RegistryBuilder::new()
         .http_index()
         .http_api()
+        .add_responder("/api/v1/crates/new", move |req, server| {
+            // Capture the publish request, but defer publishing
+            *publish_req.lock().unwrap() = Some(req.clone());
+            server.ok(req)
+        })
         .add_responder("/index/de/la/delay", move |req, server| {
             let mut lock = arc.lock().unwrap();
             *lock += 1;
-            // if the package name contains _ or -
-            if *lock <= 2 {
-                server.not_found(req)
-            } else {
-                server.index(req)
+            if *lock == 3 {
+                // Run the publish on the 3rd attempt
+                server.publish(&publish_req2.lock().unwrap().as_ref().unwrap());
             }
+            server.index(req)
         })
         .build();
 

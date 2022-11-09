@@ -549,6 +549,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // All it does is ensure that a subsequent load will double-check files with the
         // server rather than rely on a locally cached copy of the index files.
         debug!("invalidated index cache");
+        self.fresh.clear();
         self.requested_update = true;
     }
 
