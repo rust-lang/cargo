@@ -2279,7 +2279,7 @@ fn build_script_features_for_shared_dependency() {
 
 #[cargo_test]
 fn calc_bin_artifact_fingerprint() {
-    // This records the WRONG behaviour. See rust-lang/cargo#10527
+    // See rust-lang/cargo#10527
     let p = project()
         .file(
             "Cargo.toml",
@@ -2316,29 +2316,27 @@ fn calc_bin_artifact_fingerprint() {
         .run();
 
     p.change_file("bar/src/main.rs", r#"fn main() { println!("bar") }"#);
-    // Change in bin artifact but not propagated to parent fingerprint.
-    // This is WRONG!
+    // Change in artifact bin dep `bar` propagates to `foo`, triggering recompile.
     p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar [..]`
-[FRESH] foo v0.1.0 ([CWD])
+[CHECKING] foo v0.1.0 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 
-    // Only run the second time can parent fingerpint perceive the change.
-    // This is WRONG!
+    // All units are fresh. No recompile.
     p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
 [FRESH] bar v0.5.0 ([CWD]/bar)
-[CHECKING] foo v0.1.0 ([CWD])
-[RUNNING] `rustc --crate-name foo [..]`
+[FRESH] foo v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
