@@ -203,8 +203,8 @@ impl ProcessBuilder {
     ///
     /// Ref:
     ///
-    /// - https://doc.rust-lang.org/rustdoc/command-line-arguments.html#path-load-command-line-flags-from-a-path
-    /// - https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path>
+    /// - <https://doc.rust-lang.org/rustdoc/command-line-arguments.html#path-load-command-line-flags-from-a-path>
+    /// - <https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path>
     pub fn retry_with_argfile(&mut self, enabled: bool) -> &mut Self {
         self.retry_with_argfile = enabled;
         self
