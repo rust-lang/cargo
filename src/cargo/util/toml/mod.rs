@@ -634,16 +634,8 @@ impl TomlProfile {
             );
         }
 
-        match name {
-            "doc" => {
-                warnings.push("profile `doc` is deprecated and has no effect".to_string());
-            }
-            "test" | "bench" => {
-                if self.panic.is_some() {
-                    warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
-                }
-            }
-            _ => {}
+        if name == "doc" {
+            warnings.push("profile `doc` is deprecated and has no effect".to_string());
         }
 
         if let Some(panic) = &self.panic {
