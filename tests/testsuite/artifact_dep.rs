@@ -2276,3 +2276,69 @@ fn build_script_features_for_shared_dependency() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
 }
+
+#[cargo_test]
+fn calc_bin_artifact_fingerprint() {
+    // See rust-lang/cargo#10527
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar/", artifact = "bin" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let _b = include_bytes!(env!("CARGO_BIN_FILE_BAR"));
+                }
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", r#"fn main() { println!("foo") }"#)
+        .build();
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr(
+            "\
+[COMPILING] bar v0.5.0 ([CWD]/bar)
+[CHECKING] foo v0.1.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    p.change_file("bar/src/main.rs", r#"fn main() { println!("bar") }"#);
+    // Change in artifact bin dep `bar` propagates to `foo`, triggering recompile.
+    p.cargo("check -v -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr(
+            "\
+[COMPILING] bar v0.5.0 ([CWD]/bar)
+[RUNNING] `rustc --crate-name bar [..]`
+[CHECKING] foo v0.1.0 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    // All units are fresh. No recompile.
+    p.cargo("check -v -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr(
+            "\
+[FRESH] bar v0.5.0 ([CWD]/bar)
+[FRESH] foo v0.1.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
