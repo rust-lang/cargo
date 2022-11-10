@@ -469,25 +469,26 @@ pub trait ArgMatchesExt {
             ansi: false,
             render_diagnostics: false,
         };
+        let two_kinds_of_msg_format_err = "cannot specify two kinds of `message-format` arguments";
         for fmt in self._values_of("message-format") {
             for fmt in fmt.split(',') {
                 let fmt = fmt.to_ascii_lowercase();
                 match fmt.as_str() {
                     "json" => {
                         if message_format.is_some() {
-                            bail!("cannot specify two kinds of `message-format` arguments");
+                            bail!(two_kinds_of_msg_format_err);
                         }
                         message_format = Some(default_json);
                     }
                     "human" => {
                         if message_format.is_some() {
-                            bail!("cannot specify two kinds of `message-format` arguments");
+                            bail!(two_kinds_of_msg_format_err);
                         }
                         message_format = Some(MessageFormat::Human);
                     }
                     "short" => {
                         if message_format.is_some() {
-                            bail!("cannot specify two kinds of `message-format` arguments");
+                            bail!(two_kinds_of_msg_format_err);
                         }
                         message_format = Some(MessageFormat::Short);
                     }
@@ -499,7 +500,7 @@ pub trait ArgMatchesExt {
                             Some(MessageFormat::Json {
                                 render_diagnostics, ..
                             }) => *render_diagnostics = true,
-                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                            _ => bail!(two_kinds_of_msg_format_err),
                         }
                     }
                     "json-diagnostic-short" => {
@@ -508,7 +509,7 @@ pub trait ArgMatchesExt {
                         }
                         match &mut message_format {
                             Some(MessageFormat::Json { short, .. }) => *short = true,
-                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                            _ => bail!(two_kinds_of_msg_format_err),
                         }
                     }
                     "json-diagnostic-rendered-ansi" => {
@@ -517,7 +518,7 @@ pub trait ArgMatchesExt {
                         }
                         match &mut message_format {
                             Some(MessageFormat::Json { ansi, .. }) => *ansi = true,
-                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                            _ => bail!(two_kinds_of_msg_format_err),
                         }
                     }
                     s => bail!("invalid message format specifier: `{}`", s),
