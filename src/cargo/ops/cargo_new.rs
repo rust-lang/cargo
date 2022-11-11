@@ -2,7 +2,7 @@ use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use cargo_util::paths;
 use serde::de;
 use serde::Deserialize;
@@ -595,9 +595,22 @@ impl IgnoreList {
     /// already exists. It reads the contents of the given `BufRead` and
     /// checks if the contents of the ignore list are already existing in the
     /// file.
-    fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> String {
-        // TODO: is unwrap safe?
-        let existing_items = existing.lines().collect::<Result<Vec<_>, _>>().unwrap();
+    fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> CargoResult<String> {
+        let mut existing_items = Vec::new();
+        for (i, item) in existing.lines().enumerate() {
+            match item {
+                Ok(s) => existing_items.push(s),
+                Err(err) => match err.kind() {
+                    ErrorKind::InvalidData => {
+                        return Err(anyhow!(
+                            "Character at line {} is invalid. Cargo only supports UTF-8.",
+                            i
+                        ))
+                    }
+                    _ => return Err(anyhow!(err)),
+                },
+            }
+        }
 
         let ignore_items = match vcs {
             VersionControl::Hg => &self.hg_ignore,
@@ -631,7 +644,7 @@ impl IgnoreList {
             out.push('\n');
         }
 
-        out
+        Ok(out)
     }
 }
 
@@ -660,7 +673,7 @@ fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -
                 Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
                 _ => return Err(err),
             },
-            Ok(file) => list.format_existing(BufReader::new(file), vcs),
+            Ok(file) => list.format_existing(BufReader::new(file), vcs)?,
         };
 
         paths::append(&fp_ignore, ignore.as_bytes())?;
