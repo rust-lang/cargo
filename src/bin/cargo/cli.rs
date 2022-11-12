@@ -149,7 +149,7 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
         }
     };
     config_configure(config, &expanded_args, subcommand_args, global_args)?;
-    super::init_git_transports(config);
+    super::init_git(config);
 
     execute_subcommand(config, cmd, subcommand_args)
 }
