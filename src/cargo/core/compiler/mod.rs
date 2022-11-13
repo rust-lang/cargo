@@ -61,7 +61,7 @@ use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, iter_join_onto, profile};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
-use rustfix::diagnostics::{Applicability, Diagnostic};
+use rustfix::diagnostics::Applicability;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
@@ -1421,8 +1421,26 @@ fn on_stderr_line_inner(
                 rendered: String,
                 message: String,
                 level: String,
-                // `children: Vec<Diagnostic>` if we need to check them recursively
-                children: Vec<Diagnostic>,
+                children: Vec<PartialDiagnostic>,
+            }
+
+            // A partial rustfix::diagnostics::Diagnostic. We deserialize only a
+            // subset of the fields because rustc's output can be extremely
+            // deeply nested JSON in pathological cases involving macro
+            // expansion. Rustfix's Diagnostic struct is recursive containing a
+            // field `children: Vec<Self>`, and it can cause deserialization to
+            // hit serde_json's default recursion limit, or overflow the stack
+            // if we turn that off. Cargo only cares about the 1 field listed
+            // here.
+            #[derive(serde::Deserialize)]
+            struct PartialDiagnostic {
+                spans: Vec<PartialDiagnosticSpan>,
+            }
+
+            // A partial rustfix::diagnostics::DiagnosticSpan.
+            #[derive(serde::Deserialize)]
+            struct PartialDiagnosticSpan {
+                suggestion_applicability: Option<Applicability>,
             }
 
             if let Ok(mut msg) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
