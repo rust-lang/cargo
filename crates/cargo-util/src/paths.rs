@@ -18,18 +18,19 @@ use tempfile::Builder as TempFileBuilder;
 /// environment variable this is will be used for, which is included in the
 /// error message.
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> Result<OsString> {
-    env::join_paths(paths.iter())
-        .with_context(|| {
-            let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
-            format!("failed to join path array: {:?}", paths)
-        })
-        .with_context(|| {
-            format!(
-                "failed to join search paths together\n\
-                     Does ${} have an unterminated quote character?",
-                env
-            )
-        })
+    env::join_paths(paths.iter()).with_context(|| {
+        let mut message = format!(
+            "failed to join paths from `${env}` together\n\n\
+             Check if any of path segments listed below contain an \
+             unterminated quote character or path separator:"
+        );
+        for path in paths {
+            use std::fmt::Write;
+            write!(&mut message, "\n    {:?}", Path::new(path)).unwrap();
+        }
+
+        message
+    })
 }
 
 /// Returns the name of the environment variable used for searching for
@@ -742,4 +743,45 @@ fn exclude_from_time_machine(path: &Path) {
     }
     // Errors are ignored, since it's an optional feature and failure
     // doesn't prevent Cargo from working
+}
+
+#[cfg(test)]
+mod tests {
+    use super::join_paths;
+
+    #[test]
+    fn join_paths_lists_paths_on_error() {
+        let valid_paths = vec!["/testing/one", "/testing/two"];
+        // does not fail on valid input
+        let _joined = join_paths(&valid_paths, "TESTING1").unwrap();
+
+        #[cfg(unix)]
+        {
+            let invalid_paths = vec!["/testing/one", "/testing/t:wo/three"];
+            let err = join_paths(&invalid_paths, "TESTING2").unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                "failed to join paths from `$TESTING2` together\n\n\
+             Check if any of path segments listed below contain an \
+             unterminated quote character or path separator:\
+             \n    \"/testing/one\"\
+             \n    \"/testing/t:wo/three\"\
+             "
+            );
+        }
+        #[cfg(windows)]
+        {
+            let invalid_paths = vec!["/testing/one", "/testing/t\"wo/three"];
+            let err = join_paths(&invalid_paths, "TESTING2").unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                "failed to join paths from `$TESTING2` together\n\n\
+             Check if any of path segments listed below contain an \
+             unterminated quote character or path separator:\
+             \n    \"/testing/one\"\
+             \n    \"/testing/t\\\"wo/three\"\
+             "
+            );
+        }
+    }
 }

@@ -7,10 +7,11 @@ use cargo_util::paths;
 use serde::de;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::fmt;
+use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::{fmt, slice};
 use toml_edit::easy as toml;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -261,6 +262,19 @@ fn check_name(
     Ok(())
 }
 
+/// Checks if the path contains any invalid PATH env characters.
+fn check_path(path: &Path, shell: &mut Shell) -> CargoResult<()> {
+    // warn if the path contains characters that will break `env::join_paths`
+    if let Err(_) = paths::join_paths(slice::from_ref(&OsStr::new(path)), "") {
+        let path = path.to_string_lossy();
+        shell.warn(format!(
+            "the path `{path}` contains invalid PATH characters (usually `:`, `;`, or `\"`)\n\
+            It is recommended to use a different name to avoid problems."
+        ))?;
+    }
+    Ok(())
+}
+
 fn detect_source_paths_and_types(
     package_path: &Path,
     package_name: &str,
@@ -421,6 +435,8 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     }
 
+    check_path(path, &mut config.shell())?;
+
     let is_bin = opts.kind.is_bin();
 
     let name = get_name(path, opts)?;
@@ -457,6 +473,8 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     if path.join("Cargo.toml").exists() {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
+
+    check_path(path, &mut config.shell())?;
 
     let name = get_name(path, opts)?;
 
