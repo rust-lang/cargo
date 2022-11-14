@@ -1,4 +1,5 @@
 use cargo::sources::CRATES_IO_REGISTRY;
+use cargo::util::print_available_packages;
 use indexmap::IndexMap;
 use indexmap::IndexSet;
 
@@ -73,14 +74,7 @@ Example uses:
 - Depend on crates with the same name from different registries"),
         ])
         .arg_manifest_path()
-        .args([
-            clap::Arg::new("package")
-                .short('p')
-                .long("package")
-                .action(ArgAction::Set)
-                .value_name("SPEC")
-                .help("Package to modify"),
-        ])
+        .arg_package("Package to modify")
         .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
         .next_help_heading("Source")
@@ -161,20 +155,31 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let section = parse_section(args);
 
     let ws = args.workspace(config)?;
+
+    if args.is_present_with_zero_values("package") {
+        print_available_packages(&ws)?;
+    }
+
     let packages = args.packages_from_flags()?;
     let packages = packages.get_packages(&ws)?;
     let spec = match packages.len() {
         0 => {
             return Err(CliError::new(
-                anyhow::format_err!("no packages selected.  Please specify one with `-p <PKGID>`"),
+                anyhow::format_err!(
+                    "no packages selected to modify.  Please specify one with `-p <PKGID>`"
+                ),
                 101,
             ));
         }
         1 => packages[0],
-        len => {
+        _ => {
+            let names = packages.iter().map(|p| p.name()).collect::<Vec<_>>();
             return Err(CliError::new(
                 anyhow::format_err!(
-                    "{len} packages selected.  Please specify one with `-p <PKGID>`",
+                    "`cargo add` could not determine which package to modify. \
+                    Use the `--package` option to specify a package. \n\
+                    available packages: {}",
+                    names.join(", ")
                 ),
                 101,
             ));

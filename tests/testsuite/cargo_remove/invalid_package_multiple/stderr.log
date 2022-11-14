@@ -1,1 +1,2 @@
-error: 2 packages selected. Please specify one with `-p <PKG_ID>`
+error: `cargo remove` could not determine which package to modify. Use the `--package` option to specify a package. 
+available packages: dep-a, dep-b
