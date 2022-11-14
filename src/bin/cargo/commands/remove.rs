@@ -4,6 +4,7 @@ use cargo::ops::cargo_remove::remove;
 use cargo::ops::cargo_remove::RemoveOptions;
 use cargo::ops::resolve_ws;
 use cargo::util::command_prelude::*;
+use cargo::util::print_available_packages;
 use cargo::util::toml_mut::manifest::DepTable;
 use cargo::util::toml_mut::manifest::LocalManifest;
 use cargo::CargoResult;
@@ -50,20 +51,31 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let dry_run = args.dry_run();
 
     let workspace = args.workspace(config)?;
+
+    if args.is_present_with_zero_values("package") {
+        print_available_packages(&workspace)?;
+    }
+
     let packages = args.packages_from_flags()?;
     let packages = packages.get_packages(&workspace)?;
     let spec = match packages.len() {
         0 => {
             return Err(CliError::new(
-                anyhow::format_err!("no packages selected. Please specify one with `-p <PKG_ID>`"),
+                anyhow::format_err!(
+                    "no packages selected to modify.  Please specify one with `-p <PKGID>`"
+                ),
                 101,
             ));
         }
         1 => packages[0],
-        len => {
+        _ => {
+            let names = packages.iter().map(|p| p.name()).collect::<Vec<_>>();
             return Err(CliError::new(
                 anyhow::format_err!(
-                    "{len} packages selected. Please specify one with `-p <PKG_ID>`",
+                    "`cargo remove` could not determine which package to modify. \
+                    Use the `--package` option to specify a package. \n\
+                    available packages: {}",
+                    names.join(", ")
                 ),
                 101,
             ));
