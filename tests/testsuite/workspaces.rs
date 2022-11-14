@@ -1609,6 +1609,18 @@ fn excluded_glob() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file(
+            "repos/workspace/Cargo.toml",
+            r#"
+                [workspace]
+                members = ["crates/*"]
+            "#,
+        )
+        .file(
+            "repos/workspace/crates/xyz/Cargo.toml",
+            &basic_manifest("xyz", "0.1.0"),
+        )
+        .file("repos/workspace/crates/xyz/src/lib.rs", "")
         .file("repos/foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("repos/foo/src/lib.rs", "")
         .file("repos/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -1617,6 +1629,8 @@ fn excluded_glob() {
 
     p.cargo("build").run();
     assert!(p.root().join("target").is_dir());
+    p.cargo("build").cwd("repos/workspace").run();
+    assert!(p.root().join("repos/workspace/target").is_dir());
     p.cargo("build").cwd("repos/foo").run();
     assert!(p.root().join("repos/foo/target").is_dir());
     p.cargo("build").cwd("repos/bar").run();
