@@ -1610,13 +1610,17 @@ fn excluded_glob() {
         )
         .file("src/lib.rs", "")
         .file("repos/foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
-        .file("repos/foo/src/lib.rs", "");
+        .file("repos/foo/src/lib.rs", "")
+        .file("repos/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("repos/bar/src/lib.rs", "");
     let p = p.build();
 
     p.cargo("build").run();
     assert!(p.root().join("target").is_dir());
     p.cargo("build").cwd("repos/foo").run();
     assert!(p.root().join("repos/foo/target").is_dir());
+    p.cargo("build").cwd("repos/bar").run();
+    assert!(p.root().join("repos/bar/target").is_dir());
 }
 
 #[cargo_test]
