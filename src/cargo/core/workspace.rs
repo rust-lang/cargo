@@ -1590,7 +1590,10 @@ impl WorkspaceRootConfig {
         let excluded = self
             .exclude
             .iter()
-            .any(|ex| manifest_path.starts_with(self.root_dir.join(ex)));
+            .filter_map(|ex| self.root_dir.join(ex).to_str().and_then(|p| glob(p).ok()))
+            .flatten()
+            .filter_map(|ex| ex.ok())
+            .any(|ex| manifest_path.starts_with(ex));
 
         let explicit_member = match self.members {
             Some(ref members) => members

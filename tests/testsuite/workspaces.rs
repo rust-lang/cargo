@@ -1594,6 +1594,32 @@ fn excluded_simple() {
 }
 
 #[cargo_test]
+fn excluded_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "ws"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                exclude = ["repos/*"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("repos/foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("repos/foo/src/lib.rs", "");
+    let p = p.build();
+
+    p.cargo("build").run();
+    assert!(p.root().join("target").is_dir());
+    p.cargo("build").cwd("repos/foo").run();
+    assert!(p.root().join("repos/foo/target").is_dir());
+}
+
+#[cargo_test]
 fn exclude_members_preferred() {
     let p = project()
         .file(
