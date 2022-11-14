@@ -11,8 +11,6 @@
 - `cargo package` and `cargo publish` now report total and compressed crate size
   after packaging.
   [#11270](https://github.com/rust-lang/cargo/pull/11270)
-- Suggests `cargo fix` when some compilation warnings/errors can be auto-fixed.
-  [#10989](https://github.com/rust-lang/cargo/pull/10989)
 
 ### Changed
 
@@ -30,6 +28,9 @@
   [#10621](https://github.com/rust-lang/cargo/pull/10621)
 
 ### Nightly only
+
+- Suggests `cargo fix` when some compilation warnings/errors can be auto-fixed.
+  [#10989](https://github.com/rust-lang/cargo/pull/10989)
 
 ## Cargo 1.66 (2022-12-15)
 [08250398...rust-1.66.0](https://github.com/rust-lang/cargo/compare/08250398...rust-1.66.0)
