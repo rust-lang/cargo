@@ -166,17 +166,21 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         .map(|pkg| (pkg.package_id(), pkg))
         .collect();
 
-    let mut graph = graph::build(
-        ws,
-        &ws_resolve.targeted_resolve,
-        &ws_resolve.resolved_features,
-        &specs,
-        &opts.cli_features,
-        &target_data,
-        &requested_kinds,
-        package_map,
-        opts,
-    )?;
+    let mut graph = if std::env::var("CARGO_TREE_FROM_UNIT_GRAPH").is_ok() {
+        todo!("build stuff from UnitGraph");
+    } else {
+        graph::build(
+            ws,
+            &ws_resolve.targeted_resolve,
+            &ws_resolve.resolved_features,
+            &specs,
+            &opts.cli_features,
+            &target_data,
+            &requested_kinds,
+            package_map,
+            opts,
+        )?
+    };
 
     let root_specs = if opts.invert.is_empty() {
         specs

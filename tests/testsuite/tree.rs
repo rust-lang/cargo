@@ -71,6 +71,42 @@ bdep v1.0.0
 }
 
 #[cargo_test]
+fn simple_from_unit_graph() {
+    // A simple test with a few different dependencies.
+    let p = make_simple_proj();
+
+    p.cargo("tree")
+        .env("CARGO_TREE_FROM_UNIT_GRAPH", "1")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── a v1.0.0
+│   └── b v1.0.0
+│       └── c v1.0.0
+└── c v1.0.0
+[build-dependencies]
+└── bdep v1.0.0
+    └── b v1.0.0 (*)
+[dev-dependencies]
+└── devdep v1.0.0
+    └── b v1.0.0 (*)
+",
+        )
+        .run();
+
+    p.cargo("tree -p bdep")
+        .env("CARGO_TREE_FROM_UNIT_GRAPH", "1")
+        .with_stdout(
+            "\
+bdep v1.0.0
+└── b v1.0.0
+    └── c v1.0.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn virtual_workspace() {
     // Multiple packages in a virtual workspace.
     Package::new("somedep", "1.0.0").publish();
