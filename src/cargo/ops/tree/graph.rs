@@ -1,7 +1,7 @@
 //! Code for building the graph used by `cargo tree`.
 
 use super::TreeOptions;
-use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::core::compiler::{BuildContext, CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
@@ -82,6 +82,10 @@ pub struct Graph<'a> {
 }
 
 impl<'a> Graph<'a> {
+    pub fn from_bcx<'cfg>(bcx: BuildContext<'a, 'cfg>) -> CargoResult<Graph<'a>> {
+        anyhow::bail!("TODO: make graph from {:?}", bcx.unit_graph)
+    }
+
     fn new(package_map: HashMap<PackageId, &'a Package>) -> Graph<'a> {
         Graph {
             nodes: Vec::new(),

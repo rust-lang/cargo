@@ -1,11 +1,11 @@
 //! Implementation of `cargo tree`.
 
 use self::format::Pattern;
-use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, UnitInterner};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
-use crate::ops::{self, Packages};
+use crate::ops::{self, create_bcx, CompileOptions, Packages};
 use crate::util::{CargoResult, Config};
 use crate::{drop_print, drop_println};
 use anyhow::Context;
@@ -166,8 +166,12 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         .map(|pkg| (pkg.package_id(), pkg))
         .collect();
 
+    let interner = UnitInterner::new();
+    let options = CompileOptions::new(ws.config(), CompileMode::Build)?;
     let mut graph = if std::env::var("CARGO_TREE_FROM_UNIT_GRAPH").is_ok() {
-        todo!("build stuff from UnitGraph");
+        let bcx = create_bcx(ws, &options, &interner)?;
+
+        Graph::from_bcx(bcx)?
     } else {
         graph::build(
             ws,
