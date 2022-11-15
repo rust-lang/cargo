@@ -287,6 +287,7 @@ impl<'a> Graph<'a> {
 /// This is useful for finding bugs in the implementation of `build()`, below.
 pub fn from_bcx<'a, 'cfg>(
     bcx: BuildContext<'a, 'cfg>,
+    resolve: &Resolve,
     package_map: HashMap<PackageId, &'a Package>,
     opts: &TreeOptions,
 ) -> CargoResult<Graph<'a>> {
@@ -314,18 +315,41 @@ pub fn from_bcx<'a, 'cfg>(
         let from_index = *graph.index.get(&node).unwrap();
 
         for dep in deps {
+            if dep.unit.pkg.package_id() == unit.pkg.package_id() {
+                // Probably a build script that's part of the same package. Skip it.
+                continue;
+            }
             let dep_node = Node::package_for_unit(&dep.unit);
             let dep_index = *graph.index.get(&dep_node).unwrap();
             // FIXME:
             // * CompileKind doesn't know anything about development dependencies, so we never
             //   produce DepKind::Development here (also need to tell the build context to give
             //   us dev dependencies, which we currently don't do).
-            // * If target == host, and there are no crazy build-dep-specific-features going on,
-            //   Normal deps seem to be reported as CompileKind::Host, so we can't use this to
-            //   distinguish between DepKind::Build and DepKind::Normal.
-            let kind = DepKind::Normal;
 
-            graph.edges[from_index].add_edge(EdgeKind::Dep(kind), dep_index);
+            // FIXME: This is really ugly. It's also quadratic in `deps.len()`, but `deps` is only
+            // the direct dependencies of `unit`, so the ugliness is more important.
+            // I think I want to `zip(sorted(deps), sorted(resolve.deps(unit)))` and then assert
+            // that the ids line up, with nothing left over.
+            let mut found = false;
+            for (_, dep_set) in resolve
+                .deps(unit.pkg.package_id())
+                .filter(|(dep_id, _dep_set)| dep_id == &dep.unit.pkg.package_id())
+            {
+                found = true;
+                assert!(
+                    !dep_set.is_empty(),
+                    "resolver should be able to tell us why {unit:?} depends on {dep:?}"
+                );
+                for link in dep_set {
+                    let kind = link.kind();
+                    graph.edges[from_index].add_edge(EdgeKind::Dep(kind), dep_index);
+                }
+            }
+
+            assert!(
+                found,
+                "resolver should have a record of {unit:?} depending on {dep:?}"
+            );
         }
     }
     Ok(graph)
