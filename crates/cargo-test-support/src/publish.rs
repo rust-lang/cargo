@@ -161,7 +161,7 @@ pub(crate) fn create_index_line(
     name: serde_json::Value,
     vers: &str,
     deps: Vec<serde_json::Value>,
-    cksum: Option<&str>,
+    cksum: &str,
     features: crate::registry::FeatureMap,
     yanked: bool,
     links: Option<String>,

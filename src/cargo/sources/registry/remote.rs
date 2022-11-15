@@ -5,7 +5,7 @@ use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{internal, Config, Filesystem};
+use crate::util::{Config, Filesystem};
 use anyhow::Context as _;
 use cargo_util::paths;
 use lazycell::LazyCell;
@@ -310,8 +310,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.updated
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: Option<&str>) -> CargoResult<MaybeLock> {
-        let checksum = checksum.ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?;
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let registry_config = loop {
             match self.config()? {
                 Poll::Pending => self.block_until_ready()?,

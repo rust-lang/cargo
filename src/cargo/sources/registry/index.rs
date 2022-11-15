@@ -265,18 +265,15 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Returns the hash listed for a specified `PackageId`.
-    pub fn hash(
-        &mut self,
-        pkg: PackageId,
-        load: &mut dyn RegistryData,
-    ) -> Poll<CargoResult<Option<&str>>> {
+    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
         let req = OptVersionReq::exact(pkg.version());
         let summary = self.summaries(pkg.name(), &req, load)?;
         let summary = ready!(summary).next();
         Poll::Ready(Ok(summary
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
             .summary
-            .checksum()))
+            .checksum()
+            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?))
     }
 
     /// Load a list of summaries for `name` package in this registry which
@@ -858,7 +855,7 @@ impl IndexSummary {
             }
         }
         let mut summary = Summary::new(config, pkgid, deps, &features, links)?;
-        cksum.map(|cksum| summary.set_checksum(cksum));
+        summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,
             yanked: yanked.unwrap_or(false),

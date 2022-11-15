@@ -108,7 +108,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         self.updated
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: Option<&str>) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
 
         // Note that the usage of `into_path_unlocked` here is because the local
@@ -129,10 +129,8 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // We don't actually need to download anything per-se, we just need to
         // verify the checksum matches the .crate file itself.
         let actual = Sha256::new().update_file(&crate_file)?.finish_hex();
-        if let Some(checksum) = checksum {
-            if actual != checksum {
-                anyhow::bail!("failed to verify the checksum of `{}`", pkg)
-            }
+        if actual != checksum && !checksum.is_empty() {
+            anyhow::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
         crate_file.seek(SeekFrom::Start(0))?;

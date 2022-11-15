@@ -822,7 +822,7 @@ impl HttpServer {
                 serde_json::json!(new_crate.name),
                 &new_crate.vers,
                 deps,
-                Some(&cksum(file)),
+                &cksum(file),
                 new_crate.features,
                 false,
                 new_crate.links,
@@ -1085,9 +1085,9 @@ impl Package {
             .collect::<Vec<_>>();
         let cksum = if self.generate_checksum {
             let c = t!(fs::read(&self.archive_dst()));
-            Some(cksum(&c))
+            cksum(&c)
         } else {
-            None
+            String::new()
         };
         let name = if self.invalid_json {
             serde_json::json!(1)
@@ -1098,7 +1098,7 @@ impl Package {
             name,
             &self.vers,
             deps,
-            cksum.as_deref(),
+            &cksum,
             self.features.clone(),
             self.yanked,
             self.links.clone(),
@@ -1113,7 +1113,7 @@ impl Package {
 
         write_to_index(&registry_path, &self.name, line, self.local);
 
-        cksum.unwrap_or_else(String::new)
+        cksum
     }
 
     fn make_archive(&self) {

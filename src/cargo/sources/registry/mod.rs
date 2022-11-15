@@ -179,7 +179,6 @@ use crate::core::source::MaybePackage;
 use crate::core::{Package, PackageId, QueryKind, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::hex;
-use crate::util::internal;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
 use crate::util::network::PollExt;
@@ -272,7 +271,7 @@ pub struct RegistryPackage<'a> {
     /// will fail to load due to not being able to parse the new syntax, even
     /// with a `Cargo.lock` file.
     features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
-    cksum: Option<String>,
+    cksum: String,
     /// If `true`, Cargo will skip this version when resolving.
     ///
     /// This was added in 2014. Everything in the crates.io index has this set
@@ -487,7 +486,7 @@ pub trait RegistryData {
     /// `finish_download`. For already downloaded `.crate` files, it does not
     /// validate the checksum, assuming the filesystem does not suffer from
     /// corruption or manipulation.
-    fn download(&mut self, pkg: PackageId, checksum: Option<&str>) -> CargoResult<MaybeLock>;
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
 
     /// Finish a download by saving a `.crate` file to disk.
     ///
@@ -795,9 +794,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 Poll::Pending => self.block_until_ready()?,
                 Poll::Ready(hash) => break hash,
             }
-        }
-        .ok_or_else(|| internal(format!("no hash listed for {}", package)))?;
-
+        };
         let file = self.ops.finish_download(package, hash, &data)?;
         self.get_pkg(package, &file)
     }
