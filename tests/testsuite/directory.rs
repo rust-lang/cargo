@@ -410,10 +410,11 @@ fn crates_io_then_bad_checksum() {
     p.cargo("build").run();
     setup();
 
-    VendorPackage::new("bar")
-        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file("src/lib.rs", "")
-        .build();
+    let mut v = VendorPackage::new("bar");
+    v.file("Cargo.toml", &basic_manifest("bar", "0.1.0"));
+    v.file("src/lib.rs", "");
+    v.cksum.package = Some("abcdef".into());
+    v.build();
 
     p.cargo("build")
         .with_status(101)

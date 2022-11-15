@@ -564,6 +564,10 @@ fn git_dependencies_do_not_require_a_checksum() {
 
     Package::new("bar", "0.0.1")
         .local(true)
+        // Omit the checksum from the local registry by
+        // since git dependencies do not have checksums.
+        // Make sure that cargo doesn't treat this empty
+        // checksum as invalid.
         .skip_checksum(true)
         .file("src/lib.rs", "pub fn bar() {}")
         .publish();
