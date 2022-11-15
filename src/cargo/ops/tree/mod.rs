@@ -173,7 +173,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     let mut graph = if std::env::var("CARGO_TREE_FROM_UNIT_GRAPH").is_ok() {
         let bcx = create_bcx(ws, &options, &interner)?;
 
-        Graph::from_bcx(bcx)?
+        graph::from_bcx(bcx, package_map, opts)?
     } else {
         graph::build(
             ws,

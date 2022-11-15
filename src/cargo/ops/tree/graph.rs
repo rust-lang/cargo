@@ -1,7 +1,9 @@
 //! Code for building the graph used by `cargo tree`.
 
+use itertools::Itertools;
+
 use super::TreeOptions;
-use crate::core::compiler::{BuildContext, CompileKind, RustcTargetData};
+use crate::core::compiler::{BuildContext, CompileKind, RustcTargetData, Unit};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
@@ -24,6 +26,20 @@ pub enum Node {
         /// Name of the feature.
         name: InternedString,
     },
+}
+
+impl Node {
+    /// Make a Node representing the Node::Package of a Unit.
+    ///
+    /// Note: There is a many:1 relationship between Unit and Package,
+    /// because some units are build.rs builds or build.rs invocations.
+    fn package_for_unit(unit: &Unit) -> Node {
+        Node::Package {
+            package_id: unit.pkg.package_id(),
+            features: unit.features.clone(),
+            kind: unit.kind,
+        }
+    }
 }
 
 /// The kind of edge, for separating dependencies into different sections.
@@ -49,7 +65,7 @@ impl Edges {
         Edges(HashMap::new())
     }
 
-    /// Adds an edge pointing to the given node.
+    /// Adds an edge pointing to the given node. This is idempotent.
     fn add_edge(&mut self, kind: EdgeKind, index: usize) {
         let indexes = self.0.entry(kind).or_default();
         if !indexes.contains(&index) {
@@ -82,10 +98,6 @@ pub struct Graph<'a> {
 }
 
 impl<'a> Graph<'a> {
-    pub fn from_bcx<'cfg>(bcx: BuildContext<'a, 'cfg>) -> CargoResult<Graph<'a>> {
-        anyhow::bail!("TODO: make graph from {:?}", bcx.unit_graph)
-    }
-
     fn new(package_map: HashMap<PackageId, &'a Package>) -> Graph<'a> {
         Graph {
             nodes: Vec::new(),
@@ -268,6 +280,55 @@ impl<'a> Graph<'a> {
         dupes.sort_unstable();
         dupes.into_iter().map(|(_node, i)| i).collect()
     }
+}
+
+/// Builds the graph by iterating over the UnitDeps of a BuildContext.
+///
+/// This is useful for finding bugs in the implementation of `build()`, below.
+pub fn from_bcx<'a, 'cfg>(
+    bcx: BuildContext<'a, 'cfg>,
+    package_map: HashMap<PackageId, &'a Package>,
+    opts: &TreeOptions,
+) -> CargoResult<Graph<'a>> {
+    let mut graph = Graph::new(package_map);
+
+    // First pass: add all of the nodes
+    for unit in bcx.unit_graph.keys().sorted() {
+        let node = Node::package_for_unit(unit);
+        if graph.index.contains_key(&node) {
+            log::debug!(
+                "already added {node:#?} (for {unit:#?}). This is probably a build script?"
+            );
+            continue;
+        }
+        graph.add_node(node);
+
+        if opts.graph_features {
+            todo!("extract features from {:?}", unit.features);
+        }
+    }
+
+    // second pass: add all of the edges
+    for (unit, deps) in bcx.unit_graph.iter() {
+        let node = Node::package_for_unit(unit);
+        let from_index = *graph.index.get(&node).unwrap();
+
+        for dep in deps {
+            let dep_node = Node::package_for_unit(&dep.unit);
+            let dep_index = *graph.index.get(&dep_node).unwrap();
+            // FIXME:
+            // * CompileKind doesn't know anything about development dependencies, so we never
+            //   produce DepKind::Development here (also need to tell the build context to give
+            //   us dev dependencies, which we currently don't do).
+            // * If target == host, and there are no crazy build-dep-specific-features going on,
+            //   Normal deps seem to be reported as CompileKind::Host, so we can't use this to
+            //   distinguish between DepKind::Build and DepKind::Normal.
+            let kind = DepKind::Normal;
+
+            graph.edges[from_index].add_edge(EdgeKind::Dep(kind), dep_index);
+        }
+    }
+    Ok(graph)
 }
 
 /// Builds the graph.
