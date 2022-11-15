@@ -166,6 +166,8 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         .map(|pkg| (pkg.package_id(), pkg))
         .collect();
 
+    // FIXME: these variables are only needed by one branch of the if statement, but are here for
+    // lifetime reasons. Consider refactoring.
     let interner = UnitInterner::new();
     let options = CompileOptions::new(ws.config(), CompileMode::Build)?;
     let mut graph = if std::env::var("CARGO_TREE_FROM_UNIT_GRAPH").is_ok() {
