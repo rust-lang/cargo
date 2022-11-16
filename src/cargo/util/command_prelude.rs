@@ -665,13 +665,23 @@ pub trait ArgMatchesExt {
     }
 
     fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
-        match self._value_of("registry") {
-            Some(registry) => {
-                validate_package_name(registry, "registry name", "")?;
-                Ok(Some(registry.to_string()))
+        let registry = self._value_of("registry");
+        let index = self._value_of("index");
+        let result = match (registry, index) {
+            (None, None) => config.default_registry()?,
+            (None, Some(_)) => {
+                // If --index is set, then do not look at registry.default.
+                None
             }
-            None => config.default_registry(),
-        }
+            (Some(r), None) => {
+                validate_package_name(r, "registry name", "")?;
+                Some(r.to_string())
+            }
+            (Some(_), Some(_)) => {
+                bail!("both `--index` and `--registry` should not be set at the same time")
+            }
+        };
+        Ok(result)
     }
 
     fn index(&self) -> CargoResult<Option<String>> {

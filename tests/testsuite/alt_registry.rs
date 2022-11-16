@@ -1291,6 +1291,25 @@ fn both_index_and_registry() {
 }
 
 #[cargo_test]
+fn both_index_and_default() {
+    let p = project().file("src/lib.rs", "").build();
+    for cmd in &[
+        "publish",
+        "owner",
+        "search",
+        "yank --version 1.0.0",
+        "install foo",
+    ] {
+        p.cargo(cmd)
+            .env("CARGO_REGISTRY_DEFAULT", "undefined")
+            .arg(format!("--index=index_url"))
+            .with_status(101)
+            .with_stderr("[ERROR] invalid url `index_url`: relative URL without a base")
+            .run();
+    }
+}
+
+#[cargo_test]
 fn sparse_lockfile() {
     let _registry = registry::RegistryBuilder::new()
         .http_index()

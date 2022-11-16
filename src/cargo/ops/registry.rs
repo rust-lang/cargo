@@ -1031,11 +1031,8 @@ fn get_source_id(
 ) -> CargoResult<RegistrySourceIds> {
     let sid = match (reg, index) {
         (None, None) => SourceId::crates_io(config)?,
+        (_, Some(i)) => SourceId::for_registry(&i.into_url()?)?,
         (Some(r), None) => SourceId::alt_registry(config, r)?,
-        (None, Some(i)) => SourceId::for_registry(&i.into_url()?)?,
-        (Some(_), Some(_)) => {
-            bail!("both `--index` and `--registry` should not be set at the same time")
-        }
     };
     // Load source replacements that are built-in to Cargo.
     let builtin_replacement_sid = SourceConfigMap::empty(config)?
