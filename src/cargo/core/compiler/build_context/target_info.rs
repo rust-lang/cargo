@@ -462,6 +462,16 @@ impl TargetInfo {
                     // preserved.
                     should_replace_hyphens: true,
                 })
+            } else {
+                ret.push(FileType {
+                    suffix: ".dwp".to_string(),
+                    prefix: prefix.clone(),
+                    flavor: FileFlavor::DebugInfo,
+                    crate_type: Some(crate_type),
+                    // Currently no known reason to prefer one naming scheme
+                    // over the other, but the macos approach seems friendlier.
+                    should_replace_hyphens: false,
+                })
             }
         }
 
