@@ -76,8 +76,8 @@ extern "C" {
 
 struct GnomeSecret;
 
-fn label(registry_name: &str) -> CString {
-    CString::new(format!("cargo-registry:{}", registry_name)).unwrap()
+fn label(index_url: &str) -> CString {
+    CString::new(format!("cargo-registry:{}", index_url)).unwrap()
 }
 
 fn schema() -> SecretSchema {
@@ -86,10 +86,6 @@ fn schema() -> SecretSchema {
         attr_type: SecretSchemaAttributeType::String,
     }; 32];
     attributes[0] = SecretSchemaAttribute {
-        name: b"registry\0".as_ptr() as *const gchar,
-        attr_type: SecretSchemaAttributeType::String,
-    };
-    attributes[1] = SecretSchemaAttribute {
         name: b"url\0".as_ptr() as *const gchar,
         attr_type: SecretSchemaAttributeType::String,
     };
@@ -105,22 +101,18 @@ impl Credential for GnomeSecret {
         env!("CARGO_PKG_NAME")
     }
 
-    fn get(&self, registry_name: &str, api_url: &str) -> Result<String, Error> {
+    fn get(&self, index_url: &str) -> Result<String, Error> {
         let mut error: *mut GError = null_mut();
-        let attr_registry = CString::new("registry").unwrap();
         let attr_url = CString::new("url").unwrap();
-        let registry_name_c = CString::new(registry_name).unwrap();
-        let api_url_c = CString::new(api_url).unwrap();
+        let index_url_c = CString::new(index_url).unwrap();
         let schema = schema();
         unsafe {
             let token_c = secret_password_lookup_sync(
                 &schema,
                 null_mut(),
                 &mut error,
-                attr_registry.as_ptr(),
-                registry_name_c.as_ptr(),
                 attr_url.as_ptr(),
-                api_url_c.as_ptr(),
+                index_url_c.as_ptr(),
                 null() as *const gchar,
             );
             if !error.is_null() {
@@ -131,7 +123,7 @@ impl Credential for GnomeSecret {
                 .into());
             }
             if token_c.is_null() {
-                return Err(format!("cannot find token for {}", registry_name).into());
+                return Err(format!("cannot find token for {}", index_url).into());
             }
             let token = CStr::from_ptr(token_c)
                 .to_str()
@@ -141,14 +133,12 @@ impl Credential for GnomeSecret {
         }
     }
 
-    fn store(&self, registry_name: &str, api_url: &str, token: &str) -> Result<(), Error> {
-        let label = label(registry_name);
+    fn store(&self, index_url: &str, token: &str, name: Option<&str>) -> Result<(), Error> {
+        let label = label(name.unwrap_or(index_url));
         let token = CString::new(token).unwrap();
         let mut error: *mut GError = null_mut();
-        let attr_registry = CString::new("registry").unwrap();
         let attr_url = CString::new("url").unwrap();
-        let registry_name_c = CString::new(registry_name).unwrap();
-        let api_url_c = CString::new(api_url).unwrap();
+        let index_url_c = CString::new(index_url).unwrap();
         let schema = schema();
         unsafe {
             secret_password_store_sync(
@@ -158,10 +148,8 @@ impl Credential for GnomeSecret {
                 token.as_ptr(),
                 null_mut(),
                 &mut error,
-                attr_registry.as_ptr(),
-                registry_name_c.as_ptr(),
                 attr_url.as_ptr(),
-                api_url_c.as_ptr(),
+                index_url_c.as_ptr(),
                 null() as *const gchar,
             );
             if !error.is_null() {
@@ -175,22 +163,18 @@ impl Credential for GnomeSecret {
         Ok(())
     }
 
-    fn erase(&self, registry_name: &str, api_url: &str) -> Result<(), Error> {
+    fn erase(&self, index_url: &str) -> Result<(), Error> {
         let schema = schema();
         let mut error: *mut GError = null_mut();
-        let attr_registry = CString::new("registry").unwrap();
         let attr_url = CString::new("url").unwrap();
-        let registry_name_c = CString::new(registry_name).unwrap();
-        let api_url_c = CString::new(api_url).unwrap();
+        let index_url_c = CString::new(index_url).unwrap();
         unsafe {
             secret_password_clear_sync(
                 &schema,
                 null_mut(),
                 &mut error,
-                attr_registry.as_ptr(),
-                registry_name_c.as_ptr(),
                 attr_url.as_ptr(),
-                api_url_c.as_ptr(),
+                index_url_c.as_ptr(),
                 null() as *const gchar,
             );
             if !error.is_null() {

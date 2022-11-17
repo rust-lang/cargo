@@ -100,6 +100,7 @@ Each new feature described below should explain how to use it.
     * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
     * [sparse-registry](#sparse-registry) — Adds support for fetching from static-file HTTP registries (`sparse+`)
     * [publish-timeout](#publish-timeout) — Controls the timeout between uploading the crate and being available in the index
+    * [registry-auth](#registry-auth) — Adds support for authenticated registries.
 
 ### allow-features
 
@@ -847,7 +848,13 @@ for crates.io. This option requires `-Z sparse-registry` to be enabled.
 
 * `sparse` — Use sparse index.
 * `git` — Use git index.
-* If the option is unset, it will be sparse index if `-Z sparse-registry` is enabled, otherwise it will be git index.
+* If the option is unset, it will be sparse index if `-Z sparse-registry` is enabled,
+  otherwise it will be git index.
+
+Cargo locally caches the crate metadata files, and captures an `ETag` or `Last-Modified` 
+HTTP header from the server for each entry. When refreshing crate metadata, Cargo will
+send the `If-None-Match` or `If-Modified-Since` header to allow the server to respond
+with HTTP 304 if the local cache is valid, saving time and bandwidth.
 
 ### publish-timeout
 * Tracking Issue: [11222](https://github.com/rust-lang/cargo/issues/11222)
@@ -864,6 +871,30 @@ It requires the `-Zpublish-timeout` command-line options to be set.
 # config.toml
 [publish]
 timeout = 300  # in seconds
+```
+
+### registry-auth
+* Tracking Issue: [10474](https://github.com/rust-lang/cargo/issues/10474)
+* RFC: [#3139](https://github.com/rust-lang/rfcs/pull/3139)
+
+Enables Cargo to include the authorization token for API requests, crate downloads
+and sparse index updates by adding a configuration option to config.json
+in the registry index.
+
+To use this feature, the registry server must include `"auth-required": true` in
+`config.json`, and you must pass the `-Z registry-auth` flag on the Cargo command line.
+
+When using the sparse protocol, Cargo will attempt to fetch the `config.json` file before
+fetching any other files. If the server responds with an HTTP 401, then Cargo will assume
+that the registry requires authentication and re-attempt the request for `config.json`
+with the authentication token included.
+
+On authentication failure (or missing authentication token) the server MAY include a
+`WWW-Authenticate` header with a `Cargo login_url` challenge to indicate where the user
+can go to get a token.
+
+```
+WWW-Authenticate: Cargo login_url="https://test-registry-login/me
 ```
 
 ### credential-process
@@ -1010,8 +1041,8 @@ interactions are:
 The following environment variables will be provided to the executed command:
 
 * `CARGO` — Path to the `cargo` binary executing the command.
-* `CARGO_REGISTRY_NAME` — Name of the registry the authentication token is for.
-* `CARGO_REGISTRY_API_URL` — The URL of the registry API.
+* `CARGO_REGISTRY_INDEX_URL` — The URL of the registry index.
+* `CARGO_REGISTRY_NAME_OPT` — Optional name of the registry. Should not be used as a storage key. Not always available.
 
 #### `cargo logout`
 

@@ -25,7 +25,7 @@ pub use self::registry::HttpTimeout;
 pub use self::registry::{configure_http_handle, http_handle, http_handle_and_timeout};
 pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts};
 pub use self::registry::{needs_custom_http_transport, registry_login, registry_logout, search};
-pub use self::registry::{publish, registry_configuration, RegistryConfig};
+pub use self::registry::{publish, RegistryCredentialConfig};
 pub use self::resolve::{
     add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws, resolve_ws_with_opts,
     WorkspaceResolve,

@@ -11,7 +11,7 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
-use std::thread;
+use std::thread::{self, JoinHandle};
 use tar::{Builder, Header};
 use url::Url;
 
@@ -61,6 +61,8 @@ pub struct RegistryBuilder {
     alternative: Option<String>,
     /// If set, the authorization token for the registry.
     token: Option<String>,
+    /// If set, the registry requires authorization for all operations.
+    auth_required: bool,
     /// If set, serves the index over http.
     http_index: bool,
     /// If set, serves the API over http.
@@ -76,7 +78,7 @@ pub struct RegistryBuilder {
 }
 
 pub struct TestRegistry {
-    _server: Option<HttpServerHandle>,
+    server: Option<HttpServerHandle>,
     index_url: Url,
     path: PathBuf,
     api_url: Url,
@@ -98,6 +100,17 @@ impl TestRegistry {
             .as_deref()
             .expect("registry was not configured with a token")
     }
+
+    /// Shutdown the server thread and wait for it to stop.
+    /// `Drop` automatically stops the server, but this additionally
+    /// waits for the thread to stop.
+    pub fn join(self) {
+        if let Some(mut server) = self.server {
+            server.stop();
+            let handle = server.handle.take().unwrap();
+            handle.join().unwrap();
+        }
+    }
 }
 
 impl RegistryBuilder {
@@ -106,6 +119,7 @@ impl RegistryBuilder {
         RegistryBuilder {
             alternative: None,
             token: None,
+            auth_required: false,
             http_api: false,
             http_index: false,
             api: true,
@@ -160,6 +174,14 @@ impl RegistryBuilder {
         self
     }
 
+    /// Sets this registry to require the authentication token for
+    /// all operations.
+    #[must_use]
+    pub fn auth_required(mut self) -> Self {
+        self.auth_required = true;
+        self
+    }
+
     /// Operate the index over http
     #[must_use]
     pub fn http_index(mut self) -> Self {
@@ -207,6 +229,7 @@ impl RegistryBuilder {
                 registry_path.clone(),
                 dl_path,
                 token.clone(),
+                self.auth_required,
                 self.custom_responders,
             );
             let index_url = if self.http_index {
@@ -226,7 +249,7 @@ impl RegistryBuilder {
         let registry = TestRegistry {
             api_url,
             index_url,
-            _server: server,
+            server,
             dl_url,
             path: registry_path,
             token,
@@ -293,6 +316,11 @@ impl RegistryBuilder {
             }
         }
 
+        let auth = if self.auth_required {
+            r#","auth-required":true"#
+        } else {
+            ""
+        };
         let api = if self.api {
             format!(r#","api":"{}""#, registry.api_url)
         } else {
@@ -302,7 +330,7 @@ impl RegistryBuilder {
         repo(&registry.path)
             .file(
                 "config.json",
-                &format!(r#"{{"dl":"{}"{api}}}"#, registry.dl_url),
+                &format!(r#"{{"dl":"{}"{api}{auth}}}"#, registry.dl_url),
             )
             .build();
         fs::create_dir_all(api_path.join("api/v1/crates")).unwrap();
@@ -442,6 +470,7 @@ pub fn alt_init() -> TestRegistry {
 
 pub struct HttpServerHandle {
     addr: SocketAddr,
+    handle: Option<JoinHandle<()>>,
 }
 
 impl HttpServerHandle {
@@ -456,15 +485,19 @@ impl HttpServerHandle {
     pub fn dl_url(&self) -> Url {
         Url::parse(&format!("http://{}/dl", self.addr.to_string())).unwrap()
     }
-}
 
-impl Drop for HttpServerHandle {
-    fn drop(&mut self) {
+    fn stop(&self) {
         if let Ok(mut stream) = TcpStream::connect(self.addr) {
             // shutdown the server
             let _ = stream.write_all(b"stop");
             let _ = stream.flush();
         }
+    }
+}
+
+impl Drop for HttpServerHandle {
+    fn drop(&mut self) {
+        self.stop();
     }
 }
 
@@ -504,6 +537,7 @@ pub struct HttpServer {
     registry_path: PathBuf,
     dl_path: PathBuf,
     token: Option<String>,
+    auth_required: bool,
     custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
 }
 
@@ -512,6 +546,7 @@ impl HttpServer {
         registry_path: PathBuf,
         dl_path: PathBuf,
         token: Option<String>,
+        auth_required: bool,
         api_responders: HashMap<
             &'static str,
             Box<dyn Send + Fn(&Request, &HttpServer) -> Response>,
@@ -524,10 +559,11 @@ impl HttpServer {
             registry_path,
             dl_path,
             token,
+            auth_required,
             custom_responders: api_responders,
         };
-        thread::spawn(move || server.start());
-        HttpServerHandle { addr }
+        let handle = Some(thread::spawn(move || server.start()));
+        HttpServerHandle { addr, handle }
     }
 
     fn start(&self) {
@@ -615,7 +651,7 @@ impl HttpServer {
     /// Route the request
     fn route(&self, req: &Request) -> Response {
         let authorized = |mutatation: bool| {
-            if mutatation {
+            if mutatation || self.auth_required {
                 self.token == req.authorization
             } else {
                 assert!(req.authorization.is_none(), "unexpected token");
@@ -676,7 +712,9 @@ impl HttpServer {
     pub fn unauthorized(&self, _req: &Request) -> Response {
         Response {
             code: 401,
-            headers: vec![],
+            headers: vec![
+                r#"WWW-Authenticate: Cargo login_url="https://test-registry-login/me""#.to_string(),
+            ],
             body: b"Unauthorized message from server.".to_vec(),
         }
     }

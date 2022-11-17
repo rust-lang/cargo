@@ -46,14 +46,16 @@ fn check_config_token(registry: Option<&str>, should_be_set: bool) {
 }
 
 fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str) {
-    let msg = reg.unwrap_or("crates.io");
+    let msg = reg.unwrap_or("crates-io");
     check_config_token(reg, true);
-    cargo_process(&format!("logout -Z unstable-options {}", flag))
+    let mut cargo = cargo_process(&format!("logout -Z unstable-options {}", flag));
+    if reg.is_none() {
+        cargo.replace_crates_io(registry.index_url());
+    }
+    cargo
         .masquerade_as_nightly_cargo(&["cargo-logout"])
-        .replace_crates_io(registry.index_url())
         .with_stderr(&format!(
             "\
-[UPDATING] [..]
 [LOGOUT] token for `{}` has been removed from local storage
 ",
             msg
@@ -61,9 +63,12 @@ fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str) {
         .run();
     check_config_token(reg, false);
 
-    cargo_process(&format!("logout -Z unstable-options {}", flag))
+    let mut cargo = cargo_process(&format!("logout -Z unstable-options {}", flag));
+    if reg.is_none() {
+        cargo.replace_crates_io(registry.index_url());
+    }
+    cargo
         .masquerade_as_nightly_cargo(&["cargo-logout"])
-        .replace_crates_io(registry.index_url())
         .with_stderr(&format!(
             "\
 [LOGOUT] not currently logged in to `{}`

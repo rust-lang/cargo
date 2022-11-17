@@ -404,9 +404,11 @@ fn block_publish_due_to_no_token() {
     // Now perform the actual publish
     p.cargo("publish --registry alternative")
         .with_status(101)
-        .with_stderr_contains(
-            "error: no upload token found, \
-            please run `cargo login` or pass `--token`",
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+error: no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
         )
         .run();
 }

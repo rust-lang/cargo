@@ -41,7 +41,7 @@ struct ListItem {
 
 #[derive(Deserialize)]
 struct Overview {
-    title: String,
+    url: String,
 }
 
 impl OnePasswordKeychain {
@@ -175,11 +175,7 @@ impl OnePasswordKeychain {
         Ok(buffer)
     }
 
-    fn search(
-        &self,
-        session: &Option<String>,
-        registry_name: &str,
-    ) -> Result<Option<String>, Error> {
+    fn search(&self, session: &Option<String>, index_url: &str) -> Result<Option<String>, Error> {
         let cmd = self.make_cmd(
             session,
             &[
@@ -196,15 +192,15 @@ impl OnePasswordKeychain {
             .map_err(|e| format!("failed to deserialize JSON from 1password list: {}", e))?;
         let mut matches = items
             .into_iter()
-            .filter(|item| item.overview.title == registry_name);
+            .filter(|item| item.overview.url == index_url);
         match matches.next() {
             Some(login) => {
                 // Should this maybe just sort on `updatedAt` and return the newest one?
                 if matches.next().is_some() {
                     return Err(format!(
-                        "too many 1password logins match registry name {}, \
+                        "too many 1password logins match registry `{}`, \
                         consider deleting the excess entries",
-                        registry_name
+                        index_url
                     )
                     .into());
                 }
@@ -214,7 +210,13 @@ impl OnePasswordKeychain {
         }
     }
 
-    fn modify(&self, session: &Option<String>, uuid: &str, token: &str) -> Result<(), Error> {
+    fn modify(
+        &self,
+        session: &Option<String>,
+        uuid: &str,
+        token: &str,
+        _name: Option<&str>,
+    ) -> Result<(), Error> {
         let cmd = self.make_cmd(
             session,
             &["edit", "item", uuid, &format!("password={}", token)],
@@ -226,10 +228,14 @@ impl OnePasswordKeychain {
     fn create(
         &self,
         session: &Option<String>,
-        registry_name: &str,
-        api_url: &str,
+        index_url: &str,
         token: &str,
+        name: Option<&str>,
     ) -> Result<(), Error> {
+        let title = match name {
+            Some(name) => format!("Cargo registry token for {}", name),
+            None => "Cargo registry token".to_string(),
+        };
         let cmd = self.make_cmd(
             session,
             &[
@@ -237,9 +243,9 @@ impl OnePasswordKeychain {
                 "item",
                 "Login",
                 &format!("password={}", token),
-                &format!("url={}", api_url),
+                &format!("url={}", index_url),
                 "--title",
-                registry_name,
+                &title,
                 "--tags",
                 CARGO_TAG,
             ],
@@ -276,36 +282,36 @@ impl Credential for OnePasswordKeychain {
         env!("CARGO_PKG_NAME")
     }
 
-    fn get(&self, registry_name: &str, _api_url: &str) -> Result<String, Error> {
+    fn get(&self, index_url: &str) -> Result<String, Error> {
         let session = self.signin()?;
-        if let Some(uuid) = self.search(&session, registry_name)? {
+        if let Some(uuid) = self.search(&session, index_url)? {
             self.get_token(&session, &uuid)
         } else {
             return Err(format!(
                 "no 1password entry found for registry `{}`, try `cargo login` to add a token",
-                registry_name
+                index_url
             )
             .into());
         }
     }
 
-    fn store(&self, registry_name: &str, api_url: &str, token: &str) -> Result<(), Error> {
+    fn store(&self, index_url: &str, token: &str, name: Option<&str>) -> Result<(), Error> {
         let session = self.signin()?;
         // Check if an item already exists.
-        if let Some(uuid) = self.search(&session, registry_name)? {
-            self.modify(&session, &uuid, token)
+        if let Some(uuid) = self.search(&session, index_url)? {
+            self.modify(&session, &uuid, token, name)
         } else {
-            self.create(&session, registry_name, api_url, token)
+            self.create(&session, index_url, token, name)
         }
     }
 
-    fn erase(&self, registry_name: &str, _api_url: &str) -> Result<(), Error> {
+    fn erase(&self, index_url: &str) -> Result<(), Error> {
         let session = self.signin()?;
         // Check if an item already exists.
-        if let Some(uuid) = self.search(&session, registry_name)? {
+        if let Some(uuid) = self.search(&session, index_url)? {
             self.delete(&session, &uuid)?;
         } else {
-            eprintln!("not currently logged in to `{}`", registry_name);
+            eprintln!("not currently logged in to `{}`", index_url);
         }
         Ok(())
     }

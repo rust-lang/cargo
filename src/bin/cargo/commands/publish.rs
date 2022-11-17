@@ -28,8 +28,6 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    config.load_credentials()?;
-
     let registry = args.registry(config)?;
     let ws = args.workspace(config)?;
     let index = args.index()?;

@@ -703,13 +703,17 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let pkg = source
             .download(id)
             .with_context(|| "unable to get packages from source")?;
-        let (url, descriptor) = match pkg {
+        let (url, descriptor, authorization) = match pkg {
             MaybePackage::Ready(pkg) => {
                 debug!("{} doesn't need a download", id);
                 assert!(slot.fill(pkg).is_ok());
                 return Ok(Some(slot.borrow().unwrap()));
             }
-            MaybePackage::Download { url, descriptor } => (url, descriptor),
+            MaybePackage::Download {
+                url,
+                descriptor,
+                authorization,
+            } => (url, descriptor, authorization),
         };
 
         // Ok we're going to download this crate, so let's set up all our
@@ -725,6 +729,13 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         handle.get(true)?;
         handle.url(&url)?;
         handle.follow_location(true)?; // follow redirects
+
+        // Add authorization header.
+        if let Some(authorization) = authorization {
+            let mut headers = curl::easy::List::new();
+            headers.append(&format!("Authorization: {}", authorization))?;
+            handle.http_headers(headers)?;
+        }
 
         // Enable HTTP/2 to be used as it'll allow true multiplexing which makes
         // downloads much faster.

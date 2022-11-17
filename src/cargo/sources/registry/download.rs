@@ -8,6 +8,7 @@ use crate::sources::registry::{
     RegistryConfig, CHECKSUM_TEMPLATE, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
     VERSION_TEMPLATE,
 };
+use crate::util::auth;
 use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem};
 use std::fmt::Write as FmtWrite;
@@ -69,9 +70,16 @@ pub(super) fn download(
             .replace(CHECKSUM_TEMPLATE, checksum);
     }
 
+    let authorization = if registry_config.auth_required {
+        Some(auth::auth_token(config, &pkg.source_id(), None)?)
+    } else {
+        None
+    };
+
     Ok(MaybeLock::Download {
         url,
         descriptor: pkg.to_string(),
+        authorization: authorization,
     })
 }
 

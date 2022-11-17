@@ -105,6 +105,7 @@ mod publish;
 mod publish_lockfile;
 mod read_manifest;
 mod registry;
+mod registry_auth;
 mod rename_deps;
 mod replace;
 mod required_features;

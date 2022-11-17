@@ -101,7 +101,7 @@ fn empty_login_token() {
 
     cargo_process("login")
         .replace_crates_io(registry.index_url())
-        .with_stdout("please paste the API Token found on [..]/me below")
+        .with_stdout("please paste the token found on [..]/me below")
         .with_stdin("\t\n")
         .with_stderr(
             "\
