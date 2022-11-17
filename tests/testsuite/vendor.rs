@@ -7,7 +7,7 @@
 use std::fs;
 
 use cargo_test_support::git;
-use cargo_test_support::registry::{self, Package};
+use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::{basic_lib_manifest, paths, project, Project};
 
 #[cargo_test]
@@ -65,6 +65,41 @@ replace-with = "vendored-sources"
 directory = "vendor"
 "#,
         )
+        .run();
+}
+
+#[cargo_test]
+fn vendor_sample_config_alt_registry() {
+    let registry = RegistryBuilder::new().alternative().http_index().build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                log = { version = "0.3.5", registry = "alternative" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").alternative(true).publish();
+
+    p.cargo("vendor --respect-source-config -Z sparse-registry")
+        .masquerade_as_nightly_cargo(&["sparse-registry"])
+        .with_stdout(format!(
+            r#"[source."{0}"]
+registry = "{0}"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+"#,
+            registry.index_url()
+        ))
         .run();
 }
 

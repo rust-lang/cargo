@@ -163,15 +163,21 @@ impl<'cfg> HttpRegistry<'cfg> {
         let url = source_id.url().as_str();
         // Ensure the url ends with a slash so we can concatenate paths.
         if !url.ends_with('/') {
-            anyhow::bail!("sparse registry url must end in a slash `/`: sparse+{url}")
+            anyhow::bail!("sparse registry url must end in a slash `/`: {url}")
         }
+        assert!(source_id.is_sparse());
+        let url = url
+            .strip_prefix("sparse+")
+            .expect("sparse registry needs sparse+ prefix")
+            .into_url()
+            .expect("a url with the sparse+ stripped should still be valid");
 
         Ok(HttpRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            url: source_id.url().to_owned(),
+            url: url,
             multi: Multi::new(),
             multiplexing: false,
             downloads: Downloads {
