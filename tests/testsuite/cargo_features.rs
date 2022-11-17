@@ -626,6 +626,14 @@ fn publish_allowed() {
         )
         .file("src/lib.rs", "")
         .build();
+
+    // HACK: Inject `a` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("a", "0.0.1").file("src/lib.rs", "").publish();
+
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
