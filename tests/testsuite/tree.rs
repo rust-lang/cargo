@@ -530,8 +530,8 @@ foo v0.1.0 ([..]/foo)
             "\
 [WARNING] nothing to print.
 
-To find dependencies that require specific features or target platforms, \
-try use options `--all-features` or `--target all` first, and then narrow your search scope accordingly.
+To find dependencies that require specific target platforms, \
+try use option `--target all` first, and then narrow your search scope accordingly.
 ",
         )
         .run();
