@@ -15,8 +15,8 @@ use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
 use super::{
-    PathValue, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
-    TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
+    PathValue, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget, TomlLibTarget,
+    TomlManifest, TomlTarget, TomlTestTarget,
 };
 use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};

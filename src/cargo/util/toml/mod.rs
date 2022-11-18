@@ -1445,7 +1445,7 @@ impl TomlManifest {
             }
         }
         if let Some(_) = &package.build {
-            // This entry if omitted will result in cargo to look for a `build.rs` on the 
+            // This entry if omitted will result in cargo to look for a `build.rs` on the
             // root of the package, if there is a `build.rs` at has been packaged on the root
             // even if it was on a custom path before
             package.build = None;
@@ -2381,7 +2381,6 @@ impl TomlManifest {
         }
         Ok(patch)
     }
-
 
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()

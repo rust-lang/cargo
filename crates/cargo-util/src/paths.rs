@@ -747,8 +747,8 @@ fn exclude_from_time_machine(path: &Path) {
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_path, join_paths};
-    use std::path::{PathBuf, Path};
+    use super::{join_paths, normalize_path};
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn join_paths_lists_paths_on_error() {
@@ -789,10 +789,7 @@ mod tests {
     #[test]
     fn normalize_path_works() {
         let path = Path::new("../cargo");
-        assert_eq!(
-            normalize_path(&path),
-            PathBuf::from("cargo")
-        );
+        assert_eq!(normalize_path(&path), PathBuf::from("cargo"));
 
         let path = Path::new("C:\\Users\\user_name\\..\\user_name\\folder");
         assert_eq!(

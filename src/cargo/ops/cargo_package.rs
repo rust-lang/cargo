@@ -278,7 +278,7 @@ fn build_ar_list(
         });
     }
 
-    // Process special files that may need to be moved/modified like the 
+    // Process special files that may need to be moved/modified like the
     // license, the readme and the build script (build.rs)
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
@@ -312,14 +312,7 @@ fn build_ar_list(
         let readme_path = Path::new(readme);
         let abs_file_path = paths::normalize_path(&pkg.root().join(readme_path));
         if abs_file_path.exists() {
-            check_for_file_and_add(
-                "readme",
-                readme_path, 
-                abs_file_path, 
-                pkg,
-                &mut result,
-                ws
-            )?;
+            check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
         }
     }
     if let Some(build_script_path) = pkg.manifest().build_script() {
@@ -329,9 +322,9 @@ fn build_ar_list(
                 "build-script",
                 build_script_path,
                 abs_build_script_path,
-                pkg, 
+                pkg,
                 &mut result,
-                ws
+                ws,
             )?;
         } else {
             unreachable!();
@@ -344,14 +337,14 @@ fn build_ar_list(
 
 /// Check for special files that have to be archived, but may be on external paths to the
 /// package root
-/// 
+///
 /// ### Parameters
 /// * `label` - The human readable name of the type of file
-/// * `file_path` - The relative file path of the file (used just for 
+/// * `file_path` - The relative file path of the file (used just for
 ///                 human readable logging)
 /// * `abs_file_path` - The absolute file path of the file
 /// * `pkg` - The current package that issues this file
-/// * `files` - The files to be archived 
+/// * `files` - The files to be archived
 /// * `ws` - The workspace (used just for logging)
 fn check_for_file_and_add(
     label: &str,
@@ -363,7 +356,7 @@ fn check_for_file_and_add(
 ) -> CargoResult<()> {
     // Get the relative path of the file from the package root
     if let Ok(rel_file_path) = abs_file_path.strip_prefix(&pkg.root()) {
-        // If the files isn't already included on the arhived files, 
+        // If the files isn't already included on the arhived files,
         // include it
         if !files.iter().any(|ar| ar.rel_path == rel_file_path) {
             files.push(ArchiveFile {
