@@ -1,4 +1,6 @@
+use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::collections::{BTreeSet, HashMap};
+use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -8,6 +10,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
+use crate::core::manifest::TargetSourcePath;
 use crate::core::resolver::CliFeatures;
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
@@ -17,7 +20,7 @@ use crate::util::toml::TomlManifest;
 use crate::util::{self, human_readable_bytes, restricted_names, Config, FileLock};
 use crate::{drop_println, ops};
 use anyhow::Context as _;
-use cargo_util::paths;
+use cargo_util::paths::{self, is_outsider, normalize_path};
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
 use log::debug;
@@ -40,16 +43,80 @@ pub struct PackageOpts<'cfg> {
 const ORIGINAL_MANIFEST_FILE: &str = "Cargo.toml.orig";
 const VCS_INFO_FILE: &str = ".cargo_vcs_info.json";
 
+/// A file to archive, implements `Ord` because its used inside of `ArchivedFiles`
+/// this way the inner `BTreeSet` keeps them always ordered, which is needed. Also
+/// implements `Eq` because its needed that there are not two archived files that
+/// point to the same relative path
+#[derive(Clone)]
 struct ArchiveFile {
     /// The relative path in the archive (not including the top-level package
     /// name directory).
     rel_path: PathBuf,
+
     /// String variant of `rel_path`, for convenience.
     rel_str: String,
+
     /// The contents to add to the archive.
     contents: FileContents,
 }
 
+impl PartialEq for ArchiveFile {
+    fn eq(&self, other: &Self) -> bool {
+        self.rel_path.eq(&other.rel_path)
+    }
+}
+
+impl Eq for ArchiveFile {}
+
+impl PartialOrd for ArchiveFile {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.rel_path.cmp(&other.rel_path))
+    }
+}
+
+impl Ord for ArchiveFile {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+/// The sequence of files to archive, always ordered and doesn't contain duplicates
+/// because of the inner `BTreeSet`
+struct ArchivedFiles(BTreeSet<ArchiveFile>);
+
+impl ArchivedFiles {
+    /// Create a new `ArchivedFiles`
+    fn new() -> Self {
+        Self(BTreeSet::new())
+    }
+
+    /// Insert a `ArchivedFile`.
+    /// Returns if it couldn't insert because there was already one archive
+    /// with that path
+    fn insert(&mut self, file: ArchiveFile) -> bool {
+        self.0.insert(file)
+    }
+
+    /// Returns number of archived files
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Checks if there is an archived file with the provided `file_name`
+    fn contains_file_name(&self, file_name: &OsStr) -> bool {
+        self.0
+            .iter()
+            .find(|ar| ar.rel_path.file_name().unwrap() == file_name)
+            .is_some()
+    }
+
+    /// Iterator over the ordered elements
+    fn iter(&self) -> impl Iterator<Item = &ArchiveFile> {
+        self.0.iter()
+    }
+}
+
+#[derive(Clone)]
 enum FileContents {
     /// Absolute path to the file on disk to add to the archive.
     OnDisk(PathBuf),
@@ -57,6 +124,7 @@ enum FileContents {
     Generated(GeneratedFile),
 }
 
+#[derive(Clone)]
 enum GeneratedFile {
     /// Generates `Cargo.toml` by rewriting the original.
     Manifest,
@@ -66,14 +134,14 @@ enum GeneratedFile {
     VcsInfo(VcsInfo),
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct VcsInfo {
     git: GitVcsInfo,
     /// Path to the package within repo (empty string if root). / not \
     path_in_vcs: String,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct GitVcsInfo {
     sha1: String,
 }
@@ -113,7 +181,7 @@ pub fn package_one(
     let filecount = ar_files.len();
 
     if opts.list {
-        for ar_file in ar_files {
+        for ar_file in ar_files.iter() {
             drop_println!(config, "{}", ar_file.rel_str);
         }
 
@@ -224,8 +292,8 @@ fn build_ar_list(
     pkg: &Package,
     src_files: Vec<PathBuf>,
     vcs_info: Option<VcsInfo>,
-) -> CargoResult<Vec<ArchiveFile>> {
-    let mut result = Vec::new();
+) -> CargoResult<ArchivedFiles> {
+    let mut files = ArchivedFiles::new();
     let root = pkg.root();
     for src_file in src_files {
         let rel_path = src_file.strip_prefix(&root)?.to_path_buf();
@@ -238,12 +306,12 @@ fn build_ar_list(
             .to_string();
         match rel_str.as_ref() {
             "Cargo.toml" => {
-                result.push(ArchiveFile {
+                files.insert(ArchiveFile {
                     rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
                     rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
                     contents: FileContents::OnDisk(src_file),
                 });
-                result.push(ArchiveFile {
+                files.insert(ArchiveFile {
                     rel_path,
                     rel_str,
                     contents: FileContents::Generated(GeneratedFile::Manifest),
@@ -255,7 +323,7 @@ fn build_ar_list(
                 rel_str
             ),
             _ => {
-                result.push(ArchiveFile {
+                files.insert(ArchiveFile {
                     rel_path,
                     rel_str,
                     contents: FileContents::OnDisk(src_file),
@@ -263,23 +331,24 @@ fn build_ar_list(
             }
         }
     }
+
     if pkg.include_lockfile() {
-        result.push(ArchiveFile {
+        files.insert(ArchiveFile {
             rel_path: PathBuf::from("Cargo.lock"),
             rel_str: "Cargo.lock".to_string(),
             contents: FileContents::Generated(GeneratedFile::Lockfile),
         });
     }
     if let Some(vcs_info) = vcs_info {
-        result.push(ArchiveFile {
+        files.insert(ArchiveFile {
             rel_path: PathBuf::from(VCS_INFO_FILE),
             rel_str: VCS_INFO_FILE.to_string(),
             contents: FileContents::Generated(GeneratedFile::VcsInfo(vcs_info)),
         });
     }
 
-    // Process special files that may need to be moved/modified like the
-    // license, the readme and the build script (build.rs)
+    // Process special files that may need to be normalized for packaging like the
+    // readme and the license
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
         let abs_file_path = paths::normalize_path(&pkg.root().join(license_path));
@@ -289,7 +358,7 @@ fn build_ar_list(
                 license_path,
                 abs_file_path,
                 pkg,
-                &mut result,
+                &mut files,
                 ws,
             )?;
         } else {
@@ -312,27 +381,49 @@ fn build_ar_list(
         let readme_path = Path::new(readme);
         let abs_file_path = paths::normalize_path(&pkg.root().join(readme_path));
         if abs_file_path.exists() {
-            check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
+            check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut files, ws)?;
         }
     }
-    if let Some(build_script_path) = pkg.manifest().build_script() {
-        let abs_build_script_path = paths::normalize_path(&pkg.root().join(build_script_path));
-        if abs_build_script_path.exists() {
-            check_for_file_and_add(
-                "build-script",
-                build_script_path,
-                abs_build_script_path,
-                pkg,
-                &mut result,
-                ws,
-            )?;
-        } else {
-            unreachable!();
-        }
-    }
-    result.sort_unstable_by(|a, b| a.rel_path.cmp(&b.rel_path));
 
-    Ok(result)
+    // Check that every target contains a path inside the package root
+    for (tgt, src_path) in pkg.manifest().targets().iter().filter_map(|tgt| {
+        if let TargetSourcePath::Path(path) = tgt.src_path() {
+            Some((tgt, path.as_ref()))
+        } else {
+            None
+        }
+    }) {
+        // If the target has a source outside, report it as an error
+        let abs_src_path = normalize_path(src_path);
+        if is_outsider(&abs_src_path, pkg.root()) {
+            // Custom error message for build scripts (build.rs)
+            if tgt.is_custom_build() {
+                ws.config().shell().error(&format!(
+                    "the build script doesn't appear to be inside the package root folder, modify \
+                    your package manifest (Cargo.toml) to point to a build script inside the \
+                    package"
+                ))?;
+                std::process::exit(-1);
+            }
+
+            // Default message
+            ws.config().shell().error(&format!(
+                "the source file of {0:?} target \"{1}\" doesn't appear to be a path \
+                inside of the package. It is at {2}, whereas the root the package is {3}.\
+                This may cause issue during packaging, as modules resolution and resources \
+                included via macros are often relative to the path of source files. Consider updating \
+                the path of {0:?} target \"{1}\"  to point to a path inside the \
+                root of the package to resolve this error",
+                tgt.kind(),
+                tgt.name(),
+                abs_src_path.display(),
+                pkg.root().display(),
+            ))?;
+            std::process::exit(-1);
+        }
+    }
+
+    Ok(files)
 }
 
 /// Check for special files that have to be archived, but may be on external paths to the
@@ -351,72 +442,36 @@ fn check_for_file_and_add(
     file_path: &Path,
     abs_file_path: PathBuf,
     pkg: &Package,
-    files: &mut Vec<ArchiveFile>,
+    files: &mut ArchivedFiles,
     ws: &Workspace<'_>,
 ) -> CargoResult<()> {
-    // Get the relative path of the file from the package root
+    // Get the relative path to the package root
     if let Ok(rel_file_path) = abs_file_path.strip_prefix(&pkg.root()) {
-        // If the files isn't already included on the arhived files,
-        // include it
-        if !files.iter().any(|ar| ar.rel_path == rel_file_path) {
-            files.push(ArchiveFile {
-                rel_path: rel_file_path.to_path_buf(),
-                rel_str: rel_file_path
-                    .to_str()
-                    .expect("everything was utf8")
-                    .to_string(),
-                contents: FileContents::OnDisk(abs_file_path),
-            })
-        }
+        files.insert(ArchiveFile {
+            rel_path: rel_file_path.to_path_buf(),
+            rel_str: rel_file_path
+                .to_str()
+                .expect("everything was utf8")
+                .to_string(),
+            contents: FileContents::OnDisk(abs_file_path),
+        });
     } else {
-        // If the file exists somewhere outside of the package we will need
-        // to add it to the root
-        //
-        // Calculate if there is name collision with the outside package
-        // (warning) or if there is a exact path collision (error)
-        let file_name = abs_file_path.file_name().unwrap();
-        let mut name_collision = false;
-        let mut exact_path_collision = false;
-        for ar in files.iter() {
-            if ar.rel_path.file_name().unwrap() == file_name {
-                name_collision = true;
-                if ar.rel_path == pkg.root() {
-                    exact_path_collision = true;
-                    break;
-                }
-            }
-        }
-
-        if name_collision {
-            // Warn
+        // The file exists somewhere outside of the package.
+        let file_name = file_path.file_name().unwrap();
+        if files.contains_file_name(file_name) {
             ws.config().shell().warn(&format!(
                 "{} `{}` appears to be a path outside of the package, \
-                    but there is already a file named `{}` in the package. \
-                    The archived crate will contain the copy in the root of the package. \
-                    Update the {} to point to a path relative \
-                    to the root of the package to remove this warning.",
+                            but there is already a file named `{}` in the root of the package. \
+                            The archived crate will contain the copy in the root of the package. \
+                            Update the {} to point to the path relative \
+                            to the root of the package to remove this warning.",
                 label,
                 file_path.display(),
                 file_name.to_str().unwrap(),
                 label,
             ))?;
-        } else if exact_path_collision {
-            // Error (panic)
-            ws.config().shell().error(&format!(
-                "{} `{}` appears to be a path outside of the package, \
-                    but there is already a file `{}` in the root of the package. \
-                    because the default behaviour for external files referenced by \
-                    the pacakge is to put them on the root and there is already a file \
-                    with that name on the package this is a fatal error. ",
-                label,
-                file_path.display(),
-                file_name.to_str().unwrap(),
-            ))?;
-            std::process::exit(-1); // Don't know if the code matters
         } else {
-            // If there is no collision just archive that file to the root
-            // of the package
-            files.push(ArchiveFile {
+            files.insert(ArchiveFile {
                 rel_path: PathBuf::from(file_name),
                 rel_str: file_name.to_str().unwrap().to_string(),
                 contents: FileContents::OnDisk(abs_file_path),
@@ -650,7 +705,7 @@ fn check_repo_state(
 fn tar(
     ws: &Workspace<'_>,
     pkg: &Package,
-    ar_files: Vec<ArchiveFile>,
+    ar_files: ArchivedFiles,
     dst: &File,
     filename: &str,
 ) -> CargoResult<u64> {
@@ -668,7 +723,7 @@ fn tar(
     let base_path = Path::new(&base_name);
 
     let mut uncompressed_size = 0;
-    for ar_file in ar_files {
+    for ar_file in ar_files.iter() {
         let ArchiveFile {
             rel_path,
             rel_str,

@@ -352,6 +352,11 @@ pub fn bytes2path(bytes: &[u8]) -> Result<PathBuf> {
     }
 }
 
+/// Check if a path is outside the package root path
+pub fn is_outsider(path: &Path, pkg_root: &Path) -> bool {
+    !path.ancestors().any(|ancestor| ancestor == pkg_root)
+}
+
 /// Returns an iterator that walks up the directory hierarchy towards the root.
 ///
 /// Each item is a [`Path`]. It will start with the given path, finishing at
@@ -747,7 +752,7 @@ fn exclude_from_time_machine(path: &Path) {
 
 #[cfg(test)]
 mod tests {
-    use super::{join_paths, normalize_path};
+    use super::{is_outsider, join_paths, normalize_path};
     use std::path::{Path, PathBuf};
 
     #[test]
@@ -796,5 +801,16 @@ mod tests {
             normalize_path(&path),
             PathBuf::from("C:\\Users\\user_name\\folder")
         );
+    }
+
+    #[test]
+    fn check_outsider() {
+        let pkg_root = Path::new("C:\\Users\\user_name\\project");
+        let path = Path::new("C:\\Users\\user_name\\project\\src\\module");
+        assert!(is_outsider(path, pkg_root) == false);
+
+        let path = Path::new("C:\\Users");
+        assert!(is_outsider(path, pkg_root) == true);
+        assert!(is_outsider(pkg_root, pkg_root) == false);
     }
 }
