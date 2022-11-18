@@ -160,6 +160,15 @@ fn inherit_own_workspace_fields() {
         .file("bar.txt", "") // should be included when packaging
         .build();
 
+    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("foo", "1.2.3")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .run();
@@ -287,6 +296,16 @@ fn inherit_own_dependencies() {
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
+
+    // HACK: Inject `bar` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("bar", "0.2.0")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .run();
@@ -411,6 +430,16 @@ fn inherit_own_detailed_dependencies() {
     p.cargo("check").run();
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
+
+    // HACK: Inject `bar` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("bar", "0.2.0")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .run();
@@ -628,6 +657,15 @@ fn inherit_workspace_fields() {
         .file("bar/bar.txt", "") // should be included when packaging
         .build();
 
+    // HACK: Inject `bar` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("bar", "1.2.3")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .cwd("bar")
@@ -763,6 +801,16 @@ fn inherit_dependencies() {
     assert!(lockfile.contains("dep"));
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
+
+    // HACK: Inject `bar` directly into the index so `publish` won't block for it to be in
+    // the index.
+    //
+    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
+    // the registry from processing the publish.
+    Package::new("bar", "0.2.0")
+        .file("src/lib.rs", "")
+        .publish();
+
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .cwd("bar")
