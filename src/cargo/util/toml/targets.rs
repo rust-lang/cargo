@@ -15,7 +15,7 @@ use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
 use super::{
-    PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
+    PathValue, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
     TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };
 use crate::core::compiler::CrateType;
@@ -36,7 +36,6 @@ pub fn targets(
     package_name: &str,
     package_root: &Path,
     edition: Edition,
-    custom_build: &Option<StringOrBool>,
     metabuild: &Option<StringOrVec>,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
@@ -104,7 +103,7 @@ pub fn targets(
     )?);
 
     // processing the custom build script
-    if let Some(custom_build) = manifest.maybe_custom_build(custom_build, package_root) {
+    if let Some(custom_build) = package.build_script_path(package_root) {
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }

@@ -1329,6 +1329,26 @@ impl TomlPackage {
     ) -> CargoResult<PackageId> {
         PackageId::new(self.name, version, source_id)
     }
+
+    /// Returns the path to the build script if one exists for this crate.
+    pub fn build_script_path(&self, package_root: &Path) -> Option<PathBuf> {
+        let build_rs = package_root.join("build.rs");
+        match self.build {
+            // Explicitly no build script.
+            Some(StringOrBool::Bool(false)) => None,
+            Some(StringOrBool::Bool(true)) => Some(build_rs),
+            Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
+            None => {
+                // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
+                // a build script.
+                if build_rs.is_file() {
+                    Some(build_rs)
+                } else {
+                    None
+                }
+            }
+        }
+    }
 }
 
 struct Context<'a, 'b> {
@@ -1344,8 +1364,8 @@ struct Context<'a, 'b> {
 
 impl TomlManifest {
     /// Prepares the manifest for publishing.
-    // - Path and git components of dependency specifications are removed.
-    // - License path is updated to point within the package.
+    /// - Path and git components of dependency specifications are removed.
+    /// - License path is updated to point within the package.
     pub fn prepare_for_publish(
         &self,
         ws: &Workspace<'_>,
@@ -1379,6 +1399,8 @@ impl TomlManifest {
             // result in the same thing.
             package.resolver = Some(ws.resolve_behavior().to_manifest());
         }
+
+        // Update the referenced path on the manifest to the readme, license and build script if needed
         if let Some(license_file) = &package.license_file {
             let license_file = license_file
                 .as_defined()
@@ -1398,7 +1420,6 @@ impl TomlManifest {
                 ));
             }
         }
-
         if let Some(readme) = &package.readme {
             let readme = readme
                 .as_defined()
@@ -1423,6 +1444,13 @@ impl TomlManifest {
                 StringOrBool::Bool(_) => {}
             }
         }
+        if let Some(_) = &package.build {
+            // This entry if omitted will result in cargo to look for a `build.rs` on the 
+            // root of the package, if there is a `build.rs` at has been packaged on the root
+            // even if it was on a custom path before
+            package.build = None;
+        }
+
         let all = |_d: &TomlDependency| true;
         return Ok(TomlManifest {
             package: Some(package),
@@ -1727,7 +1755,6 @@ impl TomlManifest {
             package_name,
             package_root,
             edition,
-            &package.build,
             &package.metabuild,
             &mut warnings,
             &mut errors,
@@ -2129,11 +2156,15 @@ impl TomlManifest {
                 .as_ref()
                 .map(|_| MaybeWorkspace::Defined(metadata.badges.clone())),
         };
+
+        let build_script = package.build_script_path(package_root);
+
         let mut manifest = Manifest::new(
             summary,
             default_kind,
             forced_kind,
             targets,
+            build_script,
             exclude,
             include,
             package.links.clone(),
@@ -2351,29 +2382,6 @@ impl TomlManifest {
         Ok(patch)
     }
 
-    /// Returns the path to the build script if one exists for this crate.
-    fn maybe_custom_build(
-        &self,
-        build: &Option<StringOrBool>,
-        package_root: &Path,
-    ) -> Option<PathBuf> {
-        let build_rs = package_root.join("build.rs");
-        match *build {
-            // Explicitly no build script.
-            Some(StringOrBool::Bool(false)) => None,
-            Some(StringOrBool::Bool(true)) => Some(build_rs),
-            Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
-            None => {
-                // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
-                // a build script.
-                if build_rs.is_file() {
-                    Some(build_rs)
-                } else {
-                    None
-                }
-            }
-        }
-    }
 
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()

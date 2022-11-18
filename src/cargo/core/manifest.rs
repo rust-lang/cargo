@@ -42,6 +42,7 @@ impl EitherManifest {
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
+    build_script: Option<PathBuf>,
     default_kind: Option<CompileKind>,
     forced_kind: Option<CompileKind>,
     links: Option<String>,
@@ -384,6 +385,7 @@ impl Manifest {
         default_kind: Option<CompileKind>,
         forced_kind: Option<CompileKind>,
         targets: Vec<Target>,
+        build_script: Option<PathBuf>,
         exclude: Vec<String>,
         include: Vec<String>,
         links: Option<String>,
@@ -408,6 +410,7 @@ impl Manifest {
             default_kind,
             forced_kind,
             targets,
+            build_script,
             warnings: Warnings::new(),
             exclude,
             include,
@@ -497,6 +500,10 @@ impl Manifest {
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {
         &self.workspace
+    }
+
+    pub fn build_script(&self) -> Option<&PathBuf> {
+        self.build_script.as_ref()
     }
 
     /// Unstable, nightly features that are enabled in this manifest.

@@ -277,6 +277,9 @@ fn build_ar_list(
             contents: FileContents::Generated(GeneratedFile::VcsInfo(vcs_info)),
         });
     }
+
+    // Process special files that may need to be moved/modified like the 
+    // license, the readme and the build script (build.rs)
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
         let abs_file_path = paths::normalize_path(&pkg.root().join(license_path));
@@ -309,7 +312,29 @@ fn build_ar_list(
         let readme_path = Path::new(readme);
         let abs_file_path = paths::normalize_path(&pkg.root().join(readme_path));
         if abs_file_path.exists() {
-            check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
+            check_for_file_and_add(
+                "readme",
+                readme_path, 
+                abs_file_path, 
+                pkg,
+                &mut result,
+                ws
+            )?;
+        }
+    }
+    if let Some(build_script_path) = pkg.manifest().build_script() {
+        let abs_build_script_path = paths::normalize_path(&pkg.root().join(build_script_path));
+        if abs_build_script_path.exists() {
+            check_for_file_and_add(
+                "build-script",
+                build_script_path,
+                abs_build_script_path,
+                pkg, 
+                &mut result,
+                ws
+            )?;
+        } else {
+            unreachable!();
         }
     }
     result.sort_unstable_by(|a, b| a.rel_path.cmp(&b.rel_path));
@@ -317,54 +342,95 @@ fn build_ar_list(
     Ok(result)
 }
 
+/// Check for special files that have to be archived, but may be on external paths to the
+/// package root
+/// 
+/// ### Parameters
+/// * `label` - The human readable name of the type of file
+/// * `file_path` - The relative file path of the file (used just for 
+///                 human readable logging)
+/// * `abs_file_path` - The absolute file path of the file
+/// * `pkg` - The current package that issues this file
+/// * `files` - The files to be archived 
+/// * `ws` - The workspace (used just for logging)
 fn check_for_file_and_add(
     label: &str,
     file_path: &Path,
     abs_file_path: PathBuf,
     pkg: &Package,
-    result: &mut Vec<ArchiveFile>,
+    files: &mut Vec<ArchiveFile>,
     ws: &Workspace<'_>,
 ) -> CargoResult<()> {
-    match abs_file_path.strip_prefix(&pkg.root()) {
-        Ok(rel_file_path) => {
-            if !result.iter().any(|ar| ar.rel_path == rel_file_path) {
-                result.push(ArchiveFile {
-                    rel_path: rel_file_path.to_path_buf(),
-                    rel_str: rel_file_path
-                        .to_str()
-                        .expect("everything was utf8")
-                        .to_string(),
-                    contents: FileContents::OnDisk(abs_file_path),
-                })
+    // Get the relative path of the file from the package root
+    if let Ok(rel_file_path) = abs_file_path.strip_prefix(&pkg.root()) {
+        // If the files isn't already included on the arhived files, 
+        // include it
+        if !files.iter().any(|ar| ar.rel_path == rel_file_path) {
+            files.push(ArchiveFile {
+                rel_path: rel_file_path.to_path_buf(),
+                rel_str: rel_file_path
+                    .to_str()
+                    .expect("everything was utf8")
+                    .to_string(),
+                contents: FileContents::OnDisk(abs_file_path),
+            })
+        }
+    } else {
+        // If the file exists somewhere outside of the package we will need
+        // to add it to the root
+        //
+        // Calculate if there is name collision with the outside package
+        // (warning) or if there is a exact path collision (error)
+        let file_name = abs_file_path.file_name().unwrap();
+        let mut name_collision = false;
+        let mut exact_path_collision = false;
+        for ar in files.iter() {
+            if ar.rel_path.file_name().unwrap() == file_name {
+                name_collision = true;
+                if ar.rel_path == pkg.root() {
+                    exact_path_collision = true;
+                    break;
+                }
             }
         }
-        Err(_) => {
-            // The file exists somewhere outside of the package.
-            let file_name = file_path.file_name().unwrap();
-            if result
-                .iter()
-                .any(|ar| ar.rel_path.file_name().unwrap() == file_name)
-            {
-                ws.config().shell().warn(&format!(
-                    "{} `{}` appears to be a path outside of the package, \
-                            but there is already a file named `{}` in the root of the package. \
-                            The archived crate will contain the copy in the root of the package. \
-                            Update the {} to point to the path relative \
-                            to the root of the package to remove this warning.",
-                    label,
-                    file_path.display(),
-                    file_name.to_str().unwrap(),
-                    label,
-                ))?;
-            } else {
-                result.push(ArchiveFile {
-                    rel_path: PathBuf::from(file_name),
-                    rel_str: file_name.to_str().unwrap().to_string(),
-                    contents: FileContents::OnDisk(abs_file_path),
-                })
-            }
+
+        if name_collision {
+            // Warn
+            ws.config().shell().warn(&format!(
+                "{} `{}` appears to be a path outside of the package, \
+                    but there is already a file named `{}` in the package. \
+                    The archived crate will contain the copy in the root of the package. \
+                    Update the {} to point to a path relative \
+                    to the root of the package to remove this warning.",
+                label,
+                file_path.display(),
+                file_name.to_str().unwrap(),
+                label,
+            ))?;
+        } else if exact_path_collision {
+            // Error (panic)
+            ws.config().shell().error(&format!(
+                "{} `{}` appears to be a path outside of the package, \
+                    but there is already a file `{}` in the root of the package. \
+                    because the default behaviour for external files referenced by \
+                    the pacakge is to put them on the root and there is already a file \
+                    with that name on the package this is a fatal error. ",
+                label,
+                file_path.display(),
+                file_name.to_str().unwrap(),
+            ))?;
+            std::process::exit(-1); // Don't know if the code matters
+        } else {
+            // If there is no collision just archive that file to the root
+            // of the package
+            files.push(ArchiveFile {
+                rel_path: PathBuf::from(file_name),
+                rel_str: file_name.to_str().unwrap().to_string(),
+                contents: FileContents::OnDisk(abs_file_path),
+            });
         }
     }
+
     Ok(())
 }
 
