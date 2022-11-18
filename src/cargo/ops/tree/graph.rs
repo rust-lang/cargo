@@ -321,10 +321,6 @@ pub fn from_bcx<'a, 'cfg>(
             }
             let dep_node = Node::package_for_unit(&dep.unit);
             let dep_index = *graph.index.get(&dep_node).unwrap();
-            // FIXME:
-            // * CompileKind doesn't know anything about development dependencies, so we never
-            //   produce DepKind::Development here (also need to tell the build context to give
-            //   us dev dependencies, which we currently don't do).
 
             // FIXME: This is really ugly. It's also quadratic in `deps.len()`, but `deps` is only
             // the direct dependencies of `unit`, so the ugliness is more important.
