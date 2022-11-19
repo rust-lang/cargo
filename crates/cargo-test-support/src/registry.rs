@@ -378,6 +378,7 @@ pub struct Package {
     name: String,
     vers: String,
     deps: Vec<Dependency>,
+    needs_build_script: bool,
     files: Vec<PackageFile>,
     yanked: bool,
     features: FeatureMap,
@@ -854,6 +855,7 @@ impl Package {
             name: name.to_string(),
             vers: vers.to_string(),
             deps: Vec::new(),
+            needs_build_script: false,
             files: Vec::new(),
             yanked: false,
             features: BTreeMap::new(),
@@ -887,6 +889,15 @@ impl Package {
     /// this.
     pub fn alternative(&mut self, alternative: bool) -> &mut Package {
         self.alternative = alternative;
+        self
+    }
+
+    /// Add a build.rs so that the UnitGraph will not ignore our [build-dependenies] section.
+    ///
+    /// Also adds a src/lib.rs, because make_archive() will no longer do it for us.
+    /// FIXME: there is probably a better way to do this.
+    pub fn build_script(&mut self) -> &mut Package {
+        self.needs_build_script = true;
         self
     }
 
@@ -1145,6 +1156,14 @@ impl Package {
                 }
             }
         }
+        if self.needs_build_script && !self.files.iter().any(|f| f.path == "build.rs") {
+            self.append(
+                &mut a,
+                "src/lib.rs",
+                DEFAULT_MODE,
+                &EntryData::Regular("fn main {}".into()),
+            )
+        }
     }
 
     fn append_manifest<W: Write>(&self, ar: &mut Builder<W>) {
@@ -1166,6 +1185,10 @@ impl Package {
         "#,
             self.name, self.vers
         ));
+
+        if self.needs_build_script {
+            manifest.push_str("build = \"build.rs\"");
+        }
 
         if let Some(version) = &self.rust_version {
             manifest.push_str(&format!("rust-version = \"{}\"", version));

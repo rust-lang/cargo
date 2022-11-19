@@ -537,13 +537,16 @@ fn dep_kinds() {
     Package::new("normaldep", "1.0.0")
         .dep("inner-normal", "1.0")
         .dev_dep("inner-devdep", "1.0")
+        .build_script()
         .build_dep("inner-builddep", "1.0")
         .publish();
     Package::new("devdep", "1.0.0")
         .dep("inner-normal", "1.0")
         .dep("inner-pm", "1.0")
         .dev_dep("inner-devdep", "1.0")
+        .build_script()
         .build_dep("inner-builddep", "1.0")
+        // TODO: check what the behaviour is *supposed* to be for proc-macro build-deps.
         .build_dep("inner-buildpm", "1.0")
         .publish();
     // FIXME: foo doesn't have any "is_custom_build" units, so the resolver will happily drop the
@@ -551,6 +554,7 @@ fn dep_kinds() {
     Package::new("builddep", "1.0.0")
         .dep("inner-normal", "1.0")
         .dev_dep("inner-devdep", "1.0")
+        .build_script()
         .build_dep("inner-builddep", "1.0")
         .publish();
     let p = project()
@@ -560,6 +564,7 @@ fn dep_kinds() {
             [package]
             name = "foo"
             version = "0.1.0"
+            build = "build.rs"
 
             [dependencies]
             normaldep = "1.0"
@@ -571,6 +576,7 @@ fn dep_kinds() {
             builddep = "1.0"
             "#,
         )
+        .file("src/build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
