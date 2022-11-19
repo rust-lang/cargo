@@ -1341,6 +1341,9 @@ optdep v1.0.0
     // New behavior.
     switch_to_resolver_2(&p);
 
+    // FIXME:
+    // * we're adding a second `bar` as a normal dep (with optdep in there)
+    // * build-dependencies also has two versions of `bar`. Not sure why.
     p.cargo("tree")
         .with_stdout(
             "\
@@ -1442,6 +1445,12 @@ foo v0.1.0 ([..]/foo)
         .run();
 
     // -p
+    // FIXME: we do `options.spec = opts.packages.clone();` so cargo does that thing where it
+    // ignores everything above somedep in the tree. This means we don't get the contribution of
+    // pm -> somedep/optdep , so we don't compile optdep. This matches `cargo build -p` behaviour.
+    // Interestingly, if we could teach the `cargo build` machinery to honour the full workspace and
+    // then stop after building `somedep` then that would make life easier for quite a lot of
+    // use-cases, not just ours.
     p.cargo("tree -p somedep")
         .with_stdout(
             "\
@@ -1508,6 +1517,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
+    // FIXME: as discussed elsewhere, this matches `cargo build -p` behaviour.
     p.cargo("tree -p somedep")
         .with_stdout(
             "\
@@ -2005,6 +2015,9 @@ fn dev_dep_cycle_with_feature() {
         .file("bar/src/lib.rs", "")
         .build();
 
+    // FIXME: we don't seem to be displaying the feature links here:
+    // * bar feature "default"
+    // * foo feature "default" (command-line)
     p.cargo("tree -e features --features a")
         .with_stdout(
             "\
@@ -2075,6 +2088,9 @@ fn dev_dep_cycle_with_feature_nested() {
         .file("bar/src/lib.rs", "")
         .build();
 
+    // FIXME: we don't seem to be displaying the feature links here:
+    // * bar feature "default"
+    // * foo feature "default" (command-line)
     p.cargo("tree -e features")
         .with_stdout(
             "\
