@@ -173,7 +173,8 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         HasDevUnits::Yes => CompileMode::Test,
         HasDevUnits::No => CompileMode::Build,
     };
-    let options = CompileOptions::new(ws.config(), mode)?;
+    let mut options = CompileOptions::new(ws.config(), mode)?;
+    options.cli_features = opts.cli_features.clone();
     let interner = UnitInterner::new();
     let mut graph = if std::env::var("CARGO_TREE_FROM_UNIT_GRAPH").is_ok() {
         let bcx = create_bcx(ws, &options, &interner)?;
