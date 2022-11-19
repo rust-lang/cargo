@@ -13,7 +13,7 @@ use anyhow::{bail, Context as _};
 ///
 /// Generally, it represents the combination of all `-p` flag. When working within
 /// a workspace, `--exclude` and `--workspace` flags also contribute to it.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Packages {
     /// Pacakges selected by default. Ususally means no flag provided.
     Default,
