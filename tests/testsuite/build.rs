@@ -4788,9 +4788,14 @@ fn cdylib_final_outputs() {
 }
 
 #[cargo_test]
-// NOTE: Windows MSVC and wasm32-unknown-emscripten do not use metadata. Skip them.
+// NOTE: Windows MSVC and wasm32-unknown-emscripten do not use metadata.
 // See <https://github.com/rust-lang/cargo/issues/9325#issuecomment-1030662699>
-#[cfg(not(all(target_os = "windows", target_env = "msvc")))]
+//
+// We skip both msvc windows and gnu windows (mingw) because their naming schemes for
+// debuginfo files results in conflicts in this case. msvc makes two `foo.pdb` files
+// while mingw makes two `foo.dwp` files. These files clobber eachother,
+// corrupting the build output.
+#[cfg(not(target_os = "windows"))]
 fn no_dep_info_collision_when_cdylib_and_bin_coexist() {
     let p = project()
         .file(
