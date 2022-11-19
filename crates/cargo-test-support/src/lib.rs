@@ -415,7 +415,6 @@ impl Project {
         if let Some(ref mut p) = execs.process_builder {
             p.env("CARGO", cargo);
             p.env("CARGO_TREE_FROM_UNIT_GRAPH", "1");
-            p.env("CARGO_LOG", "trace");
             p.arg_line(cmd);
         }
         execs
