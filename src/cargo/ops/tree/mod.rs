@@ -168,9 +168,13 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
 
     // FIXME: these variables are only needed by one branch of the if statement, but are here for
     // lifetime reasons. Consider refactoring.
+    let mode = match has_dev {
+        // Using CompileMode::Test is a hack to convince the resolver to give us dev-dependencies.
+        HasDevUnits::Yes => CompileMode::Test,
+        HasDevUnits::No => CompileMode::Build,
+    };
+    let options = CompileOptions::new(ws.config(), mode)?;
     let interner = UnitInterner::new();
-    // Using CompileMode::Test is a hack to convince the resolver to give us dev-dependencies.
-    let options = CompileOptions::new(ws.config(), CompileMode::Test)?;
     let mut graph = if std::env::var("CARGO_TREE_FROM_UNIT_GRAPH").is_ok() {
         let bcx = create_bcx(ws, &options, &interner)?;
 
