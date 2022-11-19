@@ -346,8 +346,10 @@ pub fn from_bcx<'a, 'cfg>(
                     "resolver should be able to tell us why {unit:?} depends on {dep:?}"
                 );
                 for link in dep_set {
-                    let kind = link.kind();
-                    graph.edges[from_index].add_edge(EdgeKind::Dep(kind), dep_index);
+                    let kind = EdgeKind::Dep(link.kind());
+                    if opts.edge_kinds.contains(&kind) {
+                        graph.edges[from_index].add_edge(kind, dep_index);
+                    }
                 }
             }
 
