@@ -288,6 +288,10 @@ impl<'a> Graph<'a> {
 pub fn from_bcx<'a, 'cfg>(
     bcx: BuildContext<'a, 'cfg>,
     resolve: &Resolve,
+    // FIXME: it feels like it would be easy for specs and cli_features to get out-of-sync with
+    // what bcx has been configured with. Either make that structurally impossible or add an assert.
+    specs: &[PackageIdSpec],
+    cli_features: &CliFeatures,
     package_map: HashMap<PackageId, &'a Package>,
     opts: &TreeOptions,
 ) -> CargoResult<Graph<'a>> {
@@ -302,10 +306,13 @@ pub fn from_bcx<'a, 'cfg>(
             );
             continue;
         }
-        graph.add_node(node);
+        let node_index = graph.add_node(node);
 
         if opts.graph_features {
-            todo!("extract features from {:?}", unit.features);
+            for name in unit.features.iter().copied() {
+                let node = Node::Feature { node_index, name };
+                graph.add_node(node);
+            }
         }
     }
 
@@ -347,6 +354,28 @@ pub fn from_bcx<'a, 'cfg>(
                 "resolver should have a record of {unit:?} depending on {dep:?}"
             );
         }
+    }
+
+    if opts.graph_features {
+        let mut members_with_features = bcx.ws.members_with_features(specs, cli_features)?;
+        members_with_features.sort_unstable_by_key(|e| e.0.package_id());
+        for (member, cli_features) in members_with_features {
+            // This package might be built for both host and target.
+            let member_indexes = graph.indexes_from_ids(&[member.package_id()]);
+            assert!(!member_indexes.is_empty());
+
+            // FIXME: if the package shows up in both host and `target`, it may be possible for the
+            // features to be different (this may not even be possible for workspace members in the
+            // current resolver - I've not checked).
+            //
+            // We might be better off querying the UnitGraph again or something?
+            let fmap = resolve.summary(member.package_id()).features();
+            for member_index in member_indexes.into_iter() {
+                add_cli_features(&mut graph, member_index, &cli_features, fmap);
+            }
+        }
+
+        add_internal_features(&mut graph, resolve)
     }
     Ok(graph)
 }
