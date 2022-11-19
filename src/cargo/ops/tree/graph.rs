@@ -345,11 +345,21 @@ pub fn from_bcx<'a, 'cfg>(
                     !dep_set.is_empty(),
                     "resolver should be able to tell us why {unit:?} depends on {dep:?}"
                 );
+
                 for link in dep_set {
                     let kind = EdgeKind::Dep(link.kind());
                     if opts.edge_kinds.contains(&kind) {
                         graph.edges[from_index].add_edge(kind, dep_index);
                     }
+
+                    // FIXME: do this in its own pass (and only if needed) or something?
+                    graph
+                        .dep_name_map
+                        .entry(from_index)
+                        .or_default()
+                        .entry(link.name_in_toml())
+                        .or_default()
+                        .insert((dep_index, link.is_optional()));
                 }
             }
 
