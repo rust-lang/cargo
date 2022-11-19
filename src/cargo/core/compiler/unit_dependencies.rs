@@ -1080,6 +1080,12 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         // dependencies, otherwise we want everything *other than* build
                         // dependencies.
                         if unit.target.is_custom_build() != dep.is_build() {
+                            log::trace!(
+                                "dropping dep of {:?}: {:?}: buildiness mismatch",
+                                pkg_id.name(),
+                                id.name()
+                            );
+
                             return false;
                         }
 

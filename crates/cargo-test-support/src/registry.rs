@@ -979,6 +979,9 @@ impl Package {
     /// foo = {version = "1.0"}
     /// ```
     pub fn build_dep(&mut self, name: &str, vers: &str) -> &mut Package {
+        // FIXME: these will be removed from UnitGraph if there is no matching is_custom_build unit.
+        // Either implicitly add one here, or add a `.add_build_script()` and make sure it is called
+        // everywhere?.
         self.add_dep(Dependency::new(name, vers).build())
     }
 

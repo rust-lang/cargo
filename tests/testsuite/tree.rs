@@ -546,6 +546,8 @@ fn dep_kinds() {
         .build_dep("inner-builddep", "1.0")
         .build_dep("inner-buildpm", "1.0")
         .publish();
+    // FIXME: foo doesn't have any "is_custom_build" units, so the resolver will happily drop the
+    // dev-dependency on `builddep` (same for inner-builddep above).
     Package::new("builddep", "1.0.0")
         .dep("inner-normal", "1.0")
         .dev_dep("inner-devdep", "1.0")
