@@ -352,14 +352,16 @@ pub fn from_bcx<'a, 'cfg>(
                         graph.edges[from_index].add_edge(kind, dep_index);
                     }
 
-                    // FIXME: do this in its own pass (and only if needed) or something?
-                    graph
-                        .dep_name_map
-                        .entry(from_index)
-                        .or_default()
-                        .entry(link.name_in_toml())
-                        .or_default()
-                        .insert((dep_index, link.is_optional()));
+                    if opts.graph_features {
+                        // FIXME: do this in its own pass or something?
+                        graph
+                            .dep_name_map
+                            .entry(from_index)
+                            .or_default()
+                            .entry(link.name_in_toml())
+                            .or_default()
+                            .insert((dep_index, link.is_optional()));
+                    }
                 }
             }
 
