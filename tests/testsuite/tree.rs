@@ -795,6 +795,7 @@ fn invert_with_build_dep() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
         .build();
 
     p.cargo("tree")
