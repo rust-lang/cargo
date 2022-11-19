@@ -161,7 +161,9 @@ impl<'a> Graph<'a> {
     }
 
     pub fn package_for_id(&self, id: PackageId) -> &Package {
-        self.package_map[&id]
+        self.package_map
+            .get(&id)
+            .unwrap_or_else(|| panic!("could not find {id:#?} in {:#?}", self.package_map))
     }
 
     fn package_id_for_index(&self, index: usize) -> PackageId {
