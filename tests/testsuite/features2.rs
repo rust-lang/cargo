@@ -1663,6 +1663,8 @@ fn tree_all() {
         )
         .file("src/lib.rs", "")
         .build();
+
+    // FIXME: --target=all doesn't make sense to the cargo build machinery. Should we teach it?
     p.cargo("tree --target=all")
         .with_stdout(
             "\

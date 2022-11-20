@@ -746,6 +746,7 @@ fn tree() {
         .with_stdout("foo v0.1.0 ([ROOT]/foo)")
         .run();
 
+    // FIXME: we basically aren't implementing -e features, are we?
     p.cargo("tree -e features --features a")
         .with_stdout(
             "\
