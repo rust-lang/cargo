@@ -2083,6 +2083,7 @@ fn minimal_download() {
     clear();
 
     // This disables itarget, but leaves decouple_dev_deps enabled.
+    // FIXME: --target=all
     p.cargo("tree -e normal --target=all")
         .with_stderr_unordered(
             "\
