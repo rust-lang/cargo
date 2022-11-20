@@ -677,7 +677,11 @@ fn add_cli_features(
                 dep_feature,
                 weak,
             } => {
-                let dep_connections = match graph.dep_name_map[&package_index].get(&dep_name) {
+                let dep_connections = match graph
+                    .dep_name_map
+                    .get(&package_index)
+                    .and_then(|h| h.get(&dep_name))
+                {
                     // Clone to deal with immutable borrow of `graph`. :(
                     Some(dep_connections) => dep_connections.clone(),
                     None => {
