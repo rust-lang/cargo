@@ -460,8 +460,9 @@ foo v0.1.0 ([..]/foo)
     p.cargo("tree --target")
         .arg(alternate())
         .with_stdout(
-            // FIXME: old resolver doesn't split foo into host and target, so it prints everything
-            // under a single foo package at the top level.
+            // FIXME: old tree builder doesn't split foo into host and target, so it prints
+            // everything under a single foo package at the top level. I have changed the expected
+            // output for this test.
             "\
 foo v0.1.0 ([..]/foo)
 [build-dependencies]
@@ -495,42 +496,42 @@ foo v0.1.0 ([..]/foo)
 
     // FIXME: teaching cargo::core::compiler::unit_dependencies about --target=all feels like it
     // could turn into a huge mess.
-    //     p.cargo("tree --target=all")
-    //         .with_stdout(
-    //             "\
-    // foo v0.1.0 ([..]/foo)
-    // ├── hostdep v1.0.0
-    // └── pm_host v1.0.0 (proc-macro)
-    // ├── pm_target v1.0.0 (proc-macro)
-    // └── targetdep v1.0.0
-    // [build-dependencies]
-    // ├── build_host_dep v1.0.0
-    // │   ├── hostdep v1.0.0
-    // │   └── targetdep v1.0.0
-    // └── build_target_dep v1.0.0
-    // [dev-dependencies]
-    // └── devdep v1.0.0
-    // ",
-    //         )
-    //         .run();
+    p.cargo("tree --target=all")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── hostdep v1.0.0
+└── pm_host v1.0.0 (proc-macro)
+├── pm_target v1.0.0 (proc-macro)
+└── targetdep v1.0.0
+[build-dependencies]
+├── build_host_dep v1.0.0
+│   ├── hostdep v1.0.0
+│   └── targetdep v1.0.0
+└── build_target_dep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+",
+        )
+        .run();
 
-    //     // no-proc-macro
-    //     p.cargo("tree --target=all -e no-proc-macro")
-    //         .with_stdout(
-    //             "\
-    // foo v0.1.0 ([..]/foo)
-    // ├── hostdep v1.0.0
-    // └── targetdep v1.0.0
-    // [build-dependencies]
-    // ├── build_host_dep v1.0.0
-    // │   ├── hostdep v1.0.0
-    // │   └── targetdep v1.0.0
-    // └── build_target_dep v1.0.0
-    // [dev-dependencies]
-    // └── devdep v1.0.0
-    // ",
-    //         )
-    //         .run();
+    // no-proc-macro
+    p.cargo("tree --target=all -e no-proc-macro")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── hostdep v1.0.0
+└── targetdep v1.0.0
+[build-dependencies]
+├── build_host_dep v1.0.0
+│   ├── hostdep v1.0.0
+│   └── targetdep v1.0.0
+└── build_target_dep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -554,11 +555,8 @@ fn dep_kinds() {
         .dev_dep("inner-devdep", "1.0")
         .build_script()
         .build_dep("inner-builddep", "1.0")
-        // TODO: check what the behaviour is *supposed* to be for proc-macro build-deps.
         .build_dep("inner-buildpm", "1.0")
         .publish();
-    // FIXME: foo doesn't have any "is_custom_build" units, so the resolver will happily drop the
-    // dev-dependency on `builddep` (same for inner-builddep above).
     Package::new("builddep", "1.0.0")
         .dep("inner-normal", "1.0")
         .dev_dep("inner-devdep", "1.0")
@@ -1445,12 +1443,6 @@ foo v0.1.0 ([..]/foo)
         .run();
 
     // -p
-    // FIXME: we do `options.spec = opts.packages.clone();` so cargo does that thing where it
-    // ignores everything above somedep in the tree. This means we don't get the contribution of
-    // pm -> somedep/optdep , so we don't compile optdep. This matches `cargo build -p` behaviour.
-    // Interestingly, if we could teach the `cargo build` machinery to honour the full workspace and
-    // then stop after building `somedep` then that would make life easier for quite a lot of
-    // use-cases, not just ours.
     p.cargo("tree -p somedep")
         .with_stdout(
             "\
@@ -1517,7 +1509,13 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    // FIXME: as discussed elsewhere, this matches `cargo build -p` behaviour.
+    // FIXME: we do `options.spec = opts.packages.clone();` so cargo does that thing where it
+    // ignores everything above somedep in the tree. This means we don't get the contribution of
+    // pm -> somedep/optdep , so we don't compile optdep. This matches `cargo build -p` behaviour.
+    // Interestingly, if we could teach the `cargo build` machinery to honour the full workspace and
+    // then stop after building `somedep` then that would make life easier for quite a lot of
+    // use-cases, not just ours.
+    // TODO: double-check that the new graph builder really matches the `cargo build -p` behaviour.
     p.cargo("tree -p somedep")
         .with_stdout(
             "\
@@ -2015,9 +2013,6 @@ fn dev_dep_cycle_with_feature() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    // FIXME: we don't seem to be displaying the feature links here:
-    // * bar feature "default"
-    // * foo feature "default" (command-line)
     p.cargo("tree -e features --features a")
         .with_stdout(
             "\
@@ -2088,9 +2083,6 @@ fn dev_dep_cycle_with_feature_nested() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    // FIXME: we don't seem to be displaying the feature links here:
-    // * bar feature "default"
-    // * foo feature "default" (command-line)
     p.cargo("tree -e features")
         .with_stdout(
             "\

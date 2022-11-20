@@ -49,7 +49,6 @@ fn dep_feature_various() {
         .file("src/lib.rs", "")
         .build();
 
-    // FIXME: we basically aren't implementing -e features, are we?
     p.cargo("tree -e features")
         .with_stdout(
             "\
@@ -133,7 +132,6 @@ fn graph_features_ws_interdependent() {
         .file("b/src/lib.rs", "")
         .build();
 
-    // FIXME: we basically aren't implementing -e features, are we?
     p.cargo("tree -e features")
         .with_stdout(
             "\
@@ -201,7 +199,6 @@ fn slash_feature_name() {
         .file("src/lib.rs", "")
         .build();
 
-    // FIXME: we basically aren't implementing -e features, are we?
     p.cargo("tree -e features --features f1")
         .with_stdout(
             "\
