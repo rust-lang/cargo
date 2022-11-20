@@ -390,6 +390,9 @@ pub fn from_bcx<'a, 'cfg>(
                     } else {
                         let kind = EdgeKind::Dep(link.kind());
                         if opts.edge_kinds.contains(&kind) {
+                            // FIXME: if it's not possible to get from unit to dep with this kind
+                            // of edge then maybe we shouldn't add it? Maybe this would help with
+                            // the tree::host_dep_feature test? Not sure how to determine this though.
                             graph.edges[from_index].add_edge(kind, dep_index);
                         }
                     }
