@@ -746,7 +746,9 @@ fn tree() {
         .with_stdout("foo v0.1.0 ([ROOT]/foo)")
         .run();
 
-    // FIXME: we basically aren't implementing -e features, are we?
+    // FIXME: new code fails to print feat1, but `cargo build --features=a` actually builds `bar`
+    // with features ["feat1", "feat2"] (if I'm reading the trace output correctly), so I think
+    // the old code and test are also wrong.
     p.cargo("tree -e features --features a")
         .with_stdout(
             "\
