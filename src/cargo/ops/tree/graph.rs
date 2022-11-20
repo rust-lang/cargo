@@ -109,6 +109,15 @@ impl<'a> Graph<'a> {
         }
     }
 
+    /// Adds a new node to the graph if it doesn't exist, returning its index.
+    fn add_node_idempotently(&mut self, node: Node) -> usize {
+        if let Some(index) = self.index.get(&node) {
+            *index
+        } else {
+            self.add_node(node)
+        }
+    }
+
     /// Adds a new node to the graph, returning its new index.
     fn add_node(&mut self, node: Node) -> usize {
         let from_index = self.nodes.len();
@@ -299,26 +308,24 @@ pub fn from_bcx<'a, 'cfg>(
 ) -> CargoResult<Graph<'a>> {
     let mut graph = Graph::new(package_map);
 
-    // First pass: add all of the nodes
+    // First pass: add all of the nodes for Packages
     for unit in bcx.unit_graph.keys().sorted() {
         let node = Node::package_for_unit(unit);
-        if graph.index.contains_key(&node) {
-            log::debug!(
-                "already added {node:#?} (for {unit:#?}). This is probably a build script?"
-            );
-            continue;
-        }
-        let node_index = graph.add_node(node);
+        // There may be multiple units for the same package if build-scripts are involved.
+        graph.add_node_idempotently(node);
 
-        if opts.graph_features {
-            for name in unit.features.iter().copied() {
-                let node = Node::Feature { node_index, name };
-                graph.add_node(node);
-            }
-        }
+        // FIXME: I quite like the idea of adding all of the nodes in the first pass, but adding
+        // the full set of features doesn't seem to be possible here. Maybe it's better to think of
+        // features as more like a kind of Edge, and do it in the second loop.
+        // if opts.graph_features {
+        //     for name in unit.features.iter().copied() {
+        //         let node = Node::Feature { node_index, name };
+        //         graph.add_node_idempotently(node);
+        //     }
+        // }
     }
 
-    // second pass: add all of the edges
+    // second pass: add all of the edges (and `Node::Feature`s if that's what's asked for)
     for (unit, deps) in bcx.unit_graph.iter() {
         let node = Node::package_for_unit(unit);
         let from_index = *graph.index.get(&node).unwrap();
@@ -354,6 +361,16 @@ pub fn from_bcx<'a, 'cfg>(
                             add_feature(
                                 &mut graph,
                                 InternedString::new("default"),
+                                Some(from_index),
+                                dep_index,
+                                EdgeKind::Dep(link.kind()),
+                            );
+                        }
+                        for feature in link.features() {
+                            // FIXME: is add_feature() idempotent?
+                            add_feature(
+                                &mut graph,
+                                *feature,
                                 Some(from_index),
                                 dep_index,
                                 EdgeKind::Dep(link.kind()),
