@@ -346,13 +346,19 @@ pub fn from_bcx<'a, 'cfg>(
                     "resolver should be able to tell us why {unit:?} depends on {dep:?}"
                 );
 
+                // FIXME: think of better names for dep and link
+                // (most code needs to have `dep` renamed to `link` when copy-pasting)
                 for link in dep_set {
-                    let kind = EdgeKind::Dep(link.kind());
-                    if opts.edge_kinds.contains(&kind) {
-                        graph.edges[from_index].add_edge(kind, dep_index);
-                    }
-
                     if opts.graph_features {
+                        if link.uses_default_features() {
+                            add_feature(
+                                &mut graph,
+                                InternedString::new("default"),
+                                Some(from_index),
+                                dep_index,
+                                EdgeKind::Dep(link.kind()),
+                            );
+                        }
                         // FIXME: do this in its own pass or something?
                         graph
                             .dep_name_map
@@ -361,6 +367,11 @@ pub fn from_bcx<'a, 'cfg>(
                             .entry(link.name_in_toml())
                             .or_default()
                             .insert((dep_index, link.is_optional()));
+                    } else {
+                        let kind = EdgeKind::Dep(link.kind());
+                        if opts.edge_kinds.contains(&kind) {
+                            graph.edges[from_index].add_edge(kind, dep_index);
+                        }
                     }
                 }
             }

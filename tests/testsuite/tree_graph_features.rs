@@ -330,7 +330,6 @@ fn features_enables_inactive_target() {
         )
         .file("src/lib.rs", "")
         .build();
-    // FIXME: missing dep2 feature \"default\"
     p.cargo("tree -e features")
         .with_stdout(
             "\
@@ -349,6 +348,7 @@ foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
+    // FIXME: --target=all
     p.cargo("tree -e features --all-features --target=all")
         .with_stdout(
             "\
