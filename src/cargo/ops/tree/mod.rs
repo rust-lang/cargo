@@ -213,7 +213,15 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         })
         .collect::<CargoResult<Vec<PackageIdSpec>>>()?;
 
-    print(ws.config(), opts, root_indexes, &pkgs_to_prune, &graph)?;
+    if root_indexes.len() == 0 {
+        ws.config().shell().warn(
+            "nothing to print.\n\n\
+        To find dependencies that require specific target platforms, \
+        try use option `--target all` first, and then narrow your search scope accordingly.",
+        )?;
+    } else {
+        print(ws.config(), opts, root_indexes, &pkgs_to_prune, &graph)?;
+    }
     Ok(())
 }
 

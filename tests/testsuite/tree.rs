@@ -490,6 +490,62 @@ foo v0.1.0 ([..]/foo)
 }
 
 #[cargo_test]
+fn no_selected_target_dependency() {
+    // --target flag
+    if cross_compile::disabled() {
+        return;
+    }
+    Package::new("targetdep", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [target.'{alt}'.dependencies]
+                targetdep = "1.0"
+
+                "#,
+                alt = alternate(),
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+
+    p.cargo("tree -i targetdep")
+        .with_stderr(
+            "\
+[WARNING] nothing to print.
+
+To find dependencies that require specific target platforms, \
+try use option `--target all` first, and then narrow your search scope accordingly.
+",
+        )
+        .run();
+    p.cargo("tree -i targetdep --target all")
+        .with_stdout(
+            "\
+targetdep v1.0.0
+└── foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn dep_kinds() {
     Package::new("inner-devdep", "1.0.0").publish();
     Package::new("inner-builddep", "1.0.0").publish();
