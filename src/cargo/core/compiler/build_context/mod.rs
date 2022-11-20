@@ -17,7 +17,7 @@ pub use self::target_info::{
     FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
 };
 
-/// The build context, containing complete infomration needed for a build task
+/// The build context, containing complete information needed for a build task
 /// before it gets started.
 ///
 /// It is intended that this is mostly static information. Stuff that mutates
@@ -145,7 +145,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     /// Extra compiler flags to pass to `rustc` for a given unit.
     ///
     /// Although it depends on the caller, in the current Cargo implementation,
-    /// these flags take precendence over those from [`BuildContext::extra_args_for`].
+    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
     ///
     /// As of now, these flags come from environment variables and configurations.
     /// See [`TargetInfo.rustflags`] for more on how Cargo collects them.
@@ -158,7 +158,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     /// Extra compiler flags to pass to `rustdoc` for a given unit.
     ///
     /// Although it depends on the caller, in the current Cargo implementation,
-    /// these flags take precendence over those from [`BuildContext::extra_args_for`].
+    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
     ///
     /// As of now, these flags come from environment variables and configurations.
     /// See [`TargetInfo.rustdocflags`] for more on how Cargo collects them.
