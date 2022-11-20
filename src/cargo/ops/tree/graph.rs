@@ -343,6 +343,7 @@ pub fn from_bcx<'a, 'cfg>(
             // I think I want to `zip(sorted(deps), sorted(resolve.deps(unit)))` and then assert
             // that the ids line up, with nothing left over.
             let mut found = false;
+            let mut added = false;
             for (_, dep_set) in resolve
                 .deps(unit.pkg.package_id())
                 .filter(|(dep_id, _dep_set)| dep_id == &dep.unit.pkg.package_id())
@@ -365,6 +366,7 @@ pub fn from_bcx<'a, 'cfg>(
                                 dep_index,
                                 EdgeKind::Dep(link.kind()),
                             );
+                            added = true;
                         }
                         for feature in link.features() {
                             // FIXME: is add_feature() idempotent?
@@ -375,6 +377,7 @@ pub fn from_bcx<'a, 'cfg>(
                                 dep_index,
                                 EdgeKind::Dep(link.kind()),
                             );
+                            added = true;
                         }
                         // FIXME: do this in its own pass or something?
                         graph
@@ -397,6 +400,12 @@ pub fn from_bcx<'a, 'cfg>(
                 found,
                 "resolver should have a record of {unit:?} depending on {dep:?}"
             );
+            if opts.graph_features && !added {
+                // HACK: if dep was added with default-features = false and no other features then
+                // it won't be linked up yet. Fudge a direct link in there so that we can represent
+                // it on the graph.
+                graph.edges[from_index].add_edge(EdgeKind::Dep(DepKind::Normal), dep_index);
+            }
         }
     }
 
