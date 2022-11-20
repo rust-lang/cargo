@@ -217,7 +217,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         ws.config().shell().warn(
             "nothing to print.\n\n\
         To find dependencies that require specific target platforms, \
-        try use option `--target all` first, and then narrow your search scope accordingly.",
+        try to use option `--target all` first, and then narrow your search scope accordingly.",
         )?;
     } else {
         print(ws.config(), opts, root_indexes, &pkgs_to_prune, &graph)?;

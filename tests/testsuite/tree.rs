@@ -531,7 +531,7 @@ foo v0.1.0 ([..]/foo)
 [WARNING] nothing to print.
 
 To find dependencies that require specific target platforms, \
-try use option `--target all` first, and then narrow your search scope accordingly.
+try to use option `--target all` first, and then narrow your search scope accordingly.
 ",
         )
         .run();
