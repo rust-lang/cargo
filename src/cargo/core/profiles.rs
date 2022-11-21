@@ -737,7 +737,8 @@ impl Profile {
 /// cause to build a unit twice. By deferring the choice until we know
 /// whether to choose the optimized value or the default value, we can make sure
 /// the unit is only built once and the unit graph is still optimized.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, serde::Serialize)]
+#[serde(untagged)]
 pub enum DebugInfo {
     /// No debuginfo level was set.
     None,
@@ -785,15 +786,6 @@ impl DebugInfo {
     /// Reset to the lowest level: no debuginfo.
     pub(crate) fn weaken(self) -> Self {
         DebugInfo::None
-    }
-}
-
-impl serde::Serialize for DebugInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.to_option().serialize(serializer)
     }
 }
 
