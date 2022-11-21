@@ -635,8 +635,13 @@ fn traverse_and_share(
     let mut profile = unit.profile.clone();
 
     // If this is a build dependency, and it's not shared with runtime dependencies, we can weaken
-    // its debuginfo level to optimize build times.
-    if unit.kind.is_host() && to_host.is_some() && profile.debuginfo.is_deferred() {
+    // its debuginfo level to optimize build times. We do nothing if it's an artifact dependency,
+    // as it and its debuginfo may end up embedded in the main program.
+    if unit.kind.is_host()
+        && to_host.is_some()
+        && profile.debuginfo.is_deferred()
+        && !unit.artifact.is_true()
+    {
         // We create a "probe" test to see if a unit with the same explicit debuginfo level exists
         // in the graph. This is the level we'd expect if it was set manually or the default value
         // set by a profile for a runtime dependency: its canonical value.
