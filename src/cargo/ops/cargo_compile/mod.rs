@@ -574,7 +574,15 @@ fn rebuild_unit_graph_shared(
     let new_roots = roots
         .iter()
         .map(|root| {
-            traverse_and_share(interner, &mut memo, &mut result, &unit_graph, root, to_host)
+            traverse_and_share(
+                interner,
+                &mut memo,
+                &mut result,
+                &unit_graph,
+                root,
+                false,
+                to_host,
+            )
         })
         .collect();
     // If no unit in the unit graph ended up having scrape units attached as dependencies,
@@ -598,6 +606,7 @@ fn traverse_and_share(
     new_graph: &mut UnitGraph,
     unit_graph: &UnitGraph,
     unit: &Unit,
+    unit_is_for_host: bool,
     to_host: Option<CompileKind>,
 ) -> Unit {
     if let Some(new_unit) = memo.get(unit) {
@@ -608,8 +617,15 @@ fn traverse_and_share(
     let new_deps: Vec<_> = unit_graph[unit]
         .iter()
         .map(|dep| {
-            let new_dep_unit =
-                traverse_and_share(interner, memo, new_graph, unit_graph, &dep.unit, to_host);
+            let new_dep_unit = traverse_and_share(
+                interner,
+                memo,
+                new_graph,
+                unit_graph,
+                &dep.unit,
+                dep.unit_for.is_for_host(),
+                to_host,
+            );
             new_dep_unit.hash(&mut dep_hash);
             UnitDep {
                 unit: new_dep_unit,
@@ -637,7 +653,7 @@ fn traverse_and_share(
     // If this is a build dependency, and it's not shared with runtime dependencies, we can weaken
     // its debuginfo level to optimize build times. We do nothing if it's an artifact dependency,
     // as it and its debuginfo may end up embedded in the main program.
-    if unit.kind.is_host()
+    if unit_is_for_host
         && to_host.is_some()
         && profile.debuginfo.is_deferred()
         && !unit.artifact.is_true()
