@@ -82,7 +82,10 @@ fn profile_selection_build() {
     // NOTES:
     // - bdep `panic` is not set because it thinks `build.rs` is a plugin.
     // - build_script_build is built without panic because it thinks `build.rs` is a plugin.
-    p.cargo("build -vv").with_stderr_unordered("\
+    // - We make sure that the build dependencies bar, bdep, and build.rs
+    //   are built without debuginfo.
+    p.cargo("build -vv")
+        .with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
@@ -95,7 +98,12 @@ fn profile_selection_build() {
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
-").run();
+"
+        )
+        .with_stderr_line_without(&["[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]-C codegen-units=5 [..]"], &["-C debuginfo"])
+        .with_stderr_line_without(&["[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]-C codegen-units=5 [..]"], &["-C debuginfo"])
+        .with_stderr_line_without(&["[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]-C codegen-units=5 [..]"], &["-C debuginfo"])
+        .run();
     p.cargo("build -vv")
         .with_stderr_unordered(
             "\
@@ -149,6 +157,8 @@ fn profile_selection_build_all_targets() {
     //   `build.rs` is a plugin.
     // - Benchmark dependencies are compiled in `dev` mode, which may be
     //   surprising. See issue rust-lang/cargo#4929.
+    // - We make sure that the build dependencies bar, bdep, and build.rs
+    //   are built without debuginfo.
     //
     // - Dependency profiles:
     //   Pkg  Target  Profile     Reason
@@ -169,7 +179,8 @@ fn profile_selection_build_all_targets() {
     //   bin      dev        dev
     //   bin      dev        build
     //   example  dev        build
-    p.cargo("build --all-targets -vv").with_stderr_unordered("\
+    p.cargo("build --all-targets -vv")
+        .with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
@@ -189,7 +200,12 @@ fn profile_selection_build_all_targets() {
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
 [FINISHED] dev [unoptimized + debuginfo] [..]
-").run();
+"
+        )
+        .with_stderr_line_without(&["[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]-C codegen-units=5 [..]"], &["-C debuginfo"])
+        .with_stderr_line_without(&["[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]-C codegen-units=5 [..]"], &["-C debuginfo"])
+        .with_stderr_line_without(&["[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]-C codegen-units=5 [..]"], &["-C debuginfo"])
+        .run();
     p.cargo("build -vv")
         .with_stderr_unordered(
             "\
