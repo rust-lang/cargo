@@ -38,10 +38,12 @@ fn modifying_and_moving() {
     p.root().join("target").move_into_the_past();
 
     p.change_file("src/a.rs", "#[allow(unused)]fn main() {}");
-    p.cargo("build")
+    p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.0.1 ([CWD]): the file `src/a.rs` has changed ([..])
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -83,10 +85,12 @@ fn modify_only_some_files() {
     lib.move_into_the_past();
 
     // Make sure the binary is rebuilt, not the lib
-    p.cargo("build")
+    p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.0.1 ([CWD]): the file `src/b.rs` has changed ([..])
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -147,6 +151,7 @@ fn rebuild_sub_package_then_while_package() {
     p.cargo("build -pb -v")
         .with_stderr(
             "\
+[DIRTY] b v0.0.1 ([..]): the file `b/src/lib.rs` has changed ([..])
 [COMPILING] b [..]
 [RUNNING] `rustc --crate-name b [..]
 [FINISHED] dev [..]
@@ -163,8 +168,10 @@ fn rebuild_sub_package_then_while_package() {
         .with_stderr(
             "\
 [FRESH] b [..]
+[DIRTY] a [..]: the dependency b was rebuilt ([..])
 [COMPILING] a [..]
 [RUNNING] `rustc --crate-name a [..]
+[DIRTY] foo [..]: the dependency b was rebuilt ([..])
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..]
 [FINISHED] dev [..]
@@ -492,21 +499,38 @@ fn changing_bin_features_caches_targets() {
 
     /* Targets should be cached from the first build */
 
-    let mut e = p.cargo("build");
+    let mut e = p.cargo("build -v");
+
     // MSVC does not include hash in binary filename, so it gets recompiled.
     if cfg!(target_env = "msvc") {
-        e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
+        e.with_stderr(
+            "\
+[DIRTY] foo v0.0.1 ([..]): the list of features changed
+[COMPILING] foo[..]
+[RUNNING] `rustc [..]
+[FINISHED] dev[..]",
+        );
     } else {
-        e.with_stderr("[FINISHED] dev[..]");
+        e.with_stderr("[FRESH] foo v0.0.1 ([..])\n[FINISHED] dev[..]");
     }
     e.run();
     p.rename_run("foo", "off2").with_stdout("feature off").run();
 
-    let mut e = p.cargo("build --features foo");
+    let mut e = p.cargo("build --features foo -v");
     if cfg!(target_env = "msvc") {
-        e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
+        e.with_stderr(
+            "\
+[DIRTY] foo v0.0.1 ([..]): the list of features changed
+[COMPILING] foo[..]
+[RUNNING] `rustc [..]
+[FINISHED] dev[..]",
+        );
     } else {
-        e.with_stderr("[FINISHED] dev[..]");
+        e.with_stderr(
+            "\
+[FRESH] foo v0.0.1 ([..])
+[FINISHED] dev[..]",
+        );
     }
     e.run();
     p.rename_run("foo", "on2").with_stdout("feature on").run();
@@ -843,11 +867,13 @@ fn rebuild_if_environment_changes() {
         "#,
     );
 
-    p.cargo("run")
+    p.cargo("run -v")
         .with_stdout("new desc")
         .with_stderr(
             "\
+[DIRTY] foo v0.0.1 ([CWD]): the metadata changed
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
@@ -1186,23 +1212,43 @@ fn changing_rustflags_is_cached() {
     let p = project().file("src/lib.rs", "").build();
 
     // This isn't ever cached, we always have to recompile
-    for _ in 0..2 {
-        p.cargo("build")
-            .with_stderr(
-                "\
+    p.cargo("build")
+        .with_stderr(
+            "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-            )
-            .run();
-        p.cargo("build")
-            .env("RUSTFLAGS", "-C linker=cc")
-            .with_stderr(
-                "\
+        )
+        .run();
+    p.cargo("build -v")
+        .env("RUSTFLAGS", "-C linker=cc")
+        .with_stderr(
+            "\
+[DIRTY] foo v0.0.1 ([..]): the rustflags changed
 [COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-            )
-            .run();
-    }
+        )
+        .run();
+
+    p.cargo("build -v")
+        .with_stderr(
+            "\
+[DIRTY] foo v0.0.1 ([..]): the rustflags changed
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+    p.cargo("build -v")
+        .env("RUSTFLAGS", "-C linker=cc")
+        .with_stderr(
+            "\
+[DIRTY] foo v0.0.1 ([..]): the rustflags changed
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -1480,12 +1526,18 @@ fn bust_patched_dep() {
         sleep_ms(1000);
     }
 
-    p.cargo("build")
+    p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] registry1 v0.1.0 ([..]): the file `reg1new/src/lib.rs` has changed ([..])
 [COMPILING] registry1 v0.1.0 ([..])
+[RUNNING] `rustc [..]
+[DIRTY] registry2 v0.1.0: the dependency registry1 was rebuilt
 [COMPILING] registry2 v0.1.0
+[RUNNING] `rustc [..]
+[DIRTY] foo v0.0.1 ([..]): the dependency registry2 was rebuilt
 [COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]
 [FINISHED] [..]
 ",
         )
@@ -1598,10 +1650,13 @@ fn rebuild_on_mid_build_file_modification() {
         )
         .run();
 
-    p.cargo("build")
+    p.cargo("build -v")
         .with_stderr(
             "\
+[FRESH] proc_macro_dep v0.1.0 ([..]/proc_macro_dep)
+[DIRTY] root v0.1.0 ([..]/root): the file `root/src/lib.rs` has changed ([..])
 [COMPILING] root v0.1.0 ([..]/root)
+[RUNNING] `rustc [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1877,6 +1932,7 @@ fn simulated_docker_deps_stay_cached() {
 [FRESH] regdep_env [..]
 [FRESH] regdep_old_style [..]
 [FRESH] regdep_rerun [..]
+[DIRTY] foo [..]: the precalculated components changed
 [COMPILING] foo [..]
 [RUNNING] [..]/foo-[..]/build-script-build[..]
 [RUNNING] `rustc --crate-name foo[..]
@@ -2108,6 +2164,7 @@ fn rerun_if_changes() {
         .env("FOO", "1")
         .with_stderr(
             "\
+[DIRTY] foo [..]: the env variable FOO changed
 [COMPILING] foo [..]
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..]
@@ -2125,6 +2182,7 @@ fn rerun_if_changes() {
         .env("BAR", "1")
         .with_stderr(
             "\
+[DIRTY] foo [..]: the env variable BAR changed
 [COMPILING] foo [..]
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..]
@@ -2142,6 +2200,7 @@ fn rerun_if_changes() {
         .env("BAR", "2")
         .with_stderr(
             "\
+[DIRTY] foo [..]: the env variable FOO changed
 [COMPILING] foo [..]
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..]
@@ -2439,12 +2498,15 @@ fn linking_interrupted() {
     drop(rustc_conn.read_exact(&mut buf));
 
     // Build again, shouldn't be fresh.
-    p.cargo("test --test t1")
+    p.cargo("test --test t1 -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.0.1 ([..]): the config settings changed
 [COMPILING] foo [..]
+[RUNNING] `rustc --crate-name foo [..]
+[RUNNING] `rustc --crate-name t1 [..]
 [FINISHED] [..]
-[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
+[RUNNING] `[..]target/debug/deps/t1-[..][EXE]`
 ",
         )
         .run();
@@ -2513,25 +2575,43 @@ fn env_in_code_causes_rebuild() {
         .env_remove("FOO")
         .with_stderr("[FINISHED] [..]")
         .run();
-    p.cargo("build")
+    p.cargo("build -v")
         .env("FOO", "bar")
-        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .with_stderr(
+            "\
+[DIRTY] foo [..]: the environment variable FOO changed
+[COMPILING][..]
+[RUNNING] `rustc [..]
+[FINISHED][..]",
+        )
         .run();
     p.cargo("build")
         .env("FOO", "bar")
         .with_stderr("[FINISHED][..]")
         .run();
-    p.cargo("build")
+    p.cargo("build -v")
         .env("FOO", "baz")
-        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .with_stderr(
+            "\
+[DIRTY] foo [..]: the environment variable FOO changed
+[COMPILING][..]
+[RUNNING] `rustc [..]
+[FINISHED][..]",
+        )
         .run();
     p.cargo("build")
         .env("FOO", "baz")
         .with_stderr("[FINISHED][..]")
         .run();
-    p.cargo("build")
+    p.cargo("build -v")
         .env_remove("FOO")
-        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .with_stderr(
+            "\
+[DIRTY] foo [..]: the environment variable FOO changed
+[COMPILING][..]
+[RUNNING] `rustc [..]
+[FINISHED][..]",
+        )
         .run();
     p.cargo("build")
         .env_remove("FOO")
@@ -2616,6 +2696,7 @@ fn cargo_env_changes() {
         .arg("-v")
         .with_stderr(
             "\
+[DIRTY] foo v1.0.0 ([..]): the environment variable CARGO changed
 [CHECKING] foo [..]
 [RUNNING] `rustc [..]
 [FINISHED] [..]

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
 
-use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, UnitOutput};
+use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
 use crate::ops::CompileFilter;
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
@@ -683,7 +683,7 @@ fn is_installed(
     let tracker = InstallTracker::load(config, root)?;
     let (freshness, _duplicates) =
         tracker.check_upgrade(dst, pkg, force, opts, target, &rustc.verbose_version)?;
-    Ok(freshness == Freshness::Fresh)
+    Ok(freshness.is_fresh())
 }
 
 /// Checks if vers can only be satisfied by exactly one version of a package in a registry, and it's

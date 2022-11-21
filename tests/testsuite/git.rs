@@ -2521,6 +2521,7 @@ fn include_overrides_gitignore() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.5.0 ([..]): the precalculated components changed
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]`

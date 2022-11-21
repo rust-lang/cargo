@@ -312,7 +312,10 @@
 //! See the `A-rebuild-detection` flag on the issue tracker for more:
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
+mod dirty_reason;
+
 use std::collections::hash_map::{Entry, HashMap};
+
 use std::env;
 use std::hash::{self, Hash, Hasher};
 use std::io;
@@ -340,6 +343,8 @@ use crate::CARGO_ENV;
 use super::custom_build::BuildDeps;
 use super::job::{Job, Work};
 use super::{BuildContext, Context, FileFlavor, Unit};
+
+pub use dirty_reason::DirtyReason;
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
 /// update the persisted fingerprint.
@@ -393,9 +398,16 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         source.verify(unit.pkg.package_id())?;
     }
 
-    if compare.is_ok() && !force {
-        return Ok(Job::new_fresh());
-    }
+    let dirty_reason = match compare {
+        Ok(_) => {
+            if force {
+                Some(DirtyReason::Forced)
+            } else {
+                return Ok(Job::new_fresh());
+            }
+        }
+        Err(e) => e.downcast::<DirtyReason>().ok(),
+    };
 
     // Clear out the old fingerprint file if it exists. This protects when
     // compilation is interrupted leaving a corrupt file. For example, a
@@ -466,7 +478,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         Work::new(move |_| write_fingerprint(&loc, &fingerprint))
     };
 
-    Ok(Job::new_dirty(write_fingerprint))
+    Ok(Job::new_dirty(write_fingerprint, dirty_reason))
 }
 
 /// Dependency edge information for fingerprints. This is generated for each
@@ -559,13 +571,27 @@ pub struct Fingerprint {
 }
 
 /// Indication of the status on the filesystem for a particular unit.
-#[derive(Default)]
-enum FsStatus {
+#[derive(Clone, Default, Debug)]
+pub enum FsStatus {
     /// This unit is to be considered stale, even if hash information all
-    /// matches. The filesystem inputs have changed (or are missing) and the
-    /// unit needs to subsequently be recompiled.
+    /// matches.
     #[default]
     Stale,
+
+    /// File system inputs have changed (or are missing), or there were
+    /// changes to the environment variables that affect this unit. See
+    /// the variants of [`StaleItem`] for more information.
+    StaleItem(StaleItem),
+
+    /// A dependency was stale.
+    StaleDependency {
+        name: InternedString,
+        dep_mtime: FileTime,
+        max_mtime: FileTime,
+    },
+
+    /// A dependency was stale.
+    StaleDepFingerprint { name: InternedString },
 
     /// This unit is up-to-date. All outputs and their corresponding mtime are
     /// listed in the payload here for other dependencies to compare against.
@@ -576,7 +602,10 @@ impl FsStatus {
     fn up_to_date(&self) -> bool {
         match self {
             FsStatus::UpToDate { .. } => true,
-            FsStatus::Stale => false,
+            FsStatus::Stale
+            | FsStatus::StaleItem(_)
+            | FsStatus::StaleDependency { .. }
+            | FsStatus::StaleDepFingerprint { .. } => false,
         }
     }
 }
@@ -677,7 +706,8 @@ enum LocalFingerprint {
     RerunIfEnvChanged { var: String, val: Option<String> },
 }
 
-enum StaleItem {
+#[derive(Clone, Debug)]
+pub enum StaleItem {
     MissingFile(PathBuf),
     ChangedFile {
         reference: PathBuf,
@@ -823,56 +853,53 @@ impl Fingerprint {
     /// The purpose of this is exclusively to produce a diagnostic message
     /// indicating why we're recompiling something. This function always returns
     /// an error, it will never return success.
-    fn compare(&self, old: &Fingerprint) -> CargoResult<()> {
+    fn compare(&self, old: &Fingerprint) -> Result<(), DirtyReason> {
         if self.rustc != old.rustc {
-            bail!("rust compiler has changed")
+            Err(DirtyReason::RustcChanged)?
         }
         if self.features != old.features {
-            bail!(
-                "features have changed: previously {}, now {}",
-                old.features,
-                self.features
-            )
+            Err(DirtyReason::FeaturesChanged {
+                old: old.features.clone(),
+                new: self.features.clone(),
+            })?
         }
         if self.target != old.target {
-            bail!("target configuration has changed")
+            Err(DirtyReason::TargetConfigurationChanged)?
         }
         if self.path != old.path {
-            bail!("path to the source has changed")
+            Err(DirtyReason::PathToSourceChanged)?
         }
         if self.profile != old.profile {
-            bail!("profile configuration has changed")
+            Err(DirtyReason::ProfileConfigurationChanged)?
         }
         if self.rustflags != old.rustflags {
-            bail!(
-                "RUSTFLAGS has changed: previously {:?}, now {:?}",
-                old.rustflags,
-                self.rustflags
-            )
+            Err(DirtyReason::RustflagsChanged {
+                old: old.rustflags.clone(),
+                new: self.rustflags.clone(),
+            })?
         }
         if self.metadata != old.metadata {
-            bail!("metadata changed")
+            Err(DirtyReason::MetadataChanged)?
         }
         if self.config != old.config {
-            bail!("configuration settings have changed")
+            Err(DirtyReason::ConfigSettingsChanged)?
         }
         if self.compile_kind != old.compile_kind {
-            bail!("compile kind (rustc target) changed")
+            Err(DirtyReason::CompileKindChanged)?
         }
         let my_local = self.local.lock().unwrap();
         let old_local = old.local.lock().unwrap();
         if my_local.len() != old_local.len() {
-            bail!("local lens changed");
+            Err(DirtyReason::LocalLengthsChanged)?
         }
         for (new, old) in my_local.iter().zip(old_local.iter()) {
             match (new, old) {
                 (LocalFingerprint::Precalculated(a), LocalFingerprint::Precalculated(b)) => {
                     if a != b {
-                        bail!(
-                            "precalculated components have changed: previously {}, now {}",
-                            b,
-                            a
-                        )
+                        Err(DirtyReason::PrecalculatedComponentsChanged {
+                            old: b.to_string(),
+                            new: a.to_string(),
+                        })?
                     }
                 }
                 (
@@ -880,11 +907,10 @@ impl Fingerprint {
                     LocalFingerprint::CheckDepInfo { dep_info: bdep },
                 ) => {
                     if adep != bdep {
-                        bail!(
-                            "dep info output changed: previously {:?}, now {:?}",
-                            bdep,
-                            adep
-                        )
+                        Err(DirtyReason::DepInfoOutputChanged {
+                            old: bdep.clone(),
+                            new: adep.clone(),
+                        })?
                     }
                 }
                 (
@@ -898,18 +924,16 @@ impl Fingerprint {
                     },
                 ) => {
                     if aout != bout {
-                        bail!(
-                            "rerun-if-changed output changed: previously {:?}, now {:?}",
-                            bout,
-                            aout
-                        )
+                        Err(DirtyReason::RerunIfChangedOutputFileChanged {
+                            old: bout.clone(),
+                            new: aout.clone(),
+                        })?
                     }
                     if apaths != bpaths {
-                        bail!(
-                            "rerun-if-changed output changed: previously {:?}, now {:?}",
-                            bpaths,
-                            apaths,
-                        )
+                        Err(DirtyReason::RerunIfChangedOutputPathsChanged {
+                            old: bpaths.clone(),
+                            new: apaths.clone(),
+                        })?
                     }
                 }
                 (
@@ -923,57 +947,59 @@ impl Fingerprint {
                     },
                 ) => {
                     if *akey != *bkey {
-                        bail!("env vars changed: previously {}, now {}", bkey, akey);
+                        Err(DirtyReason::EnvVarsChanged {
+                            old: bkey.clone(),
+                            new: akey.clone(),
+                        })?
                     }
                     if *avalue != *bvalue {
-                        bail!(
-                            "env var `{}` changed: previously {:?}, now {:?}",
-                            akey,
-                            bvalue,
-                            avalue
-                        )
+                        Err(DirtyReason::EnvVarChanged {
+                            name: akey.clone(),
+                            old_value: bvalue.clone(),
+                            new_value: avalue.clone(),
+                        })?
                     }
                 }
-                (a, b) => bail!(
-                    "local fingerprint type has changed ({} => {})",
-                    b.kind(),
-                    a.kind()
-                ),
+                (a, b) => Err(DirtyReason::LocalFingerprintTypeChanged {
+                    old: b.kind(),
+                    new: a.kind(),
+                })?,
             }
         }
 
         if self.deps.len() != old.deps.len() {
-            bail!("number of dependencies has changed")
+            Err(DirtyReason::NumberOfDependenciesChanged {
+                old: old.deps.len(),
+                new: self.deps.len(),
+            })?
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.name != b.name {
-                let e = format_err!("`{}` != `{}`", a.name, b.name)
-                    .context("unit dependency name changed");
-                return Err(e);
+                Err(DirtyReason::UnitDependencyNameChanged {
+                    old: b.name.clone(),
+                    new: a.name.clone(),
+                })?
             }
 
             if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
-                let e = format_err!(
-                    "new ({}/{:x}) != old ({}/{:x})",
-                    a.name,
-                    a.fingerprint.hash_u64(),
-                    b.name,
-                    b.fingerprint.hash_u64()
-                )
-                .context("unit dependency information changed");
-                return Err(e);
+                Err(DirtyReason::UnitDependencyInfoChanged {
+                    new_name: a.name.clone(),
+                    new_fingerprint: a.fingerprint.hash_u64(),
+                    old_name: b.name.clone(),
+                    old_fingerprint: b.fingerprint.hash_u64(),
+                })?
             }
         }
 
         if !self.fs_status.up_to_date() {
-            bail!("current filesystem status shows we're outdated");
+            Err(DirtyReason::FsStatusOutdated(self.fs_status.clone()))?
         }
 
         // This typically means some filesystem modifications happened or
         // something transitive was odd. In general we should strive to provide
         // a better error message than this, so if you see this message a lot it
         // likely means this method needs to be updated!
-        bail!("two fingerprint comparison turned up nothing obvious");
+        Err(DirtyReason::NothingObvious)
     }
 
     /// Dynamically inspect the local filesystem to update the `fs_status` field
@@ -1034,7 +1060,15 @@ impl Fingerprint {
             let dep_mtimes = match &dep.fingerprint.fs_status {
                 FsStatus::UpToDate { mtimes } => mtimes,
                 // If our dependency is stale, so are we, so bail out.
-                FsStatus::Stale => return Ok(()),
+                FsStatus::Stale
+                | FsStatus::StaleItem(_)
+                | FsStatus::StaleDependency { .. }
+                | FsStatus::StaleDepFingerprint { .. } => {
+                    self.fs_status = FsStatus::StaleDepFingerprint {
+                        name: dep.name.clone(),
+                    };
+                    return Ok(());
+                }
             };
 
             // If our dependency edge only requires the rmeta file to be present
@@ -1072,6 +1106,13 @@ impl Fingerprint {
                     "dependency on `{}` is newer than we are {} > {} {:?}",
                     dep.name, dep_mtime, max_mtime, pkg_root
                 );
+
+                self.fs_status = FsStatus::StaleDependency {
+                    name: dep.name.clone(),
+                    dep_mtime: *dep_mtime,
+                    max_mtime: *max_mtime,
+                };
+
                 return Ok(());
             }
         }
@@ -1085,6 +1126,7 @@ impl Fingerprint {
                 local.find_stale_item(mtime_cache, pkg_root, target_root, cargo_exe)?
             {
                 item.log();
+                self.fs_status = FsStatus::StaleItem(item);
                 return Ok(());
             }
         }
@@ -1652,8 +1694,10 @@ fn compare_old_fingerprint(
         );
     }
     let result = new_fingerprint.compare(&old_fingerprint);
-    assert!(result.is_err());
-    result
+    match result {
+        Ok(_) => panic!("compare should not return Ok"),
+        Err(e) => Err(e.into()),
+    }
 }
 
 fn log_compare(unit: &Unit, compare: &CargoResult<()>) {

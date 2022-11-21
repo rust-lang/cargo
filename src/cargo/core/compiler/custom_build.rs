@@ -1,4 +1,4 @@
-use super::job::{Freshness, Job, Work};
+use super::job::{Job, Work};
 use super::{fingerprint, Context, LinkType, Unit};
 use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
@@ -484,11 +484,11 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     });
 
     let mut job = if cx.bcx.build_config.build_plan {
-        Job::new_dirty(Work::noop())
+        Job::new_dirty(Work::noop(), None)
     } else {
         fingerprint::prepare_target(cx, unit, false)?
     };
-    if job.freshness() == Freshness::Dirty {
+    if job.freshness().is_dirty() {
         job.before(dirty);
     } else {
         job.before(fresh);

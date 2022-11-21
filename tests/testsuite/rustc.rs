@@ -639,6 +639,7 @@ fn rustc_fingerprint() {
         .with_stderr_does_not_contain("-C debug-assertions")
         .with_stderr(
             "\
+[DIRTY] foo [..]: the profile configuration changed
 [COMPILING] foo [..]
 [RUNNING] `rustc [..]
 [FINISHED] [..]

@@ -170,7 +170,7 @@ impl InstallTracker {
         // Check if any tracked exe's are already installed.
         let duplicates = self.find_duplicates(dst, &exes);
         if force || duplicates.is_empty() {
-            return Ok((Freshness::Dirty, duplicates));
+            return Ok((Freshness::Dirty(None), duplicates));
         }
         // Check if all duplicates come from packages of the same name. If
         // there are duplicates from other packages, then --force will be
@@ -200,7 +200,7 @@ impl InstallTracker {
             let source_id = pkg.package_id().source_id();
             if source_id.is_path() {
                 // `cargo install --path ...` is always rebuilt.
-                return Ok((Freshness::Dirty, duplicates));
+                return Ok((Freshness::Dirty(None), duplicates));
             }
             let is_up_to_date = |dupe_pkg_id| {
                 let info = self
@@ -224,7 +224,7 @@ impl InstallTracker {
             if matching_duplicates.iter().all(is_up_to_date) {
                 Ok((Freshness::Fresh, duplicates))
             } else {
-                Ok((Freshness::Dirty, duplicates))
+                Ok((Freshness::Dirty(None), duplicates))
             }
         } else {
             // Format the error message.

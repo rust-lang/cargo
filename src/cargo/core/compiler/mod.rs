@@ -164,11 +164,11 @@ fn compile<'cfg>(
         // We run these targets later, so this is just a no-op for now.
         Job::new_fresh()
     } else if build_plan {
-        Job::new_dirty(rustc(cx, unit, &exec.clone())?)
+        Job::new_dirty(rustc(cx, unit, &exec.clone())?, None)
     } else {
         let force = exec.force_rebuild(unit) || force_rebuild;
         let mut job = fingerprint::prepare_target(cx, unit, force)?;
-        job.before(if job.freshness() == Freshness::Dirty {
+        job.before(if job.freshness().is_dirty() {
             let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
                 rustdoc(cx, unit)?
             } else {
