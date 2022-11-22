@@ -730,7 +730,7 @@ fn no_binaries() {
             "\
 [ERROR] there is nothing to install in `foo v0.0.1 ([..])`, because it has no binaries[..]
 [..]
-[..]",
+To use a library crate, add it as a dependency to a Cargo project with `cargo add`.",
         )
         .run();
 }
