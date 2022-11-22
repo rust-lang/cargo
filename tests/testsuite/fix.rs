@@ -772,6 +772,25 @@ commit the changes to these files:
 }
 
 #[cargo_test]
+fn errors_on_empty_repo() {
+    let (p, _) =
+        git::new_repo_without_add_and_commit("foo", |p| p.file("src/lib.rs", "pub fn foo() {}"));
+
+    p.cargo("fix")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: no commits found in the git repository, \
+and `cargo fix` can potentially perform destructive changes; \
+if you'd like to suppress this error pass `--allow-dirty`, \
+or commit your changes
+",
+        )
+        .run();
+    p.cargo("fix --allow-dirty").run();
+}
+
+#[cargo_test]
 fn does_not_warn_about_clean_working_directory() {
     let p = git::new("foo", |p| p.file("src/lib.rs", "pub fn foo() {}"));
     p.cargo("fix").run();
@@ -1715,7 +1734,7 @@ fn fix_with_run_cargo_in_proc_macros() {
             "src/lib.rs",
             r#"
                 use proc_macro::*;
-    
+
                 #[proc_macro]
                 pub fn foo(_input: TokenStream) -> TokenStream {
                     let output = std::process::Command::new(env!("CARGO"))
@@ -1725,7 +1744,7 @@ fn fix_with_run_cargo_in_proc_macros() {
                     eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
                     println!("{}", std::str::from_utf8(&output.stdout).unwrap());
                     "".parse().unwrap()
-                }                    
+                }
             "#,
         )
         .file(

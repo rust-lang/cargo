@@ -175,6 +175,20 @@ where
     (git_project, repo)
 }
 
+/// Create a new git repository with a project.
+/// Returns both the Project and the git Repository but does not commit.
+pub fn new_repo_without_add_and_commit<F>(name: &str, callback: F) -> (Project, git2::Repository)
+where
+    F: FnOnce(ProjectBuilder) -> ProjectBuilder,
+{
+    let mut git_project = project().at(name);
+    git_project = callback(git_project);
+    let git_project = git_project.build();
+
+    let repo = init(&git_project.root());
+    (git_project, repo)
+}
+
 /// Add all files in the working directory to the git index.
 pub fn add(repo: &git2::Repository) {
     // FIXME(libgit2/libgit2#2514): apparently, `add_all` will add all submodules

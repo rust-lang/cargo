@@ -154,11 +154,11 @@ fn check_version_control(config: &Config, opts: &FixOptions) -> CargoResult<()> 
     if let Ok(repo) = git2::Repository::discover(config.cwd()) {
         let mut repo_opts = git2::StatusOptions::new();
         repo_opts.include_ignored(false);
-        if repo.is_empty()? {
+        if repo.is_empty()? && !opts.allow_dirty {
             bail!(
                 "no commits found in the git repository, and \
                 `cargo fix` can potentially perform destructive changes; if you'd \
-                like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
+                like to suppress this error pass `--allow-dirty`, \
                 or commit your changes"
             )
         }
