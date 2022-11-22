@@ -1,5 +1,5 @@
 use crate::core::compiler::{BuildConfig, MessageFormat, TimingOutput};
-use crate::core::resolver::CliFeatures;
+use crate::core::resolver::{CliFeatures, ForceAllTargets};
 use crate::core::{Edition, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -598,6 +598,7 @@ pub trait ArgMatchesExt {
                 self.flag("benches"),
                 self.flag("all-targets"),
             ),
+            force_all_targets: ForceAllTargets::No,
             target_rustdoc_args: None,
             target_rustc_args: None,
             target_rustc_crate_types: None,

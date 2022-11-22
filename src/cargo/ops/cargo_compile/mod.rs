@@ -41,7 +41,7 @@ use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
+use crate::core::resolver::features::{self, CliFeatures, FeaturesFor, ForceAllTargets};
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
 use crate::core::{PackageId, SourceId, TargetKind, Workspace};
@@ -79,6 +79,8 @@ pub struct CompileOptions {
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter,
+    /// HACK: used by `cargo tree` to support `--target=all`.
+    pub force_all_targets: ForceAllTargets,
     /// Extra arguments to be passed to rustdoc (single target only)
     pub target_rustdoc_args: Option<Vec<String>>,
     /// The specified target will be compiled with all the available arguments,
@@ -105,6 +107,7 @@ impl CompileOptions {
             filter: CompileFilter::Default {
                 required_features_filterable: false,
             },
+            force_all_targets: ForceAllTargets::No,
             target_rustdoc_args: None,
             target_rustc_args: None,
             target_rustc_crate_types: None,
@@ -200,6 +203,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref spec,
         ref cli_features,
         ref filter,
+        force_all_targets,
         ref target_rustdoc_args,
         ref target_rustc_args,
         ref target_rustc_crate_types,
@@ -255,7 +259,7 @@ pub fn create_bcx<'a, 'cfg>(
         cli_features,
         &resolve_specs,
         has_dev_units,
-        crate::core::resolver::features::ForceAllTargets::No,
+        force_all_targets,
     )?;
     let WorkspaceResolve {
         mut pkg_set,

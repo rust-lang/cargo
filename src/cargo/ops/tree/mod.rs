@@ -150,6 +150,8 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     } else {
         ForceAllTargets::No
     };
+    // FIXME: we're creating this here, but build_ctx() is also creating one.
+    // Can we refactor things so that they are shared?
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
@@ -177,6 +179,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     options.cli_features = opts.cli_features.clone();
     options.spec = opts.packages.clone();
     options.build_config.requested_kinds = requested_kinds.clone();
+    options.force_all_targets = force_all;
     let interner = UnitInterner::new();
     let mut graph = if std::env::var("CARGO_TREE_FROM_UNIT_GRAPH").is_ok() {
         let bcx = create_bcx(ws, &options, &interner)?;

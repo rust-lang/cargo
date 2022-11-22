@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
-use crate::core::resolver::CliFeatures;
+use crate::core::resolver::{CliFeatures, ForceAllTargets};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
@@ -851,6 +851,7 @@ fn run_verify(
             filter: ops::CompileFilter::Default {
                 required_features_filterable: true,
             },
+            force_all_targets: ForceAllTargets::No,
             target_rustdoc_args: None,
             target_rustc_args: rustc_args,
             target_rustc_crate_types: None,

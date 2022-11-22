@@ -96,7 +96,7 @@ pub enum HasDevUnits {
 }
 
 /// Flag to indicate that target-specific filtering should be disabled.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ForceAllTargets {
     Yes,
     No,
