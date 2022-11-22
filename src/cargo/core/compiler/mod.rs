@@ -654,8 +654,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     rustdoc.arg("-C").arg(format!("metadata={}", metadata));
 
     let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {
-        cx.outputs(unit)
-            .map(|outputs| outputs[0].path.to_path_buf())
+        cx.outputs(unit).map(|outputs| outputs[0].path.clone())
     };
 
     if unit.mode.is_doc_scrape() {

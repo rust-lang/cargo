@@ -1,6 +1,5 @@
-//! Tests for the `cargo doc` command.
+//! Tests for the `cargo doc` command with `-Zrustdoc-scrape-examples`.
 
-use cargo_test_support::is_nightly;
 use cargo_test_support::project;
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
@@ -41,11 +40,6 @@ fn basic() {
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn avoid_build_script_cycle() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
     let p = project()
         // package with build dependency
         .file(
@@ -81,7 +75,7 @@ fn avoid_build_script_cycle() {
         .file("bar/build.rs", "fn main(){}")
         .build();
 
-    p.cargo("doc --all -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc --workspace -Zunstable-options -Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
@@ -138,7 +132,7 @@ fn complex_reverse_dependencies() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("doc --all --examples -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc --workspace --examples -Zunstable-options -Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
@@ -208,7 +202,7 @@ fn configure_target() {
 }
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
-fn configure_profile() {
+fn configure_profile_issue_10500() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -277,7 +271,7 @@ fn issue_10545() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("doc --all -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc --workspace -Zunstable-options -Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
@@ -412,6 +406,10 @@ error: expected one of `!` or `::`, found `NOT`
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn no_scrape_with_dev_deps() {
+    // Tests that a crate with dev-dependencies does not have its examples
+    // scraped unless explicitly prompted to check them. See
+    // `CompileFilter::refine_for_docscrape` for details on why.
+
     let p = project()
         .file(
             "Cargo.toml",

@@ -12,6 +12,7 @@ use serde::Serialize;
 use toml_edit::easy as toml;
 use url::Url;
 
+use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::{CompileKind, CrateType};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
@@ -20,8 +21,6 @@ use crate::util::errors::*;
 use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
 use crate::util::{short_hash, Config, Filesystem};
-
-use super::compiler::rustdoc::RustdocScrapeExamples;
 
 pub enum EitherManifest {
     Real(Manifest),

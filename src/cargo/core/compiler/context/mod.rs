@@ -78,6 +78,9 @@ pub struct Context<'a, 'cfg> {
     /// See Context::find_metadata_units for more details.
     pub metadata_for_doc_units: HashMap<Unit, Metadata>,
 
+    /// Set of metadata of Docscrape units that fail before completion, e.g.
+    /// because the target has a type error. This is in an Arc<Mutex<..>>
+    /// because it is continuously updated as the job progresses.
     pub failed_scrape_units: Arc<Mutex<HashSet<Metadata>>>,
 }
 

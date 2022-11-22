@@ -41,7 +41,6 @@ use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
-use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
@@ -370,7 +369,7 @@ pub fn create_bcx<'a, 'cfg>(
 
     let should_scrape = build_config.mode.is_doc() && config.cli_unstable().rustdoc_scrape_examples;
     let mut scrape_units = if should_scrape {
-        let scrape_filter = filter_for_scrape_units(&to_builds, has_dev_units, filter);
+        let scrape_filter = filter.refine_for_docscrape(&to_builds, has_dev_units);
         let all_units = generate_targets(
             ws,
             &to_builds,
@@ -565,56 +564,6 @@ pub fn create_bcx<'a, 'cfg>(
     )?;
 
     Ok(bcx)
-}
-
-/// Generate a CompileFilter that represents the maximal set of targets that should be
-/// considered for scraping. Should be a subset of the CLI-provided CompileFilter.
-fn filter_for_scrape_units(
-    to_builds: &[&Package],
-    has_dev_units: HasDevUnits,
-    filter: &CompileFilter,
-) -> CompileFilter {
-    let no_pkg_has_dev_deps = to_builds.iter().all(|pkg| {
-        pkg.summary()
-            .dependencies()
-            .iter()
-            .all(|dep| !matches!(dep.kind(), DepKind::Development))
-    });
-
-    // We are allowed to include examples ONLY if they cannot possibly require dev dependencies,
-    // or if dev dependencies are already required anyway due to the user's configuration.
-    let example_filter = if matches!(has_dev_units, HasDevUnits::Yes) || no_pkg_has_dev_deps {
-        FilterRule::All
-    } else {
-        FilterRule::none()
-    };
-
-    match filter {
-        CompileFilter::Only {
-            all_targets,
-            lib,
-            bins,
-            tests,
-            benches,
-            ..
-        } => CompileFilter::Only {
-            all_targets: *all_targets,
-            lib: lib.clone(),
-            bins: bins.clone(),
-            examples: example_filter,
-            tests: tests.clone(),
-            benches: benches.clone(),
-        },
-
-        CompileFilter::Default { .. } => CompileFilter::Only {
-            all_targets: false,
-            lib: LibRule::Default,
-            bins: FilterRule::none(),
-            examples: example_filter,
-            tests: FilterRule::none(),
-            benches: FilterRule::none(),
-        },
-    }
 }
 
 /// A proposed target.
