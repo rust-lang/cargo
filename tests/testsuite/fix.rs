@@ -2,7 +2,7 @@
 
 use cargo::core::Edition;
 use cargo_test_support::compare::assert_match_exact;
-use cargo_test_support::git;
+use cargo_test_support::git::{self, init};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::tools;
@@ -773,8 +773,10 @@ commit the changes to these files:
 
 #[cargo_test]
 fn errors_on_empty_repo() {
-    let (p, _) =
-        git::new_repo_without_add_and_commit("foo", |p| p.file("src/lib.rs", "pub fn foo() {}"));
+    let mut git_project = project().at("foo");
+    git_project = git_project.file("src/lib.rs", "pub fn foo() {}");
+    let p = git_project.build();
+    let _ = init(&p.root());
 
     p.cargo("fix")
         .with_status(101)
