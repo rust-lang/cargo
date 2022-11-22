@@ -313,7 +313,10 @@ fn resolve_dependency(
             selected
         } else {
             let source = crate::sources::PathSource::new(&path, src.source_id()?, config);
-            let package = source.read_packages()?.pop().expect("at least one package");
+            let package = source
+                .read_packages()?
+                .pop()
+                .expect("read_packages errors when no packages");
             Dependency::from(package.summary())
         };
         selected
@@ -603,7 +606,10 @@ fn infer_package_for_git_source(
     src: &dyn std::fmt::Display,
 ) -> CargoResult<Package> {
     let package = match packages.len() {
-        0 => unreachable!(),
+        0 => unreachable!(
+            "this function should only be called with packages from `GitSource::read_packages` \
+            and that call should error for us when there are no packages"
+        ),
         1 => packages.pop().expect("match ensured element is present"),
         _ => {
             let mut names: Vec<_> = packages
