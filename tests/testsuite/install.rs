@@ -327,7 +327,7 @@ fn missing_current_working_directory() {
     cargo_process("install .")
         .with_status(101)
         .with_stderr(
-            "To install the binaries for the package in current working \
+            "error: To install the binaries for the package in current working \
             directory use `cargo install --path .`. \n\
             Use `cargo build` if you want to simply build the package.",
         )
