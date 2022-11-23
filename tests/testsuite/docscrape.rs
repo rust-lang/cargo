@@ -30,6 +30,11 @@ fn basic() {
         )
         .run();
 
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
+        .with_stderr("[FINISHED] [..]")
+        .run();
+
     let doc_html = p.read_file("target/doc/foo/fn.foo.html");
     assert!(doc_html.contains("Examples found in repository"));
     assert!(doc_html.contains("More examples"));
