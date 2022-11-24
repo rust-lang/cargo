@@ -173,7 +173,13 @@ fn attach_std_deps(
     let mut found = false;
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
-            deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
+            let Some(unit_target) = std_roots.get(&unit.kind) else {
+                // TODO: Handle error without a panic?
+                // Is this a bug within Cargo? If so, it should be specified within the message.
+                panic!("Could not find std root for unit kind: {:?}", unit.kind);
+            };
+
+            deps.extend(unit_target.iter().map(|unit| UnitDep {
                 unit: unit.clone(),
                 unit_for: UnitFor::new_normal(unit.kind),
                 extern_crate_name: unit.pkg.name(),
