@@ -16,7 +16,6 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 [dependencies]
-atty = "0.2"
 bytesize = "1.0"
 cargo-platform = { path = "crates/cargo-platform", version = "0.1.2" }
 cargo-util = { path = "crates/cargo-util", version = "0.2.3" }
@@ -37,6 +36,7 @@ http-auth = { version = "0.1.6", default-features = false }
 humantime = "2.0.0"
 indexmap = "1"
 ignore = "0.4.7"
+is-terminal = "0.4.0"
 lazy_static = "1.2.0"
 jobserver = "0.1.24"
 lazycell = "1.2.0"

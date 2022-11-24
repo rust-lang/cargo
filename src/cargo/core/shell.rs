@@ -1,6 +1,7 @@
 use std::fmt;
 use std::io::prelude::*;
 
+use is_terminal::IsTerminal;
 use termcolor::Color::{Cyan, Green, Red, Yellow};
 use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
 
@@ -99,14 +100,10 @@ impl Shell {
         let auto_clr = ColorChoice::CargoAuto;
         Shell {
             output: ShellOut::Stream {
-                stdout: StandardStream::stdout(
-                    auto_clr.to_termcolor_color_choice(atty::Stream::Stdout),
-                ),
-                stderr: StandardStream::stderr(
-                    auto_clr.to_termcolor_color_choice(atty::Stream::Stderr),
-                ),
+                stdout: StandardStream::stdout(auto_clr.to_termcolor_color_choice(Stream::Stdout)),
+                stderr: StandardStream::stderr(auto_clr.to_termcolor_color_choice(Stream::Stderr)),
                 color_choice: ColorChoice::CargoAuto,
-                stderr_tty: atty::is(atty::Stream::Stderr),
+                stderr_tty: std::io::stderr().is_terminal(),
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
@@ -301,8 +298,8 @@ impl Shell {
                 ),
             };
             *color_choice = cfg;
-            *stdout = StandardStream::stdout(cfg.to_termcolor_color_choice(atty::Stream::Stdout));
-            *stderr = StandardStream::stderr(cfg.to_termcolor_color_choice(atty::Stream::Stderr));
+            *stdout = StandardStream::stdout(cfg.to_termcolor_color_choice(Stream::Stdout));
+            *stderr = StandardStream::stderr(cfg.to_termcolor_color_choice(Stream::Stderr));
         }
         Ok(())
     }
@@ -496,17 +493,31 @@ impl ShellOut {
 
 impl ColorChoice {
     /// Converts our color choice to termcolor's version.
-    fn to_termcolor_color_choice(self, stream: atty::Stream) -> termcolor::ColorChoice {
+    fn to_termcolor_color_choice(self, stream: Stream) -> termcolor::ColorChoice {
         match self {
             ColorChoice::Always => termcolor::ColorChoice::Always,
             ColorChoice::Never => termcolor::ColorChoice::Never,
             ColorChoice::CargoAuto => {
-                if atty::is(stream) {
+                if stream.is_terminal() {
                     termcolor::ColorChoice::Auto
                 } else {
                     termcolor::ColorChoice::Never
                 }
             }
+        }
+    }
+}
+
+enum Stream {
+    Stdout,
+    Stderr,
+}
+
+impl Stream {
+    fn is_terminal(self) -> bool {
+        match self {
+            Self::Stdout => std::io::stdout().is_terminal(),
+            Self::Stderr => std::io::stderr().is_terminal(),
         }
     }
 }
