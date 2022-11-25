@@ -69,7 +69,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             if name == "." {
                 bail!(
                     "To install the binaries for the package in current working \
-                     directory use `cargo install --path .`. \
+                     directory use `cargo install --path .`. \n\
                      Use `cargo build` if you want to simply build the package."
                 )
             }
