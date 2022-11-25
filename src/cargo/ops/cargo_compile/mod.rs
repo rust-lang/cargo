@@ -370,7 +370,7 @@ pub fn create_bcx<'a, 'cfg>(
     let should_scrape = build_config.mode.is_doc() && config.cli_unstable().rustdoc_scrape_examples;
     let mut scrape_units = if should_scrape {
         let scrape_filter = filter.refine_for_docscrape(&to_builds, has_dev_units);
-        let all_units = generate_targets(
+        let mut all_units = generate_targets(
             ws,
             &to_builds,
             &scrape_filter,
@@ -394,16 +394,17 @@ pub fn create_bcx<'a, 'cfg>(
             }
         }
 
-        let valid_units = all_units
-            .into_iter()
-            .filter(|unit| {
-                !matches!(
-                    unit.target.doc_scrape_examples(),
-                    RustdocScrapeExamples::Disabled
-                )
-            })
-            .collect::<Vec<_>>();
-        valid_units
+        // We further eliminate units for scraping if they are explicitly marked to not be scraped,
+        // or if they aren't eligible for scraping (see [`Workspace::unit_needs_doc_scrape`]).
+        all_units.retain(|unit| {
+            let not_marked_unscrapable = !matches!(
+                unit.target.doc_scrape_examples(),
+                RustdocScrapeExamples::Disabled
+            );
+            not_marked_unscrapable && ws.unit_needs_doc_scrape(unit)
+        });
+
+        all_units
     } else {
         Vec::new()
     };

@@ -282,6 +282,36 @@ fn issue_10545() {
 }
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
+fn no_scrape_proc_macros_issue_10571() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            proc-macro = true
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // proc-macro library should not be scraped
+    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn cache() {
     let p = project()
         .file(
