@@ -34,6 +34,7 @@ use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::unit_dependencies::{build_unit_dependencies, IsArtifact};
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
@@ -233,27 +234,34 @@ pub fn create_bcx<'a, 'cfg>(
 
     let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
-    let all_packages = &Packages::All;
-    let rustdoc_scrape_examples = &config.cli_unstable().rustdoc_scrape_examples;
-    let need_reverse_dependencies = rustdoc_scrape_examples.is_some();
-    let full_specs = if need_reverse_dependencies {
-        all_packages
-    } else {
-        spec
-    };
+    let specs = spec.to_package_id_specs(ws)?;
+    let has_dev_units = {
+        // Rustdoc itself doesn't need dev-dependencies. But to scrape examples from packages in the
+        // workspace, if any of those packages need dev-dependencies, then we need include dev-dependencies
+        // to scrape those packages.
+        let any_pkg_has_scrape_enabled = ws
+            .members_with_features(&specs, cli_features)?
+            .iter()
+            .any(|(pkg, _)| {
+                pkg.targets()
+                    .iter()
+                    .any(|target| target.is_example() && target.doc_scrape_examples().is_enabled())
+            });
 
-    let resolve_specs = full_specs.to_package_id_specs(ws)?;
-    let has_dev_units = if filter.need_dev_deps(build_config.mode) || need_reverse_dependencies {
-        HasDevUnits::Yes
-    } else {
-        HasDevUnits::No
+        if filter.need_dev_deps(build_config.mode)
+            || (build_config.mode.is_doc() && any_pkg_has_scrape_enabled)
+        {
+            HasDevUnits::Yes
+        } else {
+            HasDevUnits::No
+        }
     };
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
         &build_config.requested_kinds,
         cli_features,
-        &resolve_specs,
+        &specs,
         has_dev_units,
         crate::core::resolver::features::ForceAllTargets::No,
     )?;
@@ -276,11 +284,6 @@ pub fn create_bcx<'a, 'cfg>(
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
     // Vec<PackageIdSpec> to a Vec<PackageId>.
-    let specs = if need_reverse_dependencies {
-        spec.to_package_id_specs(ws)?
-    } else {
-        resolve_specs.clone()
-    };
     let to_build_ids = resolve.specs_to_ids(&specs)?;
     // Now get the `Package` for each `PackageId`. This may trigger a download
     // if the user specified `-p` for a dependency that is not downloaded.
@@ -364,47 +367,45 @@ pub fn create_bcx<'a, 'cfg>(
         override_rustc_crate_types(&mut units, args, interner)?;
     }
 
-    let mut scrape_units = match rustdoc_scrape_examples {
-        Some(arg) => {
-            let filter = match arg.as_str() {
-                "all" => CompileFilter::new_all_targets(),
-                "examples" => CompileFilter::new(
-                    LibRule::False,
-                    FilterRule::none(),
-                    FilterRule::none(),
-                    FilterRule::All,
-                    FilterRule::none(),
-                ),
-                _ => {
-                    anyhow::bail!(
-                        r#"-Z rustdoc-scrape-examples must take "all" or "examples" as an argument"#
-                    )
-                }
-            };
-            let to_build_ids = resolve.specs_to_ids(&resolve_specs)?;
-            let to_builds = pkg_set.get_many(to_build_ids)?;
-            let mode = CompileMode::Docscrape;
+    let should_scrape = build_config.mode.is_doc() && config.cli_unstable().rustdoc_scrape_examples;
+    let mut scrape_units = if should_scrape {
+        let scrape_filter = filter.refine_for_docscrape(&to_builds, has_dev_units);
+        let all_units = generate_targets(
+            ws,
+            &to_builds,
+            &scrape_filter,
+            &build_config.requested_kinds,
+            explicit_host_kind,
+            CompileMode::Docscrape,
+            &resolve,
+            &workspace_resolve,
+            &resolved_features,
+            &pkg_set,
+            &profiles,
+            interner,
+        )?;
 
-            generate_targets(
-                ws,
-                &to_builds,
-                &filter,
-                &build_config.requested_kinds,
-                explicit_host_kind,
-                mode,
-                &resolve,
-                &workspace_resolve,
-                &resolved_features,
-                &pkg_set,
-                &profiles,
-                interner,
-            )?
-            .into_iter()
-            // Proc macros should not be scraped for functions, since they only export macros
-            .filter(|unit| !unit.target.proc_macro())
-            .collect::<Vec<_>>()
+        // The set of scraped targets should be a strict subset of the set of documented targets,
+        // except in the special case of examples targets.
+        if cfg!(debug_assertions) {
+            let valid_targets = units.iter().map(|u| &u.target).collect::<HashSet<_>>();
+            for unit in &all_units {
+                assert!(unit.target.is_example() || valid_targets.contains(&unit.target));
+            }
         }
-        None => Vec::new(),
+
+        let valid_units = all_units
+            .into_iter()
+            .filter(|unit| {
+                !matches!(
+                    unit.target.doc_scrape_examples(),
+                    RustdocScrapeExamples::Disabled
+                )
+            })
+            .collect::<Vec<_>>();
+        valid_units
+    } else {
+        Vec::new()
     };
 
     let std_roots = if let Some(crates) = standard_lib::std_crates(config, Some(&units)) {
@@ -1232,6 +1233,9 @@ fn rebuild_unit_graph_shared(
             traverse_and_share(interner, &mut memo, &mut result, &unit_graph, root, to_host)
         })
         .collect();
+    // If no unit in the unit graph ended up having scrape units attached as dependencies,
+    // then they won't have been discovered in traverse_and_share and hence won't be in
+    // memo. So we filter out missing scrape units.
     let new_scrape_units = scrape_units
         .iter()
         .map(|unit| memo.get(unit).unwrap().clone())

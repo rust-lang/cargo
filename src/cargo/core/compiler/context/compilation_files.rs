@@ -451,9 +451,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 vec![]
             }
             CompileMode::Docscrape => {
-                let path = self
-                    .deps_dir(unit)
-                    .join(format!("{}.examples", unit.buildkey()));
+                // The file name needs to be stable across Cargo sessions.
+                // This originally used unit.buildkey(), but that isn't stable,
+                // so we use metadata instead (prefixed with name for debugging).
+                let file_name = format!("{}-{}.examples", unit.pkg.name(), self.metadata(unit));
+                let path = self.deps_dir(unit).join(file_name);
                 vec![OutputFile {
                     path,
                     hardlink: None,

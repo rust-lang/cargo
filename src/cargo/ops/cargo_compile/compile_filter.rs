@@ -1,10 +1,12 @@
 //! Filters and their rules to select which Cargo targets will be built.
 
 use crate::core::compiler::CompileMode;
-use crate::core::{Target, TargetKind};
+use crate::core::dependency::DepKind;
+use crate::core::resolver::HasDevUnits;
+use crate::core::{Package, Target, TargetKind};
 use crate::util::restricted_names::is_glob_pattern;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 /// Indicates whether or not the library target gets included.
 pub enum LibRule {
     /// Include the library, fail if not present
@@ -15,7 +17,7 @@ pub enum LibRule {
     False,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Indicates which Cargo targets will be selected to be built.
 pub enum FilterRule {
     /// All included.
@@ -297,6 +299,69 @@ impl CompileFilter {
                     || tests.contains_glob_patterns()
                     || benches.contains_glob_patterns()
             }
+        }
+    }
+
+    /// Generate a CompileFilter that represents the maximal set of targets
+    /// that should be considered for scraped examples.
+    pub(super) fn refine_for_docscrape(
+        &self,
+        to_builds: &[&Package],
+        has_dev_units: HasDevUnits,
+    ) -> CompileFilter {
+        // In general, the goal is to scrape examples from (a) whatever targets
+        // the user is documenting, and (b) Example targets. However, if the user
+        // is documenting a library with dev-dependencies, those dev-deps are not
+        // needed for the library, while dev-deps are needed for the examples.
+        //
+        // If scrape-examples caused `cargo doc` to start requiring dev-deps, this
+        // would be a breaking change to crates whose dev-deps don't compile.
+        // Therefore we ONLY want to scrape Example targets if either:
+        //    (1) No package has dev-dependencies, so this is a moot issue, OR
+        //    (2) The provided CompileFilter requires dev-dependencies anyway.
+        //
+        // The next two variables represent these two conditions.
+
+        let no_pkg_has_dev_deps = to_builds.iter().all(|pkg| {
+            pkg.summary()
+                .dependencies()
+                .iter()
+                .all(|dep| !matches!(dep.kind(), DepKind::Development))
+        });
+
+        let reqs_dev_deps = matches!(has_dev_units, HasDevUnits::Yes);
+
+        let example_filter = if no_pkg_has_dev_deps || reqs_dev_deps {
+            FilterRule::All
+        } else {
+            FilterRule::none()
+        };
+
+        match self {
+            CompileFilter::Only {
+                all_targets,
+                lib,
+                bins,
+                tests,
+                benches,
+                ..
+            } => CompileFilter::Only {
+                all_targets: *all_targets,
+                lib: lib.clone(),
+                bins: bins.clone(),
+                examples: example_filter,
+                tests: tests.clone(),
+                benches: benches.clone(),
+            },
+
+            CompileFilter::Default { .. } => CompileFilter::Only {
+                all_targets: false,
+                lib: LibRule::Default,
+                bins: FilterRule::none(),
+                examples: example_filter,
+                tests: FilterRule::none(),
+                benches: FilterRule::none(),
+            },
         }
     }
 }

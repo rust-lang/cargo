@@ -2862,12 +2862,12 @@ impl DetailedTomlDependency {
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 struct TomlTarget {
     name: Option<String>,
 
     // The intention was to only accept `crate-type` here but historical
     // versions of Cargo also accepted `crate_type`, so look for both.
-    #[serde(rename = "crate-type")]
     crate_type: Option<Vec<String>>,
     #[serde(rename = "crate_type")]
     crate_type2: Option<Vec<String>>,
@@ -2880,12 +2880,12 @@ struct TomlTarget {
     bench: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
+    doc_scrape_examples: Option<bool>,
     #[serde(rename = "proc-macro")]
     proc_macro_raw: Option<bool>,
     #[serde(rename = "proc_macro")]
     proc_macro_raw2: Option<bool>,
     harness: Option<bool>,
-    #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,
     edition: Option<String>,
 }

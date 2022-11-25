@@ -1275,7 +1275,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
 
     // Afterwards calculate our own fingerprint information.
     let target_root = target_root(cx);
-    let local = if unit.mode.is_doc() {
+    let local = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
         // rustdoc does not have dep-info files.
         let fingerprint = pkg_fingerprint(cx.bcx, &unit.pkg).with_context(|| {
             format!(
@@ -1302,7 +1302,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     // Fill out a bunch more information that we'll be tracking typically
     // hashed to take up less space on disk as we just need to know when things
     // change.
-    let extra_flags = if unit.mode.is_doc() {
+    let extra_flags = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
         cx.bcx.rustdocflags_args(unit)
     } else {
         cx.bcx.rustflags_args(unit)
