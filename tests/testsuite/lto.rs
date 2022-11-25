@@ -625,6 +625,10 @@ fn dylib() {
 }
 
 #[cargo_test]
+#[cfg_attr(
+    all(target_os = "windows", target_env = "gnu"),
+    ignore = "thinLTO is broken. Tracking in rust-lang/rust#104852"
+)]
 fn test_profile() {
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "pub fn foo() -> i32 { 123 } ")
