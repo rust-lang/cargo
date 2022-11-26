@@ -772,7 +772,7 @@ commit the changes to these files:
 }
 
 #[cargo_test]
-fn errors_on_empty_repo() {
+fn errors_about_untracked_files() {
     let mut git_project = project().at("foo");
     git_project = git_project.file("src/lib.rs", "pub fn foo() {}");
     let p = git_project.build();
@@ -782,10 +782,15 @@ fn errors_on_empty_repo() {
         .with_status(101)
         .with_stderr(
             "\
-error: no commits found in the git repository, \
-and `cargo fix` can potentially perform destructive changes; \
-if you'd like to suppress this error pass `--allow-dirty`, \
-or commit your changes
+error: the working directory of this package has uncommitted changes, \
+and `cargo fix` can potentially perform destructive changes; if you'd \
+like to suppress this error pass `--allow-dirty`, `--allow-staged`, or \
+commit the changes to these files:
+
+  * Cargo.toml (dirty)
+  * src/ (dirty)
+
+
 ",
         )
         .run();
