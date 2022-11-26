@@ -1431,7 +1431,7 @@ fn fix_in_existing_repo_weird_ignore() {
     let p = git::new("foo", |project| {
         project
             .file("src/lib.rs", "")
-            .file(".gitignore", "foo\ninner\n")
+            .file(".gitignore", "foo\ninner\nCargo.lock\ntarget\n")
             .file("inner/file", "")
     });
 
