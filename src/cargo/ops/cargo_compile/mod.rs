@@ -387,15 +387,6 @@ pub fn create_bcx<'a, 'cfg>(
             has_dev_units,
         )?;
 
-        // The set of scraped targets should be a strict subset of the set of documented targets,
-        // except in the special case of examples targets.
-        if cfg!(debug_assertions) {
-            let valid_targets = units.iter().map(|u| &u.target).collect::<HashSet<_>>();
-            for unit in &all_units {
-                assert!(unit.target.is_example() || valid_targets.contains(&unit.target));
-            }
-        }
-
         let valid_units = all_units
             .into_iter()
             .filter(|unit| {

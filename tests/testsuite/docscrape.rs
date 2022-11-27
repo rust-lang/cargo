@@ -196,7 +196,7 @@ fn configure_target() {
         )
         .build();
 
-    p.cargo("doc --lib --bins -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
@@ -518,4 +518,65 @@ fn use_dev_deps_if_explicitly_enabled() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
+fn only_scrape_documented_targets() {
+    // package bar has doc = false and should not be eligible for documtation.
+    let run_with_config = |config: &str, should_scrape: bool| {
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []            
+
+            [lib]
+            {config}
+
+            [workspace]
+            members = ["foo"]
+
+            [dependencies]
+            foo = {{ path = "foo" }}
+        "#
+                ),
+            )
+            .file("src/lib.rs", "pub fn bar() { foo::foo(); }")
+            .file(
+                "foo/Cargo.toml",
+                r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []      
+        "#,
+            )
+            .file("foo/src/lib.rs", "pub fn foo() {}")
+            .build();
+
+        p.cargo("doc --workspace -Zunstable-options -Zrustdoc-scrape-examples")
+            .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
+            .run();
+
+        let doc_html = p.read_file("target/doc/foo/fn.foo.html");
+        let example_found = doc_html.contains("Examples found in repository");
+        if should_scrape {
+            assert!(example_found);
+        } else {
+            assert!(!example_found);
+        }
+    };
+
+    // By default, bar should be scraped.
+    run_with_config("", true);
+    // If bar isn't supposed to be documented, then it is not eligible
+    // for scraping.
+    run_with_config("doc = false", false);
+    // But if the user explicitly says bar should be scraped, then it should
+    // be scraped.
+    run_with_config("doc = false\ndoc-scrape-examples = true", true);
 }
