@@ -13,3 +13,4 @@ develop Rust packages.
 * [Continuous Integration](continuous-integration.md)
 * [Cargo Home](cargo-home.md)
 * [Build Cache](build-cache.md)
+-cargo/src/doc/src/guide/index.md
