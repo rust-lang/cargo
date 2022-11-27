@@ -177,7 +177,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            url: url,
+            url,
             multi: Multi::new(),
             multiplexing: false,
             downloads: Downloads {
