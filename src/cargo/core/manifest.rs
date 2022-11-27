@@ -20,7 +20,8 @@ use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
-use crate::util::{short_hash, Config, Filesystem};
+use crate::util::{Config, Filesystem};
+use cargo_util::hex::short_hash;
 
 pub enum EitherManifest {
     Real(Manifest),

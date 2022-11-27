@@ -59,7 +59,7 @@ use std::thread::{self, Scope};
 use std::time::Duration;
 
 use anyhow::{format_err, Context as _};
-use cargo_util::ProcessBuilder;
+use cargo_util::{hash_u64, ProcessBuilder};
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, trace};
 use semver::Version;
@@ -312,7 +312,7 @@ impl<'cfg> DiagDedupe<'cfg> {
     /// Returns `true` if the message was emitted, or `false` if it was
     /// suppressed for being a duplicate.
     fn emit_diag(&self, diag: &str) -> CargoResult<bool> {
-        let h = util::hash_u64(diag);
+        let h = hash_u64(diag);
         if !self.seen.borrow_mut().insert(h) {
             return Ok(false);
         }

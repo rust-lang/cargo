@@ -322,7 +322,7 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use anyhow::{bail, format_err, Context as _};
-use cargo_util::{paths, ProcessBuilder};
+use cargo_util::{hash_u64, paths, to_hex, ProcessBuilder, StableHasher};
 use filetime::FileTime;
 use log::{debug, info};
 use serde::de;
@@ -331,10 +331,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
-use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{internal, path_args, profile, StableHasher};
+use crate::util::{internal, path_args, profile};
 use crate::CARGO_ENV;
 
 use super::custom_build::BuildDeps;
@@ -812,7 +811,7 @@ impl Fingerprint {
         if let Some(s) = *self.memoized_hash.lock().unwrap() {
             return s;
         }
-        let ret = util::hash_u64(self);
+        let ret = hash_u64(self);
         *self.memoized_hash.lock().unwrap() = Some(ret);
         ret
     }
@@ -1160,9 +1159,9 @@ impl DepFingerprint {
         // `path` then we just hash the name, but otherwise we hash the full
         // id as it won't change when the directory is renamed.
         let pkg_id = if dep.unit.pkg.package_id().source_id().is_path() {
-            util::hash_u64(dep.unit.pkg.package_id().name())
+            hash_u64(dep.unit.pkg.package_id().name())
         } else {
-            util::hash_u64(dep.unit.pkg.package_id())
+            hash_u64(dep.unit.pkg.package_id())
         };
 
         Ok(DepFingerprint {
@@ -1309,7 +1308,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     }
     .to_vec();
 
-    let profile_hash = util::hash_u64((
+    let profile_hash = hash_u64((
         &unit.profile,
         unit.mode,
         cx.bcx.extra_args_for(unit),
@@ -1317,7 +1316,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     ));
     // Include metadata since it is exposed as environment variables.
     let m = unit.pkg.manifest().metadata();
-    let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
+    let metadata = hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
     let mut config = StableHasher::new();
     if let Some(linker) = cx.bcx.linker(unit.kind) {
         linker.hash(&mut config);
@@ -1332,12 +1331,12 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     }
     let compile_kind = unit.kind.fingerprint_hash();
     Ok(Fingerprint {
-        rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
-        target: util::hash_u64(&unit.target),
+        rustc: hash_u64(&cx.bcx.rustc().verbose_version),
+        target: hash_u64(&unit.target),
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
-        path: util::hash_u64(path_args(cx.bcx.ws, unit).0),
+        path: hash_u64(path_args(cx.bcx.ws, unit).0),
         features: format!("{:?}", unit.features),
         deps,
         local: Mutex::new(local),
@@ -1402,7 +1401,7 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-change
 
     Ok(Fingerprint {
         local: Mutex::new(local),
-        rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
+        rustc: hash_u64(&cx.bcx.rustc().verbose_version),
         deps,
         outputs: if overridden { Vec::new() } else { vec![output] },
 
@@ -1532,10 +1531,7 @@ fn build_script_override_fingerprint(
     let metadata = cx.get_run_build_script_metadata(unit);
     // Returns None if it is not overridden.
     let output = build_script_outputs.get(metadata)?;
-    let s = format!(
-        "overridden build state with hash: {}",
-        util::hash_u64(output)
-    );
+    let s = format!("overridden build state with hash: {}", hash_u64(output));
     Some(LocalFingerprint::Precalculated(s))
 }
 
@@ -1586,7 +1582,7 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
     // as we can use the full hash.
     let hash = fingerprint.hash_u64();
     debug!("write fingerprint ({:x}) : {}", hash, loc.display());
-    paths::write(loc, util::to_hex(hash).as_bytes())?;
+    paths::write(loc, to_hex(hash).as_bytes())?;
 
     let json = serde_json::to_string(fingerprint).unwrap();
     if cfg!(debug_assertions) {
@@ -1637,7 +1633,7 @@ fn compare_old_fingerprint(
 
     let new_hash = new_fingerprint.hash_u64();
 
-    if util::to_hex(new_hash) == old_fingerprint_short && new_fingerprint.fs_status.up_to_date() {
+    if to_hex(new_hash) == old_fingerprint_short && new_fingerprint.fs_status.up_to_date() {
         return Ok(());
     }
 
@@ -1646,10 +1642,7 @@ fn compare_old_fingerprint(
         .with_context(|| internal("failed to deserialize json"))?;
     // Fingerprint can be empty after a failed rebuild (see comment in prepare_target).
     if !old_fingerprint_short.is_empty() {
-        debug_assert_eq!(
-            util::to_hex(old_fingerprint.hash_u64()),
-            old_fingerprint_short
-        );
+        debug_assert_eq!(to_hex(old_fingerprint.hash_u64()), old_fingerprint_short);
     }
     let result = new_fingerprint.compare(&old_fingerprint);
     assert!(result.is_err());

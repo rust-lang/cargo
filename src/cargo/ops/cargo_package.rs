@@ -14,10 +14,10 @@ use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::toml::TomlManifest;
-use crate::util::{self, human_readable_bytes, restricted_names, Config, FileLock};
+use crate::util::{human_readable_bytes, restricted_names, Config, FileLock};
 use crate::{drop_println, ops};
 use anyhow::Context as _;
-use cargo_util::paths;
+use cargo_util::{hex, paths};
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
 use log::debug;
@@ -885,13 +885,13 @@ fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
             let file_type = entry.file_type();
             if file_type.is_file() {
                 let file = File::open(entry.path())?;
-                let hash = util::hex::hash_u64_file(&file)?;
+                let hash = hex::hash_u64_file(&file)?;
                 result.insert(entry.path().to_path_buf(), hash);
             } else if file_type.is_symlink() {
-                let hash = util::hex::hash_u64(&fs::read_link(entry.path())?);
+                let hash = hex::hash_u64(&fs::read_link(entry.path())?);
                 result.insert(entry.path().to_path_buf(), hash);
             } else if file_type.is_dir() {
-                let hash = util::hex::hash_u64(&());
+                let hash = hex::hash_u64(&());
                 result.insert(entry.path().to_path_buf(), hash);
             }
         }

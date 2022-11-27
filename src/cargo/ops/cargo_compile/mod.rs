@@ -52,7 +52,8 @@ use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
 use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
-use crate::util::{closest_msg, profile, CargoResult, StableHasher};
+use crate::util::{closest_msg, profile, CargoResult};
+use cargo_util::StableHasher;
 
 mod compile_filter;
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};

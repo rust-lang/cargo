@@ -712,7 +712,7 @@ impl Ord for SourceKind {
 fn test_cratesio_hash() {
     let config = Config::default().unwrap();
     let crates_io = SourceId::crates_io(&config).unwrap();
-    assert_eq!(crate::util::hex::short_hash(&crates_io), "1ecc6299db9ec823");
+    assert_eq!(cargo_util::hex::short_hash(&crates_io), "1ecc6299db9ec823");
 }
 
 /// A `Display`able view into a `SourceId` that will write it as a url

@@ -167,6 +167,7 @@ use std::path::{Path, PathBuf};
 use std::task::Poll;
 
 use anyhow::Context as _;
+use cargo_util::hex;
 use cargo_util::paths::exclude_from_backups_and_indexing;
 use flate2::read::GzDecoder;
 use log::debug;
@@ -178,7 +179,6 @@ use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
 use crate::core::{Package, PackageId, QueryKind, Source, SourceId, Summary};
 use crate::sources::PathSource;
-use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
 use crate::util::network::PollExt;

@@ -2593,7 +2593,7 @@ fn package_lock_inside_package_is_overwritten() {
     p.cargo("build").run();
 
     let id = SourceId::for_registry(registry.index_url()).unwrap();
-    let hash = cargo::util::hex::short_hash(&id);
+    let hash = cargo_util::hex::short_hash(&id);
     let ok = cargo_home()
         .join("registry")
         .join("src")
@@ -2631,7 +2631,7 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
     p.cargo("build").run();
 
     let id = SourceId::for_registry(registry.index_url()).unwrap();
-    let hash = cargo::util::hex::short_hash(&id);
+    let hash = cargo_util::hex::short_hash(&id);
     let pkg_root = cargo_home()
         .join("registry")
         .join("src")
