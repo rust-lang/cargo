@@ -102,17 +102,11 @@ impl SourceId {
         SourceId { inner }
     }
 
-    fn remote_source_kind(url: &Url) -> (SourceKind, Url) {
+    fn remote_source_kind(url: &Url) -> SourceKind {
         if url.as_str().starts_with("sparse+") {
-            let url = url
-                .to_string()
-                .strip_prefix("sparse+")
-                .expect("we just found that prefix")
-                .into_url()
-                .expect("a valid url without a protocol specifier should still be valid");
-            (SourceKind::SparseRegistry, url)
+            SourceKind::SparseRegistry
         } else {
-            (SourceKind::Registry, url.to_owned())
+            SourceKind::Registry
         }
     }
 
@@ -196,14 +190,14 @@ impl SourceId {
     /// Use [`SourceId::for_alt_registry`] if a name can provided, which
     /// generates better messages for cargo.
     pub fn for_registry(url: &Url) -> CargoResult<SourceId> {
-        let (kind, url) = Self::remote_source_kind(url);
-        SourceId::new(kind, url, None)
+        let kind = Self::remote_source_kind(url);
+        SourceId::new(kind, url.to_owned(), None)
     }
 
     /// Creates a `SourceId` from a remote registry URL with given name.
     pub fn for_alt_registry(url: &Url, name: &str) -> CargoResult<SourceId> {
-        let (kind, url) = Self::remote_source_kind(url);
-        SourceId::new(kind, url, Some(name))
+        let kind = Self::remote_source_kind(url);
+        SourceId::new(kind, url.to_owned(), Some(name))
     }
 
     /// Creates a SourceId from a local registry path.
@@ -263,7 +257,7 @@ impl SourceId {
             return Self::crates_io(config);
         }
         let url = config.get_registry_index(key)?;
-        let (kind, url) = Self::remote_source_kind(&url);
+        let kind = Self::remote_source_kind(&url);
         Ok(SourceId::wrap(SourceIdInner {
             kind,
             canonical_url: CanonicalUrl::new(&url)?,
@@ -428,10 +422,7 @@ impl SourceId {
         let url = self.inner.url.as_str();
         url == CRATES_IO_INDEX
             || url == CRATES_IO_HTTP_INDEX
-            || std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS")
-                .as_deref()
-                .map(|u| u.trim_start_matches("sparse+"))
-                == Ok(url)
+            || std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS").as_deref() == Ok(url)
     }
 
     /// Hashes `self`.
@@ -755,7 +746,7 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 ref url,
                 ..
             } => {
-                write!(f, "sparse+{url}")
+                write!(f, "{url}")
             }
             SourceIdInner {
                 kind: SourceKind::LocalRegistry,
