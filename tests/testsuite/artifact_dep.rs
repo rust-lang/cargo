@@ -2399,7 +2399,6 @@ fn with_target_and_optional() {
 
 #[cargo_test]
 fn with_assumed_host_target_and_optional_build_dep() {
-    // This exercises an incorrect behaviour got to be fixed by the following commit.
     let p = project()
         .file(
             "Cargo.toml",
@@ -2435,8 +2434,16 @@ fn with_assumed_host_target_and_optional_build_dep() {
 
     p.cargo("check -Z bindeps -F d1 -v")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_contains("[ERROR] failed to run custom build command for `foo v0.0.1 ([..])`")
-        .with_stderr_contains("[..]thread '[..]' panicked at 'called `Result::unwrap()`[..]")
+        .with_stderr_unordered(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[COMPILING] d1 v0.0.1 ([CWD]/d1)
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin[..]
+[RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
+[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]--cfg[..]d1[..]
+[FINISHED] dev [..]
+",
+        )
         .run();
 }
