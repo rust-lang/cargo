@@ -2394,3 +2394,47 @@ fn with_target_and_optional() {
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn with_assumed_host_target_and_optional_build_dep() {
+    // This exercises an incorrect behaviour got to be fixed by the following commit.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+                [build-dependencies]
+                d1 = { path = "d1", artifact = "bin", optional = true, target = "target" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    std::env::var("CARGO_BIN_FILE_D1").unwrap();
+                }
+            "#,
+        )
+        .file(
+            "d1/Cargo.toml",
+            r#"
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                edition = "2021"
+            "#,
+        )
+        .file("d1/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps -F d1 -v")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_contains("[ERROR] failed to run custom build command for `foo v0.0.1 ([..])`")
+        .with_stderr_contains("[..]thread '[..]' panicked at 'called `Result::unwrap()`[..]")
+        .run();
+}
