@@ -31,6 +31,7 @@ struct State<'cfg> {
     throttle: Throttle,
     last_line: Option<String>,
     fixed_width: Option<usize>,
+    last_pbar: u8,
 }
 
 struct Format {
@@ -100,6 +101,7 @@ impl<'cfg> Progress<'cfg> {
                 throttle: Throttle::new(),
                 last_line: None,
                 fixed_width: progress_config.width,
+                last_pbar: 255,
             }),
         }
     }
@@ -214,13 +216,12 @@ impl<'cfg> State<'cfg> {
         // return back to the beginning of the line for the next print.
         self.try_update_max_width();
         if let Some(pbar) = self.format.progress(cur, max) {
+            let prog = ((cur as f32) / (max as f32) * 100.0) as u8;
+            if self.last_pbar != prog {
+                write!(self.config.shell().err(), "{}", ProgressCode::Normal(prog))?;
+                self.last_pbar = prog;
+            }
             self.print(&pbar, msg)?;
-            let prog = (cur as f32) / (max as f32) * 100.0;
-            write!(
-                self.config.shell().err(),
-                "{}",
-                ProgressCode::Normal(prog as u8)
-            )?;
         }
         Ok(())
     }
