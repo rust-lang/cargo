@@ -101,6 +101,9 @@ In summary, the supported environment variables are:
 * `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` - How often we should generate a future incompat report notification, see [`future-incompat-report.frequency`].
 * `CARGO_HTTP_DEBUG` — Enables HTTP debugging, see [`http.debug`].
 * `CARGO_HTTP_PROXY` — Enables HTTP proxy, see [`http.proxy`].
+* `CARGO_HTTP_PROXY_AUTH` — The proxy authentication mechanism, see [`http.proxy-auth`].
+* `CARGO_HTTP_PROXY_USERNAME` — The proxy username, see [`http.proxy-username`].
+* `CARGO_HTTP_PROXY_PASSWORD` — The proxy password, see [`http.proxy-password`].
 * `CARGO_HTTP_TIMEOUT` — The HTTP timeout, see [`http.timeout`].
 * `CARGO_HTTP_CAINFO` — The TLS certificate Certificate Authority file, see [`http.cainfo`].
 * `CARGO_HTTP_CHECK_REVOKE` — Disables TLS certificate revocation checks, see [`http.check-revoke`].
@@ -163,6 +166,9 @@ In summary, the supported environment variables are:
 [`future-incompat-report.frequency`]: config.md#future-incompat-reportfrequency
 [`http.debug`]: config.md#httpdebug
 [`http.proxy`]: config.md#httpproxy
+[`http.proxy-auth`]: config.md#httpproxy-auth
+[`http.proxy-username`]: config.md#httpproxy-username
+[`http.proxy-password`]: config.md#httpproxy-password
 [`http.timeout`]: config.md#httptimeout
 [`http.cainfo`]: config.md#httpcainfo
 [`http.check-revoke`]: config.md#httpcheck-revoke

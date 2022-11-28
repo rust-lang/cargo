@@ -96,6 +96,9 @@ vcs = "none"              # VCS to use ('git', 'hg', 'pijul', 'fossil', 'none')
 [http]
 debug = false               # HTTP debugging
 proxy = "host:port"         # HTTP proxy in libcurl format
+proxy-auth = "auto"         # HTTP proxy authentication mechanism
+proxy-username = ""         # HTTP proxy username
+proxy-password = ""         # HTTP proxy password
 ssl-version = "tlsv1.3"     # TLS version to use
 ssl-version.max = "tlsv1.3" # maximum TLS version
 ssl-version.min = "tlsv1.1" # minimum TLS version
@@ -626,6 +629,28 @@ Sets an HTTP and HTTPS proxy to use. The format is in [libcurl format] as in
 setting in your global git configuration. If none of those are set, the
 `HTTPS_PROXY` or `https_proxy` environment variables set the proxy for HTTPS
 requests, and `http_proxy` sets it for HTTP requests.
+
+##### `http.proxy-auth`
+* Type: string
+* Default: "auto"
+* Environment: `CARGO_HTTP_PROXY_AUTH`
+
+Sets a mechanism to authenticate against the proxy.
+Possible values are: "auto", "disable", "basic", "digest", "gss" and "ntlm".
+
+##### `http.proxy-username`
+* Type: string
+* Default: ""
+* Environment: `CARGO_HTTP_PROXY_USERNAME`
+
+Authenticate against the proxy using the given username.
+
+##### `http.proxy-password`
+* Type: string
+* Default: ""
+* Environment: `CARGO_HTTP_PROXY_PASSWORD`
+
+Authenticate against the proxy using the given password.
 
 ##### `http.timeout`
 * Type: integer

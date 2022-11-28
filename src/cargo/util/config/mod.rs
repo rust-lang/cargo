@@ -77,7 +77,7 @@ use crate::util::{internal, toml as cargo_toml};
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
-use curl::easy::Easy;
+use curl::easy::{Auth, Easy};
 use lazycell::LazyCell;
 use serde::Deserialize;
 use toml_edit::{easy as toml, Item};
@@ -2217,8 +2217,41 @@ impl Drop for PackageCacheLock<'_> {
 
 #[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+pub enum CargoHttpProxyAuth {
+    #[default]
+    Auto,
+    Disable,
+    Basic,
+    Digest,
+    Gss,
+    Ntlm,
+}
+
+impl CargoHttpProxyAuth {
+    pub fn to_easy(&self) -> Auth {
+        let mut easy = Auth::new();
+        let easy = match self {
+            Self::Auto => easy.basic(true).digest(true).gssnegotiate(true).ntlm(true),
+            Self::Disable => &mut easy,
+            Self::Basic => easy.basic(true),
+            Self::Digest => easy.digest(true),
+            Self::Gss => easy.gssnegotiate(true),
+            Self::Ntlm => easy.ntlm(true),
+        };
+        easy.clone()
+    }
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
 pub struct CargoHttpConfig {
     pub proxy: Option<String>,
+    #[serde(default)]
+    pub proxy_auth: CargoHttpProxyAuth,
+    #[serde(default)]
+    pub proxy_username: String,
+    #[serde(default)]
+    pub proxy_password: String,
     pub low_speed_limit: Option<u32>,
     pub timeout: Option<u64>,
     pub cainfo: Option<ConfigRelativePath>,
