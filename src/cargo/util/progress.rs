@@ -39,6 +39,25 @@ struct Format {
     max_print: usize,
 }
 
+enum ProgressCode {
+    None,
+    Normal(u8),
+}
+
+impl std::fmt::Display for ProgressCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let progress = match self {
+            Self::None => 0,
+            Self::Normal(v) => *v,
+        };
+        let state = match self {
+            Self::None => 0,
+            Self::Normal(_) => 1,
+        };
+        write!(f, "\x1b]9;4;{state};{progress}\x1b\\")
+    }
+}
+
 impl<'cfg> Progress<'cfg> {
     pub fn with_style(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
         // report no progress when -q (for quiet) or TERM=dumb are set
@@ -183,6 +202,7 @@ impl Throttle {
 impl<'cfg> State<'cfg> {
     fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         if self.done {
+            write!(self.config.shell().err(), "{}", ProgressCode::None)?;
             return Ok(());
         }
 
@@ -195,6 +215,12 @@ impl<'cfg> State<'cfg> {
         self.try_update_max_width();
         if let Some(pbar) = self.format.progress(cur, max) {
             self.print(&pbar, msg)?;
+            let prog = (cur as f32) / (max as f32) * 100.0;
+            write!(
+                self.config.shell().err(),
+                "{}",
+                ProgressCode::Normal(prog as u8)
+            )?;
         }
         Ok(())
     }
