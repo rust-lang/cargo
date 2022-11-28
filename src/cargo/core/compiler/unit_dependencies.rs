@@ -1103,7 +1103,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         // If this is an optional dependency, and the new feature resolver
                         // did not enable it, don't include it.
                         if dep.is_optional() {
-                            let features_for = unit_for.map_to_features_for(dep.artifact());
+                            let features_for = unit_for.map_to_features_for(None);
                             if !self.is_dep_activated(pkg_id, features_for, dep.name_in_toml()) {
                                 return false;
                             }

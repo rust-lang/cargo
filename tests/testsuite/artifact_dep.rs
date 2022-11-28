@@ -2345,7 +2345,6 @@ fn calc_bin_artifact_fingerprint() {
 
 #[cargo_test]
 fn with_target_and_optional() {
-    // This is a incorrect behaviour got to be fixed.
     // See rust-lang/cargo#10526
     if cross_compile::disabled() {
         return;
@@ -2386,12 +2385,15 @@ fn with_target_and_optional() {
 
     p.cargo("check -Z bindeps -F d1 -v")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_contains(
+        .with_stderr(
             "\
-[ERROR] environment variable `CARGO_BIN_FILE_D1` not defined
+[COMPILING] d1 v0.0.1 [..]
+[RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
+[CHECKING] foo v0.0.1 [..]
+[RUNNING] `rustc --crate-name foo [..]--cfg[..]d1[..]
+[FINISHED] dev [..]
 ",
         )
-        .with_status(101)
         .run();
 }
 
