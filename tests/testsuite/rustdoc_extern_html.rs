@@ -342,3 +342,85 @@ fn rebuilds_when_changing() {
         )
         .run();
 }
+
+#[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
+fn alt_sparse_registry() {
+    // Supports other registry names.
+
+    registry::init();
+    let _registry = registry::RegistryBuilder::new()
+        .http_index()
+        .alternative()
+        .build();
+
+    Package::new("bar", "1.0.0")
+        .alternative(true)
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate baz;
+                pub struct Queen;
+                pub use baz::King;
+            "#,
+        )
+        .registry_dep("baz", "1.0")
+        .publish();
+    Package::new("baz", "1.0.0")
+        .alternative(true)
+        .file("src/lib.rs", "pub struct King;")
+        .publish();
+    Package::new("grimm", "1.0.0")
+        .file("src/lib.rs", "pub struct Gold;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [dependencies]
+                bar = { version = "1.0", registry="alternative" }
+                grimm = "1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn queen() -> bar::Queen { bar::Queen }
+                pub fn king() -> bar::King { bar::King }
+                pub fn gold() -> grimm::Gold { grimm::Gold }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+                [doc.extern-map.registries]
+                alternative = "https://example.com/{pkg_name}/{version}/"
+                crates-io = "https://docs.rs/"
+            "#,
+        )
+        .build();
+    p.cargo("doc -v --no-deps -Zrustdoc-map -Zsparse-registry")
+        .masquerade_as_nightly_cargo(&["rustdoc-map", "sparse-registry"])
+        .with_stderr_contains(
+            "[RUNNING] `rustdoc [..]--crate-name foo \
+            [..]bar=https://example.com/bar/1.0.0/[..]grimm=https://docs.rs/grimm/1.0.0/[..]",
+        )
+        .run();
+    let queen = p.read_file("target/doc/foo/fn.queen.html");
+    assert!(queen.contains(r#"href="https://example.com/bar/1.0.0/bar/struct.Queen.html""#));
+    // The king example fails to link. Rustdoc seems to want the origin crate
+    // name (baz) for re-exports. There are many issues in the issue tracker
+    // for rustdoc re-exports, so I'm not sure, but I think this is maybe a
+    // rustdoc issue. Alternatively, Cargo could provide mappings for all
+    // transitive dependencies to fix this.
+    let king = p.read_file("target/doc/foo/fn.king.html");
+    assert!(king.contains(r#"-&gt; King"#));
+
+    let gold = p.read_file("target/doc/foo/fn.gold.html");
+    assert!(gold.contains(r#"href="https://docs.rs/grimm/1.0.0/grimm/struct.Gold.html""#));
+}
