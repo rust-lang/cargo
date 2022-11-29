@@ -41,6 +41,7 @@ use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
@@ -361,6 +362,7 @@ pub fn create_bcx<'a, 'cfg>(
         &pkg_set,
         &profiles,
         interner,
+        has_dev_units,
     )?;
 
     if let Some(args) = target_rustc_crate_types {
@@ -369,11 +371,10 @@ pub fn create_bcx<'a, 'cfg>(
 
     let should_scrape = build_config.mode.is_doc() && config.cli_unstable().rustdoc_scrape_examples;
     let mut scrape_units = if should_scrape {
-        let scrape_filter = filter.refine_for_docscrape(&to_builds, has_dev_units);
         let all_units = generate_targets(
             ws,
             &to_builds,
-            &scrape_filter,
+            &filter,
             &build_config.requested_kinds,
             explicit_host_kind,
             CompileMode::Docscrape,
@@ -383,24 +384,17 @@ pub fn create_bcx<'a, 'cfg>(
             &pkg_set,
             &profiles,
             interner,
+            has_dev_units,
         )?;
-
-        // The set of scraped targets should be a strict subset of the set of documented targets,
-        // except in the special case of examples targets.
-        if cfg!(debug_assertions) {
-            let valid_targets = units.iter().map(|u| &u.target).collect::<HashSet<_>>();
-            for unit in &all_units {
-                assert!(unit.target.is_example() || valid_targets.contains(&unit.target));
-            }
-        }
 
         let valid_units = all_units
             .into_iter()
             .filter(|unit| {
-                !matches!(
-                    unit.target.doc_scrape_examples(),
-                    RustdocScrapeExamples::Disabled
-                )
+                ws.unit_needs_doc_scrape(unit)
+                    && !matches!(
+                        unit.target.doc_scrape_examples(),
+                        RustdocScrapeExamples::Disabled
+                    )
             })
             .collect::<Vec<_>>();
         valid_units
@@ -597,6 +591,7 @@ fn generate_targets(
     package_set: &PackageSet<'_>,
     profiles: &Profiles,
     interner: &UnitInterner,
+    has_dev_units: HasDevUnits,
 ) -> CargoResult<Vec<Unit>> {
     let config = ws.config();
     // Helper for creating a list of `Unit` structures
@@ -826,6 +821,52 @@ fn generate_targets(
                 bench_mode,
             )?);
         }
+    }
+
+    if mode.is_doc_scrape() {
+        // In general, the goal is to scrape examples from (a) whatever targets
+        // the user is documenting, and (b) Example targets. However, if the user
+        // is documenting a library with dev-dependencies, those dev-deps are not
+        // needed for the library, while dev-deps are needed for the examples.
+        //
+        // If scrape-examples caused `cargo doc` to start requiring dev-deps, this
+        // would be a breaking change to crates whose dev-deps don't compile.
+        // Therefore we ONLY want to scrape Example targets if either:
+        //    (1) No package has dev-dependencies, so this is a moot issue, OR
+        //    (2) The provided CompileFilter requires dev-dependencies anyway.
+        //
+        // The next two variables represent these two conditions.
+        let no_pkg_has_dev_deps = packages.iter().all(|pkg| {
+            pkg.summary()
+                .dependencies()
+                .iter()
+                .all(|dep| !matches!(dep.kind(), DepKind::Development))
+        });
+        let reqs_dev_deps = matches!(has_dev_units, HasDevUnits::Yes);
+        let safe_to_scrape_example_targets = no_pkg_has_dev_deps || reqs_dev_deps;
+
+        let proposed_targets: HashSet<&Target> = proposals.iter().map(|p| p.target).collect();
+        let can_scrape = |target: &Target| {
+            let not_redundant = !proposed_targets.contains(target);
+            not_redundant
+                && match (target.doc_scrape_examples(), target.is_example()) {
+                    // Targets configured by the user to not be scraped should never be scraped
+                    (RustdocScrapeExamples::Disabled, _) => false,
+                    // Targets configured by the user to be scraped should always be scraped
+                    (RustdocScrapeExamples::Enabled, _) => true,
+                    // Example targets with no configuration should be conditionally scraped if
+                    // it's guaranteed not to break the build
+                    (RustdocScrapeExamples::Unset, true) => safe_to_scrape_example_targets,
+                    // All other targets are ignored for now. This may change in the future!
+                    (RustdocScrapeExamples::Unset, false) => false,
+                }
+        };
+        proposals.extend(filter_targets(
+            packages,
+            can_scrape,
+            false,
+            CompileMode::Docscrape,
+        ));
     }
 
     // Only include targets that are libraries or have all required
@@ -1074,7 +1115,7 @@ fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target>
             .iter()
             .filter(|t| t.is_bin() || t.is_lib())
             .collect(),
-        CompileMode::Doc { .. } => {
+        CompileMode::Doc { .. } | CompileMode::Docscrape => {
             // `doc` does lib and bins (bin with same name as lib is skipped).
             targets
                 .iter()
@@ -1085,7 +1126,7 @@ fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target>
                 })
                 .collect()
         }
-        CompileMode::Doctest | CompileMode::Docscrape | CompileMode::RunCustomBuild => {
+        CompileMode::Doctest | CompileMode::RunCustomBuild => {
             panic!("Invalid mode {:?}", mode)
         }
     }
