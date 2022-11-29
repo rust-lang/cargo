@@ -197,6 +197,7 @@ const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024;
+const MAX_COMPRESSION_RATIO: usize = 20; // 20:1
 
 /// A "source" for a local (see `local::LocalRegistry`) or remote (see
 /// `remote::RemoteRegistry`) registry.
@@ -627,9 +628,12 @@ impl<'cfg> RegistrySource<'cfg> {
                 return Ok(unpack_dir.to_path_buf());
             }
         }
-        let gz = GzDecoder::new(tarball);
-        let gz = LimitErrorReader::new(gz, max_unpack_size());
-        let mut tar = Archive::new(gz);
+        let mut tar = {
+            let size_limit = max_unpack_size(tarball.metadata()?.len());
+            let gz = GzDecoder::new(tarball);
+            let gz = LimitErrorReader::new(gz, size_limit);
+            Archive::new(gz)
+        };
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
         for entry in tar.entries()? {
@@ -851,18 +855,47 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 }
 
-/// For integration test only.
-#[inline]
-fn max_unpack_size() -> u64 {
-    const VAR: &str = "__CARGO_TEST_MAX_UNPACK_SIZE";
-    if cfg!(debug_assertions) && std::env::var(VAR).is_ok() {
-        std::env::var(VAR)
+/// Get the maximum upack size that Cargo permits
+/// based on a given `size of your compressed file.
+///
+/// Returns the larger one between `size * max compression ratio`
+/// and a fixed max unpacked size.
+///
+/// In reality, the compression ratio usually falls in the range of 2:1 to 10:1.
+/// We choose 20:1 to cover almost all possible cases hopefully.
+/// Any ratio higher than this is considered as a zip bomb.
+///
+/// In the future we might want to introduce a configurable size.
+///
+/// Some of the real world data from common compression algorithms:
+///
+/// * <https://www.zlib.net/zlib_tech.html>
+/// * <https://cran.r-project.org/web/packages/brotli/vignettes/brotli-2015-09-22.pdf>
+/// * <https://blog.cloudflare.com/results-experimenting-brotli/>
+/// * <https://tukaani.org/lzma/benchmarks.html>
+fn max_unpack_size(size: u64) -> u64 {
+    const SIZE_VAR: &str = "__CARGO_TEST_MAX_UNPACK_SIZE";
+    const RATIO_VAR: &str = "__CARGO_TEST_MAX_UNPACK_RATIO";
+    let max_unpack_size = if cfg!(debug_assertions) && std::env::var(SIZE_VAR).is_ok() {
+        // For integration test only.
+        std::env::var(SIZE_VAR)
             .unwrap()
             .parse()
             .expect("a max unpack size in bytes")
     } else {
         MAX_UNPACK_SIZE
-    }
+    };
+    let max_compression_ratio = if cfg!(debug_assertions) && std::env::var(RATIO_VAR).is_ok() {
+        // For integration test only.
+        std::env::var(RATIO_VAR)
+            .unwrap()
+            .parse()
+            .expect("a max compresssion ratio in bytes")
+    } else {
+        MAX_COMPRESSION_RATIO
+    };
+
+    u64::max(max_unpack_size, size * max_compression_ratio as u64)
 }
 
 fn make_dep_prefix(name: &str) -> String {
