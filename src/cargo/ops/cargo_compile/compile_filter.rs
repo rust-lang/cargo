@@ -32,7 +32,7 @@ pub enum FilterRule {
 ///
 /// Not to be confused with [`Packages`], which opts in packages to be built.
 ///
-/// [`generate_targets`]: super::generate_targets
+/// [`generate_targets`]: super::TargetGenerator::generate_targets
 /// [`Packages`]: crate::ops::Packages
 #[derive(Debug)]
 pub enum CompileFilter {
