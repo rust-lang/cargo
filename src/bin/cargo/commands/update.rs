@@ -19,7 +19,8 @@ pub fn cli() -> Command {
                 "precise",
                 "Update a single dependency to exactly PRECISE when used with -p",
             )
-            .value_name("PRECISE"),
+            .value_name("PRECISE")
+            .requires("package"),
         )
         .arg_manifest_path()
         .after_help("Run `cargo help update` for more detailed information.\n")
