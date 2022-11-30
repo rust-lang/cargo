@@ -694,6 +694,7 @@ impl<'cfg> RegistrySource<'cfg> {
             .summaries(&package.name(), &req, &mut *self.ops)?
             .expect("a downloaded dep now pending!?")
             .map(|s| s.summary.clone())
+            .filter(|s| s.version() == package.version())
             .next()
             .expect("summary not found");
         if let Some(cksum) = summary_with_cksum.checksum() {
