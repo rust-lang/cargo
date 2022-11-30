@@ -428,46 +428,6 @@ fn update_precise_do_not_force_update_deps() {
 }
 
 #[cargo_test]
-fn update_precise_without_package() {
-    Package::new("serde", "0.2.0").publish();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.0.1"
-                authors = []
-
-                [dependencies]
-                serde = "0.2"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build").run();
-
-    Package::new("serde", "0.2.1").publish();
-    Package::new("serde", "0.3.0").publish();
-
-    p.cargo("update --precise 0.3.0")
-        .with_status(1)
-        .with_stderr(
-            "\
-[ERROR] The following required arguments were not provided:
-  --package [<SPEC>]
-
-Usage: cargo[EXE] update --package [<SPEC>] --precise <PRECISE>
-
-For more information try '--help'
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn update_aggressive() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.2.1").dep("log", "0.1").publish();
@@ -499,45 +459,6 @@ fn update_aggressive() {
 [UPDATING] `[..]` index
 [UPDATING] log v0.1.0 -> v0.1.1
 [UPDATING] serde v0.2.1 -> v0.2.2
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn update_aggressive_without_package() {
-    Package::new("serde", "0.2.0").publish();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.0.1"
-                authors = []
-
-                [dependencies]
-                serde = "0.2"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build").run();
-
-    Package::new("serde", "0.2.1").publish();
-
-    p.cargo("update --aggressive")
-        .with_status(1)
-        .with_stderr(
-            "\
-[ERROR] The following required arguments were not provided:
-  --package [<SPEC>]
-
-Usage: cargo[EXE] update --package [<SPEC>] --aggressive
-
-For more information try '--help'
 ",
         )
         .run();
