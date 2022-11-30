@@ -297,7 +297,8 @@ fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -
         let entry = entry?;
         progress.on_clean()?;
         if entry.file_type().is_dir() {
-            paths::remove_dir(entry.path()).with_context(|| "could not remove build directory")?;
+            paths::remove_dir_all(entry.path())
+                .with_context(|| "could not remove build directory")?;
         } else {
             paths::remove_file(entry.path()).with_context(|| "failed to remove build artifact")?;
         }
