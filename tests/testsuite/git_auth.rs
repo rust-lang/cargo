@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
+use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::paths;
 use cargo_test_support::{basic_manifest, project};
 
@@ -157,8 +158,7 @@ Caused by:
   https://[..]
 
 Caused by:
-",
-            addr = addr
+"
         ))
         .run();
 
@@ -206,15 +206,16 @@ fn https_something_happens() {
     p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains(&format!(
-            "[UPDATING] git repository `https://{addr}/foo/bar`",
-            addr = addr
+            "[UPDATING] git repository `https://{addr}/foo/bar`"
         ))
         .with_stderr_contains(&format!(
             "\
 Caused by:
   {errmsg}
 ",
-            errmsg = if cfg!(windows) {
+            errmsg = if cargo_uses_gitoxide() {
+                "[..]SSL connect error [..]"
+            } else if cfg!(windows) {
                 "[..]failed to send request: [..]"
             } else if cfg!(target_os = "macos") {
                 // macOS is difficult to tests as some builds may use Security.framework,
@@ -258,18 +259,40 @@ fn ssh_something_happens() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("check -v")
-        .with_status(101)
-        .with_stderr_contains(&format!(
-            "[UPDATING] git repository `ssh://{addr}/foo/bar`",
-            addr = addr
-        ))
-        .with_stderr_contains(
+    let (expected_ssh_message, expected_update) = if cargo_uses_gitoxide() {
+        // Due to the usage of `ssh` and `ssh.exe` respectively, the messages change.
+        // This will be adjusted to use `ssh2` to get rid of this dependency and have uniform messaging.
+        let message = if cfg!(windows) {
+            // The order of multiple possible messages isn't deterministic within `ssh`, and `gitoxide` detects both
+            // but gets to report only the first. Thus this test can flip-flop from one version of the error to the other
+            // and we can't test for that.
+            // We'd want to test for:
+            // "[..]ssh: connect to host 127.0.0.1 [..]"
+            //   ssh: connect to host example.org port 22: No route to host
+            // "[..]banner exchange: Connection to 127.0.0.1 [..]"
+            //   banner exchange: Connection to 127.0.0.1 port 62250: Software caused connection abort
+            // But since there is no common meaningful sequence or word, we can only match a small telling sequence of characters.
+            "[..]onnect[..]"
+        } else {
+            "[..]Connection [..] by [..]"
+        };
+        (
+            message,
+            format!("[..]Unable to update ssh://{addr}/foo/bar"),
+        )
+    } else {
+        (
             "\
 Caused by:
   [..]failed to start SSH session: Failed getting banner[..]
 ",
+            format!("[UPDATING] git repository `ssh://{addr}/foo/bar`"),
         )
+    };
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_contains(&expected_update)
+        .with_stderr_contains(expected_ssh_message)
         .run();
     t.join().ok().unwrap();
 }
@@ -294,7 +317,7 @@ fn net_err_suggests_fetch_with_cli() {
 
     p.cargo("check -v")
         .with_status(101)
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [UPDATING] git repository `ssh://needs-proxy.invalid/git`
 warning: spurious network error[..]
@@ -316,9 +339,14 @@ Caused by:
   https://[..]
 
 Caused by:
-  failed to resolve address for needs-proxy.invalid[..]
+  {trailer}
 ",
-        )
+            trailer = if cargo_uses_gitoxide() {
+                "An IO error occurred when talking to the server\n\nCaused by:\n  ssh: Could not resolve hostname needs-proxy.invalid[..]"
+            } else {
+                "failed to resolve address for needs-proxy.invalid[..]"
+            }
+        ))
         .run();
 
     p.change_file(
@@ -389,8 +417,8 @@ Caused by:
 
 Caused by:
   [..]
-",
-            addr = addr
+{trailer}",
+            trailer = if cargo_uses_gitoxide() { "\nCaused by:\n  [..]" } else { "" }
         ))
         .run();
 

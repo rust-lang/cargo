@@ -40,6 +40,16 @@ the `CARGO_RUN_BUILD_STD_TESTS=1` environment variable and running `cargo test
 `rust-src` component installed with `rustup component add rust-src
 --toolchain=nightly`.
 
+## Running with `gitoxide` as default git backend in tests
+
+By default, the `git2` backend is used for most git operations. As tests need to explicitly
+opt-in to use nightly features and feature flags, adjusting all tests to run with nightly
+and `-Zgitoxide` is unfeasible.
+
+This is why the private environment variable named `__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2` can be
+set while running tests to automatically enable the `-Zgitoxide` flag implicitly, allowing to
+test `gitoxide` for the entire cargo test suite.
+
 ## Running public network tests
 
 Some (very rare) tests involve connecting to the public internet.

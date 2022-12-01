@@ -79,6 +79,15 @@ fn maybe_spurious(err: &Error) -> bool {
             return true;
         }
     }
+
+    use gix::protocol::transport::IsSpuriousError;
+
+    if let Some(err) = err.downcast_ref::<crate::sources::git::fetch::Error>() {
+        if err.is_spurious() {
+            return true;
+        }
+    }
+
     false
 }
 

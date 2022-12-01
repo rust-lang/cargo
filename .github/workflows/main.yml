@@ -74,7 +74,7 @@ jobs:
           os: windows-latest
           rust: stable-msvc
           other: i686-pc-windows-msvc
-        - name: Windows x86_64 gnu nightly
+        - name: Windows x86_64 gnu nightly # runs out of space while trying to link the test suite
           os: windows-latest
           rust: nightly-gnu
           other: i686-pc-windows-gnu
@@ -102,7 +102,16 @@ jobs:
       if: "!contains(matrix.rust, 'stable')"
 
     - run: cargo test
-    # The testsuite generates a huge amount of data, and fetch-smoke-test was
+    - name: Clear intermediate test output
+      run: |
+          df -h
+          rm -rf target/tmp
+          df -h
+    - name: gitoxide tests (all git-related tests)
+      run: cargo test git
+      env:
+        __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
+      # The testsuite generates a huge amount of data, and fetch-smoke-test was
     # running out of disk space.
     - name: Clear test output
       run: |
@@ -156,6 +165,18 @@ jobs:
     - run: rustup update stable && rustup default stable
     - run: cargo test --manifest-path crates/resolver-tests/Cargo.toml
 
+  test_gitoxide:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustup update --no-self-update stable && rustup default stable
+      - run: rustup target add i686-unknown-linux-gnu
+      - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
+      - run: rustup component add rustfmt || echo "rustfmt not available"
+      - run: cargo test
+        env:
+          __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
+
   build_std:
     runs-on: ubuntu-latest
     env:
@@ -196,7 +217,7 @@ jobs:
     permissions:
       contents: none
     name: bors build finished
-    needs: [docs, rustfmt, test, resolver, build_std]
+    needs: [docs, rustfmt, test, resolver, build_std, test_gitoxide]
     runs-on: ubuntu-latest
     if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
     steps:
