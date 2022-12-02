@@ -1,8 +1,9 @@
 use crate::core::Target;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{Config, StableHasher};
+use crate::util::Config;
 use anyhow::Context as _;
+use cargo_util::StableHasher;
 use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fs;

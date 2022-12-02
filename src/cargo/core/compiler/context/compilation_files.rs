@@ -5,13 +5,14 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use cargo_util::{short_hash, StableHasher};
 use lazycell::LazyCell;
 use log::debug;
 
 use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::core::{Target, TargetKind, Workspace};
-use crate::util::{self, CargoResult, StableHasher};
+use crate::util::CargoResult;
 
 /// This is a generic version number that can be changed to make
 /// backwards-incompatible changes to any file structures in the output
@@ -185,7 +186,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Used for the metadata when `metadata` returns `None`.
     pub fn target_short_hash(&self, unit: &Unit) -> String {
         let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
-        util::short_hash(&(METADATA_VERSION, hashable))
+        short_hash(&(METADATA_VERSION, hashable))
     }
 
     /// Returns the directory where the artifacts for the given unit are

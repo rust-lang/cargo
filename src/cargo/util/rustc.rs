@@ -5,12 +5,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use anyhow::Context as _;
-use cargo_util::{paths, ProcessBuilder, ProcessError};
+use cargo_util::{paths, ProcessBuilder, ProcessError, StableHasher};
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::util::interning::InternedString;
-use crate::util::{profile, CargoResult, StableHasher};
+use crate::util::{profile, CargoResult};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]

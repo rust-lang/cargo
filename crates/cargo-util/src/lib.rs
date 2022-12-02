@@ -1,10 +1,14 @@
 //! Miscellaneous support code used by Cargo.
 
+pub use self::hasher::StableHasher;
+pub use self::hex::{hash_u64, short_hash, to_hex};
 pub use self::read2::read2;
 pub use process_builder::ProcessBuilder;
 pub use process_error::{exit_status_to_string, is_simple_exit_code, ProcessError};
 pub use sha256::Sha256;
 
+mod hasher;
+pub mod hex;
 pub mod paths;
 mod process_builder;
 mod process_error;
