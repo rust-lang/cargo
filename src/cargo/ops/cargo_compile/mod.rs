@@ -10,7 +10,7 @@
 //! - Download any packages needed (see [`PackageSet`](crate::core::PackageSet)).
 //! - Generate a list of top-level "units" of work for the targets the user
 //!   requested on the command-line. Each [`Unit`] corresponds to a compiler
-//!   invocation. This is done in this module ([`TargetGenerator::generate_targets`]).
+//!   invocation. This is done in this module ([`UnitGenerator::generate_units`]).
 //! - Build the graph of `Unit` dependencies (see [`unit_dependencies`]).
 //! - Create a [`Context`] which will perform the following steps:
 //!     - Prepare the `target` directory (see [`Layout`]).
@@ -54,9 +54,9 @@ use crate::util::{profile, CargoResult, StableHasher};
 mod compile_filter;
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
-mod target_generator;
-pub use target_generator::resolve_all_features;
-use target_generator::TargetGenerator;
+mod unit_generator;
+pub use unit_generator::resolve_all_features;
+use unit_generator::UnitGenerator;
 
 mod packages;
 
@@ -345,11 +345,11 @@ pub fn create_bcx<'a, 'cfg>(
         .collect();
 
     // Passing `build_config.requested_kinds` instead of
-    // `explicit_host_kinds` here so that `generate_targets` can do
+    // `explicit_host_kinds` here so that `generate_units` can do
     // its own special handling of `CompileKind::Host`. It will
     // internally replace the host kind by the `explicit_host_kind`
     // before setting as a unit.
-    let generator = TargetGenerator {
+    let generator = UnitGenerator {
         ws,
         packages: &to_builds,
         filter,
@@ -364,7 +364,7 @@ pub fn create_bcx<'a, 'cfg>(
         interner,
         has_dev_units,
     };
-    let mut units = generator.generate_targets()?;
+    let mut units = generator.generate_units()?;
 
     if let Some(args) = target_rustc_crate_types {
         override_rustc_crate_types(&mut units, args, interner)?;
@@ -372,11 +372,11 @@ pub fn create_bcx<'a, 'cfg>(
 
     let should_scrape = build_config.mode.is_doc() && config.cli_unstable().rustdoc_scrape_examples;
     let mut scrape_units = if should_scrape {
-        let scrape_generator = TargetGenerator {
+        let scrape_generator = UnitGenerator {
             mode: CompileMode::Docscrape,
             ..generator
         };
-        let all_units = scrape_generator.generate_targets()?;
+        let all_units = scrape_generator.generate_units()?;
 
         let valid_units = all_units
             .into_iter()

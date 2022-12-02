@@ -33,8 +33,8 @@ struct Proposal<'a> {
     mode: CompileMode,
 }
 
-/// The context needed for generating targets.
-pub(super) struct TargetGenerator<'a, 'cfg> {
+/// The context needed for generating units.
+pub(super) struct UnitGenerator<'a, 'cfg> {
     pub ws: &'a Workspace<'cfg>,
     pub packages: &'a [&'a Package],
     pub filter: &'a CompileFilter,
@@ -50,7 +50,7 @@ pub(super) struct TargetGenerator<'a, 'cfg> {
     pub has_dev_units: HasDevUnits,
 }
 
-impl<'a> TargetGenerator<'a, '_> {
+impl<'a> UnitGenerator<'a, '_> {
     /// Helper for creating a list of `Unit` structures
     fn new_units(
         &self,
@@ -657,9 +657,9 @@ impl<'a> TargetGenerator<'a, '_> {
         Ok(units)
     }
 
-    /// Generates all the base targets for the packages the user has requested to
-    /// compile. Dependencies for these targets are computed later in `unit_dependencies`.
-    pub fn generate_targets(&self) -> CargoResult<Vec<Unit>> {
+    /// Generates all the base units for the packages the user has requested to
+    /// compile. Dependencies for these units are computed later in `unit_dependencies`.
+    pub fn generate_units(&self) -> CargoResult<Vec<Unit>> {
         let proposals = self.create_proposals()?;
         self.proposals_to_units(proposals)
     }

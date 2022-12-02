@@ -9,7 +9,7 @@ module. The compilation can be conceptually broken into these steps:
 
 1. Perform dependency resolution (see [the resolution chapter]).
 2. Generate the root `Unit`s, the things the user requested to compile on the
-   command-line. This is done in [`generate_targets`].
+   command-line. This is done in [`generate_units`].
 3. Starting from the root `Unit`s, generate the [`UnitGraph`] by walking the
    dependency graph from the resolver. The `UnitGraph` contains all of the
    `Unit` structs, and information about the dependency relationships between
