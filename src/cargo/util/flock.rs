@@ -395,8 +395,38 @@ mod sys {
 
     #[cfg(target_os = "solaris")]
     fn flock(file: &File, flag: libc::c_int) -> Result<()> {
-        // Solaris lacks flock(), so simply succeed with a no-op
-        Ok(())
+        // Solaris lacks flock(), so try to emulate using fcntl()
+        let mut flock = libc::flock {
+            l_type: 0,
+            l_whence: 0,
+            l_start: 0,
+            l_len: 0,
+            l_sysid: 0,
+            l_pid: 0,
+            l_pad: [0, 0, 0, 0],
+        };
+        flock.l_type = if flag & libc::LOCK_UN != 0 {
+            libc::F_RDLCK
+        } else if flag & libc::LOCK_EX != 0 {
+            libc::F_WRLCK
+        } else if flag & libc::LOCK_SH != 0 {
+            libc::F_RDLCK
+        } else {
+            panic!("unexpected flock() operation")
+        };
+
+        let mut cmd = libc::F_SETLKW;
+        if (flag & libc::LOCK_NB) != 0 {
+            cmd = libc::F_SETLK;
+        }
+
+        let ret = unsafe { libc::fcntl(file.as_raw_fd(), cmd, &flock) };
+
+        if ret < 0 {
+            Err(Error::last_os_error())
+        } else {
+            Ok(())
+        }
     }
 }
 
