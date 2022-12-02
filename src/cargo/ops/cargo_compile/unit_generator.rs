@@ -10,7 +10,7 @@ use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{FeatureValue, Package, PackageSet, Summary, Target};
-use crate::core::{PackageId, TargetKind, Workspace};
+use crate::core::{TargetKind, Workspace};
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{closest_msg, CargoResult};
 
@@ -619,7 +619,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     self.validate_required_features(target.name(), rf, pkg.summary())?;
 
                     let features = features_map.entry(pkg).or_insert_with(|| {
-                        resolve_all_features(
+                        super::resolve_all_features(
                             self.resolve,
                             self.resolved_features,
                             self.package_set,
@@ -663,42 +663,4 @@ impl<'a> UnitGenerator<'a, '_> {
         let proposals = self.create_proposals()?;
         self.proposals_to_units(proposals)
     }
-}
-
-/// Gets all of the features enabled for a package, plus its dependencies'
-/// features.
-///
-/// Dependencies are added as `dep_name/feat_name` because `required-features`
-/// wants to support that syntax.
-pub fn resolve_all_features(
-    resolve_with_overrides: &Resolve,
-    resolved_features: &features::ResolvedFeatures,
-    package_set: &PackageSet<'_>,
-    package_id: PackageId,
-) -> HashSet<String> {
-    let mut features: HashSet<String> = resolved_features
-        .activated_features(package_id, FeaturesFor::NormalOrDev)
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-
-    // Include features enabled for use by dependencies so targets can also use them with the
-    // required-features field when deciding whether to be built or skipped.
-    for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
-        let is_proc_macro = package_set
-            .get_one(dep_id)
-            .expect("packages downloaded")
-            .proc_macro();
-        for dep in deps {
-            let features_for = FeaturesFor::from_for_host(is_proc_macro || dep.is_build());
-            for feature in resolved_features
-                .activated_features_unverified(dep_id, features_for)
-                .unwrap_or_default()
-            {
-                features.insert(format!("{}/{}", dep.name_in_toml(), feature));
-            }
-        }
-    }
-
-    features
 }

@@ -41,9 +41,9 @@ use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::Profiles;
-use crate::core::resolver::features::CliFeatures;
-use crate::core::resolver::HasDevUnits;
-use crate::core::{SourceId, TargetKind, Workspace};
+use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
+use crate::core::resolver::{HasDevUnits, Resolve};
+use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
@@ -55,7 +55,6 @@ mod compile_filter;
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
 mod unit_generator;
-pub use unit_generator::resolve_all_features;
 use unit_generator::UnitGenerator;
 
 mod packages;
@@ -816,4 +815,42 @@ fn override_rustc_crate_types(
     };
 
     Ok(())
+}
+
+/// Gets all of the features enabled for a package, plus its dependencies'
+/// features.
+///
+/// Dependencies are added as `dep_name/feat_name` because `required-features`
+/// wants to support that syntax.
+pub fn resolve_all_features(
+    resolve_with_overrides: &Resolve,
+    resolved_features: &features::ResolvedFeatures,
+    package_set: &PackageSet<'_>,
+    package_id: PackageId,
+) -> HashSet<String> {
+    let mut features: HashSet<String> = resolved_features
+        .activated_features(package_id, FeaturesFor::NormalOrDev)
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
+    // Include features enabled for use by dependencies so targets can also use them with the
+    // required-features field when deciding whether to be built or skipped.
+    for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
+        let is_proc_macro = package_set
+            .get_one(dep_id)
+            .expect("packages downloaded")
+            .proc_macro();
+        for dep in deps {
+            let features_for = FeaturesFor::from_for_host(is_proc_macro || dep.is_build());
+            for feature in resolved_features
+                .activated_features_unverified(dep_id, features_for)
+                .unwrap_or_default()
+            {
+                features.insert(format!("{}/{}", dep.name_in_toml(), feature));
+            }
+        }
+    }
+
+    features
 }

@@ -9,7 +9,7 @@ module. The compilation can be conceptually broken into these steps:
 
 1. Perform dependency resolution (see [the resolution chapter]).
 2. Generate the root `Unit`s, the things the user requested to compile on the
-   command-line. This is done in [`generate_units`].
+   command-line. This is done in the [`unit_generator`] module.
 3. Starting from the root `Unit`s, generate the [`UnitGraph`] by walking the
    dependency graph from the resolver. The `UnitGraph` contains all of the
    `Unit` structs, and information about the dependency relationships between
@@ -26,8 +26,8 @@ module. The compilation can be conceptually broken into these steps:
    can be used for various things, such as running tests after the compilation
    has finished.
 
-[`cargo_compile`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/cargo_compile.rs
-[`generate_targets`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/ops/cargo_compile.rs#L725-L739
+[`cargo_compile`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/cargo_compile/mod.rs
+[`unit_generator`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/cargo_compile/unit_generator.rs
 [`UnitGraph`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/unit_graph.rs
 [the resolution chapter]: packages.md
 [`Unit`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/unit.rs
