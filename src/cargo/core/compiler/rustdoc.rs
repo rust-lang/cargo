@@ -2,7 +2,7 @@
 
 use crate::core::compiler::context::Context;
 use crate::core::compiler::unit::Unit;
-use crate::core::compiler::CompileKind;
+use crate::core::compiler::{BuildContext, CompileKind};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::{internal, CargoResult};
 use cargo_util::ProcessBuilder;
@@ -207,5 +207,42 @@ impl RustdocScrapeExamples {
 
     pub fn is_unset(&self) -> bool {
         matches!(self, RustdocScrapeExamples::Unset)
+    }
+}
+
+impl BuildContext<'_, '_> {
+    /// Returns the set of Docscrape units that have a direct dependency on `unit`
+    pub fn scrape_units_have_dep_on<'a>(&'a self, unit: &'a Unit) -> Vec<&'a Unit> {
+        self.scrape_units
+            .iter()
+            .filter(|scrape_unit| {
+                self.unit_graph[scrape_unit]
+                    .iter()
+                    .any(|dep| &dep.unit == unit)
+            })
+            .collect::<Vec<_>>()
+    }
+
+    /// Returns true if this unit is needed for doing doc-scraping and is also
+    /// allowed to fail without killing the build.
+    pub fn unit_can_fail_for_docscraping(&self, unit: &Unit) -> bool {
+        // If the unit is not a Docscrape unit, e.g. a Lib target that is
+        // checked to scrape an Example target, then we need to get the doc-scrape-examples
+        // configuration for the reverse-dependent Example target.
+        let for_scrape_units = if unit.mode.is_doc_scrape() {
+            vec![unit]
+        } else {
+            self.scrape_units_have_dep_on(unit)
+        };
+
+        if for_scrape_units.is_empty() {
+            false
+        } else {
+            // All Docscrape units must have doc-scrape-examples unset. If any are true,
+            // then the unit is not allowed to fail.
+            for_scrape_units
+                .iter()
+                .all(|unit| unit.target.doc_scrape_examples().is_unset())
+        }
     }
 }

@@ -207,6 +207,23 @@ fn compile<'cfg>(
     Ok(())
 }
 
+/// Generates the warning message used when fallible doc-scrape units fail,
+/// either for rustdoc or rustc.
+fn make_failed_scrape_diagnostic(cx: &Context<'_, '_>, unit: &Unit, top_line: String) -> String {
+    let manifest_path = unit.pkg.manifest_path();
+    let relative_manifest_path = manifest_path
+        .strip_prefix(cx.bcx.ws.root())
+        .unwrap_or(&manifest_path)
+        .to_owned();
+    format!(
+        "\
+{top_line}
+    Try running with `--verbose` to see the error message.
+    If an example or library should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` or `[lib]` definition in {}",
+        relative_manifest_path.display()
+    )
+}
+
 fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     let build_plan = cx.bcx.build_config.build_plan;
@@ -264,6 +281,25 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let script_metadata = cx.find_build_script_metadata(unit);
     let is_local = unit.is_local();
     let artifact = unit.artifact;
+
+    // If this unit is needed for doc-scraping, then we generate a diagnostic that
+    // describes the set of reverse-dependencies that cause the unit to be needed.
+    let target_desc = unit.target.description_named();
+    let mut for_scrape_units = cx
+        .bcx
+        .scrape_units_have_dep_on(unit)
+        .into_iter()
+        .map(|unit| unit.target.description_named())
+        .collect::<Vec<_>>();
+    for_scrape_units.sort();
+    let for_scrape_units = for_scrape_units.join(", ");
+    let failed_scrape_diagnostic = make_failed_scrape_diagnostic(cx, unit, format!("failed to check {target_desc} in package `{name}` as a prerequisite for scraping examples from: {for_scrape_units}"));
+
+    let hide_diagnostics_for_scrape_unit = cx.bcx.unit_can_fail_for_docscraping(unit)
+        && !matches!(cx.bcx.config.shell().verbosity(), Verbosity::Verbose);
+    if hide_diagnostics_for_scrape_unit {
+        output_options.show_diagnostics = false;
+    }
 
     return Ok(Work::new(move |state| {
         // Artifacts are in a different location than typical units,
@@ -339,38 +375,48 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            exec.exec(
-                &rustc,
-                package_id,
-                &target,
-                mode,
-                &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &manifest_path,
-                        &target,
-                        &mut output_options,
-                    )
-                },
-            )
-            .map_err(verbose_if_simple_exit_code)
-            .with_context(|| {
-                // adapted from rustc_errors/src/lib.rs
-                let warnings = match output_options.warnings_seen {
-                    0 => String::new(),
-                    1 => "; 1 warning emitted".to_string(),
-                    count => format!("; {} warnings emitted", count),
-                };
-                let errors = match output_options.errors_seen {
-                    0 => String::new(),
-                    1 => " due to previous error".to_string(),
-                    count => format!(" due to {} previous errors", count),
-                };
-                format!("could not compile `{}`{}{}", name, errors, warnings)
-            })?;
+            let result = exec
+                .exec(
+                    &rustc,
+                    package_id,
+                    &target,
+                    mode,
+                    &mut |line| on_stdout_line(state, line, package_id, &target),
+                    &mut |line| {
+                        on_stderr_line(
+                            state,
+                            line,
+                            package_id,
+                            &manifest_path,
+                            &target,
+                            &mut output_options,
+                        )
+                    },
+                )
+                .map_err(verbose_if_simple_exit_code)
+                .with_context(|| {
+                    // adapted from rustc_errors/src/lib.rs
+                    let warnings = match output_options.warnings_seen {
+                        0 => String::new(),
+                        1 => "; 1 warning emitted".to_string(),
+                        count => format!("; {} warnings emitted", count),
+                    };
+                    let errors = match output_options.errors_seen {
+                        0 => String::new(),
+                        1 => " due to previous error".to_string(),
+                        count => format!(" due to {} previous errors", count),
+                    };
+                    format!("could not compile `{}`{}{}", name, errors, warnings)
+                });
+
+            if let Err(e) = result {
+                if hide_diagnostics_for_scrape_unit {
+                    state.warning(failed_scrape_diagnostic)?;
+                }
+
+                return Err(e);
+            }
+
             // Exec should never return with success *and* generate an error.
             debug_assert_eq!(output_options.errors_seen, 0);
         }
@@ -713,20 +759,22 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let package_id = unit.pkg.package_id();
     let manifest_path = PathBuf::from(unit.pkg.manifest_path());
-    let relative_manifest_path = manifest_path
-        .strip_prefix(cx.bcx.ws.root())
-        .unwrap_or(&manifest_path)
-        .to_owned();
     let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
     let script_metadata = cx.find_build_script_metadata(unit);
+
     let failed_scrape_units = Arc::clone(&cx.failed_scrape_units);
-    let hide_diagnostics_for_scrape_unit = unit.mode.is_doc_scrape()
-        && unit.target.doc_scrape_examples().is_unset()
+    let hide_diagnostics_for_scrape_unit = cx.bcx.unit_can_fail_for_docscraping(unit)
         && !matches!(cx.bcx.config.shell().verbosity(), Verbosity::Verbose);
+    let failed_scrape_diagnostic = make_failed_scrape_diagnostic(
+        cx,
+        unit,
+        format!("failed to scan {target_desc} in package `{name}` for example code usage"),
+    );
     if hide_diagnostics_for_scrape_unit {
         output_options.show_diagnostics = false;
     }
+
     Ok(Work::new(move |state| {
         add_custom_flags(
             &mut rustdoc,
@@ -775,14 +823,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
         if let Err(e) = result {
             if hide_diagnostics_for_scrape_unit {
-                let diag = format!(
-                    "\
-failed to scan {target_desc} in package `{name}` for example code usage
-    Try running with `--verbose` to see the error message.
-    If this example should not be scanned, consider adding `doc-scrape-examples = false` to the `[[example]]` definition in {}",
-                    relative_manifest_path.display()
-                );
-                state.warning(diag)?;
+                state.warning(failed_scrape_diagnostic)?;
             }
 
             return Err(e);
