@@ -75,7 +75,7 @@ impl fmt::Debug for Shell {
 /// A `Write`able object, either with or without color support
 enum ShellOut {
     /// A plain write object without color support
-    Write(Box<dyn Write>),
+    Write(Box<dyn Write + Send>),
     /// Color-enabled stdio, with information on whether color should be used
     Stream {
         stdout: StandardStream,
@@ -114,7 +114,7 @@ impl Shell {
     }
 
     /// Creates a shell from a plain writable object, with no color, and max verbosity.
-    pub fn from_write(out: Box<dyn Write>) -> Shell {
+    pub fn from_write(out: Box<dyn Write + Send>) -> Shell {
         Shell {
             output: ShellOut::Write(out),
             verbosity: Verbosity::Verbose,

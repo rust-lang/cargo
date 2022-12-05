@@ -49,6 +49,7 @@
 //! translate from `ConfigValue` and environment variables to the caller's
 //! desired type.
 
+use parking_lot::{Mutex, MutexGuard};
 use std::borrow::Cow;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
@@ -62,7 +63,7 @@ use std::io::{self, SeekFrom};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::Once;
+use std::sync::{Arc, Once};
 use std::time::Instant;
 
 use self::ConfigValue as CV;
@@ -156,7 +157,7 @@ pub struct Config {
     /// The location of the user's Cargo home directory. OS-dependent.
     home_path: Filesystem,
     /// Information about how to write messages to the shell
-    shell: RefCell<Shell>,
+    shell: Arc<Mutex<Shell>>,
     /// A collection of configuration options
     values: LazyCell<HashMap<String, ConfigValue>>,
     /// A collection of configuration options from the credentials file
@@ -282,7 +283,7 @@ impl Config {
 
         Config {
             home_path: Filesystem::new(homedir),
-            shell: RefCell::new(shell),
+            shell: Arc::new(Mutex::new(shell)),
             cwd,
             search_stop_path: None,
             values: LazyCell::new(),
@@ -393,8 +394,17 @@ impl Config {
     }
 
     /// Gets a reference to the shell, e.g., for writing error messages.
-    pub fn shell(&self) -> RefMut<'_, Shell> {
-        self.shell.borrow_mut()
+    ///
+    /// # Deadlock Warning
+    ///
+    /// A deadlock will occour if a thread calls this method while still holding the guard returned in the previous call.
+    pub fn shell(&self) -> MutexGuard<'_, Shell> {
+        self.shell.lock()
+    }
+
+    /// Gets a shared reference to the shell, e.g., for writing error messages, for use when writing from threads.
+    pub fn shell_detached(&self) -> Arc<Mutex<Shell>> {
+        Arc::clone(&self.shell)
     }
 
     /// Gets the path to the `rustdoc` executable.
@@ -1286,9 +1296,7 @@ impl Config {
                 // --config path_to_file
                 let str_path = arg_as_path
                     .to_str()
-                    .ok_or_else(|| {
-                        anyhow::format_err!("config path {:?} is not utf-8", arg_as_path)
-                    })?
+                    .ok_or_else(|| format_err!("config path {:?} is not utf-8", arg_as_path))?
                     .to_string();
                 self._load_file(&self.cwd().join(&str_path), &mut seen, true, WhyLoad::Cli)
                     .with_context(|| format!("failed to load config from `{}`", str_path))?

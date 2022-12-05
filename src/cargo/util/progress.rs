@@ -1,15 +1,18 @@
+use parking_lot::Mutex;
 use std::cmp;
 use std::env;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::core::shell::Verbosity;
+use crate::core::Shell;
 use crate::util::config::ProgressWhen;
 use crate::util::{CargoResult, Config};
 use cargo_util::is_ci;
 use unicode_width::UnicodeWidthChar;
 
-pub struct Progress<'cfg> {
-    state: Option<State<'cfg>>,
+pub struct Progress {
+    state: Option<State>,
 }
 
 pub enum ProgressStyle {
@@ -23,8 +26,8 @@ struct Throttle {
     last_update: Instant,
 }
 
-struct State<'cfg> {
-    config: &'cfg Config,
+struct State {
+    shell: Arc<Mutex<Shell>>,
     format: Format,
     name: String,
     done: bool,
@@ -39,8 +42,8 @@ struct Format {
     max_print: usize,
 }
 
-impl<'cfg> Progress<'cfg> {
-    pub fn with_style(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
+impl Progress {
+    pub fn with_style(name: &str, style: ProgressStyle, cfg: &Config) -> Progress {
         // report no progress when -q (for quiet) or TERM=dumb are set
         // or if running on Continuous Integration service like Travis where the
         // output logs get mangled.
@@ -60,7 +63,7 @@ impl<'cfg> Progress<'cfg> {
         Progress::new_priv(name, style, cfg)
     }
 
-    fn new_priv(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
+    fn new_priv(name: &str, style: ProgressStyle, cfg: &Config) -> Progress {
         let progress_config = cfg.progress_config();
         let width = progress_config
             .width
@@ -68,7 +71,7 @@ impl<'cfg> Progress<'cfg> {
 
         Progress {
             state: width.map(|n| State {
-                config: cfg,
+                shell: cfg.shell_detached(),
                 format: Format {
                     style,
                     max_width: n,
@@ -93,7 +96,7 @@ impl<'cfg> Progress<'cfg> {
         self.state.is_some()
     }
 
-    pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
+    pub fn new(name: &str, cfg: &Config) -> Progress {
         Self::with_style(name, ProgressStyle::Percentage, cfg)
     }
 
@@ -180,7 +183,7 @@ impl Throttle {
     }
 }
 
-impl<'cfg> State<'cfg> {
+impl State {
     fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         if self.done {
             return Ok(());
@@ -215,13 +218,15 @@ impl<'cfg> State<'cfg> {
         }
 
         // Only update if the line has changed.
-        if self.config.shell().is_cleared() || self.last_line.as_ref() != Some(&line) {
-            let mut shell = self.config.shell();
-            shell.set_needs_clear(false);
-            shell.status_header(&self.name)?;
-            write!(shell.err(), "{}\r", line)?;
-            self.last_line = Some(line);
-            shell.set_needs_clear(true);
+        {
+            let mut shell = self.shell.lock();
+            if shell.is_cleared() || self.last_line.as_ref() != Some(&line) {
+                shell.set_needs_clear(false);
+                shell.status_header(&self.name)?;
+                write!(shell.err(), "{}\r", line)?;
+                self.last_line = Some(line);
+                shell.set_needs_clear(true);
+            }
         }
 
         Ok(())
@@ -229,15 +234,16 @@ impl<'cfg> State<'cfg> {
 
     fn clear(&mut self) {
         // No need to clear if the progress is not currently being displayed.
-        if self.last_line.is_some() && !self.config.shell().is_cleared() {
-            self.config.shell().err_erase_line();
+        let mut shell = self.shell.lock();
+        if self.last_line.is_some() && !shell.is_cleared() {
+            shell.err_erase_line();
             self.last_line = None;
         }
     }
 
     fn try_update_max_width(&mut self) {
         if self.fixed_width.is_none() {
-            if let Some(n) = self.config.shell().err_width().progress_max_width() {
+            if let Some(n) = self.shell.lock().err_width().progress_max_width() {
                 self.format.max_width = n;
             }
         }
@@ -323,7 +329,7 @@ impl Format {
     }
 }
 
-impl<'cfg> Drop for State<'cfg> {
+impl Drop for State {
     fn drop(&mut self) {
         self.clear();
     }

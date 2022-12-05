@@ -137,7 +137,7 @@ struct DrainState<'cfg> {
     documented: HashSet<PackageId>,
     scraped: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
-    progress: Progress<'cfg>,
+    progress: Progress,
     next_id: u32,
     timings: Timings<'cfg>,
 

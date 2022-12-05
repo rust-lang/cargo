@@ -315,14 +315,14 @@ trait CleaningProgressBar {
     fn on_clean(&mut self) -> CargoResult<()>;
 }
 
-struct CleaningFolderBar<'cfg> {
-    bar: Progress<'cfg>,
+struct CleaningFolderBar {
+    bar: Progress,
     max: usize,
     cur: usize,
 }
 
-impl<'cfg> CleaningFolderBar<'cfg> {
-    fn new(cfg: &'cfg Config, max: usize) -> Self {
+impl CleaningFolderBar {
+    fn new(cfg: &Config, max: usize) -> Self {
         Self {
             bar: Progress::with_style("Cleaning", ProgressStyle::Percentage, cfg),
             max,
@@ -335,7 +335,7 @@ impl<'cfg> CleaningFolderBar<'cfg> {
     }
 }
 
-impl<'cfg> CleaningProgressBar for CleaningFolderBar<'cfg> {
+impl CleaningProgressBar for CleaningFolderBar {
     fn display_now(&mut self) -> CargoResult<()> {
         self.bar.tick_now(self.cur_progress(), self.max, "")
     }
@@ -346,16 +346,16 @@ impl<'cfg> CleaningProgressBar for CleaningFolderBar<'cfg> {
     }
 }
 
-struct CleaningPackagesBar<'cfg> {
-    bar: Progress<'cfg>,
+struct CleaningPackagesBar {
+    bar: Progress,
     max: usize,
     cur: usize,
     num_files_folders_cleaned: usize,
     package_being_cleaned: String,
 }
 
-impl<'cfg> CleaningPackagesBar<'cfg> {
-    fn new(cfg: &'cfg Config, max: usize) -> Self {
+impl CleaningPackagesBar {
+    fn new(cfg: &Config, max: usize) -> Self {
         Self {
             bar: Progress::with_style("Cleaning", ProgressStyle::Ratio, cfg),
             max,
@@ -384,7 +384,7 @@ impl<'cfg> CleaningPackagesBar<'cfg> {
     }
 }
 
-impl<'cfg> CleaningProgressBar for CleaningPackagesBar<'cfg> {
+impl CleaningProgressBar for CleaningPackagesBar {
     fn display_now(&mut self) -> CargoResult<()> {
         self.bar
             .tick_now(self.cur_progress(), self.max, &self.format_message())

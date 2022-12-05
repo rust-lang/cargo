@@ -328,7 +328,7 @@ pub struct Downloads<'a, 'cfg> {
     /// The next ID to use for creating a token (see `Download::token`).
     next: usize,
     /// Progress bar.
-    progress: RefCell<Option<Progress<'cfg>>>,
+    progress: RefCell<Option<Progress>>,
     /// Number of downloads that have successfully finished.
     downloads_finished: usize,
     /// Total bytes for all successfully downloaded packages.
