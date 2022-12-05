@@ -33,7 +33,16 @@ struct Proposal<'a> {
     mode: CompileMode,
 }
 
-/// The context needed for generating units.
+/// The context needed for generating root units,
+/// which are pacakges the user has requested to compile.
+///
+/// To generate a full [`UnitGraph`],
+/// generally you need to call [`generate_root_units`] first,
+/// and then provide the output to [`build_unit_dependencies`].
+///
+/// [`generate_root_units`]: UnitGenerator::generate_root_units
+/// [`build_unit_dependencies`]: crate::core::compiler::unit_dependencies::build_unit_dependencies
+/// [`UnitGraph`]: crate::core::compiler::unit_graph::UnitGraph
 pub(super) struct UnitGenerator<'a, 'cfg> {
     pub ws: &'a Workspace<'cfg>,
     pub packages: &'a [&'a Package],
@@ -303,7 +312,7 @@ impl<'a> UnitGenerator<'a, '_> {
         Ok(proposals)
     }
 
-    /// Create a list of proposed targets given the context in `TargetGenerator`
+    /// Create a list of proposed targets given the context in `UnitGenerator`
     fn create_proposals(&self) -> CargoResult<Vec<Proposal<'_>>> {
         let mut proposals: Vec<Proposal<'_>> = Vec::new();
 
@@ -658,8 +667,10 @@ impl<'a> UnitGenerator<'a, '_> {
     }
 
     /// Generates all the base units for the packages the user has requested to
-    /// compile. Dependencies for these units are computed later in `unit_dependencies`.
-    pub fn generate_units(&self) -> CargoResult<Vec<Unit>> {
+    /// compile. Dependencies for these units are computed later in [`unit_dependencies`].
+    ///
+    /// [`unit_dependencies`]: crate::core::compiler::unit_dependencies
+    pub fn generate_root_units(&self) -> CargoResult<Vec<Unit>> {
         let proposals = self.create_proposals()?;
         self.proposals_to_units(proposals)
     }

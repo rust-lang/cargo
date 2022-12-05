@@ -269,7 +269,7 @@ environment. The general process is:
    * `/path/to/my/cargo/target/debug/cargo check`
    * Using a debugger like `lldb` or `gdb`:
         1. `lldb /path/to/my/cargo/target/debug/cargo`
-        2. Set a breakpoint, for example: `b generate_units`
+        2. Set a breakpoint, for example: `b generate_root_units`
         3. Run with arguments: `r check`
 
 [`testsuite`]: https://github.com/rust-lang/cargo/tree/master/tests/testsuite/
