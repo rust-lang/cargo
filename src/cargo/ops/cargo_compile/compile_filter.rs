@@ -28,11 +28,11 @@ pub enum FilterRule {
 /// Filter to apply to the root package to select which Cargo targets will be built.
 /// (examples, bins, benches, tests, ...)
 ///
-/// The actual filter process happens inside [`generate_units`].
+/// The actual filter process happens inside [`generate_root_units`].
 ///
 /// Not to be confused with [`Packages`], which opts in packages to be built.
 ///
-/// [`generate_units`]: super::UnitGenerator::generate_units
+/// [`generate_root_units`]: super::UnitGenerator::generate_root_units
 /// [`Packages`]: crate::ops::Packages
 #[derive(Debug)]
 pub enum CompileFilter {
@@ -175,8 +175,11 @@ impl CompileFilter {
     /// all targets with `tested` flag on, whereas [`CompileFilter::Default`]
     /// may include additional example targets to ensure they can be compiled.
     ///
-    /// Note that the actual behavior is subject to `filter_default_targets`
-    /// and `generate_units` though.
+    /// Note that the actual behavior is subject to [`filter_default_targets`]
+    /// and [`generate_root_units`] though.
+    ///
+    /// [`generate_root_units`]: super::UnitGenerator::generate_root_units
+    /// [`filter_default_targets`]: super::UnitGenerator::filter_default_targets
     pub fn all_test_targets() -> Self {
         Self::Only {
             all_targets: false,
@@ -234,7 +237,10 @@ impl CompileFilter {
     }
 
     /// Selects targets for "cargo run". for logic to select targets for other
-    /// subcommands, see `generate_units` and `filter_default_targets`.
+    /// subcommands, see [`generate_root_units`] and [`filter_default_targets`].
+    ///
+    /// [`generate_root_units`]: super::UnitGenerator::generate_root_units
+    /// [`filter_default_targets`]: super::UnitGenerator::filter_default_targets
     pub fn target_run(&self, target: &Target) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,

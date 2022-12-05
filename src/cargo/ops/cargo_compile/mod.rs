@@ -10,7 +10,7 @@
 //! - Download any packages needed (see [`PackageSet`](crate::core::PackageSet)).
 //! - Generate a list of top-level "units" of work for the targets the user
 //!   requested on the command-line. Each [`Unit`] corresponds to a compiler
-//!   invocation. This is done in this module ([`UnitGenerator::generate_units`]).
+//!   invocation. This is done in this module ([`UnitGenerator::generate_root_units`]).
 //! - Build the graph of `Unit` dependencies (see [`unit_dependencies`]).
 //! - Create a [`Context`] which will perform the following steps:
 //!     - Prepare the `target` directory (see [`Layout`]).
@@ -344,7 +344,7 @@ pub fn create_bcx<'a, 'cfg>(
         .collect();
 
     // Passing `build_config.requested_kinds` instead of
-    // `explicit_host_kinds` here so that `generate_units` can do
+    // `explicit_host_kinds` here so that `generate_root_units` can do
     // its own special handling of `CompileKind::Host`. It will
     // internally replace the host kind by the `explicit_host_kind`
     // before setting as a unit.
@@ -363,7 +363,7 @@ pub fn create_bcx<'a, 'cfg>(
         interner,
         has_dev_units,
     };
-    let mut units = generator.generate_units()?;
+    let mut units = generator.generate_root_units()?;
 
     if let Some(args) = target_rustc_crate_types {
         override_rustc_crate_types(&mut units, args, interner)?;
@@ -375,7 +375,7 @@ pub fn create_bcx<'a, 'cfg>(
             mode: CompileMode::Docscrape,
             ..generator
         };
-        let all_units = scrape_generator.generate_units()?;
+        let all_units = scrape_generator.generate_root_units()?;
 
         let valid_units = all_units
             .into_iter()
