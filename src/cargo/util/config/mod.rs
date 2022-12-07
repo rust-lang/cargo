@@ -2229,16 +2229,16 @@ pub enum CargoHttpProxyAuth {
 
 impl CargoHttpProxyAuth {
     pub fn to_easy(&self) -> Auth {
-        let mut easy = Auth::new();
-        let easy = match self {
-            Self::Auto => easy.basic(true).digest(true).gssnegotiate(true).ntlm(true),
-            Self::Disable => &mut easy,
-            Self::Basic => easy.basic(true),
-            Self::Digest => easy.digest(true),
-            Self::Gss => easy.gssnegotiate(true),
-            Self::Ntlm => easy.ntlm(true),
+        let mut auth = Auth::new();
+        match self {
+            Self::Auto => auth.basic(true).digest(true).gssnegotiate(true).ntlm(true),
+            Self::Disable => &auth,
+            Self::Basic => auth.basic(true),
+            Self::Digest => auth.digest(true),
+            Self::Gss => auth.gssnegotiate(true),
+            Self::Ntlm => auth.ntlm(true),
         };
-        easy.clone()
+        auth
     }
 }
 
