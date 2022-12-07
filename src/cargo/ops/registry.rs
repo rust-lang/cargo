@@ -561,8 +561,8 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.proxy(&proxy)?;
     }
     handle.proxy_auth(&http.proxy_auth.to_easy())?;
-    handle.proxy_username(&http.proxy_username)?;
-    handle.proxy_password(&http.proxy_password)?;
+    handle.proxy_username(http.proxy_username.as_deref().unwrap_or(""))?;
+    handle.proxy_password(http.proxy_password.as_deref().unwrap_or(""))?;
     if let Some(cainfo) = &http.cainfo {
         let cainfo = cainfo.resolve_path(config);
         handle.cainfo(&cainfo)?;

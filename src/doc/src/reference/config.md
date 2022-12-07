@@ -640,14 +640,14 @@ Possible values are: "auto", "disable", "basic", "digest", "gss" and "ntlm".
 
 ##### `http.proxy-username`
 * Type: string
-* Default: ""
+* Default: none
 * Environment: `CARGO_HTTP_PROXY_USERNAME`
 
 Authenticate against the proxy using the given username.
 
 ##### `http.proxy-password`
 * Type: string
-* Default: ""
+* Default: none
 * Environment: `CARGO_HTTP_PROXY_PASSWORD`
 
 Authenticate against the proxy using the given password.

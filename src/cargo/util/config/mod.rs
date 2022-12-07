@@ -2248,10 +2248,8 @@ pub struct CargoHttpConfig {
     pub proxy: Option<String>,
     #[serde(default)]
     pub proxy_auth: CargoHttpProxyAuth,
-    #[serde(default)]
-    pub proxy_username: String,
-    #[serde(default)]
-    pub proxy_password: String,
+    pub proxy_username: Option<String>,
+    pub proxy_password: Option<String>,
     pub low_speed_limit: Option<u32>,
     pub timeout: Option<u64>,
     pub cainfo: Option<ConfigRelativePath>,
