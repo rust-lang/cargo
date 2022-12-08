@@ -683,7 +683,6 @@ where
             | ErrorClass::Submodule
             | ErrorClass::FetchHead
             | ErrorClass::Ssh
-            | ErrorClass::Callback
             | ErrorClass::Http => {
                 let mut msg = "network failure seems to have happened\n".to_string();
                 msg.push_str(
@@ -693,6 +692,13 @@ where
                     "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
                 );
                 err = err.context(msg);
+            }
+            ErrorClass::Callback => {
+                // This unwraps the git2 error. We're using the callback error
+                // specifically to convey errors from Rust land through the C
+                // callback interface. We don't need the `; class=Callback
+                // (26)` that gets tacked on to the git2 error message.
+                err = anyhow::format_err!("{}", e.message());
             }
             _ => {}
         }
@@ -722,12 +728,16 @@ pub fn with_fetch_options(
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {
         with_authentication(url, git_config, |f| {
+            let port = Url::parse(url).ok().and_then(|url| url.port());
             let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
             // We choose `N=10` here to make a `300ms * 10slots ~= 3000ms`
             // sliding window for tracking the data transfer rate (in bytes/s).
             let mut counter = MetricsCounter::<10>::new(0, last_update);
             rcb.credentials(f);
+            rcb.certificate_check(|cert, host| {
+                super::known_hosts::certificate_check(cert, host, port)
+            });
             rcb.transfer_progress(|stats| {
                 let indexed_deltas = stats.indexed_deltas();
                 let msg = if indexed_deltas > 0 {

@@ -17,7 +17,7 @@ filetime = "0.2"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
 pasetors = { version = "0.6.4", features = ["v3", "paserk", "std", "serde"] }
 time = { version = "0.3", features = ["parsing", "formatting"]}
-git2 = "0.15.0"
+git2 = "0.16.0"
 glob = "0.3"
 itertools = "0.10.0"
 lazy_static = "1.0"
