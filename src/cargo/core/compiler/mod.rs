@@ -25,6 +25,7 @@ pub mod unit_graph;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
+use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -209,12 +210,16 @@ fn compile<'cfg>(
 
 /// Generates the warning message used when fallible doc-scrape units fail,
 /// either for rustdoc or rustc.
-fn make_failed_scrape_diagnostic(cx: &Context<'_, '_>, unit: &Unit, top_line: String) -> String {
+fn make_failed_scrape_diagnostic(
+    cx: &Context<'_, '_>,
+    unit: &Unit,
+    top_line: impl Display,
+) -> String {
     let manifest_path = unit.pkg.manifest_path();
     let relative_manifest_path = manifest_path
         .strip_prefix(cx.bcx.ws.root())
-        .unwrap_or(&manifest_path)
-        .to_owned();
+        .unwrap_or(&manifest_path);
+
     format!(
         "\
 {top_line}
@@ -282,21 +287,22 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let is_local = unit.is_local();
     let artifact = unit.artifact;
 
-    // If this unit is needed for doc-scraping, then we generate a diagnostic that
-    // describes the set of reverse-dependencies that cause the unit to be needed.
-    let target_desc = unit.target.description_named();
-    let mut for_scrape_units = cx
-        .bcx
-        .scrape_units_have_dep_on(unit)
-        .into_iter()
-        .map(|unit| unit.target.description_named())
-        .collect::<Vec<_>>();
-    for_scrape_units.sort();
-    let for_scrape_units = for_scrape_units.join(", ");
-    let failed_scrape_diagnostic = make_failed_scrape_diagnostic(cx, unit, format!("failed to check {target_desc} in package `{name}` as a prerequisite for scraping examples from: {for_scrape_units}"));
-
     let hide_diagnostics_for_scrape_unit = cx.bcx.unit_can_fail_for_docscraping(unit)
         && !matches!(cx.bcx.config.shell().verbosity(), Verbosity::Verbose);
+    let failed_scrape_diagnostic = hide_diagnostics_for_scrape_unit.then(|| {
+        // If this unit is needed for doc-scraping, then we generate a diagnostic that
+        // describes the set of reverse-dependencies that cause the unit to be needed.
+        let target_desc = unit.target.description_named();
+        let mut for_scrape_units = cx
+            .bcx
+            .scrape_units_have_dep_on(unit)
+            .into_iter()
+            .map(|unit| unit.target.description_named())
+            .collect::<Vec<_>>();
+        for_scrape_units.sort();
+        let for_scrape_units = for_scrape_units.join(", ");
+        make_failed_scrape_diagnostic(cx, unit, format_args!("failed to check {target_desc} in package `{name}` as a prerequisite for scraping examples from: {for_scrape_units}"))
+    });
     if hide_diagnostics_for_scrape_unit {
         output_options.show_diagnostics = false;
     }
@@ -410,8 +416,8 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 });
 
             if let Err(e) = result {
-                if hide_diagnostics_for_scrape_unit {
-                    state.warning(failed_scrape_diagnostic)?;
+                if let Some(diagnostic) = failed_scrape_diagnostic {
+                    state.warning(diagnostic)?;
                 }
 
                 return Err(e);
@@ -766,11 +772,13 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let failed_scrape_units = Arc::clone(&cx.failed_scrape_units);
     let hide_diagnostics_for_scrape_unit = cx.bcx.unit_can_fail_for_docscraping(unit)
         && !matches!(cx.bcx.config.shell().verbosity(), Verbosity::Verbose);
-    let failed_scrape_diagnostic = make_failed_scrape_diagnostic(
-        cx,
-        unit,
-        format!("failed to scan {target_desc} in package `{name}` for example code usage"),
-    );
+    let failed_scrape_diagnostic = hide_diagnostics_for_scrape_unit.then(|| {
+        make_failed_scrape_diagnostic(
+            cx,
+            unit,
+            format_args!("failed to scan {target_desc} in package `{name}` for example code usage"),
+        )
+    });
     if hide_diagnostics_for_scrape_unit {
         output_options.show_diagnostics = false;
     }
@@ -822,8 +830,8 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             .with_context(|| format!("could not document `{}`", name));
 
         if let Err(e) = result {
-            if hide_diagnostics_for_scrape_unit {
-                state.warning(failed_scrape_diagnostic)?;
+            if let Some(diagnostic) = failed_scrape_diagnostic {
+                state.warning(diagnostic)?;
             }
 
             return Err(e);
