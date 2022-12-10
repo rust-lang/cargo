@@ -249,7 +249,7 @@ situations:
   not currently being built. For example:
 
   ```toml
-  [dependency.common]
+  [dependencies.common]
   version = "1.0"
   features = ["f1"]
 
