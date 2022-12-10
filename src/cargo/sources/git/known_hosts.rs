@@ -20,6 +20,7 @@
 //! hostname patterns, and revoked markers. See "FIXME" comments littered in
 //! this file.
 
+use crate::util::config::{Definition, Value};
 use git2::cert::Cert;
 use git2::CertificateCheckStatus;
 use std::collections::HashSet;
@@ -74,6 +75,8 @@ impl From<anyhow::Error> for KnownHostError {
 enum KnownHostLocation {
     /// Loaded from a file from disk.
     File { path: PathBuf, lineno: u32 },
+    /// Loaded from cargo's config system.
+    Config { definition: Definition },
     /// Part of the hard-coded bundled keys in Cargo.
     Bundled,
 }
@@ -83,6 +86,8 @@ pub fn certificate_check(
     cert: &Cert<'_>,
     host: &str,
     port: Option<u16>,
+    config_known_hosts: Option<&Vec<Value<String>>>,
+    diagnostic_home_config: &str,
 ) -> Result<CertificateCheckStatus, git2::Error> {
     let Some(host_key) = cert.as_hostkey() else {
         // Return passthrough for TLS X509 certificates to use whatever validation
@@ -96,7 +101,7 @@ pub fn certificate_check(
         _ => host.to_string(),
     };
     // The error message must be constructed as a string to pass through the libgit2 C API.
-    let err_msg = match check_ssh_known_hosts(host_key, &host_maybe_port) {
+    let err_msg = match check_ssh_known_hosts(host_key, &host_maybe_port, config_known_hosts) {
         Ok(()) => {
             return Ok(CertificateCheckStatus::CertificateOk);
         }
@@ -113,13 +118,13 @@ pub fn certificate_check(
             // Try checking without the port.
             if port.is_some()
                 && !matches!(port, Some(22))
-                && check_ssh_known_hosts(host_key, host).is_ok()
+                && check_ssh_known_hosts(host_key, host, config_known_hosts).is_ok()
             {
                 return Ok(CertificateCheckStatus::CertificateOk);
             }
             let key_type_short_name = key_type.short_name();
             let key_type_name = key_type.name();
-            let known_hosts_location = user_known_host_location_to_add();
+            let known_hosts_location = user_known_host_location_to_add(diagnostic_home_config);
             let other_hosts_message = if other_hosts.is_empty() {
                 String::new()
             } else {
@@ -131,6 +136,9 @@ pub fn certificate_check(
                     let loc = match known_host.location {
                         KnownHostLocation::File { path, lineno } => {
                             format!("{} line {lineno}", path.display())
+                        }
+                        KnownHostLocation::Config { definition } => {
+                            format!("config value from {definition}")
                         }
                         KnownHostLocation::Bundled => format!("bundled with cargo"),
                     };
@@ -163,7 +171,7 @@ pub fn certificate_check(
         }) => {
             let key_type_short_name = key_type.short_name();
             let key_type_name = key_type.name();
-            let known_hosts_location = user_known_host_location_to_add();
+            let known_hosts_location = user_known_host_location_to_add(diagnostic_home_config);
             let old_key_resolution = match old_known_host.location {
                 KnownHostLocation::File { path, lineno } => {
                     let old_key_location = path.display();
@@ -171,6 +179,13 @@ pub fn certificate_check(
                         "removing the old {key_type_name} key for `{hostname}` \
                         located at {old_key_location} line {lineno}, \
                         and adding the new key to {known_hosts_location}",
+                    )
+                }
+                KnownHostLocation::Config { definition } => {
+                    format!(
+                        "removing the old {key_type_name} key for `{hostname}` \
+                        loaded from Cargo's config at {definition}, \
+                        and adding the new key to {known_hosts_location}"
                     )
                 }
                 KnownHostLocation::Bundled => {
@@ -217,6 +232,7 @@ pub fn certificate_check(
 fn check_ssh_known_hosts(
     cert_host_key: &git2::cert::CertHostkey<'_>,
     host: &str,
+    config_known_hosts: Option<&Vec<Value<String>>>,
 ) -> Result<(), KnownHostError> {
     let Some(remote_host_key) = cert_host_key.hostkey() else {
         return Err(anyhow::format_err!("remote host key is not available").into());
@@ -236,6 +252,23 @@ fn check_ssh_known_hosts(
         }
         let hosts = load_hostfile(&path)?;
         known_hosts.extend(hosts);
+    }
+    if let Some(config_known_hosts) = config_known_hosts {
+        // Format errors aren't an error in case the format needs to change in
+        // the future, to retain forwards compatibility.
+        for line_value in config_known_hosts {
+            let location = KnownHostLocation::Config {
+                definition: line_value.definition.clone(),
+            };
+            match parse_known_hosts_line(&line_value.val, location) {
+                Some(known_host) => known_hosts.push(known_host),
+                None => log::warn!(
+                    "failed to parse known host {} from {}",
+                    line_value.val,
+                    line_value.definition
+                ),
+            }
+        }
     }
     // Load the bundled keys. Don't add keys for hosts that the user has
     // configured, which gives them the option to override them. This could be
@@ -363,12 +396,18 @@ fn user_known_host_location() -> Option<PathBuf> {
 
 /// The location to display in an error message instructing the user where to
 /// add the new key.
-fn user_known_host_location_to_add() -> String {
+fn user_known_host_location_to_add(diagnostic_home_config: &str) -> String {
     // Note that we don't bother with the legacy known_hosts2 files.
-    match user_known_host_location() {
-        Some(path) => path.to_str().expect("utf-8 home").to_string(),
-        None => "~/.ssh/known_hosts".to_string(),
-    }
+    let user = user_known_host_location();
+    let openssh_loc = match &user {
+        Some(path) => path.to_str().expect("utf-8 home"),
+        None => "~/.ssh/known_hosts",
+    };
+    format!(
+        "the `net.ssh.known-hosts` array in your Cargo configuration \
+        (such as {diagnostic_home_config}) \
+        or in your OpenSSH known_hosts file at {openssh_loc}"
+    )
 }
 
 /// A single known host entry.

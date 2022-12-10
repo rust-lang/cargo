@@ -114,6 +114,9 @@ retry = 2                   # network retries
 git-fetch-with-cli = true   # use the `git` executable for git operations
 offline = true              # do not access the network
 
+[net.ssh]
+known-hosts = ["..."]       # known SSH host keys
+
 [patch.<registry>]
 # Same keys as for [patch] in Cargo.toml
 
@@ -748,6 +751,41 @@ proceed with locally cached data. If `false`, Cargo will access the network as
 needed, and generate an error if it encounters a network error.
 
 Can be overridden with the `--offline` command-line option.
+
+##### `net.ssh`
+
+The `[net.ssh]` table contains settings for SSH connections.
+
+##### `net.ssh.known-hosts`
+* Type: array of strings
+* Default: see description
+* Environment: not supported
+
+The `known-hosts` array contains a list of SSH host keys that should be
+accepted as valid when connecting to an SSH server (such as for SSH git
+dependencies). Each entry should be a string in a format similar to OpenSSH
+`known_hosts` files. Each string should start with one or more hostnames
+separated by commas, a space, the key type name, a space, and the
+base64-encoded key. For example:
+
+```toml
+[net.ssh]
+known-hosts = [
+    "example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFO4Q5T0UV0SQevair9PFwoxY9dl4pQl3u5phoqJH3cF"
+]
+```
+
+Cargo will attempt to load known hosts keys from common locations supported in
+OpenSSH, and will join those with any listed in a Cargo configuration file.
+If any matching entry has the correct key, the connection will be allowed.
+
+Cargo comes with the host keys for [github.com][github-keys] built-in. If
+those ever change, you can add the new keys to the config or known_hosts file.
+
+See [Git Authentication](../appendix/git-authentication.md#ssh-known-hosts)
+for more details.
+
+[github-keys]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
 
 #### `[patch]`
 
