@@ -726,6 +726,9 @@ pub fn with_fetch_options(
     cb: &mut dyn FnMut(git2::FetchOptions<'_>) -> CargoResult<()>,
 ) -> CargoResult<()> {
     let mut progress = Progress::new("Fetch", config);
+    let ssh_config = config.net_config()?.ssh.as_ref();
+    let config_known_hosts = ssh_config.and_then(|ssh| ssh.known_hosts.as_ref());
+    let diagnostic_home_config = config.diagnostic_home_config();
     network::with_retry(config, || {
         with_authentication(url, git_config, |f| {
             let port = Url::parse(url).ok().and_then(|url| url.port());
@@ -736,7 +739,13 @@ pub fn with_fetch_options(
             let mut counter = MetricsCounter::<10>::new(0, last_update);
             rcb.credentials(f);
             rcb.certificate_check(|cert, host| {
-                super::known_hosts::certificate_check(cert, host, port)
+                super::known_hosts::certificate_check(
+                    cert,
+                    host,
+                    port,
+                    config_known_hosts,
+                    &diagnostic_home_config,
+                )
             });
             rcb.transfer_progress(|stats| {
                 let indexed_deltas = stats.indexed_deltas();
