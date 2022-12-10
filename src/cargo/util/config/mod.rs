@@ -335,6 +335,18 @@ impl Config {
         &self.home_path
     }
 
+    /// Returns a path to display to the user with the location of their home
+    /// config file (to only be used for displaying a diagnostics suggestion,
+    /// such as recommending where to add a config value).
+    pub fn diagnostic_home_config(&self) -> String {
+        let home = self.home_path.as_path_unlocked();
+        let path = match self.get_file_path(home, "config", false) {
+            Ok(Some(existing_path)) => existing_path,
+            _ => home.join("config.toml"),
+        };
+        path.to_string_lossy().to_string()
+    }
+
     /// Gets the Cargo Git directory (`<cargo_home>/git`).
     pub fn git_path(&self) -> Filesystem {
         self.home_path.join("git")
@@ -2287,6 +2299,13 @@ pub struct CargoNetConfig {
     pub retry: Option<u32>,
     pub offline: Option<bool>,
     pub git_fetch_with_cli: Option<bool>,
+    pub ssh: Option<CargoSshConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoSshConfig {
+    pub known_hosts: Option<Vec<Value<String>>>,
 }
 
 #[derive(Debug, Deserialize)]

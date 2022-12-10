@@ -66,7 +66,8 @@ known hosts in OpenSSH-style `known_hosts` files located in their standard
 locations (`.ssh/known_hosts` in your home directory, or
 `/etc/ssh/ssh_known_hosts` on Unix-like platforms or
 `%PROGRAMDATA%\ssh\ssh_known_hosts` on Windows). More information about these
-files can be found in the [sshd man page].
+files can be found in the [sshd man page]. Alternatively, keys may be
+configured in a Cargo configuration file with [`net.ssh.known-hosts`].
 
 When connecting to an SSH host before the known hosts has been configured,
 Cargo will display an error message instructing you how to add the host key.
@@ -78,10 +79,11 @@ publish their fingerprints on the web; for example GitHub posts theirs at
 <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints>.
 
 Cargo comes with the host keys for [github.com](https://github.com) built-in.
-If those ever change, you can add the new keys to your known_hosts file.
+If those ever change, you can add the new keys to the config or known_hosts file.
 
 [`credential.helper`]: https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage
 [`net.git-fetch-with-cli`]: ../reference/config.md#netgit-fetch-with-cli
+[`net.ssh.known-hosts`]: ../reference/config.md#netsshknown-hosts
 [GCM]: https://github.com/microsoft/Git-Credential-Manager-Core/
 [PuTTY]: https://www.chiark.greenend.org.uk/~sgtatham/putty/
 [Microsoft installation documentation]: https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse
