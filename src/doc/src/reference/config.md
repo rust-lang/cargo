@@ -257,7 +257,7 @@ In particular, rules are:
 > is also relative to two levels up from the config file itself.
 >
 > To avoid unexpected results, the rule of thumb is putting your extra config files
-> at the same level of discovered `.cargo/config.toml` in your porject.
+> at the same level of discovered `.cargo/config.toml` in your project.
 > For instance, given a project `/my/project`,
 > it is recommended to put config files under `/my/project/.cargo`
 > or a new directory at the same level, such as `/my/project/.config`.
