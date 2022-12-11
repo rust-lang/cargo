@@ -122,3 +122,34 @@ fn whitespace() {
     let contents = p.read_file("target/doc/foo/index.html");
     assert!(contents.contains(SPACED_VERSION));
 }
+
+#[cargo_test]
+fn not_affected_by_target_rustflags() {
+    let cfg = if cfg!(windows) { "windows" } else { "unix" };
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [target.'cfg({cfg})']
+                    rustflags = ["-D", "missing-docs"]
+
+                    [build]
+                    rustdocflags = ["--cfg", "foo"]
+                "#,
+            ),
+        )
+        .build();
+
+    // `cargo build` should fail due to missing docs.
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains("[RUNNING] `rustc [..] -D missing-docs[..]`")
+        .run();
+
+    // `cargo doc` shouldn't fail.
+    p.cargo("doc -v")
+        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`")
+        .run();
+}
