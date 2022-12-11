@@ -812,10 +812,7 @@ impl<'cfg> DrainState<'cfg> {
                 debug!("end ({:?}): {:?}", unit, result);
                 match result {
                     Ok(()) => self.finish(id, &unit, artifact, cx)?,
-                    Err(_)
-                        if unit.mode.is_doc_scrape()
-                            && unit.target.doc_scrape_examples().is_unset() =>
-                    {
+                    Err(_) if cx.bcx.unit_can_fail_for_docscraping(&unit) => {
                         cx.failed_scrape_units
                             .lock()
                             .unwrap()
