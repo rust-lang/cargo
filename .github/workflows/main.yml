@@ -99,6 +99,7 @@ jobs:
         CARGO_TARGET_DIR: target
     - run: cargo test -p cargo-platform
     - run: cargo test -p cargo-util
+    - run: cargo test -p home
     - run: cargo test --manifest-path crates/mdman/Cargo.toml
     - run: cargo build --manifest-path crates/credential/cargo-credential-1password/Cargo.toml
     - run: cargo build --manifest-path crates/credential/cargo-credential-gnome-secret/Cargo.toml
