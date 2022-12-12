@@ -65,6 +65,19 @@ fn simple() {
 }
 
 #[cargo_test]
+fn simple_with_asymmetric() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .http_index()
+        .token(cargo_test_support::registry::Token::rfc_key())
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build").with_stderr(SUCCCESS_OUTPUT).run();
+}
+
+#[cargo_test]
 fn environment_config() {
     let registry = RegistryBuilder::new()
         .alternative()
@@ -96,6 +109,27 @@ fn environment_token() {
     let p = make_project();
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", registry.token())
+        .with_stderr(SUCCCESS_OUTPUT)
+        .run();
+}
+
+#[cargo_test]
+fn environment_token_with_asymmetric() {
+    let registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .no_configure_token()
+        .http_index()
+        .token(cargo_test_support::registry::Token::Keys(
+            "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
+                .to_string(),
+            None,
+        ))
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build")
+        .env("CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY", registry.key())
         .with_stderr(SUCCCESS_OUTPUT)
         .run();
 }

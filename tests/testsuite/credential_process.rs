@@ -158,7 +158,9 @@ fn get_token_test() -> (Project, TestRegistry) {
     // API server that checks that the token is included correctly.
     let server = registry::RegistryBuilder::new()
         .no_configure_token()
-        .token("sekrit")
+        .token(cargo_test_support::registry::Token::Plaintext(
+            "sekrit".to_string(),
+        ))
         .alternative()
         .http_api()
         .build();

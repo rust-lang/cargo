@@ -135,6 +135,83 @@ See [..]
 // Check that the `token` key works at the root instead of under a
 // `[registry]` table.
 #[cargo_test]
+fn simple_publish_with_http() {
+    let _reg = registry::RegistryBuilder::new()
+        .http_api()
+        .token(registry::Token::Plaintext("sekrit".to_string()))
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit --registry dummy-registry")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] `dummy-registry` index
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn simple_publish_with_asymmetric() {
+    let _reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative_named("dummy-registry")
+        .token(registry::Token::rfc_key())
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify -Zregistry-auth -Zsparse-registry --registry dummy-registry")
+        .masquerade_as_nightly_cargo(&["registry-auth", "sparse-registry"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
+[UPLOADING] foo v0.0.1 ([CWD])
+[UPDATING] `dummy-registry` index
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn old_token_location() {
     // `publish` generally requires a remote registry
     let registry = registry::RegistryBuilder::new().http_api().build();
@@ -2579,7 +2656,8 @@ fn wait_for_subsequent_publish() {
             *lock += 1;
             if *lock == 3 {
                 // Run the publish on the 3rd attempt
-                server.publish(&publish_req2.lock().unwrap().as_ref().unwrap());
+                let rep = server.check_authorized_publish(&publish_req2.lock().unwrap().as_ref().unwrap());
+                assert_eq!(rep.code, 200);
             }
             server.index(req)
         })
