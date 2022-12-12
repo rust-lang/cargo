@@ -13,6 +13,8 @@ use cargo_util::paths;
 use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
+use pasetors::keys::{AsymmetricKeyPair, Generate};
+use pasetors::paserk::FormatAsPaserk;
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use termcolor::Color::Green;
 use termcolor::ColorSpec;
@@ -791,8 +793,10 @@ pub fn registry_login(
         let secret_key: String;
         if generate_keypair {
             assert!(!secret_key_required);
-            secret_key = "key".to_owned();
-            // todo!("PASETO: generate a keypair")
+            let kp = AsymmetricKeyPair::<pasetors::version3::V3>::generate().unwrap();
+            let mut key = String::new();
+            FormatAsPaserk::fmt(&kp.secret, &mut key).unwrap();
+            secret_key = key;
         } else if secret_key_required {
             assert!(!generate_keypair);
             drop_println!(config, "please paste the API secret key below");
@@ -809,7 +813,7 @@ pub fn registry_login(
                 .ok_or_else(|| anyhow!("need a secret_key to set a key_subject"))?;
         }
         if !check_format_like_paserk_secret(&secret_key) {
-            panic!("not a validly formated PASERK secret key");
+            bail!("not a validly formated PASERK secret key");
         }
         new_token = RegistryCredentialConfig::AsymmetricKey((
             secret_key,

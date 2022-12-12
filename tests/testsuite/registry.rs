@@ -1136,12 +1136,12 @@ fn login_with_asymmetric_token_and_subject_on_stdin() {
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())
         .with_stdout("please paste the API secret key below")
-        .with_stdin("some token")
+        .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert!(credentials.starts_with("[registry]\n"));
     assert!(credentials.contains("secret-key-subject = \"foo\"\n"));
-    assert!(credentials.contains("secret-key = \"some token\"\n"));
+    assert!(credentials.contains("secret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n"));
 }
 
 #[cargo_test]
@@ -1153,10 +1153,10 @@ fn login_with_asymmetric_token_on_stdin() {
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())
         .with_stdout("please paste the API secret key below")
-        .with_stdin("some token")
+        .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
-    assert_eq!(credentials, "[registry]\nsecret-key = \"some token\"\n");
+    assert_eq!(credentials, "[registry]\nsecret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n");
 }
 
 #[cargo_test]
@@ -1170,6 +1170,38 @@ fn login_with_asymmetric_key_subject_without_key() {
         .with_stderr_contains("error: need a secret_key to set a key_subject")
         .with_status(101)
         .run();
+
+    // ok so ad a secret_key to the credentials
+    cargo_process("login --secret-key -v -Z registry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .with_stdout("please paste the API secret key below")
+        .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
+        .run();
+
+    // and then it shuld work
+    cargo_process("login --key-subject=foo -Z registry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .run();
+
+    let credentials = fs::read_to_string(&credentials).unwrap();
+    assert!(credentials.starts_with("[registry]\n"));
+    assert!(credentials.contains("secret-key-subject = \"foo\"\n"));
+    assert!(credentials.contains("secret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n"));
+}
+
+#[cargo_test]
+fn login_with_generate_asymmetric_token() {
+    let registry = registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+    cargo_process("login --generate-keypair -Z registry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .run();
+    let credentials = fs::read_to_string(&credentials).unwrap();
+    assert!(credentials.contains("secret-key = \"k3.secret."));
 }
 
 #[cargo_test]
