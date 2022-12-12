@@ -1,0 +1,64 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron:  '7 7 * * *'
+name: rolling
+jobs:
+  # https://twitter.com/mycoliza/status/1571295690063753218
+  nightly:
+    runs-on: ubuntu-latest
+    name: ubuntu / nightly
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Install nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          default: true
+      - name: cargo generate-lockfile
+        if: hashFiles('Cargo.lock') == ''
+        uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+      - name: cargo test --locked
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --locked --all-features --all-targets
+  # https://twitter.com/alcuadrado/status/1571291687837732873
+  update:
+    runs-on: ubuntu-latest
+    name: ubuntu / beta / updated
+    # There's no point running this if no Cargo.lock was checked in in the
+    # first place, since we'd just redo what happened in the regular test job.
+    # Unfortunately, hashFiles only works in if on steps, so we reepeat it.
+    # if: hashFiles('Cargo.lock') != ''
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Install beta
+        if: hashFiles('Cargo.lock') != ''
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: beta
+          default: true
+      - name: cargo update
+        if: hashFiles('Cargo.lock') != ''
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+      - name: cargo test
+        if: hashFiles('Cargo.lock') != ''
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --locked --all-features --all-targets
+        env:
+          RUSTFLAGS: -D deprecated
