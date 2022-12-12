@@ -26,6 +26,8 @@ pub fn registry_credential_config(
         index: Option<String>,
         token: Option<String>,
         credential_process: Option<config::PathAndArgs>,
+        secret_key: Option<String>,
+        secret_key_subject: Option<String>,
         #[serde(rename = "default")]
         _default: Option<String>,
     }
@@ -46,26 +48,44 @@ pub fn registry_credential_config(
         let RegistryConfig {
             token,
             credential_process,
+            secret_key,
+            secret_key_subject,
             ..
         } = config.get::<RegistryConfig>("registry")?;
         let credential_process =
             credential_process.filter(|_| config.cli_unstable().credential_process);
+        let secret_key = secret_key.filter(|_| config.cli_unstable().registry_auth);
+        let secret_key_subject = secret_key_subject.filter(|_| config.cli_unstable().registry_auth);
 
-        return Ok(match (token, credential_process) {
-            (Some(_), Some(_)) => {
-                return Err(format_err!(
-                    "both `token` and `credential-process` \
-                    were specified in the config`.\n\
-                    Only one of these values may be set, remove one or the other to proceed.",
-                ))
-            }
-            (Some(token), _) => RegistryCredentialConfig::Token(token),
-            (_, Some(process)) => RegistryCredentialConfig::Process((
-                process.path.resolve_program(config),
-                process.args,
-            )),
-            (None, None) => RegistryCredentialConfig::None,
-        });
+        let err_both = |token_key: &str, proc_key: &str| {
+            Err(format_err!(
+                "both `{token_key}` and `{proc_key}` \
+                were specified in the config`.\n\
+                 Only one of these values may be set, remove one or the other to proceed.",
+            ))
+        };
+        return Ok(
+            match (token, credential_process, secret_key, secret_key_subject) {
+                (Some(_), Some(_), _, _) => return err_both("token", "credential-process"),
+                (Some(_), _, Some(_), _) => return err_both("token", "secret-key"),
+                (_, Some(_), Some(_), _) => return err_both("credential-process", "secret-key"),
+                (_, _, None, Some(_)) => {
+                    return Err(format_err!(
+                        "`secret-key-subject` was set but `secret-key` was not in the config.\n\
+                     Ether set the `secret-key` or remove the `secret-key-subject`."
+                    ));
+                }
+                (Some(token), _, _, _) => RegistryCredentialConfig::Token(token),
+                (_, Some(process), _, _) => RegistryCredentialConfig::Process((
+                    process.path.resolve_program(config),
+                    process.args,
+                )),
+                (None, None, Some(key), subject) => {
+                    RegistryCredentialConfig::AsymmetricKey((key, subject))
+                }
+                (None, None, None, _) => RegistryCredentialConfig::None,
+            },
+        );
     }
 
     // Find the SourceId's name by its index URL. If environment variables
@@ -133,52 +153,71 @@ pub fn registry_credential_config(
         }
     }
 
-    let (token, credential_process) = if let Some(name) = &name {
+    let (token, credential_process, secret_key, secret_key_subject) = if let Some(name) = &name {
         log::debug!("found alternative registry name `{name}` for {sid}");
         let RegistryConfig {
             token,
+            secret_key,
+            secret_key_subject,
             credential_process,
             ..
         } = config.get::<RegistryConfig>(&format!("registries.{name}"))?;
         let credential_process =
             credential_process.filter(|_| config.cli_unstable().credential_process);
-        (token, credential_process)
+        let secret_key = secret_key.filter(|_| config.cli_unstable().registry_auth);
+        let secret_key_subject = secret_key_subject.filter(|_| config.cli_unstable().registry_auth);
+        (token, credential_process, secret_key, secret_key_subject)
     } else {
         log::debug!("no registry name found for {sid}");
-        (None, None)
+        (None, None, None, None)
     };
 
     let name = name.as_deref();
-    Ok(match (token, credential_process) {
-        (Some(_), Some(_)) => {
-            return {
-                Err(format_err!(
-                    "both `token` and `credential-process` \
-                    were specified in the config for registry `{name}`.\n\
-                    Only one of these values may be set, remove one or the other to proceed.",
-                    name = name.unwrap()
-                ))
+    let err_both = |token_key: &str, proc_key: &str| {
+        Err(format_err!(
+            "both `{token_key}` and `{proc_key}` \
+            were specified in the config for registry `{name}`.\n\
+             Only one of these values may be set, remove one or the other to proceed.",
+            name = name.unwrap()
+        ))
+    };
+    Ok(
+        match (token, credential_process, secret_key, secret_key_subject) {
+            (Some(_), Some(_), _, _) => return err_both("token", "credential-process"),
+            (Some(_), _, Some(_), _) => return err_both("token", "secret-key"),
+            (_, Some(_), Some(_), _) => return err_both("credential-process", "secret-key"),
+            (_, _, None, Some(_)) => {
+                return Err(format_err!(
+                    "`secret-key-subject` was set but `secret-key` was not in the config \
+                    for registry `{}`.\n\
+                 Ether set the `secret-key` or remove the `secret-key-subject`.",
+                    name.unwrap()
+                ));
             }
-        }
-        (Some(token), _) => RegistryCredentialConfig::Token(token),
-        (_, Some(process)) => {
-            RegistryCredentialConfig::Process((process.path.resolve_program(config), process.args))
-        }
-        (None, None) => {
-            // If we couldn't find a registry-specific credential, try the global credential process.
-            if let Some(process) = config
-                .get::<Option<config::PathAndArgs>>("registry.credential-process")?
-                .filter(|_| config.cli_unstable().credential_process)
-            {
-                RegistryCredentialConfig::Process((
-                    process.path.resolve_program(config),
-                    process.args,
-                ))
-            } else {
-                RegistryCredentialConfig::None
+            (Some(token), _, _, _) => RegistryCredentialConfig::Token(token),
+            (_, Some(process), _, _) => RegistryCredentialConfig::Process((
+                process.path.resolve_program(config),
+                process.args,
+            )),
+            (None, None, Some(key), subject) => {
+                RegistryCredentialConfig::AsymmetricKey((key, subject))
             }
-        }
-    })
+            (None, None, None, _) => {
+                // If we couldn't find a registry-specific credential, try the global credential process.
+                if let Some(process) = config
+                    .get::<Option<config::PathAndArgs>>("registry.credential-process")?
+                    .filter(|_| config.cli_unstable().credential_process)
+                {
+                    RegistryCredentialConfig::Process((
+                        process.path.resolve_program(config),
+                        process.args,
+                    ))
+                } else {
+                    RegistryCredentialConfig::None
+                }
+            }
+        },
+    )
 }
 
 #[derive(Debug, PartialEq)]
@@ -287,6 +326,9 @@ fn auth_token_optional(config: &Config, sid: &SourceId) -> CargoResult<Option<St
         RegistryCredentialConfig::Token(config_token) => config_token.to_string(),
         RegistryCredentialConfig::Process(process) => {
             run_command(config, &process, sid, Action::Get)?.unwrap()
+        }
+        RegistryCredentialConfig::AsymmetricKey((_secret_key, _secret_key_subject)) => {
+            todo!("sign the token")
         }
     };
 

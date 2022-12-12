@@ -44,6 +44,8 @@ pub enum RegistryCredentialConfig {
     Token(String),
     /// Process used for fetching a token.
     Process((PathBuf, Vec<String>)),
+    /// Secret Key and subject for Asymmetric tokens.
+    AsymmetricKey((String, Option<String>)),
 }
 
 impl RegistryCredentialConfig {
@@ -59,6 +61,12 @@ impl RegistryCredentialConfig {
     pub fn is_token(&self) -> bool {
         matches!(self, Self::Token(..))
     }
+    /// Returns `true` if the credential is [`Key`].
+    ///
+    /// [`Key`]: Credential::Key
+    pub fn is_asymmetric_key(&self) -> bool {
+        matches!(self, Self::AsymmetricKey(..))
+    }
     pub fn as_token(&self) -> Option<&str> {
         if let Self::Token(v) = self {
             Some(&*v)
@@ -68,6 +76,13 @@ impl RegistryCredentialConfig {
     }
     pub fn as_process(&self) -> Option<&(PathBuf, Vec<String>)> {
         if let Self::Process(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+    pub fn as_asymmetric_key(&self) -> Option<&(String, Option<String>)> {
+        if let Self::AsymmetricKey(v) = self {
             Some(v)
         } else {
             None

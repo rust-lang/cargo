@@ -682,7 +682,7 @@ unstable_cli_options!(
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     sparse_registry: bool = ("Support plain-HTTP-based crate registries"),
-    registry_auth: bool = ("Authentication for alternative registries"),
+    registry_auth: bool = ("Authentication for alternative registries, and generate registry authentication tokens using asymmetric cryptography"),
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),

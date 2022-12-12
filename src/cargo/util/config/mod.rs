@@ -1360,6 +1360,26 @@ impl Config {
                     );
                 }
 
+                if toml_v
+                    .get("registry")
+                    .and_then(|v| v.as_table())
+                    .and_then(|t| t.get("secret-key"))
+                    .is_some()
+                {
+                    bail!(
+                        "registry.secret-key cannot be set through --config for security reasons"
+                    );
+                } else if let Some((k, _)) = toml_v
+                    .get("registries")
+                    .and_then(|v| v.as_table())
+                    .and_then(|t| t.iter().find(|(_, v)| v.get("secret-key").is_some()))
+                {
+                    bail!(
+                        "registries.{}.secret-key cannot be set through --config for security reasons",
+                        k
+                    );
+                }
+
                 CV::from_toml(Definition::Cli(None), toml_v)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
