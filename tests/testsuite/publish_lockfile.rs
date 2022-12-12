@@ -494,8 +494,10 @@ fn ignore_lockfile_inner() {
 }
 
 #[cargo_test]
-fn respect_workspace_lockfile() {
+fn use_workspace_root_lockfile() {
     // Issue #11148
+    // Workspace members should use `Cargo.lock` at workspace root
+
     Package::new("serde", "0.2.0").publish();
     Package::new("serde", "0.2.1").publish();
 
@@ -535,9 +537,13 @@ fn respect_workspace_lockfile() {
         )
         .file("bar/src/main.rs", "fn main() {}")
         .build();
+
+    // Create `Cargo.lock` in the workspace root, and set it to use
+    // `serde v0.2.0`
     p.cargo("generate-lockfile").run();
     p.cargo("update -p serde:0.2.1 --precise 0.2.0").run();
 
+    // Expect: package `bar` uses `serde v0.2.0` as required by workspace lock
     p.cargo("package --workspace")
         .with_stderr(
             "\
@@ -547,8 +553,8 @@ See [..]
 [UPDATING] `dummy-registry` index
 [VERIFYING] bar v0.0.1 ([CWD]/bar)
 [DOWNLOADING] crates ...
-[DOWNLOADED] serde v0.2.1 ([..])
-[COMPILING] serde v0.2.1
+[DOWNLOADED] serde v0.2.0 ([..])
+[COMPILING] serde v0.2.0
 [COMPILING] bar v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..]
@@ -556,8 +562,6 @@ See [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[DOWNLOADING] crates ...
-[DOWNLOADED] serde v0.2.0 ([..])
 [COMPILING] serde v0.2.0
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
