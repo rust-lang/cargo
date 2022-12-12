@@ -1128,6 +1128,51 @@ fn login_with_token_on_stdin() {
 }
 
 #[cargo_test]
+fn login_with_asymmetric_token_and_subject_on_stdin() {
+    let registry = registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+    cargo_process("login --key-subject=foo --secret-key -v -Z registry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .with_stdout("please paste the API secret key below")
+        .with_stdin("some token")
+        .run();
+    let credentials = fs::read_to_string(&credentials).unwrap();
+    assert!(credentials.starts_with("[registry]\n"));
+    assert!(credentials.contains("secret-key-subject = \"foo\"\n"));
+    assert!(credentials.contains("secret-key = \"some token\"\n"));
+}
+
+#[cargo_test]
+fn login_with_asymmetric_token_on_stdin() {
+    let registry = registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+    cargo_process("login --secret-key -v -Z registry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .with_stdout("please paste the API secret key below")
+        .with_stdin("some token")
+        .run();
+    let credentials = fs::read_to_string(&credentials).unwrap();
+    assert_eq!(credentials, "[registry]\nsecret-key = \"some token\"\n");
+}
+
+#[cargo_test]
+fn login_with_asymmetric_key_subject_without_key() {
+    let registry = registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+    cargo_process("login --key-subject=foo -Z registry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr_contains("error: need a secret_key to set a key_subject")
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn bad_license_file_http() {
     let registry = setup_http();
     bad_license_file(cargo_http, &registry);
