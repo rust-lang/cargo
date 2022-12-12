@@ -9,6 +9,7 @@ use std::task::Poll;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::CliFeatures;
+use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
@@ -388,7 +389,18 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
 
     // Regenerate Cargo.lock using the old one as a guide.
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
-    let (pkg_set, mut new_resolve) = ops::resolve_ws(&tmp_ws)?;
+    let mut tmp_reg = PackageRegistry::new(ws.config())?;
+    let mut new_resolve = ops::resolve_with_previous(
+        &mut tmp_reg,
+        &tmp_ws,
+        &CliFeatures::new_all(true),
+        HasDevUnits::Yes,
+        orig_resolve.as_ref(),
+        None,
+        &[],
+        true,
+    )?;
+    let pkg_set = ops::get_resolved_packages(&new_resolve, tmp_reg)?;
 
     if let Some(orig_resolve) = orig_resolve {
         compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
