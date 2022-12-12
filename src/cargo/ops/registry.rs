@@ -738,9 +738,17 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     }
 }
 
-pub fn registry_login(config: &Config, token: Option<&str>, reg: Option<&str>) -> CargoResult<()> {
+pub fn registry_login(
+    config: &Config,
+    token: Option<&str>,
+    reg: Option<&str>,
+    generate_keypair: bool,
+    secret_key: bool,
+    key_subject: Option<&str>,
+) -> CargoResult<()> {
     let source_ids = get_source_id(config, None, reg)?;
     let reg_cfg = auth::registry_credential_config(config, &source_ids.original)?;
+
     let login_url = match registry(config, token, None, reg, false, false) {
         Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
@@ -751,6 +759,9 @@ pub fn registry_login(config: &Config, token: Option<&str>, reg: Option<&str>) -
         Err(e) => return Err(e),
     };
 
+    assert!(!generate_keypair);
+    assert!(!secret_key);
+    assert!(key_subject.is_none());
     let token = match token {
         Some(token) => token.to_string(),
         None => {

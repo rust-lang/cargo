@@ -11,6 +11,16 @@ pub fn cli() -> Command {
         .arg_quiet()
         .arg(Arg::new("token").action(ArgAction::Set))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg(flag("generate-keypair", "Generate a public/secret keypair").conflicts_with("token"))
+        .arg(
+            flag("secret-key", "Prompt for secret key")
+                .conflicts_with_all(&["generate-keypair", "token"]),
+        )
+        .arg(
+            opt("key-subject", "Set the key subject for this registry")
+                .value_name("SUBJECT")
+                .conflicts_with("token"),
+        )
         .after_help("Run `cargo help login` for more detailed information.\n")
 }
 
@@ -19,6 +29,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         config,
         args.get_one("token").map(String::as_str),
         args.get_one("registry").map(String::as_str),
+        args.flag("generate-keypair"),
+        args.flag("secret-key"),
+        args.get_one("key-subject").map(String::as_str),
     )?;
     Ok(())
 }

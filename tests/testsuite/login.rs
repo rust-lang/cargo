@@ -123,3 +123,33 @@ fn empty_login_token() {
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn bad_asymmetric_token_args() {
+    // These cases are kept brief as the implementation is covered by clap, so this is only smoke testing that we have clap configured correctly.
+    cargo_process("login --key-subject=foo tok")
+        .with_stderr_contains(
+            "[ERROR] The argument '--key-subject <SUBJECT>' cannot be used with '[token]'",
+        )
+        .with_status(1)
+        .run();
+
+    cargo_process("login --generate-keypair tok")
+        .with_stderr_contains(
+            "[ERROR] The argument '--generate-keypair' cannot be used with '[token]'",
+        )
+        .with_status(1)
+        .run();
+
+    cargo_process("login --secret-key tok")
+        .with_stderr_contains("[ERROR] The argument '--secret-key' cannot be used with '[token]'")
+        .with_status(1)
+        .run();
+
+    cargo_process("login --generate-keypair --secret-key")
+        .with_stderr_contains(
+            "[ERROR] The argument '--generate-keypair' cannot be used with '--secret-key'",
+        )
+        .with_status(1)
+        .run();
+}
