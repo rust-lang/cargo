@@ -406,7 +406,7 @@ mod sys {
             l_pad: [0, 0, 0, 0],
         };
         flock.l_type = if flag & libc::LOCK_UN != 0 {
-            libc::F_RDLCK
+            libc::F_UNLCK
         } else if flag & libc::LOCK_EX != 0 {
             libc::F_WRLCK
         } else if flag & libc::LOCK_SH != 0 {
