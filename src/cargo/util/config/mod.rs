@@ -193,7 +193,7 @@ pub struct Config {
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
     /// Cache of credentials from configuration or credential providers.
     /// Maps from url to credential value.
-    credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, String>>>,
+    credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, (bool, String)>>>,
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
@@ -468,7 +468,7 @@ impl Config {
     }
 
     /// Cached credentials from credential providers or configuration.
-    pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, String>> {
+    pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, (bool, String)>> {
         self.credential_cache
             .borrow_with(|| RefCell::new(HashMap::new()))
             .borrow_mut()

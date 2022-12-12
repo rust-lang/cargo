@@ -167,6 +167,10 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             );
         }
     }
+    // This is only used to confirm that we can create a token before we build the package.
+    // This causes the credential provider to be called an extra time, but keeps the same order of errors.
+    let ver = pkg.version().to_string();
+    let mutation = auth::Mutation::PrePublish;
 
     let (mut registry, reg_ids) = registry(
         opts.config,
@@ -174,7 +178,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.index.as_deref(),
         publish_registry.as_deref(),
         true,
-        !opts.dry_run,
+        Some(mutation).filter(|_| !opts.dry_run),
     )?;
     verify_dependencies(pkg, &registry, reg_ids.original)?;
 
@@ -197,6 +201,24 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         },
     )?
     .unwrap();
+
+    let hash = cargo_util::Sha256::new()
+        .update_file(tarball.file())?
+        .finish_hex();
+    let mutation = auth::Mutation::Publish {
+        name: pkg.name().as_str(),
+        vers: &ver,
+        cksum: &hash,
+    };
+
+    if !opts.dry_run {
+        registry.set_token(Some(auth::auth_token(
+            &opts.config,
+            &reg_ids.original,
+            None,
+            Some(mutation),
+        )?));
+    }
 
     opts.config
         .shell()
@@ -494,11 +516,11 @@ fn registry(
     index: Option<&str>,
     registry: Option<&str>,
     force_update: bool,
-    token_required: bool,
+    token_required: Option<auth::Mutation<'_>>,
 ) -> CargoResult<(Registry, RegistrySourceIds)> {
     let source_ids = get_source_id(config, index, registry)?;
 
-    if token_required && index.is_some() && token_from_cmdline.is_none() {
+    if token_required.is_some() && index.is_some() && token_from_cmdline.is_none() {
         bail!("command-line argument --index requires --token to be specified");
     }
     if let Some(token) = token_from_cmdline {
@@ -525,8 +547,13 @@ fn registry(
     let api_host = cfg
         .api
         .ok_or_else(|| format_err!("{} does not support API commands", source_ids.replacement))?;
-    let token = if token_required || cfg.auth_required {
-        Some(auth::auth_token(config, &source_ids.original, None)?)
+    let token = if token_required.is_some() || cfg.auth_required {
+        Some(auth::auth_token(
+            config,
+            &source_ids.original,
+            None,
+            token_required,
+        )?)
     } else {
         None
     };
@@ -768,7 +795,7 @@ pub fn registry_login(
     let source_ids = get_source_id(config, None, reg)?;
     let reg_cfg = auth::registry_credential_config(config, &source_ids.original)?;
 
-    let login_url = match registry(config, token, None, reg, false, false) {
+    let login_url = match registry(config, token, None, reg, false, None) {
         Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
             .downcast::<AuthorizationError>()
@@ -914,13 +941,15 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         }
     };
 
+    let mutation = auth::Mutation::Owners { name: &name };
+
     let (mut registry, _) = registry(
         config,
         opts.token.as_deref(),
         opts.index.as_deref(),
         opts.registry.as_deref(),
         true,
-        true,
+        Some(mutation),
     )?;
 
     if let Some(ref v) = opts.to_add {
@@ -993,13 +1022,25 @@ pub fn yank(
         None => bail!("a version must be specified to yank"),
     };
 
+    let message = if undo {
+        auth::Mutation::Unyank {
+            name: &name,
+            vers: &version,
+        }
+    } else {
+        auth::Mutation::Yank {
+            name: &name,
+            vers: &version,
+        }
+    };
+
     let (mut registry, _) = registry(
         config,
         token.as_deref(),
         index.as_deref(),
         reg.as_deref(),
         true,
-        true,
+        Some(message),
     )?;
 
     let package_spec = format!("{}@{}", name, version);
@@ -1087,7 +1128,7 @@ pub fn search(
     reg: Option<String>,
 ) -> CargoResult<()> {
     let (mut registry, source_ids) =
-        registry(config, None, index.as_deref(), reg.as_deref(), false, false)?;
+        registry(config, None, index.as_deref(), reg.as_deref(), false, None)?;
     let (crates, total_crates) = registry.search(query, limit).with_context(|| {
         format!(
             "failed to retrieve search results from the registry at {}",

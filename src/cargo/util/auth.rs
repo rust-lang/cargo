@@ -296,14 +296,19 @@ pub fn cache_token(config: &Config, sid: &SourceId, token: &str) {
     let url = sid.canonical_url();
     config
         .credential_cache()
-        .insert(url.clone(), token.to_string());
+        .insert(url.clone(), (true, token.to_string()));
 }
 
 /// Returns the token to use for the given registry.
 /// If a `login_url` is provided and a token is not available, the
 /// login_url will be included in the returned error.
-pub fn auth_token(config: &Config, sid: &SourceId, login_url: Option<&Url>) -> CargoResult<String> {
-    match auth_token_optional(config, sid)? {
+pub fn auth_token(
+    config: &Config,
+    sid: &SourceId,
+    login_url: Option<&Url>,
+    mutation: Option<Mutation<'_>>,
+) -> CargoResult<String> {
+    match auth_token_optional(config, sid, mutation.as_ref())? {
         Some(token) => Ok(token),
         None => Err(AuthorizationError {
             sid: sid.clone(),
@@ -315,12 +320,20 @@ pub fn auth_token(config: &Config, sid: &SourceId, login_url: Option<&Url>) -> C
 }
 
 /// Returns the token to use for the given registry.
-fn auth_token_optional(config: &Config, sid: &SourceId) -> CargoResult<Option<String>> {
+fn auth_token_optional(
+    config: &Config,
+    sid: &SourceId,
+    mutation: Option<&'_ Mutation<'_>>,
+) -> CargoResult<Option<String>> {
     let mut cache = config.credential_cache();
     let url = sid.canonical_url();
 
-    if let Some(token) = cache.get(url) {
-        return Ok(Some(token.clone()));
+    if let Some((overridden_on_commandline, token)) = cache.get(url) {
+        // Tokens for endpoints that do not involve a mutation can always be reused.
+        // If the value is put in the cach by the command line, then we reuse it without looking at the configuration.
+        if *overridden_on_commandline || mutation.is_none() {
+            return Ok(Some(token.clone()));
+        }
     }
 
     let credential = registry_credential_config(config, sid)?;
@@ -328,6 +341,7 @@ fn auth_token_optional(config: &Config, sid: &SourceId) -> CargoResult<Option<St
         RegistryCredentialConfig::None => return Ok(None),
         RegistryCredentialConfig::Token(config_token) => config_token.to_string(),
         RegistryCredentialConfig::Process(process) => {
+            // todo: PASETO with process
             run_command(config, &process, sid, Action::Get)?.unwrap()
         }
         RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) => {
@@ -340,10 +354,41 @@ fn auth_token_optional(config: &Config, sid: &SourceId) -> CargoResult<Option<St
             let message = Message {
                 iat: &iat.format(&Rfc3339)?,
                 sub: secret_key_subject.as_deref(),
-                mutation: None,
-                name: None,
-                vers: None,
-                cksum: None,
+                mutation: mutation.and_then(|m| {
+                    Some(match m {
+                        Mutation::PrePublish => return None,
+                        Mutation::Publish { .. } => "publish",
+                        Mutation::Yank { .. } => "yank",
+                        Mutation::Unyank { .. } => "unyank",
+                        Mutation::Owners { .. } => "owners",
+                    })
+                }),
+                name: mutation.and_then(|m| {
+                    Some(match m {
+                        Mutation::PrePublish => return None,
+                        Mutation::Publish { name, .. }
+                        | Mutation::Yank { name, .. }
+                        | Mutation::Unyank { name, .. }
+                        | Mutation::Owners { name, .. } => *name,
+                    })
+                }),
+                vers: mutation.and_then(|m| {
+                    Some(match m {
+                        Mutation::PrePublish | Mutation::Owners { .. } => return None,
+                        Mutation::Publish { vers, .. }
+                        | Mutation::Yank { vers, .. }
+                        | Mutation::Unyank { vers, .. } => *vers,
+                    })
+                }),
+                cksum: mutation.and_then(|m| {
+                    Some(match m {
+                        Mutation::PrePublish
+                        | Mutation::Yank { .. }
+                        | Mutation::Unyank { .. }
+                        | Mutation::Owners { .. } => return None,
+                        Mutation::Publish { cksum, .. } => *cksum,
+                    })
+                }),
                 challenge: None, // todo: PASETO with challenges
                 v: None,
             };
@@ -367,8 +412,30 @@ fn auth_token_optional(config: &Config, sid: &SourceId) -> CargoResult<Option<St
         }
     };
 
-    cache.insert(url.clone(), token.clone());
+    if mutation.is_none() {
+        cache.insert(url.clone(), (false, token.clone()));
+    }
     Ok(Some(token))
+}
+
+pub enum Mutation<'a> {
+    PrePublish,
+    Publish {
+        name: &'a str,
+        vers: &'a str,
+        cksum: &'a str,
+    },
+    Yank {
+        name: &'a str,
+        vers: &'a str,
+    },
+    Unyank {
+        name: &'a str,
+        vers: &'a str,
+    },
+    Owners {
+        name: &'a str,
+    },
 }
 
 #[derive(serde::Serialize)]

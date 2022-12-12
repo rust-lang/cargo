@@ -71,7 +71,7 @@ pub(super) fn download(
     }
 
     let authorization = if registry_config.auth_required {
-        Some(auth::auth_token(config, &pkg.source_id(), None)?)
+        Some(auth::auth_token(config, &pkg.source_id(), None, None)?)
     } else {
         None
     };
