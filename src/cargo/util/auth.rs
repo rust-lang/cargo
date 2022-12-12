@@ -4,13 +4,15 @@ use crate::util::{config, config::ConfigKey, CanonicalUrl, CargoResult, Config, 
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::ProcessError;
 use core::fmt;
-use pasetors::keys::AsymmetricSecretKey;
+use pasetors::keys::{AsymmetricPublicKey, AsymmetricSecretKey};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 use url::Url;
 
 use crate::core::SourceId;
@@ -328,13 +330,69 @@ fn auth_token_optional(config: &Config, sid: &SourceId) -> CargoResult<Option<St
         RegistryCredentialConfig::Process(process) => {
             run_command(config, &process, sid, Action::Get)?.unwrap()
         }
-        RegistryCredentialConfig::AsymmetricKey((_secret_key, _secret_key_subject)) => {
-            todo!("PASETO: sign a read token")
+        RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) => {
+            let secret: AsymmetricSecretKey<pasetors::version3::V3> =
+                secret_key.as_str().try_into()?;
+            let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into()?;
+            let kip: pasetors::paserk::Id = (&public).try_into()?;
+            let iat = OffsetDateTime::now_utc();
+
+            let message = Message {
+                iat: &iat.format(&Rfc3339)?,
+                sub: secret_key_subject.as_deref(),
+                mutation: None,
+                name: None,
+                vers: None,
+                cksum: None,
+                challenge: None, // todo: PASETO with challenges
+                v: None,
+            };
+            let footer = Footer {
+                url: &sid.url().to_string(),
+                kip,
+            };
+
+            pasetors::version3::PublicToken::sign(
+                &secret,
+                serde_json::to_string(&message)
+                    .expect("cannot serialize")
+                    .as_bytes(),
+                Some(
+                    serde_json::to_string(&footer)
+                        .expect("cannot serialize")
+                        .as_bytes(),
+                ),
+                None,
+            )?
         }
     };
 
     cache.insert(url.clone(), token.clone());
     Ok(Some(token))
+}
+
+#[derive(serde::Serialize)]
+struct Message<'a> {
+    iat: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sub: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mutation: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    vers: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cksum: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    challenge: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    v: Option<u8>,
+}
+#[derive(serde::Serialize)]
+struct Footer<'a> {
+    url: &'a str,
+    kip: pasetors::paserk::Id,
 }
 
 enum Action {
