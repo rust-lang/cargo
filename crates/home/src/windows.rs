@@ -19,7 +19,13 @@ pub fn home_dir_inner() -> Option<PathBuf> {
 fn home_dir_crt() -> Option<PathBuf> {
     unsafe {
         let mut path: Vec<u16> = Vec::with_capacity(MAX_PATH);
-        match SHGetFolderPathW(ptr::null_mut(), CSIDL_PROFILE, ptr::null_mut(), 0, path.as_mut_ptr()) {
+        match SHGetFolderPathW(
+            ptr::null_mut(),
+            CSIDL_PROFILE,
+            ptr::null_mut(),
+            0,
+            path.as_mut_ptr(),
+        ) {
             S_OK => {
                 let len = wcslen(path.as_ptr());
                 path.set_len(len);
