@@ -8,7 +8,7 @@ use std::task::Poll;
 use std::time::Duration;
 use std::{cmp, env};
 
-use anyhow::{bail, format_err, Context as _};
+use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
 use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
@@ -27,7 +27,9 @@ use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
 use crate::ops::Packages;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
-use crate::util::auth::{self, AuthorizationError};
+use crate::util::auth::{
+    check_format_like_paserk_secret, {self, AuthorizationError},
+};
 use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -37,7 +39,7 @@ use crate::{drop_print, drop_println, version};
 /// Registry settings loaded from config files.
 ///
 /// This is loaded based on the `--registry` flag and the config settings.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RegistryCredentialConfig {
     None,
     /// The authentication token.
@@ -758,7 +760,7 @@ pub fn registry_login(
     token: Option<&str>,
     reg: Option<&str>,
     generate_keypair: bool,
-    secret_key: bool,
+    secret_key_required: bool,
     key_subject: Option<&str>,
 ) -> CargoResult<()> {
     let source_ids = get_source_id(config, None, reg)?;
@@ -773,51 +775,91 @@ pub fn registry_login(
             .map(|u| u.to_string()),
         Err(e) => return Err(e),
     };
-
-    assert!(!generate_keypair);
-    assert!(!secret_key);
-    assert!(key_subject.is_none());
-    let token = match token {
-        Some(token) => token.to_string(),
-        None => {
-            if let Some(login_url) = login_url {
-                drop_println!(
-                    config,
-                    "please paste the token found on {} below",
-                    login_url
-                )
-            } else {
-                drop_println!(
-                    config,
-                    "please paste the token for {} below",
-                    source_ids.original.display_registry_name()
-                )
+    let new_token;
+    if generate_keypair || secret_key_required || key_subject.is_some() {
+        if !config.cli_unstable().registry_auth {
+            panic!("-registry_auth required.");
+        }
+        assert!(token.is_none());
+        // we are dealing with asymmetric tokens
+        let (old_secret_key, old_key_subject) = match &reg_cfg {
+            RegistryCredentialConfig::AsymmetricKey((old_secret_key, old_key_subject)) => {
+                (Some(old_secret_key), old_key_subject.clone())
             }
-
+            _ => (None, None),
+        };
+        let secret_key: String;
+        if generate_keypair {
+            assert!(!secret_key_required);
+            secret_key = "key".to_owned();
+            // todo!("PASETO: generate a keypair")
+        } else if secret_key_required {
+            assert!(!generate_keypair);
+            drop_println!(config, "please paste the API secret key below");
             let mut line = String::new();
             let input = io::stdin();
             input
                 .lock()
                 .read_line(&mut line)
                 .with_context(|| "failed to read stdin")?;
-            // Automatically remove `cargo login` from an inputted token to
-            // allow direct pastes from `registry.host()`/me.
-            line.replace("cargo login", "").trim().to_string()
+            secret_key = line.trim().to_string();
+        } else {
+            secret_key = old_secret_key
+                .cloned()
+                .ok_or_else(|| anyhow!("need a secret_key to set a key_subject"))?;
         }
-    };
+        if !check_format_like_paserk_secret(&secret_key) {
+            panic!("not a validly formated PASERK secret key");
+        }
+        new_token = RegistryCredentialConfig::AsymmetricKey((
+            secret_key,
+            match key_subject {
+                Some(key_subject) => Some(key_subject.to_string()),
+                None => old_key_subject,
+            },
+        ));
+    } else {
+        new_token = RegistryCredentialConfig::Token(match token {
+            Some(token) => token.to_string(),
+            None => {
+                if let Some(login_url) = login_url {
+                    drop_println!(
+                        config,
+                        "please paste the token found on {} below",
+                        login_url
+                    )
+                } else {
+                    drop_println!(
+                        config,
+                        "please paste the token for {} below",
+                        source_ids.original.display_registry_name()
+                    )
+                }
 
-    if token.is_empty() {
-        bail!("please provide a non-empty token");
+                let mut line = String::new();
+                let input = io::stdin();
+                input
+                    .lock()
+                    .read_line(&mut line)
+                    .with_context(|| "failed to read stdin")?;
+                // Automatically remove `cargo login` from an inputted token to
+                // allow direct pastes from `registry.host()`/me.
+                line.replace("cargo login", "").trim().to_string()
+            }
+        });
+
+        if let Some(tok) = new_token.as_token() {
+            if tok.is_empty() {
+                bail!("please provide a non-empty token");
+            }
+        }
+    }
+    if &reg_cfg == &new_token {
+        config.shell().status("Login", "already logged in")?;
+        return Ok(());
     }
 
-    if let RegistryCredentialConfig::Token(old_token) = &reg_cfg {
-        if old_token == &token {
-            config.shell().status("Login", "already logged in")?;
-            return Ok(());
-        }
-    }
-
-    auth::login(config, &source_ids.original, token)?;
+    auth::login(config, &source_ids.original, new_token)?;
 
     config.shell().status(
         "Login",

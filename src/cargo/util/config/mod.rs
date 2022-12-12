@@ -69,7 +69,7 @@ use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
-use crate::ops;
+use crate::ops::{self, RegistryCredentialConfig};
 use crate::util::errors::CargoResult;
 use crate::util::validate_package_name;
 use crate::util::CanonicalUrl;
@@ -2101,7 +2101,7 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
 
 pub fn save_credentials(
     cfg: &Config,
-    token: Option<String>,
+    token: Option<RegistryCredentialConfig>,
     registry: &SourceId,
 ) -> CargoResult<()> {
     let registry = if registry.is_crates_io() {
@@ -2151,26 +2151,50 @@ pub fn save_credentials(
 
     if let Some(token) = token {
         // login
-        let (key, mut value) = {
-            let key = "token".to_string();
-            let value = ConfigValue::String(token, Definition::Path(file.path().to_path_buf()));
-            let map = HashMap::from([(key, value)]);
-            let table = CV::Table(map, Definition::Path(file.path().to_path_buf()));
 
-            if let Some(registry) = registry {
-                let map = HashMap::from([(registry.to_string(), table)]);
-                (
-                    "registries".into(),
-                    CV::Table(map, Definition::Path(file.path().to_path_buf())),
-                )
-            } else {
-                ("registry".into(), table)
+        let path_def = Definition::Path(file.path().to_path_buf());
+        let (key, mut value) = match token {
+            RegistryCredentialConfig::Token(token) => {
+                // login with token
+
+                let key = "token".to_string();
+                let value = ConfigValue::String(token, path_def.clone());
+                let map = HashMap::from([(key, value)]);
+                let table = CV::Table(map, path_def.clone());
+
+                if let Some(registry) = registry {
+                    let map = HashMap::from([(registry.to_string(), table)]);
+                    ("registries".into(), CV::Table(map, path_def.clone()))
+                } else {
+                    ("registry".into(), table)
+                }
             }
+            RegistryCredentialConfig::AsymmetricKey((secret_key, key_subject)) => {
+                // login with key
+
+                let key = "secret-key".to_string();
+                let value = ConfigValue::String(secret_key, path_def.clone());
+                let mut map = HashMap::from([(key, value)]);
+                if let Some(key_subject) = key_subject {
+                    let key = "secret-key-subject".to_string();
+                    let value = ConfigValue::String(key_subject, path_def.clone());
+                    map.insert(key, value);
+                }
+                let table = CV::Table(map, path_def.clone());
+
+                if let Some(registry) = registry {
+                    let map = HashMap::from([(registry.to_string(), table)]);
+                    ("registries".into(), CV::Table(map, path_def.clone()))
+                } else {
+                    ("registry".into(), table)
+                }
+            }
+            _ => unreachable!(),
         };
 
         if registry.is_some() {
             if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
-                let v = CV::from_toml(Definition::Path(file.path().to_path_buf()), table)?;
+                let v = CV::from_toml(path_def, table)?;
                 value.merge(v, false)?;
             }
         }
@@ -2185,6 +2209,8 @@ pub fn save_credentials(
                         format_err!("expected `[registries.{}]` to be a table", registry)
                     })?;
                     rtable.remove("token");
+                    rtable.remove("secret-key");
+                    rtable.remove("secret-key-subject");
                 }
             }
         } else if let Some(registry) = table.get_mut("registry") {
@@ -2192,6 +2218,8 @@ pub fn save_credentials(
                 .as_table_mut()
                 .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
             reg_table.remove("token");
+            reg_table.remove("secret-key");
+            reg_table.remove("secret-key-subject");
         }
     }
 

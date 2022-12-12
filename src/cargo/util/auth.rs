@@ -328,7 +328,7 @@ fn auth_token_optional(config: &Config, sid: &SourceId) -> CargoResult<Option<St
             run_command(config, &process, sid, Action::Get)?.unwrap()
         }
         RegistryCredentialConfig::AsymmetricKey((_secret_key, _secret_key_subject)) => {
-            todo!("sign the token")
+            todo!("PASETO: sign a read token")
         }
     };
 
@@ -343,9 +343,13 @@ enum Action {
 }
 
 /// Saves the given token.
-pub fn login(config: &Config, sid: &SourceId, token: String) -> CargoResult<()> {
+pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -> CargoResult<()> {
     match registry_credential_config(config, sid)? {
         RegistryCredentialConfig::Process(process) => {
+            let token = token
+                .as_token()
+                .expect("credential_process can not use login with a secret_key")
+                .to_owned();
             run_command(config, &process, sid, Action::Store(token))?;
         }
         _ => {
@@ -353,6 +357,11 @@ pub fn login(config: &Config, sid: &SourceId, token: String) -> CargoResult<()> 
         }
     };
     Ok(())
+}
+
+pub(crate) fn check_format_like_paserk_secret(_s: &str) -> bool {
+    // TODO: PASETO: check for valid PASERK secret format
+    true
 }
 
 /// Removes the token for the given registry.
