@@ -2656,7 +2656,8 @@ fn wait_for_subsequent_publish() {
             *lock += 1;
             if *lock == 3 {
                 // Run the publish on the 3rd attempt
-                let rep = server.check_authorized_publish(&publish_req2.lock().unwrap().as_ref().unwrap());
+                let rep = server
+                    .check_authorized_publish(&publish_req2.lock().unwrap().as_ref().unwrap());
                 assert_eq!(rep.code, 200);
             }
             server.index(req)

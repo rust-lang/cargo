@@ -100,7 +100,7 @@ Each new feature described below should explain how to use it.
     * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
     * [sparse-registry](#sparse-registry) — Adds support for fetching from static-file HTTP registries (`sparse+`)
     * [publish-timeout](#publish-timeout) — Controls the timeout between uploading the crate and being available in the index
-    * [registry-auth](#registry-auth) — Adds support for authenticated registries.
+    * [registry-auth](#registry-auth) — Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
 
 ### allow-features
 
@@ -896,6 +896,46 @@ can go to get a token.
 ```
 WWW-Authenticate: Cargo login_url="https://test-registry-login/me
 ```
+
+This same flag is also used to enable asymmetric authentication tokens.
+* Tracking Issue: [10519](https://github.com/rust-lang/cargo/issues/10519)
+* RFC: [#3231](https://github.com/rust-lang/rfcs/pull/3231)
+
+Add support for Cargo to authenticate the user to registries without sending secrets over the network.
+
+In [`config.toml`](https://doc.rust-lang.org/cargo/reference/config.html) and `credentials.toml` files there is a field called `private-key`, which is a private key formatted in the secret [subset of `PASERK`](https://github.com/paseto-standard/paserk/blob/master/types/secret.md) and is used to sign asymmetric tokens
+
+A keypair can be generated with `cargo login --generate-keypair` which will:
+- generate a public/private keypair in the currently recommended fashion.
+- save the private key in `credentials.toml`.
+- print the public key in [PASERK public](https://github.com/paseto-standard/paserk/blob/master/types/public.md) format.
+
+It is recommended that the `private-key` be saved in `credentials.toml`. It is also supported in `config.toml`, primarily so that it can be set using the associated environment variable, which is the recommended way to provide it in CI contexts. This setup is what we have for the `token` field for setting a secret token.
+
+There is also an optional field called `private-key-subject` which is a string chosen by the registry.
+This string will be included as part of an asymmetric token and should not be secret.
+It is intended for the rare use cases like "cryptographic proof that the central CA server authorized this action". Cargo requires it to be non-whitespace printable ASCII. Registries that need non-ASCII data should base64 encode it.
+
+Both fields can be set with `cargo login --registry=name --private-key --private-key-subject="subject"` which will prompt you to put in the key value.
+
+A registry can have at most one of `private-key`, `token`, or `credential-process` set.
+
+All PASETOs will include `iat`, the current time in ISO 8601 format. Cargo will include the following where appropriate:
+- `sub` an optional, non-secret string chosen by the registry that is expected to be claimed with every request. The value will be the `private-key-subject` from the `config.toml` file.
+- `mutation` if present, indicates that this request is a mutating operation (or a read-only operation if not present), must be one of the strings `publish`, `yank`, or `unyank`.
+  - `name` name of the crate related to this request.
+  - `vers` version string of the crate related to this request.
+  - `cksum` the SHA256 hash of the crate contents, as a string of 64 lowercase hexadecimal digits, must be present only when `mutation` is equal to `publish`
+- `challenge` the challenge string received from a 401/403 from this server this session. Registries that issue challenges must track which challenges have been issued/used and never accept a given challenge more than once within the same validity period (avoiding the need to track every challenge ever issued).
+
+The "footer" (which is part of the signature) will be a JSON string in UTF-8 and include:
+- `url` the RFC 3986 compliant URL where cargo got the config.json file,
+  - If this is a registry with an HTTP index, then this is the base URL that all index queries are relative to.
+  - If this is a registry with a GIT index, it is the URL Cargo used to clone the index.
+- `kid` the identifier of the private key used to sign the request, using the [PASERK IDs](https://github.com/paseto-standard/paserk/blob/master/operations/ID.md) standard.
+
+PASETO includes the message that was signed, so the server does not have to reconstruct the exact string from the request in order to check the signature. The server does need to check that the signature is valid for the string in the PASETO and that the contents of that string matches the request.
+If a claim should be expected for the request but is missing in the PASETO then the request must be rejected.
 
 ### credential-process
 * Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)

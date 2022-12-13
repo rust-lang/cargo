@@ -65,9 +65,9 @@ impl RegistryCredentialConfig {
     pub fn is_token(&self) -> bool {
         matches!(self, Self::Token(..))
     }
-    /// Returns `true` if the credential is [`Key`].
+    /// Returns `true` if the credential is [`AsymmetricKey`].
     ///
-    /// [`Key`]: Credential::Key
+    /// [`AsymmetricKey`]: RegistryCredentialConfig::AsymmetricKey
     pub fn is_asymmetric_key(&self) -> bool {
         matches!(self, Self::AsymmetricKey(..))
     }
