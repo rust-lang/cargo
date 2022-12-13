@@ -630,6 +630,9 @@ fn traverse_and_share(
         unit.is_std,
         new_dep_hash,
         unit.artifact,
+        // Since `dep_hash` is now filled in, there's no need to specify the artifact target
+        // for target-dependent feature resolution
+        None,
     );
     assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
     new_graph.entry(new_unit.clone()).or_insert(new_deps);
@@ -788,6 +791,7 @@ fn override_rustc_crate_types(
             unit.is_std,
             unit.dep_hash,
             unit.artifact,
+            unit.artifact_target_for_features,
         )
     };
     units[0] = match unit.target.kind() {
