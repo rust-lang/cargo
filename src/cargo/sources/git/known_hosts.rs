@@ -478,10 +478,9 @@ fn parse_known_hosts_line(line: &str, location: KnownHostLocation) -> Option<Kno
         return None;
     }
     let mut parts = line.split([' ', '\t']).filter(|s| !s.is_empty());
-    let Some(patterns) = parts.next() else { return None };
-    let Some(key_type) = parts.next() else { return None };
-    let Some(key) = parts.next() else { return None };
-    let Ok(key) = base64::decode(key) else { return None };
+    let patterns = parts.next()?;
+    let key_type = parts.next()?;
+    let key = parts.next().map(base64::decode)?.ok()?;
     Some(KnownHost {
         location,
         patterns: patterns.to_string(),
