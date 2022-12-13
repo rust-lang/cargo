@@ -1135,7 +1135,11 @@ fn login_with_asymmetric_token_and_subject_on_stdin() {
     cargo_process("login --key-subject=foo --secret-key -v -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())
-        .with_stdout("please paste the API secret key below")
+        .with_stdout(
+            "\
+        please paste the API secret key below
+k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
+        )
         .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
@@ -1152,7 +1156,11 @@ fn login_with_asymmetric_token_on_stdin() {
     cargo_process("login --secret-key -v -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())
-        .with_stdout("please paste the API secret key below")
+        .with_stdout(
+            "\
+    please paste the API secret key below
+k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
+        )
         .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
@@ -1175,7 +1183,10 @@ fn login_with_asymmetric_key_subject_without_key() {
     cargo_process("login --secret-key -v -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())
-        .with_stdout("please paste the API secret key below")
+        .with_stdout(
+            "please paste the API secret key below
+k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
+        )
         .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
 
@@ -1199,6 +1210,7 @@ fn login_with_generate_asymmetric_token() {
     cargo_process("login --generate-keypair -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())
+        .with_stdout("k3.public.[..]")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert!(credentials.contains("secret-key = \"k3.secret."));

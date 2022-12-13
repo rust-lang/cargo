@@ -3,6 +3,7 @@
 use crate::util::{config, config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl};
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::ProcessError;
+use pasetors::paserk::FormatAsPaserk;
 use core::fmt;
 use pasetors::keys::{AsymmetricPublicKey, AsymmetricSecretKey};
 use serde::Deserialize;
@@ -488,9 +489,12 @@ pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -
     Ok(())
 }
 
-pub(crate) fn check_format_like_paserk_secret(secret_key: &str) -> bool {
-    let key: Result<AsymmetricSecretKey<pasetors::version3::V3>, _> = secret_key.try_into();
-    key.is_ok()
+pub(crate) fn paserk_public_from_paserk_secret(secret_key: &str) -> Option<String> {
+    let secret: AsymmetricSecretKey<pasetors::version3::V3> = secret_key.try_into().ok()?;
+    let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into().ok()?;
+    let mut paserk_pub_key = String::new();
+    FormatAsPaserk::fmt(&public, &mut paserk_pub_key).unwrap();
+    Some(paserk_pub_key)
 }
 
 /// Removes the token for the given registry.

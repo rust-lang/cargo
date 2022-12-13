@@ -30,7 +30,7 @@ use crate::ops;
 use crate::ops::Packages;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::auth::{
-    check_format_like_paserk_secret, {self, AuthorizationError},
+    paserk_public_from_paserk_secret, {self, AuthorizationError},
 };
 use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
@@ -807,7 +807,7 @@ pub fn registry_login(
     let new_token;
     if generate_keypair || secret_key_required || key_subject.is_some() {
         if !config.cli_unstable().registry_auth {
-            panic!("-registry_auth required.");
+            panic!("-Zregistry_auth required.");
         }
         assert!(token.is_none());
         // we are dealing with asymmetric tokens
@@ -839,7 +839,9 @@ pub fn registry_login(
                 .cloned()
                 .ok_or_else(|| anyhow!("need a secret_key to set a key_subject"))?;
         }
-        if !check_format_like_paserk_secret(&secret_key) {
+        if let Some(p) = paserk_public_from_paserk_secret(&secret_key) {
+            drop_println!(config, "{}", &p);
+        } else {
             bail!("not a validly formated PASERK secret key");
         }
         new_token = RegistryCredentialConfig::AsymmetricKey((
