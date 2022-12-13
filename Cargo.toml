@@ -19,7 +19,7 @@ path = "src/cargo/lib.rs"
 bytesize = "1.0"
 cargo-platform = { path = "crates/cargo-platform", version = "0.1.2" }
 cargo-util = { path = "crates/cargo-util", version = "0.2.3" }
-crates-io = { path = "crates/crates-io", version = "0.35.0" }
+crates-io = { path = "crates/crates-io", version = "0.35.1" }
 curl = { version = "0.4.44", features = ["http2"] }
 curl-sys = "0.4.59"
 env_logger = "0.10.0"

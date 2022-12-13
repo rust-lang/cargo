@@ -807,7 +807,11 @@ pub fn registry_login(
     let new_token;
     if generate_keypair || secret_key_required || key_subject.is_some() {
         if !config.cli_unstable().registry_auth {
-            panic!("-Zregistry_auth required.");
+            // todo use fail_if_stable_opt
+            bail!(
+                "asymmetric token options are unstable and require the \
+                `-Z registry-auth` option on the nightly channel"
+            );
         }
         assert!(token.is_none());
         // we are dealing with asymmetric tokens

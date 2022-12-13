@@ -1179,7 +1179,7 @@ fn login_with_asymmetric_key_subject_without_key() {
         .with_status(101)
         .run();
 
-    // ok so ad a secret_key to the credentials
+    // ok so add a secret_key to the credentials
     cargo_process("login --secret-key -v -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())

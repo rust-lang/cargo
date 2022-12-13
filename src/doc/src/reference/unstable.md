@@ -903,7 +903,7 @@ This same flag is also used to enable asymmetric authentication tokens.
 
 Add support for Cargo to authenticate the user to registries without sending secrets over the network.
 
-In [`config.toml`](https://doc.rust-lang.org/cargo/reference/config.html) and `credentials.toml` files there is a field called `private-key`, which is a private key formatted in the secret [subset of `PASERK`](https://github.com/paseto-standard/paserk/blob/master/types/secret.md) and is used to sign asymmetric tokens
+In [`config.toml`](config.md) and `credentials.toml` files there is a field called `private-key`, which is a private key formatted in the secret [subset of `PASERK`](https://github.com/paseto-standard/paserk/blob/master/types/secret.md) and is used to sign asymmetric tokens
 
 A keypair can be generated with `cargo login --generate-keypair` which will:
 - generate a public/private keypair in the currently recommended fashion.

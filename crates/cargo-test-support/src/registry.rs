@@ -294,8 +294,8 @@ impl RegistryBuilder {
                     &config_path,
                     format!(
                         "
-                    [registries.{alternative}]
-                    index = '{}'",
+                        [registries.{alternative}]
+                        index = '{}'",
                         registry.index_url
                     )
                     .as_bytes(),
@@ -306,11 +306,11 @@ impl RegistryBuilder {
                     &config_path,
                     format!(
                         "
-                    [source.crates-io]
-                    replace-with = 'dummy-registry'
+                        [source.crates-io]
+                        replace-with = 'dummy-registry'
 
-                    [registries.dummy-registry]
-                    index = '{}'",
+                        [registries.dummy-registry]
+                        index = '{}'",
                         registry.index_url
                     )
                     .as_bytes(),
@@ -799,7 +799,7 @@ impl HttpServer {
         // todo: PASETO with challenges
         // - If the operation is a mutation:
         if let Some(mutation) = mutation {
-            //  - That the operation matches the mutation field an is one of publish, yank, or unyank.
+            //  - That the operation matches the mutation field and is one of publish, yank, or unyank.
             if message.mutation != Some(mutation.mutation) {
                 dbg!(message.mutation);
                 return false;

@@ -3,9 +3,9 @@
 use crate::util::{config, config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl};
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::ProcessError;
-use pasetors::paserk::FormatAsPaserk;
 use core::fmt;
 use pasetors::keys::{AsymmetricPublicKey, AsymmetricSecretKey};
+use pasetors::paserk::FormatAsPaserk;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;

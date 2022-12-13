@@ -115,7 +115,7 @@ fn simple_add_with_asymmetric() {
         .build();
 
     // The http_api server will check that the authorization is correct.
-    // If the authorization was not sent then we wuld get an unauthorized error.
+    // If the authorization was not sent then we would get an unauthorized error.
     p.cargo("owner -a username")
         .arg("-Zregistry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
@@ -182,7 +182,7 @@ fn simple_remove_with_asymmetric() {
         .build();
 
     // The http_api server will check that the authorization is correct.
-    // If the authorization was not sent then we wuld get an unauthorized error.
+    // If the authorization was not sent then we would get an unauthorized error.
     p.cargo("owner -r username")
         .arg("-Zregistry-auth")
         .replace_crates_io(registry.index_url())

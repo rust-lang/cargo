@@ -11,15 +11,24 @@ pub fn cli() -> Command {
         .arg_quiet()
         .arg(Arg::new("token").action(ArgAction::Set))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
-        .arg(flag("generate-keypair", "Generate a public/secret keypair").conflicts_with("token"))
         .arg(
-            flag("secret-key", "Prompt for secret key")
+            flag(
+                "generate-keypair",
+                "Generate a public/secret keypair (unstable)",
+            )
+            .conflicts_with("token"),
+        )
+        .arg(
+            flag("secret-key", "Prompt for secret key (unstable)")
                 .conflicts_with_all(&["generate-keypair", "token"]),
         )
         .arg(
-            opt("key-subject", "Set the key subject for this registry")
-                .value_name("SUBJECT")
-                .conflicts_with("token"),
+            opt(
+                "key-subject",
+                "Set the key subject for this registry (unstable)",
+            )
+            .value_name("SUBJECT")
+            .conflicts_with("token"),
         )
         .after_help("Run `cargo help login` for more detailed information.\n")
 }

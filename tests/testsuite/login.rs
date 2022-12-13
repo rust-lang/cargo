@@ -153,3 +153,20 @@ fn bad_asymmetric_token_args() {
         .with_status(1)
         .run();
 }
+
+// todo why do theas hang when run as a test?
+// #[cargo_test]
+// fn asymmetric_requires_nightly() {
+//     cargo_process("login --key-subject=foo")
+//         .with_status(101)
+//         .with_stderr_contains("asymmetric token options are unstable and require the `-Z registry-auth` option on the nightly channel")
+//         .run();
+//     cargo_process("login --generate-keypair")
+//         .with_status(101)
+//         .with_stderr_contains("asymmetric token options are unstable and require the `-Z registry-auth` option on the nightly channel")
+//         .run();
+//     cargo_process("login --secret-key")
+//         .with_status(101)
+//         .with_stderr_contains("asymmetric token options are unstable and require the `-Z registry-auth` option on the nightly channel")
+//         .run();
+// }
