@@ -108,7 +108,7 @@ request is merged you could change your `path` dependency to:
 
 ```toml
 [patch.crates-io]
-uuid = { git = 'https://github.com/uuid-rs/uuid' }
+uuid = { git = 'https://github.com/uuid-rs/uuid.git' }
 ```
 
 [uuid-repository]: https://github.com/uuid-rs/uuid
@@ -135,7 +135,7 @@ version = "0.1.0"
 uuid = "1.0.1"
 
 [patch.crates-io]
-uuid = { git = 'https://github.com/uuid-rs/uuid' }
+uuid = { git = 'https://github.com/uuid-rs/uuid.git' }
 ```
 
 Note that our local dependency on `uuid` has been updated to `1.0.1` as it's
@@ -161,7 +161,7 @@ my-library = { git = 'https://example.com/git/my-library' }
 uuid = "1.0"
 
 [patch.crates-io]
-uuid = { git = 'https://github.com/uuid-rs/uuid' }
+uuid = { git = 'https://github.com/uuid-rs/uuid.git' }
 ```
 
 Remember that `[patch]` is applicable *transitively* but can only be defined at
@@ -197,7 +197,7 @@ we've submitted all changes upstream we can update our manifest for
 uuid = "2.0"
 
 [patch.crates-io]
-uuid = { git = "https://github.com/uuid-rs/uuid", branch = "2.0.0" }
+uuid = { git = "https://github.com/uuid-rs/uuid.git", branch = "2.0.0" }
 ```
 
 And that's it! Like with the previous example the 2.0.0 version doesn't actually
@@ -215,7 +215,7 @@ my-library = { git = 'https://example.com/git/my-library' }
 uuid = "1.0"
 
 [patch.crates-io]
-uuid = { git = 'https://github.com/uuid-rs/uuid', branch = '2.0.0' }
+uuid = { git = 'https://github.com/uuid-rs/uuid.git', branch = '2.0.0' }
 ```
 
 Note that this will actually resolve to two versions of the `uuid` crate. The
@@ -234,8 +234,8 @@ configure this we'd do:
 
 ```toml
 [patch.crates-io]
-serde = { git = 'https://github.com/serde-rs/serde' }
-serde2 = { git = 'https://github.com/example/serde', package = 'serde', branch = 'v2' }
+serde = { git = 'https://github.com/serde-rs/serde.git' }
+serde2 = { git = 'https://github.com/example/serde.git', package = 'serde', branch = 'v2' }
 ```
 
 The first `serde = ...` directive indicates that serde `1.*` should be used
@@ -256,14 +256,14 @@ with other copies. The syntax is similar to the
 
 ```toml
 [patch.crates-io]
-foo = { git = 'https://github.com/example/foo' }
+foo = { git = 'https://github.com/example/foo.git' }
 bar = { path = 'my/local/bar' }
 
 [dependencies.baz]
-git = 'https://github.com/example/baz'
+git = 'https://github.com/example/baz.git'
 
 [patch.'https://github.com/example/baz']
-baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
+baz = { git = 'https://github.com/example/patched-baz.git', branch = 'my-branch' }
 ```
 
 > **Note**: The `[patch]` table can also be specified as a [configuration
@@ -305,7 +305,7 @@ copies. The syntax is similar to the `[dependencies]` section:
 
 ```toml
 [replace]
-"foo:0.1.0" = { git = 'https://github.com/example/foo' }
+"foo:0.1.0" = { git = 'https://github.com/example/foo.git' }
 "bar:1.0.2" = { path = 'my/local/bar' }
 ```
 
