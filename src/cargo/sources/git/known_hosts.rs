@@ -21,7 +21,7 @@
 //! this file.
 
 use crate::util::config::{Definition, Value};
-use git2::cert::Cert;
+use git2::cert::{Cert, SshHostKeyType};
 use git2::CertificateCheckStatus;
 use std::collections::HashSet;
 use std::fmt::Write;
@@ -49,7 +49,7 @@ enum KnownHostError {
     /// The host key was not found.
     HostKeyNotFound {
         hostname: String,
-        key_type: git2::cert::SshHostKeyType,
+        key_type: SshHostKeyType,
         remote_host_key: String,
         remote_fingerprint: String,
         other_hosts: Vec<KnownHost>,
@@ -57,7 +57,7 @@ enum KnownHostError {
     /// The host key was found, but does not match the remote's key.
     HostKeyHasChanged {
         hostname: String,
-        key_type: git2::cert::SshHostKeyType,
+        key_type: SshHostKeyType,
         old_known_host: KnownHost,
         remote_host_key: String,
         remote_fingerprint: String,
@@ -238,11 +238,6 @@ fn check_ssh_known_hosts(
         return Err(anyhow::format_err!("remote host key is not available").into());
     };
     let remote_key_type = cert_host_key.hostkey_type().unwrap();
-    // `changed_key` keeps track of any entries where the key has changed.
-    let mut changed_key = None;
-    // `other_hosts` keeps track of any entries that have an identical key,
-    // but a different hostname.
-    let mut other_hosts = Vec::new();
 
     // Collect all the known host entries from disk.
     let mut known_hosts = Vec::new();
@@ -293,6 +288,21 @@ fn check_ssh_known_hosts(
             });
         }
     }
+    check_ssh_known_hosts_loaded(&known_hosts, host, remote_key_type, remote_host_key)
+}
+
+/// Checks a host key against a loaded set of known hosts.
+fn check_ssh_known_hosts_loaded(
+    known_hosts: &[KnownHost],
+    host: &str,
+    remote_key_type: SshHostKeyType,
+    remote_host_key: &[u8],
+) -> Result<(), KnownHostError> {
+    // `changed_key` keeps track of any entries where the key has changed.
+    let mut changed_key = None;
+    // `other_hosts` keeps track of any entries that have an identical key,
+    // but a different hostname.
+    let mut other_hosts = Vec::new();
 
     for known_host in known_hosts {
         // The key type from libgit2 needs to match the key type from the host file.
@@ -301,7 +311,6 @@ fn check_ssh_known_hosts(
         }
         let key_matches = known_host.key == remote_host_key;
         if !known_host.host_matches(host) {
-            // `name` can be None for hashed hostnames (which libgit2 does not expose).
             if key_matches {
                 other_hosts.push(known_host.clone());
             }
@@ -434,7 +443,7 @@ impl KnownHost {
                     return false;
                 }
             } else {
-                match_found = pattern == host;
+                match_found |= pattern == host;
             }
         }
         match_found
@@ -444,6 +453,10 @@ impl KnownHost {
 /// Loads an OpenSSH known_hosts file.
 fn load_hostfile(path: &Path) -> Result<Vec<KnownHost>, anyhow::Error> {
     let contents = cargo_util::paths::read(path)?;
+    Ok(load_hostfile_contents(path, &contents))
+}
+
+fn load_hostfile_contents(path: &Path, contents: &str) -> Vec<KnownHost> {
     let entries = contents
         .lines()
         .enumerate()
@@ -455,13 +468,13 @@ fn load_hostfile(path: &Path) -> Result<Vec<KnownHost>, anyhow::Error> {
             parse_known_hosts_line(line, location)
         })
         .collect();
-    Ok(entries)
+    entries
 }
 
 fn parse_known_hosts_line(line: &str, location: KnownHostLocation) -> Option<KnownHost> {
     let line = line.trim();
     // FIXME: @revoked and @cert-authority is currently not supported.
-    if line.is_empty() || line.starts_with('#') || line.starts_with('@') {
+    if line.is_empty() || line.starts_with(['#', '@', '|']) {
         return None;
     }
     let mut parts = line.split([' ', '\t']).filter(|s| !s.is_empty());
@@ -475,4 +488,127 @@ fn parse_known_hosts_line(line: &str, location: KnownHostLocation) -> Option<Kno
         key_type: key_type.to_string(),
         key,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    static COMMON_CONTENTS: &str = r#"
+        # Comments allowed at start of line
+
+        example.com,rust-lang.org ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5MzWIpZwpkpDjyCNiTIEVFhSA9OUUQvjFo7CgZBGCAj/cqeUIgiLsgtfmtBsfWIkAECQpM7ePP7NLZFGJcHvoyg5jXJiIX5s0eKo9IlcuTLLrMkW5MkHXE7bNklVbW1WdCfF2+y7Ao25B4L8FFRokMh0yp/H6+8xZ7PdVwL3FRPEg8ftZ5R0kuups6xiMHPRX+f/07vfJzA47YDPmXfhkn+JK8kL0JYw8iy8BtNBfRQL99d9iXJzWXnNce5NHMuKD5rOonD3aQHLDlwK+KhrFRrdaxQEM8ZWxNti0ux8yT4Dl5jJY0CrIu3Xl6+qroVgTqJGNkTbhs5DGWdFh6BLPTTH15rN4buisg7uMyLyHqx06ckborqD33gWu+Jig7O+PV6KJmL5mp1O1HXvZqkpBdTiT6GiDKG3oECCIXkUk0BSU9VG9VQcrMxxvgiHlyoXUAfYQoXv/lnxkTnm+Sr36kutsVOs7n5B43ZKAeuaxyQ11huJZpxamc0RA1HM641s= eric@host
+        Example.net ssh-dss AAAAB3NzaC1kc3MAAACBAK2Ek3jVxisXmz5UcZ7W65BAj/nDJCCVvSe0Aytndn4PH6k7sVesut5OoY6PdksZ9tEfuFjjS9HR5SJb8j1GW0GxtaSHHbf+rNc36PeU75bffzyIWwpA8uZFONt5swUAXJXcsHOoapNbUFuhHsRhB2hXxz9QGNiiwIwRJeSHixKRAAAAFQChKfxO1z9H2/757697xP5nJ/Z5dwAAAIEAoc+HIWas+4WowtB/KtAp6XE0B9oHI+55wKtdcGwwb7zHKK9scWNXwxIcMhSvyB3Oe2I7dQQlvyIWxsdZlzOkX0wdsTHjIAnBAP68MyvMv4kq3+I5GAVcFsqoLZfZvh0dlcgUq1/YNYZwKlt89tnzk8Fp4KLWmuw8Bd8IShYVa78AAACAL3qd8kNTY7CthgsQ8iWdjbkGSF/1KCeFyt8UjurInp9wvPDjqagwakbyLOzN7y3/ItTPCaGuX+RjFP0zZTf8i9bsAVyjFJiJ7vzRXcWytuFWANrpzLTn1qzPfh63iK92Aw8AVBYvEA/4bxo+XReAvhNBB/m78G6OedTeu6ZoTsI= eric@host
+        [example.net]:2222 ssh-dss AAAAB3NzaC1kc3MAAACBAJJN5kLZEpOJpXWyMT4KwYvLAj+b9ErNtglxOi86C6Kw7oZeYdDMCfD3lc3PJyX64udQcWGfO4abSESMiYdY43yFAZH279QGH5Q/B5CklVvTqYpfAUR+1r9TQxy3OVQHk7FB2wOi4xNQ3myO0vaYlBOB9il+P223aERbXx4JTWdvAAAAFQCTHWTcXxLK5Z6ZVPmfdSDyHzkF2wAAAIEAhp41/mTnM0Y0EWSyCXuETMW1QSpKGF8sqoZKp6wdzyhLXu0i32gLdXj4p24em/jObYh93hr+MwgxqWq+FHgD+D80Qg5f6vj4yEl4Uu5hqtTpCBFWUQoyEckbUkPf8uZ4/XzAne+tUSjZm09xATCmK9U2IGqZE+D+90eBkf1Svc8AAACAeKhi4EtfwenFYqKz60ZoEEhIsE1yI2jH73akHnfHpcW84w+fk3YlwjcfDfyYso+D0jZBdJeK5qIdkbUWhAX8wDjJVO0WL6r/YPr4yu/CgEyW1H59tAbujGJ4NR0JDqioulzYqNHnxpiw1RJukZnPBfSFKzRElvPOCq/NkQM/Mwk= eric@host
+        nistp256.example.org ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJ4iYGCcJrUIfrHfzlsv8e8kaF36qpcUpe3VNAKVCZX/BDptIdlEe8u8vKNRTPgUO9jqS0+tjTcPiQd8/8I9qng= eric@host
+        nistp384.example.org ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABhBNuGT3TqMz2rcwOt2ZqkiNqq7dvWPE66W2qPCoZsh0pQhVU3BnhKIc6nEr6+Wts0Z3jdF3QWwxbbTjbVTVhdr8fMCFhDCWiQFm9xLerYPKnu9qHvx9K87/fjc5+0pu4hLA== eric@host
+        nistp521.example.org ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBAD35HH6OsK4DN75BrKipVj/GvZaUzjPNa1F8wMjUdPB1JlVcUfgzJjWSxrhmaNN3u0soiZw8WNRFINsGPCw5E7DywF1689WcIj2Ye2rcy99je15FknScTzBBD04JgIyOI50mCUaPCBoF14vFlN6BmO00cFo+yzy5N8GuQ2sx9kr21xmFQ== eric@host
+        # Revoked not yet supported.
+        @revoked * ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKtQsi+KPYispwm2rkMidQf30fG1Niy8XNkvASfePoca eric@host
+        example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAWkjI6XT2SZh3xNk5NhisA3o3sGzWR+VAKMSqHtI0aY eric@host
+        192.168.42.12 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR eric@host
+        # Hash not yet supported.
+        |1|7CMSYgzdwruFLRhwowMtKx0maIE=|Tlff1GFqc3Ao+fUWxMEVG8mJiyk= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIHgN3O21U4LWtP5OzjTzPnUnSDmCNDvyvlaj6Hi65JC eric@host
+        # Negation isn't terribly useful without globs.
+        neg.example.com,!neg.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOXfUnaAHTlo1Qi//rNk26OcmHikmkns1Z6WW/UuuS3K eric@host
+    "#;
+
+    #[test]
+    fn known_hosts_parse() {
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
+        assert_eq!(khs.len(), 9);
+        match &khs[0].location {
+            KnownHostLocation::File { path, lineno } => {
+                assert_eq!(path, kh_path);
+                assert_eq!(*lineno, 4);
+            }
+            _ => panic!("unexpected"),
+        }
+        assert_eq!(khs[0].patterns, "example.com,rust-lang.org");
+        assert_eq!(khs[0].key_type, "ssh-rsa");
+        assert_eq!(khs[0].key.len(), 407);
+        assert_eq!(&khs[0].key[..30], b"\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x81\x00\xb935\x88\xa5\x9c)");
+        match &khs[1].location {
+            KnownHostLocation::File { path, lineno } => {
+                assert_eq!(path, kh_path);
+                assert_eq!(*lineno, 5);
+            }
+            _ => panic!("unexpected"),
+        }
+        assert_eq!(khs[2].patterns, "[example.net]:2222");
+        assert_eq!(khs[3].patterns, "nistp256.example.org");
+        assert_eq!(khs[7].patterns, "192.168.42.12");
+    }
+
+    #[test]
+    fn host_matches() {
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
+        assert!(khs[0].host_matches("example.com"));
+        assert!(khs[0].host_matches("rust-lang.org"));
+        assert!(khs[0].host_matches("EXAMPLE.COM"));
+        assert!(khs[1].host_matches("example.net"));
+        assert!(!khs[0].host_matches("example.net"));
+        assert!(khs[2].host_matches("[example.net]:2222"));
+        assert!(!khs[2].host_matches("example.net"));
+        assert!(!khs[8].host_matches("neg.example.com"));
+    }
+
+    #[test]
+    fn check_match() {
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
+
+        assert!(check_ssh_known_hosts_loaded(
+            &khs,
+            "example.com",
+            SshHostKeyType::Rsa,
+            &khs[0].key
+        )
+        .is_ok());
+
+        match check_ssh_known_hosts_loaded(&khs, "example.com", SshHostKeyType::Dss, &khs[0].key) {
+            Err(KnownHostError::HostKeyNotFound {
+                hostname,
+                remote_fingerprint,
+                other_hosts,
+                ..
+            }) => {
+                assert_eq!(
+                    remote_fingerprint,
+                    "yn+pONDn0EcgdOCVptgB4RZd/wqmsVKrPnQMLtrvhw8"
+                );
+                assert_eq!(hostname, "example.com");
+                assert_eq!(other_hosts.len(), 0);
+            }
+            _ => panic!("unexpected"),
+        }
+
+        match check_ssh_known_hosts_loaded(
+            &khs,
+            "foo.example.com",
+            SshHostKeyType::Rsa,
+            &khs[0].key,
+        ) {
+            Err(KnownHostError::HostKeyNotFound { other_hosts, .. }) => {
+                assert_eq!(other_hosts.len(), 1);
+                assert_eq!(other_hosts[0].patterns, "example.com,rust-lang.org");
+            }
+            _ => panic!("unexpected"),
+        }
+
+        let mut modified_key = khs[0].key.clone();
+        modified_key[0] = 1;
+        match check_ssh_known_hosts_loaded(&khs, "example.com", SshHostKeyType::Rsa, &modified_key)
+        {
+            Err(KnownHostError::HostKeyHasChanged { old_known_host, .. }) => {
+                assert!(matches!(
+                    old_known_host.location,
+                    KnownHostLocation::File { lineno: 4, .. }
+                ));
+            }
+            _ => panic!("unexpected"),
+        }
+    }
 }
