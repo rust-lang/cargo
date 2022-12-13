@@ -55,39 +55,14 @@ pub fn registry_credential_config(
             secret_key_subject,
             ..
         } = config.get::<RegistryConfig>("registry")?;
-        let credential_process =
-            credential_process.filter(|_| config.cli_unstable().credential_process);
-        let secret_key = secret_key.filter(|_| config.cli_unstable().registry_auth);
-        let secret_key_subject = secret_key_subject.filter(|_| config.cli_unstable().registry_auth);
-
-        let err_both = |token_key: &str, proc_key: &str| {
-            Err(format_err!(
-                "both `{token_key}` and `{proc_key}` \
-                were specified in the config`.\n\
-                 Only one of these values may be set, remove one or the other to proceed.",
-            ))
-        };
-        return Ok(
-            match (token, credential_process, secret_key, secret_key_subject) {
-                (Some(_), Some(_), _, _) => return err_both("token", "credential-process"),
-                (Some(_), _, Some(_), _) => return err_both("token", "secret-key"),
-                (_, Some(_), Some(_), _) => return err_both("credential-process", "secret-key"),
-                (_, _, None, Some(_)) => {
-                    return Err(format_err!(
-                        "`secret-key-subject` was set but `secret-key` was not in the config.\n\
-                     Ether set the `secret-key` or remove the `secret-key-subject`."
-                    ));
-                }
-                (Some(token), _, _, _) => RegistryCredentialConfig::Token(token),
-                (_, Some(process), _, _) => RegistryCredentialConfig::Process((
-                    process.path.resolve_program(config),
-                    process.args,
-                )),
-                (None, None, Some(key), subject) => {
-                    RegistryCredentialConfig::AsymmetricKey((key, subject))
-                }
-                (None, None, None, _) => RegistryCredentialConfig::None,
-            },
+        return registry_credential_config_iner(
+            true,
+            None,
+            token,
+            credential_process,
+            secret_key,
+            secret_key_subject,
+            config,
         );
     }
 
@@ -165,23 +140,46 @@ pub fn registry_credential_config(
             credential_process,
             ..
         } = config.get::<RegistryConfig>(&format!("registries.{name}"))?;
-        let credential_process =
-            credential_process.filter(|_| config.cli_unstable().credential_process);
-        let secret_key = secret_key.filter(|_| config.cli_unstable().registry_auth);
-        let secret_key_subject = secret_key_subject.filter(|_| config.cli_unstable().registry_auth);
         (token, credential_process, secret_key, secret_key_subject)
     } else {
         log::debug!("no registry name found for {sid}");
         (None, None, None, None)
     };
 
-    let name = name.as_deref();
+    registry_credential_config_iner(
+        false,
+        name.as_deref(),
+        token,
+        credential_process,
+        secret_key,
+        secret_key_subject,
+        config,
+    )
+}
+
+fn registry_credential_config_iner(
+    is_crates_io: bool,
+    name: Option<&str>,
+    token: Option<String>,
+    credential_process: Option<config::PathAndArgs>,
+    secret_key: Option<String>,
+    secret_key_subject: Option<String>,
+    config: &Config,
+) -> CargoResult<RegistryCredentialConfig> {
+    let credential_process =
+        credential_process.filter(|_| config.cli_unstable().credential_process);
+    let secret_key = secret_key.filter(|_| config.cli_unstable().registry_auth);
+    let secret_key_subject = secret_key_subject.filter(|_| config.cli_unstable().registry_auth);
     let err_both = |token_key: &str, proc_key: &str| {
+        let registry = if is_crates_io {
+            "".to_string()
+        } else {
+            format!(" for registry `{}`", name.unwrap_or("UN-NAMED"))
+        };
         Err(format_err!(
             "both `{token_key}` and `{proc_key}` \
-            were specified in the config for registry `{name}`.\n\
-             Only one of these values may be set, remove one or the other to proceed.",
-            name = name.unwrap()
+    were specified in the config{registry}.\n\
+        Only one of these values may be set, remove one or the other to proceed.",
         ))
     };
     Ok(
@@ -190,11 +188,15 @@ pub fn registry_credential_config(
             (Some(_), _, Some(_), _) => return err_both("token", "secret-key"),
             (_, Some(_), Some(_), _) => return err_both("credential-process", "secret-key"),
             (_, _, None, Some(_)) => {
+                let registry = if is_crates_io {
+                    "".to_string()
+                } else {
+                    format!(" for registry `{}`", name.as_ref().unwrap())
+                };
                 return Err(format_err!(
-                    "`secret-key-subject` was set but `secret-key` was not in the config \
-                    for registry `{}`.\n\
-                 Ether set the `secret-key` or remove the `secret-key-subject`.",
-                    name.unwrap()
+                    "`secret-key-subject` was set but `secret-key` was not in the config{}.\n\
+             Ether set the `secret-key` or remove the `secret-key-subject`.",
+                    registry
                 ));
             }
             (Some(token), _, _, _) => RegistryCredentialConfig::Token(token),
@@ -206,18 +208,19 @@ pub fn registry_credential_config(
                 RegistryCredentialConfig::AsymmetricKey((key, subject))
             }
             (None, None, None, _) => {
-                // If we couldn't find a registry-specific credential, try the global credential process.
-                if let Some(process) = config
-                    .get::<Option<config::PathAndArgs>>("registry.credential-process")?
-                    .filter(|_| config.cli_unstable().credential_process)
-                {
-                    RegistryCredentialConfig::Process((
-                        process.path.resolve_program(config),
-                        process.args,
-                    ))
-                } else {
-                    RegistryCredentialConfig::None
+                if !is_crates_io {
+                    // If we couldn't find a registry-specific credential, try the global credential process.
+                    if let Some(process) = config
+                        .get::<Option<config::PathAndArgs>>("registry.credential-process")?
+                        .filter(|_| config.cli_unstable().credential_process)
+                    {
+                        return Ok(RegistryCredentialConfig::Process((
+                            process.path.resolve_program(config),
+                            process.args,
+                        )));
+                    }
                 }
+                RegistryCredentialConfig::None
             }
         },
     )
