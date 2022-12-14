@@ -591,6 +591,8 @@ pub struct HttpServer {
     custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
 }
 
+/// A helper struct that collects the arguments for [HttpServer::check_authorized].
+/// Based on looking at the request, these are the fields that the authentication header should attest to.
 pub struct Mutation<'a> {
     pub mutation: &'a str,
     pub name: Option<&'a str>,
