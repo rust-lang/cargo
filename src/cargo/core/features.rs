@@ -988,29 +988,22 @@ impl CliUnstable {
     pub fn fail_if_stable_opt(&self, flag: &str, issue: u32) -> CargoResult<()> {
         if !self.unstable_options {
             let see = format!(
-                "See https://github.com/rust-lang/cargo/issues/{} for more \
-                 information about the `{}` flag.",
-                issue, flag
+                "See https://github.com/rust-lang/cargo/issues/{issue} for more \
+                 information about the `{flag}` flag."
             );
             // NOTE: a `config` isn't available here, check the channel directly
             let channel = channel();
             if channel == "nightly" || channel == "dev" {
                 bail!(
-                    "the `{}` flag is unstable, pass `-Z unstable-options` to enable it\n\
-                     {}",
-                    flag,
-                    see
+                    "the `{flag}` flag is unstable, pass `-Z unstable-options` to enable it\n\
+                     {see}"
                 );
             } else {
                 bail!(
-                    "the `{}` flag is unstable, and only available on the nightly channel \
-                     of Cargo, but this is the `{}` channel\n\
-                     {}\n\
-                     {}",
-                    flag,
-                    channel,
-                    SEE_CHANNELS,
-                    see
+                    "the `{flag}` flag is unstable, and only available on the nightly channel \
+                     of Cargo, but this is the `{channel}` channel\n\
+                     {SEE_CHANNELS}\n\
+                     {see}"
                 );
             }
         }

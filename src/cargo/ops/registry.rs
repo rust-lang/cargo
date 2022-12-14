@@ -807,10 +807,19 @@ pub fn registry_login(
     let new_token;
     if generate_keypair || secret_key_required || key_subject.is_some() {
         if !config.cli_unstable().registry_auth {
-            // todo use fail_if_stable_opt
+            let flag = if generate_keypair {
+                "generate-keypair"
+            } else if secret_key_required {
+                "secret-key"
+            } else if key_subject.is_some() {
+                "key-subject"
+            } else {
+                unreachable!("how did whe get here");
+            };
             bail!(
-                "asymmetric token options are unstable and require the \
-                `-Z registry-auth` option on the nightly channel"
+                "the `{flag}` flag is unstable, pass `-Z registry-auth` to enable it\n\
+                 See https://github.com/rust-lang/cargo/issues/10519 for more \
+                 information about the `{flag}` flag."
             );
         }
         assert!(token.is_none());

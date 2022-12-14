@@ -1,7 +1,7 @@
 //! Tests for the `cargo login` command.
 
 use cargo_test_support::install::cargo_home;
-use cargo_test_support::registry::RegistryBuilder;
+use cargo_test_support::registry::{self, RegistryBuilder};
 use cargo_test_support::{cargo_process, t};
 use std::fs::{self};
 use std::path::PathBuf;
@@ -154,19 +154,25 @@ fn bad_asymmetric_token_args() {
         .run();
 }
 
-// todo why do theas hang when run as a test?
-// #[cargo_test]
-// fn asymmetric_requires_nightly() {
-//     cargo_process("login --key-subject=foo")
-//         .with_status(101)
-//         .with_stderr_contains("asymmetric token options are unstable and require the `-Z registry-auth` option on the nightly channel")
-//         .run();
-//     cargo_process("login --generate-keypair")
-//         .with_status(101)
-//         .with_stderr_contains("asymmetric token options are unstable and require the `-Z registry-auth` option on the nightly channel")
-//         .run();
-//     cargo_process("login --secret-key")
-//         .with_status(101)
-//         .with_stderr_contains("asymmetric token options are unstable and require the `-Z registry-auth` option on the nightly channel")
-//         .run();
-// }
+#[cargo_test]
+fn asymmetric_requires_nightly() {
+    let registry = registry::init();
+    cargo_process("login --key-subject=foo")          
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] the `key-subject` flag is unstable, pass `-Z registry-auth` to enable it\n\
+            See https://github.com/rust-lang/cargo/issues/10519 for more information about the `key-subject` flag.")
+        .run();
+    cargo_process("login --generate-keypair")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] the `generate-keypair` flag is unstable, pass `-Z registry-auth` to enable it\n\
+            See https://github.com/rust-lang/cargo/issues/10519 for more information about the `generate-keypair` flag.")
+        .run();
+    cargo_process("login --secret-key")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] the `secret-key` flag is unstable, pass `-Z registry-auth` to enable it\n\
+            See https://github.com/rust-lang/cargo/issues/10519 for more information about the `secret-key` flag.")
+        .run();
+}
