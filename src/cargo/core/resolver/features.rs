@@ -853,12 +853,14 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                                     ArtifactTarget::BuildDependencyAssumeTarget => self
                                         .requested_targets
                                         .iter()
-                                        .filter_map(|kind| match kind {
-                                            CompileKind::Host => None,
-                                            CompileKind::Target(target) => {
-                                                Some(FeaturesFor::ArtifactDep(*target))
+                                        .map(|kind| match kind {
+                                            CompileKind::Host => {
+                                                let host_triple = self.target_data.rustc.host;
+                                                CompileTarget::new(&host_triple).unwrap()
                                             }
+                                            CompileKind::Target(target) => *target,
                                         })
+                                        .map(FeaturesFor::ArtifactDep)
                                         .collect(),
                                 }),
                             )

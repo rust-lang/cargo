@@ -2342,3 +2342,108 @@ fn calc_bin_artifact_fingerprint() {
         )
         .run();
 }
+
+#[cargo_test]
+fn with_target_and_optional() {
+    // See rust-lang/cargo#10526
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+                [dependencies]
+                d1 = { path = "d1", artifact = "bin", optional = true, target = "$TARGET" }
+            "#
+            .replace("$TARGET", target),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let _b = include_bytes!(env!("CARGO_BIN_FILE_D1"));
+                }
+            "#,
+        )
+        .file(
+            "d1/Cargo.toml",
+            r#"
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                edition = "2021"
+            "#,
+        )
+        .file("d1/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps -F d1 -v")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr(
+            "\
+[COMPILING] d1 v0.0.1 [..]
+[RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
+[CHECKING] foo v0.0.1 [..]
+[RUNNING] `rustc --crate-name foo [..]--cfg[..]d1[..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn with_assumed_host_target_and_optional_build_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+                [build-dependencies]
+                d1 = { path = "d1", artifact = "bin", optional = true, target = "target" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    std::env::var("CARGO_BIN_FILE_D1").unwrap();
+                }
+            "#,
+        )
+        .file(
+            "d1/Cargo.toml",
+            r#"
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                edition = "2021"
+            "#,
+        )
+        .file("d1/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps -F d1 -v")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_unordered(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[COMPILING] d1 v0.0.1 ([CWD]/d1)
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin[..]
+[RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
+[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]--cfg[..]d1[..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
