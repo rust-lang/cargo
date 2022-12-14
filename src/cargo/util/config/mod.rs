@@ -136,6 +136,24 @@ enum WhyLoad {
     FileDiscovery,
 }
 
+/// A previously generated authentication token and the data needed to determine if it can be reused.
+pub struct CredentialCacheValue {
+    /// If the command line was used to override the token then it must always be reused,
+    /// even if reading the configuration files would lead to a different value.
+    pub from_commandline: bool,
+    pub token_value: String,
+}
+
+impl fmt::Debug for CredentialCacheValue {
+    /// This manual implementation helps ensure that the token value is redacted from all logs.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CredentialCacheValue")
+            .field("from_commandline", &self.from_commandline)
+            .field("token_value", &"REDACTED")
+            .finish()
+    }
+}
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 #[derive(Debug)]
@@ -193,7 +211,7 @@ pub struct Config {
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
     /// Cache of credentials from configuration or credential providers.
     /// Maps from url to credential value.
-    credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, (bool, String)>>>,
+    credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, CredentialCacheValue>>>,
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
@@ -468,7 +486,7 @@ impl Config {
     }
 
     /// Cached credentials from credential providers or configuration.
-    pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, (bool, String)>> {
+    pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, CredentialCacheValue>> {
         self.credential_cache
             .borrow_with(|| RefCell::new(HashMap::new()))
             .borrow_mut()

@@ -19,6 +19,8 @@ use url::Url;
 use crate::core::SourceId;
 use crate::ops::RegistryCredentialConfig;
 
+use super::config::CredentialCacheValue;
+
 /// Get the credential configuration for a `SourceId`.
 pub fn registry_credential_config(
     config: &Config,
@@ -298,9 +300,13 @@ my-registry = {{ index = "{}" }}
 // Store a token in the cache for future calls.
 pub fn cache_token(config: &Config, sid: &SourceId, token: &str) {
     let url = sid.canonical_url();
-    config
-        .credential_cache()
-        .insert(url.clone(), (true, token.to_string()));
+    config.credential_cache().insert(
+        url.clone(),
+        CredentialCacheValue {
+            from_commandline: true,
+            token_value: token.to_string(),
+        },
+    );
 }
 
 /// Returns the token to use for the given registry.
@@ -332,11 +338,11 @@ fn auth_token_optional(
     let mut cache = config.credential_cache();
     let url = sid.canonical_url();
 
-    if let Some((overridden_on_commandline, token)) = cache.get(url) {
+    if let Some(cache_token_value) = cache.get(url) {
         // Tokens for endpoints that do not involve a mutation can always be reused.
         // If the value is put in the cach by the command line, then we reuse it without looking at the configuration.
-        if *overridden_on_commandline || mutation.is_none() {
-            return Ok(Some(token.clone()));
+        if cache_token_value.from_commandline || mutation.is_none() {
+            return Ok(Some(cache_token_value.token_value.clone()));
         }
     }
 
@@ -417,7 +423,13 @@ fn auth_token_optional(
     };
 
     if mutation.is_none() {
-        cache.insert(url.clone(), (false, token.clone()));
+        cache.insert(
+            url.clone(),
+            CredentialCacheValue {
+                from_commandline: false,
+                token_value: token.to_string(),
+            },
+        );
     }
     Ok(Some(token))
 }
