@@ -95,6 +95,10 @@ Some functionality is split off into separate crates, usually in the
   experimental
   [credential-process](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process)
   feature.
+* [`home`](https://github.com/rust-lang/cargo/tree/master/crates/home) — This library is shared between cargo and rustup and is used for finding their home directories.
+  This is not directly depended upon with a `path` dependency; cargo uses the version from crates.io.
+  It is intended to be versioned and published independently of Rust's release system.
+  Whenever a change needs to be made, bump the version in Cargo.toml and `cargo publish` it manually, and then update cargo's `Cargo.toml` to depend on the new version.
 * [`mdman`](https://github.com/rust-lang/cargo/tree/master/crates/mdman) —
   This is a utility for generating cargo's man pages. See [Building the man
   pages](https://github.com/rust-lang/cargo/tree/master/src/doc#building-the-man-pages)
