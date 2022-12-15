@@ -256,7 +256,7 @@ fn parse_dependencies(config: &Config, matches: &ArgMatches) -> CargoResult<Vec<
                             )
                         })
                         .collect::<Vec<_>>();
-                    anyhow::bail!("feature `{feature}` must be qualified by the dependency its being activated for, like {}", candidates.join(", "));
+                    anyhow::bail!("feature `{feature}` must be qualified by the dependency it's being activated for, like {}", candidates.join(", "));
                 }
                 crates
                     .first_mut()
