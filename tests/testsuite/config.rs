@@ -1,7 +1,7 @@
 //! Tests for config settings.
 
 use cargo::core::{PackageIdSpec, Shell};
-use cargo::util::config::{self, Config, SslVersionConfig, StringList};
+use cargo::util::config::{self, Config, Definition, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoResult;
@@ -1507,4 +1507,60 @@ fn all_profile_options() {
     let roundtrip: toml::TomlProfile = toml_edit::easy::from_str(&profile_toml).unwrap();
     let roundtrip_toml = toml_edit::easy::to_string(&roundtrip).unwrap();
     compare::assert_match_exact(&profile_toml, &roundtrip_toml);
+}
+
+#[cargo_test]
+fn value_in_array() {
+    // Value<String> in an array should work
+    let root_path = paths::root().join(".cargo/config.toml");
+    write_config_at(
+        &root_path,
+        "\
+[net.ssh]
+known-hosts = [
+    \"example.com ...\",
+    \"example.net ...\",
+]
+",
+    );
+
+    let foo_path = paths::root().join("foo/.cargo/config.toml");
+    write_config_at(
+        &foo_path,
+        "\
+[net.ssh]
+known-hosts = [
+    \"example.org ...\",
+]
+",
+    );
+
+    let config = ConfigBuilder::new()
+        .cwd("foo")
+        // environment variables don't actually work for known-hosts due to
+        // space splitting, but this is included here just to validate that
+        // they work (particularly if other Vec<Value> config vars are added
+        // in the future).
+        .env("CARGO_NET_SSH_KNOWN_HOSTS", "env-example")
+        .build();
+    let net_config = config.net_config().unwrap();
+    let kh = net_config
+        .ssh
+        .as_ref()
+        .unwrap()
+        .known_hosts
+        .as_ref()
+        .unwrap();
+    assert_eq!(kh.len(), 4);
+    assert_eq!(kh[0].val, "example.org ...");
+    assert_eq!(kh[0].definition, Definition::Path(foo_path.clone()));
+    assert_eq!(kh[1].val, "example.com ...");
+    assert_eq!(kh[1].definition, Definition::Path(root_path.clone()));
+    assert_eq!(kh[2].val, "example.net ...");
+    assert_eq!(kh[2].definition, Definition::Path(root_path.clone()));
+    assert_eq!(kh[3].val, "env-example");
+    assert_eq!(
+        kh[3].definition,
+        Definition::Environment("CARGO_NET_SSH_KNOWN_HOSTS".to_string())
+    );
 }
