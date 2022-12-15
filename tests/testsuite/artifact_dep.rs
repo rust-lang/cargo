@@ -2670,3 +2670,150 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
         )
         .run();
 }
+
+#[cargo_test]
+fn issue_10525() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "mycrate"
+                version = "0.0.0"
+                edition = "2021"
+
+                [dependencies]
+                structopt-derive = {{ path = "structopt-derive" }}
+                mybindep = {{ path = "mybindep", artifact = "bin", target = "{target}" }}
+            "#
+            ),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                env!("CARGO_BIN_FILE_MYBINDEP");
+            }
+            "#,
+        )
+        .file(
+            "mybindep/Cargo.toml",
+            r#"
+            [package]
+            name = "mybindep"
+            version = "0.0.0"
+            edition = "2021"
+
+            [dependencies]
+            clap_derive = { path = "../clap_derive" }
+            "#,
+        )
+        .file("mybindep/src/main.rs", "fn main() {}")
+        .file(
+            "clap_derive/Cargo.toml",
+            r#"
+            [package]
+            name = "clap_derive"
+            version = "0.0.0"
+            edition = "2021"
+
+            [dependencies]
+            proc-macro-error = { path = "../proc-macro-error" }
+
+            [lib]
+            proc-macro = true
+            "#,
+        )
+        .file("clap_derive/src/lib.rs", "")
+        .file(
+            "structopt-derive/Cargo.toml",
+            r#"
+            [package]
+            name = "structopt-derive"
+            version = "0.0.0"
+            edition = "2021"
+
+            [dependencies]
+            syn = { path = "../syn", features = ["parsing"] }
+            proc-macro-error = { path = "../proc-macro-error" }
+
+            [lib]
+            proc-macro = true
+            "#,
+        )
+        .file(
+            "structopt-derive/src/lib.rs",
+            r#"
+            use proc_macro_error::ResultExt;
+
+            fn _parse_structopt_attributes() {
+                Ok::<(), syn::Error>(()).unwrap_or_abort()
+            }
+            "#,
+        )
+        .file(
+            "proc-macro-error/Cargo.toml",
+            r#"
+            [package]
+            name = "proc-macro-error"
+            version = "0.0.0"
+            edition = "2021"
+
+            [dependencies]
+            syn = { path = "../syn" }
+            "#,
+        )
+        .file(
+            "proc-macro-error/src/lib.rs",
+            r#"
+            pub trait ResultExt<T> {
+                fn unwrap_or_abort(self) -> T;
+            }
+
+            impl<T, E: Into<Diagnostic>> ResultExt<T> for Result<T, E> {
+                fn unwrap_or_abort(self) -> T {
+                    panic!()
+                }
+            }
+
+            pub struct Diagnostic;
+
+            impl From<syn::Error> for Diagnostic {
+                fn from(_: syn::Error) -> Self {
+                    panic!()
+                }
+            }
+            "#,
+        )
+        .file(
+            "syn/Cargo.toml",
+            r#"
+            [package]
+            name = "syn"
+            version = "0.0.0"
+            edition = "2021"
+
+            [features]
+            parsing = []
+            "#,
+        )
+        .file("syn/src/lib.rs", "pub struct Error;")
+        .build();
+
+    p.cargo("build -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_unordered(
+            "\
+[COMPILING] mycrate v0.0.0 ([CWD])
+[COMPILING] mybindep v0.0.0 ([CWD]/mybindep)
+[COMPILING] clap_derive v0.0.0 ([CWD]/clap_derive)
+[COMPILING] structopt-derive v0.0.0 ([CWD]/structopt-derive)
+[COMPILING] proc-macro-error v0.0.0 ([CWD]/proc-macro-error)
+[COMPILING] syn v0.0.0 ([CWD]/syn)
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
