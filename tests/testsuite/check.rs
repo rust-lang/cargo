@@ -1447,3 +1447,50 @@ fn check_fixable_mixed() {
         .with_stderr_contains("[..] (run `cargo fix --bench \"bench\"` to apply 1 suggestion)")
         .run();
 }
+
+#[cargo_test]
+fn check_fixable_warning_for_clippy() {
+    // A wrapper around `rustc` instead of calling `clippy`
+    let clippy_driver = project()
+        .at(cargo_test_support::paths::global_root().join("clippy-driver"))
+        .file("Cargo.toml", &basic_manifest("clippy-driver", "0.0.1"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                let mut args = std::env::args_os();
+                let _me = args.next().unwrap();
+                let rustc = args.next().unwrap();
+                let status = std::process::Command::new(rustc).args(args).status().unwrap();
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            "#,
+        )
+        .build();
+    clippy_driver.cargo("build").run();
+
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        // We don't want to show a warning that is `clippy`
+        // specific since we are using a `rustc` wrapper
+        // inplace of `clippy`
+        .file("src/lib.rs", "use std::io;")
+        .build();
+
+    foo.cargo("check")
+        // We can't use `clippy` so we use a `rustc` workspace wrapper instead
+        .env(
+            "RUSTC_WORKSPACE_WRAPPER",
+            clippy_driver.bin("clippy-driver"),
+        )
+        .masquerade_as_nightly_cargo(&["auto-fix note"])
+        .with_stderr_contains("[..] (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)")
+        .run();
+}

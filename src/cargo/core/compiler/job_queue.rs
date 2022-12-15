@@ -54,6 +54,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io;
 use std::marker;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread::{self, Scope};
 use std::time::Duration;
@@ -799,7 +800,11 @@ impl<'cfg> DrainState<'cfg> {
                             self.tokens.extend(rustc_tokens);
                         }
                         self.to_send_clients.remove(&id);
-                        self.report_warning_count(cx.bcx.config, id);
+                        self.report_warning_count(
+                            cx.bcx.config,
+                            id,
+                            &cx.bcx.rustc().workspace_wrapper,
+                        );
                         self.active.remove(&id).unwrap()
                     }
                     // ... otherwise if it hasn't finished we leave it
@@ -1243,7 +1248,12 @@ impl<'cfg> DrainState<'cfg> {
     }
 
     /// Displays a final report of the warnings emitted by a particular job.
-    fn report_warning_count(&mut self, config: &Config, id: JobId) {
+    fn report_warning_count(
+        &mut self,
+        config: &Config,
+        id: JobId,
+        rustc_workspace_wrapper: &Option<PathBuf>,
+    ) {
         let count = match self.warning_count.remove(&id) {
             // An error could add an entry for a `Unit`
             // with 0 warnings but having fixable
@@ -1276,7 +1286,16 @@ impl<'cfg> DrainState<'cfg> {
             if let FixableWarnings::Positive(fixable) = count.fixable {
                 // `cargo fix` doesnt have an option for custom builds
                 if !unit.target.is_custom_build() {
-                    let mut command = {
+                    // To make sure the correct command is shown for `clippy` we
+                    // check if `RUSTC_WORKSPACE_WRAPPER` is set and pointing towards
+                    // `clippy-driver`.
+                    let clippy = std::ffi::OsStr::new("clippy-driver");
+                    let command = match rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem())
+                    {
+                        Some(wrapper) if wrapper == clippy => "cargo clippy --fix",
+                        _ => "cargo fix",
+                    };
+                    let mut args = {
                         let named = unit.target.description_named();
                         // if its a lib we need to add the package to fix
                         if unit.target.is_lib() {
@@ -1288,7 +1307,7 @@ impl<'cfg> DrainState<'cfg> {
                     if unit.mode.is_rustc_test()
                         && !(unit.target.is_test() || unit.target.is_bench())
                     {
-                        command.push_str(" --tests");
+                        args.push_str(" --tests");
                     }
                     let mut suggestions = format!("{} suggestion", fixable);
                     if fixable > 1 {
@@ -1296,8 +1315,7 @@ impl<'cfg> DrainState<'cfg> {
                     }
                     drop(write!(
                         message,
-                        " (run `cargo fix --{}` to apply {})",
-                        command, suggestions
+                        " (run `{command} --{args}` to apply {suggestions})"
                     ))
                 }
             }
