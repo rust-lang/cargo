@@ -355,8 +355,10 @@ fn collision_doc_profile_split() {
         .build();
 
     // Just to verify that common is normally built twice.
+    // This is unordered because in rare cases `pm` may start
+    // building in-between the two `common`.
     p.cargo("build -v")
-        .with_stderr(
+        .with_stderr_unordered(
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...
