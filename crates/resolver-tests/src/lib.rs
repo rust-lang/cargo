@@ -771,7 +771,7 @@ pub fn registry_strategy(
         format!("{}.{}.{}", major, minor, patch)
     };
 
-    // If this is false than the crate will depend on the nonexistent "bad"
+    // If this is false then the crate will depend on the nonexistent "bad"
     // instead of the complex set we generated for it.
     let allow_deps = prop::bool::weighted(0.99);
 
