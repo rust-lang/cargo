@@ -1,5 +1,36 @@
 # Changelog
 
+## Cargo 1.68 (2023-03-09)
+[f6e737b1...HEAD](https://github.com/rust-lang/cargo/compare/f6e737b1...HEAD)
+
+### Added
+
+- Cargo's file locking mechanism now supports Solaris by using fcntl.
+  [#11439](https://github.com/rust-lang/cargo/pull/11439)
+  [#11474](https://github.com/rust-lang/cargo/pull/11474)
+- `home` crate is now a subcrate in `rust-lang/cargo` repository. Welcome!
+  [#11359](https://github.com/rust-lang/cargo/pull/11359)
+  [#11481](https://github.com/rust-lang/cargo/pull/11481)
+
+### Changed
+
+- Splitted up registry documentation into multiple sections.
+  [#11480](https://github.com/rust-lang/cargo/pull/11480)
+
+### Fixed
+
+- Setting `target.cfg(…).rustflags` shouldn't erase `build.rustdocflags`.
+  [#11323](https://github.com/rust-lang/cargo/pull/11323)
+
+### Nightly only
+
+- Suggests `cargo clippy --fix` when warnings/errors should be fixed with clippy.
+  [#11399](https://github.com/rust-lang/cargo/pull/11399)
+- Fixed artifact deps not working when target field specified coexists with `optional = true`.
+  [#11434](https://github.com/rust-lang/cargo/pull/11434)
+- Allows builds of some crate to fail during optional doc-scraping.
+  [#11450](https://github.com/rust-lang/cargo/pull/11450)
+
 ## Cargo 1.67 (2023-01-26)
 [7e484fc1...rust-1.67.0](https://github.com/rust-lang/cargo/compare/7e484fc1...rust-1.67.0)
 
