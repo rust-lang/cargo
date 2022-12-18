@@ -375,19 +375,15 @@ pub fn create_bcx<'a, 'cfg>(
             mode: CompileMode::Docscrape,
             ..generator
         };
-        let all_units = scrape_generator.generate_root_units()?;
-
-        let valid_units = all_units
-            .into_iter()
-            .filter(|unit| {
-                ws.unit_needs_doc_scrape(unit)
-                    && !matches!(
-                        unit.target.doc_scrape_examples(),
-                        RustdocScrapeExamples::Disabled
-                    )
-            })
-            .collect::<Vec<_>>();
-        valid_units
+        let mut scrape_units = scrape_generator.generate_root_units()?;
+        scrape_units.retain(|unit| {
+            ws.unit_needs_doc_scrape(unit)
+                && !matches!(
+                    unit.target.doc_scrape_examples(),
+                    RustdocScrapeExamples::Disabled
+                )
+        });
+        scrape_units
     } else {
         Vec::new()
     };

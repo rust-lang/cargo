@@ -1515,7 +1515,7 @@ impl<'cfg> Workspace<'cfg> {
         // (not documented) or proc macros (have no scrape-able exports). Additionally,
         // naively passing a proc macro's unit_for to new_unit_dep will currently cause
         // Cargo to panic, see issue #10545.
-        self.is_member(&unit.pkg) && !unit.target.for_host()
+        self.is_member(&unit.pkg) && !(unit.target.for_host() || unit.pkg.proc_macro())
     }
 }
 
