@@ -595,3 +595,27 @@ fn only_scrape_documented_targets() {
     // be scraped.
     run_with_config("doc = false\ndoc-scrape-examples = true", true);
 }
+
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
+fn issue_11496() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "repro"
+                version = "0.1.0"
+                edition = "2021"
+                
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "fn main(){}")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
+        .run();
+}
