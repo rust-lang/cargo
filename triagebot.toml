@@ -1,3 +1,17 @@
+[relabel]
+allow-unauthenticated = [
+    "A-*",
+    "C-*",
+    "Command-*",
+    "E-*",
+    "O-*",
+    "S-*",
+    "Z-*",
+    "needs-mcve",
+    "regression-*",
+    "relnotes",
+]
+
 [ping.windows]
 message = """\
 Hey Windows Group! This bug has been identified as a good "Windows candidate".
