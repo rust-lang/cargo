@@ -899,22 +899,8 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     cmd.arg(json);
 
     let config = cx.bcx.config;
-    if config.nightly_features_allowed {
-        match (
-            config.cli_unstable().terminal_width,
-            config.shell().err_width().diagnostic_terminal_width(),
-        ) {
-            // Terminal width explicitly provided - only useful for testing.
-            (Some(Some(width)), _) => {
-                cmd.arg(format!("--diagnostic-width={}", width));
-            }
-            // Terminal width was not explicitly provided but flag was provided - common case.
-            (Some(None), Some(width)) => {
-                cmd.arg(format!("--diagnostic-width={}", width));
-            }
-            // User didn't opt-in.
-            _ => (),
-        }
+    if let Some(width) = config.shell().err_width().diagnostic_terminal_width() {
+        cmd.arg(format!("--diagnostic-width={width}"));
     }
 }
 

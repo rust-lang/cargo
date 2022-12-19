@@ -686,7 +686,6 @@ unstable_cli_options!(
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),
-    terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
     publish_timeout: bool = ("Enable the `publish.timeout` key in .cargo/config.toml file"),
     unstable_options: bool = ("Allow the usage of unstable options"),
     skip_rustdoc_fingerprint: bool = (HIDDEN),
@@ -748,6 +747,9 @@ const STABILISED_NAMESPACED_FEATURES: &str = "Namespaced features are now always
 const STABILIZED_TIMINGS: &str = "The -Ztimings option has been stabilized as --timings.";
 
 const STABILISED_MULTITARGET: &str = "Multiple `--target` options are now always available.";
+
+const STABILIZED_TERMINAL_WIDTH: &str =
+    "The -Zterminal-width option is now always enabled for terminal output.";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -862,16 +864,6 @@ impl CliUnstable {
             Ok(true)
         }
 
-        fn parse_usize_opt(value: Option<&str>) -> CargoResult<Option<usize>> {
-            Ok(match value {
-                Some(value) => match value.parse::<usize>() {
-                    Ok(value) => Some(value),
-                    Err(e) => bail!("expected a number, found: {}", e),
-                },
-                None => None,
-            })
-        }
-
         let mut stabilized_warn = |key: &str, version: &str, message: &str| {
             warnings.push(format!(
                 "flag `-Z {}` has been stabilized in the {} release, \
@@ -955,7 +947,7 @@ impl CliUnstable {
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
             "multitarget" => stabilized_warn(k, "1.64", STABILISED_MULTITARGET),
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
-            "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
+            "terminal-width" => stabilized_warn(k, "1.68", STABILIZED_TERMINAL_WIDTH),
             "sparse-registry" => self.sparse_registry = parse_empty(k, v)?,
             "registry-auth" => self.registry_auth = parse_empty(k, v)?,
             "namespaced-features" => stabilized_warn(k, "1.60", STABILISED_NAMESPACED_FEATURES),

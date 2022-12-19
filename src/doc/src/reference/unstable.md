@@ -70,7 +70,6 @@ Each new feature described below should explain how to use it.
     * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
 * Output behavior
     * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
-    * [terminal-width](#terminal-width) — Tells rustc the width of the terminal so that long diagnostic messages can be truncated to be more readable.
     * [Different binary name](#different-binary-name) — Assign a name to the built binary that is separate from the crate name.
 * Compile behavior
     * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
@@ -722,43 +721,6 @@ sysroot. If you are using rustup, this documentation can be installed with
 The default value is `"remote"`.
 
 The value may also take a URL for a custom location.
-
-### terminal-width
-
-* Tracking Issue: [#84673](https://github.com/rust-lang/rust/issues/84673)
-
-This feature provides a new flag, `-Z terminal-width`, which is used to pass
-a terminal width to `rustc` so that error messages containing long lines
-can be intelligently truncated.
-
-For example, passing `-Z terminal-width=20` (an arbitrarily low value) might
-produce the following error:
-
-```text
-error[E0308]: mismatched types
-  --> src/main.rs:2:17
-  |
-2 | ..._: () = 42;
-  |       --   ^^ expected `()`, found integer
-  |       |
-  |       expected due to this
-
-error: aborting due to previous error
-```
-
-In contrast, without `-Z terminal-width`, the error would look as shown below:
-
-```text
-error[E0308]: mismatched types
- --> src/main.rs:2:17
-  |
-2 |     let _: () = 42;
-  |            --   ^^ expected `()`, found integer
-  |            |
-  |            expected due to this
-
-error: aborting due to previous error
-```
 
 ### per-package-target
 * Tracking Issue: [#9406](https://github.com/rust-lang/cargo/pull/9406)
@@ -1447,3 +1409,9 @@ See [workspace.package](workspaces.md#the-package-table),
 [workspace.dependencies](workspaces.md#the-dependencies-table),
 and [inheriting-a-dependency-from-a-workspace](specifying-dependencies.md#inheriting-a-dependency-from-a-workspace)
 for more information.
+
+### terminal-width
+
+The `-Z terminal-width` option has been stabilized in the 1.68 release.
+The terminal width is always passed to the compiler when running from a
+terminal where Cargo can automatically detect the width.

@@ -6130,23 +6130,28 @@ fn target_directory_backup_exclusion() {
     assert!(!&cachedir_tag.is_file());
 }
 
-#[cargo_test(>=1.64, reason = "--diagnostic-width is stabilized in 1.64")]
+#[cargo_test]
 fn simple_terminal_width() {
     let p = project()
         .file(
             "src/lib.rs",
             r#"
-                fn main() {
+                pub fn foo() {
                     let _: () = 42;
                 }
             "#,
         )
         .build();
 
-    p.cargo("build -Zterminal-width=20")
-        .masquerade_as_nightly_cargo(&["terminal-width"])
+    p.cargo("build -v")
+        .env("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS", "20")
         .with_status(101)
-        .with_stderr_contains("3 | ..._: () = 42;")
+        .with_stderr_contains("[RUNNING] `rustc [..]--diagnostic-width=20[..]")
+        .run();
+
+    p.cargo("doc -v")
+        .env("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS", "20")
+        .with_stderr_contains("[RUNNING] `rustdoc [..]--diagnostic-width=20[..]")
         .run();
 }
 

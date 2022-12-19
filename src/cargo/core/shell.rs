@@ -14,9 +14,12 @@ pub enum TtyWidth {
 }
 
 impl TtyWidth {
-    /// Returns the width provided with `-Z terminal-width` to rustc to truncate diagnostics with
-    /// long lines.
+    /// Returns the width of the terminal to use for diagnostics (which is
+    /// relayed to rustc via `--diagnostic-width`).
     pub fn diagnostic_terminal_width(&self) -> Option<usize> {
+        if let Ok(width) = std::env::var("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS") {
+            return Some(width.parse().unwrap());
+        }
         match *self {
             TtyWidth::NoTty | TtyWidth::Guess(_) => None,
             TtyWidth::Known(width) => Some(width),
