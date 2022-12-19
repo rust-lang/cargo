@@ -442,26 +442,44 @@ fn auth_token_optional(
     Ok(Some(token))
 }
 
+/// A record of what kind of operation is happening that we should generate a token for.
 pub enum Mutation<'a> {
+    /// Before we generate a crate file for the users attempt to publish,
+    /// we need to check if we are configured correctly to generate a token.
+    /// This variant is used to make sure that we can generate a token,
+    /// to error out early if the token is not configured correctly.
     PrePublish,
+    /// The user is attempting to publish a crate.
     Publish {
+        /// The name of the crate
         name: &'a str,
+        /// The version of the crate
         vers: &'a str,
+        /// The checksum of the crate file being uploaded
         cksum: &'a str,
     },
+    /// The user is attempting to yank a crate.
     Yank {
+        /// The name of the crate
         name: &'a str,
+        /// The version of the crate
         vers: &'a str,
     },
+    /// The user is attempting to unyank a crate.
     Unyank {
+        /// The name of the crate
         name: &'a str,
+        /// The version of the crate
         vers: &'a str,
     },
+    /// The user is attempting to unyank a crate.
     Owners {
+        /// The name of the crate
         name: &'a str,
     },
 }
 
+/// The main body of an asymmetric token as describe in RFC 3231.
 #[derive(serde::Serialize)]
 struct Message<'a> {
     iat: &'a str,
@@ -477,9 +495,11 @@ struct Message<'a> {
     cksum: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     challenge: Option<&'a str>,
+    /// This field is not yet used. This field can be set to a value >1 to indicate a breaking change in the token format.
     #[serde(skip_serializing_if = "Option::is_none")]
     v: Option<u8>,
 }
+/// The footer of an asymmetric token as describe in RFC 3231.
 #[derive(serde::Serialize)]
 struct Footer<'a> {
     url: &'a str,
@@ -509,6 +529,7 @@ pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -
     Ok(())
 }
 
+/// Checks that a secret key is valid, and returns the associated public key in Paserk format.
 pub(crate) fn paserk_public_from_paserk_secret(secret_key: &str) -> Option<String> {
     let secret: AsymmetricSecretKey<pasetors::version3::V3> = secret_key.try_into().ok()?;
     let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into().ok()?;
