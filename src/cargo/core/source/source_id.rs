@@ -681,31 +681,6 @@ impl Ord for SourceKind {
     }
 }
 
-// This is a test that the hash of the `SourceId` for crates.io is a well-known
-// value.
-//
-// Note that the hash value matches what the crates.io source id has hashed
-// since long before Rust 1.30. We strive to keep this value the same across
-// versions of Cargo because changing it means that users will need to
-// redownload the index and all crates they use when using a new Cargo version.
-//
-// This isn't to say that this hash can *never* change, only that when changing
-// this it should be explicitly done. If this hash changes accidentally and
-// you're able to restore the hash to its original value, please do so!
-// Otherwise please just leave a comment in your PR as to why the hash value is
-// changing and why the old value can't be easily preserved.
-//
-// The hash value depends on endianness and bit-width, so we only run this test on
-// little-endian 64-bit CPUs (such as x86-64 and ARM64) where it matches the
-// well-known value.
-#[test]
-#[cfg(all(target_endian = "little", target_pointer_width = "64"))]
-fn test_cratesio_hash() {
-    let config = Config::default().unwrap();
-    let crates_io = SourceId::crates_io(&config).unwrap();
-    assert_eq!(crate::util::hex::short_hash(&crates_io), "1ecc6299db9ec823");
-}
-
 /// A `Display`able view into a `SourceId` that will write it as a url
 pub struct SourceIdAsUrl<'a> {
     inner: &'a SourceIdInner,
@@ -792,7 +767,7 @@ impl<'a> fmt::Display for PrettyRef<'a> {
 #[cfg(test)]
 mod tests {
     use super::{GitReference, SourceId, SourceKind};
-    use crate::util::IntoUrl;
+    use crate::util::{Config, IntoUrl};
 
     #[test]
     fn github_sources_equal() {
@@ -808,5 +783,30 @@ mod tests {
         let foo = SourceKind::Git(GitReference::Branch("foo".to_string()));
         let s3 = SourceId::new(foo, loc, None).unwrap();
         assert_ne!(s1, s3);
+    }
+
+    // This is a test that the hash of the `SourceId` for crates.io is a well-known
+    // value.
+    //
+    // Note that the hash value matches what the crates.io source id has hashed
+    // since long before Rust 1.30. We strive to keep this value the same across
+    // versions of Cargo because changing it means that users will need to
+    // redownload the index and all crates they use when using a new Cargo version.
+    //
+    // This isn't to say that this hash can *never* change, only that when changing
+    // this it should be explicitly done. If this hash changes accidentally and
+    // you're able to restore the hash to its original value, please do so!
+    // Otherwise please just leave a comment in your PR as to why the hash value is
+    // changing and why the old value can't be easily preserved.
+    //
+    // The hash value depends on endianness and bit-width, so we only run this test on
+    // little-endian 64-bit CPUs (such as x86-64 and ARM64) where it matches the
+    // well-known value.
+    #[test]
+    #[cfg(all(target_endian = "little", target_pointer_width = "64"))]
+    fn test_cratesio_hash() {
+        let config = Config::default().unwrap();
+        let crates_io = SourceId::crates_io(&config).unwrap();
+        assert_eq!(crate::util::hex::short_hash(&crates_io), "1ecc6299db9ec823");
     }
 }
