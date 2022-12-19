@@ -135,6 +135,97 @@ fn environment_token_with_asymmetric() {
 }
 
 #[cargo_test]
+fn warn_both_asymmetric_and_token() {
+    let _server = RegistryBuilder::new()
+        .alternative()
+        .no_configure_token()
+        .build();
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [registries.alternative]
+                token = "sekrit"
+                secret-key = "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                authors = []
+                license = "MIT"
+                homepage = "https://example.com/"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .masquerade_as_nightly_cargo(&["credential-process", "sparse-registry", "registry-auth"])
+        .arg("-Zsparse-registry")
+        .arg("-Zregistry-auth")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ERROR] both `token` and `secret-key` were specified in the config for registry `alternative`.
+Only one of these values may be set, remove one or the other to proceed.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn warn_both_asymmetric_and_credential_process() {
+    let _server = RegistryBuilder::new()
+        .alternative()
+        .no_configure_token()
+        .build();
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [registries.alternative]
+                credential-process = "false"
+                secret-key = "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                authors = []
+                license = "MIT"
+                homepage = "https://example.com/"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .masquerade_as_nightly_cargo(&["credential-process", "sparse-registry", "registry-auth"])
+        .arg("-Zcredential-process")
+        .arg("-Zsparse-registry")
+        .arg("-Zregistry-auth")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ERROR] both `credential-process` and `secret-key` were specified in the config for registry `alternative`.
+Only one of these values may be set, remove one or the other to proceed.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn bad_environment_token_with_asymmetric_subject() {
     let registry = RegistryBuilder::new()
         .alternative()
