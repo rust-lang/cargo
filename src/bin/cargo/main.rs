@@ -189,9 +189,22 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
             return Err(CliError::new(err, 101));
         }
     };
+    execute_subcommand(config, Some(&command), args)
+}
 
+fn execute_internal_subcommand(config: &Config, args: &[&OsStr]) -> CliResult {
+    execute_subcommand(config, None, args)
+}
+
+// This function is used to execute a subcommand. It is used to execute both
+// internal and external subcommands.
+// If `cmd_path` is `None`, then the subcommand is an internal subcommand.
+fn execute_subcommand(config: &Config, cmd_path: Option<&PathBuf>, args: &[&OsStr]) -> CliResult {
     let cargo_exe = config.cargo_exe()?;
-    let mut cmd = ProcessBuilder::new(&command);
+    let mut cmd = match cmd_path {
+        Some(cmd_path) => ProcessBuilder::new(cmd_path),
+        None => ProcessBuilder::new(&cargo_exe),
+    };
     cmd.env(cargo::CARGO_ENV, cargo_exe).args(args);
     if let Some(client) = config.jobserver_from_env() {
         cmd.inherit_jobserver(client);

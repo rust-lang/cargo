@@ -4,7 +4,6 @@ use cargo::ops::cargo_config;
 pub fn cli() -> Command {
     subcommand("config")
         .about("Inspect configuration values")
-        .after_help("Run `cargo help config` for more detailed information.\n")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
