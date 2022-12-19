@@ -304,6 +304,7 @@ pub fn cache_token(config: &Config, sid: &SourceId, token: &str) {
         url.clone(),
         CredentialCacheValue {
             from_commandline: true,
+            independent_of_endpoint: true,
             token_value: token.to_string(),
         },
     );
@@ -341,15 +342,18 @@ fn auth_token_optional(
     if let Some(cache_token_value) = cache.get(url) {
         // Tokens for endpoints that do not involve a mutation can always be reused.
         // If the value is put in the cach by the command line, then we reuse it without looking at the configuration.
-        if cache_token_value.from_commandline || mutation.is_none() {
+        if cache_token_value.from_commandline
+            || cache_token_value.independent_of_endpoint
+            || mutation.is_none()
+        {
             return Ok(Some(cache_token_value.token_value.clone()));
         }
     }
 
     let credential = registry_credential_config(config, sid)?;
-    let token = match credential {
+    let (independent_of_endpoint, token) = match credential {
         RegistryCredentialConfig::None => return Ok(None),
-        RegistryCredentialConfig::Token(config_token) => config_token.to_string(),
+        RegistryCredentialConfig::Token(config_token) => (true, config_token.to_string()),
         RegistryCredentialConfig::Process(process) => {
             // todo: PASETO with process
             run_command(config, &process, sid, Action::Get)?.unwrap()
@@ -407,18 +411,21 @@ fn auth_token_optional(
                 kip,
             };
 
-            pasetors::version3::PublicToken::sign(
-                &secret,
-                serde_json::to_string(&message)
-                    .expect("cannot serialize")
-                    .as_bytes(),
-                Some(
-                    serde_json::to_string(&footer)
+            (
+                false,
+                pasetors::version3::PublicToken::sign(
+                    &secret,
+                    serde_json::to_string(&message)
                         .expect("cannot serialize")
                         .as_bytes(),
-                ),
-                None,
-            )?
+                    Some(
+                        serde_json::to_string(&footer)
+                            .expect("cannot serialize")
+                            .as_bytes(),
+                    ),
+                    None,
+                )?,
+            )
         }
     };
 
@@ -427,6 +434,7 @@ fn auth_token_optional(
             url.clone(),
             CredentialCacheValue {
                 from_commandline: false,
+                independent_of_endpoint,
                 token_value: token.to_string(),
             },
         );
@@ -527,7 +535,7 @@ fn run_command(
     process: &(PathBuf, Vec<String>),
     sid: &SourceId,
     action: Action,
-) -> CargoResult<Option<String>> {
+) -> CargoResult<Option<(bool, String)>> {
     let index_url = sid.url().as_str();
     let cred_proc;
     let (exe, args) = if process.0.to_str().unwrap_or("").starts_with("cargo:") {
@@ -552,6 +560,8 @@ fn run_command(
             Action::Erase => bail!(msg("log out")),
         }
     }
+    // todo: PASETO with process
+    let independent_of_endpoint = false;
     let action_str = match action {
         Action::Get => "get",
         Action::Store(_) => "store",
@@ -622,7 +632,7 @@ fn run_command(
                 }
                 buffer.truncate(end);
             }
-            token = Some(buffer);
+            token = Some((independent_of_endpoint, buffer));
         }
         Action::Store(token) => {
             writeln!(child.stdin.as_ref().unwrap(), "{}", token).with_context(|| {

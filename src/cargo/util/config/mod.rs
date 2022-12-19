@@ -141,6 +141,9 @@ pub struct CredentialCacheValue {
     /// If the command line was used to override the token then it must always be reused,
     /// even if reading the configuration files would lead to a different value.
     pub from_commandline: bool,
+    /// If nothing depends on which endpoint is being hit, then we can reuse the token
+    /// for any future request even if some of the requests involve mutations.
+    pub independent_of_endpoint: bool,
     pub token_value: String,
 }
 
