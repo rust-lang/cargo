@@ -499,7 +499,6 @@ fn use_workspace_root_lockfile() {
     // Workspace members should use `Cargo.lock` at workspace root
 
     Package::new("serde", "0.2.0").publish();
-    Package::new("serde", "0.2.1").publish();
 
     let p = project()
         .file(
@@ -538,12 +537,13 @@ fn use_workspace_root_lockfile() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    // Create `Cargo.lock` in the workspace root, and set it to use
-    // `serde v0.2.0`
+    // Create `Cargo.lock` in the workspace root.
     p.cargo("generate-lockfile").run();
-    p.cargo("update -p serde:0.2.1 --precise 0.2.0").run();
 
-    // Expect: package `bar` uses `serde v0.2.0` as required by workspace lock
+    // Now, add a newer version of `serde`.
+    Package::new("serde", "0.2.1").publish();
+
+    // Expect: package `bar` uses `serde v0.2.0` as required by workspace `Cargo.lock`.
     p.cargo("package --workspace")
         .with_stderr(
             "\
