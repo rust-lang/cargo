@@ -328,9 +328,9 @@ impl RegistryBuilder {
                             &credentials,
                             format!(
                                 r#"
-                    [registries.{alternative}]
-                    token = "{token}"
-                "#
+                                    [registries.{alternative}]
+                                    token = "{token}"
+                                "#
                             )
                             .as_bytes(),
                         )
@@ -340,9 +340,9 @@ impl RegistryBuilder {
                             &credentials,
                             format!(
                                 r#"
-                    [registry]
-                    token = "{token}"
-                "#
+                                    [registry]
+                                    token = "{token}"
+                                "#
                             )
                             .as_bytes(),
                         )

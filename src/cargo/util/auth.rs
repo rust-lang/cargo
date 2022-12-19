@@ -58,7 +58,7 @@ pub fn registry_credential_config(
             secret_key_subject,
             ..
         } = config.get::<RegistryConfig>("registry")?;
-        return registry_credential_config_iner(
+        return registry_credential_config_inner(
             true,
             None,
             token,
@@ -149,7 +149,7 @@ pub fn registry_credential_config(
         (None, None, None, None)
     };
 
-    registry_credential_config_iner(
+    registry_credential_config_inner(
         false,
         name.as_deref(),
         token,
@@ -160,7 +160,7 @@ pub fn registry_credential_config(
     )
 }
 
-fn registry_credential_config_iner(
+fn registry_credential_config_inner(
     is_crates_io: bool,
     name: Option<&str>,
     token: Option<String>,
@@ -181,8 +181,8 @@ fn registry_credential_config_iner(
         };
         Err(format_err!(
             "both `{token_key}` and `{proc_key}` \
-    were specified in the config{registry}.\n\
-        Only one of these values may be set, remove one or the other to proceed.",
+            were specified in the config{registry}.\n\
+            Only one of these values may be set, remove one or the other to proceed.",
         ))
     };
     Ok(
@@ -198,7 +198,7 @@ fn registry_credential_config_iner(
                 };
                 return Err(format_err!(
                     "`secret-key-subject` was set but `secret-key` was not in the config{}.\n\
-             Ether set the `secret-key` or remove the `secret-key-subject`.",
+                    Either set the `secret-key` or remove the `secret-key-subject`.",
                     registry
                 ));
             }
@@ -490,7 +490,7 @@ pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -
         RegistryCredentialConfig::Process(process) => {
             let token = token
                 .as_token()
-                .expect("credential_process can not use login with a secret_key")
+                .expect("credential_process cannot use login with a secret_key")
                 .to_owned();
             run_command(config, &process, sid, Action::Store(token))?;
         }
