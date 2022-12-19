@@ -33,7 +33,6 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
@@ -371,19 +370,11 @@ pub fn create_bcx<'a, 'cfg>(
 
     let should_scrape = build_config.mode.is_doc() && config.cli_unstable().rustdoc_scrape_examples;
     let mut scrape_units = if should_scrape {
-        let scrape_generator = UnitGenerator {
+        UnitGenerator {
             mode: CompileMode::Docscrape,
             ..generator
-        };
-        let mut scrape_units = scrape_generator.generate_root_units()?;
-        scrape_units.retain(|unit| {
-            ws.unit_needs_doc_scrape(unit)
-                && !matches!(
-                    unit.target.doc_scrape_examples(),
-                    RustdocScrapeExamples::Disabled
-                )
-        });
-        scrape_units
+        }
+        .generate_scrape_units(&units)?
     } else {
         Vec::new()
     };

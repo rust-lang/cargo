@@ -189,7 +189,7 @@ impl<'a> UnitGenerator<'a, '_> {
                 .iter()
                 .filter(|t| t.is_bin() || t.is_lib())
                 .collect(),
-            CompileMode::Doc { .. } | CompileMode::Docscrape => {
+            CompileMode::Doc { .. } => {
                 // `doc` does lib and bins (bin with same name as lib is skipped).
                 targets
                     .iter()
@@ -200,7 +200,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     })
                     .collect()
             }
-            CompileMode::Doctest | CompileMode::RunCustomBuild => {
+            CompileMode::Doctest | CompileMode::RunCustomBuild | CompileMode::Docscrape => {
                 panic!("Invalid mode {:?}", self.mode)
             }
         }
@@ -426,15 +426,11 @@ impl<'a> UnitGenerator<'a, '_> {
             }
         }
 
-        if self.mode.is_doc_scrape() {
-            self.add_docscrape_proposals(&mut proposals);
-        }
-
         Ok(proposals)
     }
 
-    /// Add additional targets from which to scrape examples for documentation
-    fn add_docscrape_proposals(&self, proposals: &mut Vec<Proposal<'a>>) {
+    /// Proposes targets from which to scrape examples for documentation
+    fn create_docscrape_proposals(&self, doc_units: &[Unit]) -> CargoResult<Vec<Proposal<'a>>> {
         // In general, the goal is to scrape examples from (a) whatever targets
         // the user is documenting, and (b) Example targets. However, if the user
         // is documenting a library with dev-dependencies, those dev-deps are not
@@ -456,23 +452,30 @@ impl<'a> UnitGenerator<'a, '_> {
         let reqs_dev_deps = matches!(self.has_dev_units, HasDevUnits::Yes);
         let safe_to_scrape_example_targets = no_pkg_has_dev_deps || reqs_dev_deps;
 
-        let proposed_targets: HashSet<&Target> = proposals.iter().map(|p| p.target).collect();
+        let pkgs_to_scrape = doc_units
+            .iter()
+            .filter(|unit| self.ws.unit_needs_doc_scrape(unit))
+            .map(|u| &u.pkg)
+            .collect::<HashSet<_>>();
+
         let can_scrape = |target: &Target| {
-            let not_redundant = !proposed_targets.contains(target);
-            not_redundant
-                && match (target.doc_scrape_examples(), target.is_example()) {
-                    // Targets configured by the user to not be scraped should never be scraped
-                    (RustdocScrapeExamples::Disabled, _) => false,
-                    // Targets configured by the user to be scraped should always be scraped
-                    (RustdocScrapeExamples::Enabled, _) => true,
-                    // Example targets with no configuration should be conditionally scraped if
-                    // it's guaranteed not to break the build
-                    (RustdocScrapeExamples::Unset, true) => safe_to_scrape_example_targets,
-                    // All other targets are ignored for now. This may change in the future!
-                    (RustdocScrapeExamples::Unset, false) => false,
-                }
+            match (target.doc_scrape_examples(), target.is_example()) {
+                // Targets configured by the user to not be scraped should never be scraped
+                (RustdocScrapeExamples::Disabled, _) => false,
+                // Targets configured by the user to be scraped should always be scraped
+                (RustdocScrapeExamples::Enabled, _) => true,
+                // Example targets with no configuration should be conditionally scraped if
+                // it's guaranteed not to break the build
+                (RustdocScrapeExamples::Unset, true) => safe_to_scrape_example_targets,
+                // All other targets are ignored for now. This may change in the future!
+                (RustdocScrapeExamples::Unset, false) => false,
+            }
         };
-        proposals.extend(self.filter_targets(can_scrape, false, CompileMode::Docscrape));
+
+        let mut scrape_proposals = self.filter_targets(can_scrape, false, CompileMode::Docscrape);
+        scrape_proposals.retain(|proposal| pkgs_to_scrape.contains(proposal.pkg));
+
+        Ok(scrape_proposals)
     }
 
     /// Checks if the unit list is empty and the user has passed any combination of
@@ -673,5 +676,15 @@ impl<'a> UnitGenerator<'a, '_> {
     pub fn generate_root_units(&self) -> CargoResult<Vec<Unit>> {
         let proposals = self.create_proposals()?;
         self.proposals_to_units(proposals)
+    }
+
+    /// Generates units specfically for doc-scraping.
+    ///
+    /// This requires a separate entrypoint from `generate_root_units` because it
+    /// takes the documented units as input.
+    pub fn generate_scrape_units(&self, doc_units: &[Unit]) -> CargoResult<Vec<Unit>> {
+        let scrape_proposals = self.create_docscrape_proposals(&doc_units)?;
+        let scrape_units = self.proposals_to_units(scrape_proposals)?;
+        Ok(scrape_units)
     }
 }
