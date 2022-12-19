@@ -22,11 +22,21 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let subcommand = args.get_one::<String>("COMMAND");
     if let Some(subcommand) = subcommand {
         if !try_help(config, subcommand)? {
-            crate::execute_external_subcommand(
-                config,
-                subcommand,
-                &[OsStr::new(subcommand), OsStr::new("--help")],
-            )?;
+            match check_builtin(&subcommand) {
+                Some(s) => {
+                    crate::execute_internal_subcommand(
+                        config,
+                        &[OsStr::new(s), OsStr::new("--help")],
+                    )?;
+                }
+                None => {
+                    crate::execute_external_subcommand(
+                        config,
+                        subcommand,
+                        &[OsStr::new(subcommand), OsStr::new("--help")],
+                    )?;
+                }
+            }
         }
     } else {
         let mut cmd = crate::cli::cli();
