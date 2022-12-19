@@ -492,3 +492,101 @@ fn ignore_lockfile_inner() {
         )
         .run();
 }
+
+#[cargo_test]
+fn use_workspace_root_lockfile() {
+    // Issue #11148
+    // Workspace members should use `Cargo.lock` at workspace root
+
+    Package::new("serde", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                serde = "0.2"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                workspace = ".."
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    // Create `Cargo.lock` in the workspace root.
+    p.cargo("generate-lockfile").run();
+
+    // Now, add a newer version of `serde`.
+    Package::new("serde", "0.2.1").publish();
+
+    // Expect: package `bar` uses `serde v0.2.0` as required by workspace `Cargo.lock`.
+    p.cargo("package --workspace")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[UPDATING] `dummy-registry` index
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[DOWNLOADING] crates ...
+[DOWNLOADED] serde v0.2.0 ([..])
+[COMPILING] serde v0.2.0
+[COMPILING] bar v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..]
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] serde v0.2.0
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..]
+",
+        )
+        .run();
+
+    let package_path = p.root().join("target/package/foo-0.0.1.crate");
+    assert!(package_path.is_file());
+    let f = File::open(&package_path).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
+
+    let package_path = p.root().join("target/package/bar-0.0.1.crate");
+    assert!(package_path.is_file());
+    let f = File::open(&package_path).unwrap();
+    validate_crate_contents(
+        f,
+        "bar-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
+}
