@@ -680,8 +680,10 @@ impl<'a> UnitGenerator<'a, '_> {
 
     /// Generates units specfically for doc-scraping.
     ///
-    /// This requires a separate entrypoint from `generate_root_units` because it
+    /// This requires a separate entrypoint from [`generate_root_units`] because it
     /// takes the documented units as input.
+    ///
+    /// [`generate_root_units`]: Self::generate_root_units
     pub fn generate_scrape_units(&self, doc_units: &[Unit]) -> CargoResult<Vec<Unit>> {
         let scrape_proposals = self.create_docscrape_proposals(&doc_units)?;
         let scrape_units = self.proposals_to_units(scrape_proposals)?;

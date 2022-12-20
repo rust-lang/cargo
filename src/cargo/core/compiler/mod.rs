@@ -224,7 +224,7 @@ fn make_failed_scrape_diagnostic(
         "\
 {top_line}
     Try running with `--verbose` to see the error message.
-    If an example or library should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` or `[lib]` definition in {}",
+    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in {}",
         relative_manifest_path.display()
     )
 }

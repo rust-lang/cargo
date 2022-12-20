@@ -350,15 +350,15 @@ fn no_fail_bad_lib() {
 [SCRAPING] foo v0.0.1 ([CWD])
 warning: failed to check lib in package `foo` as a prerequisite for scraping examples from: example \"ex\", example \"ex2\"
     Try running with `--verbose` to see the error message.
-    If an example or library should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` or `[lib]` definition in Cargo.toml
+    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 warning: `foo` (lib) generated 1 warning
 warning: failed to scan example \"ex\" in package `foo` for example code usage
     Try running with `--verbose` to see the error message.
-    If an example or library should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` or `[lib]` definition in Cargo.toml
+    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 warning: `foo` (example \"ex\") generated 1 warning
 warning: failed to scan example \"ex2\" in package `foo` for example code usage
     Try running with `--verbose` to see the error message.
-    If an example or library should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` or `[lib]` definition in Cargo.toml
+    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 warning: `foo` (example \"ex2\") generated 1 warning
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
@@ -391,7 +391,7 @@ fn no_fail_bad_example() {
 [SCRAPING] foo v0.0.1 ([CWD])
 warning: failed to scan example \"ex1\" in package `foo` for example code usage
     Try running with `--verbose` to see the error message.
-    If an example or library should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` or `[lib]` definition in Cargo.toml
+    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 warning: `foo` (example \"ex1\") generated 1 warning
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
