@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
@@ -458,6 +459,7 @@ impl<'a> UnitGenerator<'a, '_> {
             .map(|u| &u.pkg)
             .collect::<HashSet<_>>();
 
+        let skipped_examples: RefCell<Vec<Target>> = RefCell::new(Vec::new());
         let can_scrape = |target: &Target| {
             match (target.doc_scrape_examples(), target.is_example()) {
                 // Targets configured by the user to not be scraped should never be scraped
@@ -466,7 +468,12 @@ impl<'a> UnitGenerator<'a, '_> {
                 (RustdocScrapeExamples::Enabled, _) => true,
                 // Example targets with no configuration should be conditionally scraped if
                 // it's guaranteed not to break the build
-                (RustdocScrapeExamples::Unset, true) => safe_to_scrape_example_targets,
+                (RustdocScrapeExamples::Unset, true) => {
+                    if !safe_to_scrape_example_targets {
+                        skipped_examples.borrow_mut().push(target.clone());
+                    }
+                    safe_to_scrape_example_targets
+                }
                 // All other targets are ignored for now. This may change in the future!
                 (RustdocScrapeExamples::Unset, false) => false,
             }
@@ -474,6 +481,22 @@ impl<'a> UnitGenerator<'a, '_> {
 
         let mut scrape_proposals = self.filter_targets(can_scrape, false, CompileMode::Docscrape);
         scrape_proposals.retain(|proposal| pkgs_to_scrape.contains(proposal.pkg));
+
+        let skipped_examples = skipped_examples.into_inner();
+        if !skipped_examples.is_empty() {
+            let mut shell = self.ws.config().shell();
+            let example_str = skipped_examples
+                .into_iter()
+                .map(|t| t.description_named())
+                .collect::<Vec<_>>()
+                .join(", ");
+            shell.warn(format!(
+                "\
+Rustdoc did not scrape the following examples because they require dev-dependencies: {example_str}
+    If you want Rustdoc to scrape these examples, then add `doc-scrape-examples = true`
+    to the [[example]] target configuration of at least one example."
+            ))?;
+        }
 
         Ok(scrape_proposals)
     }

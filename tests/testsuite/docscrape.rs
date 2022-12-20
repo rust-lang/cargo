@@ -429,7 +429,7 @@ error: expected one of `!` or `::`, found `NOT`
 fn no_scrape_with_dev_deps() {
     // Tests that a crate with dev-dependencies does not have its examples
     // scraped unless explicitly prompted to check them. See
-    // `CompileFilter::refine_for_docscrape` for details on why.
+    // `UnitGenerator::create_docscrape_proposals` for details on why.
 
     let p = project()
         .file(
@@ -439,9 +439,6 @@ fn no_scrape_with_dev_deps() {
             name = "foo"
             version = "0.0.1"
             authors = []
-
-            [lib]
-            doc-scrape-examples = false
 
             [dev-dependencies]
             a = {path = "a"}
@@ -461,17 +458,21 @@ fn no_scrape_with_dev_deps() {
         .file("a/src/lib.rs", "pub fn f() {}")
         .build();
 
-    // If --examples is not provided, then the example is never scanned.
+    // If --examples is not provided, then the example is not scanned, and a warning
+    // should be raised.
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr(
             "\
+warning: Rustdoc did not scrape the following examples because they require dev-dependencies: example \"ex\"
+    If you want Rustdoc to scrape these examples, then add `doc-scrape-examples = true`
+    to the [[example]] target configuration of at least one example.
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 
-    // If --examples is provided, then the bad example is scanned and ignored.
+    // If --examples is provided, then the example is scanned.
     p.cargo("doc --examples -Zunstable-options -Z rustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_unordered(
@@ -496,9 +497,6 @@ fn use_dev_deps_if_explicitly_enabled() {
             name = "foo"
             version = "0.0.1"
             authors = []
-
-            [lib]
-            doc-scrape-examples = false
 
             [[example]]
             name = "ex"
