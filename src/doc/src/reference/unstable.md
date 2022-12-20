@@ -1124,34 +1124,35 @@ like this:
 cargo doc -Z unstable-options -Z rustdoc-scrape-examples
 ```
 
-By default, Cargo will scrape from the packages that are being documented, as well as scrape from
-examples for the packages (i.e. those corresponding to the `--examples` flag). You can individually
-enable or disable targets from being scraped with the `doc-scrape-examples` flag, such as:
+By default, Cargo will scrape examples from the example targets of packages being documented. 
+You can individually enable or disable targets from being scraped with the `doc-scrape-examples` flag, such as:
 
 ```toml
-# Disable scraping examples from a library
+# Enable scraping examples from a library
 [lib]
-doc-scrape-examples = false
-
-# Enable scraping examples from a binary
-[[bin]]
-name = "my-bin"
 doc-scrape-examples = true
+
+# Disable scraping examples from an example target
+[[example]]
+name = "my-example"
+doc-scrape-examples = false
 ```
 
 **Note on tests:** enabling `doc-scrape-examples` on test targets will not currently have any effect. Scraping
 examples from tests is a work-in-progress.
 
 **Note on dev-dependencies:** documenting a library does not normally require the crate's dev-dependencies. However,
-example units do require dev-deps. For backwards compatibility, `-Z rustdoc-scrape-examples` will *not* introduce a 
+example targets require dev-deps. For backwards compatibility, `-Z rustdoc-scrape-examples` will *not* introduce a 
 dev-deps requirement for `cargo doc`. Therefore examples will *not* be scraped from example targets under the 
 following conditions:
 
 1. No target being documented requires dev-deps, AND
-2. At least one crate being documented requires dev-deps, AND
-3. The `doc-scrape-examples` parameter is unset for `[[example]]` targets.
+2. At least one crate with targets being documented has dev-deps, AND
+3. The `doc-scrape-examples` parameter is unset or false for all `[[example]]` targets.
 
 If you want examples to be scraped from example targets, then you must not satisfy one of the above conditions.
+For example, you can set `doc-scrape-examples` to true for one example target, and that signals to Cargo that
+you are ok with dev-deps being build for `cargo doc`.
 
 
 ### check-cfg
