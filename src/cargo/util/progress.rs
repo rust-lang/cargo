@@ -31,6 +31,7 @@ struct State<'cfg> {
     throttle: Throttle,
     last_line: Option<String>,
     fixed_width: Option<usize>,
+    #[cfg(windows)] // Windows is the only currently supported platform
     last_pbar: u8,
 }
 
@@ -43,11 +44,13 @@ struct Format {
 /// Which escape code to use for progress reporting.
 ///
 /// There is more codes, but we only use these two.
+#[cfg(windows)] // Windows is the only currently supported platform
 enum ProgressCode {
     None,
     Normal(u8),
 }
 
+#[cfg(windows)] // Windows is the only currently supported platform
 impl std::fmt::Display for ProgressCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (state, progress) = match self {
@@ -100,6 +103,7 @@ impl<'cfg> Progress<'cfg> {
                 throttle: Throttle::new(),
                 last_line: None,
                 fixed_width: progress_config.width,
+                #[cfg(windows)] // Windows is the only currently supported platform
                 last_pbar: u8::MAX,
             }),
         }
@@ -203,6 +207,7 @@ impl Throttle {
 impl<'cfg> State<'cfg> {
     fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         if self.done {
+            #[cfg(windows)] // Windows is the only currently supported platform
             write!(self.config.shell().err(), "{}", ProgressCode::None)?;
             return Ok(());
         }
@@ -215,10 +220,13 @@ impl<'cfg> State<'cfg> {
         // return back to the beginning of the line for the next print.
         self.try_update_max_width();
         if let Some(pbar) = self.format.progress(cur, max) {
-            let prog = ((cur as f32) / (max as f32) * 100.0) as u8;
-            if self.last_pbar != prog {
-                write!(self.config.shell().err(), "{}", ProgressCode::Normal(prog))?;
-                self.last_pbar = prog;
+            #[cfg(windows)] // Windows is the only currently supported platform
+            {
+                let prog = ((cur as f32) / (max as f32) * 100.0) as u8;
+                if self.last_pbar != prog {
+                    write!(self.config.shell().err(), "{}", ProgressCode::Normal(prog))?;
+                    self.last_pbar = prog;
+                }
             }
             self.print(&pbar, msg)?;
         }
@@ -258,8 +266,11 @@ impl<'cfg> State<'cfg> {
         if self.last_line.is_some() && !self.config.shell().is_cleared() {
             self.config.shell().err_erase_line();
             self.last_line = None;
-            let _ = write!(self.config.shell().err(), "{}", ProgressCode::None);
-            self.last_pbar = u8::MAX;
+            #[cfg(windows)] // Windows is the only currently supported platform
+            {
+                let _ = write!(self.config.shell().err(), "{}", ProgressCode::None);
+                self.last_pbar = u8::MAX;
+            }
         }
     }
 
