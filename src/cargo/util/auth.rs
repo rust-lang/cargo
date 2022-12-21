@@ -429,7 +429,7 @@ fn auth_token_optional(
         }
     };
 
-    if mutation.is_none() {
+    if independent_of_endpoint || mutation.is_none() {
         cache.insert(
             url.clone(),
             CredentialCacheValue {
@@ -582,7 +582,7 @@ fn run_command(
         }
     }
     // todo: PASETO with process
-    let independent_of_endpoint = false;
+    let independent_of_endpoint = true;
     let action_str = match action {
         Action::Get => "get",
         Action::Store(_) => "store",
