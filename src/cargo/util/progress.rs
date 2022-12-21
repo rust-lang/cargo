@@ -41,7 +41,7 @@ struct Format {
 }
 
 /// Which escape code to use for progress reporting.
-/// 
+///
 /// There is more codes, but we only use these two.
 enum ProgressCode {
     None,
@@ -50,13 +50,9 @@ enum ProgressCode {
 
 impl std::fmt::Display for ProgressCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let progress = match self {
-            Self::None => 0,
-            Self::Normal(v) => *v,
-        };
-        let state = match self {
-            Self::None => 0,
-            Self::Normal(_) => 1,
+        let (state, progress) = match self {
+            Self::None => (0, 0),
+            Self::Normal(v) => (1, *v),
         };
         write!(f, "\x1b]9;4;{state};{progress}\x1b\\")
     }
@@ -262,6 +258,8 @@ impl<'cfg> State<'cfg> {
         if self.last_line.is_some() && !self.config.shell().is_cleared() {
             self.config.shell().err_erase_line();
             self.last_line = None;
+            let _ = write!(self.config.shell().err(), "{}", ProgressCode::None);
+            self.last_pbar = u8::MAX;
         }
     }
 
