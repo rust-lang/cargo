@@ -40,6 +40,9 @@ struct Format {
     max_print: usize,
 }
 
+/// Which escape code to use for progress reporting.
+/// 
+/// There is more codes, but we only use these two.
 enum ProgressCode {
     None,
     Normal(u8),
@@ -101,7 +104,7 @@ impl<'cfg> Progress<'cfg> {
                 throttle: Throttle::new(),
                 last_line: None,
                 fixed_width: progress_config.width,
-                last_pbar: 255,
+                last_pbar: u8::MAX,
             }),
         }
     }
