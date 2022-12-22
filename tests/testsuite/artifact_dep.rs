@@ -2795,3 +2795,62 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
         )
         .run();
 }
+
+#[cargo_test]
+fn same_target_artifact_dep_sharing() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                a = {{ path = "a" }}
+                bar = {{ path = "bar", artifact = "bin", target = "{target}" }}
+            "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [dependencies]
+                a = { path = "../a" }
+            "#,
+        )
+        .file(
+            "bar/src/main.rs",
+            r#"
+                fn main() {}
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+    p.cargo(&format!("build -Z bindeps --target {target}"))
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr(
+            "\
+[COMPILING] a v0.1.0 ([CWD]/a)
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.1.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
