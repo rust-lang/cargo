@@ -464,7 +464,7 @@ fn no_scrape_with_dev_deps() {
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr(
             "\
-warning: Rustdoc did not scrape the following examples because they require dev-dependencies: example \"ex\"
+warning: Rustdoc did not scrape the following examples because they require dev-dependencies: ex
     If you want Rustdoc to scrape these examples, then add `doc-scrape-examples = true`
     to the [[example]] target configuration of at least one example.
 [DOCUMENTING] foo v0.0.1 ([CWD])

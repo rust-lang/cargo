@@ -459,7 +459,7 @@ impl<'a> UnitGenerator<'a, '_> {
             .map(|u| &u.pkg)
             .collect::<HashSet<_>>();
 
-        let skipped_examples: RefCell<Vec<Target>> = RefCell::new(Vec::new());
+        let skipped_examples = RefCell::new(Vec::new());
         let can_scrape = |target: &Target| {
             match (target.doc_scrape_examples(), target.is_example()) {
                 // Targets configured by the user to not be scraped should never be scraped
@@ -470,7 +470,9 @@ impl<'a> UnitGenerator<'a, '_> {
                 // it's guaranteed not to break the build
                 (RustdocScrapeExamples::Unset, true) => {
                     if !safe_to_scrape_example_targets {
-                        skipped_examples.borrow_mut().push(target.clone());
+                        skipped_examples
+                            .borrow_mut()
+                            .push(target.name().to_string());
                     }
                     safe_to_scrape_example_targets
                 }
@@ -485,11 +487,7 @@ impl<'a> UnitGenerator<'a, '_> {
         let skipped_examples = skipped_examples.into_inner();
         if !skipped_examples.is_empty() {
             let mut shell = self.ws.config().shell();
-            let example_str = skipped_examples
-                .into_iter()
-                .map(|t| t.description_named())
-                .collect::<Vec<_>>()
-                .join(", ");
+            let example_str = skipped_examples.join(", ");
             shell.warn(format!(
                 "\
 Rustdoc did not scrape the following examples because they require dev-dependencies: {example_str}
