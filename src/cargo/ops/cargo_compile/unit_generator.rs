@@ -172,6 +172,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     /*is_std*/ false,
                     /*dep_hash*/ 0,
                     IsArtifact::No,
+                    None,
                 )
             })
             .collect()

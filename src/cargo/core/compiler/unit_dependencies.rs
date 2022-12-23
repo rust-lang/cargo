@@ -885,6 +885,10 @@ fn new_unit_dep_with_profile(
         .resolve()
         .is_public_dep(parent.pkg.package_id(), pkg.package_id());
     let features_for = unit_for.map_to_features_for(artifact);
+    let artifact_target = match features_for {
+        FeaturesFor::ArtifactDep(target) => Some(target),
+        _ => None,
+    };
     let features = state.activated_features(pkg.package_id(), features_for);
     let unit = state.interner.intern(
         pkg,
@@ -896,6 +900,7 @@ fn new_unit_dep_with_profile(
         state.is_std,
         /*dep_hash*/ 0,
         artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),
+        artifact_target,
     );
     Ok(UnitDep {
         unit,
