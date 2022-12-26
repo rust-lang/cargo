@@ -255,7 +255,9 @@ fn sync(
         let name = if source_id.is_crates_io() {
             CRATES_IO_REGISTRY.to_string()
         } else {
-            source_id.url().to_string()
+            // Remove `precise` since that makes the source name very long,
+            // and isn't needed to disambiguate multiple sources.
+            source_id.with_precise(None).as_url().to_string()
         };
 
         let source = if source_id.is_crates_io() {

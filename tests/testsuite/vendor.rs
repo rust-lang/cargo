@@ -8,7 +8,7 @@ use std::fs;
 
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
-use cargo_test_support::{basic_lib_manifest, paths, project, Project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, paths, project, Project};
 
 #[cargo_test]
 fn vendor_simple() {
@@ -673,6 +673,60 @@ fn git_simple() {
     p.cargo("vendor --respect-source-config").run();
     let csum = p.read_file("vendor/a/.cargo-checksum.json");
     assert!(csum.contains("\"package\":null"));
+}
+
+#[cargo_test]
+fn git_diff_rev() {
+    let (git_project, git_repo) = git::new_repo("git", |p| {
+        p.file("Cargo.toml", &basic_manifest("a", "0.1.0"))
+            .file("src/lib.rs", "")
+    });
+    let url = git_project.url();
+    let ref_1 = "v0.1.0";
+    let ref_2 = "v0.2.0";
+
+    git::tag(&git_repo, ref_1);
+
+    git_project.change_file("Cargo.toml", &basic_manifest("a", "0.2.0"));
+    git::add(&git_repo);
+    git::commit(&git_repo);
+    git::tag(&git_repo, ref_2);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    a_1 = {{ package = "a", git = '{url}', rev = '{ref_1}' }}
+                    a_2 = {{ package = "a", git = '{url}', rev = '{ref_2}' }}
+                "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config")
+        .with_stdout(
+            r#"[source."git+file://[..]/git?rev=v0.1.0"]
+git = [..]
+rev = "v0.1.0"
+replace-with = "vendored-sources"
+
+[source."git+file://[..]/git?rev=v0.2.0"]
+git = [..]
+rev = "v0.2.0"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+"#,
+        )
+        .run();
 }
 
 #[cargo_test]
