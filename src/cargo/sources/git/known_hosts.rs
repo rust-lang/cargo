@@ -16,13 +16,13 @@
 //! - `VerifyHostKeyDNS` — Uses SSHFP DNS records to fetch a host key.
 //!
 //! There's also a number of things that aren't supported but could be easily
-//! added (it just adds a little complexity). For example, hashed hostnames,
-//! hostname patterns, and revoked markers. See "FIXME" comments littered in
-//! this file.
+//! added (it just adds a little complexity). For example, hostname patterns,
+//! and revoked markers. See "FIXME" comments littered in this file.
 
 use crate::util::config::{Definition, Value};
 use git2::cert::{Cert, SshHostKeyType};
 use git2::CertificateCheckStatus;
+use hmac::Mac;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
@@ -419,6 +419,8 @@ fn user_known_host_location_to_add(diagnostic_home_config: &str) -> String {
     )
 }
 
+const HASH_HOSTNAME_PREFIX: &str = "|1|";
+
 /// A single known host entry.
 #[derive(Clone)]
 struct KnownHost {
@@ -434,7 +436,9 @@ impl KnownHost {
     fn host_matches(&self, host: &str) -> bool {
         let mut match_found = false;
         let host = host.to_lowercase();
-        // FIXME: support hashed hostnames
+        if let Some(hashed) = self.patterns.strip_prefix(HASH_HOSTNAME_PREFIX) {
+            return hashed_hostname_matches(&host, hashed);
+        }
         for pattern in self.patterns.split(',') {
             let pattern = pattern.to_lowercase();
             // FIXME: support * and ? wildcards
@@ -448,6 +452,16 @@ impl KnownHost {
         }
         match_found
     }
+}
+
+fn hashed_hostname_matches(host: &str, hashed: &str) -> bool {
+    let Some((b64_salt, b64_host)) = hashed.split_once('|') else { return false; };
+    let Ok(salt) = base64::decode(b64_salt) else { return false; };
+    let Ok(hashed_host) = base64::decode(b64_host) else { return false; };
+    let Ok(mut mac) = hmac::Hmac::<sha1::Sha1>::new_from_slice(&salt) else { return false; };
+    mac.update(host.as_bytes());
+    let result = mac.finalize().into_bytes();
+    hashed_host == &result[..]
 }
 
 /// Loads an OpenSSH known_hosts file.
@@ -474,7 +488,7 @@ fn load_hostfile_contents(path: &Path, contents: &str) -> Vec<KnownHost> {
 fn parse_known_hosts_line(line: &str, location: KnownHostLocation) -> Option<KnownHost> {
     let line = line.trim();
     // FIXME: @revoked and @cert-authority is currently not supported.
-    if line.is_empty() || line.starts_with(['#', '@', '|']) {
+    if line.is_empty() || line.starts_with(['#', '@']) {
         return None;
     }
     let mut parts = line.split([' ', '\t']).filter(|s| !s.is_empty());
@@ -506,8 +520,7 @@ mod tests {
         @revoked * ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKtQsi+KPYispwm2rkMidQf30fG1Niy8XNkvASfePoca eric@host
         example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAWkjI6XT2SZh3xNk5NhisA3o3sGzWR+VAKMSqHtI0aY eric@host
         192.168.42.12 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR eric@host
-        # Hash not yet supported.
-        |1|7CMSYgzdwruFLRhwowMtKx0maIE=|Tlff1GFqc3Ao+fUWxMEVG8mJiyk= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIHgN3O21U4LWtP5OzjTzPnUnSDmCNDvyvlaj6Hi65JC eric@host
+        |1|QxzZoTXIWLhUsuHAXjuDMIV3FjQ=|M6NCOIkjiWdCWqkh5+Q+/uFLGjs= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIHgN3O21U4LWtP5OzjTzPnUnSDmCNDvyvlaj6Hi65JC eric@host
         # Negation isn't terribly useful without globs.
         neg.example.com,!neg.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOXfUnaAHTlo1Qi//rNk26OcmHikmkns1Z6WW/UuuS3K eric@host
     "#;
@@ -516,7 +529,7 @@ mod tests {
     fn known_hosts_parse() {
         let kh_path = Path::new("/home/abc/.known_hosts");
         let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
-        assert_eq!(khs.len(), 9);
+        assert_eq!(khs.len(), 10);
         match &khs[0].location {
             KnownHostLocation::File { path, lineno } => {
                 assert_eq!(path, kh_path);
@@ -551,7 +564,9 @@ mod tests {
         assert!(!khs[0].host_matches("example.net"));
         assert!(khs[2].host_matches("[example.net]:2222"));
         assert!(!khs[2].host_matches("example.net"));
-        assert!(!khs[8].host_matches("neg.example.com"));
+        assert!(khs[8].host_matches("hashed.example.com"));
+        assert!(!khs[8].host_matches("example.com"));
+        assert!(!khs[9].host_matches("neg.example.com"));
     }
 
     #[test]
