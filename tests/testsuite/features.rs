@@ -480,11 +480,14 @@ fn no_feature_doesnt_build() {
         .run();
     p.process(&p.bin("foo")).with_stdout("").run();
 
-    p.cargo("build --features bar")
+    p.cargo("build --features bar -v")
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
+[RUNNING] `rustc --crate-name bar [..]
+[DIRTY-MSVC] foo v0.0.1 ([CWD]): the list of features changed
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -537,10 +540,12 @@ fn default_feature_pulled_in() {
         .run();
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 
-    p.cargo("build --no-default-features")
+    p.cargo("build --no-default-features -v")
         .with_stderr(
             "\
+[DIRTY-MSVC] foo v0.0.1 ([CWD]): the list of features changed
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
