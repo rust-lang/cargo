@@ -1,8 +1,8 @@
-use crate::core::compiler::fingerprint::DirtyReason;
 use std::fmt;
 use std::mem;
 
 use super::job_queue::JobState;
+use crate::core::compiler::fingerprint::DirtyReason;
 use crate::util::CargoResult;
 
 pub struct Job {

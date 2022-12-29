@@ -1,8 +1,8 @@
-use super::*;
-use crate::core::Shell;
-
 use std::fmt;
 use std::fmt::Debug;
+
+use super::*;
+use crate::core::Shell;
 
 #[derive(Clone, Debug)]
 pub enum DirtyReason {
@@ -135,9 +135,7 @@ impl DirtyReason {
         match self {
             DirtyReason::RustcChanged => s.dirty_because(unit, "the toolchain changed"),
             DirtyReason::FeaturesChanged { .. } => {
-                s.dirty_because(unit, "the list of features changed")?;
-
-                Ok(())
+                s.dirty_because(unit, "the list of features changed")
             }
             DirtyReason::TargetConfigurationChanged => {
                 s.dirty_because(unit, "the target configuration changed")
@@ -148,11 +146,7 @@ impl DirtyReason {
             DirtyReason::ProfileConfigurationChanged => {
                 s.dirty_because(unit, "the profile configuration changed")
             }
-            DirtyReason::RustflagsChanged { .. } => {
-                s.dirty_because(unit, "the rustflags changed")?;
-
-                Ok(())
-            }
+            DirtyReason::RustflagsChanged { .. } => s.dirty_because(unit, "the rustflags changed"),
             DirtyReason::MetadataChanged => s.dirty_because(unit, "the metadata changed"),
             DirtyReason::ConfigSettingsChanged => {
                 s.dirty_because(unit, "the config settings changed")
@@ -169,37 +163,25 @@ impl DirtyReason {
                 Ok(())
             }
             DirtyReason::PrecalculatedComponentsChanged { .. } => {
-                s.dirty_because(unit, "the precalculated components changed")?;
-
-                Ok(())
+                s.dirty_because(unit, "the precalculated components changed")
             }
             DirtyReason::DepInfoOutputChanged { .. } => {
                 s.dirty_because(unit, "the dependency info output changed")
             }
             DirtyReason::RerunIfChangedOutputFileChanged { .. } => {
-                s.dirty_because(unit, "rerun-if-changed output file path changed")?;
-
-                Ok(())
+                s.dirty_because(unit, "rerun-if-changed output file path changed")
             }
             DirtyReason::RerunIfChangedOutputPathsChanged { .. } => {
-                s.dirty_because(unit, "the rerun-if-changed instructions changed")?;
-
-                Ok(())
+                s.dirty_because(unit, "the rerun-if-changed instructions changed")
             }
             DirtyReason::EnvVarsChanged { .. } => {
-                s.dirty_because(unit, "the environment variables changed")?;
-
-                Ok(())
+                s.dirty_because(unit, "the environment variables changed")
             }
             DirtyReason::EnvVarChanged { name, .. } => {
-                s.dirty_because(unit, format_args!("the env variable {name} changed"))?;
-
-                Ok(())
+                s.dirty_because(unit, format_args!("the env variable {name} changed"))
             }
             DirtyReason::LocalFingerprintTypeChanged { .. } => {
-                s.dirty_because(unit, "the local fingerprint type changed")?;
-
-                Ok(())
+                s.dirty_because(unit, "the local fingerprint type changed")
             }
             DirtyReason::NumberOfDependenciesChanged { old, new } => s.dirty_because(
                 unit,
@@ -235,13 +217,10 @@ impl DirtyReason {
                             format_args!("the file `{}` has changed ({after})", file.display()),
                         )
                     }
-                    StaleItem::ChangedEnv { var, .. } => {
-                        s.dirty_because(
-                            unit,
-                            format_args!("the environment variable {var} changed"),
-                        )?;
-                        Ok(())
-                    }
+                    StaleItem::ChangedEnv { var, .. } => s.dirty_because(
+                        unit,
+                        format_args!("the environment variable {var} changed"),
+                    ),
                 },
                 FsStatus::StaleDependency {
                     name,
