@@ -64,7 +64,7 @@ It is recommended to use the vendored versions as they are the versions that are
 First, you'll want to check out this repository
 
 ```
-git clone https://github.com/rust-lang/cargo
+git clone https://github.com/rust-lang/cargo.git
 cd cargo
 ```
 
