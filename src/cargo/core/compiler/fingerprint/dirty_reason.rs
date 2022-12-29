@@ -71,15 +71,6 @@ pub enum DirtyReason {
     Forced,
 }
 
-// still need to implement Display for Error
-impl fmt::Display for DirtyReason {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "dirty")
-    }
-}
-
-impl std::error::Error for DirtyReason {}
-
 trait ShellExt {
     fn dirty_because(&mut self, unit: &Unit, s: impl fmt::Display) -> CargoResult<()>;
 }
