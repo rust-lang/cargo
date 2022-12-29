@@ -11,7 +11,7 @@ use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 use toml_edit::easy as toml;
 
-use crate::core::compiler::Freshness;
+use crate::core::compiler::{DirtyReason, Freshness};
 use crate::core::Target;
 use crate::core::{Dependency, FeatureValue, Package, PackageId, QueryKind, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
@@ -170,7 +170,7 @@ impl InstallTracker {
         // Check if any tracked exe's are already installed.
         let duplicates = self.find_duplicates(dst, &exes);
         if force || duplicates.is_empty() {
-            return Ok((Freshness::Dirty(None), duplicates));
+            return Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates));
         }
         // Check if all duplicates come from packages of the same name. If
         // there are duplicates from other packages, then --force will be
@@ -200,7 +200,7 @@ impl InstallTracker {
             let source_id = pkg.package_id().source_id();
             if source_id.is_path() {
                 // `cargo install --path ...` is always rebuilt.
-                return Ok((Freshness::Dirty(None), duplicates));
+                return Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates));
             }
             let is_up_to_date = |dupe_pkg_id| {
                 let info = self
@@ -224,7 +224,7 @@ impl InstallTracker {
             if matching_duplicates.iter().all(is_up_to_date) {
                 Ok((Freshness::Fresh, duplicates))
             } else {
-                Ok((Freshness::Dirty(None), duplicates))
+                Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates))
             }
         } else {
             // Format the error message.
