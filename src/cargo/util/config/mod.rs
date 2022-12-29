@@ -69,7 +69,7 @@ use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
-use crate::ops;
+use crate::ops::{self, RegistryCredentialConfig};
 use crate::util::errors::CargoResult;
 use crate::util::validate_package_name;
 use crate::util::CanonicalUrl;
@@ -136,6 +136,27 @@ enum WhyLoad {
     FileDiscovery,
 }
 
+/// A previously generated authentication token and the data needed to determine if it can be reused.
+pub struct CredentialCacheValue {
+    /// If the command line was used to override the token then it must always be reused,
+    /// even if reading the configuration files would lead to a different value.
+    pub from_commandline: bool,
+    /// If nothing depends on which endpoint is being hit, then we can reuse the token
+    /// for any future request even if some of the requests involve mutations.
+    pub independent_of_endpoint: bool,
+    pub token_value: String,
+}
+
+impl fmt::Debug for CredentialCacheValue {
+    /// This manual implementation helps ensure that the token value is redacted from all logs.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CredentialCacheValue")
+            .field("from_commandline", &self.from_commandline)
+            .field("token_value", &"REDACTED")
+            .finish()
+    }
+}
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 #[derive(Debug)]
@@ -193,7 +214,7 @@ pub struct Config {
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
     /// Cache of credentials from configuration or credential providers.
     /// Maps from url to credential value.
-    credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, String>>>,
+    credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, CredentialCacheValue>>>,
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
@@ -468,7 +489,7 @@ impl Config {
     }
 
     /// Cached credentials from credential providers or configuration.
-    pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, String>> {
+    pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, CredentialCacheValue>> {
         self.credential_cache
             .borrow_with(|| RefCell::new(HashMap::new()))
             .borrow_mut()
@@ -1360,6 +1381,26 @@ impl Config {
                     );
                 }
 
+                if toml_v
+                    .get("registry")
+                    .and_then(|v| v.as_table())
+                    .and_then(|t| t.get("secret-key"))
+                    .is_some()
+                {
+                    bail!(
+                        "registry.secret-key cannot be set through --config for security reasons"
+                    );
+                } else if let Some((k, _)) = toml_v
+                    .get("registries")
+                    .and_then(|v| v.as_table())
+                    .and_then(|t| t.iter().find(|(_, v)| v.get("secret-key").is_some()))
+                {
+                    bail!(
+                        "registries.{}.secret-key cannot be set through --config for security reasons",
+                        k
+                    );
+                }
+
                 CV::from_toml(Definition::Cli(None), toml_v)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
@@ -2081,7 +2122,7 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
 
 pub fn save_credentials(
     cfg: &Config,
-    token: Option<String>,
+    token: Option<RegistryCredentialConfig>,
     registry: &SourceId,
 ) -> CargoResult<()> {
     let registry = if registry.is_crates_io() {
@@ -2131,26 +2172,50 @@ pub fn save_credentials(
 
     if let Some(token) = token {
         // login
-        let (key, mut value) = {
-            let key = "token".to_string();
-            let value = ConfigValue::String(token, Definition::Path(file.path().to_path_buf()));
-            let map = HashMap::from([(key, value)]);
-            let table = CV::Table(map, Definition::Path(file.path().to_path_buf()));
 
-            if let Some(registry) = registry {
-                let map = HashMap::from([(registry.to_string(), table)]);
-                (
-                    "registries".into(),
-                    CV::Table(map, Definition::Path(file.path().to_path_buf())),
-                )
-            } else {
-                ("registry".into(), table)
+        let path_def = Definition::Path(file.path().to_path_buf());
+        let (key, mut value) = match token {
+            RegistryCredentialConfig::Token(token) => {
+                // login with token
+
+                let key = "token".to_string();
+                let value = ConfigValue::String(token, path_def.clone());
+                let map = HashMap::from([(key, value)]);
+                let table = CV::Table(map, path_def.clone());
+
+                if let Some(registry) = registry {
+                    let map = HashMap::from([(registry.to_string(), table)]);
+                    ("registries".into(), CV::Table(map, path_def.clone()))
+                } else {
+                    ("registry".into(), table)
+                }
             }
+            RegistryCredentialConfig::AsymmetricKey((secret_key, key_subject)) => {
+                // login with key
+
+                let key = "secret-key".to_string();
+                let value = ConfigValue::String(secret_key, path_def.clone());
+                let mut map = HashMap::from([(key, value)]);
+                if let Some(key_subject) = key_subject {
+                    let key = "secret-key-subject".to_string();
+                    let value = ConfigValue::String(key_subject, path_def.clone());
+                    map.insert(key, value);
+                }
+                let table = CV::Table(map, path_def.clone());
+
+                if let Some(registry) = registry {
+                    let map = HashMap::from([(registry.to_string(), table)]);
+                    ("registries".into(), CV::Table(map, path_def.clone()))
+                } else {
+                    ("registry".into(), table)
+                }
+            }
+            _ => unreachable!(),
         };
 
         if registry.is_some() {
             if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
-                let v = CV::from_toml(Definition::Path(file.path().to_path_buf()), table)?;
+                let v = CV::from_toml(path_def, table)?;
                 value.merge(v, false)?;
             }
         }
@@ -2165,6 +2230,8 @@ pub fn save_credentials(
                         format_err!("expected `[registries.{}]` to be a table", registry)
                     })?;
                     rtable.remove("token");
+                    rtable.remove("secret-key");
+                    rtable.remove("secret-key-subject");
                 }
             }
         } else if let Some(registry) = table.get_mut("registry") {
@@ -2172,6 +2239,8 @@ pub fn save_credentials(
                 .as_table_mut()
                 .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
             reg_table.remove("token");
+            reg_table.remove("secret-key");
+            reg_table.remove("secret-key-subject");
         }
     }
 

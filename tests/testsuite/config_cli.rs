@@ -435,6 +435,20 @@ fn no_disallowed_values() {
         config.unwrap_err(),
         "registries.crates-io.token cannot be set through --config for security reasons",
     );
+    let config = ConfigBuilder::new()
+        .config_arg("registry.secret-key=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registry.secret-key cannot be set through --config for security reasons",
+    );
+    let config = ConfigBuilder::new()
+        .config_arg("registries.crates-io.secret-key=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registries.crates-io.secret-key cannot be set through --config for security reasons",
+    );
 }
 
 #[cargo_test]

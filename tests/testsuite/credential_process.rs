@@ -2,7 +2,7 @@
 
 use cargo_test_support::registry::{Package, TestRegistry};
 use cargo_test_support::{basic_manifest, cargo_process, paths, project, registry, Project};
-use std::fs;
+use std::fs::{self, read_to_string};
 
 fn toml_bin(proj: &Project, name: &str) -> String {
     proj.bin(name).display().to_string().replace('\\', "\\\\")
@@ -158,7 +158,9 @@ fn get_token_test() -> (Project, TestRegistry) {
     // API server that checks that the token is included correctly.
     let server = registry::RegistryBuilder::new()
         .no_configure_token()
-        .token("sekrit")
+        .token(cargo_test_support::registry::Token::Plaintext(
+            "sekrit".to_string(),
+        ))
         .alternative()
         .http_api()
         .build();
@@ -166,7 +168,22 @@ fn get_token_test() -> (Project, TestRegistry) {
     let cred_proj = project()
         .at("cred_proj")
         .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
-        .file("src/main.rs", r#"fn main() { println!("sekrit"); } "#)
+        .file(
+            "src/main.rs",
+            r#"
+                use std::fs::File;
+                use std::io::Write;
+                fn main() {
+                    let mut f = File::options()
+                        .write(true)
+                        .create(true)
+                        .append(true)
+                        .open("runs.log")
+                        .unwrap();
+                    write!(f, "+");
+                    println!("sekrit");
+                } "#,
+        )
         .build();
     cred_proj.cargo("build").run();
 
@@ -217,6 +234,9 @@ fn publish() {
 ",
         )
         .run();
+
+    let calls = read_to_string(p.root().join("runs.log")).unwrap().len();
+    assert_eq!(calls, 1);
 }
 
 #[cargo_test]

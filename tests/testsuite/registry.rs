@@ -1078,56 +1078,6 @@ fn dev_dependency_not_used(cargo: fn(&Project, &str) -> Execs) {
 }
 
 #[cargo_test]
-fn login_with_no_cargo_dir() {
-    // Create a config in the root directory because `login` requires the
-    // index to be updated, and we don't want to hit crates.io.
-    let registry = registry::init();
-    fs::rename(paths::home().join(".cargo"), paths::root().join(".cargo")).unwrap();
-    paths::home().rm_rf();
-    cargo_process("login foo -v")
-        .replace_crates_io(registry.index_url())
-        .run();
-    let credentials = fs::read_to_string(paths::home().join(".cargo/credentials")).unwrap();
-    assert_eq!(credentials, "[registry]\ntoken = \"foo\"\n");
-}
-
-#[cargo_test]
-fn login_with_differently_sized_token() {
-    // Verify that the configuration file gets properly truncated.
-    let registry = registry::init();
-    let credentials = paths::home().join(".cargo/credentials");
-    fs::remove_file(&credentials).unwrap();
-    cargo_process("login lmaolmaolmao -v")
-        .replace_crates_io(registry.index_url())
-        .run();
-    cargo_process("login lmao -v")
-        .replace_crates_io(registry.index_url())
-        .run();
-    cargo_process("login lmaolmaolmao -v")
-        .replace_crates_io(registry.index_url())
-        .run();
-    let credentials = fs::read_to_string(&credentials).unwrap();
-    assert_eq!(credentials, "[registry]\ntoken = \"lmaolmaolmao\"\n");
-}
-
-#[cargo_test]
-fn login_with_token_on_stdin() {
-    let registry = registry::init();
-    let credentials = paths::home().join(".cargo/credentials");
-    fs::remove_file(&credentials).unwrap();
-    cargo_process("login lmao -v")
-        .replace_crates_io(registry.index_url())
-        .run();
-    cargo_process("login")
-        .replace_crates_io(registry.index_url())
-        .with_stdout("please paste the token found on [..]/me below")
-        .with_stdin("some token")
-        .run();
-    let credentials = fs::read_to_string(&credentials).unwrap();
-    assert_eq!(credentials, "[registry]\ntoken = \"some token\"\n");
-}
-
-#[cargo_test]
 fn bad_license_file_http() {
     let registry = setup_http();
     bad_license_file(cargo_http, &registry);

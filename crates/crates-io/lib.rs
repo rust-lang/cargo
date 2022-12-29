@@ -215,6 +215,10 @@ impl Registry {
         }
     }
 
+    pub fn set_token(&mut self, token: Option<String>) {
+        self.token = token;
+    }
+
     pub fn host(&self) -> &str {
         &self.host
     }

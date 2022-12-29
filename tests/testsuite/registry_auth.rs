@@ -65,6 +65,19 @@ fn simple() {
 }
 
 #[cargo_test]
+fn simple_with_asymmetric() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .http_index()
+        .token(cargo_test_support::registry::Token::rfc_key())
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build").with_stderr(SUCCCESS_OUTPUT).run();
+}
+
+#[cargo_test]
 fn environment_config() {
     let registry = RegistryBuilder::new()
         .alternative()
@@ -97,6 +110,197 @@ fn environment_token() {
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", registry.token())
         .with_stderr(SUCCCESS_OUTPUT)
+        .run();
+}
+
+#[cargo_test]
+fn environment_token_with_asymmetric() {
+    let registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .no_configure_token()
+        .http_index()
+        .token(cargo_test_support::registry::Token::Keys(
+            "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
+                .to_string(),
+            None,
+        ))
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build")
+        .env("CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY", registry.key())
+        .with_stderr(SUCCCESS_OUTPUT)
+        .run();
+}
+
+#[cargo_test]
+fn warn_both_asymmetric_and_token() {
+    let _server = RegistryBuilder::new()
+        .alternative()
+        .no_configure_token()
+        .build();
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [registries.alternative]
+                token = "sekrit"
+                secret-key = "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                authors = []
+                license = "MIT"
+                homepage = "https://example.com/"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .masquerade_as_nightly_cargo(&["credential-process", "sparse-registry", "registry-auth"])
+        .arg("-Zsparse-registry")
+        .arg("-Zregistry-auth")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ERROR] both `token` and `secret-key` were specified in the config for registry `alternative`.
+Only one of these values may be set, remove one or the other to proceed.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn warn_both_asymmetric_and_credential_process() {
+    let _server = RegistryBuilder::new()
+        .alternative()
+        .no_configure_token()
+        .build();
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [registries.alternative]
+                credential-process = "false"
+                secret-key = "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                authors = []
+                license = "MIT"
+                homepage = "https://example.com/"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .masquerade_as_nightly_cargo(&["credential-process", "sparse-registry", "registry-auth"])
+        .arg("-Zcredential-process")
+        .arg("-Zsparse-registry")
+        .arg("-Zregistry-auth")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ERROR] both `credential-process` and `secret-key` were specified in the config for registry `alternative`.
+Only one of these values may be set, remove one or the other to proceed.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_environment_token_with_asymmetric_subject() {
+    let registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .no_configure_token()
+        .http_index()
+        .token(cargo_test_support::registry::Token::Keys(
+            "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
+                .to_string(),
+            None,
+        ))
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build")
+        .env("CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY", registry.key())
+        .env(
+            "CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY_SUBJECT",
+            "incorrect",
+        )
+        .with_stderr_contains(
+            "  token rejected for `alternative`, please run `cargo login --registry alternative`",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn bad_environment_token_with_asymmetric_incorrect_subject() {
+    let registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .no_configure_token()
+        .http_index()
+        .token(cargo_test_support::registry::Token::rfc_key())
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build")
+        .env("CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY", registry.key())
+        .env(
+            "CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY_SUBJECT",
+            "incorrect",
+        )
+        .with_stderr_contains(
+            "  token rejected for `alternative`, please run `cargo login --registry alternative`",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn bad_environment_token_with_incorrect_asymmetric() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .no_configure_token()
+        .http_index()
+        .token(cargo_test_support::registry::Token::Keys(
+            "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
+                .to_string(),
+            None,
+        ))
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build")
+        .env(
+            "CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY",
+            "k3.secret.9Vxr5hVlI_g_orBZN54vPz20bmB4O76wB_MVqUSuJJJqHFLwP8kdn_RY5g6J6pQG",
+        )
+        .with_stderr_contains(
+            "  token rejected for `alternative`, please run `cargo login --registry alternative`",
+        )
+        .with_status(101)
         .run();
 }
 

@@ -51,6 +51,44 @@ Caused by:
 }
 
 #[cargo_test]
+fn explicit_version_with_asymmetric() {
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .token(cargo_test_support::registry::Token::rfc_key())
+        .build();
+    setup("foo", "0.0.1");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // The http_api server will check that the authorization is correct.
+    // If the authorization was not sent then we would get an unauthorized error.
+    p.cargo("yank --version 0.0.1")
+        .arg("-Zregistry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .run();
+
+    p.cargo("yank --undo --version 0.0.1")
+        .arg("-Zregistry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .run();
+}
+
+#[cargo_test]
 fn inline_version() {
     let registry = registry::init();
     setup("foo", "0.0.1");

@@ -682,7 +682,7 @@ unstable_cli_options!(
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     sparse_registry: bool = ("Support plain-HTTP-based crate registries"),
-    registry_auth: bool = ("Authentication for alternative registries"),
+    registry_auth: bool = ("Authentication for alternative registries, and generate registry authentication tokens using asymmetric cryptography"),
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     separate_nightlies: bool = (HIDDEN),
@@ -980,29 +980,22 @@ impl CliUnstable {
     pub fn fail_if_stable_opt(&self, flag: &str, issue: u32) -> CargoResult<()> {
         if !self.unstable_options {
             let see = format!(
-                "See https://github.com/rust-lang/cargo/issues/{} for more \
-                 information about the `{}` flag.",
-                issue, flag
+                "See https://github.com/rust-lang/cargo/issues/{issue} for more \
+                 information about the `{flag}` flag."
             );
             // NOTE: a `config` isn't available here, check the channel directly
             let channel = channel();
             if channel == "nightly" || channel == "dev" {
                 bail!(
-                    "the `{}` flag is unstable, pass `-Z unstable-options` to enable it\n\
-                     {}",
-                    flag,
-                    see
+                    "the `{flag}` flag is unstable, pass `-Z unstable-options` to enable it\n\
+                     {see}"
                 );
             } else {
                 bail!(
-                    "the `{}` flag is unstable, and only available on the nightly channel \
-                     of Cargo, but this is the `{}` channel\n\
-                     {}\n\
-                     {}",
-                    flag,
-                    channel,
-                    SEE_CHANNELS,
-                    see
+                    "the `{flag}` flag is unstable, and only available on the nightly channel \
+                     of Cargo, but this is the `{channel}` channel\n\
+                     {SEE_CHANNELS}\n\
+                     {see}"
                 );
             }
         }

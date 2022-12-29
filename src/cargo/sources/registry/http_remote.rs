@@ -592,7 +592,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         if self.auth_required {
             self.check_registry_auth_unstable()?;
             let authorization =
-                auth::auth_token(self.config, &self.source_id, self.login_url.as_ref())?;
+                auth::auth_token(self.config, &self.source_id, self.login_url.as_ref(), None)?;
             headers.append(&format!("Authorization: {}", authorization))?;
             trace!("including authorization for {}", full_url);
         }

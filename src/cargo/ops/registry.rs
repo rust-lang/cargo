@@ -8,11 +8,13 @@ use std::task::Poll;
 use std::time::Duration;
 use std::{cmp, env};
 
-use anyhow::{bail, format_err, Context as _};
+use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
 use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
+use pasetors::keys::{AsymmetricKeyPair, Generate};
+use pasetors::paserk::FormatAsPaserk;
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use termcolor::Color::Green;
 use termcolor::ColorSpec;
@@ -27,7 +29,9 @@ use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
 use crate::ops::Packages;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
-use crate::util::auth::{self, AuthorizationError};
+use crate::util::auth::{
+    paserk_public_from_paserk_secret, {self, AuthorizationError},
+};
 use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -37,13 +41,15 @@ use crate::{drop_print, drop_println, version};
 /// Registry settings loaded from config files.
 ///
 /// This is loaded based on the `--registry` flag and the config settings.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RegistryCredentialConfig {
     None,
     /// The authentication token.
     Token(String),
     /// Process used for fetching a token.
     Process((PathBuf, Vec<String>)),
+    /// Secret Key and subject for Asymmetric tokens.
+    AsymmetricKey((String, Option<String>)),
 }
 
 impl RegistryCredentialConfig {
@@ -59,6 +65,12 @@ impl RegistryCredentialConfig {
     pub fn is_token(&self) -> bool {
         matches!(self, Self::Token(..))
     }
+    /// Returns `true` if the credential is [`AsymmetricKey`].
+    ///
+    /// [`AsymmetricKey`]: RegistryCredentialConfig::AsymmetricKey
+    pub fn is_asymmetric_key(&self) -> bool {
+        matches!(self, Self::AsymmetricKey(..))
+    }
     pub fn as_token(&self) -> Option<&str> {
         if let Self::Token(v) = self {
             Some(&*v)
@@ -68,6 +80,13 @@ impl RegistryCredentialConfig {
     }
     pub fn as_process(&self) -> Option<&(PathBuf, Vec<String>)> {
         if let Self::Process(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+    pub fn as_asymmetric_key(&self) -> Option<&(String, Option<String>)> {
+        if let Self::AsymmetricKey(v) = self {
             Some(v)
         } else {
             None
@@ -148,6 +167,10 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             );
         }
     }
+    // This is only used to confirm that we can create a token before we build the package.
+    // This causes the credential provider to be called an extra time, but keeps the same order of errors.
+    let ver = pkg.version().to_string();
+    let mutation = auth::Mutation::PrePublish;
 
     let (mut registry, reg_ids) = registry(
         opts.config,
@@ -155,7 +178,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.index.as_deref(),
         publish_registry.as_deref(),
         true,
-        !opts.dry_run,
+        Some(mutation).filter(|_| !opts.dry_run),
     )?;
     verify_dependencies(pkg, &registry, reg_ids.original)?;
 
@@ -178,6 +201,24 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         },
     )?
     .unwrap();
+
+    let hash = cargo_util::Sha256::new()
+        .update_file(tarball.file())?
+        .finish_hex();
+    let mutation = auth::Mutation::Publish {
+        name: pkg.name().as_str(),
+        vers: &ver,
+        cksum: &hash,
+    };
+
+    if !opts.dry_run {
+        registry.set_token(Some(auth::auth_token(
+            &opts.config,
+            &reg_ids.original,
+            None,
+            Some(mutation),
+        )?));
+    }
 
     opts.config
         .shell()
@@ -475,11 +516,11 @@ fn registry(
     index: Option<&str>,
     registry: Option<&str>,
     force_update: bool,
-    token_required: bool,
+    token_required: Option<auth::Mutation<'_>>,
 ) -> CargoResult<(Registry, RegistrySourceIds)> {
     let source_ids = get_source_id(config, index, registry)?;
 
-    if token_required && index.is_some() && token_from_cmdline.is_none() {
+    if token_required.is_some() && index.is_some() && token_from_cmdline.is_none() {
         bail!("command-line argument --index requires --token to be specified");
     }
     if let Some(token) = token_from_cmdline {
@@ -506,8 +547,13 @@ fn registry(
     let api_host = cfg
         .api
         .ok_or_else(|| format_err!("{} does not support API commands", source_ids.replacement))?;
-    let token = if token_required || cfg.auth_required {
-        Some(auth::auth_token(config, &source_ids.original, None)?)
+    let token = if token_required.is_some() || cfg.auth_required {
+        Some(auth::auth_token(
+            config,
+            &source_ids.original,
+            None,
+            token_required,
+        )?)
     } else {
         None
     };
@@ -738,10 +784,18 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     }
 }
 
-pub fn registry_login(config: &Config, token: Option<&str>, reg: Option<&str>) -> CargoResult<()> {
+pub fn registry_login(
+    config: &Config,
+    token: Option<&str>,
+    reg: Option<&str>,
+    generate_keypair: bool,
+    secret_key_required: bool,
+    key_subject: Option<&str>,
+) -> CargoResult<()> {
     let source_ids = get_source_id(config, None, reg)?;
     let reg_cfg = auth::registry_credential_config(config, &source_ids.original)?;
-    let login_url = match registry(config, token, None, reg, false, false) {
+
+    let login_url = match registry(config, token, None, reg, false, None) {
         Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
             .downcast::<AuthorizationError>()
@@ -750,48 +804,108 @@ pub fn registry_login(config: &Config, token: Option<&str>, reg: Option<&str>) -
             .map(|u| u.to_string()),
         Err(e) => return Err(e),
     };
-
-    let token = match token {
-        Some(token) => token.to_string(),
-        None => {
-            if let Some(login_url) = login_url {
-                drop_println!(
-                    config,
-                    "please paste the token found on {} below",
-                    login_url
-                )
+    let new_token;
+    if generate_keypair || secret_key_required || key_subject.is_some() {
+        if !config.cli_unstable().registry_auth {
+            let flag = if generate_keypair {
+                "generate-keypair"
+            } else if secret_key_required {
+                "secret-key"
+            } else if key_subject.is_some() {
+                "key-subject"
             } else {
-                drop_println!(
-                    config,
-                    "please paste the token for {} below",
-                    source_ids.original.display_registry_name()
-                )
+                unreachable!("how did whe get here");
+            };
+            bail!(
+                "the `{flag}` flag is unstable, pass `-Z registry-auth` to enable it\n\
+                 See https://github.com/rust-lang/cargo/issues/10519 for more \
+                 information about the `{flag}` flag."
+            );
+        }
+        assert!(token.is_none());
+        // we are dealing with asymmetric tokens
+        let (old_secret_key, old_key_subject) = match &reg_cfg {
+            RegistryCredentialConfig::AsymmetricKey((old_secret_key, old_key_subject)) => {
+                (Some(old_secret_key), old_key_subject.clone())
             }
-
+            _ => (None, None),
+        };
+        let secret_key: String;
+        if generate_keypair {
+            assert!(!secret_key_required);
+            let kp = AsymmetricKeyPair::<pasetors::version3::V3>::generate().unwrap();
+            let mut key = String::new();
+            FormatAsPaserk::fmt(&kp.secret, &mut key).unwrap();
+            secret_key = key;
+        } else if secret_key_required {
+            assert!(!generate_keypair);
+            drop_println!(config, "please paste the API secret key below");
             let mut line = String::new();
             let input = io::stdin();
             input
                 .lock()
                 .read_line(&mut line)
                 .with_context(|| "failed to read stdin")?;
-            // Automatically remove `cargo login` from an inputted token to
-            // allow direct pastes from `registry.host()`/me.
-            line.replace("cargo login", "").trim().to_string()
+            secret_key = line.trim().to_string();
+        } else {
+            secret_key = old_secret_key
+                .cloned()
+                .ok_or_else(|| anyhow!("need a secret_key to set a key_subject"))?;
         }
-    };
+        if let Some(p) = paserk_public_from_paserk_secret(&secret_key) {
+            drop_println!(config, "{}", &p);
+        } else {
+            bail!("not a validly formated PASERK secret key");
+        }
+        new_token = RegistryCredentialConfig::AsymmetricKey((
+            secret_key,
+            match key_subject {
+                Some(key_subject) => Some(key_subject.to_string()),
+                None => old_key_subject,
+            },
+        ));
+    } else {
+        new_token = RegistryCredentialConfig::Token(match token {
+            Some(token) => token.to_string(),
+            None => {
+                if let Some(login_url) = login_url {
+                    drop_println!(
+                        config,
+                        "please paste the token found on {} below",
+                        login_url
+                    )
+                } else {
+                    drop_println!(
+                        config,
+                        "please paste the token for {} below",
+                        source_ids.original.display_registry_name()
+                    )
+                }
 
-    if token.is_empty() {
-        bail!("please provide a non-empty token");
+                let mut line = String::new();
+                let input = io::stdin();
+                input
+                    .lock()
+                    .read_line(&mut line)
+                    .with_context(|| "failed to read stdin")?;
+                // Automatically remove `cargo login` from an inputted token to
+                // allow direct pastes from `registry.host()`/me.
+                line.replace("cargo login", "").trim().to_string()
+            }
+        });
+
+        if let Some(tok) = new_token.as_token() {
+            if tok.is_empty() {
+                bail!("please provide a non-empty token");
+            }
+        }
+    }
+    if &reg_cfg == &new_token {
+        config.shell().status("Login", "already logged in")?;
+        return Ok(());
     }
 
-    if let RegistryCredentialConfig::Token(old_token) = &reg_cfg {
-        if old_token == &token {
-            config.shell().status("Login", "already logged in")?;
-            return Ok(());
-        }
-    }
-
-    auth::login(config, &source_ids.original, token)?;
+    auth::login(config, &source_ids.original, new_token)?;
 
     config.shell().status(
         "Login",
@@ -842,13 +956,15 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         }
     };
 
+    let mutation = auth::Mutation::Owners { name: &name };
+
     let (mut registry, _) = registry(
         config,
         opts.token.as_deref(),
         opts.index.as_deref(),
         opts.registry.as_deref(),
         true,
-        true,
+        Some(mutation),
     )?;
 
     if let Some(ref v) = opts.to_add {
@@ -921,13 +1037,25 @@ pub fn yank(
         None => bail!("a version must be specified to yank"),
     };
 
+    let message = if undo {
+        auth::Mutation::Unyank {
+            name: &name,
+            vers: &version,
+        }
+    } else {
+        auth::Mutation::Yank {
+            name: &name,
+            vers: &version,
+        }
+    };
+
     let (mut registry, _) = registry(
         config,
         token.as_deref(),
         index.as_deref(),
         reg.as_deref(),
         true,
-        true,
+        Some(message),
     )?;
 
     let package_spec = format!("{}@{}", name, version);
@@ -1015,7 +1143,7 @@ pub fn search(
     reg: Option<String>,
 ) -> CargoResult<()> {
     let (mut registry, source_ids) =
-        registry(config, None, index.as_deref(), reg.as_deref(), false, false)?;
+        registry(config, None, index.as_deref(), reg.as_deref(), false, None)?;
     let (crates, total_crates) = registry.search(query, limit).with_context(|| {
         format!(
             "failed to retrieve search results from the registry at {}",

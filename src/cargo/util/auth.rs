@@ -4,16 +4,22 @@ use crate::util::{config, config::ConfigKey, CanonicalUrl, CargoResult, Config, 
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::ProcessError;
 use core::fmt;
+use pasetors::keys::{AsymmetricPublicKey, AsymmetricSecretKey};
+use pasetors::paserk::FormatAsPaserk;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 use url::Url;
 
 use crate::core::SourceId;
 use crate::ops::RegistryCredentialConfig;
+
+use super::config::CredentialCacheValue;
 
 /// Get the credential configuration for a `SourceId`.
 pub fn registry_credential_config(
@@ -26,6 +32,8 @@ pub fn registry_credential_config(
         index: Option<String>,
         token: Option<String>,
         credential_process: Option<config::PathAndArgs>,
+        secret_key: Option<String>,
+        secret_key_subject: Option<String>,
         #[serde(rename = "default")]
         _default: Option<String>,
     }
@@ -46,26 +54,19 @@ pub fn registry_credential_config(
         let RegistryConfig {
             token,
             credential_process,
+            secret_key,
+            secret_key_subject,
             ..
         } = config.get::<RegistryConfig>("registry")?;
-        let credential_process =
-            credential_process.filter(|_| config.cli_unstable().credential_process);
-
-        return Ok(match (token, credential_process) {
-            (Some(_), Some(_)) => {
-                return Err(format_err!(
-                    "both `token` and `credential-process` \
-                    were specified in the config`.\n\
-                    Only one of these values may be set, remove one or the other to proceed.",
-                ))
-            }
-            (Some(token), _) => RegistryCredentialConfig::Token(token),
-            (_, Some(process)) => RegistryCredentialConfig::Process((
-                process.path.resolve_program(config),
-                process.args,
-            )),
-            (None, None) => RegistryCredentialConfig::None,
-        });
+        return registry_credential_config_inner(
+            true,
+            None,
+            token,
+            credential_process,
+            secret_key,
+            secret_key_subject,
+            config,
+        );
     }
 
     // Find the SourceId's name by its index URL. If environment variables
@@ -133,52 +134,99 @@ pub fn registry_credential_config(
         }
     }
 
-    let (token, credential_process) = if let Some(name) = &name {
+    let (token, credential_process, secret_key, secret_key_subject) = if let Some(name) = &name {
         log::debug!("found alternative registry name `{name}` for {sid}");
         let RegistryConfig {
             token,
+            secret_key,
+            secret_key_subject,
             credential_process,
             ..
         } = config.get::<RegistryConfig>(&format!("registries.{name}"))?;
-        let credential_process =
-            credential_process.filter(|_| config.cli_unstable().credential_process);
-        (token, credential_process)
+        (token, credential_process, secret_key, secret_key_subject)
     } else {
         log::debug!("no registry name found for {sid}");
-        (None, None)
+        (None, None, None, None)
     };
 
-    let name = name.as_deref();
-    Ok(match (token, credential_process) {
-        (Some(_), Some(_)) => {
-            return {
-                Err(format_err!(
-                    "both `token` and `credential-process` \
-                    were specified in the config for registry `{name}`.\n\
-                    Only one of these values may be set, remove one or the other to proceed.",
-                    name = name.unwrap()
-                ))
+    registry_credential_config_inner(
+        false,
+        name.as_deref(),
+        token,
+        credential_process,
+        secret_key,
+        secret_key_subject,
+        config,
+    )
+}
+
+fn registry_credential_config_inner(
+    is_crates_io: bool,
+    name: Option<&str>,
+    token: Option<String>,
+    credential_process: Option<config::PathAndArgs>,
+    secret_key: Option<String>,
+    secret_key_subject: Option<String>,
+    config: &Config,
+) -> CargoResult<RegistryCredentialConfig> {
+    let credential_process =
+        credential_process.filter(|_| config.cli_unstable().credential_process);
+    let secret_key = secret_key.filter(|_| config.cli_unstable().registry_auth);
+    let secret_key_subject = secret_key_subject.filter(|_| config.cli_unstable().registry_auth);
+    let err_both = |token_key: &str, proc_key: &str| {
+        let registry = if is_crates_io {
+            "".to_string()
+        } else {
+            format!(" for registry `{}`", name.unwrap_or("UN-NAMED"))
+        };
+        Err(format_err!(
+            "both `{token_key}` and `{proc_key}` \
+            were specified in the config{registry}.\n\
+            Only one of these values may be set, remove one or the other to proceed.",
+        ))
+    };
+    Ok(
+        match (token, credential_process, secret_key, secret_key_subject) {
+            (Some(_), Some(_), _, _) => return err_both("token", "credential-process"),
+            (Some(_), _, Some(_), _) => return err_both("token", "secret-key"),
+            (_, Some(_), Some(_), _) => return err_both("credential-process", "secret-key"),
+            (_, _, None, Some(_)) => {
+                let registry = if is_crates_io {
+                    "".to_string()
+                } else {
+                    format!(" for registry `{}`", name.as_ref().unwrap())
+                };
+                return Err(format_err!(
+                    "`secret-key-subject` was set but `secret-key` was not in the config{}.\n\
+                    Either set the `secret-key` or remove the `secret-key-subject`.",
+                    registry
+                ));
             }
-        }
-        (Some(token), _) => RegistryCredentialConfig::Token(token),
-        (_, Some(process)) => {
-            RegistryCredentialConfig::Process((process.path.resolve_program(config), process.args))
-        }
-        (None, None) => {
-            // If we couldn't find a registry-specific credential, try the global credential process.
-            if let Some(process) = config
-                .get::<Option<config::PathAndArgs>>("registry.credential-process")?
-                .filter(|_| config.cli_unstable().credential_process)
-            {
-                RegistryCredentialConfig::Process((
-                    process.path.resolve_program(config),
-                    process.args,
-                ))
-            } else {
+            (Some(token), _, _, _) => RegistryCredentialConfig::Token(token),
+            (_, Some(process), _, _) => RegistryCredentialConfig::Process((
+                process.path.resolve_program(config),
+                process.args,
+            )),
+            (None, None, Some(key), subject) => {
+                RegistryCredentialConfig::AsymmetricKey((key, subject))
+            }
+            (None, None, None, _) => {
+                if !is_crates_io {
+                    // If we couldn't find a registry-specific credential, try the global credential process.
+                    if let Some(process) = config
+                        .get::<Option<config::PathAndArgs>>("registry.credential-process")?
+                        .filter(|_| config.cli_unstable().credential_process)
+                    {
+                        return Ok(RegistryCredentialConfig::Process((
+                            process.path.resolve_program(config),
+                            process.args,
+                        )));
+                    }
+                }
                 RegistryCredentialConfig::None
             }
-        }
-    })
+        },
+    )
 }
 
 #[derive(Debug, PartialEq)]
@@ -252,16 +300,26 @@ my-registry = {{ index = "{}" }}
 // Store a token in the cache for future calls.
 pub fn cache_token(config: &Config, sid: &SourceId, token: &str) {
     let url = sid.canonical_url();
-    config
-        .credential_cache()
-        .insert(url.clone(), token.to_string());
+    config.credential_cache().insert(
+        url.clone(),
+        CredentialCacheValue {
+            from_commandline: true,
+            independent_of_endpoint: true,
+            token_value: token.to_string(),
+        },
+    );
 }
 
 /// Returns the token to use for the given registry.
 /// If a `login_url` is provided and a token is not available, the
 /// login_url will be included in the returned error.
-pub fn auth_token(config: &Config, sid: &SourceId, login_url: Option<&Url>) -> CargoResult<String> {
-    match auth_token_optional(config, sid)? {
+pub fn auth_token(
+    config: &Config,
+    sid: &SourceId,
+    login_url: Option<&Url>,
+    mutation: Option<Mutation<'_>>,
+) -> CargoResult<String> {
+    match auth_token_optional(config, sid, mutation.as_ref())? {
         Some(token) => Ok(token),
         None => Err(AuthorizationError {
             sid: sid.clone(),
@@ -273,25 +331,179 @@ pub fn auth_token(config: &Config, sid: &SourceId, login_url: Option<&Url>) -> C
 }
 
 /// Returns the token to use for the given registry.
-fn auth_token_optional(config: &Config, sid: &SourceId) -> CargoResult<Option<String>> {
+fn auth_token_optional(
+    config: &Config,
+    sid: &SourceId,
+    mutation: Option<&'_ Mutation<'_>>,
+) -> CargoResult<Option<String>> {
     let mut cache = config.credential_cache();
     let url = sid.canonical_url();
 
-    if let Some(token) = cache.get(url) {
-        return Ok(Some(token.clone()));
+    if let Some(cache_token_value) = cache.get(url) {
+        // Tokens for endpoints that do not involve a mutation can always be reused.
+        // If the value is put in the cach by the command line, then we reuse it without looking at the configuration.
+        if cache_token_value.from_commandline
+            || cache_token_value.independent_of_endpoint
+            || mutation.is_none()
+        {
+            return Ok(Some(cache_token_value.token_value.clone()));
+        }
     }
 
     let credential = registry_credential_config(config, sid)?;
-    let token = match credential {
+    let (independent_of_endpoint, token) = match credential {
         RegistryCredentialConfig::None => return Ok(None),
-        RegistryCredentialConfig::Token(config_token) => config_token.to_string(),
+        RegistryCredentialConfig::Token(config_token) => (true, config_token.to_string()),
         RegistryCredentialConfig::Process(process) => {
+            // todo: PASETO with process
             run_command(config, &process, sid, Action::Get)?.unwrap()
+        }
+        RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) => {
+            let secret: AsymmetricSecretKey<pasetors::version3::V3> =
+                secret_key.as_str().try_into()?;
+            let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into()?;
+            let kip: pasetors::paserk::Id = (&public).try_into()?;
+            let iat = OffsetDateTime::now_utc();
+
+            let message = Message {
+                iat: &iat.format(&Rfc3339)?,
+                sub: secret_key_subject.as_deref(),
+                mutation: mutation.and_then(|m| {
+                    Some(match m {
+                        Mutation::PrePublish => return None,
+                        Mutation::Publish { .. } => "publish",
+                        Mutation::Yank { .. } => "yank",
+                        Mutation::Unyank { .. } => "unyank",
+                        Mutation::Owners { .. } => "owners",
+                    })
+                }),
+                name: mutation.and_then(|m| {
+                    Some(match m {
+                        Mutation::PrePublish => return None,
+                        Mutation::Publish { name, .. }
+                        | Mutation::Yank { name, .. }
+                        | Mutation::Unyank { name, .. }
+                        | Mutation::Owners { name, .. } => *name,
+                    })
+                }),
+                vers: mutation.and_then(|m| {
+                    Some(match m {
+                        Mutation::PrePublish | Mutation::Owners { .. } => return None,
+                        Mutation::Publish { vers, .. }
+                        | Mutation::Yank { vers, .. }
+                        | Mutation::Unyank { vers, .. } => *vers,
+                    })
+                }),
+                cksum: mutation.and_then(|m| {
+                    Some(match m {
+                        Mutation::PrePublish
+                        | Mutation::Yank { .. }
+                        | Mutation::Unyank { .. }
+                        | Mutation::Owners { .. } => return None,
+                        Mutation::Publish { cksum, .. } => *cksum,
+                    })
+                }),
+                challenge: None, // todo: PASETO with challenges
+                v: None,
+            };
+            let footer = Footer {
+                url: &sid.url().to_string(),
+                kip,
+            };
+
+            (
+                false,
+                pasetors::version3::PublicToken::sign(
+                    &secret,
+                    serde_json::to_string(&message)
+                        .expect("cannot serialize")
+                        .as_bytes(),
+                    Some(
+                        serde_json::to_string(&footer)
+                            .expect("cannot serialize")
+                            .as_bytes(),
+                    ),
+                    None,
+                )?,
+            )
         }
     };
 
-    cache.insert(url.clone(), token.clone());
+    if independent_of_endpoint || mutation.is_none() {
+        cache.insert(
+            url.clone(),
+            CredentialCacheValue {
+                from_commandline: false,
+                independent_of_endpoint,
+                token_value: token.to_string(),
+            },
+        );
+    }
     Ok(Some(token))
+}
+
+/// A record of what kind of operation is happening that we should generate a token for.
+pub enum Mutation<'a> {
+    /// Before we generate a crate file for the users attempt to publish,
+    /// we need to check if we are configured correctly to generate a token.
+    /// This variant is used to make sure that we can generate a token,
+    /// to error out early if the token is not configured correctly.
+    PrePublish,
+    /// The user is attempting to publish a crate.
+    Publish {
+        /// The name of the crate
+        name: &'a str,
+        /// The version of the crate
+        vers: &'a str,
+        /// The checksum of the crate file being uploaded
+        cksum: &'a str,
+    },
+    /// The user is attempting to yank a crate.
+    Yank {
+        /// The name of the crate
+        name: &'a str,
+        /// The version of the crate
+        vers: &'a str,
+    },
+    /// The user is attempting to unyank a crate.
+    Unyank {
+        /// The name of the crate
+        name: &'a str,
+        /// The version of the crate
+        vers: &'a str,
+    },
+    /// The user is attempting to unyank a crate.
+    Owners {
+        /// The name of the crate
+        name: &'a str,
+    },
+}
+
+/// The main body of an asymmetric token as describe in RFC 3231.
+#[derive(serde::Serialize)]
+struct Message<'a> {
+    iat: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sub: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mutation: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    vers: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cksum: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    challenge: Option<&'a str>,
+    /// This field is not yet used. This field can be set to a value >1 to indicate a breaking change in the token format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    v: Option<u8>,
+}
+/// The footer of an asymmetric token as describe in RFC 3231.
+#[derive(serde::Serialize)]
+struct Footer<'a> {
+    url: &'a str,
+    kip: pasetors::paserk::Id,
 }
 
 enum Action {
@@ -301,9 +513,13 @@ enum Action {
 }
 
 /// Saves the given token.
-pub fn login(config: &Config, sid: &SourceId, token: String) -> CargoResult<()> {
+pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -> CargoResult<()> {
     match registry_credential_config(config, sid)? {
         RegistryCredentialConfig::Process(process) => {
+            let token = token
+                .as_token()
+                .expect("credential_process cannot use login with a secret_key")
+                .to_owned();
             run_command(config, &process, sid, Action::Store(token))?;
         }
         _ => {
@@ -311,6 +527,15 @@ pub fn login(config: &Config, sid: &SourceId, token: String) -> CargoResult<()> 
         }
     };
     Ok(())
+}
+
+/// Checks that a secret key is valid, and returns the associated public key in Paserk format.
+pub(crate) fn paserk_public_from_paserk_secret(secret_key: &str) -> Option<String> {
+    let secret: AsymmetricSecretKey<pasetors::version3::V3> = secret_key.try_into().ok()?;
+    let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into().ok()?;
+    let mut paserk_pub_key = String::new();
+    FormatAsPaserk::fmt(&public, &mut paserk_pub_key).unwrap();
+    Some(paserk_pub_key)
 }
 
 /// Removes the token for the given registry.
@@ -331,7 +556,7 @@ fn run_command(
     process: &(PathBuf, Vec<String>),
     sid: &SourceId,
     action: Action,
-) -> CargoResult<Option<String>> {
+) -> CargoResult<Option<(bool, String)>> {
     let index_url = sid.url().as_str();
     let cred_proc;
     let (exe, args) = if process.0.to_str().unwrap_or("").starts_with("cargo:") {
@@ -356,6 +581,8 @@ fn run_command(
             Action::Erase => bail!(msg("log out")),
         }
     }
+    // todo: PASETO with process
+    let independent_of_endpoint = true;
     let action_str = match action {
         Action::Get => "get",
         Action::Store(_) => "store",
@@ -426,7 +653,7 @@ fn run_command(
                 }
                 buffer.truncate(end);
             }
-            token = Some(buffer);
+            token = Some((independent_of_endpoint, buffer));
         }
         Action::Store(token) => {
             writeln!(child.stdin.as_ref().unwrap(), "{}", token).with_context(|| {
