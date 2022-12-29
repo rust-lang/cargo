@@ -856,13 +856,13 @@ impl Fingerprint {
     /// an error, it will never return success.
     fn compare(&self, old: &Fingerprint) -> DirtyReason {
         if self.rustc != old.rustc {
-            return DirtyReason::RustcChanged
+            return DirtyReason::RustcChanged;
         }
         if self.features != old.features {
             return DirtyReason::FeaturesChanged {
                 old: old.features.clone(),
                 new: self.features.clone(),
-            }
+            };
         }
         if self.target != old.target {
             return DirtyReason::TargetConfigurationChanged;
@@ -961,10 +961,12 @@ impl Fingerprint {
                         };
                     }
                 }
-                (a, b) => return DirtyReason::LocalFingerprintTypeChanged {
-                    old: b.kind(),
-                    new: a.kind(),
-                },
+                (a, b) => {
+                    return DirtyReason::LocalFingerprintTypeChanged {
+                        old: b.kind(),
+                        new: a.kind(),
+                    }
+                }
             }
         }
 
@@ -1700,21 +1702,21 @@ fn compare_old_fingerprint(
 
 fn log_compare(unit: &Unit, compare: &CargoResult<Option<DirtyReason>>) {
     match compare {
-        Ok(None) => {},
+        Ok(None) => {}
         Ok(Some(reason)) => {
             info!(
                 "fingerprint dirty for {}/{:?}/{:?}",
                 unit.pkg, unit.mode, unit.target,
             );
             info!("    dirty: {reason:?}");
-        },
+        }
         Err(e) => {
             info!(
                 "fingerprint error for {}/{:?}/{:?}",
                 unit.pkg, unit.mode, unit.target,
             );
             info!("    err: {e:?}");
-        },
+        }
     }
 }
 
