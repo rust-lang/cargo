@@ -68,7 +68,12 @@ registry to use. For example, to publish the package in the current directory:
 
 Instead of always passing the `--registry` command-line option, the default
 registry may be set in [`.cargo/config.toml`][config] with the `registry.default`
-key.
+key. For example:
+
+```toml
+[registry]
+default = "my-registry"
+```
 
 Setting the `package.publish` key in the `Cargo.toml` manifest restricts which
 registries the package is allowed to be published to. This is useful to
