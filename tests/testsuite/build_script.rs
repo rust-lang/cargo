@@ -1214,6 +1214,7 @@ fn only_rerun_build_script() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.5.0 ([CWD]): the precalculated components changed
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
@@ -1320,6 +1321,7 @@ fn testing_and_such() {
     p.cargo("test -vj1")
         .with_stderr(
             "\
+[DIRTY] foo v0.5.0 ([CWD]): the precalculated components changed
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
@@ -1717,6 +1719,7 @@ fn out_dir_is_preserved() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo [..]: the file `build.rs` has changed ([..])
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build [..]
 [RUNNING] `[..]/build-script-build`
@@ -1741,6 +1744,7 @@ fn out_dir_is_preserved() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo [..]: the precalculated components changed
 [COMPILING] foo [..]
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc --crate-name foo [..]
@@ -3005,6 +3009,7 @@ fn changing_an_override_invalidates() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.5.0 ([..]): the precalculated components changed
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -3295,6 +3300,7 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.5.0 ([..]): the file `foo` is missing
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
@@ -3313,6 +3319,7 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.5.0 ([..]): the file `foo` has changed ([..])
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
@@ -3351,6 +3358,7 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.5.0 ([..]): the file `foo` has changed ([..])
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
@@ -3360,11 +3368,12 @@ fn rebuild_only_on_explicit_paths() {
         .run();
 
     // .. as does deleting a file
-    println!("run foo delete");
+    println!("run bar delete");
     fs::remove_file(p.root().join("bar")).unwrap();
     p.cargo("build -v")
         .with_stderr(
             "\
+[DIRTY] foo v0.5.0 ([..]): the file `bar` is missing
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
@@ -4692,12 +4701,29 @@ fn rerun_if_directory() {
         )
         .build();
 
-    let dirty = || {
-        p.cargo("check")
-            .with_stderr(
-                "[COMPILING] foo [..]\n\
-                 [FINISHED] [..]",
-            )
+    let dirty = |dirty_line: &str, compile_build_script: bool| {
+        let mut dirty_line = dirty_line.to_string();
+
+        if !dirty_line.is_empty() {
+            dirty_line.push('\n');
+        }
+
+        let compile_build_script_line = if compile_build_script {
+            "[RUNNING] `rustc --crate-name build_script_build [..]\n"
+        } else {
+            ""
+        };
+
+        p.cargo("check -v")
+            .with_stderr(format!(
+                "\
+{dirty_line}\
+[COMPILING] foo [..]
+{compile_build_script_line}\
+[RUNNING] `[..]build-script-build[..]`
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] [..]",
+            ))
             .run();
     };
 
@@ -4706,10 +4732,13 @@ fn rerun_if_directory() {
     };
 
     // Start with a missing directory.
-    dirty();
+    dirty("", true);
     // Because the directory doesn't exist, it will trigger a rebuild every time.
     // https://github.com/rust-lang/cargo/issues/6003
-    dirty();
+    dirty(
+        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` is missing",
+        false,
+    );
 
     if is_coarse_mtime() {
         sleep_ms(1000);
@@ -4717,7 +4746,10 @@ fn rerun_if_directory() {
 
     // Empty directory.
     fs::create_dir(p.root().join("somedir")).unwrap();
-    dirty();
+    dirty(
+        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
+        false,
+    );
     fresh();
 
     if is_coarse_mtime() {
@@ -4727,7 +4759,10 @@ fn rerun_if_directory() {
     // Add a file.
     p.change_file("somedir/foo", "");
     p.change_file("somedir/bar", "");
-    dirty();
+    dirty(
+        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
+        false,
+    );
     fresh();
 
     if is_coarse_mtime() {
@@ -4736,7 +4771,10 @@ fn rerun_if_directory() {
 
     // Add a symlink.
     p.symlink("foo", "somedir/link");
-    dirty();
+    dirty(
+        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
+        false,
+    );
     fresh();
 
     if is_coarse_mtime() {
@@ -4746,7 +4784,10 @@ fn rerun_if_directory() {
     // Move the symlink.
     fs::remove_file(p.root().join("somedir/link")).unwrap();
     p.symlink("bar", "somedir/link");
-    dirty();
+    dirty(
+        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
+        false,
+    );
     fresh();
 
     if is_coarse_mtime() {
@@ -4755,7 +4796,10 @@ fn rerun_if_directory() {
 
     // Remove a file.
     fs::remove_file(p.root().join("somedir/foo")).unwrap();
-    dirty();
+    dirty(
+        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
+        false,
+    );
     fresh();
 }
 

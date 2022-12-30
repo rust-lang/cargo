@@ -2,6 +2,7 @@ use std::fmt;
 use std::mem;
 
 use super::job_queue::JobState;
+use crate::core::compiler::fingerprint::DirtyReason;
 use crate::util::CargoResult;
 
 pub struct Job {
@@ -49,10 +50,10 @@ impl Job {
     }
 
     /// Creates a new job representing a unit of work.
-    pub fn new_dirty(work: Work) -> Job {
+    pub fn new_dirty(work: Work, dirty_reason: Option<DirtyReason>) -> Job {
         Job {
             work,
-            fresh: Freshness::Dirty,
+            fresh: Freshness::Dirty(dirty_reason),
         }
     }
 
@@ -65,8 +66,8 @@ impl Job {
     /// Returns whether this job was fresh/dirty, where "fresh" means we're
     /// likely to perform just some small bookkeeping where "dirty" means we'll
     /// probably do something slow like invoke rustc.
-    pub fn freshness(&self) -> Freshness {
-        self.fresh
+    pub fn freshness(&self) -> &Freshness {
+        &self.fresh
     }
 
     pub fn before(&mut self, next: Work) {
@@ -85,8 +86,18 @@ impl fmt::Debug for Job {
 ///
 /// A fresh package does not necessarily need to be rebuilt (unless a dependency
 /// was also rebuilt), and a dirty package must always be rebuilt.
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Freshness {
     Fresh,
-    Dirty,
+    Dirty(Option<DirtyReason>),
+}
+
+impl Freshness {
+    pub fn is_dirty(&self) -> bool {
+        matches!(self, Freshness::Dirty(_))
+    }
+
+    pub fn is_fresh(&self) -> bool {
+        matches!(self, Freshness::Fresh)
+    }
 }

@@ -16,6 +16,11 @@
 //!   `[WARNING]`) to match cargo's "status" output and allows you to ignore
 //!   the alignment. See the source of `substitute_macros` for a complete list
 //!   of substitutions.
+//! - `[DIRTY-MSVC]` (only when the line starts with it) would be replaced by
+//!   `[DIRTY]` when `cfg(target_env = "msvc")` or the line will be ignored otherwise.
+//!   Tests that work around [issue 7358](https://github.com/rust-lang/cargo/issues/7358)
+//!   can use this to avoid duplicating the `with_stderr` call like:
+//!   `if cfg!(target_env = "msvc") {e.with_stderr("...[DIRTY]...");} else {e.with_stderr("...");}`.
 //!
 //! # Normalization
 //!
@@ -108,7 +113,9 @@ fn normalize_actual(actual: &str, cwd: Option<&Path>) -> String {
 
 /// Normalizes the expected string so that it can be compared against the actual output.
 fn normalize_expected(expected: &str, cwd: Option<&Path>) -> String {
-    let expected = substitute_macros(expected);
+    let expected = replace_dirty_msvc(expected);
+    let expected = substitute_macros(&expected);
+
     if cfg!(windows) {
         normalize_windows(&expected, cwd)
     } else {
@@ -119,6 +126,29 @@ fn normalize_expected(expected: &str, cwd: Option<&Path>) -> String {
         let expected = expected.replace("[ROOT]", &paths::root().display().to_string());
         expected
     }
+}
+
+fn replace_dirty_msvc_impl(s: &str, is_msvc: bool) -> String {
+    if is_msvc {
+        s.replace("[DIRTY-MSVC]", "[DIRTY]")
+    } else {
+        use itertools::Itertools;
+
+        let mut new = s
+            .lines()
+            .filter(|it| !it.starts_with("[DIRTY-MSVC]"))
+            .join("\n");
+
+        if s.ends_with("\n") {
+            new.push_str("\n");
+        }
+
+        new
+    }
+}
+
+fn replace_dirty_msvc(s: &str) -> String {
+    replace_dirty_msvc_impl(s, cfg!(target_env = "msvc"))
 }
 
 /// Normalizes text for both actual and expected strings on Windows.
@@ -170,6 +200,7 @@ fn substitute_macros(input: &str) -> String {
         ("[DOCUMENTING]", " Documenting"),
         ("[SCRAPING]", "    Scraping"),
         ("[FRESH]", "       Fresh"),
+        ("[DIRTY]", "       Dirty"),
         ("[UPDATING]", "    Updating"),
         ("[ADDING]", "      Adding"),
         ("[REMOVING]", "    Removing"),
@@ -636,4 +667,115 @@ fn wild_str_cmp() {
     for (a, b) in &[("[..]b", "c"), ("b", "c"), ("b", "cb")] {
         assert_ne!(WildStr::new(a), WildStr::new(b));
     }
+}
+
+#[test]
+fn dirty_msvc() {
+    let case = |expected: &str, wild: &str, msvc: bool| {
+        assert_eq!(expected, &replace_dirty_msvc_impl(wild, msvc));
+    };
+
+    // no replacements
+    case("aa", "aa", false);
+    case("aa", "aa", true);
+
+    // with replacements
+    case(
+        "\
+[DIRTY] a",
+        "\
+[DIRTY-MSVC] a",
+        true,
+    );
+    case(
+        "",
+        "\
+[DIRTY-MSVC] a",
+        false,
+    );
+    case(
+        "\
+[DIRTY] a
+[COMPILING] a",
+        "\
+[DIRTY-MSVC] a
+[COMPILING] a",
+        true,
+    );
+    case(
+        "\
+[COMPILING] a",
+        "\
+[DIRTY-MSVC] a
+[COMPILING] a",
+        false,
+    );
+
+    // test trailing newline behavior
+    case(
+        "\
+A
+B
+", "\
+A
+B
+", true,
+    );
+
+    case(
+        "\
+A
+B
+", "\
+A
+B
+", false,
+    );
+
+    case(
+        "\
+A
+B", "\
+A
+B", true,
+    );
+
+    case(
+        "\
+A
+B", "\
+A
+B", false,
+    );
+
+    case(
+        "\
+[DIRTY] a
+",
+        "\
+[DIRTY-MSVC] a
+",
+        true,
+    );
+    case(
+        "\n",
+        "\
+[DIRTY-MSVC] a
+",
+        false,
+    );
+
+    case(
+        "\
+[DIRTY] a",
+        "\
+[DIRTY-MSVC] a",
+        true,
+    );
+    case(
+        "",
+        "\
+[DIRTY-MSVC] a",
+        false,
+    );
 }

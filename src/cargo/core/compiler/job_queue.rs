@@ -54,7 +54,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io;
 use std::marker;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread::{self, Scope};
 use std::time::Duration;
@@ -676,7 +676,7 @@ impl<'cfg> DrainState<'cfg> {
                 // NOTE: An error here will drop the job without starting it.
                 // That should be OK, since we want to exit as soon as
                 // possible during an error.
-                self.note_working_on(cx.bcx.config, &unit, job.freshness())?;
+                self.note_working_on(cx.bcx.config, cx.bcx.ws.root(), &unit, job.freshness())?;
             }
             self.run(&unit, job, cx, scope);
         }
@@ -1116,7 +1116,7 @@ impl<'cfg> DrainState<'cfg> {
         assert!(self.active.insert(id, unit.clone()).is_none());
 
         let messages = self.messages.clone();
-        let fresh = job.freshness();
+        let is_fresh = job.freshness().is_fresh();
         let rmeta_required = cx.rmeta_required(unit);
 
         let doit = move |state: JobState<'_, '_>| {
@@ -1167,8 +1167,8 @@ impl<'cfg> DrainState<'cfg> {
             }
         };
 
-        match fresh {
-            Freshness::Fresh => {
+        match is_fresh {
+            true => {
                 self.timings.add_fresh();
                 // Running a fresh job on the same thread is often much faster than spawning a new
                 // thread to run the job.
@@ -1180,7 +1180,7 @@ impl<'cfg> DrainState<'cfg> {
                     _marker: marker::PhantomData,
                 });
             }
-            Freshness::Dirty => {
+            false => {
                 self.timings.add_dirty();
                 scope.spawn(move || {
                     doit(JobState {
@@ -1355,8 +1355,9 @@ impl<'cfg> DrainState<'cfg> {
     fn note_working_on(
         &mut self,
         config: &Config,
+        ws_root: &Path,
         unit: &Unit,
-        fresh: Freshness,
+        fresh: &Freshness,
     ) -> CargoResult<()> {
         if (self.compiled.contains(&unit.pkg.package_id())
             && !unit.mode.is_doc()
@@ -1370,7 +1371,13 @@ impl<'cfg> DrainState<'cfg> {
         match fresh {
             // Any dirty stage which runs at least one command gets printed as
             // being a compiled package.
-            Dirty => {
+            Dirty(dirty_reason) => {
+                if let Some(reason) = dirty_reason {
+                    config
+                        .shell()
+                        .verbose(|shell| reason.present_to(shell, unit, ws_root))?;
+                }
+
                 if unit.mode.is_doc() {
                     self.documented.insert(unit.pkg.package_id());
                     config.shell().status("Documenting", &unit.pkg)?;

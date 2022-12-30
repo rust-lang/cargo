@@ -2321,8 +2321,10 @@ fn calc_bin_artifact_fingerprint() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
+[DIRTY] bar v0.5.0 ([CWD]/bar): the file `bar/src/main.rs` has changed ([..])
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar [..]`
+[DIRTY] foo v0.1.0 ([CWD]): the dependency bar was rebuilt
 [CHECKING] foo v0.1.0 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]

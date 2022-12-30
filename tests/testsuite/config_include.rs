@@ -74,6 +74,7 @@ fn works_with_cli() {
         .masquerade_as_nightly_cargo(&["config-include"])
         .with_stderr(
             "\
+[DIRTY] foo v0.0.1 ([..]): the rustflags changed
 [COMPILING] foo v0.0.1 [..]
 [RUNNING] `rustc [..]-W unsafe-code -W unused`
 [FINISHED] [..]

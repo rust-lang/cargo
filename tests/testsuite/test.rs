@@ -2661,6 +2661,7 @@ fn bin_does_not_rebuild_tests() {
     p.cargo("test -v --no-run")
         .with_stderr(
             "\
+[DIRTY] foo v0.0.1 ([..]): the file `src/main.rs` has changed ([..])
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] src/main.rs [..]`
 [RUNNING] `rustc [..] src/main.rs [..]`
