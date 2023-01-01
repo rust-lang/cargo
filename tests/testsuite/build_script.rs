@@ -15,7 +15,7 @@ use std::io;
 use std::thread;
 
 #[cargo_test]
-fn custom_build_script_failed() {
+fn custom_build_script_failed_verbose() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -38,10 +38,50 @@ fn custom_build_script_failed() {
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+[ERROR] custom build command for `foo v0.5.0 ([CWD])` has failed
 
 Caused by:
   process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_build_script_failed_terse() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            "fn main() { println!(\"cargo:noise=1\netc\"); panic!(\"oops\"); }",
+        )
+        .build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[ERROR] custom build command for `foo v0.5.0 ([CWD])` has failed
+  thread 'main' panicked at 'oops', build.rs:2:8
+  stack backtrace:
+     0: [..]
+               at [..]
+     1: build_script_build::main
+               at [..]
+     2: [..]
+               at [..]
+  note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+[NOTE] for more details, run again with '--verbose'",
         )
         .run();
 }

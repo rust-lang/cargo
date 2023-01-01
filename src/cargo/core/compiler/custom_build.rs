@@ -7,9 +7,10 @@ use crate::core::{profiles::ProfileRoot, PackageId, Target};
 use crate::util::errors::CargoResult;
 use crate::util::machine_message::{self, Message};
 use crate::util::{internal, profile};
-use anyhow::{bail, Context as _};
+use crate::VerboseError;
+use anyhow::{bail, Context as _, Error};
 use cargo_platform::Cfg;
-use cargo_util::paths;
+use cargo_util::{paths, ProcessError};
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -386,26 +387,24 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         let timestamp = paths::set_invocation_time(&script_run_dir)?;
         let prefix = format!("[{} {}] ", id.name(), id.version());
         let mut warnings_in_case_of_panic = Vec::new();
-        let output = cmd
-            .exec_with_streaming(
-                &mut |stdout| {
-                    if let Some(warning) = stdout.strip_prefix(CARGO_WARNING) {
-                        warnings_in_case_of_panic.push(warning.to_owned());
-                    }
-                    if extra_verbose {
-                        state.stdout(format!("{}{}", prefix, stdout))?;
-                    }
-                    Ok(())
-                },
-                &mut |stderr| {
-                    if extra_verbose {
-                        state.stderr(format!("{}{}", prefix, stderr))?;
-                    }
-                    Ok(())
-                },
-                true,
-            )
-            .with_context(|| format!("failed to run custom build command for `{}`", pkg_descr));
+        let output = cmd.exec_with_streaming(
+            &mut |stdout| {
+                if let Some(warning) = stdout.strip_prefix(CARGO_WARNING) {
+                    warnings_in_case_of_panic.push(warning.to_owned());
+                }
+                if extra_verbose {
+                    state.stdout(format!("{}{}", prefix, stdout))?;
+                }
+                Ok(())
+            },
+            &mut |stderr| {
+                if extra_verbose {
+                    state.stderr(format!("{}{}", prefix, stderr))?;
+                }
+                Ok(())
+            },
+            true,
+        );
 
         if let Err(error) = output {
             insert_warnings_in_build_outputs(
@@ -414,7 +413,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 metadata_hash,
                 warnings_in_case_of_panic,
             );
-            return Err(error);
+            return Err(build_error_with_context(error, &pkg_descr));
         }
 
         let output = output.unwrap();
@@ -494,6 +493,42 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         job.before(fresh);
     }
     Ok(job)
+}
+
+fn build_error_with_context(error: Error, pkg_descr: &str) -> Error {
+    let Some(perr) = error.downcast_ref::<ProcessError>() else {
+        return error.context(format!("failed to run custom build command for `{}`", pkg_descr));
+    };
+
+    let mut msg = format!("custom build command for `{}` has failed", pkg_descr);
+
+    let mut parsing_stdout = false;
+    let output = perr
+        .stderr
+        .as_ref()
+        .and_then(|stderr| std::str::from_utf8(stderr).ok())
+        .filter(|stderr| !stderr.trim_start().is_empty())
+        .or_else(|| {
+            parsing_stdout = true;
+            perr.stdout
+                .as_ref()
+                .and_then(|stdout| std::str::from_utf8(stdout).ok())
+        });
+
+    if let Some(out) = output {
+        let mut skipping_backtrace = false;
+        for line in out.lines() {
+            // Cargo directives aren't part of the error message text (except cargo:warning, which is reported separately).
+            // Some scripts print a lot of cargo:rerun-if-env-changed that obscure the root cause of the failure.
+            if parsing_stdout && line.starts_with("cargo:") {
+                continue;
+            }
+
+            msg.push_str("\n  ");
+            msg.push_str(line);
+        }
+    }
+    Error::from(VerboseError::new(error)).context(msg)
 }
 
 fn insert_warnings_in_build_outputs(
