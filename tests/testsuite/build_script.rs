@@ -72,15 +72,7 @@ fn custom_build_script_failed_terse() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [ERROR] custom build command for `foo v0.5.0 ([CWD])` has failed
-  thread 'main' panicked at 'oops', build.rs:2:8
-  stack backtrace:
-     0: [..]
-               at [..]
-     1: build_script_build::main
-               at [..]
-     2: [..]
-               at [..]
-  note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+  'oops', build.rs:2:8
 [NOTE] for more details, run again with '--verbose'",
         )
         .run();

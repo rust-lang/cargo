@@ -501,6 +501,7 @@ fn build_error_with_context(error: Error, pkg_descr: &str) -> Error {
     };
 
     let mut msg = format!("custom build command for `{}` has failed", pkg_descr);
+    let may_be_panic = perr.code == Some(101);
 
     let mut parsing_stdout = false;
     let output = perr
@@ -517,11 +518,39 @@ fn build_error_with_context(error: Error, pkg_descr: &str) -> Error {
 
     if let Some(out) = output {
         let mut skipping_backtrace = false;
-        for line in out.lines() {
+        for mut line in out.lines() {
             // Cargo directives aren't part of the error message text (except cargo:warning, which is reported separately).
             // Some scripts print a lot of cargo:rerun-if-env-changed that obscure the root cause of the failure.
             if parsing_stdout && line.starts_with("cargo:") {
                 continue;
+            }
+
+            if !parsing_stdout && may_be_panic {
+                // Panics print a backtrace, but the location within the build script is not interesting to downstream users
+                if line == "stack backtrace:" {
+                    skipping_backtrace = true;
+                    continue;
+                }
+                if line == "note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace." || line == "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace" {
+                    skipping_backtrace = false;
+                    continue;
+                }
+                if skipping_backtrace {
+                    if line.starts_with("   ") {
+                        continue;
+                    }
+                    skipping_backtrace = false;
+                }
+                // Build scripts tend to unwrap() errors. This skips the most common panic message boilerplate.
+                if let Some(rest) = line.strip_prefix("thread 'main' panicked at ") {
+                    line = rest;
+                    if let Some(rest) =
+                        line.strip_prefix("'called `Result::unwrap()` on an `Err` value: ")
+                    {
+                        msg.push('\''); // re-add stripped quote start
+                        line = rest;
+                    }
+                }
             }
 
             msg.push_str("\n  ");
