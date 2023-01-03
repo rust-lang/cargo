@@ -24,7 +24,7 @@ the `cargo logout` command.
 
 /// Checks whether or not the token is set for the given token.
 fn check_config_token(registry: Option<&str>, should_be_set: bool) {
-    let credentials = cargo_home().join("credentials");
+    let credentials = cargo_home().join("credentials.toml");
     let contents = fs::read_to_string(&credentials).unwrap();
     let toml: toml::Value = contents.parse().unwrap();
     if let Some(registry) = registry {

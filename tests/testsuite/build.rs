@@ -2893,7 +2893,7 @@ fn credentials_is_unreadable() {
         .file("src/lib.rs", "")
         .build();
 
-    let credentials = home().join(".cargo/credentials");
+    let credentials = home().join(".cargo/credentials.toml");
     t!(fs::create_dir_all(credentials.parent().unwrap()));
     t!(fs::write(
         &credentials,

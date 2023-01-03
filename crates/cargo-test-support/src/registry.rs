@@ -320,7 +320,7 @@ impl RegistryBuilder {
         }
 
         if self.configure_token {
-            let credentials = paths::home().join(".cargo/credentials");
+            let credentials = paths::home().join(".cargo/credentials.toml");
             match &registry.token {
                 Token::Plaintext(token) => {
                     if let Some(alternative) = &self.alternative {

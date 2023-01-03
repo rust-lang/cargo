@@ -231,7 +231,7 @@ fn old_token_location() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    let credentials = paths::home().join(".cargo/credentials");
+    let credentials = paths::home().join(".cargo/credentials.toml");
     fs::remove_file(&credentials).unwrap();
 
     // Verify can't publish without a token.
@@ -1614,8 +1614,9 @@ fn credentials_ambiguous_filename() {
     // `publish` generally requires a remote registry
     let registry = registry::RegistryBuilder::new().http_api().build();
 
+    // Make token in `credentials.toml` incorrect to ensure it is not read.
     let credentials_toml = paths::home().join(".cargo/credentials.toml");
-    fs::write(credentials_toml, r#"token = "api-token""#).unwrap();
+    fs::write(credentials_toml, r#"token = "wrong-token""#).unwrap();
 
     let p = project()
         .file(
@@ -1631,6 +1632,16 @@ fn credentials_ambiguous_filename() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_contains("[..]Unauthorized message from server[..]")
+        .run();
+
+    // Favor `credentials` if exists.
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::write(credentials, r#"token = "sekrit""#).unwrap();
 
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
@@ -1656,7 +1667,7 @@ fn index_requires_token() {
     // Use local registry for faster test times since no publish will occur
     let registry = registry::init();
 
-    let credentials = paths::home().join(".cargo/credentials");
+    let credentials = paths::home().join(".cargo/credentials.toml");
     fs::remove_file(&credentials).unwrap();
 
     let p = project()
