@@ -53,6 +53,8 @@
   [#11285](https://github.com/rust-lang/cargo/pull/11285)
 - ❗ Cargo now emits an error when running `cargo update --precise` without a `-p` flag.
   [#11349](https://github.com/rust-lang/cargo/pull/11349)
+- ❗ Cargo now emits an error if there are multiple registries in the configuration with the same index URL.
+  [#10592](https://github.com/rust-lang/cargo/pull/10592)
 - Cargo now is aware of compression ratio when extracing crate files.
   This relaxes the hard size limit introduced in 1.64.0 to mitigate zip bomb attack.
   [#11337](https://github.com/rust-lang/cargo/pull/11337)
