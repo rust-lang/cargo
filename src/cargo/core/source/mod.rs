@@ -63,7 +63,7 @@ pub trait Source {
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
     ///
-    /// This fingerprint is used to determine the "fresheness" of the source
+    /// This fingerprint is used to determine the "freshness" of the source
     /// later on. It must be guaranteed that the fingerprint of a source is
     /// constant if and only if the output product will remain constant.
     ///
