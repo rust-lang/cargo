@@ -203,3 +203,5 @@ The JSON objects should not be modified after they are added except for the
 `yanked` field whose value may change at any time.
 
 [`cargo publish`]: ../commands/cargo-publish.md
+[alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
+[crates.io]: https://crates.io/

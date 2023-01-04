@@ -104,6 +104,7 @@ token = "854DvwSlUwEHtIo3kWy6x7UCPKHfzCmy"
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo login`]: ../commands/cargo-login.md
 [config]: config.md
+[crates.io]: https://crates.io/
 
 <script>
 (function() {
