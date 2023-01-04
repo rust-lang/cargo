@@ -912,7 +912,7 @@ a new `cargo logout` command.
 
 To use this feature, you must pass the `-Z credential-process` flag on the
 command-line. Additionally, you must remove any current tokens currently saved
-in the [`credentials` file] (which can be done with the new `logout` command).
+in the [`credentials.toml` file] (which can be done with the new `logout` command).
 
 #### `credential-process` Configuration
 
@@ -1049,10 +1049,10 @@ The following environment variables will be provided to the executed command:
 #### `cargo logout`
 
 A new `cargo logout` command has been added to make it easier to remove a
-token from storage. This supports both [`credentials` file] tokens and
+token from storage. This supports both [`credentials.toml` file] tokens and
 `credential-process` tokens.
 
-When used with `credentials` file tokens, it needs the `-Z unstable-options`
+When used with `credentials.toml` file tokens, it needs the `-Z unstable-options`
 command-line option:
 
 ```console
@@ -1071,7 +1071,7 @@ cargo logout -Z credential-process
 [`cargo publish`]: ../commands/cargo-publish.md
 [`cargo owner`]: ../commands/cargo-owner.md
 [`cargo yank`]: ../commands/cargo-yank.md
-[`credentials` file]: config.md#credentials
+[`credentials.toml` file]: config.md#credentials
 [crates.io]: https://crates.io/
 [config file]: config.md
 
