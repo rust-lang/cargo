@@ -252,6 +252,14 @@ pub trait CommandExt: Sized {
             .require_equals(true),
         )
     }
+
+    fn arg_show_summary(self) -> Self {
+        self._arg(flag("summary", "Show diagnostic summary"))
+    }
+
+    fn arg_hide_summary(self) -> Self {
+        self._arg(flag("no-summary", "Suppress diagnostic summary"))
+    }
 }
 
 impl CommandExt for Command {

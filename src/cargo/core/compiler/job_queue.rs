@@ -1351,7 +1351,11 @@ impl<'cfg> DrainState<'cfg> {
             .into_iter()
             .collect();
         let total_diag_count: usize = diag_stats.iter().map(|(_, count)| count).sum();
-        if total_diag_count >= DIAGNOSTIC_SUMMARY_THRESHOLD {
+
+        let print_summary = config
+            .summary_override
+            .unwrap_or(total_diag_count >= DIAGNOSTIC_SUMMARY_THRESHOLD);
+        if print_summary {
             // we sort the each diagnostic count by count and name. We will primarily sort descending by count, and for
             // entries with the same count we shall sort by alphabetic order by the lint name.
             diag_stats

@@ -37,6 +37,8 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_future_incompat_report()
         .arg_timings()
+        .arg_show_summary()
+        .arg_hide_summary()
         .after_help("Run `cargo help check` for more detailed information.\n")
 }
 
