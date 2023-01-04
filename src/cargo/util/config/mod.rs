@@ -2134,16 +2134,16 @@ pub fn save_credentials(
         Some(name)
     };
 
-    // If 'credentials.toml' exists, we should write to that, otherwise
-    // use the legacy 'credentials'. There's no need to print the warning
-    // here, because it would already be printed at load time.
+    // If 'credentials' exists, write to that for backward compatibility reasons.
+    // Otherwise write to 'credentials.toml'. There's no need to print the
+    // warning here, because it would already be printed at load time.
     let home_path = cfg.home_path.clone().into_path_unlocked();
     let filename = match cfg.get_file_path(&home_path, "credentials", false)? {
         Some(path) => match path.file_name() {
             Some(filename) => Path::new(filename).to_owned(),
-            None => Path::new("credentials").to_owned(),
+            None => Path::new("credentials.toml").to_owned(),
         },
-        None => Path::new("credentials").to_owned(),
+        None => Path::new("credentials.toml").to_owned(),
     };
 
     let mut file = {

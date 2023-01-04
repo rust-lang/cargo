@@ -1,11 +1,10 @@
 //! Tests for the `cargo login` command.
 
 use cargo_test_support::cargo_process;
-use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{self, RegistryBuilder};
 use cargo_test_support::t;
-use std::fs::{self};
+use std::fs;
 use std::path::PathBuf;
 use toml_edit::easy as toml;
 
@@ -13,9 +12,12 @@ const TOKEN: &str = "test-token";
 const TOKEN2: &str = "test-token2";
 const ORIGINAL_TOKEN: &str = "api-token";
 
+fn credentials_toml() -> PathBuf {
+    paths::home().join(".cargo/credentials.toml")
+}
+
 fn setup_new_credentials() {
-    let config = cargo_home().join("credentials");
-    setup_new_credentials_at(config);
+    setup_new_credentials_at(credentials_toml());
 }
 
 fn setup_new_credentials_at(config: PathBuf) {
@@ -27,7 +29,7 @@ fn setup_new_credentials_at(config: PathBuf) {
 }
 
 fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
-    let credentials = cargo_home().join("credentials");
+    let credentials = credentials_toml();
     assert!(credentials.is_file());
 
     let contents = fs::read_to_string(&credentials).unwrap();
@@ -189,7 +191,7 @@ fn login_with_no_cargo_dir() {
     cargo_process("login foo -v")
         .replace_crates_io(registry.index_url())
         .run();
-    let credentials = fs::read_to_string(paths::home().join(".cargo/credentials")).unwrap();
+    let credentials = fs::read_to_string(credentials_toml()).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"foo\"\n");
 }
 
@@ -197,7 +199,7 @@ fn login_with_no_cargo_dir() {
 fn login_with_differently_sized_token() {
     // Verify that the configuration file gets properly truncated.
     let registry = registry::init();
-    let credentials = paths::home().join(".cargo/credentials");
+    let credentials = credentials_toml();
     fs::remove_file(&credentials).unwrap();
     cargo_process("login lmaolmaolmao -v")
         .replace_crates_io(registry.index_url())
@@ -215,7 +217,7 @@ fn login_with_differently_sized_token() {
 #[cargo_test]
 fn login_with_token_on_stdin() {
     let registry = registry::init();
-    let credentials = paths::home().join(".cargo/credentials");
+    let credentials = credentials_toml();
     fs::remove_file(&credentials).unwrap();
     cargo_process("login lmao -v")
         .replace_crates_io(registry.index_url())
@@ -232,7 +234,7 @@ fn login_with_token_on_stdin() {
 #[cargo_test]
 fn login_with_asymmetric_token_and_subject_on_stdin() {
     let registry = registry::init();
-    let credentials = paths::home().join(".cargo/credentials");
+    let credentials = credentials_toml();
     fs::remove_file(&credentials).unwrap();
     cargo_process("login --key-subject=foo --secret-key -v -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
@@ -253,7 +255,7 @@ k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
 #[cargo_test]
 fn login_with_asymmetric_token_on_stdin() {
     let registry = registry::init();
-    let credentials = paths::home().join(".cargo/credentials");
+    let credentials = credentials_toml();
     fs::remove_file(&credentials).unwrap();
     cargo_process("login --secret-key -v -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
@@ -272,7 +274,7 @@ k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
 #[cargo_test]
 fn login_with_asymmetric_key_subject_without_key() {
     let registry = registry::init();
-    let credentials = paths::home().join(".cargo/credentials");
+    let credentials = credentials_toml();
     fs::remove_file(&credentials).unwrap();
     cargo_process("login --key-subject=foo -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
@@ -307,7 +309,7 @@ k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
 #[cargo_test]
 fn login_with_generate_asymmetric_token() {
     let registry = registry::init();
-    let credentials = paths::home().join(".cargo/credentials");
+    let credentials = credentials_toml();
     fs::remove_file(&credentials).unwrap();
     cargo_process("login --generate-keypair -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])

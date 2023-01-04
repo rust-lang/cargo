@@ -399,7 +399,7 @@ fn block_publish_due_to_no_token() {
     registry::alt_init();
     let p = project().file("src/lib.rs", "").build();
 
-    fs::remove_file(paths::home().join(".cargo/credentials")).unwrap();
+    fs::remove_file(paths::home().join(".cargo/credentials.toml")).unwrap();
 
     // Now perform the actual publish
     p.cargo("publish --registry alternative")
