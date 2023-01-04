@@ -361,6 +361,7 @@ fn panic_abort_plugins() {
             r#"
                 #![feature(rustc_private)]
                 extern crate rustc_ast;
+                extern crate rustc_driver;
             "#,
         )
         .build();
@@ -408,6 +409,7 @@ fn shared_panic_abort_plugins() {
             r#"
                 #![feature(rustc_private)]
                 extern crate rustc_ast;
+                extern crate rustc_driver;
                 extern crate baz;
             "#,
         )
