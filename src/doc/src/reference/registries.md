@@ -8,7 +8,7 @@ support publishing new crates directly from Cargo.
 > Note: If you are interested in mirroring or vendoring an existing registry,
 > take a look at [Source Replacement].
 
-If you are implementing a registry server, see [Running at Registry] for more
+If you are implementing a registry server, see [Running a Registry] for more
 details about the protocol between Cargo and a registry.
 
 ### Using an Alternate Registry
@@ -99,7 +99,7 @@ token = "854DvwSlUwEHtIo3kWy6x7UCPKHfzCmy"
 ```
 
 [Source Replacement]: source-replacement.md
-[Running at Registry]: running-a-registry.md
+[Running a Registry]: running-a-registry.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo login`]: ../commands/cargo-login.md
