@@ -1503,11 +1503,16 @@ fn on_stderr_line_inner(
             ..
         } => {
             #[derive(serde::Deserialize)]
+            struct DiagnosticCode {
+                code: String,
+            }
+            #[derive(serde::Deserialize)]
             struct CompilerMessage {
                 rendered: String,
                 message: String,
                 level: String,
                 children: Vec<PartialDiagnostic>,
+                code: Option<DiagnosticCode>,
             }
 
             // A partial rustfix::diagnostics::Diagnostic. We deserialize only a
@@ -1563,7 +1568,12 @@ fn on_stderr_line_inner(
                         })
                         .any(|b| b);
                     count_diagnostic(&msg.level, options);
-                    state.emit_diag(msg.level, rendered, machine_applicable)?;
+                    state.emit_diag(
+                        msg.level,
+                        rendered,
+                        machine_applicable,
+                        msg.code.map(|code| code.code),
+                    )?;
                 }
                 return Ok(true);
             }

@@ -132,6 +132,7 @@ struct DrainState<'cfg> {
     diag_dedupe: DiagDedupe<'cfg>,
     /// Count of warnings, used to print a summary after the job succeeds
     warning_count: HashMap<JobId, WarningCount>,
+    diagnostic_codes: HashMap<JobId, HashMap<String, usize>>,
     active: HashMap<JobId, Unit>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
@@ -201,6 +202,9 @@ impl WarningCount {
         }
     }
 }
+
+// If the total number of diagnostics is at least this many, then output a summary.
+const DIAGNOSTIC_SUMMARY_THRESHOLD: usize = 10;
 
 /// Used to keep track of how many fixable warnings there are
 /// and if fixable warnings are allowed
@@ -356,6 +360,7 @@ enum Message {
         level: String,
         diag: String,
         fixable: bool,
+        code: Option<String>,
     },
     // This handles duplicate output that is suppressed, for showing
     // only a count of duplicate messages instead
@@ -420,7 +425,13 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
     }
 
     /// See [`Message::Diagnostic`] and [`Message::WarningCount`].
-    pub fn emit_diag(&self, level: String, diag: String, fixable: bool) -> CargoResult<()> {
+    pub fn emit_diag(
+        &self,
+        level: String,
+        diag: String,
+        fixable: bool,
+        code: Option<String>,
+    ) -> CargoResult<()> {
         if let Some(dedupe) = self.output {
             let emitted = dedupe.emit_diag(&diag)?;
             if level == "warning" {
@@ -436,6 +447,7 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
                 level,
                 diag,
                 fixable,
+                code,
             });
         }
         Ok(())
@@ -586,6 +598,7 @@ impl<'cfg> JobQueue<'cfg> {
             messages: Arc::new(Queue::new(100)),
             diag_dedupe: DiagDedupe::new(cx.bcx.config),
             warning_count: HashMap::new(),
+            diagnostic_codes: HashMap::new(),
             active: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -755,7 +768,11 @@ impl<'cfg> DrainState<'cfg> {
                 level,
                 diag,
                 fixable,
+                code,
             } => {
+                if let Some(code) = code {
+                    self.bump_diagnostic_count(id, code);
+                }
                 let emitted = self.diag_dedupe.emit_diag(&diag)?;
                 if level == "warning" {
                     self.bump_warning_count(id, emitted, fixable);
@@ -1247,6 +1264,12 @@ impl<'cfg> DrainState<'cfg> {
         }
     }
 
+    fn bump_diagnostic_count(&mut self, id: JobId, code: String) {
+        let code_counts = self.diagnostic_codes.entry(id).or_default();
+        let total = code_counts.entry(code).or_default();
+        *total += 1;
+    }
+
     /// Displays a final report of the warnings emitted by a particular job.
     fn report_warning_count(
         &mut self,
@@ -1320,6 +1343,26 @@ impl<'cfg> DrainState<'cfg> {
                 }
             }
         }
+
+        let mut diag_stats: Vec<(String, usize)> = self
+            .diagnostic_codes
+            .remove(&id)
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
+        let total_diag_count: usize = diag_stats.iter().map(|(_, count)| count).sum();
+        if total_diag_count >= DIAGNOSTIC_SUMMARY_THRESHOLD {
+            // we sort the each diagnostic count by count and name. We will primarily sort descending by count, and for
+            // entries with the same count we shall sort by alphabetic order by the lint name.
+            diag_stats
+                .sort_by(|(name1, count1), (name2, count2)| (count2, name1).cmp(&(count1, name2)));
+            message.push_str("\n\n");
+            message.push_str("Summary of diagnostics:\n");
+            for (name, count) in diag_stats {
+                message.push_str(format!("{name}: {count}\n").as_str());
+            }
+        }
+
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.
         drop(config.shell().warn(message));
