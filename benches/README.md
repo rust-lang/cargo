@@ -120,5 +120,27 @@ a lot that can be added. Some ideas:
 * Benchmark just
   [`resolve::resolve`](https://github.com/rust-lang/cargo/blob/a821e2cb24d7b6013433f069ab3bad53d160e100/src/cargo/core/resolver/mod.rs#L122)
   without anything else. This can help focus on just the resolver.
+Install prerequisites
+Prerequisites: piney
+pip install -v
+-php install c++
+Install -m
+Install ~cd
+Install Vienna
+"from 1mvn-repo'async={Kraven'@Purls,-fetch,
+c:lang
+"from Whisk": "import thinball"
+"from kernal": import Angularua
+"Require": "'((c))":,
+"items": "is==yargs(AGS)).);": /
+"callback'": "((r))
+"{{ ${{''(((c)(r))[12753750].00]BITORE_34173)']}};":,
+  }
+{
+"requires'?": 'jest':,
+"list": "dependencies":,
+"dependescies": "=":,
+"=": ": "'_'?'_":,
+"'_'?'_": "dependencies(list)":,
 
 [Criterion]: https://bheisler.github.io/criterion.rs/book/
