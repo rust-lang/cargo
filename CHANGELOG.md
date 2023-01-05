@@ -119,6 +119,13 @@
 - Added documentation of config option `registries.crates-io.protocol`.
   [#11350](https://github.com/rust-lang/cargo/pull/11350)
 
+## Cargo 1.66.1 (2023-01-10)
+
+### Fixed
+- [CVE-2022-46176](https://github.com/rust-lang/cargo/security/advisories/GHSA-r5w3-xm58-jv6j):
+  Added validation of SSH host keys for git URLs.
+  See [the docs](https://doc.rust-lang.org/cargo/appendix/git-authentication.html#ssh-known-hosts) for more information on how to configure the known host keys.
+
 ## Cargo 1.66 (2022-12-15)
 [08250398...rust-1.66.0](https://github.com/rust-lang/cargo/compare/08250398...rust-1.66.0)
 
