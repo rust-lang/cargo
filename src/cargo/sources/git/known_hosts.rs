@@ -158,7 +158,7 @@ pub fn certificate_check(
                 The {key_type_short_name} key fingerprint is: SHA256:{remote_fingerprint}\n\
                 This fingerprint should be validated with the server administrator that it is correct.\n\
                 {other_hosts_message}\n\
-                See https://doc.rust-lang.org/nightly/cargo/appendix/git-authentication.html#ssh-known-hosts \
+                See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts \
                 for more information.\n\
                 ")
         }
@@ -216,7 +216,7 @@ pub fn certificate_check(
                 \n\
                 {hostname} {key_type_name} {remote_host_key}\n\
                 \n\
-                See https://doc.rust-lang.org/nightly/cargo/appendix/git-authentication.html#ssh-known-hosts \
+                See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts \
                 for more information.\n\
                 ")
         }
