@@ -1351,7 +1351,10 @@ impl<'cfg> DrainState<'cfg> {
             .into_iter()
             .collect();
         let total_diag_count: usize = diag_stats.iter().map(|(_, count)| count).sum();
-        if total_diag_count >= DIAGNOSTIC_SUMMARY_THRESHOLD {
+        // We only show the diagnostic summary if the user is running `cargo clippy`
+        let clippy = std::ffi::OsStr::new("clippy-driver");
+        let is_running_clippy = Some(clippy) == rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem());
+        if is_running_clippy && total_diag_count >= DIAGNOSTIC_SUMMARY_THRESHOLD {
             // we sort the each diagnostic count by count and name. We will primarily sort descending by count, and for
             // entries with the same count we shall sort by alphabetic order by the lint name.
             diag_stats
