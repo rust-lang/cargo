@@ -1861,8 +1861,7 @@ impl TomlManifest {
                 None,
                 &workspace_config,
                 &inherit_cell,
-            )
-            .unwrap();
+            )?;
             if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
                 warn_on_deprecated("build-dependencies", name, "platform target", cx.warnings);
             }
@@ -1876,8 +1875,7 @@ impl TomlManifest {
                 Some(DepKind::Build),
                 &workspace_config,
                 &inherit_cell,
-            )
-            .unwrap();
+            )?;
             if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
                 warn_on_deprecated("dev-dependencies", name, "platform target", cx.warnings);
             }
@@ -1891,8 +1889,7 @@ impl TomlManifest {
                 Some(DepKind::Development),
                 &workspace_config,
                 &inherit_cell,
-            )
-            .unwrap();
+            )?;
             target.insert(
                 name.clone(),
                 TomlPlatform {

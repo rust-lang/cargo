@@ -1141,16 +1141,32 @@ fn ignored_git_revision() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build -v")
-        .with_status(101)
-        .with_stderr(
-            "\
+    let err_msg = "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   key `branch` is ignored for dependency (bar).
-",
-        )
+";
+    foo.cargo("build -v")
+        .with_status(101)
+        .with_stderr(err_msg)
+        .run();
+
+    // #11540, check that [target] dependencies fail the same way.
+    foo.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+
+            [target.some-target.dependencies]
+            bar = { path = "bar", branch = "spam" }
+        "#,
+    );
+    foo.cargo("build")
+        .with_status(101)
+        .with_stderr(err_msg)
         .run();
 }
 
