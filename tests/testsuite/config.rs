@@ -88,7 +88,6 @@ impl ConfigBuilder {
             false,
             false,
             &None,
-            None,
             &self.unstable,
             &self.config_args,
         )?;

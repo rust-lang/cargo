@@ -341,14 +341,6 @@ fn config_configure(
     if let Some(values) = args.get_many::<String>("config") {
         config_args.extend(values.cloned());
     }
-    let summary_override = if subcommand_args.flag("summary") {
-        Some(true)
-    } else if subcommand_args.flag("no-summary") {
-        Some(false)
-    } else {
-        None
-    };
-
     config.configure(
         verbose,
         quiet,
@@ -357,7 +349,6 @@ fn config_configure(
         locked,
         offline,
         arg_target_dir,
-        summary_override,
         &unstable_flags,
         &config_args,
     )?;

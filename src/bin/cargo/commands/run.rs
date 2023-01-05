@@ -32,8 +32,6 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_ignore_rust_version()
         .arg_timings()
-        .arg_show_summary()
-        .arg_hide_summary()
         .after_help("Run `cargo help run` for more detailed information.\n")
 }
 

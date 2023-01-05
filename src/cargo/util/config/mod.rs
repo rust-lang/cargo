@@ -245,9 +245,6 @@ pub struct Config {
     pub nightly_features_allowed: bool,
     /// WorkspaceRootConfigs that have been found
     pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
-    /// By default, a summary is shown if `cargo clippy` gives many warnings.
-    /// This field overrides default behavior if the option is a Some variant.
-    pub summary_override: Option<bool>,
 }
 
 impl Config {
@@ -334,7 +331,6 @@ impl Config {
             env_config: LazyCell::new(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
             ws_roots: RefCell::new(HashMap::new()),
-            summary_override: None,
         }
     }
 
@@ -961,7 +957,6 @@ impl Config {
         locked: bool,
         offline: bool,
         target_dir: &Option<PathBuf>,
-        summary_override: Option<bool>,
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
@@ -1029,7 +1024,6 @@ impl Config {
                 .and_then(|n| n.offline)
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
-        self.summary_override = summary_override;
 
         self.load_unstable_flags_from_config()?;
 
