@@ -10,6 +10,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Read, Write};
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use time::format_description::well_known::Rfc3339;
@@ -20,6 +21,70 @@ use crate::core::SourceId;
 use crate::ops::RegistryCredentialConfig;
 
 use super::config::CredentialCacheValue;
+
+/// A wrapper for values that should not be printed.
+///
+/// This type does not implement `Display`, and has a `Debug` impl that hides
+/// the contained value.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Secret<T> {
+    inner: T,
+}
+
+impl<T> Secret<T> {
+    /// Converts a `Secret<T>` to a `Secret<&T::Target>`.
+    ///
+    /// For example, this can be used to convert from `&Secret<String>` to
+    /// `Secret<&str>`.
+    pub fn as_deref(&self) -> Secret<&<T as Deref>::Target>
+    where
+        T: Deref,
+    {
+        Secret::from(self.inner.deref())
+    }
+
+    pub fn map<U, F>(self, f: F) -> Secret<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        Secret::from(f(self.inner))
+    }
+
+    fn into_inner(self) -> T {
+        self.inner
+    }
+}
+
+impl<T: ToOwned + ?Sized> Secret<&T> {
+    /// Converts a `Secret` containing a borrowed type to a `Secret` containing the
+    /// corresponding owned type.
+    ///
+    /// For example, this can be used to convert from `Secret<&str>` to
+    /// `Secret<String>`.
+    pub fn owned(&self) -> Secret<<T as ToOwned>::Owned> {
+        Secret::from(self.inner.to_owned())
+    }
+}
+
+impl<T: AsRef<str>> Secret<T> {
+    pub fn is_empty(&self) -> bool {
+        self.inner.as_ref().is_empty()
+    }
+}
+
+impl<T> From<T> for Secret<T> {
+    fn from(inner: T) -> Self {
+        Self { inner }
+    }
+}
+
+impl<T> fmt::Debug for Secret<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Secret")
+            .field("inner", &"REDACTED")
+            .finish()
+    }
+}
 
 /// Get the credential configuration for a `SourceId`.
 pub fn registry_credential_config(
