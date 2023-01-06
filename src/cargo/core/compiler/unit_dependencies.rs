@@ -19,11 +19,12 @@ use std::collections::{HashMap, HashSet};
 
 use log::trace;
 
+use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::core::compiler::{
     CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner,
 };
-use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
+use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
@@ -554,87 +555,54 @@ fn artifact_targets_to_unit_deps(
     artifact_pkg: &Package,
     dep: &Dependency,
 ) -> CargoResult<Vec<UnitDep>> {
-    let ret =
-        match_artifacts_kind_with_targets(dep, artifact_pkg.targets(), parent.pkg.name().as_str())?
-            .into_iter()
-            .flat_map(|target| {
-                // We split target libraries into individual units, even though rustc is able
-                // to produce multiple kinds in an single invocation for the sole reason that
-                // each artifact kind has its own output directory, something we can't easily
-                // teach rustc for now.
-                match target.kind() {
-                    TargetKind::Lib(kinds) => Box::new(
-                        kinds
-                            .iter()
-                            .filter(|tk| matches!(tk, CrateType::Cdylib | CrateType::Staticlib))
-                            .map(|target_kind| {
-                                new_unit_dep(
-                                    state,
-                                    parent,
-                                    artifact_pkg,
-                                    target
-                                        .clone()
-                                        .set_kind(TargetKind::Lib(vec![target_kind.clone()])),
-                                    parent_unit_for,
-                                    compile_kind,
-                                    CompileMode::Build,
-                                    dep.artifact(),
-                                )
-                            }),
-                    ) as Box<dyn Iterator<Item = _>>,
-                    _ => Box::new(std::iter::once(new_unit_dep(
-                        state,
-                        parent,
-                        artifact_pkg,
-                        target,
-                        parent_unit_for,
-                        compile_kind,
-                        CompileMode::Build,
-                        dep.artifact(),
-                    ))),
-                }
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-    Ok(ret)
-}
-
-/// Given a dependency with an artifact `artifact_dep` and a set of available `targets`
-/// of its package, find a target for each kind of artifacts that are to be built.
-///
-/// Failure to match any target results in an error mentioning the parent manifests
-/// `parent_package` name.
-fn match_artifacts_kind_with_targets<'a>(
-    artifact_dep: &Dependency,
-    targets: &'a [Target],
-    parent_package: &str,
-) -> CargoResult<HashSet<&'a Target>> {
-    let mut out = HashSet::new();
-    let artifact_requirements = artifact_dep.artifact().expect("artifact present");
-    for artifact_kind in artifact_requirements.kinds() {
-        let mut extend = |filter: &dyn Fn(&&Target) -> bool| {
-            let mut iter = targets.iter().filter(filter).peekable();
-            let found = iter.peek().is_some();
-            out.extend(iter);
-            found
-        };
-        let found = match artifact_kind {
-            ArtifactKind::Cdylib => extend(&|t| t.is_cdylib()),
-            ArtifactKind::Staticlib => extend(&|t| t.is_staticlib()),
-            ArtifactKind::AllBinaries => extend(&|t| t.is_bin()),
-            ArtifactKind::SelectedBinary(bin_name) => {
-                extend(&|t| t.is_bin() && t.name() == bin_name.as_str())
+    let mut targets = HashSet::new();
+    match_artifacts_kind_with_targets(
+        dep,
+        artifact_pkg.targets(),
+        parent.pkg.name().as_str(),
+        |_, iter| targets.extend(iter),
+    )?;
+    let ret = targets
+        .into_iter()
+        .flat_map(|target| {
+            // We split target libraries into individual units, even though rustc is able
+            // to produce multiple kinds in an single invocation for the sole reason that
+            // each artifact kind has its own output directory, something we can't easily
+            // teach rustc for now.
+            match target.kind() {
+                TargetKind::Lib(kinds) => Box::new(
+                    kinds
+                        .iter()
+                        .filter(|tk| matches!(tk, CrateType::Cdylib | CrateType::Staticlib))
+                        .map(|target_kind| {
+                            new_unit_dep(
+                                state,
+                                parent,
+                                artifact_pkg,
+                                target
+                                    .clone()
+                                    .set_kind(TargetKind::Lib(vec![target_kind.clone()])),
+                                parent_unit_for,
+                                compile_kind,
+                                CompileMode::Build,
+                                dep.artifact(),
+                            )
+                        }),
+                ) as Box<dyn Iterator<Item = _>>,
+                _ => Box::new(std::iter::once(new_unit_dep(
+                    state,
+                    parent,
+                    artifact_pkg,
+                    target,
+                    parent_unit_for,
+                    compile_kind,
+                    CompileMode::Build,
+                    dep.artifact(),
+                ))),
             }
-        };
-        if !found {
-            anyhow::bail!(
-                "dependency `{}` in package `{}` requires a `{}` artifact to be present.",
-                artifact_dep.name_in_toml(),
-                parent_package,
-                artifact_kind
-            );
-        }
-    }
-    Ok(out)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(ret)
 }
 
 /// Returns the dependencies necessary to document a package.

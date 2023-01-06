@@ -1857,6 +1857,36 @@ Caused by:
         .run();
 }
 
+#[cargo_test]
+fn cargo_metadata_with_invalid_artifact_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                artifact = { path = "artifact", artifact = "bin:notfound" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("artifact/Cargo.toml", &basic_bin_manifest("artifact"))
+        .file("artifact/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] dependency `artifact` in package `foo` requires a `bin:notfound` artifact to be present.",
+        )
+        .run();
+}
+
 const MANIFEST_OUTPUT: &str = r#"
 {
     "packages": [{

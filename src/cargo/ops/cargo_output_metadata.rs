@@ -1,8 +1,9 @@
+use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::{CompileKind, RustcTargetData};
-use crate::core::dependency::{ArtifactKind, DepKind};
+use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
 use crate::core::resolver::{features::CliFeatures, HasDevUnits, Resolve};
-use crate::core::{Package, PackageId, Target, Workspace};
+use crate::core::{Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
@@ -160,7 +161,7 @@ fn build_resolve_graph(
             &package_map,
             &target_data,
             &requested_kinds,
-        );
+        )?;
     }
     // Get a Vec of Packages.
     let actual_packages = package_map
@@ -183,9 +184,9 @@ fn build_resolve_graph_r(
     package_map: &BTreeMap<PackageId, Package>,
     target_data: &RustcTargetData<'_>,
     requested_kinds: &[CompileKind],
-) {
+) -> CargoResult<()> {
     if node_map.contains_key(&pkg_id) {
-        return;
+        return Ok(());
     }
     // This normalizes the IDs so that they are consistent between the
     // `packages` array and the `resolve` map. This is a bit of a hack to
@@ -268,27 +269,22 @@ fn build_resolve_graph_r(
                     None => None,
                 };
 
-                let mut extend = |kind: &ArtifactKind, filter: &dyn Fn(&&Target) -> bool| {
-                    let iter = targets.iter().filter(filter).map(|target| DepKindInfo {
-                        kind: dep.kind(),
-                        target: dep.platform().cloned(),
-                        artifact: Some(kind.crate_type()),
-                        extern_name: extern_name(target),
-                        compile_target,
-                        bin_name: target.is_bin().then(|| target.name().to_string()),
-                    });
-                    dep_kinds.extend(iter);
-                };
-
-                for kind in artifact_requirements.kinds() {
-                    match kind {
-                        ArtifactKind::Cdylib => extend(kind, &|t| t.is_cdylib()),
-                        ArtifactKind::Staticlib => extend(kind, &|t| t.is_staticlib()),
-                        ArtifactKind::AllBinaries => extend(kind, &|t| t.is_bin()),
-                        ArtifactKind::SelectedBinary(bin_name) => {
-                            extend(kind, &|t| t.is_bin() && t.name() == bin_name.as_str())
-                        }
-                    };
+                if let Err(e) = match_artifacts_kind_with_targets(
+                    dep,
+                    targets,
+                    pkg_id.name().as_str(),
+                    |kind, targets| {
+                        dep_kinds.extend(targets.map(|target| DepKindInfo {
+                            kind: dep.kind(),
+                            target: dep.platform().cloned(),
+                            artifact: Some(kind.crate_type()),
+                            extern_name: extern_name(target),
+                            compile_target,
+                            bin_name: target.is_bin().then(|| target.name().to_string()),
+                        }))
+                    },
+                ) {
+                    return Some(Err(e));
                 }
             }
 
@@ -296,7 +292,7 @@ fn build_resolve_graph_r(
 
             let pkg = normalize_id(dep_id);
 
-            match (lib_target_name, dep_kinds.len()) {
+            let dep = match (lib_target_name, dep_kinds.len()) {
                 (Some(name), _) => Some(Dep {
                     name,
                     pkg,
@@ -311,10 +307,11 @@ fn build_resolve_graph_r(
                 // No lib or artifact dep exists.
                 // Ususally this mean parent depending on non-lib bin crate.
                 (None, _) => None,
-            }
+            };
+            dep.map(Ok)
         })
-        .collect();
-    let dumb_deps: Vec<PackageId> = deps.iter().map(|dep| normalize_id(dep.pkg)).collect();
+        .collect::<CargoResult<_>>()?;
+    let dumb_deps: Vec<PackageId> = deps.iter().map(|dep| dep.pkg).collect();
     let to_visit = dumb_deps.clone();
     let node = MetadataResolveNode {
         id: normalize_id(pkg_id),
@@ -331,6 +328,8 @@ fn build_resolve_graph_r(
             package_map,
             target_data,
             requested_kinds,
-        );
+        )?;
     }
+
+    Ok(())
 }
