@@ -1,8 +1,8 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
-use crate::core::dependency::DepKind;
+use crate::core::dependency::{ArtifactKind, DepKind};
 use crate::core::package::SerializedPackage;
 use crate::core::resolver::{features::CliFeatures, HasDevUnits, Resolve};
-use crate::core::{Dependency, Package, PackageId, Workspace};
+use crate::core::{Package, PackageId, Target, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
@@ -90,15 +90,26 @@ struct Dep {
 struct DepKindInfo {
     kind: DepKind,
     target: Option<Platform>,
-}
 
-impl From<&Dependency> for DepKindInfo {
-    fn from(dep: &Dependency) -> DepKindInfo {
-        DepKindInfo {
-            kind: dep.kind(),
-            target: dep.platform().cloned(),
-        }
-    }
+    // vvvvv The fields below are introduced for `-Z bindeps`.
+    /// Artifact's crate type, e.g. staticlib, cdylib, bin...
+    #[serde(skip_serializing_if = "Option::is_none")]
+    artifact: Option<&'static str>,
+    /// What the manifest calls the crate.
+    ///
+    /// A renamed dependency will show the rename instead of original name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extern_name: Option<InternedString>,
+    /// Equivalent to `{ target = "…" }` in an artifact dependency requirement.
+    ///
+    /// * If the target points to a custom target JSON file, the path will be absolute.
+    /// * If the target is a build assumed target `{ target = "target" }`, it will show as `<target>`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    compile_target: Option<InternedString>,
+    /// Executable name for an artifact binary dependency.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bin_name: Option<String>,
+    // ^^^^^ The fields above are introduced for `-Z bindeps`.
 }
 
 /// Builds the resolve graph as it will be displayed to the user.
@@ -206,22 +217,101 @@ fn build_resolve_graph_r(
             }
         })
         .filter_map(|(dep_id, deps)| {
-            let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+            let mut dep_kinds = Vec::new();
+
+            let targets = package_map[&dep_id].targets();
+
+            // Try to get the extern name for lib, or crate name for bins.
+            let extern_name = |target| {
+                resolve
+                    .extern_crate_name_and_dep_name(pkg_id, dep_id, target)
+                    .map(|(ext_crate_name, _)| ext_crate_name)
+                    .ok()
+            };
+
+            let lib_target_name = targets.iter().find(|t| t.is_lib()).map(extern_name);
+
+            for dep in deps.iter() {
+                let mut include_lib = || {
+                    dep_kinds.push(DepKindInfo {
+                        kind: dep.kind(),
+                        target: dep.platform().cloned(),
+                        artifact: None,
+                        extern_name: lib_target_name,
+                        compile_target: None,
+                        bin_name: None,
+                    });
+                };
+
+                // When we do have a library target, include them in deps if...
+                match (dep.artifact(), lib_target_name) {
+                    // it is also an artifact dep with `{ …, lib = true }`
+                    (Some(a), Some(_)) if a.is_lib() => include_lib(),
+                    // it is not an artifact dep at all
+                    (None, Some(_)) => include_lib(),
+                    _ => {}
+                }
+
+                // No need to proceed if there is no artifact dependency.
+                let Some(artifact_requirements) = dep.artifact() else {
+                    continue;
+                };
+
+                let compile_target = match artifact_requirements.target() {
+                    Some(t) => t
+                        .to_compile_target()
+                        .map(|t| t.rustc_target())
+                        // Given that Cargo doesn't know which target it should resolve to,
+                        // when an artifact dep is specified with { target = "target" },
+                        // keep it with a special "<target>" string,
+                        .or_else(|| Some(InternedString::new("<target>"))),
+                    None => None,
+                };
+
+                let mut extend = |kind: &ArtifactKind, filter: &dyn Fn(&&Target) -> bool| {
+                    let iter = targets.iter().filter(filter).map(|target| DepKindInfo {
+                        kind: dep.kind(),
+                        target: dep.platform().cloned(),
+                        artifact: Some(kind.crate_type()),
+                        extern_name: extern_name(target),
+                        compile_target,
+                        bin_name: target.is_bin().then(|| target.name().to_string()),
+                    });
+                    dep_kinds.extend(iter);
+                };
+
+                for kind in artifact_requirements.kinds() {
+                    match kind {
+                        ArtifactKind::Cdylib => extend(kind, &|t| t.is_cdylib()),
+                        ArtifactKind::Staticlib => extend(kind, &|t| t.is_staticlib()),
+                        ArtifactKind::AllBinaries => extend(kind, &|t| t.is_bin()),
+                        ArtifactKind::SelectedBinary(bin_name) => {
+                            extend(kind, &|t| t.is_bin() && t.name() == bin_name.as_str())
+                        }
+                    };
+                }
+            }
+
             dep_kinds.sort();
-            package_map
-                .get(&dep_id)
-                .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                .and_then(|lib_target| {
-                    resolve
-                        .extern_crate_name_and_dep_name(pkg_id, dep_id, lib_target)
-                        .map(|(ext_crate_name, _)| ext_crate_name)
-                        .ok()
-                })
-                .map(|name| Dep {
+
+            let pkg = normalize_id(dep_id);
+
+            match (lib_target_name, dep_kinds.len()) {
+                (Some(name), _) => Some(Dep {
                     name,
-                    pkg: normalize_id(dep_id),
+                    pkg,
                     dep_kinds,
-                })
+                }),
+                // No lib target exists but contains artifact deps.
+                (None, 1..) => Some(Dep {
+                    name: InternedString::new(""),
+                    pkg,
+                    dep_kinds,
+                }),
+                // No lib or artifact dep exists.
+                // Ususally this mean parent depending on non-lib bin crate.
+                (None, _) => None,
+            }
         })
         .collect();
     let dumb_deps: Vec<PackageId> = deps.iter().map(|dep| normalize_id(dep.pkg)).collect();

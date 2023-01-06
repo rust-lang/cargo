@@ -608,6 +608,7 @@ fn update_precise_first_run() {
           {
             "dep_kinds": [
               {
+                "extern_name": "serde",
                 "kind": null,
                 "target": null
               }
