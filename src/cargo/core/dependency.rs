@@ -566,10 +566,8 @@ impl ser::Serialize for ArtifactKind {
         S: ser::Serializer,
     {
         let out: Cow<'_, str> = match *self {
-            ArtifactKind::AllBinaries => "bin".into(),
-            ArtifactKind::Staticlib => "staticlib".into(),
-            ArtifactKind::Cdylib => "cdylib".into(),
             ArtifactKind::SelectedBinary(name) => format!("bin:{}", name.as_str()).into(),
+            _ => self.crate_type().into(),
         };
         out.serialize(s)
     }
@@ -578,15 +576,24 @@ impl ser::Serialize for ArtifactKind {
 impl fmt::Display for ArtifactKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
-            ArtifactKind::Cdylib => "cdylib",
-            ArtifactKind::Staticlib => "staticlib",
-            ArtifactKind::AllBinaries => "bin",
-            ArtifactKind::SelectedBinary(bin_name) => return write!(f, "bin:{}", bin_name),
+            ArtifactKind::SelectedBinary(bin_name) => return write!(f, "bin:{bin_name}"),
+            _ => self.crate_type(),
         })
     }
 }
 
 impl ArtifactKind {
+    /// Returns a string of crate type of the artifact being built.
+    ///
+    /// Note that the name of `SelectedBinary` would be dropped and displayed as `bin`.
+    pub fn crate_type(&self) -> &'static str {
+        match self {
+            ArtifactKind::AllBinaries | ArtifactKind::SelectedBinary(_) => "bin",
+            ArtifactKind::Cdylib => "cdylib",
+            ArtifactKind::Staticlib => "staticlib",
+        }
+    }
+
     fn parse(kind: &str) -> CargoResult<Self> {
         Ok(match kind {
             "bin" => ArtifactKind::AllBinaries,
