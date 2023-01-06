@@ -48,7 +48,7 @@ pub trait CommandExt: Sized {
         exclude: &'static str,
     ) -> Self {
         self.arg_package_spec_simple(package)
-            ._arg(flag("workspace", all))
+            ._arg(flag("workspace", all).short('w'))
             ._arg(multi_opt("exclude", "SPEC", exclude))
     }
 
