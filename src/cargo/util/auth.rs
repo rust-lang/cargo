@@ -32,6 +32,14 @@ pub struct Secret<T> {
 }
 
 impl<T> Secret<T> {
+    /// Unwraps the contained value.
+    ///
+    /// Use of this method marks the boundary of where the contained value is
+    /// hidden.
+    pub fn expose(self) -> T {
+        self.inner
+    }
+
     /// Converts a `Secret<T>` to a `Secret<&T::Target>`.
     ///
     /// For example, this can be used to convert from `&Secret<String>` to
@@ -43,15 +51,15 @@ impl<T> Secret<T> {
         Secret::from(self.inner.deref())
     }
 
+    pub fn as_ref(&self) -> Secret<&T> {
+        Secret::from(&self.inner)
+    }
+
     pub fn map<U, F>(self, f: F) -> Secret<U>
     where
         F: FnOnce(T) -> U,
     {
         Secret::from(f(self.inner))
-    }
-
-    fn into_inner(self) -> T {
-        self.inner
     }
 }
 
@@ -63,6 +71,12 @@ impl<T: ToOwned + ?Sized> Secret<&T> {
     /// `Secret<String>`.
     pub fn owned(&self) -> Secret<<T as ToOwned>::Owned> {
         Secret::from(self.inner.to_owned())
+    }
+}
+
+impl<T, E> Secret<Result<T, E>> {
+    pub fn transpose(self) -> Result<Secret<T>, E> {
+        self.inner.map(|v| Secret::from(v))
     }
 }
 
