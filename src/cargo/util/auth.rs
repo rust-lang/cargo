@@ -384,7 +384,7 @@ pub fn cache_token(config: &Config, sid: &SourceId, token: &str) {
         CredentialCacheValue {
             from_commandline: true,
             independent_of_endpoint: true,
-            token_value: token.to_string(),
+            token_value: Secret::from(token.to_string()),
         },
     );
 }
@@ -425,7 +425,7 @@ fn auth_token_optional(
             || cache_token_value.independent_of_endpoint
             || mutation.is_none()
         {
-            return Ok(Some(cache_token_value.token_value.clone()));
+            return Ok(Some(cache_token_value.token_value.clone().expose()));
         }
     }
 
@@ -518,7 +518,7 @@ fn auth_token_optional(
             CredentialCacheValue {
                 from_commandline: false,
                 independent_of_endpoint,
-                token_value: token.to_string(),
+                token_value: Secret::from(token.to_string()),
             },
         );
     }

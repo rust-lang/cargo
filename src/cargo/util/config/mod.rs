@@ -70,6 +70,7 @@ use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
 use crate::ops::{self, RegistryCredentialConfig};
+use crate::util::auth::Secret;
 use crate::util::errors::CargoResult;
 use crate::util::validate_package_name;
 use crate::util::CanonicalUrl;
@@ -137,6 +138,7 @@ enum WhyLoad {
 }
 
 /// A previously generated authentication token and the data needed to determine if it can be reused.
+#[derive(Debug)]
 pub struct CredentialCacheValue {
     /// If the command line was used to override the token then it must always be reused,
     /// even if reading the configuration files would lead to a different value.
@@ -144,17 +146,7 @@ pub struct CredentialCacheValue {
     /// If nothing depends on which endpoint is being hit, then we can reuse the token
     /// for any future request even if some of the requests involve mutations.
     pub independent_of_endpoint: bool,
-    pub token_value: String,
-}
-
-impl fmt::Debug for CredentialCacheValue {
-    /// This manual implementation helps ensure that the token value is redacted from all logs.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CredentialCacheValue")
-            .field("from_commandline", &self.from_commandline)
-            .field("token_value", &"REDACTED")
-            .finish()
-    }
+    pub token_value: Secret<String>,
 }
 
 /// Configuration information for cargo. This is not specific to a build, it is information
