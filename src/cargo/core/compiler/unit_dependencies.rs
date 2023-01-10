@@ -555,53 +555,48 @@ fn artifact_targets_to_unit_deps(
     artifact_pkg: &Package,
     dep: &Dependency,
 ) -> CargoResult<Vec<UnitDep>> {
-    let mut targets = HashSet::new();
-    match_artifacts_kind_with_targets(
-        dep,
-        artifact_pkg.targets(),
-        parent.pkg.name().as_str(),
-        |_, iter| targets.extend(iter),
-    )?;
-    let ret = targets
-        .into_iter()
-        .flat_map(|target| {
-            // We split target libraries into individual units, even though rustc is able
-            // to produce multiple kinds in an single invocation for the sole reason that
-            // each artifact kind has its own output directory, something we can't easily
-            // teach rustc for now.
-            match target.kind() {
-                TargetKind::Lib(kinds) => Box::new(
-                    kinds
-                        .iter()
-                        .filter(|tk| matches!(tk, CrateType::Cdylib | CrateType::Staticlib))
-                        .map(|target_kind| {
-                            new_unit_dep(
-                                state,
-                                parent,
-                                artifact_pkg,
-                                target
-                                    .clone()
-                                    .set_kind(TargetKind::Lib(vec![target_kind.clone()])),
-                                parent_unit_for,
-                                compile_kind,
-                                CompileMode::Build,
-                                dep.artifact(),
-                            )
-                        }),
-                ) as Box<dyn Iterator<Item = _>>,
-                _ => Box::new(std::iter::once(new_unit_dep(
-                    state,
-                    parent,
-                    artifact_pkg,
-                    target,
-                    parent_unit_for,
-                    compile_kind,
-                    CompileMode::Build,
-                    dep.artifact(),
-                ))),
-            }
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let ret =
+        match_artifacts_kind_with_targets(dep, artifact_pkg.targets(), parent.pkg.name().as_str())?
+            .into_iter()
+            .map(|(_artifact_kind, target)| target)
+            .flat_map(|target| {
+                // We split target libraries into individual units, even though rustc is able
+                // to produce multiple kinds in an single invocation for the sole reason that
+                // each artifact kind has its own output directory, something we can't easily
+                // teach rustc for now.
+                match target.kind() {
+                    TargetKind::Lib(kinds) => Box::new(
+                        kinds
+                            .iter()
+                            .filter(|tk| matches!(tk, CrateType::Cdylib | CrateType::Staticlib))
+                            .map(|target_kind| {
+                                new_unit_dep(
+                                    state,
+                                    parent,
+                                    artifact_pkg,
+                                    target
+                                        .clone()
+                                        .set_kind(TargetKind::Lib(vec![target_kind.clone()])),
+                                    parent_unit_for,
+                                    compile_kind,
+                                    CompileMode::Build,
+                                    dep.artifact(),
+                                )
+                            }),
+                    ) as Box<dyn Iterator<Item = _>>,
+                    _ => Box::new(std::iter::once(new_unit_dep(
+                        state,
+                        parent,
+                        artifact_pkg,
+                        target,
+                        parent_unit_for,
+                        compile_kind,
+                        CompileMode::Build,
+                        dep.artifact(),
+                    ))),
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
     Ok(ret)
 }
 

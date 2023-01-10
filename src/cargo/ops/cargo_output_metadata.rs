@@ -91,16 +91,15 @@ struct Dep {
 struct DepKindInfo {
     kind: DepKind,
     target: Option<Platform>,
+    /// What the manifest calls the crate.
+    ///
+    /// A renamed dependency will show the rename instead of original name.
+    extern_name: InternedString,
 
     // vvvvv The fields below are introduced for `-Z bindeps`.
     /// Artifact's crate type, e.g. staticlib, cdylib, bin...
     #[serde(skip_serializing_if = "Option::is_none")]
     artifact: Option<&'static str>,
-    /// What the manifest calls the crate.
-    ///
-    /// A renamed dependency will show the rename instead of original name.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    extern_name: Option<InternedString>,
     /// Equivalent to `{ target = "…" }` in an artifact dependency requirement.
     ///
     /// * If the target points to a custom target JSON file, the path will be absolute.
@@ -205,9 +204,9 @@ fn build_resolve_graph_r(
     let normalize_id = |id| -> PackageId { *package_map.get_key_value(&id).unwrap().0 };
     let features = resolve.features(pkg_id).to_vec();
 
-    let deps: Vec<Dep> = resolve
-        .deps(pkg_id)
-        .filter(|(_dep_id, deps)| {
+    let deps = {
+        let mut dep_metadatas = Vec::new();
+        let iter = resolve.deps(pkg_id).filter(|(_dep_id, deps)| {
             if requested_kinds == [CompileKind::Host] {
                 true
             } else {
@@ -216,8 +215,8 @@ fn build_resolve_graph_r(
                         .any(|dep| target_data.dep_platform_activated(dep, *kind))
                 })
             }
-        })
-        .filter_map(|(dep_id, deps)| {
+        });
+        for (dep_id, deps) in iter {
             let mut dep_kinds = Vec::new();
 
             let targets = package_map[&dep_id].targets();
@@ -227,30 +226,30 @@ fn build_resolve_graph_r(
                 resolve
                     .extern_crate_name_and_dep_name(pkg_id, dep_id, target)
                     .map(|(ext_crate_name, _)| ext_crate_name)
-                    .ok()
             };
 
-            let lib_target_name = targets.iter().find(|t| t.is_lib()).map(extern_name);
+            let lib_target = targets.iter().find(|t| t.is_lib());
 
             for dep in deps.iter() {
-                let mut include_lib = || {
-                    dep_kinds.push(DepKindInfo {
-                        kind: dep.kind(),
-                        target: dep.platform().cloned(),
-                        artifact: None,
-                        extern_name: lib_target_name,
-                        compile_target: None,
-                        bin_name: None,
-                    });
-                };
-
-                // When we do have a library target, include them in deps if...
-                match (dep.artifact(), lib_target_name) {
-                    // it is also an artifact dep with `{ …, lib = true }`
-                    (Some(a), Some(_)) if a.is_lib() => include_lib(),
-                    // it is not an artifact dep at all
-                    (None, Some(_)) => include_lib(),
-                    _ => {}
+                if let Some(target) = lib_target {
+                    // When we do have a library target, include them in deps if...
+                    let included = match dep.artifact() {
+                        // it is not an artifact dep at all
+                        None => true,
+                        // it is also an artifact dep with `{ …, lib = true }`
+                        Some(a) if a.is_lib() => true,
+                        _ => false,
+                    };
+                    if included {
+                        dep_kinds.push(DepKindInfo {
+                            kind: dep.kind(),
+                            target: dep.platform().cloned(),
+                            extern_name: extern_name(target)?,
+                            artifact: None,
+                            compile_target: None,
+                            bin_name: None,
+                        });
+                    }
                 }
 
                 // No need to proceed if there is no artifact dependency.
@@ -269,22 +268,18 @@ fn build_resolve_graph_r(
                     None => None,
                 };
 
-                if let Err(e) = match_artifacts_kind_with_targets(
-                    dep,
-                    targets,
-                    pkg_id.name().as_str(),
-                    |kind, targets| {
-                        dep_kinds.extend(targets.map(|target| DepKindInfo {
-                            kind: dep.kind(),
-                            target: dep.platform().cloned(),
-                            artifact: Some(kind.crate_type()),
-                            extern_name: extern_name(target),
-                            compile_target,
-                            bin_name: target.is_bin().then(|| target.name().to_string()),
-                        }))
-                    },
-                ) {
-                    return Some(Err(e));
+                let target_set =
+                    match_artifacts_kind_with_targets(dep, targets, pkg_id.name().as_str())?;
+                dep_kinds.reserve(target_set.len());
+                for (kind, target) in target_set.into_iter() {
+                    dep_kinds.push(DepKindInfo {
+                        kind: dep.kind(),
+                        target: dep.platform().cloned(),
+                        extern_name: extern_name(target)?,
+                        artifact: Some(kind.crate_type()),
+                        compile_target,
+                        bin_name: target.is_bin().then(|| target.name().to_string()),
+                    })
                 }
             }
 
@@ -292,25 +287,28 @@ fn build_resolve_graph_r(
 
             let pkg = normalize_id(dep_id);
 
-            let dep = match (lib_target_name, dep_kinds.len()) {
-                (Some(name), _) => Some(Dep {
-                    name,
+            let dep = match (lib_target, dep_kinds.len()) {
+                (Some(target), _) => Dep {
+                    name: extern_name(target)?,
                     pkg,
                     dep_kinds,
-                }),
+                },
                 // No lib target exists but contains artifact deps.
-                (None, 1..) => Some(Dep {
+                (None, 1..) => Dep {
                     name: InternedString::new(""),
                     pkg,
                     dep_kinds,
-                }),
+                },
                 // No lib or artifact dep exists.
                 // Ususally this mean parent depending on non-lib bin crate.
-                (None, _) => None,
+                (None, _) => continue,
             };
-            dep.map(Ok)
-        })
-        .collect::<CargoResult<_>>()?;
+
+            dep_metadatas.push(dep)
+        }
+        dep_metadatas
+    };
+
     let dumb_deps: Vec<PackageId> = deps.iter().map(|dep| dep.pkg).collect();
     let to_visit = dumb_deps.clone();
     let node = MetadataResolveNode {

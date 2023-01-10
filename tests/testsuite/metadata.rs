@@ -1632,14 +1632,6 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                             "target": null
                           },
                           {
-                            "artifact": "bin",
-                            "bin_name": "baz-name",
-                            "compile_target": "wasm32-unknown-unknown",
-                            "extern_name": "baz_name",
-                            "kind": null,
-                            "target": null
-                          },
-                          {
                             "artifact": "cdylib",
                             "compile_target": "wasm32-unknown-unknown",
                             "extern_name": "artifact",
@@ -1650,6 +1642,14 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                             "artifact": "staticlib",
                             "compile_target": "wasm32-unknown-unknown",
                             "extern_name": "artifact",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "baz-name",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "baz_name",
                             "kind": null,
                             "target": null
                           },
@@ -1883,6 +1883,36 @@ fn cargo_metadata_with_invalid_artifact_deps() {
             "\
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
 [ERROR] dependency `artifact` in package `foo` requires a `bin:notfound` artifact to be present.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_invalid_duplicate_renamed_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar = { path = "bar" }
+                baz = { path = "bar", package = "bar" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] the crate `foo v0.5.0 ([..])` depends on crate `bar v0.5.0 ([..])` multiple times with different names",
         )
         .run();
 }

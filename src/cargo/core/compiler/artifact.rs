@@ -4,7 +4,7 @@ use crate::core::compiler::{Context, CrateType, FileFlavor, Unit};
 use crate::core::dependency::ArtifactKind;
 use crate::core::{Dependency, Target, TargetKind};
 use crate::CargoResult;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 
 /// Return all environment variables for the given unit-dependencies
@@ -62,21 +62,18 @@ fn unit_artifact_type_name_upper(unit: &Unit) -> &'static str {
 ///
 /// Failure to match any target results in an error mentioning the parent manifests
 /// `parent_package` name.
-pub(crate) fn match_artifacts_kind_with_targets<'a, F>(
-    artifact_dep: &Dependency,
-    targets: &'a [Target],
+pub(crate) fn match_artifacts_kind_with_targets<'t, 'd>(
+    artifact_dep: &'d Dependency,
+    targets: &'t [Target],
     parent_package: &str,
-    mut callback: F,
-) -> CargoResult<()>
-where
-    F: FnMut(&ArtifactKind, &mut dyn Iterator<Item = &'a Target>),
-{
+) -> CargoResult<HashSet<(&'d ArtifactKind, &'t Target)>> {
+    let mut out = HashSet::new();
     let artifact_requirements = artifact_dep.artifact().expect("artifact present");
     for artifact_kind in artifact_requirements.kinds() {
-        let mut extend = |kind: &ArtifactKind, filter: &dyn Fn(&&Target) -> bool| {
+        let mut extend = |kind, filter: &dyn Fn(&&Target) -> bool| {
             let mut iter = targets.iter().filter(filter).peekable();
             let found = iter.peek().is_some();
-            callback(kind, &mut iter);
+            out.extend(std::iter::repeat(kind).zip(iter));
             found
         };
         let found = match artifact_kind {
@@ -96,5 +93,5 @@ where
             );
         }
     }
-    Ok(())
+    Ok(out)
 }
