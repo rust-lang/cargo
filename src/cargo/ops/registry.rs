@@ -30,7 +30,7 @@ use crate::ops;
 use crate::ops::Packages;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::auth::{
-    paserk_public_from_paserk_secret, {self, AuthorizationError},
+    paserk_public_from_paserk_secret, Secret, {self, AuthorizationError},
 };
 use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
@@ -45,11 +45,11 @@ use crate::{drop_print, drop_println, version};
 pub enum RegistryCredentialConfig {
     None,
     /// The authentication token.
-    Token(String),
+    Token(Secret<String>),
     /// Process used for fetching a token.
     Process((PathBuf, Vec<String>)),
     /// Secret Key and subject for Asymmetric tokens.
-    AsymmetricKey((String, Option<String>)),
+    AsymmetricKey((Secret<String>, Option<String>)),
 }
 
 impl RegistryCredentialConfig {
@@ -71,9 +71,9 @@ impl RegistryCredentialConfig {
     pub fn is_asymmetric_key(&self) -> bool {
         matches!(self, Self::AsymmetricKey(..))
     }
-    pub fn as_token(&self) -> Option<&str> {
+    pub fn as_token(&self) -> Option<Secret<&str>> {
         if let Self::Token(v) = self {
-            Some(&*v)
+            Some(v.as_deref())
         } else {
             None
         }
@@ -85,7 +85,7 @@ impl RegistryCredentialConfig {
             None
         }
     }
-    pub fn as_asymmetric_key(&self) -> Option<&(String, Option<String>)> {
+    pub fn as_asymmetric_key(&self) -> Option<&(Secret<String>, Option<String>)> {
         if let Self::AsymmetricKey(v) = self {
             Some(v)
         } else {
@@ -830,13 +830,13 @@ pub fn registry_login(
             }
             _ => (None, None),
         };
-        let secret_key: String;
+        let secret_key: Secret<String>;
         if generate_keypair {
             assert!(!secret_key_required);
             let kp = AsymmetricKeyPair::<pasetors::version3::V3>::generate().unwrap();
             let mut key = String::new();
             FormatAsPaserk::fmt(&kp.secret, &mut key).unwrap();
-            secret_key = key;
+            secret_key = Secret::from(key);
         } else if secret_key_required {
             assert!(!generate_keypair);
             drop_println!(config, "please paste the API secret key below");
@@ -846,13 +846,13 @@ pub fn registry_login(
                 .lock()
                 .read_line(&mut line)
                 .with_context(|| "failed to read stdin")?;
-            secret_key = line.trim().to_string();
+            secret_key = Secret::from(line.trim().to_string());
         } else {
             secret_key = old_secret_key
                 .cloned()
                 .ok_or_else(|| anyhow!("need a secret_key to set a key_subject"))?;
         }
-        if let Some(p) = paserk_public_from_paserk_secret(&secret_key) {
+        if let Some(p) = paserk_public_from_paserk_secret(secret_key.as_deref()) {
             drop_println!(config, "{}", &p);
         } else {
             bail!("not a validly formated PASERK secret key");
@@ -866,7 +866,7 @@ pub fn registry_login(
         ));
     } else {
         new_token = RegistryCredentialConfig::Token(match token {
-            Some(token) => token.to_string(),
+            Some(token) => Secret::from(token.to_string()),
             None => {
                 if let Some(login_url) = login_url {
                     drop_println!(
@@ -890,7 +890,7 @@ pub fn registry_login(
                     .with_context(|| "failed to read stdin")?;
                 // Automatically remove `cargo login` from an inputted token to
                 // allow direct pastes from `registry.host()`/me.
-                line.replace("cargo login", "").trim().to_string()
+                Secret::from(line.replace("cargo login", "").trim().to_string())
             }
         });
 

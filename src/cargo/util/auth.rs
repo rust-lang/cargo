@@ -281,13 +281,13 @@ fn registry_credential_config_inner(
                     registry
                 ));
             }
-            (Some(token), _, _, _) => RegistryCredentialConfig::Token(token),
+            (Some(token), _, _, _) => RegistryCredentialConfig::Token(Secret::from(token)),
             (_, Some(process), _, _) => RegistryCredentialConfig::Process((
                 process.path.resolve_program(config),
                 process.args,
             )),
             (None, None, Some(key), subject) => {
-                RegistryCredentialConfig::AsymmetricKey((key, subject))
+                RegistryCredentialConfig::AsymmetricKey((Secret::from(key), subject))
             }
             (None, None, None, _) => {
                 if !is_crates_io {
@@ -432,15 +432,19 @@ fn auth_token_optional(
     let credential = registry_credential_config(config, sid)?;
     let (independent_of_endpoint, token) = match credential {
         RegistryCredentialConfig::None => return Ok(None),
-        RegistryCredentialConfig::Token(config_token) => (true, config_token.to_string()),
+        RegistryCredentialConfig::Token(config_token) => (true, config_token.expose()),
         RegistryCredentialConfig::Process(process) => {
             // todo: PASETO with process
             run_command(config, &process, sid, Action::Get)?.unwrap()
         }
         RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) => {
-            let secret: AsymmetricSecretKey<pasetors::version3::V3> =
-                secret_key.as_str().try_into()?;
-            let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into()?;
+            let secret: Secret<AsymmetricSecretKey<pasetors::version3::V3>> =
+                secret_key.map(|key| key.as_str().try_into()).transpose()?;
+            let public: AsymmetricPublicKey<pasetors::version3::V3> = secret
+                .as_ref()
+                .map(|key| key.try_into())
+                .transpose()?
+                .expose();
             let kip: pasetors::paserk::Id = (&public).try_into()?;
             let iat = OffsetDateTime::now_utc();
 
@@ -493,7 +497,7 @@ fn auth_token_optional(
             (
                 false,
                 pasetors::version3::PublicToken::sign(
-                    &secret,
+                    &secret.expose(),
                     serde_json::to_string(&message)
                         .expect("cannot serialize")
                         .as_bytes(),
@@ -598,6 +602,7 @@ pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -
             let token = token
                 .as_token()
                 .expect("credential_process cannot use login with a secret_key")
+                .expose()
                 .to_owned();
             run_command(config, &process, sid, Action::Store(token))?;
         }
@@ -609,9 +614,15 @@ pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -
 }
 
 /// Checks that a secret key is valid, and returns the associated public key in Paserk format.
-pub(crate) fn paserk_public_from_paserk_secret(secret_key: &str) -> Option<String> {
-    let secret: AsymmetricSecretKey<pasetors::version3::V3> = secret_key.try_into().ok()?;
-    let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into().ok()?;
+pub(crate) fn paserk_public_from_paserk_secret(secret_key: Secret<&str>) -> Option<String> {
+    let secret: Secret<AsymmetricSecretKey<pasetors::version3::V3>> =
+        secret_key.map(|key| key.try_into()).transpose().ok()?;
+    let public: AsymmetricPublicKey<pasetors::version3::V3> = secret
+        .as_ref()
+        .map(|key| key.try_into())
+        .transpose()
+        .ok()?
+        .expose();
     let mut paserk_pub_key = String::new();
     FormatAsPaserk::fmt(&public, &mut paserk_pub_key).unwrap();
     Some(paserk_pub_key)

@@ -2179,7 +2179,7 @@ pub fn save_credentials(
                 // login with token
 
                 let key = "token".to_string();
-                let value = ConfigValue::String(token, path_def.clone());
+                let value = ConfigValue::String(token.expose(), path_def.clone());
                 let map = HashMap::from([(key, value)]);
                 let table = CV::Table(map, path_def.clone());
 
@@ -2194,7 +2194,7 @@ pub fn save_credentials(
                 // login with key
 
                 let key = "secret-key".to_string();
-                let value = ConfigValue::String(secret_key, path_def.clone());
+                let value = ConfigValue::String(secret_key.expose(), path_def.clone());
                 let mut map = HashMap::from([(key, value)]);
                 if let Some(key_subject) = key_subject {
                     let key = "secret-key-subject".to_string();
