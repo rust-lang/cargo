@@ -96,7 +96,7 @@ impl RegistryCredentialConfig {
 
 pub struct PublishOpts<'cfg> {
     pub config: &'cfg Config,
-    pub token: Option<String>,
+    pub token: Option<Secret<String>>,
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
@@ -174,7 +174,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
     let (mut registry, reg_ids) = registry(
         opts.config,
-        opts.token.as_deref().map(Secret::from),
+        opts.token.as_ref().map(Secret::as_deref),
         opts.index.as_deref(),
         publish_registry.as_deref(),
         true,
@@ -786,7 +786,7 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
 
 pub fn registry_login(
     config: &Config,
-    token: Option<&str>,
+    token: Option<Secret<&str>>,
     reg: Option<&str>,
     generate_keypair: bool,
     secret_key_required: bool,
@@ -939,7 +939,7 @@ pub fn registry_logout(config: &Config, reg: Option<&str>) -> CargoResult<()> {
 
 pub struct OwnersOptions {
     pub krate: Option<String>,
-    pub token: Option<String>,
+    pub token: Option<Secret<String>>,
     pub index: Option<String>,
     pub to_add: Option<Vec<String>>,
     pub to_remove: Option<Vec<String>>,
@@ -961,7 +961,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     let (mut registry, _) = registry(
         config,
-        opts.token.as_deref().map(Secret::from),
+        opts.token.as_ref().map(Secret::as_deref),
         opts.index.as_deref(),
         opts.registry.as_deref(),
         true,
@@ -1020,7 +1020,7 @@ pub fn yank(
     config: &Config,
     krate: Option<String>,
     version: Option<String>,
-    token: Option<String>,
+    token: Option<Secret<String>>,
     index: Option<String>,
     undo: bool,
     reg: Option<String>,
@@ -1052,7 +1052,7 @@ pub fn yank(
 
     let (mut registry, _) = registry(
         config,
-        token.as_deref().map(Secret::from),
+        token.as_ref().map(Secret::as_deref),
         index.as_deref(),
         reg.as_deref(),
         true,

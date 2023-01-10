@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops;
+use cargo::util::auth::Secret;
 
 pub fn cli() -> Command {
     subcommand("yank")
@@ -37,7 +38,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         config,
         krate.map(|s| s.to_string()),
         version.map(|s| s.to_string()),
-        args.get_one::<String>("token").cloned(),
+        args.get_one::<String>("token").cloned().map(Secret::from),
         args.get_one::<String>("index").cloned(),
         args.flag("undo"),
         registry,

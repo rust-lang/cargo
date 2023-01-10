@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops::{self, OwnersOptions};
+use cargo::util::auth::Secret;
 
 pub fn cli() -> Command {
     subcommand("owner")
@@ -34,7 +35,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let registry = args.registry(config)?;
     let opts = OwnersOptions {
         krate: args.get_one::<String>("crate").cloned(),
-        token: args.get_one::<String>("token").cloned(),
+        token: args.get_one::<String>("token").cloned().map(Secret::from),
         index: args.get_one::<String>("index").cloned(),
         to_add: args
             .get_many::<String>("add")

@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops::{self, PublishOpts};
+use cargo::util::auth::Secret;
 
 pub fn cli() -> Command {
     subcommand("publish")
@@ -36,7 +37,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         &ws,
         &PublishOpts {
             config,
-            token: args.get_one::<String>("token").map(|s| s.to_string()),
+            token: args
+                .get_one::<String>("token")
+                .map(|s| Secret::from(s.to_string())),
             index,
             verify: !args.flag("no-verify"),
             allow_dirty: args.flag("allow-dirty"),

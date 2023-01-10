@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops;
+use cargo::util::auth::Secret;
 
 pub fn cli() -> Command {
     subcommand("login")
@@ -36,7 +37,7 @@ pub fn cli() -> Command {
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     ops::registry_login(
         config,
-        args.get_one("token").map(String::as_str),
+        args.get_one("token").map(String::as_str).map(Secret::from),
         args.get_one("registry").map(String::as_str),
         args.flag("generate-keypair"),
         args.flag("secret-key"),

@@ -140,9 +140,9 @@ pub fn registry_credential_config(
         return registry_credential_config_inner(
             true,
             None,
-            token,
+            token.map(Secret::from),
             credential_process,
-            secret_key,
+            secret_key.map(Secret::from),
             secret_key_subject,
             config,
         );
@@ -231,9 +231,9 @@ pub fn registry_credential_config(
     registry_credential_config_inner(
         false,
         name.as_deref(),
-        token,
+        token.map(Secret::from),
         credential_process,
-        secret_key,
+        secret_key.map(Secret::from),
         secret_key_subject,
         config,
     )
@@ -242,9 +242,9 @@ pub fn registry_credential_config(
 fn registry_credential_config_inner(
     is_crates_io: bool,
     name: Option<&str>,
-    token: Option<String>,
+    token: Option<Secret<String>>,
     credential_process: Option<config::PathAndArgs>,
-    secret_key: Option<String>,
+    secret_key: Option<Secret<String>>,
     secret_key_subject: Option<String>,
     config: &Config,
 ) -> CargoResult<RegistryCredentialConfig> {
@@ -281,13 +281,13 @@ fn registry_credential_config_inner(
                     registry
                 ));
             }
-            (Some(token), _, _, _) => RegistryCredentialConfig::Token(Secret::from(token)),
+            (Some(token), _, _, _) => RegistryCredentialConfig::Token(token),
             (_, Some(process), _, _) => RegistryCredentialConfig::Process((
                 process.path.resolve_program(config),
                 process.args,
             )),
             (None, None, Some(key), subject) => {
-                RegistryCredentialConfig::AsymmetricKey((Secret::from(key), subject))
+                RegistryCredentialConfig::AsymmetricKey((key, subject))
             }
             (None, None, None, _) => {
                 if !is_crates_io {
