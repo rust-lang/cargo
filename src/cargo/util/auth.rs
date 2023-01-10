@@ -377,14 +377,14 @@ my-registry = {{ index = "{}" }}
 }
 
 // Store a token in the cache for future calls.
-pub fn cache_token(config: &Config, sid: &SourceId, token: &str) {
+pub fn cache_token(config: &Config, sid: &SourceId, token: Secret<&str>) {
     let url = sid.canonical_url();
     config.credential_cache().insert(
         url.clone(),
         CredentialCacheValue {
             from_commandline: true,
             independent_of_endpoint: true,
-            token_value: Secret::from(token.to_string()),
+            token_value: token.owned(),
         },
     );
 }
@@ -399,7 +399,7 @@ pub fn auth_token(
     mutation: Option<Mutation<'_>>,
 ) -> CargoResult<String> {
     match auth_token_optional(config, sid, mutation.as_ref())? {
-        Some(token) => Ok(token),
+        Some(token) => Ok(token.expose()),
         None => Err(AuthorizationError {
             sid: sid.clone(),
             login_url: login_url.cloned(),
@@ -414,7 +414,7 @@ fn auth_token_optional(
     config: &Config,
     sid: &SourceId,
     mutation: Option<&'_ Mutation<'_>>,
-) -> CargoResult<Option<String>> {
+) -> CargoResult<Option<Secret<String>>> {
     let mut cache = config.credential_cache();
     let url = sid.canonical_url();
 
@@ -425,17 +425,19 @@ fn auth_token_optional(
             || cache_token_value.independent_of_endpoint
             || mutation.is_none()
         {
-            return Ok(Some(cache_token_value.token_value.clone().expose()));
+            return Ok(Some(cache_token_value.token_value.clone()));
         }
     }
 
     let credential = registry_credential_config(config, sid)?;
     let (independent_of_endpoint, token) = match credential {
         RegistryCredentialConfig::None => return Ok(None),
-        RegistryCredentialConfig::Token(config_token) => (true, config_token.expose()),
+        RegistryCredentialConfig::Token(config_token) => (true, config_token),
         RegistryCredentialConfig::Process(process) => {
             // todo: PASETO with process
-            run_command(config, &process, sid, Action::Get)?.unwrap()
+            let (independent_of_endpoint, token) =
+                run_command(config, &process, sid, Action::Get)?.unwrap();
+            (independent_of_endpoint, Secret::from(token))
         }
         RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) => {
             let secret: Secret<AsymmetricSecretKey<pasetors::version3::V3>> =
@@ -496,18 +498,22 @@ fn auth_token_optional(
 
             (
                 false,
-                pasetors::version3::PublicToken::sign(
-                    &secret.expose(),
-                    serde_json::to_string(&message)
-                        .expect("cannot serialize")
-                        .as_bytes(),
-                    Some(
-                        serde_json::to_string(&footer)
-                            .expect("cannot serialize")
-                            .as_bytes(),
-                    ),
-                    None,
-                )?,
+                secret
+                    .map(|secret| {
+                        pasetors::version3::PublicToken::sign(
+                            &secret,
+                            serde_json::to_string(&message)
+                                .expect("cannot serialize")
+                                .as_bytes(),
+                            Some(
+                                serde_json::to_string(&footer)
+                                    .expect("cannot serialize")
+                                    .as_bytes(),
+                            ),
+                            None,
+                        )
+                    })
+                    .transpose()?,
             )
         }
     };
@@ -518,7 +524,7 @@ fn auth_token_optional(
             CredentialCacheValue {
                 from_commandline: false,
                 independent_of_endpoint,
-                token_value: Secret::from(token.to_string()),
+                token_value: token.clone(),
             },
         );
     }

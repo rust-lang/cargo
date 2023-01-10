@@ -174,7 +174,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
     let (mut registry, reg_ids) = registry(
         opts.config,
-        opts.token.as_deref(),
+        opts.token.as_deref().map(Secret::from),
         opts.index.as_deref(),
         publish_registry.as_deref(),
         true,
@@ -512,7 +512,7 @@ fn wait_for_publish(
 /// * `token_required`: If `true`, the token will be set.
 fn registry(
     config: &Config,
-    token_from_cmdline: Option<&str>,
+    token_from_cmdline: Option<Secret<&str>>,
     index: Option<&str>,
     registry: Option<&str>,
     force_update: bool,
@@ -795,7 +795,8 @@ pub fn registry_login(
     let source_ids = get_source_id(config, None, reg)?;
     let reg_cfg = auth::registry_credential_config(config, &source_ids.original)?;
 
-    let login_url = match registry(config, token, None, reg, false, None) {
+    let token = token.map(Secret::from);
+    let login_url = match registry(config, token.clone(), None, reg, false, None) {
         Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
             .downcast::<AuthorizationError>()
@@ -866,7 +867,7 @@ pub fn registry_login(
         ));
     } else {
         new_token = RegistryCredentialConfig::Token(match token {
-            Some(token) => Secret::from(token.to_string()),
+            Some(token) => token.owned(),
             None => {
                 if let Some(login_url) = login_url {
                     drop_println!(
@@ -960,7 +961,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     let (mut registry, _) = registry(
         config,
-        opts.token.as_deref(),
+        opts.token.as_deref().map(Secret::from),
         opts.index.as_deref(),
         opts.registry.as_deref(),
         true,
@@ -1051,7 +1052,7 @@ pub fn yank(
 
     let (mut registry, _) = registry(
         config,
-        token.as_deref(),
+        token.as_deref().map(Secret::from),
         index.as_deref(),
         reg.as_deref(),
         true,
