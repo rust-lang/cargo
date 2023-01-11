@@ -814,7 +814,7 @@ pub fn registry_login(
             } else if key_subject.is_some() {
                 "key-subject"
             } else {
-                unreachable!("how did whe get here");
+                unreachable!("how did we get here");
             };
             bail!(
                 "the `{flag}` flag is unstable, pass `-Z registry-auth` to enable it\n\
@@ -855,7 +855,7 @@ pub fn registry_login(
         if let Some(p) = paserk_public_from_paserk_secret(&secret_key) {
             drop_println!(config, "{}", &p);
         } else {
-            bail!("not a validly formated PASERK secret key");
+            bail!("not a validly formatted PASERK secret key");
         }
         new_token = RegistryCredentialConfig::AsymmetricKey((
             secret_key,

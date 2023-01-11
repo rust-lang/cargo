@@ -1109,7 +1109,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         // did not enable it, don't include it.
                         if dep.is_optional() {
                             // This `unit_for` is from parent dep and *SHOULD* contains its own
-                            // artifact dep infomration inside `artifact_target_for_features`.
+                            // artifact dep information inside `artifact_target_for_features`.
                             // So, no need to map any artifact info from an incorrect `dep.artifact()`.
                             let features_for = unit_for.map_to_features_for(IS_NO_ARTIFACT_DEP);
                             if !self.is_dep_activated(pkg_id, features_for, dep.name_in_toml()) {

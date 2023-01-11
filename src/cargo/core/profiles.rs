@@ -7,12 +7,12 @@
 //! which does the followings:
 //!
 //! - Create a `Profiles` by merging profiles from configs onto the profile
-//!   from root mainfest (see [`merge_config_profiles`]).
+//!   from root manifest (see [`merge_config_profiles`]).
 //! - Add built-in profiles onto it (see [`Profiles::add_root_profiles`]).
 //! - Process profile inheritance for each profiles. (see [`Profiles::add_maker`]).
 //!
 //! Then you can query a [`Profile`] via [`Profiles::get_profile`], which respects
-//! the profile overriden hierarchy described in below. The [`Profile`] you get
+//! the profile overridden hierarchy described in below. The [`Profile`] you get
 //! is basically an immutable struct containing the compiler flag presets.
 //!
 //! ## Profile overridden hierarchy
