@@ -1115,7 +1115,12 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
     let mut warnings = Vec::new();
     profile
         .val
-        .validate(name, ws.unstable_features(), &mut warnings)
+        .validate(
+            name,
+            ws.config().cli_unstable(),
+            ws.unstable_features(),
+            &mut warnings,
+        )
         .with_context(|| {
             format!(
                 "config profile `{}` is not valid (defined in `{}`)",

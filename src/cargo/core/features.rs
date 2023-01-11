@@ -667,6 +667,7 @@ unstable_cli_options!(
     #[serde(deserialize_with = "deserialize_build_std")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
+    codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     #[serde(deserialize_with = "deserialize_check_cfg")]
@@ -680,6 +681,7 @@ unstable_cli_options!(
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
+    profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     sparse_registry: bool = ("Support plain-HTTP-based crate registries"),
     registry_auth: bool = ("Authentication for alternative registries, and generate registry authentication tokens using asymmetric cryptography"),
@@ -969,6 +971,8 @@ impl CliUnstable {
                 stabilized_warn(k, "1.59.0", STABILIZED_FUTURE_INCOMPAT_REPORT)
             }
             "timings" => stabilized_warn(k, "1.60", STABILIZED_TIMINGS),
+            "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
+            "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

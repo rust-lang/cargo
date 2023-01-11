@@ -22,9 +22,8 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{
-    find_workspace_root, resolve_relative_path, Dependency, Manifest, PackageId, Summary, Target,
-};
+use crate::core::{find_workspace_root, resolve_relative_path, CliUnstable};
+use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -455,9 +454,18 @@ impl TomlProfiles {
         self.0.get(name)
     }
 
-    pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
+    /// Checks syntax validity and unstable feature gate for each profile.
+    ///
+    /// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
+    /// because profiles can now be set in either `Cargo.toml` or `config.toml`.
+    pub fn validate(
+        &self,
+        cli_unstable: &CliUnstable,
+        features: &Features,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<()> {
         for (name, profile) in &self.0 {
-            profile.validate(name, features, warnings)?;
+            profile.validate(name, cli_unstable, features, warnings)?;
         }
         Ok(())
     }
@@ -592,21 +600,27 @@ impl fmt::Display for ProfilePackageSpec {
 }
 
 impl TomlProfile {
+    /// Checks stytax validity and unstable feature gate for a given profile.
     pub fn validate(
         &self,
         name: &str,
+        cli_unstable: &CliUnstable,
         features: &Features,
         warnings: &mut Vec<String>,
     ) -> CargoResult<()> {
-        self.validate_profile(name, features)?;
+        self.validate_profile(name, cli_unstable, features)?;
         if let Some(ref profile) = self.build_override {
             profile.validate_override("build-override")?;
-            profile.validate_profile(&format!("{name}.build-override"), features)?;
+            profile.validate_profile(&format!("{name}.build-override"), cli_unstable, features)?;
         }
         if let Some(ref packages) = self.package {
             for (override_name, profile) in packages {
                 profile.validate_override("package")?;
-                profile.validate_profile(&format!("{name}.package.{override_name}"), features)?;
+                profile.validate_profile(
+                    &format!("{name}.package.{override_name}"),
+                    cli_unstable,
+                    features,
+                )?;
             }
         }
 
@@ -751,9 +765,21 @@ impl TomlProfile {
     /// Validates a profile.
     ///
     /// This is a shallow check, which is reused for the profile itself and any overrides.
-    fn validate_profile(&self, name: &str, features: &Features) -> CargoResult<()> {
+    fn validate_profile(
+        &self,
+        name: &str,
+        cli_unstable: &CliUnstable,
+        features: &Features,
+    ) -> CargoResult<()> {
         if let Some(codegen_backend) = &self.codegen_backend {
-            features.require(Feature::codegen_backend())?;
+            match (
+                features.require(Feature::codegen_backend()),
+                cli_unstable.codegen_backend,
+            ) {
+                (Err(e), false) => return Err(e),
+                _ => {}
+            }
+
             if codegen_backend.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
                 bail!(
                     "`profile.{}.codegen-backend` setting of `{}` is not a valid backend name.",
@@ -763,7 +789,13 @@ impl TomlProfile {
             }
         }
         if self.rustflags.is_some() {
-            features.require(Feature::profile_rustflags())?;
+            match (
+                features.require(Feature::profile_rustflags()),
+                cli_unstable.profile_rustflags,
+            ) {
+                (Err(e), false) => return Err(e),
+                _ => {}
+            }
         }
         Ok(())
     }
@@ -2065,7 +2097,8 @@ impl TomlManifest {
 
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
-            profiles.validate(&features, &mut warnings)?;
+            let cli_unstable = config.cli_unstable();
+            profiles.validate(cli_unstable, &features, &mut warnings)?;
         }
 
         let publish = package
@@ -2254,7 +2287,7 @@ impl TomlManifest {
         };
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
-            profiles.validate(&features, &mut warnings)?;
+            profiles.validate(config.cli_unstable(), &features, &mut warnings)?;
         }
         let resolve_behavior = me
             .workspace
