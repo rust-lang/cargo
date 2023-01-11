@@ -294,7 +294,7 @@ k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
         .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
 
-    // and then it shuld work
+    // and then it should work
     cargo_process("login --key-subject=foo -Z registry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())

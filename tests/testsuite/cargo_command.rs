@@ -343,7 +343,7 @@ fn cargo_subcommand_env() {
         .with_stdout(cargo.to_str().unwrap())
         .run();
 
-    // Check that subcommands inherit an overriden $CARGO
+    // Check that subcommands inherit an overridden $CARGO
     let envtest_bin = target_dir
         .join("cargo-envtest")
         .with_extension(std::env::consts::EXE_EXTENSION)

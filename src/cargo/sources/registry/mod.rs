@@ -890,7 +890,7 @@ fn max_unpack_size(size: u64) -> u64 {
         std::env::var(RATIO_VAR)
             .unwrap()
             .parse()
-            .expect("a max compresssion ratio in bytes")
+            .expect("a max compression ratio in bytes")
     } else {
         MAX_COMPRESSION_RATIO
     };

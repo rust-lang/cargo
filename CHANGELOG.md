@@ -14,7 +14,7 @@
 
 ### Changed
 
-- Splitted up registry documentation into multiple sections.
+- Split up registry documentation into multiple sections.
   [#11480](https://github.com/rust-lang/cargo/pull/11480)
 
 ### Fixed
@@ -55,7 +55,7 @@
   [#11349](https://github.com/rust-lang/cargo/pull/11349)
 - ❗ Cargo now emits an error if there are multiple registries in the configuration with the same index URL.
   [#10592](https://github.com/rust-lang/cargo/pull/10592)
-- Cargo now is aware of compression ratio when extracing crate files.
+- Cargo now is aware of compression ratio when extracting crate files.
   This relaxes the hard size limit introduced in 1.64.0 to mitigate zip bomb attack.
   [#11337](https://github.com/rust-lang/cargo/pull/11337)
 - Cargo now errors out when `cargo fix` on a git repo with uncommitted changes.
@@ -65,7 +65,7 @@
 - Cargo now warns when running `cargo new/init` and `PATH` env separator
   is in the project path.
   [#11318](https://github.com/rust-lang/cargo/pull/11318)
-- Better error messages when multiple pacakges were found and 
+- Better error messages when multiple packages were found and 
   `cargo add/remove` gets confused.
   [#11186](https://github.com/rust-lang/cargo/pull/11186)
   [#11375](https://github.com/rust-lang/cargo/pull/11375)
@@ -289,7 +289,7 @@
 
 ### Nightly
 
-- Progress indicator for sparse registries becomes more straightfoward.
+- Progress indicator for sparse registries becomes more straightforward.
   [#11068](https://github.com/rust-lang/cargo/pull/11068)
 
 ## Cargo 1.64 (2022-09-22)

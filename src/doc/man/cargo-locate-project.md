@@ -15,7 +15,7 @@ manifest is found by searching upward for a file named `Cargo.toml` starting fro
 working directory.
 
 If the project happens to be a part of a workspace, the manifest of the project, rather than
-the workspace root, is output. This can be overriden by the `--workspace` flag. The root
+the workspace root, is output. This can be overridden by the `--workspace` flag. The root
 workspace is found by traversing further upward or by using the field `package.workspace` after
 locating the manifest of a workspace member.
 

@@ -35,7 +35,7 @@ struct Proposal<'a> {
 }
 
 /// The context needed for generating root units,
-/// which are pacakges the user has requested to compile.
+/// which are packages the user has requested to compile.
 ///
 /// To generate a full [`UnitGraph`],
 /// generally you need to call [`generate_root_units`] first,
@@ -700,7 +700,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
         self.proposals_to_units(proposals)
     }
 
-    /// Generates units specfically for doc-scraping.
+    /// Generates units specifically for doc-scraping.
     ///
     /// This requires a separate entrypoint from [`generate_root_units`] because it
     /// takes the documented units as input.

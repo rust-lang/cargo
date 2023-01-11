@@ -9,13 +9,13 @@ use crate::util::CargoResult;
 
 use anyhow::{bail, Context as _};
 
-/// Represents the selected pacakges that will be built.
+/// Represents the selected packages that will be built.
 ///
 /// Generally, it represents the combination of all `-p` flag. When working within
 /// a workspace, `--exclude` and `--workspace` flags also contribute to it.
 #[derive(PartialEq, Eq, Debug)]
 pub enum Packages {
-    /// Pacakges selected by default. Ususally means no flag provided.
+    /// Packages selected by default. Usually means no flag provided.
     Default,
     /// Opt in all packages.
     ///

@@ -72,7 +72,7 @@ pub fn registry_credential_config(
     // Find the SourceId's name by its index URL. If environment variables
     // are available they will be preferred over configuration values.
     //
-    // The fundimental problem is that we only know the index url of the registry
+    // The fundamental problem is that we only know the index url of the registry
     // for certain. For example, an unnamed registry source can come from the `--index`
     // command line argument, or from a Cargo.lock file. For this reason, we always
     // attempt to discover the name by looking it up by the index URL.
@@ -341,7 +341,7 @@ fn auth_token_optional(
 
     if let Some(cache_token_value) = cache.get(url) {
         // Tokens for endpoints that do not involve a mutation can always be reused.
-        // If the value is put in the cach by the command line, then we reuse it without looking at the configuration.
+        // If the value is put in the cache by the command line, then we reuse it without looking at the configuration.
         if cache_token_value.from_commandline
             || cache_token_value.independent_of_endpoint
             || mutation.is_none()

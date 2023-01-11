@@ -32,7 +32,7 @@ fn make_project() -> Project {
     p
 }
 
-static SUCCCESS_OUTPUT: &'static str = "\
+static SUCCESS_OUTPUT: &'static str = "\
 [UPDATING] `alternative` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
@@ -61,7 +61,7 @@ fn simple() {
         .build();
 
     let p = make_project();
-    cargo(&p, "build").with_stderr(SUCCCESS_OUTPUT).run();
+    cargo(&p, "build").with_stderr(SUCCESS_OUTPUT).run();
 }
 
 #[cargo_test]
@@ -74,7 +74,7 @@ fn simple_with_asymmetric() {
         .build();
 
     let p = make_project();
-    cargo(&p, "build").with_stderr(SUCCCESS_OUTPUT).run();
+    cargo(&p, "build").with_stderr(SUCCESS_OUTPUT).run();
 }
 
 #[cargo_test]
@@ -93,7 +93,7 @@ fn environment_config() {
             registry.index_url().as_str(),
         )
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", registry.token())
-        .with_stderr(SUCCCESS_OUTPUT)
+        .with_stderr(SUCCESS_OUTPUT)
         .run();
 }
 
@@ -109,7 +109,7 @@ fn environment_token() {
     let p = make_project();
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", registry.token())
-        .with_stderr(SUCCCESS_OUTPUT)
+        .with_stderr(SUCCESS_OUTPUT)
         .run();
 }
 
@@ -130,7 +130,7 @@ fn environment_token_with_asymmetric() {
     let p = make_project();
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY", registry.key())
-        .with_stderr(SUCCCESS_OUTPUT)
+        .with_stderr(SUCCESS_OUTPUT)
         .run();
 }
 

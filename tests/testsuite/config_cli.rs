@@ -56,7 +56,7 @@ fn cli_priority() {
 }
 
 #[cargo_test]
-fn merge_primitives_for_multiple_cli_occurences() {
+fn merge_primitives_for_multiple_cli_occurrences() {
     let config_path0 = ".cargo/file0.toml";
     write_config_at(config_path0, "k = 'file0'");
     let config_path1 = ".cargo/file1.toml";

@@ -1,4 +1,4 @@
-//! This modules contains types storing information of target platfroms.
+//! This modules contains types storing information of target platforms.
 //!
 //! Normally, call [`RustcTargetData::new`] to construct all the target
 //! platform once, and then query info on your demand. For example,
