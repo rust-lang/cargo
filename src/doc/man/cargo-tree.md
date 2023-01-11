@@ -67,7 +67,7 @@ of what `cargo test` does, `cargo tree` is pretty close. However, it doesn't
 guarantee the exact equivalence to what Cargo is going to build, since a
 compilation is complex and depends on lots of different factors.
 
-To learm more about feature unification, check out this
+To learn more about feature unification, check out this
 [dedicated section](../reference/features.html#feature-unification).
 
 ## OPTIONS

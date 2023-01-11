@@ -59,7 +59,7 @@ DESCRIPTION
        build, since a compilation is complex and depends on lots of different
        factors.
 
-       To learm more about feature unification, check out this dedicated
+       To learn more about feature unification, check out this dedicated
        section
        <https://doc.rust-lang.org/cargo/reference/features.html#feature-unification>.
 
