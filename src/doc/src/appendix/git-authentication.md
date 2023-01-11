@@ -78,8 +78,9 @@ the fingerprint by running `ssh-keygen` against the public key (for example,
 publish their fingerprints on the web; for example GitHub posts theirs at
 <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints>.
 
-Cargo comes with the host keys for [github.com](https://github.com) built-in.
-If those ever change, you can add the new keys to the config or known_hosts file.
+Cargo comes with the host keys for [github.com](https://github.com) and
+[gitlab.com](https://gitlab.com) built-in. If those ever change, you can add
+the new keys to the config or known_hosts file.
 
 [`credential.helper`]: https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage
 [`net.git-fetch-with-cli`]: ../reference/config.md#netgit-fetch-with-cli
