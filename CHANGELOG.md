@@ -235,7 +235,7 @@
 - External subcommands can now inherit jobserver file descriptors from Cargo.
   [#10511](https://github.com/rust-lang/cargo/pull/10511)
 - Added an API documentation for private items in cargo-the-library. See
-  <https://doc.crates.io/contrib/apidoc/cargo>.
+  <https://doc.rust-lang.org/nightly/nightly-rustc/cargo>.
   [#11019](https://github.com/rust-lang/cargo/pull/11019)
 
 ### Changed

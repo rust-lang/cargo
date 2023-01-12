@@ -14,7 +14,7 @@
 //! There are two places you can find API documentation of cargo-the-library,
 //!
 //! - <https://docs.rs/cargo> and
-//! - <https://doc.crates.io/contrib/apidoc/cargo>.
+//! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo>.
 //!
 //! Each of them targets on a slightly different audience.
 //!
@@ -33,7 +33,7 @@
 //!
 //! ## For Cargo contributors
 //!
-//! The documentation on <https://doc.crates.io/contrib/apidoc/cargo> contains all items in Cargo.
+//! The documentation on <https://doc.rust-lang.org/nightly/nightly-rustc/cargo> contains all items in Cargo.
 //! Contributors of Cargo may find it useful as a reference of Cargo's implementation details.
 //! It's built with `--document-private-items` rustdoc flag,
 //! so you might expect to see some noise and strange items here.
