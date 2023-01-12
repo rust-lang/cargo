@@ -6,4 +6,4 @@ authors = ["Eric Huss"]
 git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src"
 
 [output.html.redirect]
-"/apidoc/cargo/" = "https://doc.rust-lang.org/nightly/nightly-rustc/cargo/"
+"/apidoc/cargo/index.html" = "https://doc.rust-lang.org/nightly/nightly-rustc/cargo/"
