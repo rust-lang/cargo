@@ -85,6 +85,7 @@ Each new feature described below should explain how to use it.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
+    * [codegen-backend](#codegen-backend) — Select the codegen backend used by rustc.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) - Allow build artifacts to be included into other build artifacts and build them for different targets.
 * Information and metadata
