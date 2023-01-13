@@ -1,7 +1,7 @@
-error: Found argument '--flag' which wasn't expected, or isn't valid in this context
+error: unexpected argument '--flag' found
 
-  If you tried to supply '--flag' as a value rather than a flag, use '-- --flag'
+  note: to pass '--flag' as a value, use '-- --flag'
 
 Usage: cargo[EXE] remove <DEP_ID>...
 
-For more information try '--help'
+For more information, try '--help'.

@@ -1,7 +1,7 @@
-error: The argument '--dev' cannot be used with '--build'
+error: the argument '--dev' cannot be used with '--build'
 
 Usage: cargo add [OPTIONS] <DEP>[@<VERSION>] ...
        cargo add [OPTIONS] --path <PATH> ...
        cargo add [OPTIONS] --git <URL> ...
 
-For more information try '--help'
+For more information, try '--help'.

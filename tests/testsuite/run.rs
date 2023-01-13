@@ -589,7 +589,10 @@ fn run_bins() {
     p.cargo("run --bins")
         .with_status(1)
         .with_stderr_contains(
-            "error: Found argument '--bins' which wasn't expected, or isn't valid in this context",
+            "\
+error: unexpected argument '--bins' found
+
+  note: argument '--bin' exists",
         )
         .run();
 }
@@ -1321,7 +1324,7 @@ fn run_multiple_packages() {
         .arg("d2")
         .with_status(1)
         .with_stderr_contains(
-            "error: The argument '--package [<SPEC>]' was provided more than once, but cannot be used multiple times",
+            "error: the argument '--package [<SPEC>]' cannot be used multiple times",
         )
         .run();
 

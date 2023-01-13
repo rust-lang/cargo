@@ -1446,7 +1446,7 @@ fn not_both_vers_and_version() {
         .with_status(1)
         .with_stderr_contains(
             "\
-error: The argument '--version <VERSION>' was provided more than once, but cannot be used multiple times
+[ERROR] the argument '--version <VERSION>' cannot be used multiple times
 ",
         )
         .run();
@@ -1648,9 +1648,7 @@ fn install_empty_argument() {
     cargo_process("install")
         .arg("")
         .with_status(1)
-        .with_stderr_contains(
-            "[ERROR] The argument '[crate]...' requires a value but none was supplied",
-        )
+        .with_stderr_contains("[ERROR] a value is required for '[crate]...' but none was supplied")
         .run();
 }
 

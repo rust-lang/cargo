@@ -551,7 +551,7 @@ fn fail_with_multiple_packages() {
         .with_status(1)
         .with_stderr_contains(
             "\
-error: The argument '--package [<SPEC>]' was provided more than once, but cannot be used multiple times
+error: the argument '--package [<SPEC>]' cannot be used multiple times
 ",
         )
         .run();
