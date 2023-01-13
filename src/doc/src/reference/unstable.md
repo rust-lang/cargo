@@ -681,6 +681,18 @@ cargo-features = ["profile-rustflags"]
 rustflags = [ "-C", "..." ]
 ```
 
+To set this in a profile in Cargo configuration, you need to use either
+`-Z profile-rustflags` or `[unstable]` table to enable it. For example,
+
+```toml
+# .cargo/config.toml
+[unstable]
+profile-rustflags = true
+
+[profile.release]
+rustflags = [ "-C", "..." ]
+```
+
 ### rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
 
@@ -1373,6 +1385,18 @@ name = "foo"
 
 [dependencies]
 serde = "1.0.117"
+
+[profile.dev.package.foo]
+codegen-backend = "cranelift"
+```
+
+To set this in a profile in Cargo configuration, you need to use either
+`-Z codegen-backend` or `[unstable]` table to enable it. For example,
+
+```toml
+# .cargo/config.toml
+[unstable]
+codegen-backend = true
 
 [profile.dev.package.foo]
 codegen-backend = "cranelift"
