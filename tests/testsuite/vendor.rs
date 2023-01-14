@@ -436,11 +436,11 @@ fn test_sync_argument() {
 
     p.cargo("vendor --respect-source-config --manifest-path foo/Cargo.toml -s bar/Cargo.toml baz/Cargo.toml test_vendor")
         .with_stderr("\
-error: Found argument 'test_vendor' which wasn't expected, or isn't valid in this context
+error: unexpected argument 'test_vendor' found
 
 Usage: cargo[EXE] vendor [OPTIONS] [path]
 
-For more information try '--help'",
+For more information, try '--help'.",
         )
         .with_status(1)
         .run();
