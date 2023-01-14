@@ -70,6 +70,7 @@ pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
 pub use cargo_test_macro::cargo_test;
 
 pub mod compare;
+pub mod containers;
 pub mod cross_compile;
 mod diff;
 pub mod git;
@@ -1227,6 +1228,8 @@ pub trait TestEnv: Sized {
             // should hopefully not surprise us as we add cargo features over time and
             // cargo rides the trains.
             .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
+            // Keeps cargo within its sandbox.
+            .env("__CARGO_TEST_DISABLE_GLOBAL_KNOWN_HOST", "1")
             // For now disable incremental by default as support hasn't ridden to the
             // stable channel yet. Once incremental support hits the stable compiler we
             // can switch this to one and then fix the tests.
@@ -1247,10 +1250,14 @@ pub trait TestEnv: Sized {
             .env_remove("GIT_AUTHOR_EMAIL")
             .env_remove("GIT_COMMITTER_NAME")
             .env_remove("GIT_COMMITTER_EMAIL")
+            .env_remove("SSH_AUTH_SOCK") // ensure an outer agent is never contacted
             .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
         if cfg!(target_os = "macos") {
             // Work-around a bug in macOS 10.15, see `link_or_copy` for details.
             self = self.env("__CARGO_COPY_DONT_LINK_DO_NOT_USE_THIS", "1");
+        }
+        if cfg!(windows) {
+            self = self.env("USERPROFILE", paths::home());
         }
         self
     }

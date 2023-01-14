@@ -92,6 +92,19 @@ The options it supports are:
 * `>=1.64` — This indicates that the test will only run with the given version of `rustc` or newer.
   This can be used when a new `rustc` feature has been stabilized that the test depends on.
   If this is specified, a `reason` is required to explain why it is being checked.
+* `public_network_test` — This tests contacts the public internet.
+  These tests are disabled unless the `CARGO_PUBLIC_NETWORK_TESTS` environment variable is set.
+  Use of this should be *extremely rare*, please avoid using it if possible.
+  The hosts it contacts should have a relatively high confidence that they are reliable and stable (such as github.com), especially in CI.
+  The tests should be carefully considered for developer security and privacy as well.
+* `container_test` — This indicates that it is a test that uses Docker.
+  These tests are disabled unless the `CARGO_CONTAINER_TESTS` environment variable is set.
+  This requires that you have Docker installed.
+  The SSH tests also assume that you have OpenSSH installed.
+  These should work on Linux, macOS, and Windows where possible.
+  Unfortunately these tests are not run in CI for macOS or Windows (no Docker on macOS, and Windows does not support Linux images).
+  See [`crates/cargo-test-support/src/containers.rs`](https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/containers.rs) for more on writing these tests.
+
 
 #### Testing Nightly Features
 
