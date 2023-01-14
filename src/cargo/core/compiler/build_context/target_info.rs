@@ -462,6 +462,14 @@ impl TargetInfo {
                     // preserved.
                     should_replace_hyphens: true,
                 })
+            } else {
+                ret.push(FileType {
+                    suffix: format!("{}.dwp", suffix),
+                    prefix: prefix.clone(),
+                    flavor: FileFlavor::DebugInfo,
+                    crate_type: Some(crate_type.clone()),
+                    should_replace_hyphens: crate_type != CrateType::Bin,
+                })
             }
         }
 
