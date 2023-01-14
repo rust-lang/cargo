@@ -961,7 +961,7 @@ fn fetch_with_cli(
     config
         .shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
-    cmd.exec_with_output()?;
+    cmd.exec()?;
     Ok(())
 }
 
