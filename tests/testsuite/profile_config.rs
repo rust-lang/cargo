@@ -4,6 +4,67 @@ use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project};
 
+// TODO: this should be remove once -Zprofile-rustflags is stabilized
+#[cargo_test]
+fn rustflags_works_with_zflag() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [profile.dev]
+                rustflags = ["-C", "link-dead-code=yes"]
+            "#,
+        )
+        .build();
+
+    p.cargo("check -v")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_status(101)
+        .with_stderr_contains("[..]feature `profile-rustflags` is required[..]")
+        .run();
+
+    p.cargo("check -v -Zprofile-rustflags")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [unstable]
+            profile-rustflags = true
+
+            [profile.dev]
+            rustflags = ["-C", "link-dead-code=yes"]
+        "#,
+    );
+
+    p.cargo("check -v")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_stderr(
+            "\
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
 #[cargo_test]
 fn profile_config_validate_warnings() {
     let p = project()

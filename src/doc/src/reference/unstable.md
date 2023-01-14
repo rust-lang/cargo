@@ -85,6 +85,7 @@ Each new feature described below should explain how to use it.
     * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
+    * [codegen-backend](#codegen-backend) — Select the codegen backend used by rustc.
     * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) - Allow build artifacts to be included into other build artifacts and build them for different targets.
 * Information and metadata
@@ -676,6 +677,18 @@ cargo-features = ["profile-rustflags"]
 
 [package]
 # ...
+
+[profile.release]
+rustflags = [ "-C", "..." ]
+```
+
+To set this in a profile in Cargo configuration, you need to use either
+`-Z profile-rustflags` or `[unstable]` table to enable it. For example,
+
+```toml
+# .cargo/config.toml
+[unstable]
+profile-rustflags = true
 
 [profile.release]
 rustflags = [ "-C", "..." ]
@@ -1373,6 +1386,18 @@ name = "foo"
 
 [dependencies]
 serde = "1.0.117"
+
+[profile.dev.package.foo]
+codegen-backend = "cranelift"
+```
+
+To set this in a profile in Cargo configuration, you need to use either
+`-Z codegen-backend` or `[unstable]` table to enable it. For example,
+
+```toml
+# .cargo/config.toml
+[unstable]
+codegen-backend = true
 
 [profile.dev.package.foo]
 codegen-backend = "cranelift"
