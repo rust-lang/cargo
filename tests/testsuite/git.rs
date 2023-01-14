@@ -2749,6 +2749,8 @@ fn use_the_cli() {
     let stderr = "\
 [UPDATING] git repository `[..]`
 [RUNNING] `git fetch [..]`
+From [..]
+ * [new ref]                    -> origin/HEAD
 [COMPILING] dep1 [..]
 [RUNNING] `rustc [..]`
 [COMPILING] foo [..]
