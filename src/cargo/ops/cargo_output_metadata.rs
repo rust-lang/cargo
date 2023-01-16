@@ -82,6 +82,8 @@ struct MetadataResolveNode {
 
 #[derive(Serialize)]
 struct Dep {
+    // TODO(bindeps): after -Zbindeps gets stabilized,
+    // mark this field as deprecated in the help manual of cargo-metadata
     name: InternedString,
     pkg: PackageId,
     dep_kinds: Vec<DepKindInfo>,
@@ -91,12 +93,14 @@ struct Dep {
 struct DepKindInfo {
     kind: DepKind,
     target: Option<Platform>,
+
+    // vvvvv The fields below are introduced for `-Z bindeps`.
     /// What the manifest calls the crate.
     ///
     /// A renamed dependency will show the rename instead of original name.
-    extern_name: InternedString,
-
-    // vvvvv The fields below are introduced for `-Z bindeps`.
+    // TODO(bindeps): Remove `Option` after -Zbindeps get stabilized.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extern_name: Option<InternedString>,
     /// Artifact's crate type, e.g. staticlib, cdylib, bin...
     #[serde(skip_serializing_if = "Option::is_none")]
     artifact: Option<&'static str>,
@@ -240,11 +244,19 @@ fn build_resolve_graph_r(
                         Some(a) if a.is_lib() => true,
                         _ => false,
                     };
+                    // TODO(bindeps): Cargo shouldn't have `extern_name` field
+                    // if the user is not using -Zbindeps.
+                    // Remove this condition ` after -Zbindeps gets stabilized.
+                    let extern_name = if dep.artifact().is_some() {
+                        Some(extern_name(target)?)
+                    } else {
+                        None
+                    };
                     if included {
                         dep_kinds.push(DepKindInfo {
                             kind: dep.kind(),
                             target: dep.platform().cloned(),
-                            extern_name: extern_name(target)?,
+                            extern_name,
                             artifact: None,
                             compile_target: None,
                             bin_name: None,
@@ -275,7 +287,7 @@ fn build_resolve_graph_r(
                     dep_kinds.push(DepKindInfo {
                         kind: dep.kind(),
                         target: dep.platform().cloned(),
-                        extern_name: extern_name(target)?,
+                        extern_name: extern_name(target).ok(),
                         artifact: Some(kind.crate_type()),
                         compile_target,
                         bin_name: target.is_bin().then(|| target.name().to_string()),

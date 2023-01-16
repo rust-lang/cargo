@@ -526,7 +526,6 @@ fn cargo_metadata_with_deps_and_version() {
                         {
                             "dep_kinds": [
                               {
-                                "extern_name": "baz",
                                 "kind": null,
                                 "target": null
                               }
@@ -553,7 +552,6 @@ fn cargo_metadata_with_deps_and_version() {
                         {
                             "dep_kinds": [
                               {
-                                "extern_name": "bar",
                                 "kind": null,
                                 "target": null
                               }
@@ -564,7 +562,6 @@ fn cargo_metadata_with_deps_and_version() {
                         {
                             "dep_kinds": [
                               {
-                                "extern_name": "foobar",
                                 "kind": "dev",
                                 "target": null
                               }
@@ -1155,17 +1152,17 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 name = "bar"
                 version = "0.5.0"
                 authors = []
-                
+
                 [build-dependencies]
                 artifact = { path = "../artifact/", artifact = "bin", target = "target" }
                 bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin", target = "$ALT_TARGET" }
                 non-artifact = { path = "../non-artifact" }
-                
+
                 [dependencies]
                 artifact = { path = "../artifact/", artifact = ["cdylib", "staticlib", "bin:baz-name"], lib = true, target = "$ALT_TARGET" }
                 bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin:a-name" }
                 non-artifact = { path = "../non-artifact" }
-                
+
                 [dev-dependencies]
                 artifact = { path = "../artifact/" }
                 non-artifact = { path = "../non-artifact" }
@@ -1654,7 +1651,6 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                             "target": null
                           },
                           {
-                            "extern_name": "artifact",
                             "kind": "dev",
                             "target": null
                           },
@@ -1717,17 +1713,14 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                       {
                         "dep_kinds": [
                           {
-                            "extern_name": "non_artifact",
                             "kind": null,
                             "target": null
                           },
                           {
-                            "extern_name": "non_artifact",
                             "kind": "dev",
                             "target": null
                           },
                           {
-                            "extern_name": "non_artifact",
                             "kind": "build",
                             "target": null
                           }
@@ -2764,7 +2757,6 @@ fn rename_dependency() {
                     {
                         "dep_kinds": [
                           {
-                            "extern_name": "bar",
                             "kind": null,
                             "target": null
                           }
@@ -2775,7 +2767,6 @@ fn rename_dependency() {
                     {
                         "dep_kinds": [
                           {
-                            "extern_name": "baz",
                             "kind": null,
                             "target": null
                           }
@@ -3392,7 +3383,6 @@ fn filter_platform() {
             "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "alt_dep",
                 "kind": null,
                 "target": "$ALT_TRIPLE"
               }
@@ -3403,7 +3393,6 @@ fn filter_platform() {
             "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "cfg_dep",
                 "kind": null,
                 "target": "cfg(foobar)"
               }
@@ -3414,7 +3403,6 @@ fn filter_platform() {
             "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "host_dep",
                 "kind": null,
                 "target": "$HOST_TRIPLE"
               }
@@ -3425,7 +3413,6 @@ fn filter_platform() {
             "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "normal_dep",
                 "kind": null,
                 "target": null
               }
@@ -3507,7 +3494,6 @@ fn filter_platform() {
             "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "alt_dep",
                 "kind": null,
                 "target": "$ALT_TRIPLE"
               }
@@ -3518,7 +3504,6 @@ fn filter_platform() {
             "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "normal_dep",
                 "kind": null,
                 "target": null
               }
@@ -3584,7 +3569,6 @@ fn filter_platform() {
             "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "host_dep",
                 "kind": null,
                 "target": "$HOST_TRIPLE"
               }
@@ -3595,7 +3579,6 @@ fn filter_platform() {
             "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "normal_dep",
                 "kind": null,
                 "target": null
               }
@@ -3677,7 +3660,6 @@ fn filter_platform() {
             "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "cfg_dep",
                 "kind": null,
                 "target": "cfg(foobar)"
               }
@@ -3688,7 +3670,6 @@ fn filter_platform() {
             "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "host_dep",
                 "kind": null,
                 "target": "$HOST_TRIPLE"
               }
@@ -3699,7 +3680,6 @@ fn filter_platform() {
             "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
             "dep_kinds": [
               {
-                "extern_name": "normal_dep",
                 "kind": null,
                 "target": null
               }
@@ -3797,17 +3777,14 @@ fn dep_kinds() {
                         "pkg": "bar 0.1.0 [..]",
                         "dep_kinds": [
                           {
-                            "extern_name": "bar",
                             "kind": null,
                             "target": null
                           },
                           {
-                            "extern_name": "bar",
                             "kind": "dev",
                             "target": null
                           },
                           {
-                            "extern_name": "bar",
                             "kind": "build",
                             "target": null
                           }
@@ -3818,7 +3795,6 @@ fn dep_kinds() {
                         "pkg": "winapi 0.1.0 [..]",
                         "dep_kinds": [
                           {
-                            "extern_name": "winapi",
                             "kind": null,
                             "target": "cfg(windows)"
                           }
@@ -3909,7 +3885,6 @@ fn dep_kinds_workspace() {
                         "pkg": "foo 0.1.0 (path+file://[..]/foo)",
                         "dep_kinds": [
                           {
-                            "extern_name": "foo",
                             "kind": null,
                             "target": null
                           }
@@ -3935,7 +3910,6 @@ fn dep_kinds_workspace() {
                         "pkg": "dep 0.5.0 (path+file://[..]/foo/dep)",
                         "dep_kinds": [
                           {
-                            "extern_name": "dep",
                             "kind": null,
                             "target": null
                           }

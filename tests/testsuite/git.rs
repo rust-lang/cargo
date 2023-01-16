@@ -3393,7 +3393,6 @@ fn metadata_master_consistency() {
                         "pkg": "bar 1.0.0 (__BAR_SOURCE__#__BAR_HASH__)",
                         "dep_kinds": [
                           {
-                            "extern_name": "bar",
                             "kind": null,
                             "target": null
                           }
