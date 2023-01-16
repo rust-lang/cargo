@@ -358,7 +358,8 @@ fn check_ssh_known_hosts_loaded(
 /// Returns a list of files to try loading OpenSSH-formatted known hosts.
 fn known_host_files() -> Vec<PathBuf> {
     let mut result = Vec::new();
-    if cfg!(unix) {
+    if std::env::var_os("__CARGO_TEST_DISABLE_GLOBAL_KNOWN_HOST").is_some() {
+    } else if cfg!(unix) {
         result.push(PathBuf::from("/etc/ssh/ssh_known_hosts"));
     } else if cfg!(windows) {
         // The msys/cygwin version of OpenSSH uses `/etc` from the posix root

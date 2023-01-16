@@ -55,6 +55,23 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                     "does not work on windows-gnu"
                 );
             }
+            "container_test" => {
+                // These tests must be opt-in because they require docker.
+                set_ignore!(
+                    option_env!("CARGO_CONTAINER_TESTS").is_none(),
+                    "CARGO_CONTAINER_TESTS must be set"
+                );
+            }
+            "public_network_test" => {
+                // These tests must be opt-in because they touch the public
+                // network. The use of these should be **EXTREMELY RARE**, and
+                // should only touch things which would nearly certainly work
+                // in CI (like github.com).
+                set_ignore!(
+                    option_env!("CARGO_PUBLIC_NETWORK_TESTS").is_none(),
+                    "CARGO_PUBLIC_NETWORK_TESTS must be set"
+                );
+            }
             "nightly" => {
                 requires_reason = true;
                 set_ignore!(is_not_nightly, "requires nightly");
