@@ -48,14 +48,13 @@ pub const MANIFEST_PREAMBLE: &str = "\
 /// Information about a package that is available somewhere in the file system.
 ///
 /// A package is a `Cargo.toml` file plus all the files that are part of it.
-//
-// TODO: is `manifest_path` a relic?
 #[derive(Clone)]
 pub struct Package {
     inner: Rc<PackageInner>,
 }
 
 #[derive(Clone)]
+// TODO: is `manifest_path` a relic?
 struct PackageInner {
     /// The package's manifest.
     manifest: Manifest,
