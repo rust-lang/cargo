@@ -19,11 +19,12 @@ use std::collections::{HashMap, HashSet};
 
 use log::trace;
 
+use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::core::compiler::{
     CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner,
 };
-use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
+use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
@@ -557,6 +558,7 @@ fn artifact_targets_to_unit_deps(
     let ret =
         match_artifacts_kind_with_targets(dep, artifact_pkg.targets(), parent.pkg.name().as_str())?
             .into_iter()
+            .map(|(_artifact_kind, target)| target)
             .flat_map(|target| {
                 // We split target libraries into individual units, even though rustc is able
                 // to produce multiple kinds in an single invocation for the sole reason that
@@ -596,45 +598,6 @@ fn artifact_targets_to_unit_deps(
             })
             .collect::<Result<Vec<_>, _>>()?;
     Ok(ret)
-}
-
-/// Given a dependency with an artifact `artifact_dep` and a set of available `targets`
-/// of its package, find a target for each kind of artifacts that are to be built.
-///
-/// Failure to match any target results in an error mentioning the parent manifests
-/// `parent_package` name.
-fn match_artifacts_kind_with_targets<'a>(
-    artifact_dep: &Dependency,
-    targets: &'a [Target],
-    parent_package: &str,
-) -> CargoResult<HashSet<&'a Target>> {
-    let mut out = HashSet::new();
-    let artifact_requirements = artifact_dep.artifact().expect("artifact present");
-    for artifact_kind in artifact_requirements.kinds() {
-        let mut extend = |filter: &dyn Fn(&&Target) -> bool| {
-            let mut iter = targets.iter().filter(filter).peekable();
-            let found = iter.peek().is_some();
-            out.extend(iter);
-            found
-        };
-        let found = match artifact_kind {
-            ArtifactKind::Cdylib => extend(&|t| t.is_cdylib()),
-            ArtifactKind::Staticlib => extend(&|t| t.is_staticlib()),
-            ArtifactKind::AllBinaries => extend(&|t| t.is_bin()),
-            ArtifactKind::SelectedBinary(bin_name) => {
-                extend(&|t| t.is_bin() && t.name() == bin_name.as_str())
-            }
-        };
-        if !found {
-            anyhow::bail!(
-                "dependency `{}` in package `{}` requires a `{}` artifact to be present.",
-                artifact_dep.name_in_toml(),
-                parent_package,
-                artifact_kind
-            );
-        }
-    }
-    Ok(out)
 }
 
 /// Returns the dependencies necessary to document a package.

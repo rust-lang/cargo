@@ -1152,17 +1152,17 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 name = "bar"
                 version = "0.5.0"
                 authors = []
-                
+
                 [build-dependencies]
                 artifact = { path = "../artifact/", artifact = "bin", target = "target" }
                 bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin", target = "$ALT_TARGET" }
                 non-artifact = { path = "../non-artifact" }
-                
+
                 [dependencies]
                 artifact = { path = "../artifact/", artifact = ["cdylib", "staticlib", "bin:baz-name"], lib = true, target = "$ALT_TARGET" }
                 bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin:a-name" }
                 non-artifact = { path = "../non-artifact" }
-                
+
                 [dev-dependencies]
                 artifact = { path = "../artifact/" }
                 non-artifact = { path = "../non-artifact" }
@@ -1617,12 +1617,36 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                   {
                     "dependencies": [
                       "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                      "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
                       "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
                     ],
                     "deps": [
                       {
                         "dep_kinds": [
                           {
+                            "extern_name": "artifact",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "cdylib",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "artifact",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "staticlib",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "artifact",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "baz-name",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "baz_name",
                             "kind": null,
                             "target": null
                           },
@@ -1631,12 +1655,60 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                             "target": null
                           },
                           {
+                            "artifact": "bin",
+                            "bin_name": "bar-name",
+                            "compile_target": "<target>",
+                            "extern_name": "bar_name",
+                            "kind": "build",
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "baz-name",
+                            "compile_target": "<target>",
+                            "extern_name": "baz_name",
                             "kind": "build",
                             "target": null
                           }
                         ],
                         "name": "artifact",
                         "pkg": "artifact 0.5.0 (path+file://[..]/foo/artifact)"
+                      },
+                      {
+                        "dep_kinds": [
+                          {
+                            "artifact": "bin",
+                            "bin_name": "a-name",
+                            "extern_name": "a_name",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "b-name",
+                            "extern_name": "b_name",
+                            "kind": "dev",
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "a-name",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "a_name",
+                            "kind": "build",
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "b-name",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "b_name",
+                            "kind": "build",
+                            "target": null
+                          }
+                        ],
+                        "name": "",
+                        "pkg": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)"
                       },
                       {
                         "dep_kinds": [
@@ -1774,6 +1846,66 @@ fn cargo_metadata_with_invalid_publish_field() {
 
 Caused by:
   invalid type: string "foo", expected a boolean or vector of strings for key `package.publish`"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_invalid_artifact_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                artifact = { path = "artifact", artifact = "bin:notfound" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("artifact/Cargo.toml", &basic_bin_manifest("artifact"))
+        .file("artifact/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] dependency `artifact` in package `foo` requires a `bin:notfound` artifact to be present.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_invalid_duplicate_renamed_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar = { path = "bar" }
+                baz = { path = "bar", package = "bar" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] the crate `foo v0.5.0 ([..])` depends on crate `bar v0.5.0 ([..])` multiple times with different names",
         )
         .run();
 }
