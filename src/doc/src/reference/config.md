@@ -121,6 +121,7 @@ known-hosts = ["..."]       # known SSH host keys
 # Same keys as for [patch] in Cargo.toml
 
 [profile.<name>]         # Modify profile settings via config.
+inherits = "dev"         # Inherits settings from [profile.dev].
 opt-level = 0            # Optimization level.
 debug = true             # Include debug info.
 split-debuginfo = '...'  # Debug info splitting behavior.
