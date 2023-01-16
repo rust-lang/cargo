@@ -459,7 +459,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             // is not known here.
             .filter(|s| (online || load.is_crate_downloaded(s.summary.package_id())))
             // Next filter out all yanked packages. Some yanked packages may
-            // leak throguh if they're in a whitelist (aka if they were
+            // leak through if they're in a whitelist (aka if they were
             // previously in `Cargo.lock`
             .filter(|s| !s.yanked || yanked_whitelist.contains(&s.summary.package_id()))
             .map(|s| s.summary.clone());
