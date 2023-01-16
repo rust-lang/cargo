@@ -1,7 +1,7 @@
 //! Utilities for handling git repositories, mainly around
 //! authentication/cloning.
 
-use crate::core::GitReference;
+use crate::core::{GitReference, Verbosity};
 use crate::util::errors::CargoResult;
 use crate::util::{human_readable_bytes, network, Config, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
@@ -933,6 +933,15 @@ fn fetch_with_cli(
     if tags {
         cmd.arg("--tags");
     }
+    match config.shell().verbosity() {
+        Verbosity::Normal => {}
+        Verbosity::Verbose => {
+            cmd.arg("--verbose");
+        }
+        Verbosity::Quiet => {
+            cmd.arg("--quiet");
+        }
+    }
     cmd.arg("--force") // handle force pushes
         .arg("--update-head-ok") // see discussion in #2078
         .arg(url)
@@ -952,7 +961,7 @@ fn fetch_with_cli(
     config
         .shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
-    cmd.exec_with_output()?;
+    cmd.exec()?;
     Ok(())
 }
 
