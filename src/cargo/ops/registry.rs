@@ -795,7 +795,6 @@ pub fn registry_login(
     let source_ids = get_source_id(config, None, reg)?;
     let reg_cfg = auth::registry_credential_config(config, &source_ids.original)?;
 
-    let token = token.map(Secret::from);
     let login_url = match registry(config, token.clone(), None, reg, false, None) {
         Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
