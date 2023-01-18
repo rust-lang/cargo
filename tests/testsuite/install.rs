@@ -1293,6 +1293,46 @@ fn use_path_workspace() {
 }
 
 #[cargo_test]
+fn path_install_workspace_root_despite_default_members() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "ws-root"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["ws-member"]
+                default-members = ["ws-member"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "ws-member/Cargo.toml",
+            r#"
+                [package]
+                name = "ws-member"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file("ws-member/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("install --path")
+        .arg(p.root())
+        .arg("ws-root")
+        .with_stderr_contains(
+            "[INSTALLED] package `ws-root v0.1.0 ([..])` (executable `ws-root[EXE]`)",
+        )
+        // Particularly avoid "Installed package `ws-root v0.1.0 ([..]])` (executable `ws-member`)":
+        .with_stderr_does_not_contain("ws-member")
+        .run();
+}
+
+#[cargo_test]
 fn dev_dependencies_no_check() {
     Package::new("foo", "1.0.0").publish();
     let p = project()

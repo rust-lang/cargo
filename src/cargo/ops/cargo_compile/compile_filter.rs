@@ -34,7 +34,7 @@ pub enum FilterRule {
 ///
 /// [`generate_root_units`]: super::UnitGenerator::generate_root_units
 /// [`Packages`]: crate::ops::Packages
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CompileFilter {
     /// The default set of Cargo targets.
     Default {

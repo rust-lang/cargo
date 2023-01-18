@@ -68,7 +68,7 @@ pub use packages::Packages;
 /// of it as `CompileOptions` are high-level settings requested on the
 /// command-line, and `BuildConfig` are low-level settings for actually
 /// driving `rustc`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CompileOptions {
     /// Configuration information for a rustc build
     pub build_config: BuildConfig,
