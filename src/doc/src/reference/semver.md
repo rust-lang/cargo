@@ -93,6 +93,7 @@ considered incompatible.
 * Tooling and environment compatibility
     * [Possibly-breaking: changing the minimum version of Rust required](#env-new-rust)
     * [Possibly-breaking: changing the platform and environment requirements](#env-change-requirements)
+    * [Minor: introducing new lints](#new-lints)
     * Cargo
         * [Minor: adding a new Cargo feature](#cargo-feature-add)
         * [Major: removing a Cargo feature](#cargo-feature-remove)
@@ -1163,6 +1164,61 @@ reasonable to also discontinue support.
 Mitigation strategies:
 * Document the platforms and environments you specifically support.
 * Test your code on a wide range of environments in CI.
+
+<a id="new-lints"></a>
+### Minor: introducing new lints
+
+Some changes to a library may cause new lints to be triggered in users of that library.
+This should generally be considered a compatible change.
+
+```rust,ignore,dont-deny
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub fn foo() {}
+
+///////////////////////////////////////////////////////////
+// After
+#[deprecated]
+pub fn foo() {}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+
+fn main() {
+    updated_crate::foo(); // Warning: use of deprecated function
+}
+```
+
+Beware that it may be possible for this to technically cause a project to fail if they have explicitly denied the warning, and the updated crate is a direct dependency.
+Denying warnings should be done with care and the understanding that new lints may be introduced over time.
+However, library authors should be cautious about introducing new warnings and may want to consider the potential impact on their users.
+
+The following lints are examples of those that may be introduced when updating a dependency:
+
+* [`deprecated`][deprecated-lint] — Introduced when a dependency adds the [`#[deprecated]` attribute][deprecated] to an item you are using.
+* [`unused_must_use`] — Introduced when a dependency adds the [`#[must_use]` attribute][must-use-attr] to an item where you are not consuming the result.
+* [`unused_unsafe`] — Introduced when a dependency *removes* the `unsafe` qualifier from a function, and that is the only unsafe function called in an unsafe block.
+
+Additionally, updating `rustc` to a new version may introduce new lints.
+
+Transitive dependencies which introduce new lints should not usually cause a failure because Cargo uses [`--cap-lints`](../../rustc/lints/levels.html#capping-lints) to suppress all lints in dependencies.
+
+Mitigating strategies:
+* Options for dealing with denying warnings:
+    * Understand you may need to deal with resolving new warnings whenever you update your dependencies.
+    * Place `deny(warnings)` behind a [feature][Cargo features], for example `#![cfg_attr(feature = "deny-warnings", deny(warnings))]`.
+      Set up your automated CI to check your crate with the feature enabled, possibly as an allowed failure with a notification.
+* Introduce deprecations behind a [feature][Cargo features].
+  For example `#[cfg_attr(feature = "deprecated", deprecated="use bar instead")]`.
+  Then, when you plan to remove an item in a future SemVer breaking change, you can communicate with your users that they should enable the `deprecated` feature *before* updating to remove the use of the deprecated items.
+
+
+[`unused_must_use`]: ../../rustc/lints/listing/warn-by-default.html#unused-must-use
+[deprecated-lint]: ../../rustc/lints/listing/warn-by-default.html#deprecated
+[must-use-attr]: ../../reference/attributes/diagnostics.html#the-must_use-attribute
+[`unused_unsafe`]: ../../rustc/lints/listing/warn-by-default.html#unused-unsafe
 
 ### Cargo
 
