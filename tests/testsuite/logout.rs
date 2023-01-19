@@ -4,7 +4,6 @@ use cargo_test_support::install::cargo_home;
 use cargo_test_support::registry::TestRegistry;
 use cargo_test_support::{cargo_process, registry};
 use std::fs;
-use toml_edit::easy as toml;
 
 #[cargo_test]
 fn gated() {
@@ -26,7 +25,7 @@ the `cargo logout` command.
 fn check_config_token(registry: Option<&str>, should_be_set: bool) {
     let credentials = cargo_home().join("credentials.toml");
     let contents = fs::read_to_string(&credentials).unwrap();
-    let toml: toml::Value = contents.parse().unwrap();
+    let toml: toml::Table = contents.parse().unwrap();
     if let Some(registry) = registry {
         assert_eq!(
             toml.get("registries")

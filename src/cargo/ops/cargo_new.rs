@@ -12,7 +12,6 @@ use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{fmt, slice};
-use toml_edit::easy as toml;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl {

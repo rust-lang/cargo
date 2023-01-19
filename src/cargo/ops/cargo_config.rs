@@ -137,7 +137,8 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
                     drop_println!(
                         config,
                         "    {}, # {}",
-                        toml_edit::ser::to_item(&val).unwrap(),
+                        serde::Serialize::serialize(val, toml_edit::ser::ValueSerializer::new())
+                            .unwrap(),
                         def
                     );
                 }

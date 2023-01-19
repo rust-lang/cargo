@@ -989,8 +989,7 @@ Caused by:
     |
   1 | [..]
     | ^
-  Unexpected `[..]`
-  Expected key or end of input
+  invalid key
 ",
         )
         .run();

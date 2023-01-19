@@ -191,8 +191,8 @@ Caused by:
     |
   1 | !
     | ^
-  Unexpected `!`
-  Expected key or end of input",
+  invalid key
+",
         )
         .run();
 }
@@ -240,8 +240,8 @@ Caused by:
     |
   3 |                 foo = bar
     |                       ^
-  Unexpected `b`
-  Expected quoted string
+  invalid string
+  expected `\"`, `'`
 ",
         )
         .run();
@@ -265,8 +265,8 @@ Caused by:
     |
   1 | a = bar
     |     ^
-  Unexpected `b`
-  Expected quoted string
+  invalid string
+  expected `\"`, `'`
 ",
         )
         .run();
@@ -320,7 +320,8 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  unexpected end of input while parsing minor version number for key `package.version`
+  unexpected end of input while parsing minor version number
+  in `package.version`
 ",
         )
         .run();
@@ -2991,8 +2992,7 @@ Caused by:
     |
   1 | this is not valid toml
     |      ^
-  Unexpected `i`
-  Expected `.` or `=`
+  expected `.`, `=`
 ",
         )
         .run();

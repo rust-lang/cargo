@@ -5,7 +5,6 @@ use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project};
 use std::fs;
-use toml_edit::easy as toml;
 
 #[cargo_test]
 fn replace() {
@@ -386,7 +385,7 @@ version. [..]
 
     // unused patch should be in the lock file
     let lock = p.read_lockfile();
-    let toml: toml::Value = toml::from_str(&lock).unwrap();
+    let toml: toml::Table = toml::from_str(&lock).unwrap();
     assert_eq!(toml["patch"]["unused"].as_array().unwrap().len(), 1);
     assert_eq!(toml["patch"]["unused"][0]["name"].as_str(), Some("bar"));
     assert_eq!(
@@ -494,7 +493,7 @@ fn prefer_patch_version() {
 
     // there should be no patch.unused in the toml file
     let lock = p.read_lockfile();
-    let toml: toml::Value = toml::from_str(&lock).unwrap();
+    let toml: toml::Table = toml::from_str(&lock).unwrap();
     assert!(toml.get("patch").is_none());
 }
 
@@ -559,7 +558,7 @@ version. [..]
 
     // unused patch should be in the lock file
     let lock = p.read_lockfile();
-    let toml: toml::Value = toml::from_str(&lock).unwrap();
+    let toml: toml::Table = toml::from_str(&lock).unwrap();
     assert_eq!(toml["patch"]["unused"].as_array().unwrap().len(), 1);
     assert_eq!(toml["patch"]["unused"][0]["name"].as_str(), Some("bar"));
     assert_eq!(
@@ -1934,7 +1933,7 @@ fn update_unused_new_version() {
         .run();
     // unused patch should be in the lock file
     let lock = p.read_lockfile();
-    let toml: toml::Value = toml::from_str(&lock).unwrap();
+    let toml: toml::Table = toml::from_str(&lock).unwrap();
     assert_eq!(toml["patch"]["unused"].as_array().unwrap().len(), 1);
     assert_eq!(toml["patch"]["unused"][0]["name"].as_str(), Some("bar"));
     assert_eq!(

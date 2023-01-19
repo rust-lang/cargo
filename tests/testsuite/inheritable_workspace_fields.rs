@@ -1174,7 +1174,8 @@ fn error_workspace_false() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  `workspace` cannot be false for key `package.description`
+  `workspace` cannot be false
+  in `package.description`
 ",
         )
         .run();
@@ -1266,8 +1267,8 @@ Caused by:
     |
   3 |             members = [invalid toml
     |                        ^
-  Unexpected `i`
-  Expected newline or `#`
+  invalid array
+  expected `]`
 ",
         )
         .run();

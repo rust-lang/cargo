@@ -1391,10 +1391,13 @@ impl Package {
         let mut manifest = String::new();
 
         if !self.cargo_features.is_empty() {
-            manifest.push_str(&format!(
-                "cargo-features = {}\n\n",
-                toml_edit::ser::to_item(&self.cargo_features).unwrap()
-            ));
+            let mut features = String::new();
+            serde::Serialize::serialize(
+                &self.cargo_features,
+                toml::ser::ValueSerializer::new(&mut features),
+            )
+            .unwrap();
+            manifest.push_str(&format!("cargo-features = {}\n\n", features));
         }
 
         manifest.push_str(&format!(
