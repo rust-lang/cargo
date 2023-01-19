@@ -1210,10 +1210,13 @@ Mitigating strategies:
     * Understand you may need to deal with resolving new warnings whenever you update your dependencies.
     * Place `deny(warnings)` behind a [feature][Cargo features], for example `#![cfg_attr(feature = "deny-warnings", deny(warnings))]`.
       Set up your automated CI to check your crate with the feature enabled, possibly as an allowed failure with a notification.
+      Beware that features are exposed to users, so you may want to clearly document it as something that is not to be used.
+    * If using RUSTFLAGS to pass `-Dwarnings`, also add the `-A` flag to allow lints that are likely to cause issues, such as `-Adeprecated`.
 * Introduce deprecations behind a [feature][Cargo features].
   For example `#[cfg_attr(feature = "deprecated", deprecated="use bar instead")]`.
   Then, when you plan to remove an item in a future SemVer breaking change, you can communicate with your users that they should enable the `deprecated` feature *before* updating to remove the use of the deprecated items.
-
+  This allows users to choose when to respond to deprecations without needing to immediately respond to them.
+  A downside is that it can be difficult to communicate to users that they need to take these manual steps to prepare for a major update.
 
 [`unused_must_use`]: ../../rustc/lints/listing/warn-by-default.html#unused-must-use
 [deprecated-lint]: ../../rustc/lints/listing/warn-by-default.html#deprecated
