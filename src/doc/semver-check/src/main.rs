@@ -31,11 +31,15 @@ fn doit() -> Result<(), Box<dyn Error>> {
 
     loop {
         // Find a rust block.
-        let (block_start, run_program) = loop {
+        let (block_start, run_program, deny_warnings) = loop {
             match lines.next() {
                 Some((lineno, line)) => {
                     if line.trim().starts_with("```rust") && !line.contains("skip") {
-                        break (lineno + 1, line.contains("run-fail"));
+                        break (
+                            lineno + 1,
+                            line.contains("run-fail"),
+                            !line.contains("dont-deny"),
+                        );
                     }
                 }
                 None => return Ok(()),
@@ -73,7 +77,10 @@ fn doit() -> Result<(), Box<dyn Error>> {
         }
         let join = |part: &[&str]| {
             let mut result = String::new();
-            result.push_str("#![allow(unused)]\n#![deny(warnings)]\n");
+            result.push_str("#![allow(unused)]\n");
+            if deny_warnings {
+                result.push_str("#![deny(warnings)]\n");
+            }
             result.push_str(&part.join("\n"));
             if !result.ends_with('\n') {
                 result.push('\n');
