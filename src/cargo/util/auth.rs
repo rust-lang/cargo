@@ -26,6 +26,16 @@ use super::config::CredentialCacheValue;
 ///
 /// This type does not implement `Display`, and has a `Debug` impl that hides
 /// the contained value.
+///
+/// ```
+/// # use cargo::util::auth::Secret;
+/// let token = Secret::from("super secret string");
+/// assert_eq!(format!("{:?}", token), "Secret { inner: \"REDACTED\" }");
+/// ```
+///
+/// Currently, we write a borrowed `Secret<T>` as `Secret<&T>`.
+/// The [`as_deref`](Secret::as_deref) and [`owned`](Secret::owned) methods can 
+/// be used to convert back and forth between `Secret<String>` and `Secret<&str>`.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Secret<T> {
     inner: T,
@@ -41,9 +51,11 @@ impl<T> Secret<T> {
     }
 
     /// Converts a `Secret<T>` to a `Secret<&T::Target>`.
-    ///
-    /// For example, this can be used to convert from `&Secret<String>` to
-    /// `Secret<&str>`.
+    /// ```
+    /// # use cargo::util::auth::Secret;
+    /// let owned: Secret<String> = Secret::from(String::from("token"));
+    /// let borrowed: Secret<&str> = owned.as_deref();
+    /// ```
     pub fn as_deref(&self) -> Secret<&<T as Deref>::Target>
     where
         T: Deref,
@@ -51,10 +63,12 @@ impl<T> Secret<T> {
         Secret::from(self.inner.deref())
     }
 
+    /// Converts a `Secret<T>` to a `Secret<&T>`.
     pub fn as_ref(&self) -> Secret<&T> {
         Secret::from(&self.inner)
     }
 
+    /// Converts a `Secret<T>` to a `Secret<U>` by applying `f` to the contained value.
     pub fn map<U, F>(self, f: F) -> Secret<U>
     where
         F: FnOnce(T) -> U,
@@ -66,21 +80,25 @@ impl<T> Secret<T> {
 impl<T: ToOwned + ?Sized> Secret<&T> {
     /// Converts a `Secret` containing a borrowed type to a `Secret` containing the
     /// corresponding owned type.
-    ///
-    /// For example, this can be used to convert from `Secret<&str>` to
-    /// `Secret<String>`.
+    /// ```
+    /// # use cargo::util::auth::Secret;
+    /// let borrowed: Secret<&str> = Secret::from("token");
+    /// let owned: Secret<String> = borrowed.owned();
+    /// ```
     pub fn owned(&self) -> Secret<<T as ToOwned>::Owned> {
         Secret::from(self.inner.to_owned())
     }
 }
 
 impl<T, E> Secret<Result<T, E>> {
+    /// Converts a `Secret<Result<T, E>>` to a `Result<Secret<T>, E>`.
     pub fn transpose(self) -> Result<Secret<T>, E> {
         self.inner.map(|v| Secret::from(v))
     }
 }
 
 impl<T: AsRef<str>> Secret<T> {
+    /// Checks if the contained value is empty.
     pub fn is_empty(&self) -> bool {
         self.inner.as_ref().is_empty()
     }
