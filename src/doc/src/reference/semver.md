@@ -1206,12 +1206,8 @@ Additionally, updating `rustc` to a new version may introduce new lints.
 Transitive dependencies which introduce new lints should not usually cause a failure because Cargo uses [`--cap-lints`](../../rustc/lints/levels.html#capping-lints) to suppress all lints in dependencies.
 
 Mitigating strategies:
-* Options for dealing with denying warnings:
-    * Understand you may need to deal with resolving new warnings whenever you update your dependencies.
-    * Place `deny(warnings)` behind a [feature][Cargo features], for example `#![cfg_attr(feature = "deny-warnings", deny(warnings))]`.
-      Set up your automated CI to check your crate with the feature enabled, possibly as an allowed failure with a notification.
-      Beware that features are exposed to users, so you may want to clearly document it as something that is not to be used.
-    * If using RUSTFLAGS to pass `-Dwarnings`, also add the `-A` flag to allow lints that are likely to cause issues, such as `-Adeprecated`.
+* If you build with warnings denied, understand you may need to deal with resolving new warnings whenever you update your dependencies.
+  If using RUSTFLAGS to pass `-Dwarnings`, also add the `-A` flag to allow lints that are likely to cause issues, such as `-Adeprecated`.
 * Introduce deprecations behind a [feature][Cargo features].
   For example `#[cfg_attr(feature = "deprecated", deprecated="use bar instead")]`.
   Then, when you plan to remove an item in a future SemVer breaking change, you can communicate with your users that they should enable the `deprecated` feature *before* updating to remove the use of the deprecated items.
