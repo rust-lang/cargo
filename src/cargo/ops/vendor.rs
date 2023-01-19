@@ -1,5 +1,6 @@
+use crate::core::package::MANIFEST_PREAMBLE;
 use crate::core::shell::Verbosity;
-use crate::core::{GitReference, Workspace};
+use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
 use crate::sources::CRATES_IO_REGISTRY;
@@ -9,6 +10,7 @@ use cargo_util::{paths, Sha256};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -225,7 +227,7 @@ fn sync(
         let pathsource = PathSource::new(src, id.source_id(), config);
         let paths = pathsource.list_files(pkg)?;
         let mut map = BTreeMap::new();
-        cp_sources(src, &paths, &dst, &mut map, &mut tmp_buf)
+        cp_sources(pkg, src, &paths, &dst, &mut map, &mut tmp_buf)
             .with_context(|| format!("failed to copy over vendored sources for: {}", id))?;
 
         // Finally, emit the metadata about this package
@@ -315,6 +317,7 @@ fn sync(
 }
 
 fn cp_sources(
+    pkg: &Package,
     src: &Path,
     paths: &[PathBuf],
     dst: &Path,
@@ -354,25 +357,55 @@ fn cp_sources(
             .fold(dst.to_owned(), |acc, component| acc.join(&component));
 
         paths::create_dir_all(dst.parent().unwrap())?;
+        let mut dst_opts = OpenOptions::new();
+        dst_opts.write(true).create(true).truncate(true);
+        // When vendoring git dependencies, the manifest has not been normalized like it would be
+        // when published. This causes issue when the manifest is using workspace inheritance.
+        // To get around this issue we use the "original" manifest after `{}.workspace = true`
+        // has been resolved for git dependencies.
+        let cksum = if dst.file_name() == Some(OsStr::new("Cargo.toml"))
+            && pkg.package_id().source_id().is_git()
+        {
+            let original_toml = toml::to_string_pretty(pkg.manifest().original())?;
+            let contents = format!("{}\n{}", MANIFEST_PREAMBLE, original_toml);
+            copy_and_checksum(
+                &dst,
+                &mut dst_opts,
+                &mut contents.as_bytes(),
+                "Generated Cargo.toml",
+                tmp_buf,
+            )?
+        } else {
+            let mut src = File::open(&p).with_context(|| format!("failed to open {:?}", &p))?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+                let src_metadata = src
+                    .metadata()
+                    .with_context(|| format!("failed to stat {:?}", p))?;
+                dst_opts.mode(src_metadata.mode());
+            }
+            copy_and_checksum(
+                &dst,
+                &mut dst_opts,
+                &mut src,
+                &p.display().to_string(),
+                tmp_buf,
+            )?
+        };
 
-        let cksum = copy_and_checksum(p, &dst, tmp_buf)?;
         cksums.insert(relative.to_str().unwrap().replace("\\", "/"), cksum);
     }
     Ok(())
 }
 
-fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoResult<String> {
-    let mut src = File::open(src_path).with_context(|| format!("failed to open {:?}", src_path))?;
-    let mut dst_opts = OpenOptions::new();
-    dst_opts.write(true).create(true).truncate(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
-        let src_metadata = src
-            .metadata()
-            .with_context(|| format!("failed to stat {:?}", src_path))?;
-        dst_opts.mode(src_metadata.mode());
-    }
+fn copy_and_checksum<T: Read>(
+    dst_path: &Path,
+    dst_opts: &mut OpenOptions,
+    contents: &mut T,
+    contents_path: &str,
+    buf: &mut [u8],
+) -> CargoResult<String> {
     let mut dst = dst_opts
         .open(dst_path)
         .with_context(|| format!("failed to create {:?}", dst_path))?;
@@ -380,9 +413,9 @@ fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoR
     // shouldn't be any under normal conditions.
     let mut cksum = Sha256::new();
     loop {
-        let n = src
+        let n = contents
             .read(buf)
-            .with_context(|| format!("failed to read from {:?}", src_path))?;
+            .with_context(|| format!("failed to read from {:?}", contents_path))?;
         if n == 0 {
             break Ok(cksum.finish_hex());
         }

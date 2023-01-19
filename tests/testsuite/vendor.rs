@@ -790,6 +790,79 @@ Caused by:
 }
 
 #[cargo_test]
+fn git_complex() {
+    let git_b = git::new("git_b", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+
+                [dependencies]
+                dep_b = { path = 'dep_b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("dep_b/Cargo.toml", &basic_lib_manifest("dep_b"))
+        .file("dep_b/src/lib.rs", "")
+    });
+
+    let git_a = git::new("git_a", |p| {
+        p.file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "a"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    b = {{ git = '{}' }}
+                    dep_a = {{ path = 'dep_a' }}
+                "#,
+                git_b.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("dep_a/Cargo.toml", &basic_lib_manifest("dep_a"))
+        .file("dep_a/src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    a = {{ git = '{}' }}
+                "#,
+                git_a.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let output = p
+        .cargo("vendor --respect-source-config")
+        .exec_with_output()
+        .unwrap();
+    let output = String::from_utf8(output.stdout).unwrap();
+    p.change_file(".cargo/config", &output);
+
+    p.cargo("check -v")
+        .with_stderr_contains("[..]foo/vendor/a/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/dep_a/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/b/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/dep_b/src/lib.rs[..]")
+        .run();
+}
+
+#[cargo_test]
 fn depend_on_vendor_dir_not_deleted() {
     let p = project()
         .file(
@@ -1014,4 +1087,67 @@ fn no_remote_dependency_no_vendor() {
         .with_stderr("There is no dependency to vendor in this project.")
         .run();
     assert!(!p.root().join("vendor").exists());
+}
+
+#[cargo_test]
+fn vendor_crate_with_ws_inherit() {
+    let git = git::new("ws", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+                [workspace.package]
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version.workspace = true
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    bar = {{ git = '{}' }}
+                "#,
+                git.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+    p.change_file(
+        ".cargo/config",
+        &format!(
+            r#"
+                [source."{}"]
+                git = "{}"
+                replace-with = "vendor"
+
+                [source.vendor]
+                directory = "vendor"
+            "#,
+            git.url(),
+            git.url()
+        ),
+    );
+
+    p.cargo("check -v")
+        .with_stderr_contains("[..]foo/vendor/bar/src/lib.rs[..]")
+        .run();
 }
