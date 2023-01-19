@@ -834,19 +834,23 @@ pub fn registry_login(
         if generate_keypair {
             assert!(!secret_key_required);
             let kp = AsymmetricKeyPair::<pasetors::version3::V3>::generate().unwrap();
-            let mut key = String::new();
-            FormatAsPaserk::fmt(&kp.secret, &mut key).unwrap();
-            secret_key = Secret::from(key);
+            secret_key = Secret::default().map(|mut key| {
+                FormatAsPaserk::fmt(&kp.secret, &mut key).unwrap();
+                key
+            });
         } else if secret_key_required {
             assert!(!generate_keypair);
             drop_println!(config, "please paste the API secret key below");
-            let mut line = String::new();
-            let input = io::stdin();
-            input
-                .lock()
-                .read_line(&mut line)
-                .with_context(|| "failed to read stdin")?;
-            secret_key = Secret::from(line.trim().to_string());
+            secret_key = Secret::default()
+                .map(|mut line| {
+                    let input = io::stdin();
+                    input
+                        .lock()
+                        .read_line(&mut line)
+                        .with_context(|| "failed to read stdin")
+                        .map(|_| line.trim().to_string())
+                })
+                .transpose()?;
         } else {
             secret_key = old_secret_key
                 .cloned()

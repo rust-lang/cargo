@@ -34,9 +34,9 @@ use super::config::CredentialCacheValue;
 /// ```
 ///
 /// Currently, we write a borrowed `Secret<T>` as `Secret<&T>`.
-/// The [`as_deref`](Secret::as_deref) and [`owned`](Secret::owned) methods can 
+/// The [`as_deref`](Secret::as_deref) and [`owned`](Secret::owned) methods can
 /// be used to convert back and forth between `Secret<String>` and `Secret<&str>`.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Secret<T> {
     inner: T,
 }
