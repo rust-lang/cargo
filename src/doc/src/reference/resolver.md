@@ -7,8 +7,10 @@ result of the resolution is stored in the `Cargo.lock` file which "locks" the
 dependencies to specific versions, and keeps them fixed over time.
 
 The resolver attempts to unify common dependencies while considering possibly
-conflicting requirements. The sections below provide some details on how these
-constraints are handled, and how to work with the resolver.
+conflicting requirements. Dependency resolution is, however, an NP-hard problem,
+and so the resolver uses a heuristic algorithm that may yield counterintuitive
+results in some cases. The sections below provide some details on how
+requirements are handled, and how to work with the resolver.
 
 See the chapter [Specifying Dependencies] for more details about how
 dependency requirements are specified.
@@ -90,6 +92,31 @@ The above will result in Package A using the greatest `0.7` release (`0.7.3`
 at the time of this writing) and Package B will use the greatest `0.6` release
 (`0.6.5` for example). This can lead to potential problems, see the
 [Version-incompatibility hazards] section for more details.
+
+The resolver algorithm favors the greatest available versions of dependencies
+and has limited support for backtracking in the solutions it attempts.
+Therefore, it may converge on a solution that includes two copies of a
+dependency when one would suffice. For example:
+
+```toml
+# Package A
+[dependencies]
+rand = "0.7"
+
+# Package B
+[dependencies]
+rand = ">=0.6"
+```
+
+In this example, Cargo may build two copies of the rand crate: `0.8.5` (the
+greatest available at the time of this writing) for Package B and `0.7.3` for
+Package A — even though a single copy at version `0.7.3` meets all requirements.
+Future revisions of the resolver algorithm may change this behavior. In the
+meantime, the [`cargo update`] command with the `--precise` flag can be used to
+manually remove such duplications.
+
+[`cargo update`]: ../commands/cargo-update.md
+
 
 Multiple versions within the same compatibility range are not allowed and will
 result in a resolver error if it is constrained to two different versions
