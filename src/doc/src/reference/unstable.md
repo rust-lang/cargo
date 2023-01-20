@@ -459,17 +459,19 @@ CLI paths are relative to the current working directory.
 * Tracking Issue: [#9453](https://github.com/rust-lang/cargo/issues/9453)
 
 Historically, Cargo's behavior for whether the `linker` and `rustflags`
-configuration options from environment variables and `[target]` are
-respected for build scripts, plugins, and other artifacts that are
-_always_ built for the host platform has been somewhat inconsistent.
+configuration options from environment variables and 
+[`[target]`](config.md#target) are respected for build scripts, plugins, 
+and other artifacts that are _always_ built for the host platform has 
+been somewhat inconsistent.
 When `--target` is _not_ passed, Cargo respects the same `linker` and
 `rustflags` for build scripts as for all other compile artifacts. When
 `--target` _is_ passed, however, Cargo respects `linker` from
-`[target.<host triple>]`, and does not pick up any `rustflags`
-configuration. This dual behavior is confusing, but also makes it
-difficult to correctly configure builds where the host triple and the
-target triple happen to be the same, but artifacts intended to run on
-the build host should still be configured differently.
+[`[target.<host triple>]`](config.md#targettriplelinker), and does not 
+pick up any `rustflags` configuration. 
+This dual behavior is confusing, but also makes it difficult to correctly 
+configure builds where the host triple and the [target triple] happen to 
+be the same, but artifacts intended to run on the build host should still 
+be configured differently.
 
 `-Ztarget-applies-to-host` enables the top-level
 `target-applies-to-host` setting in Cargo configuration files which
@@ -1432,7 +1434,7 @@ information.
 
 The `-Z multitarget` option has been stabilized in the 1.64 release.
 See [`build.target`](config.md#buildtarget) for more information about
-setting the default target platform triples.
+setting the default [target platform triples][target triple].
 
 ### crate-type
 
@@ -1459,3 +1461,5 @@ terminal where Cargo can automatically detect the width.
 
 Sparse registry support has been stabilized in the 1.68 release.
 See [Registry Protocols](registries.md#registry-protocols) for more information.
+
+[target triple]: ../appendix/glossary.md#target '"target" (glossary)'
