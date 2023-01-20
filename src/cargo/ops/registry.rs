@@ -30,7 +30,7 @@ use crate::ops;
 use crate::ops::Packages;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_IO_REGISTRY};
 use crate::util::auth::{
-    paserk_public_from_paserk_secret, {self, AuthorizationError},
+    paserk_public_from_paserk_secret, Secret, {self, AuthorizationError},
 };
 use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
@@ -45,11 +45,11 @@ use crate::{drop_print, drop_println, version};
 pub enum RegistryCredentialConfig {
     None,
     /// The authentication token.
-    Token(String),
+    Token(Secret<String>),
     /// Process used for fetching a token.
     Process((PathBuf, Vec<String>)),
     /// Secret Key and subject for Asymmetric tokens.
-    AsymmetricKey((String, Option<String>)),
+    AsymmetricKey((Secret<String>, Option<String>)),
 }
 
 impl RegistryCredentialConfig {
@@ -71,9 +71,9 @@ impl RegistryCredentialConfig {
     pub fn is_asymmetric_key(&self) -> bool {
         matches!(self, Self::AsymmetricKey(..))
     }
-    pub fn as_token(&self) -> Option<&str> {
+    pub fn as_token(&self) -> Option<Secret<&str>> {
         if let Self::Token(v) = self {
-            Some(&*v)
+            Some(v.as_deref())
         } else {
             None
         }
@@ -85,7 +85,7 @@ impl RegistryCredentialConfig {
             None
         }
     }
-    pub fn as_asymmetric_key(&self) -> Option<&(String, Option<String>)> {
+    pub fn as_asymmetric_key(&self) -> Option<&(Secret<String>, Option<String>)> {
         if let Self::AsymmetricKey(v) = self {
             Some(v)
         } else {
@@ -96,7 +96,7 @@ impl RegistryCredentialConfig {
 
 pub struct PublishOpts<'cfg> {
     pub config: &'cfg Config,
-    pub token: Option<String>,
+    pub token: Option<Secret<String>>,
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
@@ -174,7 +174,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
     let (mut registry, reg_ids) = registry(
         opts.config,
-        opts.token.as_deref(),
+        opts.token.as_ref().map(Secret::as_deref),
         opts.index.as_deref(),
         publish_registry.as_deref(),
         true,
@@ -512,7 +512,7 @@ fn wait_for_publish(
 /// * `token_required`: If `true`, the token will be set.
 fn registry(
     config: &Config,
-    token_from_cmdline: Option<&str>,
+    token_from_cmdline: Option<Secret<&str>>,
     index: Option<&str>,
     registry: Option<&str>,
     force_update: bool,
@@ -786,7 +786,7 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
 
 pub fn registry_login(
     config: &Config,
-    token: Option<&str>,
+    token: Option<Secret<&str>>,
     reg: Option<&str>,
     generate_keypair: bool,
     secret_key_required: bool,
@@ -795,7 +795,7 @@ pub fn registry_login(
     let source_ids = get_source_id(config, None, reg)?;
     let reg_cfg = auth::registry_credential_config(config, &source_ids.original)?;
 
-    let login_url = match registry(config, token, None, reg, false, None) {
+    let login_url = match registry(config, token.clone(), None, reg, false, None) {
         Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
             .downcast::<AuthorizationError>()
@@ -830,29 +830,33 @@ pub fn registry_login(
             }
             _ => (None, None),
         };
-        let secret_key: String;
+        let secret_key: Secret<String>;
         if generate_keypair {
             assert!(!secret_key_required);
             let kp = AsymmetricKeyPair::<pasetors::version3::V3>::generate().unwrap();
-            let mut key = String::new();
-            FormatAsPaserk::fmt(&kp.secret, &mut key).unwrap();
-            secret_key = key;
+            secret_key = Secret::default().map(|mut key| {
+                FormatAsPaserk::fmt(&kp.secret, &mut key).unwrap();
+                key
+            });
         } else if secret_key_required {
             assert!(!generate_keypair);
             drop_println!(config, "please paste the API secret key below");
-            let mut line = String::new();
-            let input = io::stdin();
-            input
-                .lock()
-                .read_line(&mut line)
-                .with_context(|| "failed to read stdin")?;
-            secret_key = line.trim().to_string();
+            secret_key = Secret::default()
+                .map(|mut line| {
+                    let input = io::stdin();
+                    input
+                        .lock()
+                        .read_line(&mut line)
+                        .with_context(|| "failed to read stdin")
+                        .map(|_| line.trim().to_string())
+                })
+                .transpose()?;
         } else {
             secret_key = old_secret_key
                 .cloned()
                 .ok_or_else(|| anyhow!("need a secret_key to set a key_subject"))?;
         }
-        if let Some(p) = paserk_public_from_paserk_secret(&secret_key) {
+        if let Some(p) = paserk_public_from_paserk_secret(secret_key.as_deref()) {
             drop_println!(config, "{}", &p);
         } else {
             bail!("not a validly formatted PASERK secret key");
@@ -866,7 +870,7 @@ pub fn registry_login(
         ));
     } else {
         new_token = RegistryCredentialConfig::Token(match token {
-            Some(token) => token.to_string(),
+            Some(token) => token.owned(),
             None => {
                 if let Some(login_url) = login_url {
                     drop_println!(
@@ -890,7 +894,7 @@ pub fn registry_login(
                     .with_context(|| "failed to read stdin")?;
                 // Automatically remove `cargo login` from an inputted token to
                 // allow direct pastes from `registry.host()`/me.
-                line.replace("cargo login", "").trim().to_string()
+                Secret::from(line.replace("cargo login", "").trim().to_string())
             }
         });
 
@@ -938,7 +942,7 @@ pub fn registry_logout(config: &Config, reg: Option<&str>) -> CargoResult<()> {
 
 pub struct OwnersOptions {
     pub krate: Option<String>,
-    pub token: Option<String>,
+    pub token: Option<Secret<String>>,
     pub index: Option<String>,
     pub to_add: Option<Vec<String>>,
     pub to_remove: Option<Vec<String>>,
@@ -960,7 +964,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     let (mut registry, _) = registry(
         config,
-        opts.token.as_deref(),
+        opts.token.as_ref().map(Secret::as_deref),
         opts.index.as_deref(),
         opts.registry.as_deref(),
         true,
@@ -1019,7 +1023,7 @@ pub fn yank(
     config: &Config,
     krate: Option<String>,
     version: Option<String>,
-    token: Option<String>,
+    token: Option<Secret<String>>,
     index: Option<String>,
     undo: bool,
     reg: Option<String>,
@@ -1051,7 +1055,7 @@ pub fn yank(
 
     let (mut registry, _) = registry(
         config,
-        token.as_deref(),
+        token.as_ref().map(Secret::as_deref),
         index.as_deref(),
         reg.as_deref(),
         true,

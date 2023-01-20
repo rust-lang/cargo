@@ -10,6 +10,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Read, Write};
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use time::format_description::well_known::Rfc3339;
@@ -20,6 +21,102 @@ use crate::core::SourceId;
 use crate::ops::RegistryCredentialConfig;
 
 use super::config::CredentialCacheValue;
+
+/// A wrapper for values that should not be printed.
+///
+/// This type does not implement `Display`, and has a `Debug` impl that hides
+/// the contained value.
+///
+/// ```
+/// # use cargo::util::auth::Secret;
+/// let token = Secret::from("super secret string");
+/// assert_eq!(format!("{:?}", token), "Secret { inner: \"REDACTED\" }");
+/// ```
+///
+/// Currently, we write a borrowed `Secret<T>` as `Secret<&T>`.
+/// The [`as_deref`](Secret::as_deref) and [`owned`](Secret::owned) methods can
+/// be used to convert back and forth between `Secret<String>` and `Secret<&str>`.
+#[derive(Default, Clone, PartialEq, Eq)]
+pub struct Secret<T> {
+    inner: T,
+}
+
+impl<T> Secret<T> {
+    /// Unwraps the contained value.
+    ///
+    /// Use of this method marks the boundary of where the contained value is
+    /// hidden.
+    pub fn expose(self) -> T {
+        self.inner
+    }
+
+    /// Converts a `Secret<T>` to a `Secret<&T::Target>`.
+    /// ```
+    /// # use cargo::util::auth::Secret;
+    /// let owned: Secret<String> = Secret::from(String::from("token"));
+    /// let borrowed: Secret<&str> = owned.as_deref();
+    /// ```
+    pub fn as_deref(&self) -> Secret<&<T as Deref>::Target>
+    where
+        T: Deref,
+    {
+        Secret::from(self.inner.deref())
+    }
+
+    /// Converts a `Secret<T>` to a `Secret<&T>`.
+    pub fn as_ref(&self) -> Secret<&T> {
+        Secret::from(&self.inner)
+    }
+
+    /// Converts a `Secret<T>` to a `Secret<U>` by applying `f` to the contained value.
+    pub fn map<U, F>(self, f: F) -> Secret<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        Secret::from(f(self.inner))
+    }
+}
+
+impl<T: ToOwned + ?Sized> Secret<&T> {
+    /// Converts a `Secret` containing a borrowed type to a `Secret` containing the
+    /// corresponding owned type.
+    /// ```
+    /// # use cargo::util::auth::Secret;
+    /// let borrowed: Secret<&str> = Secret::from("token");
+    /// let owned: Secret<String> = borrowed.owned();
+    /// ```
+    pub fn owned(&self) -> Secret<<T as ToOwned>::Owned> {
+        Secret::from(self.inner.to_owned())
+    }
+}
+
+impl<T, E> Secret<Result<T, E>> {
+    /// Converts a `Secret<Result<T, E>>` to a `Result<Secret<T>, E>`.
+    pub fn transpose(self) -> Result<Secret<T>, E> {
+        self.inner.map(|v| Secret::from(v))
+    }
+}
+
+impl<T: AsRef<str>> Secret<T> {
+    /// Checks if the contained value is empty.
+    pub fn is_empty(&self) -> bool {
+        self.inner.as_ref().is_empty()
+    }
+}
+
+impl<T> From<T> for Secret<T> {
+    fn from(inner: T) -> Self {
+        Self { inner }
+    }
+}
+
+impl<T> fmt::Debug for Secret<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Secret")
+            .field("inner", &"REDACTED")
+            .finish()
+    }
+}
 
 /// Get the credential configuration for a `SourceId`.
 pub fn registry_credential_config(
@@ -61,9 +158,9 @@ pub fn registry_credential_config(
         return registry_credential_config_inner(
             true,
             None,
-            token,
+            token.map(Secret::from),
             credential_process,
-            secret_key,
+            secret_key.map(Secret::from),
             secret_key_subject,
             config,
         );
@@ -152,9 +249,9 @@ pub fn registry_credential_config(
     registry_credential_config_inner(
         false,
         name.as_deref(),
-        token,
+        token.map(Secret::from),
         credential_process,
-        secret_key,
+        secret_key.map(Secret::from),
         secret_key_subject,
         config,
     )
@@ -163,9 +260,9 @@ pub fn registry_credential_config(
 fn registry_credential_config_inner(
     is_crates_io: bool,
     name: Option<&str>,
-    token: Option<String>,
+    token: Option<Secret<String>>,
     credential_process: Option<config::PathAndArgs>,
-    secret_key: Option<String>,
+    secret_key: Option<Secret<String>>,
     secret_key_subject: Option<String>,
     config: &Config,
 ) -> CargoResult<RegistryCredentialConfig> {
@@ -298,14 +395,14 @@ my-registry = {{ index = "{}" }}
 }
 
 // Store a token in the cache for future calls.
-pub fn cache_token(config: &Config, sid: &SourceId, token: &str) {
+pub fn cache_token(config: &Config, sid: &SourceId, token: Secret<&str>) {
     let url = sid.canonical_url();
     config.credential_cache().insert(
         url.clone(),
         CredentialCacheValue {
             from_commandline: true,
             independent_of_endpoint: true,
-            token_value: token.to_string(),
+            token_value: token.owned(),
         },
     );
 }
@@ -320,7 +417,7 @@ pub fn auth_token(
     mutation: Option<Mutation<'_>>,
 ) -> CargoResult<String> {
     match auth_token_optional(config, sid, mutation.as_ref())? {
-        Some(token) => Ok(token),
+        Some(token) => Ok(token.expose()),
         None => Err(AuthorizationError {
             sid: sid.clone(),
             login_url: login_url.cloned(),
@@ -335,7 +432,7 @@ fn auth_token_optional(
     config: &Config,
     sid: &SourceId,
     mutation: Option<&'_ Mutation<'_>>,
-) -> CargoResult<Option<String>> {
+) -> CargoResult<Option<Secret<String>>> {
     let mut cache = config.credential_cache();
     let url = sid.canonical_url();
 
@@ -353,15 +450,21 @@ fn auth_token_optional(
     let credential = registry_credential_config(config, sid)?;
     let (independent_of_endpoint, token) = match credential {
         RegistryCredentialConfig::None => return Ok(None),
-        RegistryCredentialConfig::Token(config_token) => (true, config_token.to_string()),
+        RegistryCredentialConfig::Token(config_token) => (true, config_token),
         RegistryCredentialConfig::Process(process) => {
             // todo: PASETO with process
-            run_command(config, &process, sid, Action::Get)?.unwrap()
+            let (independent_of_endpoint, token) =
+                run_command(config, &process, sid, Action::Get)?.unwrap();
+            (independent_of_endpoint, Secret::from(token))
         }
         RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) => {
-            let secret: AsymmetricSecretKey<pasetors::version3::V3> =
-                secret_key.as_str().try_into()?;
-            let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into()?;
+            let secret: Secret<AsymmetricSecretKey<pasetors::version3::V3>> =
+                secret_key.map(|key| key.as_str().try_into()).transpose()?;
+            let public: AsymmetricPublicKey<pasetors::version3::V3> = secret
+                .as_ref()
+                .map(|key| key.try_into())
+                .transpose()?
+                .expose();
             let kip: pasetors::paserk::Id = (&public).try_into()?;
             let iat = OffsetDateTime::now_utc();
 
@@ -413,18 +516,22 @@ fn auth_token_optional(
 
             (
                 false,
-                pasetors::version3::PublicToken::sign(
-                    &secret,
-                    serde_json::to_string(&message)
-                        .expect("cannot serialize")
-                        .as_bytes(),
-                    Some(
-                        serde_json::to_string(&footer)
-                            .expect("cannot serialize")
-                            .as_bytes(),
-                    ),
-                    None,
-                )?,
+                secret
+                    .map(|secret| {
+                        pasetors::version3::PublicToken::sign(
+                            &secret,
+                            serde_json::to_string(&message)
+                                .expect("cannot serialize")
+                                .as_bytes(),
+                            Some(
+                                serde_json::to_string(&footer)
+                                    .expect("cannot serialize")
+                                    .as_bytes(),
+                            ),
+                            None,
+                        )
+                    })
+                    .transpose()?,
             )
         }
     };
@@ -435,7 +542,7 @@ fn auth_token_optional(
             CredentialCacheValue {
                 from_commandline: false,
                 independent_of_endpoint,
-                token_value: token.to_string(),
+                token_value: token.clone(),
             },
         );
     }
@@ -519,6 +626,7 @@ pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -
             let token = token
                 .as_token()
                 .expect("credential_process cannot use login with a secret_key")
+                .expose()
                 .to_owned();
             run_command(config, &process, sid, Action::Store(token))?;
         }
@@ -530,9 +638,15 @@ pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -
 }
 
 /// Checks that a secret key is valid, and returns the associated public key in Paserk format.
-pub(crate) fn paserk_public_from_paserk_secret(secret_key: &str) -> Option<String> {
-    let secret: AsymmetricSecretKey<pasetors::version3::V3> = secret_key.try_into().ok()?;
-    let public: AsymmetricPublicKey<pasetors::version3::V3> = (&secret).try_into().ok()?;
+pub(crate) fn paserk_public_from_paserk_secret(secret_key: Secret<&str>) -> Option<String> {
+    let secret: Secret<AsymmetricSecretKey<pasetors::version3::V3>> =
+        secret_key.map(|key| key.try_into()).transpose().ok()?;
+    let public: AsymmetricPublicKey<pasetors::version3::V3> = secret
+        .as_ref()
+        .map(|key| key.try_into())
+        .transpose()
+        .ok()?
+        .expose();
     let mut paserk_pub_key = String::new();
     FormatAsPaserk::fmt(&public, &mut paserk_pub_key).unwrap();
     Some(paserk_pub_key)

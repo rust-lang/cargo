@@ -36,7 +36,7 @@ pub fn cli() -> Command {
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     ops::registry_login(
         config,
-        args.get_one("token").map(String::as_str),
+        args.get_one::<String>("token").map(|s| s.as_str().into()),
         args.get_one("registry").map(String::as_str),
         args.flag("generate-keypair"),
         args.flag("secret-key"),
