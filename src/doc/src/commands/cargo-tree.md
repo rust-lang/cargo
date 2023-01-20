@@ -137,9 +137,8 @@ kind given, then it will automatically include the other dependency kinds.</li>
 
 
 <dt class="option-term" id="option-cargo-tree---target"><a class="option-anchor" href="#option-cargo-tree---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Filter dependencies matching the given target-triple. The default is the host
-platform. Use the value <code>all</code> to include <em>all</em> targets.</dd>
-
+<dd class="option-desc">Filter dependencies matching the given <a href="../appendix/glossary.md#target">target triple</a>.
+The default is the host platform. Use the value <code>all</code> to include <em>all</em> targets.</dd>
 
 </dl>
 
