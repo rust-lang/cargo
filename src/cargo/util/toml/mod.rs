@@ -272,6 +272,8 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
                         Ok(TomlDependency::Workspace(TomlWorkspaceDependency {
                             workspace: true,
                             features: details.features,
+                            default_features: details.default_features,
+                            default_features2: details.default_features2,
                             optional: details.optional,
                         }))
                     } else {
@@ -348,9 +350,13 @@ pub struct IntermediateDependency<P = String> {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct TomlWorkspaceDependency {
     workspace: bool,
     features: Option<Vec<String>>,
+    default_features: Option<bool>,
+    #[serde(rename = "default_features")]
+    default_features2: Option<bool>,
     optional: Option<bool>,
 }
 
@@ -2579,6 +2585,18 @@ impl TomlDependency {
         cx: &mut Context<'_, '_>,
         get_inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
     ) -> CargoResult<TomlDependency> {
+        fn default_features_msg(label: &str, ws_def_feat: Option<bool>, cx: &mut Context<'_, '_>) {
+            let ws_def_feat = match ws_def_feat {
+                Some(true) => "true",
+                Some(false) => "false",
+                None => "not specified",
+            };
+            cx.warnings.push(format!(
+                "`default-features` is ignored for {label}, since `default-features` was \
+                {ws_def_feat} for `workspace.dependencies.{label}`, \
+                this could become a hard error in the future"
+            ))
+        }
         match self {
             TomlDependency::Detailed(d) => Ok(TomlDependency::Detailed(d)),
             TomlDependency::Simple(s) => Ok(TomlDependency::Simple(s)),
@@ -2586,7 +2604,12 @@ impl TomlDependency {
                 workspace: true,
                 features,
                 optional,
+                default_features,
+                default_features2,
             }) => {
+                if default_features.is_some() && default_features2.is_some() {
+                    warn_on_deprecated("default-features", label, "dependency", cx.warnings);
+                }
                 let inheritable = get_inheritable()?;
                 inheritable.get_dependency(label).context(format!(
                     "error reading `dependencies.{}` from workspace root manifest's `workspace.dependencies.{}`",
@@ -2594,6 +2617,9 @@ impl TomlDependency {
                 )).map(|dep| {
                     match dep {
                         TomlDependency::Simple(s) => {
+                            if let Some(false) = default_features.or(default_features2) {
+                                default_features_msg(label, None, cx);
+                            }
                             if optional.is_some() || features.is_some() {
                                 Ok(TomlDependency::Detailed(DetailedTomlDependency {
                                     version: Some(s),
@@ -2607,6 +2633,29 @@ impl TomlDependency {
                         },
                         TomlDependency::Detailed(d) => {
                             let mut dep = d.clone();
+                            match (
+                                default_features.or(default_features2),
+                                d.default_features.or(d.default_features2)
+                            ) {
+                                // member: default-features = true and
+                                // workspace: default-features = false should turn on
+                                // default-features
+                                (Some(true), Some(false)) => {
+                                    dep.default_features = Some(true);
+                                }
+                                // member: default-features = false and
+                                // workspace: default-features = true should ignore member
+                                // default-features
+                                (Some(false), Some(true)) => {
+                                    default_features_msg(label, Some(true), cx);
+                                }
+                                // member: default-features = false and
+                                // workspace: dep = "1.0" should ignore member default-features
+                                (Some(false), None) => {
+                                    default_features_msg(label, None, cx);
+                                }
+                                _ => {}
+                            }
                             dep.add_features(features);
                             dep.update_optional(optional);
                             dep.resolve_path(label,inheritable.ws_root(), cx.root)?;
