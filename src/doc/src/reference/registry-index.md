@@ -6,11 +6,10 @@ introduced them. Older versions of Cargo may not be able to use packages that
 make use of new features. However, the format for older packages should not
 change, so older versions of Cargo should be able to use them.
 
-The index is stored in a git repository so that Cargo can efficiently fetch
-incremental updates to the index. In the root of the repository is a file
-named `config.json` which contains JSON information used by Cargo for
-accessing the registry. This is an example of what the [crates.io] config file
-looks like:
+### Index Configuration
+The root of the index contains a file named `config.json` which contains JSON
+information used by Cargo for accessing the registry. This is an example of
+what the [crates.io] config file looks like:
 
 ```javascript
 {
@@ -37,11 +36,15 @@ The keys are:
   is not specified, commands such as [`cargo publish`] will not work. The web
   API is described below.
 
+
+### Download Endpoint
 The download endpoint should send the `.crate` file for the requested package.
 Cargo supports https, http, and file URLs, HTTP redirects, HTTP1 and HTTP2.
 The exact specifics of TLS support depend on the platform that Cargo is
 running on, the version of Cargo, and how it was compiled.
 
+
+### Index files
 The rest of the index repository contains one file for each package, where the
 filename is the name of the package in lowercase. Each version of the package
 has a separate line in the file. The files are organized in a tier of
@@ -202,6 +205,55 @@ explaining the format of the entry.
 The JSON objects should not be modified after they are added except for the
 `yanked` field whose value may change at any time.
 
+### Index Protocols
+Cargo supports two remote registry protocols: `git` and `sparse`. The `git` protocol
+stores index files in a git repository and the `sparse` protocol fetches individual
+files over HTTP.
+
+#### Git Protocol
+The git protocol has no protocol prefix in the index url. For example the git index URL
+for [crates.io] is `https://github.com/rust-lang/crates.io-index`.
+
+Cargo caches the git repository on disk so that it can efficiently incrementally fetch
+updates.
+
+#### Sparse Protocol
+The sparse protocol uses the `sparse+` protocol prefix in the registry URL. For example,
+the sparse index URL for [crates.io] is `sparse+https://index.crates.io/`.
+
+The sparse protocol downloads each index file using an individual HTTP request. Since
+this results in a large number of small HTTP requests, performance is signficiantly
+improved with a server that supports pipelining and HTTP/2.
+
+##### Caching
+Cargo caches the crate metadata files, and captures the `ETag` or `Last-Modified` 
+HTTP header from the server for each entry. When refreshing crate metadata, Cargo
+sends the `If-None-Match` or `If-Modified-Since` header to allow the server to respond
+with HTTP 304 "Not Modified" if the local cache is valid, saving time and bandwidth.
+If both `ETag` and `Last-Modified` headers are present, Cargo uses the `ETag` only.
+
+##### Cache Invalidation
+If a registry is using some kind of CDN or proxy which caches access to the index files,
+then it is recommended that registries implement some form of cache invalidation when
+the files are updated. If these caches are not updated, then users may not be able to
+access new crates until the cache is cleared.
+
+##### Nonexistent Crates
+For crates that do not exist, the registry should respond with a 404 "Not Found", 410 "Gone"
+or 451 "Unavailable For Legal Reasons" code.
+
+##### Sparse Limitations
+Since the URL of the registry is stored in the lockfile, it's not recommended to offer
+a registry with both protocols. Discussion about a transition plan is ongoing in issue 
+[#10964]. The [crates.io] registry is an exception, since Cargo internally substitues
+the equivalent git URL when the sparse protocol is used.
+
+If a registry does offer both protocols, it's currently recommended to choose one protocol
+as the canonical protocol and use [source replacement] for the other protocol.
+
+
 [`cargo publish`]: ../commands/cargo-publish.md
 [alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
 [crates.io]: https://crates.io/
+[source replacement]: ../reference/source-replacement.md
+[#10964]: https://github.com/rust-lang/cargo/issues/10964

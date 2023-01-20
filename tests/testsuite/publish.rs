@@ -195,8 +195,8 @@ fn simple_publish_with_asymmetric() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify -Zregistry-auth -Zsparse-registry --registry dummy-registry")
-        .masquerade_as_nightly_cargo(&["registry-auth", "sparse-registry"])
+    p.cargo("publish --no-verify -Zregistry-auth --registry dummy-registry")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -2518,8 +2518,7 @@ fn wait_for_first_publish() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
+    p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(
@@ -2556,10 +2555,7 @@ See [..]
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
-        .with_status(0)
-        .run();
+    p.cargo("build").with_status(0).run();
 }
 
 /// A separate test is needed for package names with - or _ as they hit
@@ -2602,8 +2598,7 @@ fn wait_for_first_publish_underscore() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
+    p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(
@@ -2640,10 +2635,7 @@ See [..]
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
-        .with_status(0)
-        .run();
+    p.cargo("build").with_status(0).run();
 }
 
 #[cargo_test]
@@ -2696,8 +2688,7 @@ fn wait_for_subsequent_publish() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --no-verify -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
+    p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .with_stderr(
@@ -2734,10 +2725,7 @@ See [..]
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
-        .with_status(0)
-        .run();
+    p.cargo("build").with_status(0).run();
 }
 
 #[cargo_test]

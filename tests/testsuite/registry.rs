@@ -6,23 +6,12 @@ use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{
     self, registry_path, Dependency, Package, RegistryBuilder, TestRegistry,
 };
-use cargo_test_support::{basic_manifest, project, Execs, Project};
+use cargo_test_support::{basic_manifest, project};
 use cargo_test_support::{git, install::cargo_home, t};
 use cargo_util::paths::remove_dir_all;
 use std::fs::{self, File};
 use std::path::Path;
 use std::sync::Mutex;
-
-fn cargo_http(p: &Project, s: &str) -> Execs {
-    let mut e = p.cargo(s);
-    e.arg("-Zsparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"]);
-    e
-}
-
-fn cargo_stable(p: &Project, s: &str) -> Execs {
-    p.cargo(s)
-}
 
 fn setup_http() -> TestRegistry {
     RegistryBuilder::new().http_index().build()
@@ -37,15 +26,15 @@ fn test_server_stops() {
 #[cargo_test]
 fn simple_http() {
     let _server = setup_http();
-    simple(cargo_http);
+    simple();
 }
 
 #[cargo_test]
 fn simple_git() {
-    simple(cargo_stable);
+    simple();
 }
 
-fn simple(cargo: fn(&Project, &str) -> Execs) {
+fn simple() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -64,7 +53,7 @@ fn simple(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("bar", "0.0.1").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -77,12 +66,12 @@ fn simple(cargo: fn(&Project, &str) -> Execs) {
         )
         .run();
 
-    cargo(&p, "clean").run();
+    p.cargo("clean").run();
 
     assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
 
     // Don't download a second time
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1
@@ -96,15 +85,15 @@ fn simple(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn deps_http() {
     let _server = setup_http();
-    deps(cargo_http);
+    deps();
 }
 
 #[cargo_test]
 fn deps_git() {
-    deps(cargo_stable);
+    deps();
 }
 
-fn deps(cargo: fn(&Project, &str) -> Execs) {
+fn deps() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -124,7 +113,7 @@ fn deps(cargo: fn(&Project, &str) -> Execs) {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -145,15 +134,15 @@ fn deps(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn nonexistent_http() {
     let _server = setup_http();
-    nonexistent(cargo_http);
+    nonexistent();
 }
 
 #[cargo_test]
 fn nonexistent_git() {
-    nonexistent(cargo_stable);
+    nonexistent();
 }
 
-fn nonexistent(cargo: fn(&Project, &str) -> Execs) {
+fn nonexistent() {
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -172,7 +161,7 @@ fn nonexistent(cargo: fn(&Project, &str) -> Execs) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -188,15 +177,15 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn wrong_case_http() {
     let _server = setup_http();
-    wrong_case(cargo_http);
+    wrong_case();
 }
 
 #[cargo_test]
 fn wrong_case_git() {
-    wrong_case(cargo_stable);
+    wrong_case();
 }
 
-fn wrong_case(cargo: fn(&Project, &str) -> Execs) {
+fn wrong_case() {
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -216,7 +205,7 @@ fn wrong_case(cargo: fn(&Project, &str) -> Execs) {
         .build();
 
     // #5678 to make this work
-    cargo(&p, "build")
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -234,15 +223,15 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn mis_hyphenated_http() {
     let _server = setup_http();
-    mis_hyphenated(cargo_http);
+    mis_hyphenated();
 }
 
 #[cargo_test]
 fn mis_hyphenated_git() {
-    mis_hyphenated(cargo_stable);
+    mis_hyphenated();
 }
 
-fn mis_hyphenated(cargo: fn(&Project, &str) -> Execs) {
+fn mis_hyphenated() {
     Package::new("mis-hyphenated", "0.0.1").publish();
 
     let p = project()
@@ -262,7 +251,7 @@ fn mis_hyphenated(cargo: fn(&Project, &str) -> Execs) {
         .build();
 
     // #2775 to make this work
-    cargo(&p, "build")
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -280,15 +269,15 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn wrong_version_http() {
     let _server = setup_http();
-    wrong_version(cargo_http);
+    wrong_version();
 }
 
 #[cargo_test]
 fn wrong_version_git() {
-    wrong_version(cargo_stable);
+    wrong_version();
 }
 
-fn wrong_version(cargo: fn(&Project, &str) -> Execs) {
+fn wrong_version() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -308,7 +297,7 @@ fn wrong_version(cargo: fn(&Project, &str) -> Execs) {
     Package::new("foo", "0.0.1").publish();
     Package::new("foo", "0.0.2").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -323,7 +312,7 @@ required by package `foo v0.0.1 ([..])`
     Package::new("foo", "0.0.3").publish();
     Package::new("foo", "0.0.4").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -339,15 +328,15 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn bad_cksum_http() {
     let _server = setup_http();
-    bad_cksum(cargo_http);
+    bad_cksum();
 }
 
 #[cargo_test]
 fn bad_cksum_git() {
-    bad_cksum(cargo_stable);
+    bad_cksum();
 }
 
-fn bad_cksum(cargo: fn(&Project, &str) -> Execs) {
+fn bad_cksum() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -368,7 +357,7 @@ fn bad_cksum(cargo: fn(&Project, &str) -> Execs) {
     pkg.publish();
     t!(File::create(&pkg.archive_dst()));
 
-    cargo(&p, "build -v")
+    p.cargo("build -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -387,15 +376,15 @@ Caused by:
 #[cargo_test]
 fn update_registry_http() {
     let _server = setup_http();
-    update_registry(cargo_http);
+    update_registry();
 }
 
 #[cargo_test]
 fn update_registry_git() {
-    update_registry(cargo_stable);
+    update_registry();
 }
 
-fn update_registry(cargo: fn(&Project, &str) -> Execs) {
+fn update_registry() {
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -414,7 +403,7 @@ fn update_registry(cargo: fn(&Project, &str) -> Execs) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -427,7 +416,7 @@ required by package `foo v0.0.1 ([..])`
 
     Package::new("notyet", "0.0.1").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -444,15 +433,15 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn package_with_path_deps_http() {
     let _server = setup_http();
-    package_with_path_deps(cargo_http);
+    package_with_path_deps();
 }
 
 #[cargo_test]
 fn package_with_path_deps_git() {
-    package_with_path_deps(cargo_stable);
+    package_with_path_deps();
 }
 
-fn package_with_path_deps(cargo: fn(&Project, &str) -> Execs) {
+fn package_with_path_deps() {
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -477,7 +466,7 @@ fn package_with_path_deps(cargo: fn(&Project, &str) -> Execs) {
         .file("notyet/src/lib.rs", "")
         .build();
 
-    cargo(&p, "package")
+    p.cargo("package")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -495,7 +484,7 @@ Caused by:
 
     Package::new("notyet", "0.0.1").publish();
 
-    cargo(&p, "package")
+    p.cargo("package")
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
@@ -515,15 +504,15 @@ Caused by:
 #[cargo_test]
 fn lockfile_locks_http() {
     let _server = setup_http();
-    lockfile_locks(cargo_http);
+    lockfile_locks();
 }
 
 #[cargo_test]
 fn lockfile_locks_git() {
-    lockfile_locks(cargo_stable);
+    lockfile_locks();
 }
 
-fn lockfile_locks(cargo: fn(&Project, &str) -> Execs) {
+fn lockfile_locks() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -542,7 +531,7 @@ fn lockfile_locks(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("bar", "0.0.1").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -558,21 +547,21 @@ fn lockfile_locks(cargo: fn(&Project, &str) -> Execs) {
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
 
-    cargo(&p, "build").with_stdout("").run();
+    p.cargo("build").with_stdout("").run();
 }
 
 #[cargo_test]
 fn lockfile_locks_transitively_http() {
     let _server = setup_http();
-    lockfile_locks_transitively(cargo_http);
+    lockfile_locks_transitively();
 }
 
 #[cargo_test]
 fn lockfile_locks_transitively_git() {
-    lockfile_locks_transitively(cargo_stable);
+    lockfile_locks_transitively();
 }
 
-fn lockfile_locks_transitively(cargo: fn(&Project, &str) -> Execs) {
+fn lockfile_locks_transitively() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -592,7 +581,7 @@ fn lockfile_locks_transitively(cargo: fn(&Project, &str) -> Execs) {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -611,21 +600,21 @@ fn lockfile_locks_transitively(cargo: fn(&Project, &str) -> Execs) {
     Package::new("baz", "0.0.2").publish();
     Package::new("bar", "0.0.2").dep("baz", "*").publish();
 
-    cargo(&p, "build").with_stdout("").run();
+    p.cargo("build").with_stdout("").run();
 }
 
 #[cargo_test]
 fn yanks_are_not_used_http() {
     let _server = setup_http();
-    yanks_are_not_used(cargo_http);
+    yanks_are_not_used();
 }
 
 #[cargo_test]
 fn yanks_are_not_used_git() {
-    yanks_are_not_used(cargo_stable);
+    yanks_are_not_used();
 }
 
-fn yanks_are_not_used(cargo: fn(&Project, &str) -> Execs) {
+fn yanks_are_not_used() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -650,7 +639,7 @@ fn yanks_are_not_used(cargo: fn(&Project, &str) -> Execs) {
         .yanked(true)
         .publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -669,15 +658,15 @@ fn yanks_are_not_used(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn relying_on_a_yank_is_bad_http() {
     let _server = setup_http();
-    relying_on_a_yank_is_bad(cargo_http);
+    relying_on_a_yank_is_bad();
 }
 
 #[cargo_test]
 fn relying_on_a_yank_is_bad_git() {
-    relying_on_a_yank_is_bad(cargo_stable);
+    relying_on_a_yank_is_bad();
 }
 
-fn relying_on_a_yank_is_bad(cargo: fn(&Project, &str) -> Execs) {
+fn relying_on_a_yank_is_bad() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -698,7 +687,7 @@ fn relying_on_a_yank_is_bad(cargo: fn(&Project, &str) -> Execs) {
     Package::new("baz", "0.0.2").yanked(true).publish();
     Package::new("bar", "0.0.1").dep("baz", "=0.0.2").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -715,15 +704,15 @@ required by package `bar v0.0.1`
 #[cargo_test]
 fn yanks_in_lockfiles_are_ok_http() {
     let _server = setup_http();
-    yanks_in_lockfiles_are_ok(cargo_http);
+    yanks_in_lockfiles_are_ok();
 }
 
 #[cargo_test]
 fn yanks_in_lockfiles_are_ok_git() {
-    yanks_in_lockfiles_are_ok(cargo_stable);
+    yanks_in_lockfiles_are_ok();
 }
 
-fn yanks_in_lockfiles_are_ok(cargo: fn(&Project, &str) -> Execs) {
+fn yanks_in_lockfiles_are_ok() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -742,15 +731,15 @@ fn yanks_in_lockfiles_are_ok(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("bar", "0.0.1").publish();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 
     registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
-    cargo(&p, "build").with_stdout("").run();
+    p.cargo("build").with_stdout("").run();
 
-    cargo(&p, "update")
+    p.cargo("update")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -765,15 +754,15 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn yanks_in_lockfiles_are_ok_for_other_update_http() {
     let _server = setup_http();
-    yanks_in_lockfiles_are_ok_for_other_update(cargo_http);
+    yanks_in_lockfiles_are_ok_for_other_update();
 }
 
 #[cargo_test]
 fn yanks_in_lockfiles_are_ok_for_other_update_git() {
-    yanks_in_lockfiles_are_ok_for_other_update(cargo_stable);
+    yanks_in_lockfiles_are_ok_for_other_update();
 }
 
-fn yanks_in_lockfiles_are_ok_for_other_update(cargo: fn(&Project, &str) -> Execs) {
+fn yanks_in_lockfiles_are_ok_for_other_update() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -794,18 +783,18 @@ fn yanks_in_lockfiles_are_ok_for_other_update(cargo: fn(&Project, &str) -> Execs
     Package::new("bar", "0.0.1").publish();
     Package::new("baz", "0.0.1").publish();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 
     registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
     Package::new("baz", "0.0.1").publish();
 
-    cargo(&p, "build").with_stdout("").run();
+    p.cargo("build").with_stdout("").run();
 
     Package::new("baz", "0.0.2").publish();
 
-    cargo(&p, "update")
+    p.cargo("update")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -816,7 +805,7 @@ required by package `foo v0.0.1 ([..])`
         )
         .run();
 
-    cargo(&p, "update -p baz")
+    p.cargo("update -p baz")
         .with_stderr_contains(
             "\
 [UPDATING] `[..]` index
@@ -829,15 +818,15 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn yanks_in_lockfiles_are_ok_with_new_dep_http() {
     let _server = setup_http();
-    yanks_in_lockfiles_are_ok_with_new_dep(cargo_http);
+    yanks_in_lockfiles_are_ok_with_new_dep();
 }
 
 #[cargo_test]
 fn yanks_in_lockfiles_are_ok_with_new_dep_git() {
-    yanks_in_lockfiles_are_ok_with_new_dep(cargo_stable);
+    yanks_in_lockfiles_are_ok_with_new_dep();
 }
 
-fn yanks_in_lockfiles_are_ok_with_new_dep(cargo: fn(&Project, &str) -> Execs) {
+fn yanks_in_lockfiles_are_ok_with_new_dep() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -856,7 +845,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("bar", "0.0.1").publish();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 
     registry_path().join("3").rm_rf();
 
@@ -877,21 +866,21 @@ fn yanks_in_lockfiles_are_ok_with_new_dep(cargo: fn(&Project, &str) -> Execs) {
         "#,
     );
 
-    cargo(&p, "build").with_stdout("").run();
+    p.cargo("build").with_stdout("").run();
 }
 
 #[cargo_test]
 fn update_with_lockfile_if_packages_missing_http() {
     let _server = setup_http();
-    update_with_lockfile_if_packages_missing(cargo_http);
+    update_with_lockfile_if_packages_missing();
 }
 
 #[cargo_test]
 fn update_with_lockfile_if_packages_missing_git() {
-    update_with_lockfile_if_packages_missing(cargo_stable);
+    update_with_lockfile_if_packages_missing();
 }
 
-fn update_with_lockfile_if_packages_missing(cargo: fn(&Project, &str) -> Execs) {
+fn update_with_lockfile_if_packages_missing() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -909,11 +898,11 @@ fn update_with_lockfile_if_packages_missing(cargo: fn(&Project, &str) -> Execs) 
         .build();
 
     Package::new("bar", "0.0.1").publish();
-    cargo(&p, "build").run();
+    p.cargo("build").run();
     p.root().move_into_the_past();
 
     paths::home().join(".cargo/registry").rm_rf();
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -928,15 +917,15 @@ fn update_with_lockfile_if_packages_missing(cargo: fn(&Project, &str) -> Execs) 
 #[cargo_test]
 fn update_lockfile_http() {
     let _server = setup_http();
-    update_lockfile(cargo_http);
+    update_lockfile();
 }
 
 #[cargo_test]
 fn update_lockfile_git() {
-    update_lockfile(cargo_stable);
+    update_lockfile();
 }
 
-fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
+fn update_lockfile() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -955,13 +944,13 @@ fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
 
     println!("0.0.1");
     Package::new("bar", "0.0.1").publish();
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 
     Package::new("bar", "0.0.2").publish();
     Package::new("bar", "0.0.3").publish();
     paths::home().join(".cargo/registry").rm_rf();
     println!("0.0.2 update");
-    cargo(&p, "update -p bar --precise 0.0.2")
+    p.cargo("update -p bar --precise 0.0.2")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -971,7 +960,7 @@ fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
         .run();
 
     println!("0.0.2 build");
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
@@ -984,7 +973,7 @@ fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
         .run();
 
     println!("0.0.3 update");
-    cargo(&p, "update -p bar")
+    p.cargo("update -p bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -994,7 +983,7 @@ fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
         .run();
 
     println!("0.0.3 build");
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
@@ -1009,7 +998,7 @@ fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
     println!("new dependencies update");
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
     Package::new("spam", "0.2.5").publish();
-    cargo(&p, "update -p bar")
+    p.cargo("update -p bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1021,7 +1010,7 @@ fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
 
     println!("new dependencies update");
     Package::new("bar", "0.0.5").publish();
-    cargo(&p, "update -p bar")
+    p.cargo("update -p bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1035,15 +1024,15 @@ fn update_lockfile(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn dev_dependency_not_used_http() {
     let _server = setup_http();
-    dev_dependency_not_used(cargo_http);
+    dev_dependency_not_used();
 }
 
 #[cargo_test]
 fn dev_dependency_not_used_git() {
-    dev_dependency_not_used(cargo_stable);
+    dev_dependency_not_used();
 }
 
-fn dev_dependency_not_used(cargo: fn(&Project, &str) -> Execs) {
+fn dev_dependency_not_used() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1063,7 +1052,7 @@ fn dev_dependency_not_used(cargo: fn(&Project, &str) -> Execs) {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dev_dep("baz", "*").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1080,16 +1069,16 @@ fn dev_dependency_not_used(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn bad_license_file_http() {
     let registry = setup_http();
-    bad_license_file(cargo_http, &registry);
+    bad_license_file(&registry);
 }
 
 #[cargo_test]
 fn bad_license_file_git() {
     let registry = registry::init();
-    bad_license_file(cargo_stable, &registry);
+    bad_license_file(&registry);
 }
 
-fn bad_license_file(cargo: fn(&Project, &str) -> Execs, registry: &TestRegistry) {
+fn bad_license_file(registry: &TestRegistry) {
     Package::new("foo", "1.0.0").publish();
     let p = project()
         .file(
@@ -1106,7 +1095,7 @@ fn bad_license_file(cargo: fn(&Project, &str) -> Execs, registry: &TestRegistry)
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    cargo(&p, "publish -v")
+    p.cargo("publish -v")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_contains("[ERROR] the license file `foo` does not exist")
@@ -1116,15 +1105,15 @@ fn bad_license_file(cargo: fn(&Project, &str) -> Execs, registry: &TestRegistry)
 #[cargo_test]
 fn updating_a_dep_http() {
     let _server = setup_http();
-    updating_a_dep(cargo_http);
+    updating_a_dep();
 }
 
 #[cargo_test]
 fn updating_a_dep_git() {
-    updating_a_dep(cargo_stable);
+    updating_a_dep();
 }
 
-fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
+fn updating_a_dep() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1156,7 +1145,7 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("bar", "0.0.1").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1192,7 +1181,7 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
     Package::new("bar", "0.1.0").publish();
 
     println!("second");
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1215,15 +1204,15 @@ fn updating_a_dep(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn git_and_registry_dep_http() {
     let _server = setup_http();
-    git_and_registry_dep(cargo_http);
+    git_and_registry_dep();
 }
 
 #[cargo_test]
 fn git_and_registry_dep_git() {
-    git_and_registry_dep(cargo_stable);
+    git_and_registry_dep();
 }
 
-fn git_and_registry_dep(cargo: fn(&Project, &str) -> Execs) {
+fn git_and_registry_dep() {
     let b = git::repo(&paths::root().join("b"))
         .file(
             "Cargo.toml",
@@ -1264,7 +1253,7 @@ fn git_and_registry_dep(cargo: fn(&Project, &str) -> Execs) {
     Package::new("a", "0.0.1").publish();
 
     p.root().move_into_the_past();
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -1281,21 +1270,21 @@ fn git_and_registry_dep(cargo: fn(&Project, &str) -> Execs) {
     p.root().move_into_the_past();
 
     println!("second");
-    cargo(&p, "build").with_stdout("").run();
+    p.cargo("build").with_stdout("").run();
 }
 
 #[cargo_test]
 fn update_publish_then_update_http() {
     let _server = setup_http();
-    update_publish_then_update(cargo_http);
+    update_publish_then_update();
 }
 
 #[cargo_test]
 fn update_publish_then_update_git() {
-    update_publish_then_update(cargo_stable);
+    update_publish_then_update();
 }
 
-fn update_publish_then_update(cargo: fn(&Project, &str) -> Execs) {
+fn update_publish_then_update() {
     // First generate a Cargo.lock and a clone of the registry index at the
     // "head" of the current registry.
     let p = project()
@@ -1314,7 +1303,7 @@ fn update_publish_then_update(cargo: fn(&Project, &str) -> Execs) {
         .file("src/main.rs", "fn main() {}")
         .build();
     Package::new("a", "0.1.0").publish();
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 
     // Next, publish a new package and back up the copy of the registry we just
     // created.
@@ -1341,7 +1330,7 @@ fn update_publish_then_update(cargo: fn(&Project, &str) -> Execs) {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    cargo(&p2, "build").run();
+    p2.cargo("build").run();
     registry.rm_rf();
     t!(fs::rename(&backup, &registry));
     t!(fs::rename(
@@ -1352,7 +1341,7 @@ fn update_publish_then_update(cargo: fn(&Project, &str) -> Execs) {
     // Finally, build the first project again (with our newer Cargo.lock) which
     // should force an update of the old registry, download the new crate, and
     // then build everything again.
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -1369,15 +1358,15 @@ fn update_publish_then_update(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn fetch_downloads_http() {
     let _server = setup_http();
-    fetch_downloads(cargo_http);
+    fetch_downloads();
 }
 
 #[cargo_test]
 fn fetch_downloads_git() {
-    fetch_downloads(cargo_stable);
+    fetch_downloads();
 }
 
-fn fetch_downloads(cargo: fn(&Project, &str) -> Execs) {
+fn fetch_downloads() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1396,7 +1385,7 @@ fn fetch_downloads(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("a", "0.1.0").publish();
 
-    cargo(&p, "fetch")
+    p.cargo("fetch")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1410,15 +1399,15 @@ fn fetch_downloads(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn update_transitive_dependency_http() {
     let _server = setup_http();
-    update_transitive_dependency(cargo_http);
+    update_transitive_dependency();
 }
 
 #[cargo_test]
 fn update_transitive_dependency_git() {
-    update_transitive_dependency(cargo_stable);
+    update_transitive_dependency();
 }
 
-fn update_transitive_dependency(cargo: fn(&Project, &str) -> Execs) {
+fn update_transitive_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1438,11 +1427,11 @@ fn update_transitive_dependency(cargo: fn(&Project, &str) -> Execs) {
     Package::new("a", "0.1.0").dep("b", "*").publish();
     Package::new("b", "0.1.0").publish();
 
-    cargo(&p, "fetch").run();
+    p.cargo("fetch").run();
 
     Package::new("b", "0.1.1").publish();
 
-    cargo(&p, "update -pb")
+    p.cargo("update -pb")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1451,7 +1440,7 @@ fn update_transitive_dependency(cargo: fn(&Project, &str) -> Execs) {
         )
         .run();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
@@ -1468,15 +1457,15 @@ fn update_transitive_dependency(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn update_backtracking_ok_http() {
     let _server = setup_http();
-    update_backtracking_ok(cargo_http);
+    update_backtracking_ok();
 }
 
 #[cargo_test]
 fn update_backtracking_ok_git() {
-    update_backtracking_ok(cargo_stable);
+    update_backtracking_ok();
 }
 
-fn update_backtracking_ok(cargo: fn(&Project, &str) -> Execs) {
+fn update_backtracking_ok() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1505,7 +1494,7 @@ fn update_backtracking_ok(cargo: fn(&Project, &str) -> Execs) {
         .publish();
     Package::new("openssl", "0.1.0").publish();
 
-    cargo(&p, "generate-lockfile").run();
+    p.cargo("generate-lockfile").run();
 
     Package::new("openssl", "0.1.1").publish();
     Package::new("hyper", "0.6.6")
@@ -1513,7 +1502,7 @@ fn update_backtracking_ok(cargo: fn(&Project, &str) -> Execs) {
         .dep("cookie", "0.1.0")
         .publish();
 
-    cargo(&p, "update -p hyper")
+    p.cargo("update -p hyper")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1527,15 +1516,15 @@ fn update_backtracking_ok(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn update_multiple_packages_http() {
     let _server = setup_http();
-    update_multiple_packages(cargo_http);
+    update_multiple_packages();
 }
 
 #[cargo_test]
 fn update_multiple_packages_git() {
-    update_multiple_packages(cargo_stable);
+    update_multiple_packages();
 }
 
-fn update_multiple_packages(cargo: fn(&Project, &str) -> Execs) {
+fn update_multiple_packages() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1558,13 +1547,13 @@ fn update_multiple_packages(cargo: fn(&Project, &str) -> Execs) {
     Package::new("b", "0.1.0").publish();
     Package::new("c", "0.1.0").publish();
 
-    cargo(&p, "fetch").run();
+    p.cargo("fetch").run();
 
     Package::new("a", "0.1.1").publish();
     Package::new("b", "0.1.1").publish();
     Package::new("c", "0.1.1").publish();
 
-    cargo(&p, "update -pa -pb")
+    p.cargo("update -pa -pb")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1574,7 +1563,7 @@ fn update_multiple_packages(cargo: fn(&Project, &str) -> Execs) {
         )
         .run();
 
-    cargo(&p, "update -pb -pc")
+    p.cargo("update -pb -pc")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1583,7 +1572,7 @@ fn update_multiple_packages(cargo: fn(&Project, &str) -> Execs) {
         )
         .run();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr_contains("[DOWNLOADED] a v0.1.1 (registry `dummy-registry`)")
         .with_stderr_contains("[DOWNLOADED] b v0.1.1 (registry `dummy-registry`)")
         .with_stderr_contains("[DOWNLOADED] c v0.1.1 (registry `dummy-registry`)")
@@ -1597,15 +1586,15 @@ fn update_multiple_packages(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn bundled_crate_in_registry_http() {
     let _server = setup_http();
-    bundled_crate_in_registry(cargo_http);
+    bundled_crate_in_registry();
 }
 
 #[cargo_test]
 fn bundled_crate_in_registry_git() {
-    bundled_crate_in_registry(cargo_stable);
+    bundled_crate_in_registry();
 }
 
-fn bundled_crate_in_registry(cargo: fn(&Project, &str) -> Execs) {
+fn bundled_crate_in_registry() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1643,21 +1632,21 @@ fn bundled_crate_in_registry(cargo: fn(&Project, &str) -> Execs) {
         .file("bar/src/lib.rs", "")
         .publish();
 
-    cargo(&p, "run").run();
+    p.cargo("run").run();
 }
 
 #[cargo_test]
 fn update_same_prefix_oh_my_how_was_this_a_bug_http() {
     let _server = setup_http();
-    update_same_prefix_oh_my_how_was_this_a_bug(cargo_http);
+    update_same_prefix_oh_my_how_was_this_a_bug();
 }
 
 #[cargo_test]
 fn update_same_prefix_oh_my_how_was_this_a_bug_git() {
-    update_same_prefix_oh_my_how_was_this_a_bug(cargo_stable);
+    update_same_prefix_oh_my_how_was_this_a_bug();
 }
 
-fn update_same_prefix_oh_my_how_was_this_a_bug(cargo: fn(&Project, &str) -> Execs) {
+fn update_same_prefix_oh_my_how_was_this_a_bug() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1679,22 +1668,22 @@ fn update_same_prefix_oh_my_how_was_this_a_bug(cargo: fn(&Project, &str) -> Exec
         .dep("foobar", "0.2.0")
         .publish();
 
-    cargo(&p, "generate-lockfile").run();
-    cargo(&p, "update -pfoobar --precise=0.2.0").run();
+    p.cargo("generate-lockfile").run();
+    p.cargo("update -pfoobar --precise=0.2.0").run();
 }
 
 #[cargo_test]
 fn use_semver_http() {
     let _server = setup_http();
-    use_semver(cargo_http);
+    use_semver();
 }
 
 #[cargo_test]
 fn use_semver_git() {
-    use_semver(cargo_stable);
+    use_semver();
 }
 
-fn use_semver(cargo: fn(&Project, &str) -> Execs) {
+fn use_semver() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1713,21 +1702,21 @@ fn use_semver(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("foo", "1.2.3-alpha.0").publish();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 }
 
 #[cargo_test]
 fn use_semver_package_incorrectly_http() {
     let _server = setup_http();
-    use_semver_package_incorrectly(cargo_http);
+    use_semver_package_incorrectly();
 }
 
 #[cargo_test]
 fn use_semver_package_incorrectly_git() {
-    use_semver_package_incorrectly(cargo_stable);
+    use_semver_package_incorrectly();
 }
 
-fn use_semver_package_incorrectly(cargo: fn(&Project, &str) -> Execs) {
+fn use_semver_package_incorrectly() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1761,7 +1750,7 @@ fn use_semver_package_incorrectly(cargo: fn(&Project, &str) -> Execs) {
         .file("b/src/main.rs", "fn main() {}")
         .build();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -1779,15 +1768,15 @@ required by package `b v0.1.0 ([..])`
 #[cargo_test]
 fn only_download_relevant_http() {
     let _server = setup_http();
-    only_download_relevant(cargo_http);
+    only_download_relevant();
 }
 
 #[cargo_test]
 fn only_download_relevant_git() {
-    only_download_relevant(cargo_stable);
+    only_download_relevant();
 }
 
-fn only_download_relevant(cargo: fn(&Project, &str) -> Execs) {
+fn only_download_relevant() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1812,7 +1801,7 @@ fn only_download_relevant(cargo: fn(&Project, &str) -> Execs) {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1829,15 +1818,15 @@ fn only_download_relevant(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn resolve_and_backtracking_http() {
     let _server = setup_http();
-    resolve_and_backtracking(cargo_http);
+    resolve_and_backtracking();
 }
 
 #[cargo_test]
 fn resolve_and_backtracking_git() {
-    resolve_and_backtracking(cargo_stable);
+    resolve_and_backtracking();
 }
 
-fn resolve_and_backtracking(cargo: fn(&Project, &str) -> Execs) {
+fn resolve_and_backtracking() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1859,21 +1848,21 @@ fn resolve_and_backtracking(cargo: fn(&Project, &str) -> Execs) {
         .publish();
     Package::new("foo", "0.1.0").publish();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 }
 
 #[cargo_test]
 fn upstream_warnings_on_extra_verbose_http() {
     let _server = setup_http();
-    upstream_warnings_on_extra_verbose(cargo_http);
+    upstream_warnings_on_extra_verbose();
 }
 
 #[cargo_test]
 fn upstream_warnings_on_extra_verbose_git() {
-    upstream_warnings_on_extra_verbose(cargo_stable);
+    upstream_warnings_on_extra_verbose();
 }
 
-fn upstream_warnings_on_extra_verbose(cargo: fn(&Project, &str) -> Execs) {
+fn upstream_warnings_on_extra_verbose() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1894,7 +1883,7 @@ fn upstream_warnings_on_extra_verbose(cargo: fn(&Project, &str) -> Execs) {
         .file("src/lib.rs", "fn unused() {}")
         .publish();
 
-    cargo(&p, "build -vv")
+    p.cargo("build -vv")
         .with_stderr_contains("[WARNING] [..]unused[..]")
         .run();
 }
@@ -1918,7 +1907,7 @@ fn disallow_network_http() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo_http(&p, "build --frozen")
+    p.cargo("build --frozen")
         .with_status(101)
         .with_stderr(
             "\
@@ -1953,7 +1942,7 @@ fn disallow_network_git() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo_stable(&p, "build --frozen")
+    p.cargo("build --frozen")
         .with_status(101)
         .with_stderr(
             "\
@@ -1975,15 +1964,15 @@ Caused by:
 #[cargo_test]
 fn add_dep_dont_update_registry_http() {
     let _server = setup_http();
-    add_dep_dont_update_registry(cargo_http);
+    add_dep_dont_update_registry();
 }
 
 #[cargo_test]
 fn add_dep_dont_update_registry_git() {
-    add_dep_dont_update_registry(cargo_stable);
+    add_dep_dont_update_registry();
 }
 
-fn add_dep_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
+fn add_dep_dont_update_registry() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2015,7 +2004,7 @@ fn add_dep_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("remote", "0.3.4").publish();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 
     p.change_file(
         "Cargo.toml",
@@ -2031,7 +2020,7 @@ fn add_dep_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
         "#,
     );
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [COMPILING] bar v0.5.0 ([..])
@@ -2044,15 +2033,15 @@ fn add_dep_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn bump_version_dont_update_registry_http() {
     let _server = setup_http();
-    bump_version_dont_update_registry(cargo_http);
+    bump_version_dont_update_registry();
 }
 
 #[cargo_test]
 fn bump_version_dont_update_registry_git() {
-    bump_version_dont_update_registry(cargo_stable);
+    bump_version_dont_update_registry();
 }
 
-fn bump_version_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
+fn bump_version_dont_update_registry() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2084,7 +2073,7 @@ fn bump_version_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
 
     Package::new("remote", "0.3.4").publish();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 
     p.change_file(
         "Cargo.toml",
@@ -2099,7 +2088,7 @@ fn bump_version_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
         "#,
     );
 
-    cargo(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [COMPILING] bar v0.6.0 ([..])
@@ -2112,15 +2101,15 @@ fn bump_version_dont_update_registry(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn toml_lies_but_index_is_truth_http() {
     let _server = setup_http();
-    toml_lies_but_index_is_truth(cargo_http);
+    toml_lies_but_index_is_truth();
 }
 
 #[cargo_test]
 fn toml_lies_but_index_is_truth_git() {
-    toml_lies_but_index_is_truth(cargo_stable);
+    toml_lies_but_index_is_truth();
 }
 
-fn toml_lies_but_index_is_truth(cargo: fn(&Project, &str) -> Execs) {
+fn toml_lies_but_index_is_truth() {
     Package::new("foo", "0.2.0").publish();
     Package::new("bar", "0.3.0")
         .dep("foo", "0.2.0")
@@ -2155,21 +2144,21 @@ fn toml_lies_but_index_is_truth(cargo: fn(&Project, &str) -> Execs) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo(&p, "build -v").run();
+    p.cargo("build -v").run();
 }
 
 #[cargo_test]
 fn vv_prints_warnings_http() {
     let _server = setup_http();
-    vv_prints_warnings(cargo_http);
+    vv_prints_warnings();
 }
 
 #[cargo_test]
 fn vv_prints_warnings_git() {
-    vv_prints_warnings(cargo_stable);
+    vv_prints_warnings();
 }
 
-fn vv_prints_warnings(cargo: fn(&Project, &str) -> Execs) {
+fn vv_prints_warnings() {
     Package::new("foo", "0.2.0")
         .file(
             "src/lib.rs",
@@ -2193,21 +2182,21 @@ fn vv_prints_warnings(cargo: fn(&Project, &str) -> Execs) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo(&p, "build -vv").run();
+    p.cargo("build -vv").run();
 }
 
 #[cargo_test]
 fn bad_and_or_malicious_packages_rejected_http() {
     let _server = setup_http();
-    bad_and_or_malicious_packages_rejected(cargo_http);
+    bad_and_or_malicious_packages_rejected();
 }
 
 #[cargo_test]
 fn bad_and_or_malicious_packages_rejected_git() {
-    bad_and_or_malicious_packages_rejected(cargo_stable);
+    bad_and_or_malicious_packages_rejected();
 }
 
-fn bad_and_or_malicious_packages_rejected(cargo: fn(&Project, &str) -> Execs) {
+fn bad_and_or_malicious_packages_rejected() {
     Package::new("foo", "0.2.0")
         .extra_file("foo-0.1.0/src/lib.rs", "")
         .publish();
@@ -2228,7 +2217,7 @@ fn bad_and_or_malicious_packages_rejected(cargo: fn(&Project, &str) -> Execs) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo(&p, "build -vv")
+    p.cargo("build -vv")
         .with_status(101)
         .with_stderr(
             "\
@@ -2250,15 +2239,15 @@ Caused by:
 #[cargo_test]
 fn git_init_templatedir_missing_http() {
     let _server = setup_http();
-    git_init_templatedir_missing(cargo_http);
+    git_init_templatedir_missing();
 }
 
 #[cargo_test]
 fn git_init_templatedir_missing_git() {
-    git_init_templatedir_missing(cargo_stable);
+    git_init_templatedir_missing();
 }
 
-fn git_init_templatedir_missing(cargo: fn(&Project, &str) -> Execs) {
+fn git_init_templatedir_missing() {
     Package::new("foo", "0.2.0").dep("bar", "*").publish();
     Package::new("bar", "0.2.0").publish();
 
@@ -2278,7 +2267,7 @@ fn git_init_templatedir_missing(cargo: fn(&Project, &str) -> Execs) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 
     remove_dir_all(paths::home().join(".cargo/registry")).unwrap();
     fs::write(
@@ -2290,22 +2279,22 @@ fn git_init_templatedir_missing(cargo: fn(&Project, &str) -> Execs) {
     )
     .unwrap();
 
-    cargo(&p, "build").run();
-    cargo(&p, "build").run();
+    p.cargo("build").run();
+    p.cargo("build").run();
 }
 
 #[cargo_test]
 fn rename_deps_and_features_http() {
     let _server = setup_http();
-    rename_deps_and_features(cargo_http);
+    rename_deps_and_features();
 }
 
 #[cargo_test]
 fn rename_deps_and_features_git() {
-    rename_deps_and_features(cargo_stable);
+    rename_deps_and_features();
 }
 
-fn rename_deps_and_features(cargo: fn(&Project, &str) -> Execs) {
+fn rename_deps_and_features() {
     Package::new("foo", "0.1.0")
         .file("src/lib.rs", "pub fn f1() {}")
         .publish();
@@ -2358,23 +2347,23 @@ fn rename_deps_and_features(cargo: fn(&Project, &str) -> Execs) {
         )
         .build();
 
-    cargo(&p, "build").run();
-    cargo(&p, "build --features bar/foo01").run();
-    cargo(&p, "build --features bar/another").run();
+    p.cargo("build").run();
+    p.cargo("build --features bar/foo01").run();
+    p.cargo("build --features bar/another").run();
 }
 
 #[cargo_test]
 fn ignore_invalid_json_lines_http() {
     let _server = setup_http();
-    ignore_invalid_json_lines(cargo_http);
+    ignore_invalid_json_lines();
 }
 
 #[cargo_test]
 fn ignore_invalid_json_lines_git() {
-    ignore_invalid_json_lines(cargo_stable);
+    ignore_invalid_json_lines();
 }
 
-fn ignore_invalid_json_lines(cargo: fn(&Project, &str) -> Execs) {
+fn ignore_invalid_json_lines() {
     Package::new("foo", "0.1.0").publish();
     Package::new("foo", "0.1.1").invalid_json(true).publish();
     Package::new("foo", "0.2.0").publish();
@@ -2396,21 +2385,21 @@ fn ignore_invalid_json_lines(cargo: fn(&Project, &str) -> Execs) {
         .file("src/lib.rs", "")
         .build();
 
-    cargo(&p, "build").run();
+    p.cargo("build").run();
 }
 
 #[cargo_test]
 fn readonly_registry_still_works_http() {
     let _server = setup_http();
-    readonly_registry_still_works(cargo_http);
+    readonly_registry_still_works();
 }
 
 #[cargo_test]
 fn readonly_registry_still_works_git() {
-    readonly_registry_still_works(cargo_stable);
+    readonly_registry_still_works();
 }
 
-fn readonly_registry_still_works(cargo: fn(&Project, &str) -> Execs) {
+fn readonly_registry_still_works() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project()
@@ -2429,10 +2418,10 @@ fn readonly_registry_still_works(cargo: fn(&Project, &str) -> Execs) {
         .file("src/lib.rs", "")
         .build();
 
-    cargo(&p, "generate-lockfile").run();
-    cargo(&p, "fetch --locked").run();
+    p.cargo("generate-lockfile").run();
+    p.cargo("fetch --locked").run();
     chmod_readonly(&paths::home(), true);
-    cargo(&p, "build").run();
+    p.cargo("build").run();
     // make sure we un-readonly the files afterwards so "cargo clean" can remove them (#6934)
     chmod_readonly(&paths::home(), false);
 
@@ -2459,15 +2448,15 @@ fn readonly_registry_still_works(cargo: fn(&Project, &str) -> Execs) {
 #[cargo_test]
 fn registry_index_rejected_http() {
     let _server = setup_http();
-    registry_index_rejected(cargo_http);
+    registry_index_rejected();
 }
 
 #[cargo_test]
 fn registry_index_rejected_git() {
-    registry_index_rejected(cargo_stable);
+    registry_index_rejected();
 }
 
-fn registry_index_rejected(cargo: fn(&Project, &str) -> Execs) {
+fn registry_index_rejected() {
     Package::new("dep", "0.1.0").publish();
 
     let p = project()
@@ -2492,7 +2481,7 @@ fn registry_index_rejected(cargo: fn(&Project, &str) -> Execs) {
         .file("src/lib.rs", "")
         .build();
 
-    cargo(&p, "check")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -2505,7 +2494,7 @@ Caused by:
         )
         .run();
 
-    cargo(&p, "login")
+    p.cargo("login")
         .with_status(101)
         .with_stderr(
             "\
@@ -2598,15 +2587,15 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
 #[cargo_test]
 fn ignores_unknown_index_version_http() {
     let _server = setup_http();
-    ignores_unknown_index_version(cargo_http);
+    ignores_unknown_index_version();
 }
 
 #[cargo_test]
 fn ignores_unknown_index_version_git() {
-    ignores_unknown_index_version(cargo_stable);
+    ignores_unknown_index_version();
 }
 
-fn ignores_unknown_index_version(cargo: fn(&Project, &str) -> Execs) {
+fn ignores_unknown_index_version() {
     // If the version field is not understood, it is ignored.
     Package::new("bar", "1.0.0").publish();
     Package::new("bar", "1.0.1").schema_version(9999).publish();
@@ -2626,47 +2615,13 @@ fn ignores_unknown_index_version(cargo: fn(&Project, &str) -> Execs) {
         .file("src/lib.rs", "")
         .build();
 
-    cargo(&p, "tree")
+    p.cargo("tree")
         .with_stdout(
             "foo v0.1.0 [..]\n\
              └── bar v1.0.0\n\
             ",
         )
         .run();
-}
-
-#[cargo_test]
-fn http_requires_z_flag() {
-    let _server = setup_http();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [dependencies]
-                bar = ">= 0.0.0"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build")
-        .with_status(101)
-        .with_stderr_contains("  usage of sparse registries requires `-Z sparse-registry`")
-        .run();
-}
-
-#[cargo_test]
-fn protocol_sparse_requires_z_flag() {
-    cargo_process("install bar")
-        .with_status(101)
-        .env("CARGO_REGISTRIES_CRATES_IO_PROTOCOL", "sparse")
-        .with_stderr("[ERROR] usage of sparse registries requires `-Z sparse-registry`")
-        .run()
 }
 
 #[cargo_test]
@@ -2680,8 +2635,7 @@ fn protocol() {
 
 #[cargo_test]
 fn http_requires_trailing_slash() {
-    cargo_process("-Z sparse-registry install bar --index sparse+https://invalid.crates.io/test")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
+    cargo_process("install bar --index sparse+https://invalid.crates.io/test")
         .with_status(101)
         .with_stderr("[ERROR] sparse registry url must end in a slash `/`: sparse+https://invalid.crates.io/test")
         .run()
@@ -2779,7 +2733,7 @@ fn sparse_retry() {
 
     Package::new("bar", "0.0.1").publish();
 
-    cargo_http(&p, "build")
+    p.cargo("build")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
