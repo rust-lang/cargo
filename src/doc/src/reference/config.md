@@ -321,7 +321,7 @@ all capital letters.
 
 This section documents all configuration keys. The description for keys with
 variable parts are annotated with angled brackets like `target.<triple>` where
-the [`<triple>`] part can be any [target triple] like
+the `<triple>` part can be any [target triple] like
 `target.x86_64-pc-windows-msvc`.
 
 #### `paths`
@@ -1050,7 +1050,7 @@ If none of `branch`, `tag`, or `rev` is set, defaults to the `master` branch.
 The `[target]` table is used for specifying settings for specific platform
 targets. It consists of a sub-table which is either a [platform triple][target triple] 
 or a [`cfg()` expression]. The given values will be used if the target platform
-matches either the [`<triple>`] value or the `<cfg>` expression.
+matches either the `<triple>` value or the `<cfg>` expression.
 
 ```toml
 [target.thumbv7m-none-eabi]
