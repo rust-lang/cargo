@@ -386,6 +386,10 @@ Caused by:
 }
 
 #[cargo_test(public_network_test)]
+// For unknown reasons, this test occasionally fails on Windows with a
+// LIBSSH2_ERROR_KEY_EXCHANGE_FAILURE error:
+//     failed to start SSH session: Unable to exchange encryption keys; class=Ssh (23)
+#[cfg_attr(windows, ignore = "test is flaky on windows")]
 fn invalid_github_key() {
     // A key for github.com in known_hosts should override the built-in key.
     // This uses a bogus key which should result in an error.
@@ -417,6 +421,10 @@ fn invalid_github_key() {
 }
 
 #[cargo_test(public_network_test)]
+// For unknown reasons, this test occasionally fails on Windows with a
+// LIBSSH2_ERROR_KEY_EXCHANGE_FAILURE error:
+//     failed to start SSH session: Unable to exchange encryption keys; class=Ssh (23)
+#[cfg_attr(windows, ignore = "test is flaky on windows")]
 fn bundled_github_works() {
     // The bundled key for github.com works.
     //
