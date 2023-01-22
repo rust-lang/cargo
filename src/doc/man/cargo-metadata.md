@@ -311,7 +311,8 @@ possible value.
 
 {{#option "`--filter-platform` _triple_" }}
 This filters the `resolve` output to only include dependencies for the
-given target triple. Without this flag, the resolve includes all targets.
+given [target triple](../appendix/glossary.html#target). 
+Without this flag, the resolve includes all targets.
 
 Note that the dependencies listed in the "packages" array still includes all
 dependencies. Each package definition is intended to be an unaltered

@@ -321,7 +321,7 @@ all capital letters.
 
 This section documents all configuration keys. The description for keys with
 variable parts are annotated with angled brackets like `target.<triple>` where
-the `<triple>` part can be any target triple like
+the `<triple>` part can be any [target triple] like
 `target.x86_64-pc-windows-msvc`.
 
 #### `paths`
@@ -418,7 +418,7 @@ Sets the executable to use for `rustdoc`.
 * Default: host platform
 * Environment: `CARGO_BUILD_TARGET`
 
-The default target platform triples to compile to.
+The default [target platform triples][target triple] to compile to.
 
 This allows passing either a string or an array of strings. Each string value
 is a target platform triple. The selected build targets will be built for each
@@ -468,7 +468,7 @@ for the host, such as build scripts or proc macros, will not receive the args.
 Without `--target`, the flags will be passed to all compiler invocations
 (including build scripts and proc macros) because dependencies are shared. If
 you have args that you do not want to pass to build scripts or proc macros and
-are building for the host, pass `--target` with the host triple.
+are building for the host, pass `--target` with the [host triple][target triple].
 
 It is not recommended to pass in flags that Cargo itself usually manages. For
 example, the flags driven by [profiles](profiles.md) are best handled by setting the
@@ -1048,8 +1048,8 @@ If none of `branch`, `tag`, or `rev` is set, defaults to the `master` branch.
 #### `[target]`
 
 The `[target]` table is used for specifying settings for specific platform
-targets. It consists of a sub-table which is either a platform triple or a
-[`cfg()` expression]. The given values will be used if the target platform
+targets. It consists of a sub-table which is either a [platform triple][target triple] 
+or a [`cfg()` expression]. The given values will be used if the target platform
 matches either the `<triple>` value or the `<cfg>` expression.
 
 ```toml
@@ -1068,7 +1068,7 @@ to view), values set by [build scripts], and extra `--cfg` flags passed to
 `rustc` (such as those defined in `RUSTFLAGS`). Do not try to match on
 `debug_assertions` or Cargo features like `feature="foo"`.
 
-If using a target spec JSON file, the `<triple>` value is the filename stem.
+If using a target spec JSON file, the [`<triple>`] value is the filename stem.
 For example `--target foo/bar.json` would match `[target.bar]`.
 
 ##### `target.<triple>.ar`
@@ -1081,14 +1081,14 @@ This option is deprecated and unused.
 * Environment: `CARGO_TARGET_<triple>_LINKER`
 
 Specifies the linker which is passed to `rustc` (via [`-C linker`]) when the
-`<triple>` is being compiled for. By default, the linker is not overridden.
+[`<triple>`] is being compiled for. By default, the linker is not overridden.
 
 ##### `target.<triple>.runner`
 * Type: string or array of strings ([program path with args])
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_RUNNER`
 
-If a runner is provided, executables for the target `<triple>` will be
+If a runner is provided, executables for the target [`<triple>`] will be
 executed by invoking the specified runner with the actual executable passed as
 an argument. This applies to [`cargo run`], [`cargo test`] and [`cargo bench`]
 commands. By default, compiled executables are executed directly.
@@ -1096,7 +1096,7 @@ commands. By default, compiled executables are executed directly.
 ##### `target.<cfg>.runner`
 
 This is similar to the [target runner](#targettriplerunner), but using
-a [`cfg()` expression]. If both a `<triple>` and `<cfg>` runner match,
+a [`cfg()` expression]. If both a [`<triple>`] and `<cfg>` runner match,
 the `<triple>` will take precedence. It is an error if more than one
 `<cfg>` runner matches the current target.
 
@@ -1105,8 +1105,8 @@ the `<triple>` will take precedence. It is an error if more than one
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_RUSTFLAGS`
 
-Passes a set of custom flags to the compiler for this `<triple>`. The value
-may be an array of strings or a space-separated string.
+Passes a set of custom flags to the compiler for this [`<triple>`]. 
+The value may be an array of strings or a space-separated string.
 
 See [`build.rustflags`](#buildrustflags) for more details on the different
 ways to specific extra flags.
@@ -1114,7 +1114,7 @@ ways to specific extra flags.
 ##### `target.<cfg>.rustflags`
 
 This is similar to the [target rustflags](#targettriplerustflags), but
-using a [`cfg()` expression]. If several `<cfg>` and `<triple>` entries
+using a [`cfg()` expression]. If several `<cfg>` and [`<triple>`] entries
 match the current target, the flags are joined together.
 
 ##### `target.<triple>.<links>`
@@ -1214,3 +1214,5 @@ Sets the width for progress bar.
 [revision]: https://git-scm.com/docs/gitrevisions
 [registries]: registries.md
 [crates.io]: https://crates.io/
+[target triple]: ../appendix/glossary.md#target '"target" (glossary)'
+[`<triple>`]: ../appendix/glossary.md#target '"target" (glossary)'

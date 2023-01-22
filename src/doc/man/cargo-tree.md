@@ -137,8 +137,8 @@ The default is `normal,build,dev`.
 {{/option}}
 
 {{#option "`--target` _triple_" }}
-Filter dependencies matching the given target-triple. The default is the host
-platform. Use the value `all` to include *all* targets.
+Filter dependencies matching the given [target triple](../appendix/glossary.html#target). 
+The default is the host platform. Use the value `all` to include *all* targets.
 {{/option}}
 
 {{/options}}
