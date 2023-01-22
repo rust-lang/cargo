@@ -89,6 +89,9 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
             s if s.starts_with("reason=") => {
                 explicit_reason = Some(s[7..].parse().unwrap());
             }
+            s if s.starts_with("ignore_windows=") => {
+                set_ignore!(cfg!(windows), "{}", &s[16..s.len() - 1]);
+            }
             _ => panic!("unknown rule {:?}", rule),
         }
     }
