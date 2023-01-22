@@ -100,6 +100,7 @@ mod quiet;
 mod registry;
 mod rename;
 mod require_weak;
+mod sorted_table_with_dotted_item;
 mod target;
 mod target_cfg;
 mod unknown_inherited_feature;
