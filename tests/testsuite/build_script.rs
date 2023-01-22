@@ -1,6 +1,7 @@
 //! Tests for build.rs scripts.
 
 use cargo_test_support::compare::assert_match_exact;
+use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools;
@@ -4801,6 +4802,84 @@ fn rerun_if_directory() {
         false,
     );
     fresh();
+}
+
+#[cargo_test]
+fn rerun_if_published_directory() {
+    // build script of a dependency contains a `rerun-if-changed` pointing to a directory
+    Package::new("mylib-sys", "1.0.0")
+        .file("mylib/balrog.c", "")
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    // Changing to mylib/balrog.c will not trigger a rebuild
+                    println!("cargo:rerun-if-changed=mylib");
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                mylib-sys = "1.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check").run();
+
+    // Delete regitry src to make directories being recreated with the latest timestamp.
+    cargo_home().join("registry/src").rm_rf();
+
+    p.cargo("check --verbose")
+        .with_stderr(
+            "\
+[FRESH] mylib-sys v1.0.0
+[FRESH] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    // Upgrade of a package should still trigger a rebuild
+    Package::new("mylib-sys", "1.0.1")
+        .file("mylib/balrog.c", "")
+        .file("mylib/balrog.h", "")
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                    fn main() {
+                        println!("cargo:rerun-if-changed=mylib");
+                    }
+                "#,
+        )
+        .publish();
+    p.cargo("update").run();
+    p.cargo("fetch").run();
+
+    p.cargo("check -v")
+        .with_stderr(format!(
+            "\
+[COMPILING] mylib-sys [..]
+[RUNNING] `rustc --crate-name build_script_build [..]
+[RUNNING] `[..]build-script-build[..]`
+[RUNNING] `rustc --crate-name mylib_sys [..]
+[CHECKING] foo [..]
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] [..]",
+        ))
+        .run();
 }
 
 #[cargo_test]
