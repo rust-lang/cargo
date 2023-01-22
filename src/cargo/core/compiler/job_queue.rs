@@ -1281,7 +1281,7 @@ impl<'cfg> DrainState<'cfg> {
             n => drop(write!(message, " ({} duplicates)", n)),
         }
         // Only show the `cargo fix` message if its a local `Unit`
-        if unit.is_local() && config.nightly_features_allowed {
+        if unit.is_local() {
             // Do not show this if there are any errors or no fixable warnings
             if let FixableWarnings::Positive(fixable) = count.fixable {
                 // `cargo fix` doesnt have an option for custom builds

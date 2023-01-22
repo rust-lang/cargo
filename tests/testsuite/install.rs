@@ -2083,7 +2083,6 @@ fn no_auto_fix_note() {
     // This is checked by matching the full output as `with_stderr_does_not_contain`
     // can be brittle
     cargo_process("install auto_fix")
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index

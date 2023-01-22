@@ -1193,36 +1193,8 @@ fn check_fixable_warning() {
         .build();
 
     foo.cargo("check")
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_stderr_contains("[..] (run `cargo fix --lib -p foo` to apply 1 suggestion)")
         .run();
-}
-
-#[cargo_test]
-fn check_fixable_not_nightly() {
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-            "#,
-        )
-        .file("src/lib.rs", "use std::io;")
-        .build();
-
-    let rustc_message = raw_rustc_output(&foo, "src/lib.rs", &[]);
-    let expected_output = format!(
-        "\
-[CHECKING] foo v0.0.1 ([..])
-{}\
-[WARNING] `foo` (lib) generated 1 warning
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        rustc_message
-    );
-    foo.cargo("check").with_stderr(expected_output).run();
 }
 
 #[cargo_test]
@@ -1250,7 +1222,6 @@ mod tests {
         .build();
 
     foo.cargo("check --all-targets")
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_stderr_contains("[..] (run `cargo fix --lib -p foo --tests` to apply 1 suggestion)")
         .run();
     foo.cargo("fix --lib -p foo --tests --allow-no-vcs").run();
@@ -1285,7 +1256,6 @@ fn check_fixable_error_no_fix() {
         rustc_message
     );
     foo.cargo("check")
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_status(101)
         .with_stderr(expected_output)
         .run();
@@ -1325,7 +1295,6 @@ fn check_fixable_warning_workspace() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_stderr_contains("[..] (run `cargo fix --lib -p foo` to apply 1 suggestion)")
         .with_stderr_contains("[..] (run `cargo fix --lib -p bar` to apply 1 suggestion)")
         .run();
@@ -1350,7 +1319,6 @@ fn check_fixable_example() {
         .file("examples/ex1.rs", "use std::fmt; fn main() {}")
         .build();
     p.cargo("check --all-targets")
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_stderr_contains("[..] (run `cargo fix --example \"ex1\"` to apply 1 suggestion)")
         .run();
 }
@@ -1393,7 +1361,6 @@ fn check_fixable_bench() {
         )
         .build();
     p.cargo("check --all-targets")
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_stderr_contains("[..] (run `cargo fix --bench \"bench\"` to apply 1 suggestion)")
         .run();
 }
@@ -1441,7 +1408,6 @@ fn check_fixable_mixed() {
         )
         .build();
     p.cargo("check --all-targets")
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_stderr_contains("[..] (run `cargo fix --bin \"foo\" --tests` to apply 2 suggestions)")
         .with_stderr_contains("[..] (run `cargo fix --example \"ex1\"` to apply 1 suggestion)")
         .with_stderr_contains("[..] (run `cargo fix --bench \"bench\"` to apply 1 suggestion)")
@@ -1490,7 +1456,6 @@ fn check_fixable_warning_for_clippy() {
             "RUSTC_WORKSPACE_WRAPPER",
             clippy_driver.bin("clippy-driver"),
         )
-        .masquerade_as_nightly_cargo(&["auto-fix note"])
         .with_stderr_contains("[..] (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)")
         .run();
 }
