@@ -104,7 +104,7 @@ The options it supports are:
   These should work on Linux, macOS, and Windows where possible.
   Unfortunately these tests are not run in CI for macOS or Windows (no Docker on macOS, and Windows does not support Linux images).
   See [`crates/cargo-test-support/src/containers.rs`](https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/containers.rs) for more on writing these tests.
-
+* `ignore_windows="reason"` — Indicates that the test should be ignored on windows for the given reason.
 
 #### Testing Nightly Features
 
