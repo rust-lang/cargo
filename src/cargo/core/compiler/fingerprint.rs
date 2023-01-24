@@ -1785,6 +1785,13 @@ where
 
     for path in paths {
         let path = path.as_ref();
+
+        // Assuming anything in cargo_home is immutable (see also #9455 about marking it readonly)
+        // which avoids rebuilds when CI caches $CARGO_HOME/registry/{index, cache} and
+        // $CARGO_HOME/git/db across runs, keeping the content the same but changing the mtime.
+        if let Ok(true) = home::cargo_home().map(|home| path.starts_with(home)) {
+            continue;
+        }
         let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(v) => {
