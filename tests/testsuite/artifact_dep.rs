@@ -2856,3 +2856,50 @@ fn same_target_artifact_dep_sharing() {
         )
         .run();
 }
+
+#[cargo_test]
+fn check_transitive_artifact_dependency_with_different_target() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [dependencies]
+                bar = { path = "bar/" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.0"
+
+                [dependencies]
+                baz = { path = "baz/", artifact = "bin", target = "custom" }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "bar/baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.0.0"
+
+                [dependencies]
+            "#,
+        )
+        .file("bar/baz/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_contains(r#"thread 'main' panicked at 'no entry found for key'[..]"#)
+        .with_status(101)
+        .run();
+}
