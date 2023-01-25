@@ -32,7 +32,7 @@ mod imp {
         let mut errfd = 1;
 
         while nfds > 0 {
-            // wait for either pipe to become readable using `select`
+            // wait for either pipe to become readable using `poll`
             let r = unsafe { libc::poll(fds.as_mut_ptr(), nfds, -1) };
             if r == -1 {
                 let err = io::Error::last_os_error();
