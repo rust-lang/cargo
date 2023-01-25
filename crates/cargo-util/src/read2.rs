@@ -2,21 +2,28 @@ pub use self::imp::read2;
 
 #[cfg(unix)]
 mod imp {
+    use libc::{c_int, fcntl, F_GETFL, F_SETFL, O_NONBLOCK};
     use std::io;
     use std::io::prelude::*;
     use std::mem;
     use std::os::unix::prelude::*;
     use std::process::{ChildStderr, ChildStdout};
 
+    fn set_nonblock(fd: c_int) -> io::Result<()> {
+        let flags = unsafe { fcntl(fd, F_GETFL) };
+        if flags == -1 || unsafe { fcntl(fd, F_SETFL, flags | O_NONBLOCK) } == -1 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+
     pub fn read2(
         mut out_pipe: ChildStdout,
         mut err_pipe: ChildStderr,
         data: &mut dyn FnMut(bool, &mut Vec<u8>, bool),
     ) -> io::Result<()> {
-        unsafe {
-            libc::fcntl(out_pipe.as_raw_fd(), libc::F_SETFL, libc::O_NONBLOCK);
-            libc::fcntl(err_pipe.as_raw_fd(), libc::F_SETFL, libc::O_NONBLOCK);
-        }
+        set_nonblock(out_pipe.as_raw_fd())?;
+        set_nonblock(err_pipe.as_raw_fd())?;
 
         let mut out_done = false;
         let mut err_done = false;
