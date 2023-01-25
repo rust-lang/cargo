@@ -7,8 +7,10 @@ result of the resolution is stored in the `Cargo.lock` file which "locks" the
 dependencies to specific versions, and keeps them fixed over time.
 
 The resolver attempts to unify common dependencies while considering possibly
-conflicting requirements. The sections below provide some details on how these
-constraints are handled, and how to work with the resolver.
+conflicting requirements. It turns out, however, that in many cases there is no
+single "best" dependency resolution, and so the resolver must use heuristics to
+choose a preferred solution. The sections below provide some details on how
+requirements are handled, and how to work with the resolver.
 
 See the chapter [Specifying Dependencies] for more details about how
 dependency requirements are specified.
@@ -489,6 +491,35 @@ break the build.
 
 The following illustrates some problems you may experience, and some possible
 solutions.
+
+### Unexpected dependency duplication
+
+The resolver algorithm may converge on a solution that includes two copies of a
+dependency when one would suffice. For example:
+
+```toml
+# Package A
+[dependencies]
+rand = "0.7"
+
+# Package B
+[dependencies]
+rand = ">=0.6"  # note: open requirements such as this are discouraged
+```
+
+In this example, Cargo may build two copies of the `rand` crate, even though a
+single copy at version `0.7.3` would meet all requirements. This is because the
+resolver's algorithm favors building the latest available version of `rand` for
+Package B, which is `0.8.5` at the time of this writing, and that is
+incompatible with Package A's specification. The resolver's algorithm does not
+currently attempt to "deduplicate" in this situation.
+
+The use of open-ended version requirements like `>=0.6` is discouraged in Cargo.
+But, if you run into this situation, the [`cargo update`] command with the
+`--precise` flag can be used to manually remove such duplications.
+
+[`cargo update`]: ../commands/cargo-update.md
+
 
 ### SemVer-breaking patch release breaks the build
 
