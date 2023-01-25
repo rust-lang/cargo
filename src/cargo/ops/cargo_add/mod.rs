@@ -98,7 +98,12 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         .get_table(&dep_table)
         .map(TomlItem::as_table)
         .map_or(true, |table_option| {
-            table_option.map_or(true, |table| is_sorted(table.iter().map(|(name, _)| name)))
+            table_option.map_or(true, |table| {
+                is_sorted(table.get_values().iter_mut().map(|(key, _)| {
+                    // get_values key paths always have at least one key.
+                    key.remove(0)
+                }))
+            })
         });
     for dep in deps {
         print_action_msg(&mut options.config.shell(), &dep, &dep_table)?;
