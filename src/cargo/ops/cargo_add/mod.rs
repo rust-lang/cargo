@@ -99,12 +99,10 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         .map(TomlItem::as_table)
         .map_or(true, |table_option| {
             table_option.map_or(true, |table| {
-                is_sorted(
-                    table
-                        .get_values()
-                        .iter()
-                        .map(|(key, _)| key.first().unwrap().to_string()),
-                )
+                is_sorted(table.get_values().iter_mut().map(|(key, _)| {
+                    // get_values key paths always have at least one key.
+                    key.remove(0)
+                }))
             })
         });
     for dep in deps {
