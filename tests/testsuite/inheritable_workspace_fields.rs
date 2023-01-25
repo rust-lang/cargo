@@ -1174,7 +1174,7 @@ fn error_workspace_false() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  `workspace=false` is unsupported for `package.description`
+  `workspace` cannot be false for key `package.description`
 ",
         )
         .run();
@@ -1193,13 +1193,12 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
             [package]
             name = "bar"
             version = "1.2.3"
-            workspace = ".."
 
             [dependencies]
             dep.workspace = true
 
             [workspace]
-            members = ["bar"]
+            members = []
 
             [workspace.dependencies]
             dep.workspace = true
@@ -1213,11 +1212,12 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  dep was specified as `workspace.dependencies.dep.workspace = true`, but \
-  workspace dependencies cannot specify `workspace = true`
+[WARNING] [CWD]/Cargo.toml: dependency (dep) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
+[WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.dependencies.dep.workspace
+[UPDATING] `dummy-registry` index
+[ERROR] no matching package named `dep` found
+location searched: registry `crates-io`
+required by package `bar v1.2.3 ([CWD])`
 ",
         )
         .run();
@@ -1348,7 +1348,7 @@ fn error_inherit_unspecified_dependency() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  error reading `dependencies.foo` from workspace root manifest's `workspace.dependencies.foo`
+  error inheriting `foo` from workspace root manifest's `workspace.dependencies.foo`
 
 Caused by:
   `workspace.dependencies` was not defined
@@ -1494,6 +1494,51 @@ fn inherit_def_feat_false_member_def_feat_true() {
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cannot_inherit_in_patch() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = []
+
+            [workspace.dependencies]
+            bar = { path = "bar" }
+
+            [package]
+            name = "foo"
+            version = "0.2.0"
+
+            [patch.crates-io]
+            bar.workspace = true
+
+            [dependencies]
+            bar = "0.1.0"
+
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] [CWD]/Cargo.toml: dependency (bar) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
+[WARNING] [CWD]/Cargo.toml: unused manifest key: patch.crates-io.bar.workspace
+[UPDATING] `dummy-registry` index
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources
 ",
         )
         .run();
