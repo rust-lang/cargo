@@ -582,7 +582,265 @@ fn config_invalid() {
 
     p.cargo("build")
         .masquerade_as_nightly_cargo(&["check-cfg"])
-        .with_stderr_contains("error: unstable check-cfg only takes `features`, `names`, `values` or `output` as valid inputs")
+        .with_stderr_contains("error: unstable check-cfg only takes `features`, `names`, `values`, `output` or `cfgs` as valid inputs")
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_simple() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs]
+                use_a = []
+                net = ["y", "m"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v -Zcheck-cfg=cfgs")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains(x!("rustc" => "values" of "use_a"))
+        .with_stderr_contains(x!("rustc" => "values" of "net" with "y" "m"))
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_simple_with_config() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs]
+                use_a = []
+                net = ["y", "m"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [unstable]
+                check-cfg = ["cfgs"]
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains(x!("rustc" => "values" of "use_a"))
+        .with_stderr_contains(x!("rustc" => "values" of "net" with "y" "m"))
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_simple_with_doc() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs]
+                use_a = []
+                net = ["y", "m"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("doc -v -Zcheck-cfg=cfgs")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains(x!("rustdoc" => "values" of "use_a"))
+        .with_stderr_contains(x!("rustdoc" => "values" of "net" with "y" "m"))
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_values() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs."net"]
+                values = false
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v -Zcheck-cfg=cfgs")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains(x!("rustc" => "names" of "net"))
+        .with_stderr_does_not_contain(x!("rustc" => "values" of "net"))
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_values_true() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs."net"]
+                values = true
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v -Zcheck-cfg=cfgs")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains(x!("rustc" => "values" of "net"))
+        .with_stderr_does_not_contain(x!("rustc" => "names" of "net"))
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_complex() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs]
+                use_a = []
+                net = ["y", "m"]
+
+                [cfgs."io"]
+                values = false
+
+                [cfgs."rs"]
+                values = true
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v -Zcheck-cfg=cfgs")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains(x!("rustc" => "values" of "use_a"))
+        .with_stderr_contains(x!("rustc" => "values" of "rs"))
+        .with_stderr_contains(x!("rustc" => "values" of "net" with "y" "m"))
+        .with_stderr_contains(x!("rustc" => "names" of "io"))
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_empty() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v -Zcheck-cfg=cfgs")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_does_not_contain("--check-cfg")
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_feature_gate() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs]
+                use_a = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains("error: failed to parse manifest [..]")
+        .with_stderr_contains("[..] `[cfgs]` section requires `-Zcheck-cfg=cfgs`")
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_invalid() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs."net"]
+                values = "ho"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains("error: failed to parse manifest [..]")
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn cfgs_invalid2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [cfgs."net"]
+                values = ["y", "m"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains("error: failed to parse manifest [..]")
         .with_status(101)
         .run();
 }

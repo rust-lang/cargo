@@ -1197,6 +1197,7 @@ It's values are:
  - `names`: enables well known names checking via `--check-cfg=names()`.
  - `values`: enables well known values checking via `--check-cfg=values()`.
  - `output`: enable the use of `rustc-check-cfg` in build script.
+ - `cfgs`: enable the use of the `#[cfgs]` in the `Cargo.toml` manifest.
 
 For instance:
 
@@ -1204,10 +1205,18 @@ For instance:
 cargo check -Z unstable-options -Z check-cfg=features
 cargo check -Z unstable-options -Z check-cfg=names
 cargo check -Z unstable-options -Z check-cfg=values
-cargo check -Z unstable-options -Z check-cfg=features,names,values
+cargo check -Z unstable-options -Z check-cfg=cfgs
+cargo check -Z unstable-options -Z check-cfg=features,names,values,cfgs
 ```
 
-Or for `output`:
+Those values can also be set in the `[unstable]` section of `.cargo/config.toml`:
+
+```toml
+[unstable]
+check-cfg = ["cfgs", "features"]
+```
+
+#### Usage of `output`
 
 ```rust,no_run
 // build.rs
@@ -1216,6 +1225,23 @@ println!("cargo:rustc-check-cfg=names(foo, bar)");
 
 ```
 cargo check -Z unstable-options -Z check-cfg=output
+```
+
+#### Usage of `cfgs`
+
+In `Cargo.toml`:
+
+```toml
+[cfgs]
+"use_libc" = []                # means `--check-cfg=values('use_libc')`
+"loom" = ["yes", "no", "auto"] # means `--check-cfg=values('feature', "yes", "no", "auto")`
+
+[cfgs."unknow_values"] # means `--check-cfg=names('unknow_values')`
+values = false         # aka values are unknown (so everything is accepted)
+```
+
+```
+cargo check -Z unstable-options -Z check-cfg=cfgs
 ```
 
 ### `cargo:rustc-check-cfg=CHECK_CFG`
