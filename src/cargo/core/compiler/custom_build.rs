@@ -325,7 +325,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
 
     let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
     let extra_check_cfg = match cx.bcx.config.cli_unstable().check_cfg {
-        Some((_, _, _, output)) => output,
+        Some((_, _, _, output, _)) => output,
         None => false,
     };
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
@@ -989,7 +989,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             &prev_script_out_dir,
             &script_out_dir,
             match cx.bcx.config.cli_unstable().check_cfg {
-                Some((_, _, _, output)) => output,
+                Some((_, _, _, output, _)) => output,
                 None => false,
             },
             cx.bcx.config.nightly_features_allowed,

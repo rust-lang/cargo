@@ -138,7 +138,7 @@ fn parse_links_overrides(
 ) -> CargoResult<BTreeMap<String, BuildOutput>> {
     let mut links_overrides = BTreeMap::new();
     let extra_check_cfg = match config.cli_unstable().check_cfg {
-        Some((_, _, _, output)) => output,
+        Some((_, _, _, output, _)) => output,
         None => false,
     };
 

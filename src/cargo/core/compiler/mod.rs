@@ -1131,7 +1131,7 @@ fn features_args(unit: &Unit) -> Vec<OsString> {
 
 /// Generate the --check-cfg arguments for the unit
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    if let Some((features, well_known_names, well_known_values, _output)) =
+    if let Some((features, well_known_names, well_known_values, _output, _cfgs)) =
         cx.bcx.config.cli_unstable().check_cfg
     {
         let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);

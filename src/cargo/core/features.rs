@@ -671,7 +671,7 @@ unstable_cli_options!(
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     #[serde(deserialize_with = "deserialize_check_cfg")]
-    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
+    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool, /*cfgs:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
@@ -774,7 +774,7 @@ where
 
 fn deserialize_check_cfg<'de, D>(
     deserializer: D,
-) -> Result<Option<(bool, bool, bool, bool)>, D::Error>
+) -> Result<Option<(bool, bool, bool, bool, bool)>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -789,20 +789,28 @@ where
 
 fn parse_check_cfg(
     it: impl Iterator<Item = impl AsRef<str>>,
-) -> CargoResult<Option<(bool, bool, bool, bool)>> {
+) -> CargoResult<Option<(bool, bool, bool, bool, bool)>> {
     let mut features = false;
     let mut well_known_names = false;
     let mut well_known_values = false;
     let mut output = false;
+    let mut cfgs = false;
 
+    let mut had_options = false;
     for e in it {
         match e.as_ref() {
             "features" => features = true,
             "names" => well_known_names = true,
             "values" => well_known_values = true,
             "output" => output = true,
-            _ => bail!("unstable check-cfg only takes `features`, `names`, `values` or `output` as valid inputs"),
+            "cfgs" => cfgs = true,
+            _ => bail!("unstable check-cfg only takes `features`, `names`, `values`, `output` or `cfgs` as valid inputs"),
         }
+        had_options = true;
+    }
+
+    if !had_options {
+        bail!("unstable check-cfg must take one or more of these options: `features`, `names`, `values`, `output` or `cfgs`");
     }
 
     Ok(Some((
@@ -810,6 +818,7 @@ fn parse_check_cfg(
         well_known_names,
         well_known_values,
         output,
+        cfgs,
     )))
 }
 
