@@ -1153,6 +1153,46 @@ fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
             args.push(arg);
         }
 
+        if let Some(cfgs) = unit.pkg.cfgs() {
+            let mut names = OsString::from("names(");
+            let mut has_names = false;
+
+            for name in cfgs
+                .iter()
+                .filter_map(|(name, values)| values.as_ref().is_none().then_some(name))
+            {
+                if has_names {
+                    names.push(",");
+                }
+                names.push(name);
+                has_names = true;
+            }
+
+            if has_names {
+                names.push(")");
+                args.push(OsString::from("--check-cfg"));
+                args.push(names);
+            }
+
+            for (name, values) in cfgs
+                .iter()
+                .filter_map(|(name, values)| values.as_ref().map(|values| (name, values)))
+            {
+                let mut arg = OsString::from("values(");
+
+                arg.push(name);
+                for val in values {
+                    arg.push(", \"");
+                    arg.push(&val);
+                    arg.push("\"");
+                }
+                arg.push(")");
+
+                args.push(OsString::from("--check-cfg"));
+                args.push(arg);
+            }
+        }
+
         if well_known_names {
             args.push(OsString::from("--check-cfg"));
             args.push(OsString::from("names()"));
