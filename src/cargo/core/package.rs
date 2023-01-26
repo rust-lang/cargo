@@ -87,6 +87,7 @@ pub struct SerializedPackage {
     dependencies: Vec<Dependency>,
     targets: Vec<Target>,
     features: BTreeMap<InternedString, Vec<InternedString>>,
+    // cfgs: BTreeMap<String, Option<Vec<String>>>,
     manifest_path: PathBuf,
     metadata: Option<toml::Value>,
     publish: Option<Vec<String>>,
@@ -163,6 +164,10 @@ impl Package {
     /// Gets the package authors.
     pub fn authors(&self) -> &Vec<String> {
         &self.manifest().metadata().authors
+    }
+    /// Gets the cfgs.
+    pub fn cfgs(&self) -> &Option<BTreeMap<String, Option<Vec<String>>>> {
+        self.manifest().cfgs()
     }
 
     /// Returns `None` if the package is set to publish.

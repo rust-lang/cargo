@@ -360,11 +360,29 @@ pub struct TomlManifest {
     #[serde(rename = "build_dependencies")]
     build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     features: Option<BTreeMap<InternedString, Vec<InternedString>>>,
+    cfgs: Option<BTreeMap<String, TomlCfg>>,
     target: Option<BTreeMap<String, TomlPlatform>>,
     replace: Option<BTreeMap<String, TomlDependency>>,
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<MaybeWorkspaceField<BTreeMap<String, BTreeMap<String, String>>>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TomlCfg {
+    List(Vec<String>),
+    Values { values: bool },
+}
+
+impl TomlCfg {
+    pub(crate) fn into_option_vec(self) -> Option<Vec<String>> {
+        match self {
+            TomlCfg::List(l) => Some(l),
+            TomlCfg::Values { values: true } => Some(Vec::new()),
+            TomlCfg::Values { values: false } => None,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -1558,6 +1576,7 @@ impl TomlManifest {
             )?,
             build_dependencies2: None,
             features: self.features.clone(),
+            cfgs: self.cfgs.clone(),
             target: match self.target.as_ref().map(|target_map| {
                 target_map
                     .iter()
@@ -1791,6 +1810,15 @@ impl TomlManifest {
                 "edition {} should be gated",
                 edition
             )));
+        }
+
+        if me.cfgs.is_some()
+            && matches!(
+                &config.cli_unstable().check_cfg,
+                None | Some((_, _, _, _, false))
+            )
+        {
+            bail!("`[cfgs]` section requires `-Zcheck-cfg=cfgs`");
         }
 
         let rust_version = if let Some(rust_version) = &package.rust_version {
@@ -2220,6 +2248,12 @@ impl TomlManifest {
             }
         }
 
+        let cfgs = me.cfgs.as_ref().map(|cfgs| {
+            cfgs.iter()
+                .map(|(name, toml_cfg)| (name.clone(), toml_cfg.clone().into_option_vec()))
+                .collect()
+        });
+
         let default_kind = package
             .default_target
             .as_ref()
@@ -2249,6 +2283,7 @@ impl TomlManifest {
             build_dependencies: build_deps,
             build_dependencies2: None,
             features: me.features.clone(),
+            cfgs: me.cfgs.clone(),
             target,
             replace: me.replace.clone(),
             patch: me.patch.clone(),
@@ -2281,6 +2316,7 @@ impl TomlManifest {
             Rc::new(resolved_toml),
             package.metabuild.clone().map(|sov| sov.0),
             resolve_behavior,
+            cfgs,
         );
         if package.license_file.is_some() && package.license.is_some() {
             manifest.warnings_mut().add_warning(
@@ -2343,6 +2379,9 @@ impl TomlManifest {
         }
         if me.features.is_some() {
             bail!("this virtual manifest specifies a [features] section, which is not allowed");
+        }
+        if me.cfgs.is_some() {
+            bail!("this virtual manifest specifies a [cfgs] section, which is not allowed");
         }
         if me.target.is_some() {
             bail!("this virtual manifest specifies a [target] section, which is not allowed");

@@ -64,6 +64,7 @@ pub struct Manifest {
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
+    cfgs: Option<BTreeMap<String, Option<Vec<String>>>>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -405,6 +406,7 @@ impl Manifest {
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
+        cfgs: Option<BTreeMap<String, Option<Vec<String>>>>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -430,6 +432,7 @@ impl Manifest {
             default_run,
             metabuild,
             resolve_behavior,
+            cfgs,
         }
     }
 
@@ -496,6 +499,9 @@ impl Manifest {
     }
     pub fn links(&self) -> Option<&str> {
         self.links.as_deref()
+    }
+    pub fn cfgs(&self) -> &Option<BTreeMap<String, Option<Vec<String>>>> {
+        &self.cfgs
     }
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {
