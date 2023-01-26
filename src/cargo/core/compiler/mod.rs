@@ -980,10 +980,17 @@ fn build_base_args(
     cmd.args(&lto_args(cx, unit));
 
     // This is generally just an optimization on build time so if we don't pass
-    // it then it's ok. As of the time of this writing it's a very new flag, so
-    // we need to dynamically check if it's available.
-    if cx.bcx.target_data.info(unit.kind).supports_split_debuginfo {
-        if let Some(split) = split_debuginfo {
+    // it then it's ok. The values for the flag (off, packed, unpacked) may be supported
+    // or not depending on the platform, so availability is checked per-value.
+    // For example, at the time of writing this code, on Windows the only stable valid
+    // value for split-debuginfo is "packed", while on Linux "unpacked" is also stable.
+    if let Some(split) = split_debuginfo {
+        if cx
+            .bcx
+            .target_data
+            .info(unit.kind)
+            .supports_debuginfo_split(split)
+        {
             cmd.arg("-C").arg(format!("split-debuginfo={}", split));
         }
     }
