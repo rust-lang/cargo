@@ -282,15 +282,24 @@ fn rm_rf_glob(
 }
 
 fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -> CargoResult<()> {
-    if fs::symlink_metadata(path).is_err() {
-        return Ok(());
-    }
+    let meta = match fs::symlink_metadata(path) {
+        Ok(meta) => meta,
+        Err(_) => return Ok(()),
+    };
 
     config
         .shell()
         .verbose(|shell| shell.status("Removing", path.display()))?;
     progress.display_now()?;
 
+    // Broken symlinks as roots will break in Walkdir even if `follow_symlinks()` is disabled.
+    // It would be better to fix this in WalkDir I presume.
+    // The special-case handling here https://github.com/BurntSushi/walkdir/blob/abf3a15887758e0af54ebca827c7b6f8b311cb45/src/lib.rs#L841-L843
+    // causes the issue in the firs place.
+    if meta.is_symlink() && fs::metadata(path).is_err() {
+        paths::remove_file(path).with_context(|| "failed to remove broken symlink")?;
+        return Ok(());
+    }
     for entry in walkdir::WalkDir::new(path).contents_first(true) {
         let entry = entry?;
         progress.on_clean()?;
