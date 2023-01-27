@@ -24,7 +24,7 @@ use git2::cert::{Cert, SshHostKeyType};
 use git2::CertificateCheckStatus;
 use hmac::Mac;
 use std::collections::HashSet;
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 use std::path::{Path, PathBuf};
 
 /// These are host keys that are hard-coded in cargo to provide convenience.
@@ -62,6 +62,19 @@ enum KnownHostError {
         remote_host_key: String,
         remote_fingerprint: String,
     },
+    /// The host key was found with a @revoked marker, it must not be accepted.
+    HostKeyRevoked {
+        hostname: String,
+        key_type: SshHostKeyType,
+        remote_host_key: String,
+        location: KnownHostLocation,
+    },
+    /// The host key was not found, but there was a matching known host with a
+    /// @cert-authority marker (which Cargo doesn't yet support).
+    HostHasOnlyCertAuthority {
+        hostname: String,
+        location: KnownHostLocation,
+    },
 }
 
 impl From<anyhow::Error> for KnownHostError {
@@ -79,6 +92,21 @@ enum KnownHostLocation {
     Config { definition: Definition },
     /// Part of the hard-coded bundled keys in Cargo.
     Bundled,
+}
+
+impl Display for KnownHostLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let loc = match self {
+            KnownHostLocation::File { path, lineno } => {
+                format!("{} line {lineno}", path.display())
+            }
+            KnownHostLocation::Config { definition } => {
+                format!("config value from {definition}")
+            }
+            KnownHostLocation::Bundled => format!("bundled with cargo"),
+        };
+        f.write_str(&loc)
+    }
 }
 
 /// The git2 callback used to validate a certificate (only ssh known hosts are validated).
@@ -133,16 +161,13 @@ pub fn certificate_check(
                     but is associated with a different host:\n",
                 );
                 for known_host in other_hosts {
-                    let loc = match known_host.location {
-                        KnownHostLocation::File { path, lineno } => {
-                            format!("{} line {lineno}", path.display())
-                        }
-                        KnownHostLocation::Config { definition } => {
-                            format!("config value from {definition}")
-                        }
-                        KnownHostLocation::Bundled => format!("bundled with cargo"),
-                    };
-                    write!(msg, "    {loc}: {}\n", known_host.patterns).unwrap();
+                    write!(
+                        msg,
+                        "    {loc}: {patterns}\n",
+                        loc = known_host.location,
+                        patterns = known_host.patterns
+                    )
+                    .unwrap();
                 }
                 msg
             };
@@ -220,6 +245,39 @@ pub fn certificate_check(
                 for more information.\n\
                 ")
         }
+        Err(KnownHostError::HostKeyRevoked {
+            hostname,
+            key_type,
+            remote_host_key,
+            location,
+        }) => {
+            let key_type_short_name = key_type.short_name();
+            format!(
+                "error: Key has been revoked for `{hostname}`\n\
+                **************************************\n\
+                * WARNING: REVOKED HOST KEY DETECTED *\n\
+                **************************************\n\
+                This may indicate that the key provided by this host has been\n\
+                compromised and should not be accepted.
+                \n\
+                The host key {key_type_short_name} {remote_host_key} is revoked\n\
+                in {location} and has been rejected.\n\
+                "
+            )
+        }
+        Err(KnownHostError::HostHasOnlyCertAuthority { hostname, location }) => {
+            format!("error: Found a `@cert-authority` marker for `{hostname}`\n\
+                \n\
+                Cargo doesn't support certificate authorities for host key verification. It is\n\
+                recommended that the command line Git client is used instead. This can be achieved\n\
+                by setting `net.git-fetch-with-cli` to `true` in the Cargo config.\n\
+                \n
+                The `@cert-authority` line was found in {location}.\n\
+                \n\
+                See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts \
+                for more information.\n\
+                ")
+        }
     };
     Err(git2::Error::new(
         git2::ErrorCode::GenericError,
@@ -285,6 +343,7 @@ fn check_ssh_known_hosts(
                 patterns: patterns.to_string(),
                 key_type: key_type.to_string(),
                 key,
+                line_type: KnownHostLineType::Key,
             });
         }
     }
@@ -298,11 +357,22 @@ fn check_ssh_known_hosts_loaded(
     remote_key_type: SshHostKeyType,
     remote_host_key: &[u8],
 ) -> Result<(), KnownHostError> {
-    // `changed_key` keeps track of any entries where the key has changed.
-    let mut changed_key = None;
+    // `latent_error` keeps track of a potential error that will be returned
+    // in case a matching host key isn't found.
+    let mut latent_errors: Vec<KnownHostError> = Vec::new();
+
     // `other_hosts` keeps track of any entries that have an identical key,
     // but a different hostname.
     let mut other_hosts = Vec::new();
+
+    // Older versions of OpenSSH (before 6.8, March 2015) showed MD5
+    // fingerprints (see FingerprintHash ssh config option). Here we only
+    // support SHA256.
+    let mut remote_fingerprint = cargo_util::Sha256::new();
+    remote_fingerprint.update(remote_host_key.clone());
+    let remote_fingerprint =
+        base64::encode_config(remote_fingerprint.finish(), base64::STANDARD_NO_PAD);
+    let remote_host_key_encoded = base64::encode(remote_host_key);
 
     for known_host in known_hosts {
         // The key type from libgit2 needs to match the key type from the host file.
@@ -316,42 +386,81 @@ fn check_ssh_known_hosts_loaded(
             }
             continue;
         }
-        if key_matches {
-            return Ok(());
+        match known_host.line_type {
+            KnownHostLineType::Key => {
+                if key_matches {
+                    return Ok(());
+                }
+
+                // The host and key type matched, but the key itself did not.
+                // This indicates the key has changed.
+                // This is only reported as an error if no subsequent lines have a
+                // correct key.
+                latent_errors.push(KnownHostError::HostKeyHasChanged {
+                    hostname: host.to_string(),
+                    key_type: remote_key_type,
+                    old_known_host: known_host.clone(),
+                    remote_host_key: remote_host_key_encoded.clone(),
+                    remote_fingerprint: remote_fingerprint.clone(),
+                });
+            }
+            KnownHostLineType::Revoked => {
+                if key_matches {
+                    return Err(KnownHostError::HostKeyRevoked {
+                        hostname: host.to_string(),
+                        key_type: remote_key_type,
+                        remote_host_key: remote_host_key_encoded,
+                        location: known_host.location.clone(),
+                    });
+                }
+            }
+            KnownHostLineType::CertAuthority => {
+                // The host matches a @cert-authority line, which is unsupported.
+                latent_errors.push(KnownHostError::HostHasOnlyCertAuthority {
+                    hostname: host.to_string(),
+                    location: known_host.location.clone(),
+                });
+            }
         }
-        // The host and key type matched, but the key itself did not.
-        // This indicates the key has changed.
-        // This is only reported as an error if no subsequent lines have a
-        // correct key.
-        changed_key = Some(known_host.clone());
     }
-    // Older versions of OpenSSH (before 6.8, March 2015) showed MD5
-    // fingerprints (see FingerprintHash ssh config option). Here we only
-    // support SHA256.
-    let mut remote_fingerprint = cargo_util::Sha256::new();
-    remote_fingerprint.update(remote_host_key);
-    let remote_fingerprint =
-        base64::encode_config(remote_fingerprint.finish(), base64::STANDARD_NO_PAD);
-    let remote_host_key = base64::encode(remote_host_key);
-    // FIXME: Ideally the error message should include the IP address of the
-    // remote host (to help the user validate that they are connecting to the
-    // host they were expecting to). However, I don't see a way to obtain that
-    // information from libgit2.
-    match changed_key {
-        Some(old_known_host) => Err(KnownHostError::HostKeyHasChanged {
+
+    if latent_errors.len() == 0 {
+        // FIXME: Ideally the error message should include the IP address of the
+        // remote host (to help the user validate that they are connecting to the
+        // host they were expecting to). However, I don't see a way to obtain that
+        // information from libgit2.
+        Err(KnownHostError::HostKeyNotFound {
             hostname: host.to_string(),
             key_type: remote_key_type,
-            old_known_host,
-            remote_host_key,
-            remote_fingerprint,
-        }),
-        None => Err(KnownHostError::HostKeyNotFound {
-            hostname: host.to_string(),
-            key_type: remote_key_type,
-            remote_host_key,
+            remote_host_key: remote_host_key_encoded,
             remote_fingerprint,
             other_hosts,
-        }),
+        })
+    } else {
+        // We're going to take the first HostKeyHasChanged error if
+        // we find one, otherwise we'll take the first error (which
+        // we expect to be a CertAuthority error).
+        for err in &latent_errors {
+            if let KnownHostError::HostKeyHasChanged {
+                hostname,
+                key_type,
+                old_known_host,
+                remote_host_key,
+                remote_fingerprint,
+            } = err
+            {
+                return Err(KnownHostError::HostKeyHasChanged {
+                    hostname: hostname.clone(),
+                    key_type: key_type.clone(),
+                    old_known_host: old_known_host.clone(),
+                    remote_host_key: remote_host_key.clone(),
+                    remote_fingerprint: remote_fingerprint.clone(),
+                });
+            }
+        }
+        // Otherwise, we take the first error (which we expect to be
+        // a CertAuthority error).
+        Err(latent_errors.pop().unwrap())
     }
 }
 
@@ -422,6 +531,13 @@ fn user_known_host_location_to_add(diagnostic_home_config: &str) -> String {
 
 const HASH_HOSTNAME_PREFIX: &str = "|1|";
 
+#[derive(Clone)]
+enum KnownHostLineType {
+    Key,
+    CertAuthority,
+    Revoked,
+}
+
 /// A single known host entry.
 #[derive(Clone)]
 struct KnownHost {
@@ -430,6 +546,7 @@ struct KnownHost {
     patterns: String,
     key_type: String,
     key: Vec<u8>,
+    line_type: KnownHostLineType,
 }
 
 impl KnownHost {
@@ -488,15 +605,31 @@ fn load_hostfile_contents(path: &Path, contents: &str) -> Vec<KnownHost> {
 
 fn parse_known_hosts_line(line: &str, location: KnownHostLocation) -> Option<KnownHost> {
     let line = line.trim();
-    // FIXME: @revoked and @cert-authority is currently not supported.
-    if line.is_empty() || line.starts_with(['#', '@']) {
+    if line.is_empty() || line.starts_with('#') {
         return None;
     }
     let mut parts = line.split([' ', '\t']).filter(|s| !s.is_empty());
+
+    let line_type = if line.starts_with("@") {
+        let line_type = parts.next()?;
+
+        if line_type == "@cert-authority" {
+            KnownHostLineType::CertAuthority
+        } else if line_type == "@revoked" {
+            KnownHostLineType::Revoked
+        } else {
+            // No other markers are defined
+            return None;
+        }
+    } else {
+        KnownHostLineType::Key
+    };
+
     let patterns = parts.next()?;
     let key_type = parts.next()?;
     let key = parts.next().map(base64::decode)?.ok()?;
     Some(KnownHost {
+        line_type,
         location,
         patterns: patterns.to_string(),
         key_type: key_type.to_string(),
@@ -517,8 +650,10 @@ mod tests {
         nistp256.example.org ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJ4iYGCcJrUIfrHfzlsv8e8kaF36qpcUpe3VNAKVCZX/BDptIdlEe8u8vKNRTPgUO9jqS0+tjTcPiQd8/8I9qng= eric@host
         nistp384.example.org ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABhBNuGT3TqMz2rcwOt2ZqkiNqq7dvWPE66W2qPCoZsh0pQhVU3BnhKIc6nEr6+Wts0Z3jdF3QWwxbbTjbVTVhdr8fMCFhDCWiQFm9xLerYPKnu9qHvx9K87/fjc5+0pu4hLA== eric@host
         nistp521.example.org ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBAD35HH6OsK4DN75BrKipVj/GvZaUzjPNa1F8wMjUdPB1JlVcUfgzJjWSxrhmaNN3u0soiZw8WNRFINsGPCw5E7DywF1689WcIj2Ye2rcy99je15FknScTzBBD04JgIyOI50mCUaPCBoF14vFlN6BmO00cFo+yzy5N8GuQ2sx9kr21xmFQ== eric@host
-        # Revoked not yet supported.
-        @revoked * ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKtQsi+KPYispwm2rkMidQf30fG1Niy8XNkvASfePoca eric@host
+        # Revoked is supported, but without Cert-Authority support, it will only negate some other fixed key.
+        @revoked revoked.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKtQsi+KPYispwm2rkMidQf30fG1Niy8XNkvASfePoca eric@host
+        # Cert-Authority is not supported (below key should not be valid anyway)
+        @cert-authority ca.example.com ssh-rsa AABBB5Wm
         example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAWkjI6XT2SZh3xNk5NhisA3o3sGzWR+VAKMSqHtI0aY eric@host
         192.168.42.12 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR eric@host
         |1|QxzZoTXIWLhUsuHAXjuDMIV3FjQ=|M6NCOIkjiWdCWqkh5+Q+/uFLGjs= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIHgN3O21U4LWtP5OzjTzPnUnSDmCNDvyvlaj6Hi65JC eric@host
@@ -530,7 +665,7 @@ mod tests {
     fn known_hosts_parse() {
         let kh_path = Path::new("/home/abc/.known_hosts");
         let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
-        assert_eq!(khs.len(), 10);
+        assert_eq!(khs.len(), 12);
         match &khs[0].location {
             KnownHostLocation::File { path, lineno } => {
                 assert_eq!(path, kh_path);
@@ -551,7 +686,7 @@ mod tests {
         }
         assert_eq!(khs[2].patterns, "[example.net]:2222");
         assert_eq!(khs[3].patterns, "nistp256.example.org");
-        assert_eq!(khs[7].patterns, "192.168.42.12");
+        assert_eq!(khs[9].patterns, "192.168.42.12");
     }
 
     #[test]
@@ -565,9 +700,9 @@ mod tests {
         assert!(!khs[0].host_matches("example.net"));
         assert!(khs[2].host_matches("[example.net]:2222"));
         assert!(!khs[2].host_matches("example.net"));
-        assert!(khs[8].host_matches("hashed.example.com"));
-        assert!(!khs[8].host_matches("example.com"));
-        assert!(!khs[9].host_matches("neg.example.com"));
+        assert!(khs[10].host_matches("hashed.example.com"));
+        assert!(!khs[10].host_matches("example.com"));
+        assert!(!khs[11].host_matches("neg.example.com"));
     }
 
     #[test]
@@ -624,6 +759,87 @@ mod tests {
                 ));
             }
             _ => panic!("unexpected"),
+        }
+    }
+
+    #[test]
+    fn revoked() {
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
+
+        match check_ssh_known_hosts_loaded(
+            &khs,
+            "revoked.example.com",
+            SshHostKeyType::Ed255219,
+            &khs[6].key,
+        ) {
+            Err(KnownHostError::HostKeyRevoked {
+                hostname, location, ..
+            }) => {
+                assert_eq!("revoked.example.com", hostname);
+                assert!(matches!(
+                    location,
+                    KnownHostLocation::File { lineno: 11, .. }
+                ));
+            }
+            _ => panic!("Expected key to be revoked for revoked.example.com."),
+        }
+    }
+
+    #[test]
+    fn cert_authority() {
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
+
+        match check_ssh_known_hosts_loaded(
+            &khs,
+            "ca.example.com",
+            SshHostKeyType::Rsa,
+            &khs[0].key, // The key should not matter
+        ) {
+            Err(KnownHostError::HostHasOnlyCertAuthority {
+                hostname, location, ..
+            }) => {
+                assert_eq!("ca.example.com", hostname);
+                assert!(matches!(
+                    location,
+                    KnownHostLocation::File { lineno: 13, .. }
+                ));
+            }
+            Err(KnownHostError::HostKeyNotFound { hostname, .. }) => {
+                panic!("host key not found... {}", hostname);
+            }
+            _ => panic!("Expected host to only have @cert-authority line (which is unsupported)."),
+        }
+    }
+
+    #[test]
+    fn multiple_errors() {
+        let contents = r#"
+        not-used.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAWkjI6XT2SZh3xNk5NhisA3o3sGzWR+VAKMSqHtI0aY eric@host
+        # Cert-authority and changed key for the same host - changed key error should prevail
+        @cert-authority example.com ssh-ed25519 AABBB5Wm
+        example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR eric@host
+        "#;
+
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, contents);
+
+        match check_ssh_known_hosts_loaded(
+            &khs,
+            "example.com",
+            SshHostKeyType::Ed255219,
+            &khs[0].key,
+        ) {
+            Err(KnownHostError::HostKeyHasChanged { hostname, old_known_host, remote_host_key, .. }) => {
+                assert_eq!("example.com", hostname);
+                assert_eq!("AAAAC3NzaC1lZDI1NTE5AAAAIAWkjI6XT2SZh3xNk5NhisA3o3sGzWR+VAKMSqHtI0aY", remote_host_key);
+                assert!(matches!(
+                    old_known_host.location,
+                    KnownHostLocation::File { lineno: 5, .. }
+                ));
+            }
+            _ => panic!("Expected error to be of type HostKeyHasChanged."),
         }
     }
 }
