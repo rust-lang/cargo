@@ -219,13 +219,8 @@ impl TargetInfo {
                 map.insert(crate_type.clone(), out);
             }
 
-            let line = match lines.next() {
-                Some(line) => line,
-                None => anyhow::bail!(
-                    "output of --print=sysroot missing when learning about \
-                 target-specific information from rustc\n{}",
-                    output_err_info(&process, &output, &error)
-                ),
+            let Some(line) = lines.next() else {
+                return error_missing_print_output("sysroot", &process, &output, &error);
             };
             let sysroot = PathBuf::from(line);
             let sysroot_host_libdir = if cfg!(windows) {
@@ -601,12 +596,8 @@ fn parse_crate_type(
     };
     let mut parts = line.trim().split("___");
     let prefix = parts.next().unwrap();
-    let suffix = match parts.next() {
-        Some(part) => part,
-        None => anyhow::bail!(
-            "output of --print=file-names has changed in the compiler, cannot parse\n{}",
-            output_err_info(cmd, output, error)
-        ),
+    let Some(suffix) = parts.next() else {
+        return error_missing_print_output("file-names", cmd, output, error);
     };
 
     Ok(Some((prefix.to_string(), suffix.to_string())))
