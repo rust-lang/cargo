@@ -831,9 +831,17 @@ mod tests {
             SshHostKeyType::Ed255219,
             &khs[0].key,
         ) {
-            Err(KnownHostError::HostKeyHasChanged { hostname, old_known_host, remote_host_key, .. }) => {
+            Err(KnownHostError::HostKeyHasChanged {
+                hostname,
+                old_known_host,
+                remote_host_key,
+                ..
+            }) => {
                 assert_eq!("example.com", hostname);
-                assert_eq!("AAAAC3NzaC1lZDI1NTE5AAAAIAWkjI6XT2SZh3xNk5NhisA3o3sGzWR+VAKMSqHtI0aY", remote_host_key);
+                assert_eq!(
+                    "AAAAC3NzaC1lZDI1NTE5AAAAIAWkjI6XT2SZh3xNk5NhisA3o3sGzWR+VAKMSqHtI0aY",
+                    remote_host_key
+                );
                 assert!(matches!(
                     old_known_host.location,
                     KnownHostLocation::File { lineno: 5, .. }
