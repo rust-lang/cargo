@@ -467,7 +467,8 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                         1 => " due to previous error".to_string(),
                         count => format!(" due to {} previous errors", count),
                     };
-                    format!("could not compile `{}`{}{}", name, errors, warnings)
+                    let name = descriptive_pkg_name(&name, &target, &mode);
+                    format!("could not compile {name}{errors}{warnings}")
                 });
 
             if let Err(e) = result {
@@ -1775,4 +1776,20 @@ fn replay_output_cache(
         }
         Ok(())
     })
+}
+
+/// Provides a package name with descriptive target information,
+/// e.g., '`foo` (bin "bar" test)', '`foo` (lib doctest)'.
+fn descriptive_pkg_name(name: &str, target: &Target, mode: &CompileMode) -> String {
+    let desc_name = target.description_named();
+    let mode = if mode.is_rustc_test() && !(target.is_test() || target.is_bench()) {
+        " test"
+    } else if mode.is_doc_test() {
+        " doctest"
+    } else if mode.is_doc() {
+        " doc"
+    } else {
+        ""
+    };
+    format!("`{name}` ({desc_name}{mode})")
 }

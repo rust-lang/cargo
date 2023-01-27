@@ -1678,7 +1678,7 @@ fn build_deps_not_for_normal() {
         .with_stderr_contains("[..]can't find crate for `aaaaa`[..]")
         .with_stderr_contains(
             "\
-[ERROR] could not compile `foo` due to previous error
+[ERROR] could not compile `foo` (lib) due to previous error
 
 Caused by:
   process didn't exit successfully: [..]

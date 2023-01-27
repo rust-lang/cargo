@@ -134,6 +134,7 @@ pub use self::job_state::JobState;
 use super::context::OutputFile;
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
+use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
 };
@@ -1000,15 +1001,8 @@ impl<'cfg> DrainState<'cfg> {
             None | Some(_) => return,
         };
         let unit = &self.active[&id];
-        let mut message = format!("`{}` ({}", unit.pkg.name(), unit.target.description_named());
-        if unit.mode.is_rustc_test() && !(unit.target.is_test() || unit.target.is_bench()) {
-            message.push_str(" test");
-        } else if unit.mode.is_doc_test() {
-            message.push_str(" doctest");
-        } else if unit.mode.is_doc() {
-            message.push_str(" doc");
-        }
-        message.push_str(") generated ");
+        let mut message = descriptive_pkg_name(&unit.pkg.name(), &unit.target, &unit.mode);
+        message.push_str(" generated ");
         match count.total {
             1 => message.push_str("1 warning"),
             n => drop(write!(message, "{} warnings", n)),
