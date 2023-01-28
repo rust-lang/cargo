@@ -168,22 +168,11 @@ impl TargetInfo {
         loop {
             let extra_fingerprint = kind.fingerprint_hash();
 
-            // Query rustc for supported -Csplit-debuginfo values
-            let support_split_debuginfo = rustc
-                .cached_output(
-                    rustc.workspace_process().arg("--print=split-debuginfo"),
-                    extra_fingerprint,
-                )
-                .unwrap_or_default()
-                .0
-                .lines()
-                .map(String::from)
-                .collect();
-
             // Query rustc for several kinds of info from each line of output:
             // 0) file-names (to determine output file prefix/suffix for given crate type)
             // 1) sysroot
-            // 2) cfg
+            // 2) split-debuginfo
+            // 3) cfg
             //
             // Search `--print` to see what we query so far.
             let mut process = rustc.workspace_process();
@@ -213,6 +202,8 @@ impl TargetInfo {
             }
 
             process.arg("--print=sysroot");
+            process.arg("--print=split-debuginfo");
+            process.arg("--print=crate-name"); // `___` as a delimiter.
             process.arg("--print=cfg");
 
             let (output, error) = rustc
@@ -228,13 +219,8 @@ impl TargetInfo {
                 map.insert(crate_type.clone(), out);
             }
 
-            let line = match lines.next() {
-                Some(line) => line,
-                None => anyhow::bail!(
-                    "output of --print=sysroot missing when learning about \
-                 target-specific information from rustc\n{}",
-                    output_err_info(&process, &output, &error)
-                ),
+            let Some(line) = lines.next() else {
+                return error_missing_print_output("sysroot", &process, &output, &error);
             };
             let sysroot = PathBuf::from(line);
             let sysroot_host_libdir = if cfg!(windows) {
@@ -250,6 +236,26 @@ impl TargetInfo {
                 CompileKind::Target(target) => target.short_name(),
             });
             sysroot_target_libdir.push("lib");
+
+            let support_split_debuginfo = {
+                // HACK: abuse `--print=crate-name` to use `___` as a delimiter.
+                let mut res = Vec::new();
+                loop {
+                    match lines.next() {
+                        Some(line) if line == "___" => break,
+                        Some(line) => res.push(line.into()),
+                        None => {
+                            return error_missing_print_output(
+                                "split-debuginfo",
+                                &process,
+                                &output,
+                                &error,
+                            )
+                        }
+                    }
+                }
+                res
+            };
 
             let cfg = lines
                 .map(|line| Ok(Cfg::from_str(line)?))
@@ -590,15 +596,25 @@ fn parse_crate_type(
     };
     let mut parts = line.trim().split("___");
     let prefix = parts.next().unwrap();
-    let suffix = match parts.next() {
-        Some(part) => part,
-        None => anyhow::bail!(
-            "output of --print=file-names has changed in the compiler, cannot parse\n{}",
-            output_err_info(cmd, output, error)
-        ),
+    let Some(suffix) = parts.next() else {
+        return error_missing_print_output("file-names", cmd, output, error);
     };
 
     Ok(Some((prefix.to_string(), suffix.to_string())))
+}
+
+/// Helper for creating an error message for missing output from a certain `--print` request.
+fn error_missing_print_output<T>(
+    request: &str,
+    cmd: &ProcessBuilder,
+    stdout: &str,
+    stderr: &str,
+) -> CargoResult<T> {
+    let err_info = output_err_info(cmd, stdout, stderr);
+    anyhow::bail!(
+        "output of --print={request} missing when learning about \
+     target-specific information from rustc\n{err_info}",
+    )
 }
 
 /// Helper for creating an error message when parsing rustc output fails.

@@ -356,6 +356,22 @@ fn bad_cfg_discovery() {
                     return;
                 }
                 println!("{}", sysroot);
+
+                if mode == "no-split-debuginfo" {
+                    return;
+                }
+                loop {
+                    let line = lines.next().unwrap();
+                    if line == "___" {
+                        println!("\n{line}");
+                        break;
+                    } else {
+                        // As the number split-debuginfo options varies,
+                        // concat them into one line.
+                        print!("{line},");
+                    }
+                };
+
                 if mode != "bad-cfg" {
                     panic!("unexpected");
                 }
@@ -418,6 +434,28 @@ command was: `[..]compiler[..]--crate-type [..]`
 
     p.cargo("build")
         .env("RUSTC", &funky_rustc)
+        .env("FUNKY_MODE", "no-split-debuginfo")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] output of --print=split-debuginfo missing when learning about target-specific information from rustc
+command was: `[..]compiler[..]--crate-type [..]`
+
+--- stdout
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]
+
+",
+        )
+        .run();
+
+    p.cargo("build")
+        .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "bad-cfg")
         .with_status(101)
         .with_stderr(
@@ -430,6 +468,8 @@ command was: `[..]compiler[..]--crate-type [..]`
 [..]___[..]
 [..]___[..]
 [..]
+[..],[..]
+___
 123
 
 
