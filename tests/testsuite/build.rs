@@ -1370,6 +1370,7 @@ fn crate_env_vars() {
             license = "MIT OR Apache-2.0"
             license-file = "license.txt"
             rust-version = "1.61.0"
+            readme = "../../README.md"
 
             [[bin]]
             name = "foo-bar"
@@ -1395,6 +1396,7 @@ fn crate_env_vars() {
                 static LICENSE_FILE: &'static str = env!("CARGO_PKG_LICENSE_FILE");
                 static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
                 static RUST_VERSION: &'static str = env!("CARGO_PKG_RUST_VERSION");
+                static README: &'static str = env!("CARGO_PKG_README");
                 static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
                 static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
 
@@ -1414,6 +1416,7 @@ fn crate_env_vars() {
                      assert_eq!("license.txt", LICENSE_FILE);
                      assert_eq!("This is foo", DESCRIPTION);
                      assert_eq!("1.61.0", RUST_VERSION);
+                     assert_eq!("../../README.md", README);
                     let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
                                     VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
                     assert_eq!(s, VERSION);
