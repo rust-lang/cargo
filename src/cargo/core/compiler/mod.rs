@@ -413,7 +413,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                         1 => " due to previous error".to_string(),
                         count => format!(" due to {} previous errors", count),
                     };
-                    format!("could not compile `{}` ({}) {}{}", name,target.description_named(), errors, warnings)
+                    format!("could not compile `{}`{}{}", name, errors, warnings)
                 });
 
             if let Err(e) = result {
