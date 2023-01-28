@@ -58,6 +58,32 @@ fn env_invalid() {
 }
 
 #[cargo_test]
+fn env_no_cargo_home() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        fn main() {
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+                [env]
+                CARGO_HOME = "/"
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]`CARGO_HOME` environment variable should be not be set in `.cargo/config` via `env.CARGO_HOME` as cargo does not use this value directly (only recursive calls to cargo would)")
+        .run();
+}
+
+#[cargo_test]
 fn env_force() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))

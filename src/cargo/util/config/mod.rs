@@ -1685,8 +1685,15 @@ impl Config {
     }
 
     pub fn env_config(&self) -> CargoResult<&EnvConfig> {
-        self.env_config
-            .try_borrow_with(|| self.get::<EnvConfig>("env"))
+        let env_config = self
+            .env_config
+            .try_borrow_with(|| self.get::<EnvConfig>("env"))?;
+
+        if env_config.get("CARGO_HOME").is_some() {
+            bail!("`CARGO_HOME` environment variable should be not be set in `.cargo/config` via `env.CARGO_HOME` as cargo does not use this value directly (only recursive calls to cargo would)");
+        }
+
+        Ok(env_config)
     }
 
     /// This is used to validate the `term` table has valid syntax.
