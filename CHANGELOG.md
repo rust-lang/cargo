@@ -1,5 +1,43 @@
 # Changelog
 
+## Cargo 1.69 (2023-04-20)
+[985d561f...HEAD](https://github.com/rust-lang/cargo/compare/985d561f...HEAD)
+
+### Added
+
+- Cargo now suggests `cargo fix` or `cargo clippy --fix`
+  when compilation warnings/errors can be auto-fixed.
+  [#11558](https://github.com/rust-lang/cargo/pull/11558)
+
+### Changed
+
+- ❗ When `default-features` is set to false of a workspace dependency,
+  and an inherited dependency of a member has `default-features = true`,
+  Cargo will enable default features of that dependency.
+  [#11409](https://github.com/rust-lang/cargo/pull/11409)
+- `cargo add` now checks only the order of `[dependencies]`
+  without considering `[dependencies.*]`.
+  [#11612](https://github.com/rust-lang/cargo/pull/11612)
+- Several documentation improvements.
+  [#11576](https://github.com/rust-lang/cargo/pull/11576)
+  [#11604](https://github.com/rust-lang/cargo/pull/11604)
+  [#11620](https://github.com/rust-lang/cargo/pull/11620)
+  [#11603](https://github.com/rust-lang/cargo/pull/11603)
+
+### Fixed
+
+- Unsupported `profile.split-debuginfo` options are now ignored,
+  which previously made Cargo fail to compile on certain platforms.
+  [#11347](https://github.com/rust-lang/cargo/pull/11347)
+- Fixed build scripts triggering recompiles when a `rerun-if-changed` points to
+  a directory whose mtime is not preserved by the filesystem.
+  [#11613](https://github.com/rust-lang/cargo/pull/11613)
+- Fixed panics when using dependencies from `[workspace.dependencies]`
+  for `[patch]`. This usage is not supposed to be supported.
+  [#11565](https://github.com/rust-lang/cargo/pull/11565)
+
+### Nightly only
+
 ## Cargo 1.68 (2023-03-09)
 [f6e737b1...rust-1.68.0](https://github.com/rust-lang/cargo/compare/f6e737b1...rust-1.68.0)
 
