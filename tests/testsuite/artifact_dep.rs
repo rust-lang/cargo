@@ -2880,7 +2880,7 @@ fn check_transitive_artifact_dependency_with_different_target() {
                 version = "0.0.0"
 
                 [dependencies]
-                baz = { path = "baz/", artifact = "bin", target = "custom" }
+                baz = { path = "baz/", artifact = "bin", target = "custom-target" }
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -2899,7 +2899,10 @@ fn check_transitive_artifact_dependency_with_different_target() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_contains(r#"thread 'main' panicked at 'no entry found for key'[..]"#)
+        .with_stderr_contains(
+            "error: could not find specification for target \"custom-target\".\n  \
+            Dependency `baz v0.0.0` requires to build for target \"custom-target\".",
+        )
         .with_status(101)
         .run();
 }
