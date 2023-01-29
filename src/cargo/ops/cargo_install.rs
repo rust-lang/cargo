@@ -14,6 +14,7 @@ use crate::{drop_println, ops};
 
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::paths;
+use itertools::Itertools;
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
 
@@ -360,10 +361,33 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             //
             // Note that we know at this point that _if_ bins or examples is set to `::Just`,
             // they're `::Just([])`, which is `FilterRule::none()`.
-            if self.pkg.targets().iter().any(|t| t.is_executable()) {
-                self.config
-                    .shell()
-                    .warn("none of the package's binaries are available for install using the selected features")?;
+            let binaries: Vec<_> = self.pkg.targets().iter().filter(|t| t.is_bin()).collect();
+            if !binaries.is_empty() {
+                let target_features_message = binaries
+                    .iter()
+                    .map(|b| {
+                        let name = b.name();
+                        let features = b
+                            .required_features()
+                            .unwrap_or(&Vec::new())
+                            .iter()
+                            .map(|f| format!("`{f}`"))
+                            .join(", ");
+                        format!("  Target `{name}` requires the features: {features}")
+                    })
+                    .join("\n");
+                let example_features = binaries[0]
+                    .required_features()
+                    .map(|f| f.join(" "))
+                    .unwrap_or_else(|| String::new());
+                let consider_enabling_message = format!("Consider enabling some of them by passing, e.g., `--features=\"{example_features}\"`");
+                let message = format!(
+                    "\
+none of the package's binaries are available for install using the selected features
+{target_features_message}
+{consider_enabling_message}"
+                );
+                self.config.shell().warn(message)?;
             }
 
             return Ok(false);

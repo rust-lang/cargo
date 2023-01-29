@@ -640,6 +640,8 @@ fn install_default_features() {
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  Target `foo` requires the features: `a`
+Consider enabling some of them by passing, e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -792,6 +794,9 @@ fn install_multiple_required_features() {
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  Target `foo_1` requires the features: `b`, `c`
+  Target `foo_2` requires the features: `a`
+Consider enabling some of them by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -802,6 +807,9 @@ fn install_multiple_required_features() {
 [WARNING] Target filter `bins` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  Target `foo_1` requires the features: `b`, `c`
+  Target `foo_2` requires the features: `a`
+Consider enabling some of them by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -812,6 +820,9 @@ fn install_multiple_required_features() {
 [WARNING] Target filter `examples` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  Target `foo_1` requires the features: `b`, `c`
+  Target `foo_2` requires the features: `a`
+Consider enabling some of them by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -822,6 +833,9 @@ fn install_multiple_required_features() {
 [WARNING] Target filters `bins`, `examples` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  Target `foo_1` requires the features: `b`, `c`
+  Target `foo_2` requires the features: `a`
+Consider enabling some of them by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -1080,6 +1094,8 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  Target `foo` requires the features: `bar/a`
+Consider enabling some of them by passing, e.g., `--features=\"bar/a\"`
 ",
         )
         .run();
