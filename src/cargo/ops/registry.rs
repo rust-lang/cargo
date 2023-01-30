@@ -202,21 +202,20 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     )?
     .unwrap();
 
-    let hash = cargo_util::Sha256::new()
-        .update_file(tarball.file())?
-        .finish_hex();
-    let mutation = auth::Mutation::Publish {
-        name: pkg.name().as_str(),
-        vers: &ver,
-        cksum: &hash,
-    };
-
     if !opts.dry_run {
+        let hash = cargo_util::Sha256::new()
+            .update_file(tarball.file())?
+            .finish_hex();
+        let mutation = Some(auth::Mutation::Publish {
+            name: pkg.name().as_str(),
+            vers: &ver,
+            cksum: &hash,
+        });
         registry.set_token(Some(auth::auth_token(
             &opts.config,
             &reg_ids.original,
             None,
-            Some(mutation),
+            mutation,
         )?));
     }
 
