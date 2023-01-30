@@ -459,18 +459,18 @@ CLI paths are relative to the current working directory.
 * Tracking Issue: [#9453](https://github.com/rust-lang/cargo/issues/9453)
 
 Historically, Cargo's behavior for whether the `linker` and `rustflags`
-configuration options from environment variables and 
-[`[target]`](config.md#target) are respected for build scripts, plugins, 
-and other artifacts that are _always_ built for the host platform has 
+configuration options from environment variables and
+[`[target]`](config.md#target) are respected for build scripts, plugins,
+and other artifacts that are _always_ built for the host platform has
 been somewhat inconsistent.
 When `--target` is _not_ passed, Cargo respects the same `linker` and
 `rustflags` for build scripts as for all other compile artifacts. When
 `--target` _is_ passed, however, Cargo respects `linker` from
-[`[target.<host triple>]`](config.md#targettriplelinker), and does not 
-pick up any `rustflags` configuration. 
-This dual behavior is confusing, but also makes it difficult to correctly 
-configure builds where the host triple and the [target triple] happen to 
-be the same, but artifacts intended to run on the build host should still 
+[`[target.<host triple>]`](config.md#targettriplelinker), and does not
+pick up any `rustflags` configuration.
+This dual behavior is confusing, but also makes it difficult to correctly
+configure builds where the host triple and the [target triple] happen to
+be the same, but artifacts intended to run on the build host should still
 be configured differently.
 
 `-Ztarget-applies-to-host` enables the top-level
@@ -813,7 +813,8 @@ The `publish.timeout` key in a config file can be used to control how long
 `cargo publish` waits between posting a package to the registry and it being
 available in the local index.
 
-A timeout of `0` prevents any checks from occurring.
+A timeout of `0` prevents any checks from occurring. The current default is
+`60` seconds.
 
 It requires the `-Zpublish-timeout` command-line options to be set.
 
@@ -1152,7 +1153,7 @@ like this:
 cargo doc -Z unstable-options -Z rustdoc-scrape-examples
 ```
 
-By default, Cargo will scrape examples from the example targets of packages being documented. 
+By default, Cargo will scrape examples from the example targets of packages being documented.
 You can individually enable or disable targets from being scraped with the `doc-scrape-examples` flag, such as:
 
 ```toml
@@ -1170,8 +1171,8 @@ doc-scrape-examples = false
 examples from tests is a work-in-progress.
 
 **Note on dev-dependencies:** documenting a library does not normally require the crate's dev-dependencies. However,
-example targets require dev-deps. For backwards compatibility, `-Z rustdoc-scrape-examples` will *not* introduce a 
-dev-deps requirement for `cargo doc`. Therefore examples will *not* be scraped from example targets under the 
+example targets require dev-deps. For backwards compatibility, `-Z rustdoc-scrape-examples` will *not* introduce a
+dev-deps requirement for `cargo doc`. Therefore examples will *not* be scraped from example targets under the
 following conditions:
 
 1. No target being documented requires dev-deps, AND
