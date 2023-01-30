@@ -473,6 +473,25 @@ impl TargetInfo {
                     // preserved.
                     should_replace_hyphens: true,
                 })
+            } else {
+                // Because DWARF Package (dwp) files are produced after the
+                // fact by another tool, there is nothing in the binary that
+                // provides a means to locate them. By convention, debuggers
+                // take the binary filename and append ".dwp" (including to
+                // binaries that already have an extension such as shared libs)
+                // to find the dwp.
+                ret.push(FileType {
+                    // It is important to preserve the existing suffix for
+                    // e.g. shared libraries, where the dwp for libfoo.so is
+                    // expected to be at libfoo.so.dwp.
+                    suffix: format!("{suffix}.dwp"),
+                    prefix: prefix.clone(),
+                    flavor: FileFlavor::DebugInfo,
+                    crate_type: Some(crate_type.clone()),
+                    // Likewise, the dwp needs to match the primary artifact's
+                    // hyphenation exactly.
+                    should_replace_hyphens: crate_type != CrateType::Bin,
+                })
             }
         }
 

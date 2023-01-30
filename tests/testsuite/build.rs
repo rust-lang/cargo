@@ -5216,6 +5216,29 @@ fn uplift_pdb_of_bin_on_windows() {
     assert!(!p.target_debug_dir().join("d.pdb").exists());
 }
 
+#[cargo_test]
+#[cfg(target_os = "linux")]
+fn uplift_dwp_of_bin_on_linux() {
+    let p = project()
+        .file("src/main.rs", "fn main() { panic!(); }")
+        .file("src/bin/b.rs", "fn main() { panic!(); }")
+        .file("src/bin/foo-bar.rs", "fn main() { panic!(); }")
+        .file("examples/c.rs", "fn main() { panic!(); }")
+        .file("tests/d.rs", "fn main() { panic!(); }")
+        .build();
+
+    p.cargo("build --bins --examples --tests")
+        .enable_split_debuginfo_packed()
+        .run();
+    assert!(p.target_debug_dir().join("foo.dwp").is_file());
+    assert!(p.target_debug_dir().join("b.dwp").is_file());
+    assert!(p.target_debug_dir().join("examples/c.dwp").exists());
+    assert!(p.target_debug_dir().join("foo-bar").is_file());
+    assert!(p.target_debug_dir().join("foo-bar.dwp").is_file());
+    assert!(!p.target_debug_dir().join("c.dwp").exists());
+    assert!(!p.target_debug_dir().join("d.dwp").exists());
+}
+
 // Ensure that `cargo build` chooses the correct profile for building
 // targets based on filters (assuming `--profile` is not specified).
 #[cargo_test]

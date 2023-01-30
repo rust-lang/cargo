@@ -832,12 +832,17 @@ impl Execs {
         self
     }
 
+    pub fn enable_split_debuginfo_packed(&mut self) -> &mut Self {
+        self.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "packed")
+            .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "packed")
+            .env("CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO", "packed")
+            .env("CARGO_PROFILE_BENCH_SPLIT_DEBUGINFO", "packed");
+        self
+    }
+
     pub fn enable_mac_dsym(&mut self) -> &mut Self {
         if cfg!(target_os = "macos") {
-            self.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "packed")
-                .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "packed")
-                .env("CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO", "packed")
-                .env("CARGO_PROFILE_BENCH_SPLIT_DEBUGINFO", "packed");
+            return self.enable_split_debuginfo_packed();
         }
         self
     }
