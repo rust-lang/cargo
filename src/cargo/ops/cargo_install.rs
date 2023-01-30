@@ -379,13 +379,12 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                 let example_features = binaries[0]
                     .required_features()
                     .map(|f| f.join(" "))
-                    .unwrap_or_else(|| String::new());
-                let consider_enabling_message = format!("Consider enabling some of them by passing, e.g., `--features=\"{example_features}\"`");
+                    .unwrap_or_default();
                 let message = format!(
                     "\
 none of the package's binaries are available for install using the selected features
 {target_features_message}
-{consider_enabling_message}"
+Consider enabling some of them by passing, e.g., `--features=\"{example_features}\"`"
                 );
                 self.config.shell().warn(message)?;
             }
