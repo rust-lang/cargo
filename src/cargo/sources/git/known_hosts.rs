@@ -424,7 +424,7 @@ fn check_ssh_known_hosts_loaded(
         }
     }
 
-    if latent_errors.len() == 0 {
+    if latent_errors.is_empty() {
         // FIXME: Ideally the error message should include the IP address of the
         // remote host (to help the user validate that they are connecting to the
         // host they were expecting to). However, I don't see a way to obtain that
@@ -440,27 +440,16 @@ fn check_ssh_known_hosts_loaded(
         // We're going to take the first HostKeyHasChanged error if
         // we find one, otherwise we'll take the first error (which
         // we expect to be a CertAuthority error).
-        for err in &latent_errors {
-            if let KnownHostError::HostKeyHasChanged {
-                hostname,
-                key_type,
-                old_known_host,
-                remote_host_key,
-                remote_fingerprint,
-            } = err
-            {
-                return Err(KnownHostError::HostKeyHasChanged {
-                    hostname: hostname.clone(),
-                    key_type: key_type.clone(),
-                    old_known_host: old_known_host.clone(),
-                    remote_host_key: remote_host_key.clone(),
-                    remote_fingerprint: remote_fingerprint.clone(),
-                });
-            }
+        if let Some(index) = latent_errors
+            .iter()
+            .position(|e| matches!(e, KnownHostError::HostKeyHasChanged { .. }))
+        {
+            return Err(latent_errors.remove(index));
+        } else {
+            // Otherwise, we take the first error (which we expect to be
+            // a CertAuthority error).
+            Err(latent_errors.pop().unwrap())
         }
-        // Otherwise, we take the first error (which we expect to be
-        // a CertAuthority error).
-        Err(latent_errors.pop().unwrap())
     }
 }
 
