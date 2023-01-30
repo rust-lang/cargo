@@ -100,18 +100,30 @@ impl Default for OnDiskReports {
 }
 
 impl OnDiskReports {
-    /// Saves a new report.
+    /// Saves a new report returning its id
     pub fn save_report(
         mut self,
         ws: &Workspace<'_>,
         suggestion_message: String,
         per_package_reports: &[FutureIncompatReportPackage],
-    ) {
+    ) -> u32 {
+        let per_package = render_report(per_package_reports);
+
+        if let Some(existing_report) = self
+            .reports
+            .iter()
+            .find(|existing| existing.per_package == per_package)
+        {
+            return existing_report.id;
+        }
+
         let report = OnDiskReport {
             id: self.next_id,
             suggestion_message,
-            per_package: render_report(per_package_reports),
+            per_package,
         };
+
+        let saved_id = report.id;
         self.next_id += 1;
         self.reports.push(report);
         if self.reports.len() > MAX_REPORTS {
@@ -138,6 +150,8 @@ impl OnDiskReports {
                 &mut ws.config().shell(),
             );
         }
+
+        saved_id
     }
 
     /// Loads the on-disk reports.
@@ -450,7 +464,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         update_message = update_message,
     );
 
-    current_reports.save_report(
+    let saved_report_id = current_reports.save_report(
         bcx.ws,
         suggestion_message.clone(),
         per_package_future_incompat_reports,
@@ -461,14 +475,14 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         drop(bcx.config.shell().note(&format!(
             "this report can be shown with `cargo report \
              future-incompatibilities --id {}`",
-            report_id
+            saved_report_id
         )));
     } else if should_display_message {
         drop(bcx.config.shell().note(&format!(
             "to see what the problems were, use the option \
              `--future-incompat-report`, or run `cargo report \
              future-incompatibilities --id {}`",
-            report_id
+            saved_report_id
         )));
     }
 }
