@@ -572,7 +572,7 @@ fn make_warning_about_missing_features(binaries: &[&Target]) -> String {
 
     let additional_bins_message = if binaries.len() > max_targets_listed {
         format!(
-            "\n{} more targets also requires features not enabled, see them in the Cargo.toml file.",
+            "\n{} more targets also requires features not enabled. See them in the Cargo.toml file.",
             binaries.len() - max_targets_listed
         )
     } else {
