@@ -867,7 +867,12 @@ mod tests {
             SshHostKeyType::Ed255219,
             &khs[0].key,
         ) {
-            Err(KnownHostError::HostKeyRevoked { hostname, remote_host_key, location, .. }) => {
+            Err(KnownHostError::HostKeyRevoked {
+                hostname,
+                remote_host_key,
+                location,
+                ..
+            }) => {
                 assert_eq!("example.com", hostname);
                 assert_eq!(
                     "AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR",
@@ -877,7 +882,7 @@ mod tests {
                     location,
                     KnownHostLocation::File { lineno: 4, .. }
                 ));
-            },
+            }
             _ => panic!("Expected host key to be reject with error HostKeyRevoked."),
         }
     }
