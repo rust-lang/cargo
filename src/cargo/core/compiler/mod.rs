@@ -33,14 +33,14 @@
 
 pub mod artifact;
 mod build_config;
-mod build_context;
+pub(crate) mod build_context;
 mod build_plan;
 mod compilation;
 mod compile_kind;
-mod context;
+pub(crate) mod context;
 mod crate_type;
 mod custom_build;
-mod fingerprint;
+pub(crate) mod fingerprint;
 pub mod future_incompat;
 mod job_queue;
 mod layout;

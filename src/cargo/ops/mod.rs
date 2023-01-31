@@ -34,7 +34,7 @@ pub use self::vendor::{vendor, VendorOptions};
 
 pub mod cargo_add;
 mod cargo_clean;
-mod cargo_compile;
+pub(crate) mod cargo_compile;
 pub mod cargo_config;
 mod cargo_doc;
 mod cargo_fetch;
@@ -51,7 +51,7 @@ mod cargo_test;
 mod cargo_uninstall;
 mod common_for_install_and_uninstall;
 mod fix;
-mod lockfile;
+pub(crate) mod lockfile;
 pub(crate) mod registry;
 mod resolve;
 pub mod tree;

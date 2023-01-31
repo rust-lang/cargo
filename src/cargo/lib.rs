@@ -20,21 +20,81 @@
 //! and there is no clear path to stabilize it soon at the time of writing.  See [The Cargo Book:
 //! External tools] for more on this topic.
 //!
-//! ## For Cargo contributors
+//! ## Overview
 //!
-//! If you are just diving into Cargo internals, [Cargo Architecture Overview]
-//! is the best material to get a broader context of how Cargo works under the hood.
-//! Things also worth a read are important concepts reside in source code,
-//! which Cargo developers have been crafting for a while, namely
+//! - [`ops`]:
+//!   Every major operation is implemented here. Each command is a thin wrapper around ops.
+//!   - [`ops::cargo_compile`]:
+//!     This is the entry point for all the compilation commands. This is a
+//!     good place to start if you want to follow how compilation starts and
+//!     flows to completion.
+//! - [`core::resolver`]:
+//!   This is the dependency and feature resolvers.
+//! - [`core::compiler`]:
+//!   This is the code responsible for running `rustc` and `rustdoc`.
+//!   - [`core::compiler::build_context`]:
+//!     The [`BuildContext`]['core::compiler::BuildContext] is the result of the "front end" of the
+//!     build process. This contains the graph of work to perform and any settings necessary for
+//!     `rustc`. After this is built, the next stage of building is handled in
+//!     [`Context`][core::compiler::Context].
+//!   - [`core::compiler::context`]:
+//!     The `Context` is the mutable state used during the build process. This
+//!     is the core of the build process, and everything is coordinated through
+//!     this.
+//!   - [`core::compiler::fingerprint`]:
+//!     The `fingerprint` module contains all the code that handles detecting
+//!     if a crate needs to be recompiled.
+//! - [`core::source`]:
+//!   The [`core::Source`] trait is an abstraction over different sources of packages.
+//!   Sources are uniquely identified by a [`core::SourceId`]. Sources are implemented in the [`sources`]
+//!   directory.
+//! - [`util`]:
+//!   This directory contains generally-useful utility modules.
+//! - [`util::config`]:
+//!   This directory contains the config parser. It makes heavy use of
+//!   [serde](https://serde.rs/) to merge and translate config values. The
+//!   [`util::Config`] is usually accessed from the
+//!   [`core::Workspace`]
+//!   though references to it are scattered around for more convenient access.
+//! - [`util::toml`]:
+//!   This directory contains the code for parsing `Cargo.toml` files.
+//!   - [`ops::lockfile`]:
+//!     This is where `Cargo.lock` files are loaded and saved.
 //!
-//! - [`cargo::core::resolver`](crate::core::resolver),
-//! - [`cargo::core::compiler::fingerprint`](core/compiler/fingerprint/index.html),
-//! - [`cargo::util::config`](crate::util::config),
-//! - [`cargo::ops::fix`](ops/fix/index.html), and
-//! - [`cargo::sources::registry`](crate::sources::registry).
-//!
-//! This API documentation is published on each push of rust-lang/cargo master branch.
-//! In other words, it always reflects the latest doc comments in source code on master branch.
+//! Related crates:
+//! - [`cargo-platform`](https://crates.io/crates/cargo-platform)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_platform)):
+//!   This library handles parsing `cfg` expressions.
+//! - [`cargo-util`](https://crates.io/crates/cargo-util)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_util)):
+//!   This contains general utility code that is shared between cargo and the testsuite
+//! - [`crates-io`](https://crates.io/crates/crates-io)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/crates_io)):
+//!   This contains code for accessing the crates.io API.
+//! - [`home`](https://crates.io/crates/home):
+//!   This library is shared between cargo and rustup and is used for finding their home directories.
+//!   This is not directly depended upon with a `path` dependency; cargo uses the version from crates.io.
+//!   It is intended to be versioned and published independently of Rust's release system.
+//!   Whenever a change needs to be made, bump the version in Cargo.toml and `cargo publish` it manually, and then update cargo's `Cargo.toml` to depend on the new version.
+//! - [`cargo-test-support`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-support)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_support/index.html)):
+//!   This contains a variety of code to support writing tests
+//! - [`cargo-test-macro`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-macro)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_macro/index.html)):
+//!   This is the `#[cargo_test]` proc-macro used by the test suite to define tests.
+//! - [`credential`](https://github.com/rust-lang/cargo/tree/master/crates/credential)
+//!   This subdirectory contains several packages for implementing the
+//!   experimental
+//!   [credential-process](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process)
+//!   feature.
+//! - [`mdman`](https://github.com/rust-lang/cargo/tree/master/crates/mdman)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/mdman/index.html)):
+//!   This is a utility for generating cargo's man pages. See [Building the man
+//!   pages](https://github.com/rust-lang/cargo/tree/master/src/doc#building-the-man-pages)
+//!   for more information.
+//! - [`resolver-tests`](https://github.com/rust-lang/cargo/tree/master/crates/resolver-tests)
+//!   This is a dedicated package that defines tests for the [dependency
+//!   resolver][core::resolver].
 //!
 //! ## Contribute to Cargo documentations
 //!
