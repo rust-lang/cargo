@@ -38,13 +38,13 @@ impl Credential for WindowsCredential {
 
     fn get(&self, index_url: &str) -> Result<String, Error> {
         let target_name = target_name(index_url);
-        let mut p_credential: CREDENTIALW = std::ptr::null_mut();
+        let p_credential: *mut CREDENTIALW = std::ptr::null_mut() as *mut _;
         unsafe {
             if CredReadW(
                 target_name.as_ptr(),
                 CRED_TYPE_GENERIC,
                 0,
-                &mut p_credential as *mut _,
+                p_credential as *mut _ as *mut _,
             ) != TRUE
             {
                 return Err(
@@ -52,8 +52,8 @@ impl Credential for WindowsCredential {
                 );
             }
             let bytes = std::slice::from_raw_parts(
-                p_credential.CredentialBlob,
-                p_credential.CredentialBlobSize as usize,
+                (*p_credential).CredentialBlob,
+                (*p_credential).CredentialBlobSize as usize,
             );
             String::from_utf8(bytes.to_vec()).map_err(|_| "failed to convert token to UTF8".into())
         }
