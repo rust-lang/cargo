@@ -395,19 +395,19 @@ fn check_ssh_known_hosts_loaded(
             KnownHostLineType::Key => {
                 if key_matches {
                     accepted_known_host_found = true;
+                } else {
+                    // The host and key type matched, but the key itself did not.
+                    // This indicates the key has changed.
+                    // This is only reported as an error if no subsequent lines have a
+                    // correct key.
+                    latent_errors.push(KnownHostError::HostKeyHasChanged {
+                        hostname: host.to_string(),
+                        key_type: remote_key_type,
+                        old_known_host: known_host.clone(),
+                        remote_host_key: remote_host_key_encoded.clone(),
+                        remote_fingerprint: remote_fingerprint.clone(),
+                    });
                 }
-
-                // The host and key type matched, but the key itself did not.
-                // This indicates the key has changed.
-                // This is only reported as an error if no subsequent lines have a
-                // correct key.
-                latent_errors.push(KnownHostError::HostKeyHasChanged {
-                    hostname: host.to_string(),
-                    key_type: remote_key_type,
-                    old_known_host: known_host.clone(),
-                    remote_host_key: remote_host_key_encoded.clone(),
-                    remote_fingerprint: remote_fingerprint.clone(),
-                });
             }
             KnownHostLineType::Revoked => {
                 if key_matches {
