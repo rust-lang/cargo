@@ -36,3 +36,111 @@ warn_non_default_branch = true
 
 [assign.owners]
 "*" = ["@ehuss", "@epage", "@weihanglo"]
+
+[autolabel."Command-add"]
+trigger_files = ["src/bin/cargo/commands/add.rs", "src/cargo/ops/cargo_add/*"]
+
+[autolabel."Command-bench"]
+trigger_files = ["src/bin/cargo/commands/bench.rs"]
+
+[autolabel."Command-build"]
+trigger_files = ["src/bin/cargo/commands/build.rs"]
+
+[autolabel."Command-check"]
+trigger_files = ["src/bin/cargo/commands/check.rs"]
+
+[autolabel."Command-clean"]
+trigger_files = ["src/bin/cargo/commands/clean.rs", "src/cargo/ops/cargo_clean.rs"]
+
+[autolabel."Command-doc"]
+trigger_files = ["src/bin/cargo/commands/doc.rs", "src/cargo/ops/cargo_doc.rs"]
+
+[autolabel."Command-fetch"]
+trigger_files = ["src/bin/cargo/commands/fetch.rs", "src/cargo/ops/cargo_fetch.rs"]
+
+[autolabel."Command-fix"]
+trigger_files = ["src/bin/cargo/commands/fix.rs", "src/cargo/ops/fix.rs"]
+
+[autolabel."Command-generate-lockfile"]
+trigger_files = ["src/bin/cargo/commands/generate_lockfile.rs", "src/cargo/ops/cargo_generate_lockfile.rs"]
+
+[autolabel."Command-git-checkout"]
+trigger_files = ["src/bin/cargo/commands/git_checkout.rs"]
+
+[autolabel."Command-init"]
+trigger_files = ["src/bin/cargo/commands/init.rs"]
+
+[autolabel."Command-install"]
+trigger_files = ["src/bin/cargo/commands/install.rs", "src/cargo/ops/cargo_install.rs"]
+
+[autolabel."Command-locate-project"]
+trigger_files = ["src/bin/cargo/commands/locate_project.rs"]
+
+[autolabel."Command-login"]
+trigger_files = ["src/bin/cargo/commands/login.rs"]
+
+[autolabel."Command-logout"]
+trigger_files = ["src/bin/cargo/commands/logout.rs"]
+
+[autolabel."Command-metadata"]
+trigger_files = ["src/bin/cargo/commands/metadata.rs", "src/cargo/ops/cargo_output_metadata.rs"]
+
+[autolabel."Command-new"]
+trigger_files = ["src/bin/cargo/commands/new.rs", "src/cargo/ops/cargo_new.rs"]
+
+[autolabel."Command-owner"]
+trigger_files = ["src/bin/cargo/commands/owner.rs"]
+
+[autolabel."Command-package"]
+trigger_files = ["src/bin/cargo/commands/package.rs", "src/cargo/ops/cargo_package.rs"]
+
+[autolabel."Command-pkgid"]
+trigger_files = ["src/bin/cargo/commands/pkgid.rs", "src/cargo/ops/cargo_pkgid.rs"]
+
+[autolabel."Command-publish"]
+trigger_files = ["src/bin/cargo/commands/publish.rs"]
+
+[autolabel."Command-read-manifest"]
+trigger_files = ["src/bin/cargo/commands/read_manifest.rs", "src/cargo/ops/cargo_read_manifest.rs"]
+
+[autolabel."Command-remove"]
+trigger_files = ["src/bin/cargo/commands/remove.rs", "src/cargo/ops/cargo_remove.rs"]
+
+[autolabel."Command-report"]
+trigger_files = ["src/bin/cargo/commands/report.rs"]
+
+[autolabel."Command-run"]
+trigger_files = ["src/bin/cargo/commands/run.rs", "src/cargo/ops/cargo_run.rs"]
+
+[autolabel."Command-rustc"]
+trigger_files = ["src/bin/cargo/commands/rustc.rs"]
+
+[autolabel."Command-rustdoc"]
+trigger_files = ["src/bin/cargo/commands/rustdoc.rs"]
+
+[autolabel."Command-search"]
+trigger_files = ["src/bin/cargo/commands/search.rs"]
+
+[autolabel."Command-test"]
+trigger_files = ["src/bin/cargo/commands/test.rs", "src/cargo/ops/cargo_test.rs"]
+
+[autolabel."Command-tree"]
+trigger_files = ["src/bin/cargo/commands/tree.rs", "src/cargo/ops/tree/*"]
+
+[autolabel."Command-uninstall"]
+trigger_files = ["src/bin/cargo/commands/uninstall.rs", "src/cargo/ops/cargo_uninstall.rs"]
+
+[autolabel."Command-update"]
+trigger_files = ["src/bin/cargo/commands/update.rs"]
+
+[autolabel."Command-vendor"]
+trigger_files = ["src/bin/cargo/commands/vendor.rs", "src/cargo/ops/vendor.rs"]
+
+[autolabel."Command-verify-project"]
+trigger_files = ["src/bin/cargo/commands/verify_project.rs"]
+
+[autolabel."Command-version"]
+trigger_files = ["src/bin/cargo/commands/version.rs"]
+
+[autolabel."Command-yank"]
+trigger_files = ["src/bin/cargo/commands/yank.rs"]
