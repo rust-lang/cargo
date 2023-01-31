@@ -24,11 +24,7 @@ been passed.
 Every unstable feature should have a section added to the [unstable chapter]
 describing how to use the feature.
 
-`-Z` CLI flags should be documented in the built-in help in the [`cli`
-module].
-
 [unstable chapter]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md
-[`cli` module]: https://github.com/rust-lang/cargo/blob/master/src/bin/cargo/cli.rs
 
 ## Tracking issues
 
