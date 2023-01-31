@@ -84,25 +84,16 @@ rustc-workspace-hack = "1.0.0"
 [target.'cfg(windows)'.dependencies]
 fwdansi = "1.1.0"
 
-[target.'cfg(windows)'.dependencies.winapi]
-version = "0.3"
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.45"
 features = [
-  "basetsd",
-  "handleapi",
-  "jobapi",
-  "jobapi2",
-  "memoryapi",
-  "minwindef",
-  "ntdef",
-  "ntstatus",
-  "processenv",
-  "processthreadsapi",
-  "psapi",
-  "synchapi",
-  "winerror",
-  "winbase",
-  "wincon",
-  "winnt",
+  "Win32_Foundation",
+  "Win32_Storage_FileSystem",
+  "Win32_System_IO",
+  "Win32_System_Threading",
+  "Win32_System_JobObjects",
+  "Win32_Security",
+  "Win32_System_SystemServices"
 ]
 
 [dev-dependencies]

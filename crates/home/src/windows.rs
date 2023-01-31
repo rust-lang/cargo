@@ -4,9 +4,8 @@ use std::os::windows::ffi::OsStringExt;
 use std::path::PathBuf;
 use std::ptr;
 
-use winapi::shared::minwindef::MAX_PATH;
-use winapi::shared::winerror::S_OK;
-use winapi::um::shlobj::{SHGetFolderPathW, CSIDL_PROFILE};
+use windows_sys::Win32::Foundation::{MAX_PATH, S_OK};
+use windows_sys::Win32::UI::Shell::{SHGetFolderPathW, CSIDL_PROFILE};
 
 pub fn home_dir_inner() -> Option<PathBuf> {
     env::var_os("USERPROFILE")

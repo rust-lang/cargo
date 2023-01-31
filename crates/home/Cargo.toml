@@ -16,10 +16,5 @@ readme = "README.md"
 repository = "https://github.com/brson/home"
 description = "Shared definitions of home directories"
 
-[target."cfg(windows)".dependencies.winapi]
-version = "0.3"
-features = [
-    "shlobj",
-    "std",
-    "winerror",
-]
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.45.0", features = ["Win32_Foundation", "Win32_UI_Shell"] }

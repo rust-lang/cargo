@@ -305,7 +305,7 @@ pub fn windows_reserved_names_are_allowed() -> bool {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     use std::ptr;
-    use winapi::um::fileapi::GetFullPathNameW;
+    use windows_sys::Win32::Storage::FileSystem::GetFullPathNameW;
 
     let test_file_name: Vec<_> = OsStr::new("aux.rs").encode_wide().collect();
 
