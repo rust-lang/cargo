@@ -365,6 +365,11 @@ fn check_ssh_known_hosts_loaded(
     // but a different hostname.
     let mut other_hosts = Vec::new();
 
+    // `accepted_known_host_found` keeps track of whether we've found a matching
+    // line in the `known_hosts` file that we would accept. We can't return that
+    // immediately, because there may be a subsequent @revoked key.
+    let mut accepted_known_host_found = false;
+
     // Older versions of OpenSSH (before 6.8, March 2015) showed MD5
     // fingerprints (see FingerprintHash ssh config option). Here we only
     // support SHA256.
@@ -389,7 +394,7 @@ fn check_ssh_known_hosts_loaded(
         match known_host.line_type {
             KnownHostLineType::Key => {
                 if key_matches {
-                    return Ok(());
+                    accepted_known_host_found = true;
                 }
 
                 // The host and key type matched, but the key itself did not.
@@ -422,6 +427,11 @@ fn check_ssh_known_hosts_loaded(
                 });
             }
         }
+    }
+
+    // We have an accepted host key and it hasn't been revoked.
+    if accepted_known_host_found {
+        return Ok(());
     }
 
     if latent_errors.len() == 0 {
@@ -848,6 +858,38 @@ mod tests {
                 ));
             }
             _ => panic!("Expected error to be of type HostKeyHasChanged."),
+        }
+    }
+
+    #[test]
+    fn known_host_and_revoked() {
+        let contents = r#"
+        example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR eric@host
+        # Later in the file the same host key is revoked
+        @revoked example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR eric@host
+        "#;
+
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, contents);
+
+        match check_ssh_known_hosts_loaded(
+            &khs,
+            "example.com",
+            SshHostKeyType::Ed255219,
+            &khs[0].key,
+        ) {
+            Err(KnownHostError::HostKeyRevoked { hostname, remote_host_key, location, .. }) => {
+                assert_eq!("example.com", hostname);
+                assert_eq!(
+                    "AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR",
+                    remote_host_key
+                );
+                assert!(matches!(
+                    location,
+                    KnownHostLocation::File { lineno: 4, .. }
+                ));
+            },
+            _ => panic!("Expected host key to be reject with error HostKeyRevoked."),
         }
     }
 }
