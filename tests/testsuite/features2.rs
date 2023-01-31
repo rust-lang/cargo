@@ -1050,6 +1050,11 @@ fn decouple_proc_macro() {
 #[cargo_test]
 fn proc_macro_ws() {
     // Checks for bug with proc-macro in a workspace with dependency (shouldn't panic).
+    //
+    // Note, debuginfo is explicitly requested here to preserve the intent of this non-regression
+    // test: that will disable the debuginfo build dependencies optimization. Otherwise, it would
+    // initially trigger when the crates are built independently, but rebuild them with debuginfo
+    // when it sees the shared build/runtime dependency when checking the complete workspace.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1057,6 +1062,9 @@ fn proc_macro_ws() {
             [workspace]
             members = ["foo", "pm"]
             resolver = "2"
+
+            [profile.dev.build-override]
+            debug = true
             "#,
         )
         .file(
