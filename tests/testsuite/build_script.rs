@@ -77,7 +77,24 @@ fn custom_build_script_failed_backtraces_message() {
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
-note: To improve backtraces for build dependencies[..]
+note: To improve backtraces for build dependencies, set the \
+CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable [..]
+
+Caused by:
+  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
+        )
+        .run();
+
+    p.cargo("check -v")
+        .env("RUST_BACKTRACE", "1")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[RUNNING] `[..]/build-script-build`
+[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+note: To improve backtraces for build dependencies, set the \
+CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable [..]
 
 Caused by:
   process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
