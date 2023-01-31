@@ -9,39 +9,18 @@
 
 //! # Cargo as a library
 //!
-//! Cargo, the Rust package manager, is also provided as a library.
-//!
 //! There are two places you can find API documentation of cargo-the-library,
 //!
-//! - <https://docs.rs/cargo> and
-//! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo>.
+//! - <https://docs.rs/cargo>: targeted at external tool developers using cargo-the-library
+//!   - Released with every rustc release
+//! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo>: targeted at cargo contributors
+//!   - Updated on each update of the `cargo` submodule in `rust-lang/rust`
 //!
-//! Each of them targets on a slightly different audience.
-//!
-//! ## For external tool developers
-//!
-//! The documentation on <https://docs.rs/cargo> contains public-facing items in cargo-the-library.
-//! External tool developers may find it useful when trying to reuse existing building blocks from Cargo.
-//! However, using Cargo as a library has drawbacks, especially cargo-the-library is unstable,
-//! and there is no clear path to stabilize it soon at the time of writing.
-//! See [The Cargo Book: External tools] for more on this topic.
-//!
-//! Cargo API documentation on docs.rs gets updates along with each Rust release.
-//! Its version always has a 0 major version to state it is unstable.
-//! The minor version is always +1 of rustc's minor version
-//! (that is, `cargo 0.66.0` corresponds to `rustc 1.65`).
+//! **WARNING:** Using Cargo as a library has drawbacks, particulary the API is unstable,
+//! and there is no clear path to stabilize it soon at the time of writing.  See [The Cargo Book:
+//! External tools] for more on this topic.
 //!
 //! ## For Cargo contributors
-//!
-//! The documentation on <https://doc.rust-lang.org/nightly/nightly-rustc/cargo> contains all items in Cargo.
-//! Contributors of Cargo may find it useful as a reference of Cargo's implementation details.
-//! It's built with `--document-private-items` rustdoc flag,
-//! so you might expect to see some noise and strange items here.
-//! The Cargo team and contributors strive for jotting down every details
-//! from their brains in each issue and PR.
-//! However, something might just disappear in the air with no reason.
-//! This documentation can be seen as their extended minds,
-//! sharing designs and hacks behind both public and private interfaces.
 //!
 //! If you are just diving into Cargo internals, [Cargo Architecture Overview]
 //! is the best material to get a broader context of how Cargo works under the hood.
