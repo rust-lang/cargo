@@ -44,6 +44,7 @@ mod imp {
     use std::io;
     use std::mem;
     use std::ptr;
+    use std::ptr::addr_of;
 
     use log::info;
 
@@ -96,8 +97,8 @@ mod imp {
         let r = SetInformationJobObject(
             job.inner,
             JobObjectExtendedLimitInformation,
-            &mut info as *mut _ as LPVOID,
-            mem::size_of_val(&info) as DWORD,
+            addr_of!(info) as *const _,
+            mem::size_of_val(&info) as u32,
         );
         if r == 0 {
             return None;
@@ -120,13 +121,13 @@ mod imp {
             // processes. The destructor here configures our job object to
             // **not** kill everything on close, then closes the job object.
             unsafe {
-                let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
+                let info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
                 info = mem::zeroed();
                 let r = SetInformationJobObject(
                     self.job.inner,
                     JobObjectExtendedLimitInformation,
-                    &mut info as *mut _ as LPVOID,
-                    mem::size_of_val(&info) as DWORD,
+                    addr_of!(info) as *const _,
+                    mem::size_of_val(&info) as u32,
                 );
                 if r == 0 {
                     info!("failed to configure job object to defaults: {}", last_err());

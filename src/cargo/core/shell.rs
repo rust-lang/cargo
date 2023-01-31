@@ -589,7 +589,7 @@ mod imp {
                 ptr::null_mut(),
                 OPEN_EXISTING,
                 0,
-                ptr::null_mut(),
+                0,
             );
             if h == INVALID_HANDLE_VALUE {
                 return TtyWidth::NoTty;
