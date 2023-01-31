@@ -2866,3 +2866,48 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn corrupted_ok_overwritten() {
+    // Checks what happens if .cargo-ok gets truncated, such as if the file is
+    // created, but the flush/close is interrupted.
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+",
+        )
+        .run();
+    let ok = glob::glob(
+        paths::home()
+            .join(".cargo/registry/src/*/bar-1.0.0/.cargo-ok")
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap()
+    .next()
+    .unwrap()
+    .unwrap();
+    // Simulate cargo being interrupted, or filesystem corruption.
+    fs::write(&ok, "").unwrap();
+    assert_eq!(fs::read_to_string(&ok).unwrap(), "");
+    p.cargo("fetch").with_stderr("").run();
+    assert_eq!(fs::read_to_string(&ok).unwrap(), "ok");
+}
