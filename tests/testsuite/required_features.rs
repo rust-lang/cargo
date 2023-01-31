@@ -640,6 +640,9 @@ fn install_default_features() {
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo\" requires the features: `a`
+  example \"foo\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -792,6 +795,11 @@ fn install_multiple_required_features() {
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo_1\" requires the features: `b`, `c`
+  bin \"foo_2\" requires the features: `a`
+  example \"foo_3\" requires the features: `b`, `c`
+  example \"foo_4\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -802,6 +810,11 @@ fn install_multiple_required_features() {
 [WARNING] Target filter `bins` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo_1\" requires the features: `b`, `c`
+  bin \"foo_2\" requires the features: `a`
+  example \"foo_3\" requires the features: `b`, `c`
+  example \"foo_4\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -812,6 +825,11 @@ fn install_multiple_required_features() {
 [WARNING] Target filter `examples` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo_1\" requires the features: `b`, `c`
+  bin \"foo_2\" requires the features: `a`
+  example \"foo_3\" requires the features: `b`, `c`
+  example \"foo_4\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -822,6 +840,11 @@ fn install_multiple_required_features() {
 [WARNING] Target filters `bins`, `examples` specified, but no targets matched. This is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo_1\" requires the features: `b`, `c`
+  bin \"foo_2\" requires the features: `a`
+  example \"foo_3\" requires the features: `b`, `c`
+  example \"foo_4\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -1080,6 +1103,9 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo\" requires the features: `bar/a`
+  example \"foo\" requires the features: `bar/a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"bar/a\"`
 ",
         )
         .run();
@@ -1332,4 +1358,95 @@ Consider enabling them by passing, e.g., `--features=\"a1/f1\"`
     p.rename_run("x", "x_with_f1_f2")
         .with_stdout("a1 f1\na2 f2")
         .run();
+}
+
+#[cargo_test]
+fn truncated_install_warning_message() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.1.0"
+    edition = "2021"
+
+    [features]
+    feature1 = []
+    feature2 = []
+    feature3 = []
+    feature4 = []
+    feature5 = []
+
+    [[bin]]
+    name = "foo1"
+    required-features = ["feature1", "feature2", "feature3"]
+
+    [[bin]]
+    name = "foo2"
+    required-features = ["feature2"]
+
+    [[bin]]
+    name = "foo3"
+    required-features = ["feature3"]
+
+    [[bin]]
+    name = "foo4"
+    required-features = ["feature4", "feature1"]
+
+    [[bin]]
+    name = "foo5"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo6"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo7"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo8"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo9"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo10"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[example]]
+    name = "example1"
+    required-features = ["feature1", "feature2"]
+    "#,
+        )
+        .file("src/bin/foo1.rs", "fn main() {}")
+        .file("src/bin/foo2.rs", "fn main() {}")
+        .file("src/bin/foo3.rs", "fn main() {}")
+        .file("src/bin/foo4.rs", "fn main() {}")
+        .file("src/bin/foo5.rs", "fn main() {}")
+        .file("src/bin/foo6.rs", "fn main() {}")
+        .file("src/bin/foo7.rs", "fn main() {}")
+        .file("src/bin/foo8.rs", "fn main() {}")
+        .file("src/bin/foo9.rs", "fn main() {}")
+        .file("src/bin/foo10.rs", "fn main() {}")
+        .file("examples/example1.rs", "fn main() {}")
+        .build();
+
+    p.cargo("install --path .").with_stderr("\
+[INSTALLING] foo v0.1.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+[WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo1\" requires the features: `feature1`, `feature2`, `feature3`
+  bin \"foo2\" requires the features: `feature2`
+  bin \"foo3\" requires the features: `feature3`
+  bin \"foo4\" requires the features: `feature4`, `feature1`
+  bin \"foo5\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+  bin \"foo6\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+  bin \"foo7\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+4 more targets also requires features not enabled. See them in the Cargo.toml file.
+Consider enabling some of the needed features by passing, e.g., `--features=\"feature1 feature2 feature3\"`").run();
 }
