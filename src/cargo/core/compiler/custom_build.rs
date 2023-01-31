@@ -333,6 +333,13 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let targets_fresh = targets.clone();
 
     let env_profile_name = unit.profile.name.to_uppercase();
+    let built_with_debuginfo = cx
+        .bcx
+        .unit_graph
+        .get(unit)
+        .and_then(|deps| deps.iter().find(|dep| dep.unit.target == unit.target))
+        .map(|dep| dep.unit.profile.debuginfo.is_turned_on())
+        .unwrap_or(false);
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -412,9 +419,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                     format!("failed to run custom build command for `{}`", pkg_descr);
 
                 // If we're opting into backtraces, mention that build dependencies' backtraces can
-                // be improved by setting a higher debuginfo level.
+                // be improved by requesting debuginfo to be built, if we're not building with
+                // debuginfo already.
                 if let Ok(show_backtraces) = std::env::var("RUST_BACKTRACE") {
-                    if show_backtraces != "0" {
+                    if !built_with_debuginfo && show_backtraces != "0" {
                         build_error_context.push_str(&format!(
                             "\n\
                             note: To improve backtraces for build dependencies, set the \

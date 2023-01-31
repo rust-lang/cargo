@@ -103,6 +103,43 @@ Caused by:
 }
 
 #[cargo_test]
+fn custom_build_script_failed_backtraces_message_with_debuginfo() {
+    // This is the same test as `custom_build_script_failed_backtraces_message` above, this time
+    // ensuring that the message dedicated to improving backtraces by requesting debuginfo is not
+    // shown when debuginfo is already turned on.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() { std::process::exit(101); }")
+        .build();
+    p.cargo("build -v")
+        .env("RUST_BACKTRACE", "1")
+        .env("CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG", "true")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
+[RUNNING] `[..]/build-script-build`
+[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+
+Caused by:
+  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_env_vars() {
     let p = project()
         .file(
