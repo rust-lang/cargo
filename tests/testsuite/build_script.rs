@@ -4566,6 +4566,7 @@ fn optional_build_dep_and_required_normal_dep() {
         .with_stdout("1")
         .with_stderr(
             "\
+[COMPILING] bar v0.5.0 ([..])
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]foo[EXE]`",
