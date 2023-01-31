@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
-use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
+use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Target, Workspace};
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
@@ -361,32 +361,16 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             //
             // Note that we know at this point that _if_ bins or examples is set to `::Just`,
             // they're `::Just([])`, which is `FilterRule::none()`.
-            let binaries: Vec<_> = self.pkg.targets().iter().filter(|t| t.is_bin()).collect();
+            let binaries: Vec<_> = self
+                .pkg
+                .targets()
+                .iter()
+                .filter(|t| t.is_executable())
+                .collect();
             if !binaries.is_empty() {
-                let target_features_message = binaries
-                    .iter()
-                    .map(|b| {
-                        let name = b.name();
-                        let features = b
-                            .required_features()
-                            .unwrap_or(&Vec::new())
-                            .iter()
-                            .map(|f| format!("`{f}`"))
-                            .join(", ");
-                        format!("  Target `{name}` requires the features: {features}")
-                    })
-                    .join("\n");
-                let example_features = binaries[0]
-                    .required_features()
-                    .map(|f| f.join(" "))
-                    .unwrap_or_default();
-                let message = format!(
-                    "\
-none of the package's binaries are available for install using the selected features
-{target_features_message}
-Consider enabling some of them by passing, e.g., `--features=\"{example_features}\"`"
-                );
-                self.config.shell().warn(message)?;
+                self.config
+                    .shell()
+                    .warn(make_warning_about_missing_features(&binaries))?;
             }
 
             return Ok(false);
@@ -567,6 +551,45 @@ Consider enabling some of them by passing, e.g., `--features=\"{example_features
             "consider running without --locked",
         )
     }
+}
+
+fn make_warning_about_missing_features(binaries: &[&Target]) -> String {
+    let max_targets_listed = 7;
+    let target_features_message = binaries
+        .iter()
+        .take(max_targets_listed)
+        .map(|b| {
+            let name = b.description_named();
+            let features = b
+                .required_features()
+                .unwrap_or(&Vec::new())
+                .iter()
+                .map(|f| format!("`{f}`"))
+                .join(", ");
+            format!("  {name} requires the features: {features}")
+        })
+        .join("\n");
+
+    let additional_bins_message = if binaries.len() > max_targets_listed {
+        format!(
+            "\n{} more targets also requires features not enabled, see them in the Cargo.toml file.",
+            binaries.len() - max_targets_listed
+        )
+    } else {
+        "".into()
+    };
+
+    let example_features = binaries[0]
+        .required_features()
+        .map(|f| f.join(" "))
+        .unwrap_or_default();
+
+    format!(
+        "\
+none of the package's binaries are available for install using the selected features
+{target_features_message}{additional_bins_message}
+Consider enabling some of the needed features by passing, e.g., `--features=\"{example_features}\"`"
+    )
 }
 
 pub fn install(
