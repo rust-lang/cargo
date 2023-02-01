@@ -146,9 +146,8 @@ fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
     for (i, err) in err.chain().enumerate() {
         // If we're not in verbose mode then only print cause chain until one
         // marked as `VerboseError` appears.
-        //
-        // Generally the top error shouldn't be verbose, but check it anyways.
         if shell.verbosity() != Verbose && err.is::<VerboseError>() {
+            drop(shell.note("for more details, run again with '--verbose'"));
             return true;
         }
         if err.is::<AlreadyPrintedError>() {

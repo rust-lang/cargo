@@ -39,10 +39,56 @@ fn custom_build_script_failed() {
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+[ERROR] could not build `foo` due to a custom build script failure
 
 Caused by:
   process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_build_script_failed_custom_error() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                build = "build.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() {
+            println!("cargo:error=failed");
+            println!("cargo:error+=because oops");
+            println!("cargo:warning=multi");
+            println!("cargo:warning+=line");
+            println!("cargo:warning+=warning");
+            println!("cargo:error=error2");
+            println!("cargo:warning+=this one has nothing to append to");
+            std::process::exit(101);
+        }"#,
+        )
+        .build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[ERROR] failed
+  because oops
+[WARNING] multi
+  line
+  warning
+[ERROR] error2
+[ERROR] could not build `foo` due to 2 previous errors; 1 warning emitted
+[NOTE] for more details, run again with '--verbose'",
         )
         .run();
 }
