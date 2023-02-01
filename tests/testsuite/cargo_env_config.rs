@@ -79,7 +79,7 @@ fn env_no_cargo_home() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("[..]`CARGO_HOME` environment variable should be not be set in `.cargo/config` via `env.CARGO_HOME` as cargo does not use this value directly (only recursive calls to cargo would)")
+        .with_stderr_contains("[..]setting the `CARGO_HOME` environment variable is not supported in the `[env]` configuration table")
         .run();
 }
 

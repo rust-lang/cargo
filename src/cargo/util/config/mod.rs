@@ -1690,7 +1690,7 @@ impl Config {
             .try_borrow_with(|| self.get::<EnvConfig>("env"))?;
 
         if env_config.get("CARGO_HOME").is_some() {
-            bail!("`CARGO_HOME` environment variable should be not be set in `.cargo/config` via `env.CARGO_HOME` as cargo does not use this value directly (only recursive calls to cargo would)");
+            bail!("setting the `CARGO_HOME` environment variable is not supported in the `[env]` configuration table")
         }
 
         Ok(env_config)
