@@ -985,7 +985,7 @@ impl<'cfg> DrainState<'cfg> {
         } else {
             "optimized"
         });
-        if profile.debuginfo.unwrap_or(0) != 0 {
+        if profile.debuginfo.is_turned_on() {
             opt_type += " + debuginfo";
         }
 

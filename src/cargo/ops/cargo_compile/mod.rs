@@ -428,17 +428,13 @@ pub fn create_bcx<'a, 'cfg>(
         // Rebuild the unit graph, replacing the explicit host targets with
         // CompileKind::Host, removing `artifact_target_for_features` and merging any dependencies
         // shared with build and artifact dependencies.
-        let new_graph = rebuild_unit_graph_shared(
+        (units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
             interner,
             unit_graph,
             &units,
             &scrape_units,
             host_kind_requested.then_some(explicit_host_kind),
         );
-        // This would be nicer with destructuring assignment.
-        units = new_graph.0;
-        scrape_units = new_graph.1;
-        unit_graph = new_graph.2;
     }
 
     let mut extra_compiler_args = HashMap::new();
@@ -578,7 +574,15 @@ fn rebuild_unit_graph_shared(
     let new_roots = roots
         .iter()
         .map(|root| {
-            traverse_and_share(interner, &mut memo, &mut result, &unit_graph, root, to_host)
+            traverse_and_share(
+                interner,
+                &mut memo,
+                &mut result,
+                &unit_graph,
+                root,
+                false,
+                to_host,
+            )
         })
         .collect();
     // If no unit in the unit graph ended up having scrape units attached as dependencies,
@@ -602,6 +606,7 @@ fn traverse_and_share(
     new_graph: &mut UnitGraph,
     unit_graph: &UnitGraph,
     unit: &Unit,
+    unit_is_for_host: bool,
     to_host: Option<CompileKind>,
 ) -> Unit {
     if let Some(new_unit) = memo.get(unit) {
@@ -612,8 +617,15 @@ fn traverse_and_share(
     let new_deps: Vec<_> = unit_graph[unit]
         .iter()
         .map(|dep| {
-            let new_dep_unit =
-                traverse_and_share(interner, memo, new_graph, unit_graph, &dep.unit, to_host);
+            let new_dep_unit = traverse_and_share(
+                interner,
+                memo,
+                new_graph,
+                unit_graph,
+                &dep.unit,
+                dep.unit_for.is_for_host(),
+                to_host,
+            );
             new_dep_unit.hash(&mut dep_hash);
             UnitDep {
                 unit: new_dep_unit,
@@ -621,16 +633,67 @@ fn traverse_and_share(
             }
         })
         .collect();
+    // Here, we have recursively traversed this unit's dependencies, and hashed them: we can
+    // finalize the dep hash.
     let new_dep_hash = dep_hash.finish();
-    let new_kind = match to_host {
+
+    // This is the key part of the sharing process: if the unit is a runtime dependency, whose
+    // target is the same as the host, we canonicalize the compile kind to `CompileKind::Host`.
+    // A possible host dependency counterpart to this unit would have that kind, and if such a unit
+    // exists in the current `unit_graph`, they will unify in the new unit graph map `new_graph`.
+    // The resulting unit graph will be optimized with less units, thanks to sharing these host
+    // dependencies.
+    let canonical_kind = match to_host {
         Some(to_host) if to_host == unit.kind => CompileKind::Host,
         _ => unit.kind,
     };
+
+    let mut profile = unit.profile.clone();
+
+    // If this is a build dependency, and it's not shared with runtime dependencies, we can weaken
+    // its debuginfo level to optimize build times. We do nothing if it's an artifact dependency,
+    // as it and its debuginfo may end up embedded in the main program.
+    if unit_is_for_host
+        && to_host.is_some()
+        && profile.debuginfo.is_deferred()
+        && !unit.artifact.is_true()
+    {
+        // We create a "probe" test to see if a unit with the same explicit debuginfo level exists
+        // in the graph. This is the level we'd expect if it was set manually or the default value
+        // set by a profile for a runtime dependency: its canonical value.
+        let canonical_debuginfo = profile.debuginfo.finalize();
+        let mut canonical_profile = profile.clone();
+        canonical_profile.debuginfo = canonical_debuginfo;
+        let unit_probe = interner.intern(
+            &unit.pkg,
+            &unit.target,
+            canonical_profile,
+            to_host.unwrap(),
+            unit.mode,
+            unit.features.clone(),
+            unit.is_std,
+            unit.dep_hash,
+            unit.artifact,
+            unit.artifact_target_for_features,
+        );
+
+        // We can now turn the deferred value into its actual final value.
+        profile.debuginfo = if unit_graph.contains_key(&unit_probe) {
+            // The unit is present in both build time and runtime subgraphs: we canonicalize its
+            // level to the other unit's, thus ensuring reuse between the two to optimize build times.
+            canonical_debuginfo
+        } else {
+            // The unit is only present in the build time subgraph, we can weaken its debuginfo
+            // level to optimize build times.
+            canonical_debuginfo.weaken()
+        }
+    }
+
     let new_unit = interner.intern(
         &unit.pkg,
         &unit.target,
-        unit.profile.clone(),
-        new_kind,
+        profile,
+        canonical_kind,
         unit.mode,
         unit.features.clone(),
         unit.is_std,

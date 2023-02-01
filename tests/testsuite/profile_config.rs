@@ -436,7 +436,7 @@ fn named_config_profile() {
     assert_eq!(p.name, "foo");
     assert_eq!(p.codegen_units, Some(2)); // "foo" from config
     assert_eq!(p.opt_level, "1"); // "middle" from manifest
-    assert_eq!(p.debuginfo, Some(1)); // "bar" from config
+    assert_eq!(p.debuginfo.to_option(), Some(1)); // "bar" from config
     assert_eq!(p.debug_assertions, true); // "dev" built-in (ignore build-override)
     assert_eq!(p.overflow_checks, true); // "dev" built-in (ignore package override)
 
@@ -445,7 +445,7 @@ fn named_config_profile() {
     assert_eq!(bo.name, "foo");
     assert_eq!(bo.codegen_units, Some(6)); // "foo" build override from config
     assert_eq!(bo.opt_level, "0"); // default to zero
-    assert_eq!(bo.debuginfo, Some(1)); // SAME as normal
+    assert_eq!(bo.debuginfo.to_option(), Some(1)); // SAME as normal
     assert_eq!(bo.debug_assertions, false); // "foo" build override from manifest
     assert_eq!(bo.overflow_checks, true); // SAME as normal
 
@@ -454,7 +454,7 @@ fn named_config_profile() {
     assert_eq!(po.name, "foo");
     assert_eq!(po.codegen_units, Some(7)); // "foo" package override from config
     assert_eq!(po.opt_level, "1"); // SAME as normal
-    assert_eq!(po.debuginfo, Some(1)); // SAME as normal
+    assert_eq!(po.debuginfo.to_option(), Some(1)); // SAME as normal
     assert_eq!(po.debug_assertions, true); // SAME as normal
     assert_eq!(po.overflow_checks, false); // "middle" package override from manifest
 }

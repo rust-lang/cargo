@@ -3796,7 +3796,7 @@ fn compiler_json_error_format() {
                 },
                 "profile": {
                     "debug_assertions": true,
-                    "debuginfo": 2,
+                    "debuginfo": null,
                     "opt_level": "0",
                     "overflow_checks": true,
                     "test": false
