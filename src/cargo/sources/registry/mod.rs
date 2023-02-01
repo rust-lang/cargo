@@ -162,12 +162,12 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
-use std::io::Write;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::task::Poll;
 
 use anyhow::Context as _;
-use cargo_util::paths::exclude_from_backups_and_indexing;
+use cargo_util::paths::{self, exclude_from_backups_and_indexing};
 use flate2::read::GzDecoder;
 use log::debug;
 use semver::Version;
@@ -619,15 +619,22 @@ impl<'cfg> RegistrySource<'cfg> {
         // unpacked.
         let package_dir = format!("{}-{}", pkg.name(), pkg.version());
         let dst = self.src_path.join(&package_dir);
-        dst.create_dir()?;
         let path = dst.join(PACKAGE_SOURCE_LOCK);
         let path = self.config.assert_package_cache_locked(&path);
         let unpack_dir = path.parent().unwrap();
-        if let Ok(meta) = path.metadata() {
-            if meta.len() > 0 {
-                return Ok(unpack_dir.to_path_buf());
+        match path.metadata() {
+            Ok(meta) if meta.len() > 0 => return Ok(unpack_dir.to_path_buf()),
+            Ok(_meta) => {
+                // The file appears to be corrupted. Perhaps it failed to flush,
+                // or the filesystem was corrupted in some way. To be safe, let's
+                // assume something is wrong and clear it and start over.
+                log::warn!("unexpected length of {path:?}, clearing cache");
+                paths::remove_dir_all(dst.as_path_unlocked())?;
             }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => anyhow::bail!("failed to access package completion {path:?}: {e}"),
         }
+        dst.create_dir()?;
         let mut tar = {
             let size_limit = max_unpack_size(tarball.metadata()?.len());
             let gz = GzDecoder::new(tarball);
