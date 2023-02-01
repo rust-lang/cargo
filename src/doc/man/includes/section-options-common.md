@@ -16,6 +16,12 @@ or provided as a path to an extra configuration file. This flag may be specified
 See the [command-line overrides section](../reference/config.html#command-line-overrides) for more information.
 {{/option}}
 
+{{#option "`-C` _PATH_"}}
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (`Cargo.toml`), as well as
+the directories searched for discovering `.cargo/config.toml`, for example.
+{{/option}}
+
 {{#option "`-h`" "`--help`"}}
 Prints help information.
 {{/option}}
