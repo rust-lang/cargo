@@ -28,6 +28,8 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
     let args = cli().try_get_matches()?;
 
     // Update the process-level notion of cwd
+    // This must be completed before config is initialized
+    assert_eq!(config.is_init(), false);
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
     }
@@ -508,6 +510,13 @@ pub struct LazyConfig {
 impl LazyConfig {
     pub fn new() -> Self {
         Self { config: None }
+    }
+
+    /// Check whether the config is loaded
+    ///
+    /// This is useful for asserts in case the environment needs to be setup before loading
+    pub fn is_init(&self) -> bool {
+        self.config.is_some()
     }
 
     /// Get the config, loading it if needed
