@@ -84,7 +84,7 @@ mod imp {
     use miow::iocp::{CompletionPort, CompletionStatus};
     use miow::pipe::NamedPipe;
     use miow::Overlapped;
-    use winapi::shared::winerror::ERROR_BROKEN_PIPE;
+    use windows_sys::Win32::Foundation::ERROR_BROKEN_PIPE;
 
     struct Pipe<'a> {
         dst: &'a mut Vec<u8>,

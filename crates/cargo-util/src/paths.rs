@@ -701,8 +701,9 @@ fn exclude_from_content_indexing(path: &Path) {
     {
         use std::iter::once;
         use std::os::windows::prelude::OsStrExt;
-        use winapi::um::fileapi::{GetFileAttributesW, SetFileAttributesW};
-        use winapi::um::winnt::FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+        use windows_sys::Win32::Storage::FileSystem::{
+            GetFileAttributesW, SetFileAttributesW, FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+        };
 
         let path: Vec<u16> = path.as_os_str().encode_wide().chain(once(0)).collect();
         unsafe {

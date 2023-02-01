@@ -140,11 +140,10 @@ pub fn exit_status_to_string(status: ExitStatus) -> String {
 
     #[cfg(windows)]
     fn status_to_string(status: ExitStatus) -> String {
-        use winapi::shared::minwindef::DWORD;
-        use winapi::um::winnt::*;
+        use windows_sys::Win32::Foundation::*;
 
         let mut base = status.to_string();
-        let extra = match status.code().unwrap() as DWORD {
+        let extra = match status.code().unwrap() as i32 {
             STATUS_ACCESS_VIOLATION => "STATUS_ACCESS_VIOLATION",
             STATUS_IN_PAGE_ERROR => "STATUS_IN_PAGE_ERROR",
             STATUS_INVALID_HANDLE => "STATUS_INVALID_HANDLE",

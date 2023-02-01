@@ -30,7 +30,7 @@
 
 pub mod env;
 
-#[cfg(windows)]
+#[cfg(target_os = "windows")]
 mod windows;
 
 use std::io;

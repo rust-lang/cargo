@@ -29,7 +29,7 @@ toml_edit = { version = "0.15.0", features = ["serde", "easy", "perf"] }
 url = "2.2.2"
 
 [target.'cfg(windows)'.dependencies]
-winapi = "0.3"
+windows-sys = { version = "0.45.0", features = ["Win32_Storage_FileSystem"] }
 
 [features]
 deny-warnings = []
