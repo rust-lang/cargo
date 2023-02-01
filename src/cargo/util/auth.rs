@@ -579,7 +579,7 @@ pub enum Mutation<'a> {
         /// The version of the crate
         vers: &'a str,
     },
-    /// The user is attempting to unyank a crate.
+    /// The user is attempting to modify the owners of a crate.
     Owners {
         /// The name of the crate
         name: &'a str,
