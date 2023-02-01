@@ -812,7 +812,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         true
                     })
                     .flat_map(|dep| {
-                        // Each dependency can be built for multiple targets. For one, it
+                        // Each `dep`endency can be built for multiple targets. For one, it
                         // may be a library target which is built as initially configured
                         // by `fk`. If it appears as build dependency, it must be built
                         // for the host.
