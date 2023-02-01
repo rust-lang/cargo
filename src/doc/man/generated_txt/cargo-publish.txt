@@ -205,6 +205,12 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
            for more information.
 
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example.
+
        -h, --help
            Prints help information.
 

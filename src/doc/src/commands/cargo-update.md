@@ -144,6 +144,12 @@ or provided as a path to an extra configuration file. This flag may be specified
 See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
 
 
+<dt class="option-term" id="option-cargo-update--C"><a class="option-anchor" href="#option-cargo-update--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example.</dd>
+
+
 <dt class="option-term" id="option-cargo-update--h"><a class="option-anchor" href="#option-cargo-update--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-update---help"><a class="option-anchor" href="#option-cargo-update---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
