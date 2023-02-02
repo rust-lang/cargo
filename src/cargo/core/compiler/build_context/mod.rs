@@ -40,6 +40,8 @@ pub use self::target_info::{
 /// since it is often too lower-level.
 /// Instead, [`ops::create_bcx`] is usually what you are looking for.
 ///
+/// After a `BuildContext` is built, the next stage of building is handled in [`Context`].
+///
 /// [`Context`]: crate::core::compiler::Context
 /// [`ops::create_bcx`]: crate::ops::create_bcx
 pub struct BuildContext<'a, 'cfg> {
