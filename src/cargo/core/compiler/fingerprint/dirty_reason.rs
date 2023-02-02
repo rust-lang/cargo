@@ -4,6 +4,10 @@ use std::fmt::Debug;
 use super::*;
 use crate::core::Shell;
 
+/// Tells a better story of why a build is considered "dirty" that leads
+/// to a recompile. Usually constructed via [`Fingerprint::compare`].
+///
+/// [`Fingerprint::compare`]: super::Fingerprint::compare
 #[derive(Clone, Debug)]
 pub enum DirtyReason {
     RustcChanged,
