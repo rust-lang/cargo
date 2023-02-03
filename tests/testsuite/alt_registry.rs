@@ -28,14 +28,14 @@ fn depend_on_alt_registry() {
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `alternative` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
-[COMPILING] bar v0.0.1 (registry `alternative`)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -44,11 +44,11 @@ fn depend_on_alt_registry() {
     p.cargo("clean").run();
 
     // Don't download a second time
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1 (registry `alternative`)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -81,16 +81,16 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .alternative(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `alternative` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (registry `alternative`)
 [DOWNLOADED] [..] v0.0.1 (registry `alternative`)
-[COMPILING] baz v0.0.1 (registry `alternative`)
-[COMPILING] bar v0.0.1 (registry `alternative`)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.0.1 (registry `alternative`)
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -123,16 +123,16 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .alternative(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `alternative` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (registry `alternative`)
 [DOWNLOADED] [..] v0.0.1 (registry `alternative`)
-[COMPILING] baz v0.0.1 (registry `alternative`)
-[COMPILING] bar v0.0.1 (registry `alternative`)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.0.1 (registry `alternative`)
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -165,7 +165,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .alternative(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_unordered(
             "\
 [UPDATING] `alternative` index
@@ -173,9 +173,9 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
-[COMPILING] baz v0.0.1
-[COMPILING] bar v0.0.1 (registry `alternative`)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.0.1
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -205,11 +205,11 @@ fn registry_and_path_dep_works() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -237,7 +237,7 @@ fn registry_incompatible_with_git() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "  dependency (bar) specification is ambiguous. \
@@ -377,7 +377,7 @@ fn alt_registry_and_crates_io_deps() {
         .alternative(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_unordered(
             "\
 [UPDATING] `alternative` index
@@ -385,9 +385,9 @@ fn alt_registry_and_crates_io_deps() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] crates_io_dep v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] alt_reg_dep v0.1.0 (registry `alternative`)
-[COMPILING] alt_reg_dep v0.1.0 (registry `alternative`)
-[COMPILING] crates_io_dep v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] alt_reg_dep v0.1.0 (registry `alternative`)
+[CHECKING] crates_io_dep v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -580,12 +580,12 @@ fn patch_alt_reg() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-[COMPILING] bar v0.1.0 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -662,14 +662,14 @@ fn no_api() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `alternative` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
-[COMPILING] bar v0.0.1 (registry `alternative`)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1050,7 +1050,7 @@ fn unknown_registry() {
     config.insert(start + start_index, '#');
     fs::write(&cfg_path, config).unwrap();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     // Important parts:
     // foo -> bar registry = null
@@ -1212,14 +1212,14 @@ fn registries_index_relative_url() {
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `relative` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `relative`)
-[COMPILING] bar v0.0.1 (registry `relative`)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1 (registry `relative`)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1259,7 +1259,7 @@ fn registries_index_relative_path_not_allowed() {
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "\
 error: failed to parse manifest at `{root}/foo/Cargo.toml`
