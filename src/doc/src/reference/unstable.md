@@ -78,7 +78,6 @@ Each new feature described below should explain how to use it.
     * [build-std-features](#build-std-features) — Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
-    * [crate-type](#crate-type) — Supports passing crate types to the compiler.
     * [keep-going](#keep-going) — Build as much as possible rather than aborting on the first error.
 * rustdoc
     * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
@@ -1231,6 +1230,35 @@ with a warning.
 If you want to integrate with Cargo features, use `-Zcheck-cfg=features` instead of
 trying to do it manually with this option.
 
+### codegen-backend
+
+The `codegen-backend` feature makes it possible to select the codegen backend used by rustc using a profile.
+
+Example:
+
+```toml
+[package]
+name = "foo"
+
+[dependencies]
+serde = "1.0.117"
+
+[profile.dev.package.foo]
+codegen-backend = "cranelift"
+```
+
+To set this in a profile in Cargo configuration, you need to use either
+`-Z codegen-backend` or `[unstable]` table to enable it. For example,
+
+```toml
+# .cargo/config.toml
+[unstable]
+codegen-backend = true
+
+[profile.dev.package.foo]
+codegen-backend = "cranelift"
+```
+
 ## Stabilized and removed features
 
 ### Compile progress
@@ -1348,36 +1376,6 @@ environment variables.
 The `rust-version` field in `Cargo.toml` has been stabilized in the 1.56 release.
 See the [rust-version field](manifest.html#the-rust-version-field) for more
 information on using the `rust-version` field and the `--ignore-rust-version` option.
-
-### codegen-backend
-
-The `codegen-backend` feature makes it possible to select the codegen backend used by rustc using a
-profile.
-
-Example:
-
-```toml
-[package]
-name = "foo"
-
-[dependencies]
-serde = "1.0.117"
-
-[profile.dev.package.foo]
-codegen-backend = "cranelift"
-```
-
-To set this in a profile in Cargo configuration, you need to use either
-`-Z codegen-backend` or `[unstable]` table to enable it. For example,
-
-```toml
-# .cargo/config.toml
-[unstable]
-codegen-backend = true
-
-[profile.dev.package.foo]
-codegen-backend = "cranelift"
-```
 
 ### patch-in-config
 
