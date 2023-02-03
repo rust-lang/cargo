@@ -2800,10 +2800,17 @@ fn verify_source_before_recompile() {
     //
     // Cargo should refuse to build because of checksum verfication failure.
     // Cargo shouldn't recompile dependency `bar`.
-    // TODO: fix this wrong behaviour
     p.cargo("check --verbose")
         .env("RUSTFLAGS", "-W warnings")
         .with_status(101)
-        .with_stderr_contains("[..]error: You shall not pass![..]")
+        .with_stderr(
+            "\
+error: the listed checksum of `[CWD]/vendor/bar/src/lib.rs` has changed:
+expected: [..]
+actual:   [..]
+
+directory sources are not [..]
+",
+        )
         .run();
 }
