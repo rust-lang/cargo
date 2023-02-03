@@ -624,10 +624,10 @@ fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
 }
 
 fn infer_any(entry: &DirEntry) -> Option<(String, PathBuf)> {
-    if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
-        infer_file(entry)
-    } else if entry.file_type().map(|t| t.is_dir()).ok() == Some(true) {
+    if entry.file_type().map_or(false, |t| t.is_dir()) {
         infer_subdirectory(entry)
+    } else if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
+        infer_file(entry)
     } else {
         None
     }

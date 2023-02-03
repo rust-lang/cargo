@@ -5023,6 +5023,18 @@ fn inferred_benchmarks() {
 }
 
 #[cargo_test]
+fn no_infer_dirs() {
+    let p = project()
+        .file("src/lib.rs", "fn main() {}")
+        .file("examples/dir.rs/dummy", "")
+        .file("benches/dir.rs/dummy", "")
+        .file("tests/dir.rs/dummy", "")
+        .build();
+
+    p.cargo("build --examples --benches --tests").run(); // should not fail with "is a directory"
+}
+
+#[cargo_test]
 fn target_edition() {
     let p = project()
         .file(
