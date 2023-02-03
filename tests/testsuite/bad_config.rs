@@ -15,7 +15,7 @@ fn bad1() {
             "#,
         )
         .build();
-    p.cargo("build -v --target=nonexistent-target")
+    p.cargo("check -v --target=nonexistent-target")
         .with_status(101)
         .with_stderr(
             "\
@@ -161,7 +161,7 @@ fn invalid_global_config() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -191,7 +191,7 @@ fn bad_cargo_lock() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -246,7 +246,7 @@ fn duplicate_packages_in_cargo_lock() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -295,7 +295,7 @@ fn bad_source_in_cargo_lock() {
         )
         .build();
 
-    p.cargo("build --verbose")
+    p.cargo("check --verbose")
         .with_status(101)
         .with_stderr(
             "\
@@ -326,7 +326,7 @@ fn bad_dependency_in_lockfile() {
         )
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -347,7 +347,7 @@ fn bad_git_dependency() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -416,7 +416,7 @@ fn malformed_override() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -461,7 +461,7 @@ fn duplicate_binary_names() {
         .file("b.rs", r#"fn main() -> () {}"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -498,7 +498,7 @@ fn duplicate_example_names() {
         .file("examples/ex2.rs", r#"fn main () -> () {}"#)
         .build();
 
-    p.cargo("build --example ex")
+    p.cargo("check --example ex")
         .with_status(101)
         .with_stderr(
             "\
@@ -573,7 +573,7 @@ fn duplicate_deps() {
         .file("src/main.rs", r#"fn main () {}"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -612,7 +612,7 @@ fn duplicate_deps_diff_sources() {
         .file("src/main.rs", r#"fn main () {}"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -644,11 +644,11 @@ fn unused_keys() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 warning: unused manifest key: target.foo.bar
-[COMPILING] foo v0.1.0 ([CWD])
+[CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -668,11 +668,11 @@ warning: unused manifest key: target.foo.bar
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 warning: unused manifest key: package.bulid
-[COMPILING] foo [..]
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -695,11 +695,11 @@ warning: unused manifest key: package.bulid
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 warning: unused manifest key: lib.build
-[COMPILING] foo [..]
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -720,11 +720,11 @@ fn unused_keys_in_virtual_manifest() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
-    p.cargo("build --workspace")
+    p.cargo("check --workspace")
         .with_stderr(
             "\
 [WARNING] [..]/foo/Cargo.toml: unused manifest key: workspace.bulid
-[COMPILING] bar [..]
+[CHECKING] bar [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -751,7 +751,7 @@ fn empty_dependencies() {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
             "\
 warning: dependency (bar) specified without providing a local path, Git repository, or version \
@@ -768,7 +768,7 @@ fn invalid_toml_historically_allowed_fails() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -812,7 +812,7 @@ fn ambiguous_git_reference() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -843,7 +843,7 @@ fn fragment_in_git_url() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -862,7 +862,7 @@ fn bad_source_config1() {
         .file(".cargo/config", "[source.foo]")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr("error: no source location specified for `source.foo`, need [..]")
         .run();
@@ -894,7 +894,7 @@ fn bad_source_config2() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -940,7 +940,7 @@ fn bad_source_config3() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -988,7 +988,7 @@ fn bad_source_config4() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1037,7 +1037,7 @@ fn bad_source_config5() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1069,7 +1069,7 @@ fn both_git_and_path_specified() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build -v")
+    foo.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -1108,7 +1108,7 @@ fn bad_source_config6() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1146,7 +1146,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   key `branch` is ignored for dependency (bar).
 ";
-    foo.cargo("build -v")
+    foo.cargo("check -v")
         .with_status(101)
         .with_stderr(err_msg)
         .run();
@@ -1163,7 +1163,7 @@ Caused by:
             bar = { path = "bar", branch = "spam" }
         "#,
     );
-    foo.cargo("build")
+    foo.cargo("check")
         .with_status(101)
         .with_stderr(err_msg)
         .run();
@@ -1197,7 +1197,7 @@ fn bad_source_config7() {
 
     Package::new("bar", "0.1.0").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr("error: more than one source location specified for `source.foo`")
         .run();
@@ -1228,7 +1228,7 @@ fn bad_source_config8() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "[ERROR] source definition `source.foo` specifies `branch`, \
@@ -1255,7 +1255,7 @@ fn bad_dependency() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1287,7 +1287,7 @@ fn bad_debuginfo() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1317,7 +1317,7 @@ fn bad_opt_level() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
