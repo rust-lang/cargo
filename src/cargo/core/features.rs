@@ -58,6 +58,9 @@
 //!
 //! ## `-Z` options
 //!
+//! New `-Z` options cover all other functionality that isn't covered with
+//! `cargo-features` or `-Z unstable-options`.
+//!
 //! The steps to add a new `-Z` option are:
 //!
 //! 1. Add the option to the [`CliUnstable`] struct below. Flags can take an
@@ -67,6 +70,43 @@
 //!    [`Config::cli_unstable`] to get an instance of [`CliUnstable`]
 //!    and check if the option has been enabled on the [`CliUnstable`] instance.
 //!    Nightly gating is already handled, so no need to worry about that.
+//!
+//! ### `-Z` vs `cargo-features`
+//!
+//! In some cases there might be some changes that `cargo-features` is unable
+//! to sufficiently encompass. An example would be a syntax change in
+//! `Cargo.toml` that also impacts the index or resolver. The resolver doesn't
+//! know about `cargo-features`, so it needs a `-Z` flag to enable the
+//! experimental functionality.
+//!
+//! In those cases, you usually should introduce both a `-Z` flag (to enable
+//! the changes outside of the manifest) and a `cargo-features` entry (to
+//! enable the new syntax in `Cargo.toml`). The `cargo-features` entry ensures
+//! that any experimental syntax that gets uploaded to crates.io is clearly
+//! intended for nightly-only builds. Otherwise, users accessing those crates
+//! may get confusing errors, particularly if the syntax changes during the
+//! development cycle, and the user tries to access it with a stable release.
+//!
+//! ### `-Z` with external files
+//!
+//! Some files, such as `config.toml` config files, or the `config.json` index
+//! file, are used in a global location which can make interaction with stable
+//! releases problematic. In general, before the feature is stabilized, stable
+//! Cargo should behave roughly similar to how it behaved *before* the
+//! unstable feature was introduced. If Cargo would normally have ignored or
+//! warned about the introduction of something, then it probably should
+//! continue to do so.
+//!
+//! For example, Cargo generally ignores (or warns) about `config.toml`
+//! entries it doesn't know about. This allows a limited degree of
+//! forwards-compatibility with future versions of Cargo that add new entries.
+//!
+//! Whether or not to warn on stable may need to be decided on a case-by-case
+//! basis. For example, you may want to avoid generating a warning for options
+//! that are not critical to Cargo's operation in order to reduce the
+//! annoyance of constant warnings. However, ignoring some options may prevent
+//! proper operation, so a warning may be valuable for a user trying to
+//! diagnose why it isn't working correctly.
 //!
 //! ## Stabilization
 //!
