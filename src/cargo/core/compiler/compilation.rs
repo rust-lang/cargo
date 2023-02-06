@@ -381,30 +381,25 @@ fn get_sysroot_target_libdir(
     bcx.all_kinds
         .iter()
         .map(|&kind| {
-            Ok((
-                kind,
-                bcx.target_data
-                    .get_info(kind)
-                    .ok_or_else(|| {
-                        let target = match kind {
-                            CompileKind::Host => "host".to_owned(),
-                            CompileKind::Target(s) => s.short_name().to_owned(),
-                        };
+            let Some(info) = bcx.target_data.get_info(kind) else {
+                let target = match kind {
+                    CompileKind::Host => "host".to_owned(),
+                    CompileKind::Target(s) => s.short_name().to_owned(),
+                };
 
-                        let dependency = bcx
-                            .unit_graph
-                            .iter()
-                            .find_map(|(u, _)| (unit.kind == kind).then_some(unit.pkg.summary().package_id()))
-                            .unwrap();
+                let dependency = bcx
+                    .unit_graph
+                    .iter()
+                    .find_map(|(u, _)| (u.kind == kind).then_some(u.pkg.summary().package_id()))
+                    .unwrap();
 
-                        anyhow::anyhow!(
-                            "could not find specification for target `{target}`.\n  \
-                            Dependency `{dependency}` requires to build for target `{target}`."
-                        )
-                    })?
-                    .sysroot_target_libdir
-                    .clone(),
-            ))
+                anyhow::bail!(
+                    "could not find specification for target `{target}`.\n  \
+                    Dependency `{dependency}` requires to build for target `{target}`."
+                )
+            };
+
+            Ok((kind, info.sysroot_target_libdir.clone()))
         })
         .collect()
 }
