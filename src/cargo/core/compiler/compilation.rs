@@ -394,15 +394,7 @@ fn get_sysroot_target_libdir(
                         let dependency = bcx
                             .unit_graph
                             .iter()
-                            .find_map(|(k, _)| {
-                                if k.kind == kind {
-                                    let summary = k.pkg.manifest().summary();
-
-                                    Some(format!("{} v{}", summary.name(), summary.version()))
-                                } else {
-                                    None
-                                }
-                            })
+                            .find_map(|(u, _)| (unit.kind == kind).then_some(unit.pkg.summary().package_id()))
                             .unwrap();
 
                         anyhow::anyhow!(
