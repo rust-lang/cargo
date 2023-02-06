@@ -202,8 +202,7 @@ description = "A short description of my package"
 #### The `documentation` field
 
 The `documentation` field specifies a URL to a website hosting the crate's
-documentation. If no URL is specified in the manifest file, [crates.io] will
-automatically link your crate to the corresponding [docs.rs] page.
+documentation.
 
 ```toml
 [package]
