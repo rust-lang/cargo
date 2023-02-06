@@ -406,7 +406,7 @@ fn get_sysroot_target_libdir(
                     .clone(),
             ))
         })
-        .collect::<CargoResult<HashMap<_, _>>>()
+        .collect()
 }
 
 fn target_runner(
