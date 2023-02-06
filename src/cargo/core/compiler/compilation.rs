@@ -398,8 +398,8 @@ fn get_sysroot_target_libdir(
                             .unwrap();
 
                         anyhow::anyhow!(
-                            "could not find specification for target \"{target}\".\n  \
-                            Dependency `{dependency}` requires to build for target \"{target}\"."
+                            "could not find specification for target `{target}`.\n  \
+                            Dependency `{dependency}` requires to build for target `{target}`."
                         )
                     })?
                     .sysroot_target_libdir
