@@ -718,6 +718,7 @@ unstable_cli_options!(
     features: Option<Vec<String>>  = (HIDDEN),
     jobserver_per_rustc: bool = (HIDDEN),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
+    direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
@@ -948,6 +949,7 @@ impl CliUnstable {
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
+            "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "check-cfg" => {
