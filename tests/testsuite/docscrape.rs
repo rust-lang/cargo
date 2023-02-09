@@ -389,17 +389,11 @@ fn fail_bad_build_script() {
         .with_stderr_contains("[..]You shall not pass[..]")
         .run();
 
-    // FIXME: scrape examples should fail whenever `cargo doc` fails.
+    // scrape examples should fail whenever `cargo doc` fails.
     p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[SCRAPING] foo v0.0.1 ([CWD])
-[DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [..]
-",
-        )
+        .with_status(101)
+        .with_stderr_contains("[..]You shall not pass[..]")
         .run();
 }
 

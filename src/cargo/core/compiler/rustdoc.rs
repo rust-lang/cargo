@@ -211,16 +211,24 @@ impl RustdocScrapeExamples {
 }
 
 impl BuildContext<'_, '_> {
-    /// Returns the set of Docscrape units that have a direct dependency on `unit`
+    /// Returns the set of [`Docscrape`] units that have a direct dependency on `unit`.
+    ///
+    /// [`RunCustomBuild`] units are excluded because we allow failures
+    /// from type checks but not build script executions.
+    /// A plain old `cargo doc` would just die if a build script execution fails,
+    /// there is no reason for `-Zrustdoc-scrape-examples` to keep going.
+    ///
+    /// [`Docscrape`]: crate::core::compiler::CompileMode::Docscrape
+    /// [`RunCustomBuild`]: crate::core::compiler::CompileMode::Docscrape
     pub fn scrape_units_have_dep_on<'a>(&'a self, unit: &'a Unit) -> Vec<&'a Unit> {
         self.scrape_units
             .iter()
             .filter(|scrape_unit| {
                 self.unit_graph[scrape_unit]
                     .iter()
-                    .any(|dep| &dep.unit == unit)
+                    .any(|dep| &dep.unit == unit && !dep.unit.mode.is_run_custom_build())
             })
-            .collect::<Vec<_>>()
+            .collect()
     }
 
     /// Returns true if this unit is needed for doing doc-scraping and is also
