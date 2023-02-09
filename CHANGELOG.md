@@ -26,9 +26,6 @@
 
 ### Fixed
 
-- Unsupported `profile.split-debuginfo` options are now ignored,
-  which previously made Cargo fail to compile on certain platforms.
-  [#11347](https://github.com/rust-lang/cargo/pull/11347)
 - Fixed build scripts triggering recompiles when a `rerun-if-changed` points to
   a directory whose mtime is not preserved by the filesystem.
   [#11613](https://github.com/rust-lang/cargo/pull/11613)
@@ -103,6 +100,10 @@
   [#11473](https://github.com/rust-lang/cargo/pull/11473)
 - Setting `target.cfg(…).rustflags` shouldn't erase `build.rustdocflags`.
   [#11323](https://github.com/rust-lang/cargo/pull/11323)
+- Unsupported `profile.split-debuginfo` options are now ignored,
+  which previously made Cargo fail to compile on certain platforms.
+  [#11347](https://github.com/rust-lang/cargo/pull/11347)
+  [#11633](https://github.com/rust-lang/cargo/pull/11633)
 
 ### Nightly only
 
@@ -110,6 +111,8 @@
   ([RFC 3231](https://github.com/rust-lang/rfcs/blob/master/text/3231-cargo-asymmetric-tokens.md))
   ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#registry-auth))
   [#10771](https://github.com/rust-lang/cargo/pull/10771)
+- Do not error for `auth-required: true` without `-Z sparse-registry`
+  [#11661](https://github.com/rust-lang/cargo/pull/11661)
 - Supports `codegen-backend` and `rustflags` in profiles in config file.
   [#11562](https://github.com/rust-lang/cargo/pull/11562)
 - Suggests `cargo clippy --fix` when warnings/errors could be fixed with clippy.
