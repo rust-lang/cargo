@@ -11,37 +11,30 @@ const CARGO_TAG: &str = "cargo-registry";
 struct OnePasswordKeychain {
     account: Option<String>,
     vault: Option<String>,
-    sign_in_address: Option<String>,
-    email: Option<String>,
 }
 
-/// 1password Login item type, used for the JSON output of `op get item`.
+/// 1password Login item type, used for the JSON output of `op item get`.
 #[derive(Deserialize)]
 struct Login {
-    details: Details,
-}
-
-#[derive(Deserialize)]
-struct Details {
     fields: Vec<Field>,
 }
 
 #[derive(Deserialize)]
 struct Field {
-    designation: String,
-    value: String,
+    id: String,
+    value: Option<String>,
 }
 
-/// 1password item from `op list items`.
+/// 1password item from `op items list`.
 #[derive(Deserialize)]
 struct ListItem {
-    uuid: String,
-    overview: Overview,
+    id: String,
+    urls: Vec<Url>,
 }
 
 #[derive(Deserialize)]
-struct Overview {
-    url: String,
+struct Url {
+    href: String,
 }
 
 impl OnePasswordKeychain {
@@ -50,8 +43,6 @@ impl OnePasswordKeychain {
         let mut action = false;
         let mut account = None;
         let mut vault = None;
-        let mut sign_in_address = None;
-        let mut email = None;
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--account" => {
@@ -59,12 +50,6 @@ impl OnePasswordKeychain {
                 }
                 "--vault" => {
                     vault = Some(args.next().ok_or("--vault needs an arg")?);
-                }
-                "--sign-in-address" => {
-                    sign_in_address = Some(args.next().ok_or("--sign-in-address needs an arg")?);
-                }
-                "--email" => {
-                    email = Some(args.next().ok_or("--email needs an arg")?);
                 }
                 s if s.starts_with('-') => {
                     return Err(format!("unknown option {}", s).into());
@@ -78,15 +63,7 @@ impl OnePasswordKeychain {
                 }
             }
         }
-        if sign_in_address.is_none() && email.is_some() {
-            return Err("--email requires --sign-in-address".into());
-        }
-        Ok(OnePasswordKeychain {
-            account,
-            vault,
-            sign_in_address,
-            email,
-        })
+        Ok(OnePasswordKeychain { account, vault })
     }
 
     fn signin(&self) -> Result<Option<String>, Error> {
@@ -96,24 +73,9 @@ impl OnePasswordKeychain {
             return Ok(None);
         }
         let mut cmd = Command::new("op");
-        cmd.arg("signin");
-        if let Some(addr) = &self.sign_in_address {
-            cmd.arg(addr);
-            if let Some(email) = &self.email {
-                cmd.arg(email);
-            }
-        }
-        cmd.arg("--raw");
+        cmd.args(&["signin", "--raw"]);
         cmd.stdout(Stdio::piped());
-        #[cfg(unix)]
-        const IN_DEVICE: &str = "/dev/tty";
-        #[cfg(windows)]
-        const IN_DEVICE: &str = "CONIN$";
-        let stdin = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(IN_DEVICE)?;
-        cmd.stdin(stdin);
+        self.with_tty(&mut cmd)?;
         let mut child = cmd
             .spawn()
             .map_err(|e| format!("failed to spawn `op`: {}", e))?;
@@ -132,6 +94,11 @@ impl OnePasswordKeychain {
             .map_err(|e| format!("failed to wait for `op`: {}", e))?;
         if !status.success() {
             return Err(format!("failed to run `op signin`: {}", status).into());
+        }
+        if buffer.is_empty() {
+            // When using CLI integration, `op signin` returns no output,
+            // so there is no need to set the session.
+            return Ok(None);
         }
         Ok(Some(buffer))
     }
@@ -152,6 +119,19 @@ impl OnePasswordKeychain {
             cmd.arg(session);
         }
         cmd
+    }
+
+    fn with_tty(&self, cmd: &mut Command) -> Result<(), Error> {
+        #[cfg(unix)]
+        const IN_DEVICE: &str = "/dev/tty";
+        #[cfg(windows)]
+        const IN_DEVICE: &str = "CONIN$";
+        let stdin = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(IN_DEVICE)?;
+        cmd.stdin(stdin);
+        Ok(())
     }
 
     fn run_cmd(&self, mut cmd: Command) -> Result<String, Error> {
@@ -179,12 +159,14 @@ impl OnePasswordKeychain {
         let cmd = self.make_cmd(
             session,
             &[
-                "list",
                 "items",
+                "list",
                 "--categories",
                 "Login",
                 "--tags",
                 CARGO_TAG,
+                "--format",
+                "json",
             ],
         );
         let buffer = self.run_cmd(cmd)?;
@@ -192,7 +174,7 @@ impl OnePasswordKeychain {
             .map_err(|e| format!("failed to deserialize JSON from 1password list: {}", e))?;
         let mut matches = items
             .into_iter()
-            .filter(|item| item.overview.url == index_url);
+            .filter(|item| item.urls.iter().any(|url| url.href == index_url));
         match matches.next() {
             Some(login) => {
                 // Should this maybe just sort on `updatedAt` and return the newest one?
@@ -204,7 +186,7 @@ impl OnePasswordKeychain {
                     )
                     .into());
                 }
-                Ok(Some(login.uuid))
+                Ok(Some(login.id))
             }
             None => Ok(None),
         }
@@ -213,13 +195,13 @@ impl OnePasswordKeychain {
     fn modify(
         &self,
         session: &Option<String>,
-        uuid: &str,
+        id: &str,
         token: &str,
         _name: Option<&str>,
     ) -> Result<(), Error> {
         let cmd = self.make_cmd(
             session,
-            &["edit", "item", uuid, &format!("password={}", token)],
+            &["item", "edit", id, &format!("password={}", token)],
         );
         self.run_cmd(cmd)?;
         Ok(())
@@ -236,11 +218,12 @@ impl OnePasswordKeychain {
             Some(name) => format!("Cargo registry token for {}", name),
             None => "Cargo registry token".to_string(),
         };
-        let cmd = self.make_cmd(
+        let mut cmd = self.make_cmd(
             session,
             &[
-                "create",
                 "item",
+                "create",
+                "--category",
                 "Login",
                 &format!("password={}", token),
                 &format!("url={}", index_url),
@@ -250,28 +233,30 @@ impl OnePasswordKeychain {
                 CARGO_TAG,
             ],
         );
+        // For unknown reasons, `op item create` seems to not be happy if
+        // stdin is not a tty. Otherwise it returns with a 0 exit code without
+        // doing anything.
+        self.with_tty(&mut cmd)?;
         self.run_cmd(cmd)?;
         Ok(())
     }
 
-    fn get_token(&self, session: &Option<String>, uuid: &str) -> Result<String, Error> {
-        let cmd = self.make_cmd(session, &["get", "item", uuid]);
+    fn get_token(&self, session: &Option<String>, id: &str) -> Result<String, Error> {
+        let cmd = self.make_cmd(session, &["item", "get", "--format=json", id]);
         let buffer = self.run_cmd(cmd)?;
         let item: Login = serde_json::from_str(&buffer)
             .map_err(|e| format!("failed to deserialize JSON from 1password get: {}", e))?;
-        let password = item
-            .details
-            .fields
-            .into_iter()
-            .find(|item| item.designation == "password");
+        let password = item.fields.into_iter().find(|item| item.id == "password");
         match password {
-            Some(password) => Ok(password.value),
+            Some(password) => password
+                .value
+                .ok_or_else(|| format!("missing password value for entry").into()),
             None => Err("could not find password field".into()),
         }
     }
 
-    fn delete(&self, session: &Option<String>, uuid: &str) -> Result<(), Error> {
-        let cmd = self.make_cmd(session, &["delete", "item", uuid]);
+    fn delete(&self, session: &Option<String>, id: &str) -> Result<(), Error> {
+        let cmd = self.make_cmd(session, &["item", "delete", id]);
         self.run_cmd(cmd)?;
         Ok(())
     }
@@ -284,8 +269,8 @@ impl Credential for OnePasswordKeychain {
 
     fn get(&self, index_url: &str) -> Result<String, Error> {
         let session = self.signin()?;
-        if let Some(uuid) = self.search(&session, index_url)? {
-            self.get_token(&session, &uuid)
+        if let Some(id) = self.search(&session, index_url)? {
+            self.get_token(&session, &id)
         } else {
             return Err(format!(
                 "no 1password entry found for registry `{}`, try `cargo login` to add a token",
@@ -298,8 +283,8 @@ impl Credential for OnePasswordKeychain {
     fn store(&self, index_url: &str, token: &str, name: Option<&str>) -> Result<(), Error> {
         let session = self.signin()?;
         // Check if an item already exists.
-        if let Some(uuid) = self.search(&session, index_url)? {
-            self.modify(&session, &uuid, token, name)
+        if let Some(id) = self.search(&session, index_url)? {
+            self.modify(&session, &id, token, name)
         } else {
             self.create(&session, index_url, token, name)
         }
@@ -308,8 +293,8 @@ impl Credential for OnePasswordKeychain {
     fn erase(&self, index_url: &str) -> Result<(), Error> {
         let session = self.signin()?;
         // Check if an item already exists.
-        if let Some(uuid) = self.search(&session, index_url)? {
-            self.delete(&session, &uuid)?;
+        if let Some(id) = self.search(&session, index_url)? {
+            self.delete(&session, &id)?;
         } else {
             eprintln!("not currently logged in to `{}`", index_url);
         }
