@@ -245,11 +245,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
             LoadResponse::Data { raw_data, .. } => {
                 trace!("config loaded");
-                let cfg: RegistryConfig = serde_json::from_slice(&raw_data)?;
-                if cfg.auth_required && !self.config.cli_unstable().registry_auth {
-                    return Poll::Ready(Err(anyhow::anyhow!(
-                        "authenticated registries require `-Z registry-auth`"
-                    )));
+                let mut cfg: RegistryConfig = serde_json::from_slice(&raw_data)?;
+                if !self.config.cli_unstable().registry_auth {
+                    cfg.auth_required = false;
                 }
                 Poll::Ready(Ok(Some(cfg)))
             }

@@ -379,9 +379,9 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     let compare = compare_old_fingerprint(&loc, &*fingerprint, mtime_on_use);
     log_compare(unit, &compare);
 
-    // If our comparison failed (e.g., we're going to trigger a rebuild of this
-    // crate), then we also ensure the source of the crate passes all
-    // verification checks before we build it.
+    // If our comparison failed or reported dirty (e.g., we're going to trigger
+    // a rebuild of this crate), then we also ensure the source of the crate
+    // passes all verification checks before we build it.
     //
     // The `Source::verify` method is intended to allow sources to execute
     // pre-build checks to ensure that the relevant source code is all
@@ -389,7 +389,11 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     // directory sources which will use this hook to perform an integrity check
     // on all files in the source to ensure they haven't changed. If they have
     // changed then an error is issued.
-    if compare.is_err() {
+    if compare
+        .as_ref()
+        .map(|dirty| dirty.is_some())
+        .unwrap_or(true)
+    {
         let source_id = unit.pkg.package_id().source_id();
         let sources = bcx.packages.sources();
         let source = sources
