@@ -367,6 +367,43 @@ warning: `foo` (example \"ex2\") generated 1 warning
 }
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
+fn fail_bad_build_script() {
+    // See rust-lang/cargo#11623
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() { panic!(\"You shall not pass\")}")
+        .file("examples/ex.rs", "fn main() {}")
+        .build();
+
+    // `cargo doc` fails
+    p.cargo("doc")
+        .with_status(101)
+        .with_stderr_contains("[..]You shall not pass[..]")
+        .run();
+
+    // FIXME: scrape examples should fail whenever `cargo doc` fails.
+    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[SCRAPING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn no_fail_bad_example() {
     let p = project()
         .file(
