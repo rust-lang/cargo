@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-build - Compile the current package
+cargo-build --- Compile the current package
 
 ## SYNOPSIS
 

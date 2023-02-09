@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-add - Add dependencies to a Cargo.toml manifest file
+cargo-add --- Add dependencies to a Cargo.toml manifest file
 
 ## SYNOPSIS
 

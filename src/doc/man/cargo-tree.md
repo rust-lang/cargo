@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-tree - Display a tree visualization of a dependency graph
+cargo-tree --- Display a tree visualization of a dependency graph
 
 ## SYNOPSIS
 
@@ -119,16 +119,16 @@ only one instance is built.
 {{#option "`-e` _kinds_" "`--edges` _kinds_" }}
 The dependency kinds to display. Takes a comma separated list of values:
 
-- `all` — Show all edge kinds.
-- `normal` — Show normal dependencies.
-- `build` — Show build dependencies.
-- `dev` — Show development dependencies.
-- `features` — Show features enabled by each dependency. If this is the only
+- `all` --- Show all edge kinds.
+- `normal` --- Show normal dependencies.
+- `build` --- Show build dependencies.
+- `dev` --- Show development dependencies.
+- `features` --- Show features enabled by each dependency. If this is the only
   kind given, then it will automatically include the other dependency kinds.
-- `no-normal` — Do not include normal dependencies.
-- `no-build` — Do not include build dependencies.
-- `no-dev` — Do not include development dependencies.
-- `no-proc-macro` — Do not include procedural macro dependencies.
+- `no-normal` --- Do not include normal dependencies.
+- `no-build` --- Do not include build dependencies.
+- `no-dev` --- Do not include development dependencies.
+- `no-proc-macro` --- Do not include procedural macro dependencies.
 
 The `normal`, `build`, `dev`, and `all` dependency kinds cannot be mixed with
 `no-normal`, `no-build`, or `no-dev` dependency kinds.
@@ -158,19 +158,19 @@ Set the format string for each package. The default is "{p}".
 This is an arbitrary string which will be used to display each package. The following
 strings will be replaced with the corresponding value:
 
-- `{p}` — The package name.
-- `{l}` — The package license.
-- `{r}` — The package repository URL.
-- `{f}` — Comma-separated list of package features that are enabled.
-- `{lib}` — The name, as used in a `use` statement, of the package's library.
+- `{p}` --- The package name.
+- `{l}` --- The package license.
+- `{r}` --- The package repository URL.
+- `{f}` --- Comma-separated list of package features that are enabled.
+- `{lib}` --- The name, as used in a `use` statement, of the package's library.
 {{/option}}
 
 {{#option "`--prefix` _prefix_" }}
 Sets how each line is displayed. The _prefix_ value can be one of:
 
-- `indent` (default) — Shows each line indented as a tree.
-- `depth` — Show as a list, with the numeric depth printed before each entry.
-- `none` — Show as a flat list.
+- `indent` (default) --- Shows each line indented as a tree.
+- `depth` --- Show as a list, with the numeric depth printed before each entry.
+- `none` --- Show as a flat list.
 {{/option}}
 
 {{/options}}

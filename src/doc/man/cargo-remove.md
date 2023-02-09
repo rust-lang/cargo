@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-remove - Remove dependencies from a Cargo.toml manifest file
+cargo-remove --- Remove dependencies from a Cargo.toml manifest file
 
 ## SYNOPSIS
 

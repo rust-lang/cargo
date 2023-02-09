@@ -60,45 +60,45 @@ Each new feature described below should explain how to use it.
 ### List of unstable features
 
 * Unstable-specific features
-    * [-Z allow-features](#allow-features) — Provides a way to restrict which unstable features are used.
+    * [-Z allow-features](#allow-features) --- Provides a way to restrict which unstable features are used.
 * Build scripts and linking
-    * [Metabuild](#metabuild) — Provides declarative build scripts.
+    * [Metabuild](#metabuild) --- Provides declarative build scripts.
 * Resolver and features
-    * [no-index-update](#no-index-update) — Prevents cargo from updating the index cache.
-    * [avoid-dev-deps](#avoid-dev-deps) — Prevents the resolver from including dev-dependencies during resolution.
-    * [minimal-versions](#minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
-    * [public-dependency](#public-dependency) — Allows dependencies to be classified as either public or private.
+    * [no-index-update](#no-index-update) --- Prevents cargo from updating the index cache.
+    * [avoid-dev-deps](#avoid-dev-deps) --- Prevents the resolver from including dev-dependencies during resolution.
+    * [minimal-versions](#minimal-versions) --- Forces the resolver to use the lowest compatible version instead of the highest.
+    * [public-dependency](#public-dependency) --- Allows dependencies to be classified as either public or private.
 * Output behavior
-    * [out-dir](#out-dir) — Adds a directory where artifacts are copied to.
-    * [Different binary name](#different-binary-name) — Assign a name to the built binary that is separate from the crate name.
+    * [out-dir](#out-dir) --- Adds a directory where artifacts are copied to.
+    * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
 * Compile behavior
-    * [mtime-on-use](#mtime-on-use) — Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
-    * [doctest-xcompile](#doctest-xcompile) — Supports running doctests with the `--target` flag.
-    * [build-std](#build-std) — Builds the standard library instead of using pre-built binaries.
-    * [build-std-features](#build-std-features) — Sets features to use with the standard library.
-    * [binary-dep-depinfo](#binary-dep-depinfo) — Causes the dep-info file to track binary dependencies.
-    * [panic-abort-tests](#panic-abort-tests) — Allows running tests with the "abort" panic strategy.
-    * [keep-going](#keep-going) — Build as much as possible rather than aborting on the first error.
+    * [mtime-on-use](#mtime-on-use) --- Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
+    * [doctest-xcompile](#doctest-xcompile) --- Supports running doctests with the `--target` flag.
+    * [build-std](#build-std) --- Builds the standard library instead of using pre-built binaries.
+    * [build-std-features](#build-std-features) --- Sets features to use with the standard library.
+    * [binary-dep-depinfo](#binary-dep-depinfo) --- Causes the dep-info file to track binary dependencies.
+    * [panic-abort-tests](#panic-abort-tests) --- Allows running tests with the "abort" panic strategy.
+    * [keep-going](#keep-going) --- Build as much as possible rather than aborting on the first error.
 * rustdoc
-    * [`doctest-in-workspace`](#doctest-in-workspace) — Fixes workspace-relative paths when running doctests.
-    * [rustdoc-map](#rustdoc-map) — Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
+    * [`doctest-in-workspace`](#doctest-in-workspace) --- Fixes workspace-relative paths when running doctests.
+    * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
 * `Cargo.toml` extensions
-    * [Profile `rustflags` option](#profile-rustflags-option) — Passed directly to rustc.
-    * [codegen-backend](#codegen-backend) — Select the codegen backend used by rustc.
-    * [per-package-target](#per-package-target) — Sets the `--target` to use for each individual package.
-    * [artifact dependencies](#artifact-dependencies) - Allow build artifacts to be included into other build artifacts and build them for different targets.
+    * [Profile `rustflags` option](#profile-rustflags-option) --- Passed directly to rustc.
+    * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
+    * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
+    * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
 * Information and metadata
-    * [Build-plan](#build-plan) — Emits JSON information on which commands will be run.
-    * [unit-graph](#unit-graph) — Emits JSON for Cargo's internal graph structure.
-    * [`cargo rustc --print`](#rustc---print) — Calls rustc with `--print` to display information from rustc.
+    * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
+    * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
+    * [`cargo rustc --print`](#rustc---print) --- Calls rustc with `--print` to display information from rustc.
 * Configuration
-    * [config-include](#config-include) — Adds the ability for config files to include other files.
-    * [`cargo config`](#cargo-config) — Adds a new subcommand for viewing config files.
+    * [config-include](#config-include) --- Adds the ability for config files to include other files.
+    * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
 * Registries
-    * [credential-process](#credential-process) — Adds support for fetching registry tokens from an external authentication program.
-    * [`cargo logout`](#cargo-logout) — Adds the `logout` command to remove the currently saved registry token.
-    * [publish-timeout](#publish-timeout) — Controls the timeout between uploading the crate and being available in the index
-    * [registry-auth](#registry-auth) — Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
+    * [credential-process](#credential-process) --- Adds support for fetching registry tokens from an external authentication program.
+    * [`cargo logout`](#cargo-logout) --- Adds the `logout` command to remove the currently saved registry token.
+    * [publish-timeout](#publish-timeout) --- Controls the timeout between uploading the crate and being available in the index
+    * [registry-auth](#registry-auth) --- Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
 
 ### allow-features
 
@@ -362,9 +362,9 @@ feature for Cargo has an extremely long history and is very large in scope, and
 this is just the beginning. If you'd like to report bugs please either report
 them to:
 
-* Cargo - <https://github.com/rust-lang/cargo/issues/new> - for implementation bugs
-* The tracking repository -
-  <https://github.com/rust-lang/wg-cargo-std-aware/issues/new> - for larger design
+* Cargo --- <https://github.com/rust-lang/cargo/issues/new> --- for implementation bugs
+* The tracking repository ---
+  <https://github.com/rust-lang/wg-cargo-std-aware/issues/new> --- for larger design
   questions.
 
 Also if you'd like to see a feature that's not yet implemented and/or if
@@ -620,12 +620,12 @@ The following is a description of the JSON structure:
       "platform": null,
       /* The "mode" for this unit. Valid values:
 
-         * "test" — Build using `rustc` as a test.
-         * "build" — Build using `rustc`.
-         * "check" — Build using `rustc` in "check" mode.
-         * "doc" — Build using `rustdoc`.
-         * "doctest" — Test using `rustdoc`.
-         * "run-custom-build" — Represents the execution of a build script.
+         * "test" --- Build using `rustc` as a test.
+         * "build" --- Build using `rustc`.
+         * "check" --- Build using `rustc` in "check" mode.
+         * "doc" --- Build using `rustdoc`.
+         * "doctest" --- Test using `rustdoc`.
+         * "run-custom-build" --- Represents the execution of a build script.
       */
       "mode": "build",
       /* Array of features enabled on this unit as strings. */
@@ -926,9 +926,9 @@ array of strings.
 Command-line arguments allow special placeholders which will be replaced with
 the corresponding value:
 
-* `{name}` — The name of the registry.
-* `{api_url}` — The base URL of the registry API endpoints.
-* `{action}` — The authentication action (described below).
+* `{name}` --- The name of the registry.
+* `{api_url}` --- The base URL of the registry API endpoints.
+* `{action}` --- The authentication action (described below).
 
 Process names with the prefix `cargo:` are loaded from the `libexec` directory
 next to cargo. Several experimental credential wrappers are included with
@@ -999,9 +999,9 @@ ensure the credential process is kept as simple as possible. Cargo will
 execute the process with the `{action}` argument indicating which action to
 perform:
 
-* `store` — Store the given token in secure storage.
-* `get` — Get a token from storage.
-* `erase` — Remove a token from storage.
+* `store` --- Store the given token in secure storage.
+* `get` --- Get a token from storage.
+* `erase` --- Remove a token from storage.
 
 The `cargo login` command uses `store` to save a token. Commands that require
 authentication, like `cargo publish`, uses `get` to retrieve a token. `cargo
@@ -1011,18 +1011,18 @@ The process inherits the user's stderr, so the process can display messages.
 Some values are passed in via environment variables (see below). The expected
 interactions are:
 
-* `store` — The token is sent to the process's stdin, terminated by a newline.
+* `store` --- The token is sent to the process's stdin, terminated by a newline.
   The process should store the token keyed off the registry name. If the
   process fails, it should exit with a nonzero exit status.
 
-* `get` — The process should send the token to its stdout (trailing newline
+* `get` --- The process should send the token to its stdout (trailing newline
   will be trimmed). The process inherits the user's stdin, should it need to
   receive input.
 
   If the process is unable to fulfill the request, it should exit with a
   nonzero exit code.
 
-* `erase` — The process should remove the token associated with the registry
+* `erase` --- The process should remove the token associated with the registry
   name. If the token is not found, the process should exit with a 0 exit
   status.
 
@@ -1030,9 +1030,9 @@ interactions are:
 
 The following environment variables will be provided to the executed command:
 
-* `CARGO` — Path to the `cargo` binary executing the command.
-* `CARGO_REGISTRY_INDEX_URL` — The URL of the registry index.
-* `CARGO_REGISTRY_NAME_OPT` — Optional name of the registry. Should not be used as a storage key. Not always available.
+* `CARGO` --- Path to the `cargo` binary executing the command.
+* `CARGO_REGISTRY_INDEX_URL` --- The URL of the registry index.
+* `CARGO_REGISTRY_NAME_OPT` --- Optional name of the registry. Should not be used as a storage key. Not always available.
 
 #### `cargo logout`
 

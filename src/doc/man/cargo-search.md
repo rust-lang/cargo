@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-search - Search packages in crates.io
+cargo-search --- Search packages in crates.io
 
 ## SYNOPSIS
 

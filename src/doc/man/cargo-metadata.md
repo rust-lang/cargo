@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-metadata - Machine-readable metadata about the current package
+cargo-metadata --- Machine-readable metadata about the current package
 
 ## SYNOPSIS
 

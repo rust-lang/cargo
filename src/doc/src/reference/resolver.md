@@ -44,7 +44,7 @@ As a quick refresher, the
 dependencies is:
 
 Requirement | Example | Equivalence | Description
---|--------|--|-------------
+------------|---------|-------------|-------------
 Caret | `1.2.3` or `^1.2.3` | <code>>=1.2.3,&nbsp;<2.0.0</code> | Any SemVer-compatible version of at least the given value.
 Tilde | `~1.2` | <code>>=1.2.0,&nbsp;<1.3.0</code> | Minimum version, with restricted compatibility range.
 Wildcard | `1.*` | <code>>=1.0.0,&nbsp;<2.0.0</code> | Any version in the `*` position.

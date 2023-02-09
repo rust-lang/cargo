@@ -17,17 +17,17 @@ The key points of workspaces are:
 
 In the `Cargo.toml`, the `[workspace]` table supports the following sections:
 
-* [`[workspace]`](#the-workspace-section) — Defines a workspace.
-  * [`resolver`](resolver.md#resolver-versions) — Sets the dependency resolver to use.
-  * [`members`](#the-members-and-exclude-fields) — Packages to include in the workspace.
-  * [`exclude`](#the-members-and-exclude-fields) — Packages to exclude from the workspace.
-  * [`default-members`](#the-default-members-field) — Packages to operate on when a specific package wasn't selected.
-  * [`package`](#the-package-table) — Keys for inheriting in packages.
-  * [`dependencies`](#the-dependencies-table) — Keys for inheriting in package dependencies.
-  * [`metadata`](#the-metadata-table) — Extra settings for external tools.
-* [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
-* [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
-* [`[profile]`](profiles.md) — Compiler settings and optimizations.
+* [`[workspace]`](#the-workspace-section) --- Defines a workspace.
+  * [`resolver`](resolver.md#resolver-versions) --- Sets the dependency resolver to use.
+  * [`members`](#the-members-and-exclude-fields) --- Packages to include in the workspace.
+  * [`exclude`](#the-members-and-exclude-fields) --- Packages to exclude from the workspace.
+  * [`default-members`](#the-default-members-field) --- Packages to operate on when a specific package wasn't selected.
+  * [`package`](#the-package-table) --- Keys for inheriting in packages.
+  * [`dependencies`](#the-dependencies-table) --- Keys for inheriting in package dependencies.
+  * [`metadata`](#the-metadata-table) --- Extra settings for external tools.
+* [`[patch]`](overriding-dependencies.md#the-patch-section) --- Override dependencies.
+* [`[replace]`](overriding-dependencies.md#the-replace-section) --- Override dependencies (deprecated).
+* [`[profile]`](profiles.md) --- Compiler settings and optimizations.
 
 ### The `[workspace]` section
 

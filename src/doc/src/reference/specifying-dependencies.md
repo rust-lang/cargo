@@ -2,7 +2,7 @@
 
 Your crates can depend on other libraries from [crates.io] or other
 registries, `git` repositories, or subdirectories on your local file system.
-You can also temporarily override the location of a dependency — for example,
+You can also temporarily override the location of a dependency --- for example,
 to be able to test out a bug fix in the dependency that you are working on
 locally. You can have different dependencies for different platforms, and
 dependencies that are only used during development. Let's take a look at how
@@ -136,7 +136,7 @@ regex = { git = "https://github.com/rust-lang/regex.git" }
 
 Cargo will fetch the `git` repository at this location then look for a
 `Cargo.toml` for the requested crate anywhere inside the `git` repository
-(not necessarily at the root - for example, specifying a member crate name
+(not necessarily at the root --- for example, specifying a member crate name
 of a workspace and setting `git` to the repository containing the workspace).
 
 Since we haven’t specified any other information, Cargo assumes that

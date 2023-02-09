@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-locate-project - Print a JSON representation of a Cargo.toml file's location
+cargo-locate-project --- Print a JSON representation of a Cargo.toml file's location
 
 ## SYNOPSIS
 

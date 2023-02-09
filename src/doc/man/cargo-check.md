@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-check - Check the current package
+cargo-check --- Check the current package
 
 ## SYNOPSIS
 

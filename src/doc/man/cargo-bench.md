@@ -5,7 +5,7 @@
 
 ## NAME
 
-cargo-bench - Execute benchmarks of a package
+cargo-bench --- Execute benchmarks of a package
 
 ## SYNOPSIS
 
@@ -69,7 +69,7 @@ debugger.
 When no target selection options are given, `cargo bench` will build the
 following targets of the selected packages:
 
-- lib — used to link with binaries and benchmarks
+- lib --- used to link with binaries and benchmarks
 - bins (only if benchmark targets are built and required features are
   available)
 - lib as a benchmark

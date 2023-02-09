@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-owner - Manage the owners of a crate on the registry
+cargo-owner --- Manage the owners of a crate on the registry
 
 ## SYNOPSIS
 

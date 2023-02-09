@@ -5,7 +5,7 @@
 
 ## NAME
 
-cargo-package - Assemble the local package into a distributable tarball
+cargo-package --- Assemble the local package into a distributable tarball
 
 ## SYNOPSIS
 

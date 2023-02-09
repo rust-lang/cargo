@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo - The Rust package manager
+cargo --- The Rust package manager
 
 ## SYNOPSIS
 

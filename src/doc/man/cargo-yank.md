@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-yank - Remove a pushed crate from the index
+cargo-yank --- Remove a pushed crate from the index
 
 ## SYNOPSIS
 
