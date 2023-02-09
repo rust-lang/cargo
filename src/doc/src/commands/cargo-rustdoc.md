@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-rustdoc - Build a package's documentation, using specified custom flags
+cargo-rustdoc --- Build a package's documentation, using specified custom flags
 
 ## SYNOPSIS
 
@@ -80,10 +80,10 @@ use single quotes or double quotes around each glob pattern.
 <dl>
 
 <dt class="option-term" id="option-cargo-rustdoc---lib"><a class="option-anchor" href="#option-cargo-rustdoc---lib"></a><code>--lib</code></dt>
-<dd class="option-desc">Document the package's library.</dd>
+<dd class="option-desc">Document the package’s library.</dd>
 
 
-<dt class="option-term" id="option-cargo-rustdoc---bin"><a class="option-anchor" href="#option-cargo-rustdoc---bin"></a><code>--bin</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-rustdoc---bin"><a class="option-anchor" href="#option-cargo-rustdoc---bin"></a><code>--bin</code> <em>name</em>…</dt>
 <dd class="option-desc">Document the specified binary. This flag may be specified multiple times
 and supports common Unix glob patterns.</dd>
 
@@ -93,7 +93,7 @@ and supports common Unix glob patterns.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-rustdoc---example"><a class="option-anchor" href="#option-cargo-rustdoc---example"></a><code>--example</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-rustdoc---example"><a class="option-anchor" href="#option-cargo-rustdoc---example"></a><code>--example</code> <em>name</em>…</dt>
 <dd class="option-desc">Document the specified example. This flag may be specified multiple times
 and supports common Unix glob patterns.</dd>
 
@@ -102,7 +102,7 @@ and supports common Unix glob patterns.</dd>
 <dd class="option-desc">Document all example targets.</dd>
 
 
-<dt class="option-term" id="option-cargo-rustdoc---test"><a class="option-anchor" href="#option-cargo-rustdoc---test"></a><code>--test</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-rustdoc---test"><a class="option-anchor" href="#option-cargo-rustdoc---test"></a><code>--test</code> <em>name</em>…</dt>
 <dd class="option-desc">Document the specified integration test. This flag may be specified
 multiple times and supports common Unix glob patterns.</dd>
 
@@ -117,7 +117,7 @@ Targets may be enabled or disabled by setting the <code>test</code> flag in the
 manifest settings for the target.</dd>
 
 
-<dt class="option-term" id="option-cargo-rustdoc---bench"><a class="option-anchor" href="#option-cargo-rustdoc---bench"></a><code>--bench</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-rustdoc---bench"><a class="option-anchor" href="#option-cargo-rustdoc---bench"></a><code>--bench</code> <em>name</em>…</dt>
 <dd class="option-desc">Document the specified benchmark. This flag may be specified multiple
 times and supports common Unix glob patterns.</dd>
 
@@ -199,7 +199,7 @@ See the <a href="../reference/profiles.html">the reference</a> for more details 
 
 <dt class="option-term" id="option-cargo-rustdoc---ignore-rust-version"><a class="option-anchor" href="#option-cargo-rustdoc---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
 <dd class="option-desc">Document the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project's <code>rust-version</code> field.</dd>
+required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
 
 
 
@@ -241,7 +241,7 @@ Defaults to <code>target</code> in the root of the workspace.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-rustdoc--v"><a class="option-anchor" href="#option-cargo-rustdoc--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-rustdoc---verbose"><a class="option-anchor" href="#option-cargo-rustdoc---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -279,13 +279,13 @@ and <code>json</code>.</li>
 <a href="../reference/external-tools.html#json-messages">the reference</a>
 for more details. Conflicts with <code>human</code> and <code>short</code>.</li>
 <li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
-the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
+the “short” rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
+contains embedded ANSI color codes for respecting rustc’s default color
 scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo’s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
 </ul></dd>
 

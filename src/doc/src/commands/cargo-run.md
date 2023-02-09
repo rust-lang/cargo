@@ -3,7 +3,7 @@
 
 ## NAME
 
-cargo-run - Run the current package
+cargo-run --- Run the current package
 
 ## SYNOPSIS
 
@@ -114,7 +114,7 @@ See the <a href="../reference/profiles.html">the reference</a> for more details 
 
 <dt class="option-term" id="option-cargo-run---ignore-rust-version"><a class="option-anchor" href="#option-cargo-run---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
 <dd class="option-desc">Run the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project's <code>rust-version</code> field.</dd>
+required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
 
 
 
@@ -157,7 +157,7 @@ Defaults to <code>target</code> in the root of the workspace.</dd>
 
 <dt class="option-term" id="option-cargo-run--v"><a class="option-anchor" href="#option-cargo-run--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-run---verbose"><a class="option-anchor" href="#option-cargo-run---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -195,13 +195,13 @@ and <code>json</code>.</li>
 <a href="../reference/external-tools.html#json-messages">the reference</a>
 for more details. Conflicts with <code>human</code> and <code>short</code>.</li>
 <li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
-the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
+the “short” rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
+contains embedded ANSI color codes for respecting rustc’s default color
 scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo’s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
 </ul></dd>
 

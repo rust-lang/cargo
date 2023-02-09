@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-init - Create a new Cargo package in an existing directory
+cargo-init --- Create a new Cargo package in an existing directory
 
 ## SYNOPSIS
 
@@ -72,7 +72,7 @@ be restricted.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-init--v"><a class="option-anchor" href="#option-cargo-init--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-init---verbose"><a class="option-anchor" href="#option-cargo-init---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>

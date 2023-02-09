@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-yank - Remove a pushed crate from the index
+cargo-yank --- Remove a pushed crate from the index
 
 ## SYNOPSIS
 
@@ -73,7 +73,7 @@ which is defined by the <code>registry.default</code> config key which defaults 
 
 <dt class="option-term" id="option-cargo-yank--v"><a class="option-anchor" href="#option-cargo-yank--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-yank---verbose"><a class="option-anchor" href="#option-cargo-yank---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>

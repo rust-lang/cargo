@@ -4,15 +4,15 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-yank \- Remove a pushed crate from the index
+cargo\-yank \[em] Remove a pushed crate from the index
 .SH "SYNOPSIS"
 \fBcargo yank\fR [\fIoptions\fR] \fIcrate\fR@\fIversion\fR
 .br
 \fBcargo yank\fR [\fIoptions\fR] \fB\-\-version\fR \fIversion\fR [\fIcrate\fR]
 .SH "DESCRIPTION"
-The yank command removes a previously published crate's version from the
-server's index. This command does not delete any data, and the crate will
-still be available for download via the registry's download link.
+The yank command removes a previously published crate\[cq]s version from the
+server\[cq]s index. This command does not delete any data, and the crate will
+still be available for download via the registry\[cq]s download link.
 .sp
 Note that existing crates locked to a yanked version will still be able to
 download the yanked version to use it. Cargo will, however, not allow any new
@@ -67,7 +67,7 @@ which is defined by the \fBregistry.default\fR config key which defaults to
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.

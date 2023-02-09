@@ -1,7 +1,7 @@
 CARGO-CHECK(1)
 
 NAME
-       cargo-check - Check the current package
+       cargo-check — Check the current package
 
 SYNOPSIS
        cargo check [options]
@@ -12,7 +12,7 @@ DESCRIPTION
        code generation, which is faster than running cargo build. The compiler
        will save metadata files to disk so that future runs will reuse them if
        the source has not been modified. Some diagnostics and errors are only
-       emitted during code generation, so they inherently won't be reported
+       emitted during code generation, so they inherently won’t be reported
        with cargo check.
 
 OPTIONS
@@ -30,7 +30,7 @@ OPTIONS
        passing --workspace), and a non-virtual workspace will include only the
        root crate itself.
 
-       -p spec..., --package spec...
+       -p spec…, --package spec…
            Check only the specified packages. See cargo-pkgid(1) for the SPEC
            format. This flag may be specified multiple times and supports
            common Unix glob patterns like *, ? and []. However, to avoid your
@@ -44,7 +44,7 @@ OPTIONS
        --all
            Deprecated alias for --workspace.
 
-       --exclude SPEC...
+       --exclude SPEC…
            Exclude the specified packages. Must be used in conjunction with the
            --workspace flag. This flag may be specified multiple times and
            supports common Unix glob patterns like *, ? and []. However, to
@@ -65,23 +65,23 @@ OPTIONS
        use single quotes or double quotes around each glob pattern.
 
        --lib
-           Check the package's library.
+           Check the package’s library.
 
-       --bin name...
+       --bin name…
            Check the specified binary. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
        --bins
            Check all binary targets.
 
-       --example name...
+       --example name…
            Check the specified example. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
        --examples
            Check all example targets.
 
-       --test name...
+       --test name…
            Check the specified integration test. This flag may be specified
            multiple times and supports common Unix glob patterns.
 
@@ -94,7 +94,7 @@ OPTIONS
            integration tests, etc.). Targets may be enabled or disabled by
            setting the test flag in the manifest settings for the target.
 
-       --bench name...
+       --bench name…
            Check the specified benchmark. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
@@ -167,7 +167,7 @@ OPTIONS
 
        --ignore-rust-version
            Check the target even if the selected Rust compiler is older than
-           the required Rust version as configured in the project's
+           the required Rust version as configured in the project’s
            rust-version field.
 
        --timings=fmts
@@ -199,10 +199,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -237,18 +238,19 @@ OPTIONS
               for more details. Conflicts with human and short.
 
            o  json-diagnostic-short: Ensure the rendered field of JSON messages
-              contains the "short" rendering from rustc. Cannot be used with
-              human or short.
+              contains the “short” rendering from rustc. Cannot be used
+              with human or short.
 
            o  json-diagnostic-rendered-ansi: Ensure the rendered field of JSON
               messages contains embedded ANSI color codes for respecting
-              rustc's default color scheme. Cannot be used with human or short.
+              rustc’s default color scheme. Cannot be used with human or
+              short.
 
            o  json-render-diagnostics: Instruct Cargo to not include rustc
               diagnostics in JSON messages printed, but instead Cargo itself
-              should render the JSON diagnostics coming from rustc. Cargo's own
-              JSON diagnostics and others coming from rustc are still emitted.
-              Cannot be used with human or short.
+              should render the JSON diagnostics coming from rustc. Cargo’s
+              own JSON diagnostics and others coming from rustc are still
+              emitted. Cannot be used with human or short.
 
    Manifest Options
        --manifest-path path

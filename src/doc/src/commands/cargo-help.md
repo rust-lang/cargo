@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-help - Get help for a Cargo command
+cargo-help --- Get help for a Cargo command
 
 ## SYNOPSIS
 

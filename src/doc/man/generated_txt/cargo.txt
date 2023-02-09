@@ -1,7 +1,7 @@
 CARGO(1)
 
 NAME
-       cargo - The Rust package manager
+       cargo — The Rust package manager
 
 SYNOPSIS
        cargo [options] command [args]
@@ -29,7 +29,7 @@ COMMANDS
            Remove artifacts that Cargo has generated in the past.
 
        cargo-doc(1)
-           Build a package's documentation.
+           Build a package’s documentation.
 
        cargo-fetch(1)
            Fetch dependencies of a package from the network.
@@ -44,7 +44,7 @@ COMMANDS
            Compile a package, and pass extra options to the compiler.
 
        cargo-rustdoc(1)
-           Build a package's documentation, using specified custom flags.
+           Build a package’s documentation, using specified custom flags.
 
        cargo-test(1)
            Execute unit and integration tests of a package.
@@ -54,7 +54,7 @@ COMMANDS
            Generate Cargo.lock for a project.
 
        cargo-locate-project(1)
-           Print a JSON representation of a Cargo.toml file's location.
+           Print a JSON representation of a Cargo.toml file’s location.
 
        cargo-metadata(1)
            Output the resolved dependencies of a package in
@@ -130,10 +130,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -221,8 +222,8 @@ EXIT STATUS
 
 FILES
        ~/.cargo/
-           Default location for Cargo's "home" directory where it stores
-       various files. The location can be changed with the CARGO_HOME
+           Default location for Cargo’s “home” directory where it
+       stores various files. The location can be changed with the CARGO_HOME
        environment variable.
 
        $CARGO_HOME/bin/
@@ -275,7 +276,7 @@ EXAMPLES
               mkdir foo && cd foo
               cargo init .
 
-       6. Learn about a command's options and usage:
+       6. Learn about a command’s options and usage:
 
               cargo help clean
 

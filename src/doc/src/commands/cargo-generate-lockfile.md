@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-generate-lockfile - Generate the lockfile for a package
+cargo-generate-lockfile --- Generate the lockfile for a package
 
 ## SYNOPSIS
 
@@ -24,7 +24,7 @@ lockfile and has more options for controlling update behavior.
 <dl>
 <dt class="option-term" id="option-cargo-generate-lockfile--v"><a class="option-anchor" href="#option-cargo-generate-lockfile--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-generate-lockfile---verbose"><a class="option-anchor" href="#option-cargo-generate-lockfile---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>

@@ -1,7 +1,8 @@
 CARGO-PACKAGE(1)
 
 NAME
-       cargo-package - Assemble the local package into a distributable tarball
+       cargo-package — Assemble the local package into a distributable
+       tarball
 
 SYNOPSIS
        cargo package [options]
@@ -64,7 +65,7 @@ OPTIONS
            Print files included in a package without making one.
 
        --no-verify
-           Don't verify the contents by building them.
+           Don’t verify the contents by building them.
 
        --no-metadata
            Ignore warnings about a lack of human-usable metadata (such as the
@@ -88,7 +89,7 @@ OPTIONS
        passing --workspace), and a non-virtual workspace will include only the
        root crate itself.
 
-       -p spec..., --package spec...
+       -p spec…, --package spec…
            Package only the specified packages. See cargo-pkgid(1) for the SPEC
            format. This flag may be specified multiple times and supports
            common Unix glob patterns like *, ? and []. However, to avoid your
@@ -99,7 +100,7 @@ OPTIONS
        --workspace
            Package all members in the workspace.
 
-       --exclude SPEC...
+       --exclude SPEC…
            Exclude the specified packages. Must be used in conjunction with the
            --workspace flag. This flag may be specified multiple times and
            supports common Unix glob patterns like *, ? and []. However, to
@@ -199,10 +200,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the

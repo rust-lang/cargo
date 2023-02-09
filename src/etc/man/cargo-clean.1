@@ -4,7 +4,7 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-clean \- Remove generated artifacts
+cargo\-clean \[em] Remove generated artifacts
 .SH "SYNOPSIS"
 \fBcargo clean\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
@@ -17,8 +17,8 @@ With no options, \fBcargo clean\fR will delete the entire target directory.
 When no packages are selected, all packages and all dependencies in the
 workspace are cleaned.
 .sp
-\fB\-p\fR \fIspec\fR\&..., 
-\fB\-\-package\fR \fIspec\fR\&...
+\fB\-p\fR \fIspec\fR\[u2026], 
+\fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
 Clean only the specified packages. This flag may be specified
 multiple times. See \fBcargo\-pkgid\fR(1) for the SPEC format.
@@ -67,7 +67,7 @@ target artifacts are placed in a separate directory. See the
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.

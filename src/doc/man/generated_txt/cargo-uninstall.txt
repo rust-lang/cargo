@@ -1,10 +1,10 @@
 CARGO-UNINSTALL(1)
 
 NAME
-       cargo-uninstall - Remove a Rust binary
+       cargo-uninstall — Remove a Rust binary
 
 SYNOPSIS
-       cargo uninstall [options] [spec...]
+       cargo uninstall [options] [spec…]
 
 DESCRIPTION
        This command removes a package installed with cargo-install(1). The spec
@@ -29,10 +29,10 @@ DESCRIPTION
 
 OPTIONS
    Install Options
-       -p, --package spec...
+       -p, --package spec…
            Package to uninstall.
 
-       --bin name...
+       --bin name…
            Only uninstall the binary name.
 
        --root dir
@@ -40,10 +40,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the

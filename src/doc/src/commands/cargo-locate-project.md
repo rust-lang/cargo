@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-locate-project - Print a JSON representation of a Cargo.toml file's location
+cargo-locate-project --- Print a JSON representation of a Cargo.toml file's location
 
 ## SYNOPSIS
 
@@ -37,14 +37,14 @@ workspace member.</dd>
 <dt class="option-term" id="option-cargo-locate-project---message-format"><a class="option-anchor" href="#option-cargo-locate-project---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
 <dd class="option-desc">The representation in which to print the project location. Valid values:</p>
 <ul>
-<li><code>json</code> (default): JSON object with the path under the key &quot;root&quot;.</li>
+<li><code>json</code> (default): JSON object with the path under the key “root”.</li>
 <li><code>plain</code>: Just the path.</li>
 </ul></dd>
 
 
 <dt class="option-term" id="option-cargo-locate-project--v"><a class="option-anchor" href="#option-cargo-locate-project--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-locate-project---verbose"><a class="option-anchor" href="#option-cargo-locate-project---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>

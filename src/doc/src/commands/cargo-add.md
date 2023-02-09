@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-add - Add dependencies to a Cargo.toml manifest file
+cargo-add --- Add dependencies to a Cargo.toml manifest file
 
 ## SYNOPSIS
 
@@ -98,7 +98,7 @@ which is defined by the <code>registry.default</code> config key which defaults 
 <dl>
 
 <dt class="option-term" id="option-cargo-add---dry-run"><a class="option-anchor" href="#option-cargo-add---dry-run"></a><code>--dry-run</code></dt>
-<dd class="option-desc">Don't actually write the manifest</dd>
+<dd class="option-desc">Don’t actually write the manifest</dd>
 
 
 <dt class="option-term" id="option-cargo-add---rename"><a class="option-anchor" href="#option-cargo-add---rename"></a><code>--rename</code> <em>name</em></dt>
@@ -137,7 +137,7 @@ which enables all specified features.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-add--v"><a class="option-anchor" href="#option-cargo-add--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-add---verbose"><a class="option-anchor" href="#option-cargo-add---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>

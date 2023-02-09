@@ -4,20 +4,20 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-add \- Add dependencies to a Cargo.toml manifest file
+cargo\-add \[em] Add dependencies to a Cargo.toml manifest file
 .SH "SYNOPSIS"
-\fBcargo add\fR [\fIoptions\fR] \fIcrate\fR\&...
+\fBcargo add\fR [\fIoptions\fR] \fIcrate\fR\[u2026]
 .br
 \fBcargo add\fR [\fIoptions\fR] \fB\-\-path\fR \fIpath\fR
 .br
-\fBcargo add\fR [\fIoptions\fR] \fB\-\-git\fR \fIurl\fR [\fIcrate\fR\&...]
+\fBcargo add\fR [\fIoptions\fR] \fB\-\-git\fR \fIurl\fR [\fIcrate\fR\[u2026]]
 .SH "DESCRIPTION"
 This command can add or modify dependencies.
 .sp
 The source for the dependency can be specified with:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fIcrate\fR\fB@\fR\fIversion\fR: Fetch from a registry with a version constraint of "\fIversion\fR"
+\h'-04'\(bu\h'+02'\fIcrate\fR\fB@\fR\fIversion\fR: Fetch from a registry with a version constraint of \[lq]\fIversion\fR\[rq]
 .RE
 .sp
 .RS 4
@@ -45,7 +45,7 @@ If no source is specified, then a best effort will be made to select one, includ
 When you add a package that is already present, the existing entry will be updated with the flags specified.
 .sp
 Upon successful invocation, the enabled (\fB+\fR) and disabled (\fB\-\fR) \fIfeatures\fR <https://doc.rust\-lang.org/cargo/reference/features.md> of the specified
-dependency will be listed in the command's output.
+dependency will be listed in the command\[cq]s output.
 .SH "OPTIONS"
 .SS "Source options"
 .sp
@@ -102,7 +102,7 @@ Add as a dependency to the \fIgiven target platform\fR <https://doc.rust\-lang.o
 .sp
 \fB\-\-dry\-run\fR
 .RS 4
-Don't actually write the manifest
+Don\[cq]t actually write the manifest
 .RE
 .sp
 \fB\-\-rename\fR \fIname\fR
@@ -143,7 +143,7 @@ which enables all specified features.
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
