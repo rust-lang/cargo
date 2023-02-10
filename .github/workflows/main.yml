@@ -35,6 +35,8 @@ jobs:
       CARGO_PROFILE_TEST_DEBUG: 1
       CARGO_INCREMENTAL: 0
       CARGO_PUBLIC_NETWORK_TESTS: 1
+      # Deny warnings on CI to avoid warnings getting into the codebase.
+      RUSTFLAGS: -D warnings
     strategy:
       matrix:
         include:
@@ -85,8 +87,7 @@ jobs:
       run: echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV
       if: "!contains(matrix.rust, 'stable')"
 
-    # Deny warnings on CI to avoid warnings getting into the codebase.
-    - run: cargo test --features 'deny-warnings'
+    - run: cargo test
     # The testsuite generates a huge amount of data, and fetch-smoke-test was
     # running out of disk space.
     - name: Clear test output
@@ -100,8 +101,8 @@ jobs:
       run: |
         # This only tests `cargo fix` because fix-proxy-mode is one of the most
         # complicated subprocess management in Cargo.
-        cargo test --test testsuite --features 'deny-warnings' -- fix::
-    - run: cargo test --features 'deny-warnings' --manifest-path crates/cargo-test-support/Cargo.toml
+        cargo test --test testsuite -- fix::
+    - run: cargo test --manifest-path crates/cargo-test-support/Cargo.toml
       env:
         CARGO_TARGET_DIR: target
     - run: cargo test -p cargo-platform
