@@ -160,6 +160,44 @@ fn cargo_compile_manifest_path() {
 }
 
 #[cargo_test]
+fn cargo_compile_directory_not_cwd() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file(".cargo/config.toml", &"")
+        .build();
+
+    p.cargo("-C foo build")
+        .cwd(p.root().parent().unwrap())
+        .run();
+    assert!(p.bin("foo").is_file());
+}
+
+#[cargo_test]
+fn cargo_compile_directory_not_cwd_with_invalid_config() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file(".cargo/config.toml", &"!")
+        .build();
+
+    p.cargo("-C foo build")
+        .cwd(p.root().parent().unwrap())
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+Caused by:
+  TOML parse error at line 1, column 1
+    |
+  1 | !
+    | ^
+  Unexpected `!`
+  Expected key or end of input",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_with_invalid_manifest() {
     let p = project().file("Cargo.toml", "").build();
 

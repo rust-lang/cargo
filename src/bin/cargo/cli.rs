@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Context as _};
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CliResult, Config};
@@ -26,6 +26,11 @@ lazy_static::lazy_static! {
 
 pub fn main(config: &mut LazyConfig) -> CliResult {
     let args = cli().try_get_matches()?;
+
+    // Update the process-level notion of cwd
+    if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
+        std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
+    }
 
     // CAUTION: Be careful with using `config` until it is configured below.
     // In general, try to avoid loading config values unless necessary (like
@@ -466,6 +471,14 @@ See 'cargo help <command>' for more information on a specific command.\n",
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")
                 .global(true),
+        )
+        .arg(
+            Arg::new("directory")
+                .help("Change to DIRECTORY before doing anything")
+                .short('C')
+                .value_name("DIRECTORY")
+                .value_hint(clap::ValueHint::DirPath)
+                .value_parser(clap::builder::ValueParser::path_buf()),
         )
         .arg(flag("frozen", "Require Cargo.lock and cache are up to date").global(true))
         .arg(flag("locked", "Require Cargo.lock is up to date").global(true))
