@@ -13,6 +13,12 @@ use log::debug;
 
 /// Bacially just normalizes a given path and converts it to a string.
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
+    fn wrap_path(path: &Path) -> CargoResult<String> {
+        path.to_str()
+            .ok_or_else(|| internal(format!("path `{:?}` not utf-8", path)))
+            .map(|f| f.replace(" ", "\\ "))
+    }
+
     let path = path.as_ref();
     if let Some(basedir) = basedir {
         let norm_path = normalize_path(path);
@@ -24,12 +30,6 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
     } else {
         wrap_path(path)
     }
-}
-
-fn wrap_path(path: &Path) -> CargoResult<String> {
-    path.to_str()
-        .ok_or_else(|| internal(format!("path `{:?}` not utf-8", path)))
-        .map(|f| f.replace(" ", "\\ "))
 }
 
 /// Collects all dependencies of the `unit` for the output dep info file.
