@@ -13,7 +13,9 @@ use url::Url;
 
 const DOCS_RS_URL: &'static str = "https://docs.rs/";
 
-/// Mode used for `std`.
+/// Mode used for `std`. This is for unstable feature [`-Zrustdoc-map`][1].
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
 #[derive(Debug, Hash)]
 pub enum RustdocExternMode {
     /// Use a local `file://` URL.
@@ -54,11 +56,17 @@ impl<'de> serde::de::Deserialize<'de> for RustdocExternMode {
     }
 }
 
+/// A map of registry names to URLs where documentations are hosted.
+/// This is for unstable feature [`-Zrustdoc-map`][1].
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
 #[derive(serde::Deserialize, Debug)]
 #[serde(default)]
 pub struct RustdocExternMap {
     #[serde(deserialize_with = "default_crates_io_to_docs_rs")]
-    pub(crate) registries: HashMap<String, String>,
+    /// * Key is the registry name in the configuration `[registries.<name>]`.
+    /// * Value is the URL where the documentation is hosted.
+    registries: HashMap<String, String>,
     std: Option<RustdocExternMode>,
 }
 
@@ -92,6 +100,11 @@ impl hash::Hash for RustdocExternMap {
     }
 }
 
+/// Adds unstable flag [`--extern-html-root-url`][1] to the given `rustdoc`
+/// invocation. This is for unstable feature [`-Zrustdoc-map`][2].
+///
+/// [1]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html#--extern-html-root-url-control-how-rustdoc-links-to-non-local-crates
+/// [2]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
 pub fn add_root_urls(
     cx: &Context<'_, '_>,
     unit: &Unit,
@@ -191,8 +204,11 @@ pub fn add_root_urls(
     Ok(())
 }
 
-/// Indicates whether a target should have examples scraped from it
-/// by rustdoc. Configured within Cargo.toml.
+/// Indicates whether a target should have examples scraped from it by rustdoc.
+/// Configured within Cargo.toml and only for unstable feature
+/// [`-Zrustdoc-scrape-examples`][1].
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#scrape-examples
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug, Copy)]
 pub enum RustdocScrapeExamples {
     Enabled,
