@@ -3,7 +3,6 @@
 //! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 
 #![allow(clippy::all)]
-#![cfg_attr(feature = "deny-warnings", deny(warnings))]
 
 use std::env;
 use std::ffi::OsStr;
