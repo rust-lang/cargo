@@ -7,7 +7,7 @@ SYNOPSIS
        my-command [--abc | --xyz] name
        my-command [-f file]
        my-command (-m | -M) [oldbranch] newbranch
-       my-command (-d | -D) [-r] branchname...
+       my-command (-d | -D) [-r] branchname…
 
 DESCRIPTION
        A description of the command.
@@ -29,7 +29,7 @@ OPTIONS
        -p spec, --package spec
            This has multiple flags.
 
-       named-arg...
+       named-arg…
            A named argument.
 
    Common Options

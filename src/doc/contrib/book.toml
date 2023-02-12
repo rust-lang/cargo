@@ -3,6 +3,7 @@ title = "Cargo Contributor Guide"
 authors = ["Eric Huss"]
 
 [output.html]
+curly-quotes = true # Enable smart-punctuation feature for more than quotes.
 git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src"
 
 [output.html.redirect]

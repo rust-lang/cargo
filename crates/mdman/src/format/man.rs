@@ -400,12 +400,20 @@ impl<'e> ManRenderer<'e> {
 }
 
 fn escape(s: &str) -> Result<String, Error> {
+    // Note: Possible source on output escape sequences: https://man7.org/linux/man-pages/man7/groff_char.7.html.
+    //       Otherwise, use generic escaping in the form `\[u1EE7]` or `\[u1F994]`.
+
     let mut replaced = s
         .replace('\\', "\\(rs")
         .replace('-', "\\-")
         .replace('\u{00A0}', "\\ ") // non-breaking space (non-stretchable)
         .replace('–', "\\[en]") // \u{2013} en-dash
         .replace('—', "\\[em]") // \u{2014} em-dash
+        .replace('‘', "\\[oq]") // \u{2018} left single quote
+        .replace('’', "\\[cq]") // \u{2019} right single quote or apostrophe
+        .replace('“', "\\[lq]") // \u{201C} left double quote
+        .replace('”', "\\[rq]") // \u{201D} right double quote
+        .replace('…', "\\[u2026]") // \u{2026} ellipsis
         .replace('│', "|") // \u{2502} box drawing light vertical (could use \[br])
         .replace('├', "|") // \u{251C} box drawings light vertical and right
         .replace('└', "`") // \u{2514} box drawings light up and right
@@ -413,8 +421,6 @@ fn escape(s: &str) -> Result<String, Error> {
     ;
     if replaced.starts_with('.') {
         replaced = format!("\\&.{}", &replaced[1..]);
-    } else if replaced.starts_with('\'') {
-        replaced = format!("\\(aq{}", &replaced[1..]);
     }
 
     if let Some(ch) = replaced.chars().find(|ch| {
