@@ -3,7 +3,7 @@
 use crate::util::{header_text, parse_name_and_section};
 use crate::EventIter;
 use anyhow::{bail, Error};
-use pulldown_cmark::{Alignment, Event, LinkType, Tag};
+use pulldown_cmark::{Alignment, Event, HeadingLevel, LinkType, Tag};
 use std::fmt::Write;
 use url::Url;
 
@@ -122,10 +122,10 @@ impl<'e> ManRenderer<'e> {
                                 self.output.push_str(".sp\n");
                             }
                         }
-                        Tag::Heading(n) => {
-                            if n == 1 {
+                        Tag::Heading(level, ..) => {
+                            if level == HeadingLevel::H1 {
                                 self.push_top_header()?;
-                            } else if n == 2 {
+                            } else if level == HeadingLevel::H2 {
                                 // Section header
                                 let text = header_text(&mut self.parser)?;
                                 self.flush();
@@ -255,7 +255,7 @@ impl<'e> ManRenderer<'e> {
                 Event::End(tag) => {
                     match &tag {
                         Tag::Paragraph => self.flush(),
-                        Tag::Heading(_n) => {}
+                        Tag::Heading(..) => {}
                         Tag::BlockQuote => {
                             self.flush();
                             // restore left margin, restore line length
