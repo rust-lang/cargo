@@ -348,7 +348,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn prepare(&mut self) -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
-        self.files_mut()
+        self.files
+            .as_mut()
+            .unwrap()
             .host
             .prepare()
             .with_context(|| "couldn't prepare build directories")?;
@@ -373,10 +375,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     pub fn files(&self) -> &CompilationFiles<'a, 'cfg> {
         self.files.as_ref().unwrap()
-    }
-
-    fn files_mut(&mut self) -> &mut CompilationFiles<'a, 'cfg> {
-        self.files.as_mut().unwrap()
     }
 
     /// Returns the filenames that the given unit will generate.

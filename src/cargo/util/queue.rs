@@ -7,9 +7,12 @@ use std::time::Duration;
 /// This is a sort of channel where any thread can push to a queue and any
 /// thread can pop from a queue.
 ///
-/// This supports both bounded and unbounded operations. `push` will never block,
-/// and allows the queue to grow without bounds. `push_bounded` will block if the
-/// queue is over capacity, and will resume once there is enough capacity.
+/// This supports both bounded and unbounded operations. [`push`] will never block,
+/// and allows the queue to grow without bounds. [`push_bounded`] will block if
+/// the queue is over capacity, and will resume once there is enough capacity.
+///
+/// [`push`]: Self::push
+/// [`push_bounded`]: Self::push_bounded
 pub struct Queue<T> {
     state: Mutex<State<T>>,
     popper_cv: Condvar,
@@ -22,6 +25,7 @@ struct State<T> {
 }
 
 impl<T> Queue<T> {
+    /// Creates a queue with a given bound.
     pub fn new(bound: usize) -> Queue<T> {
         Queue {
             state: Mutex::new(State {
@@ -33,6 +37,7 @@ impl<T> Queue<T> {
         }
     }
 
+    /// Pushes an item onto the queue, regardless of the capacity of the queue.
     pub fn push(&self, item: T) {
         self.state.lock().unwrap().items.push_back(item);
         self.popper_cv.notify_one();
@@ -49,6 +54,7 @@ impl<T> Queue<T> {
         self.popper_cv.notify_one();
     }
 
+    /// Pops an item from the queue, blocking if the queue is empty.
     pub fn pop(&self, timeout: Duration) -> Option<T> {
         let (mut state, result) = self
             .popper_cv
@@ -66,6 +72,7 @@ impl<T> Queue<T> {
         }
     }
 
+    /// Pops all items from the queue without blocking.
     pub fn try_pop_all(&self) -> Vec<T> {
         let mut state = self.state.lock().unwrap();
         let result = state.items.drain(..).collect();
