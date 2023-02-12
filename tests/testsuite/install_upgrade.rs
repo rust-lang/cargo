@@ -6,7 +6,6 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use toml_edit::easy as toml;
 
 use cargo_test_support::install::{cargo_home, exe};
 use cargo_test_support::paths::CargoPathExt;

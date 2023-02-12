@@ -8,4 +8,5 @@ Caused by:
     |
   8 | key = invalid-value
     |       ^
-  Unexpected `v`
+  invalid string
+  expected `"`, `'`

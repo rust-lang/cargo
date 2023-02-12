@@ -8,7 +8,6 @@ use anyhow::{anyhow, bail, Context as _};
 use glob::glob;
 use itertools::Itertools;
 use log::debug;
-use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::compiler::Unit;

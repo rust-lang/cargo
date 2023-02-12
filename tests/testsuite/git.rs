@@ -2623,8 +2623,7 @@ Caused by:
     |
   8 |                     categories = [\"algorithms\"]
     |                     ^
-  Duplicate key `categories` in table `package`
-
+  duplicate key `categories` in table `package`
 ",
             path2url(&git_root),
             path2url(&git_root),

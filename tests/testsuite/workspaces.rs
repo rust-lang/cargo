@@ -1098,8 +1098,7 @@ Caused by:
     |
   1 | asdf
     |     ^
-  Unexpected end of input
-  Expected `.` or `=`
+  expected `.`, `=`
      Created binary (application) `bar` package
 ",
         )

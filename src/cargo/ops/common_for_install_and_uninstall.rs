@@ -9,7 +9,6 @@ use std::task::Poll;
 use anyhow::{bail, format_err, Context as _};
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
-use toml_edit::easy as toml;
 
 use crate::core::compiler::{DirtyReason, Freshness};
 use crate::core::Target;

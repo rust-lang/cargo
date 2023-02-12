@@ -80,8 +80,9 @@ use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
 use curl::easy::Easy;
 use lazycell::LazyCell;
+use serde::de::IntoDeserializer as _;
 use serde::Deserialize;
-use toml_edit::{easy as toml, Item};
+use toml_edit::Item;
 use url::Url;
 
 mod de;
@@ -895,17 +896,11 @@ impl Config {
         let def = Definition::Environment(key.as_env_key().to_string());
         if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
-            let toml_s = format!("value={}", env_val);
-            let toml_v: toml::Value = toml::de::from_str(&toml_s).map_err(|e| {
-                ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
-            })?;
-            let values = toml_v
-                .as_table()
-                .unwrap()
-                .get("value")
-                .unwrap()
-                .as_array()
-                .expect("env var was not array");
+            let toml_v = toml::Value::deserialize(toml::de::ValueDeserializer::new(&env_val))
+                .map_err(|e| {
+                    ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
+                })?;
+            let values = toml_v.as_array().expect("env var was not array");
             for value in values {
                 // TODO: support other types.
                 let s = value.as_str().ok_or_else(|| {
@@ -1180,14 +1175,14 @@ impl Config {
         }
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
-        let toml = cargo_toml::parse(&contents, path, self).with_context(|| {
+        let toml = cargo_toml::parse_document(&contents, path, self).with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
         let def = match why_load {
             WhyLoad::Cli => Definition::Cli(Some(path.into())),
             WhyLoad::FileDiscovery => Definition::Path(path.into()),
         };
-        let value = CV::from_toml(def, toml).with_context(|| {
+        let value = CV::from_toml(def, toml::Value::Table(toml)).with_context(|| {
             format!(
                 "failed to load TOML configuration from `{}`",
                 path.display()
@@ -1302,8 +1297,10 @@ impl Config {
                     format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
                 })?;
                 fn non_empty_decor(d: &toml_edit::Decor) -> bool {
-                    d.prefix().map_or(false, |p| !p.trim().is_empty())
-                        || d.suffix().map_or(false, |s| !s.trim().is_empty())
+                    d.prefix()
+                        .map_or(false, |p| !p.as_str().unwrap_or_default().trim().is_empty())
+                        || d.suffix()
+                            .map_or(false, |s| !s.as_str().unwrap_or_default().trim().is_empty())
                 }
                 let ok = {
                     let mut got_to_value = false;
@@ -1363,9 +1360,10 @@ impl Config {
                     );
                 }
 
-                let toml_v: toml::Value = toml::from_document(doc).with_context(|| {
-                    format!("failed to parse value from --config argument `{arg}`")
-                })?;
+                let toml_v: toml::Value = toml::Value::deserialize(doc.into_deserializer())
+                    .with_context(|| {
+                        format!("failed to parse value from --config argument `{arg}`")
+                    })?;
 
                 if toml_v
                     .get("registry")
@@ -2171,14 +2169,12 @@ pub fn save_credentials(
         )
     })?;
 
-    let mut toml = cargo_toml::parse(&contents, file.path(), cfg)?;
+    let mut toml = cargo_toml::parse_document(&contents, file.path(), cfg)?;
 
     // Move the old token location to the new one.
-    if let Some(token) = toml.as_table_mut().unwrap().remove("token") {
+    if let Some(token) = toml.remove("token") {
         let map = HashMap::from([("token".to_string(), token)]);
-        toml.as_table_mut()
-            .unwrap()
-            .insert("registry".into(), map.into());
+        toml.insert("registry".into(), map.into());
     }
 
     if let Some(token) = token {
@@ -2225,17 +2221,16 @@ pub fn save_credentials(
         };
 
         if registry.is_some() {
-            if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
+            if let Some(table) = toml.remove("registries") {
                 let v = CV::from_toml(path_def, table)?;
                 value.merge(v, false)?;
             }
         }
-        toml.as_table_mut().unwrap().insert(key, value.into_toml());
+        toml.insert(key, value.into_toml());
     } else {
         // logout
-        let table = toml.as_table_mut().unwrap();
         if let Some(registry) = registry {
-            if let Some(registries) = table.get_mut("registries") {
+            if let Some(registries) = toml.get_mut("registries") {
                 if let Some(reg) = registries.get_mut(registry) {
                     let rtable = reg.as_table_mut().ok_or_else(|| {
                         format_err!("expected `[registries.{}]` to be a table", registry)
@@ -2245,7 +2240,7 @@ pub fn save_credentials(
                     rtable.remove("secret-key-subject");
                 }
             }
-        } else if let Some(registry) = table.get_mut("registry") {
+        } else if let Some(registry) = toml.get_mut("registry") {
             let reg_table = registry
                 .as_table_mut()
                 .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;

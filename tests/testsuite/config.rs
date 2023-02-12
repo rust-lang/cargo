@@ -3,7 +3,7 @@
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::config::{self, Config, Definition, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
-use cargo::util::toml::{self, VecStringOrBool as VSOB};
+use cargo::util::toml::{self as cargo_toml, VecStringOrBool as VSOB};
 use cargo::CargoResult;
 use cargo_test_support::compare;
 use cargo_test_support::{panic_error, paths, project, symlink_supported, t};
@@ -352,17 +352,19 @@ lto = false
         .build();
 
     // TODO: don't use actual `tomlprofile`.
-    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
     let mut packages = BTreeMap::new();
-    let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
-    let o_profile = toml::TomlProfile {
-        opt_level: Some(toml::TomlOptLevel("2".to_string())),
+    let key =
+        cargo_toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
+    let o_profile = cargo_toml::TomlProfile {
+        opt_level: Some(cargo_toml::TomlOptLevel("2".to_string())),
         codegen_units: Some(9),
         ..Default::default()
     };
     packages.insert(key, o_profile);
-    let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("env").unwrap());
-    let o_profile = toml::TomlProfile {
+    let key =
+        cargo_toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("env").unwrap());
+    let o_profile = cargo_toml::TomlProfile {
         codegen_units: Some(13),
         ..Default::default()
     };
@@ -370,19 +372,19 @@ lto = false
 
     assert_eq!(
         p,
-        toml::TomlProfile {
-            opt_level: Some(toml::TomlOptLevel("s".to_string())),
-            lto: Some(toml::StringOrBool::Bool(true)),
+        cargo_toml::TomlProfile {
+            opt_level: Some(cargo_toml::TomlOptLevel("s".to_string())),
+            lto: Some(cargo_toml::StringOrBool::Bool(true)),
             codegen_units: Some(5),
-            debug: Some(toml::U32OrBool::Bool(true)),
+            debug: Some(cargo_toml::U32OrBool::Bool(true)),
             debug_assertions: Some(true),
             rpath: Some(true),
             panic: Some("abort".to_string()),
             overflow_checks: Some(true),
             incremental: Some(true),
             package: Some(packages),
-            build_override: Some(Box::new(toml::TomlProfile {
-                opt_level: Some(toml::TomlOptLevel("1".to_string())),
+            build_override: Some(Box::new(cargo_toml::TomlProfile {
+                opt_level: Some(cargo_toml::TomlOptLevel("1".to_string())),
                 codegen_units: Some(11),
                 ..Default::default()
             })),
@@ -390,11 +392,11 @@ lto = false
         }
     );
 
-    let p: toml::TomlProfile = config.get("profile.no-lto").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.no-lto").unwrap();
     assert_eq!(
         p,
-        toml::TomlProfile {
-            lto: Some(toml::StringOrBool::Bool(false)),
+        cargo_toml::TomlProfile {
+            lto: Some(cargo_toml::StringOrBool::Bool(false)),
             dir_name: Some(InternedString::new("without-lto")),
             inherits: Some(InternedString::new("dev")),
             ..Default::default()
@@ -408,24 +410,24 @@ fn profile_env_var_prefix() {
     let config = ConfigBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG_ASSERTIONS", "false")
         .build();
-    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, Some(false));
     assert_eq!(p.debug, None);
 
     let config = ConfigBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG", "1")
         .build();
-    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, None);
-    assert_eq!(p.debug, Some(toml::U32OrBool::U32(1)));
+    assert_eq!(p.debug, Some(cargo_toml::U32OrBool::U32(1)));
 
     let config = ConfigBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG_ASSERTIONS", "false")
         .env("CARGO_PROFILE_DEV_DEBUG", "1")
         .build();
-    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, Some(false));
-    assert_eq!(p.debug, Some(toml::U32OrBool::U32(1)));
+    assert_eq!(p.debug, Some(cargo_toml::U32OrBool::U32(1)));
 }
 
 #[cargo_test]
@@ -542,7 +544,9 @@ opt-level = 'foo'
     let config = new_config();
 
     assert_error(
-        config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
+        config
+            .get::<cargo_toml::TomlProfile>("profile.dev")
+            .unwrap_err(),
         "\
 error in [..]/.cargo/config: could not load config key `profile.dev.opt-level`
 
@@ -555,7 +559,7 @@ Caused by:
         .build();
 
     assert_error(
-        config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
+        config.get::<cargo_toml::TomlProfile>("profile.dev").unwrap_err(),
         "\
 error in environment variable `CARGO_PROFILE_DEV_OPT_LEVEL`: could not load config key `profile.dev.opt-level`
 
@@ -700,8 +704,7 @@ Caused by:
   |
 1 | asdf
   |     ^
-Unexpected end of input
-Expected `.` or `=`",
+expected `.`, `=`",
     );
 }
 
@@ -771,12 +774,12 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     assert_error(
         config.get::<L>("bad-env").unwrap_err(),
         "\
-error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 8
+error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 2
   |
-1 | value=[zzz]
-  |        ^
-Unexpected `z`
-Expected newline or `#`
+1 | [zzz]
+  |  ^
+invalid array
+expected `]`
 ",
     );
 
@@ -1070,8 +1073,7 @@ Caused by:
   |
 3 | ssl-version.min = 'tlsv1.2'
   | ^
-Dotted key `ssl-version` attempted to extend non-table type (string)
-
+dotted key `ssl-version` attempted to extend non-table type (string)
 ",
     );
 }
@@ -1440,9 +1442,12 @@ strip = 'debuginfo'
 
     let config = new_config();
 
-    let p: toml::TomlProfile = config.get("profile.release").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.release").unwrap();
     let strip = p.strip.unwrap();
-    assert_eq!(strip, toml::StringOrBool::String("debuginfo".to_string()));
+    assert_eq!(
+        strip,
+        cargo_toml::StringOrBool::String("debuginfo".to_string())
+    );
 }
 
 #[cargo_test]
@@ -1476,12 +1481,12 @@ fn cargo_target_empty_env() {
 #[cargo_test]
 fn all_profile_options() {
     // Check that all profile options can be serialized/deserialized.
-    let base_settings = toml::TomlProfile {
-        opt_level: Some(toml::TomlOptLevel("0".to_string())),
-        lto: Some(toml::StringOrBool::String("thin".to_string())),
+    let base_settings = cargo_toml::TomlProfile {
+        opt_level: Some(cargo_toml::TomlOptLevel("0".to_string())),
+        lto: Some(cargo_toml::StringOrBool::String("thin".to_string())),
         codegen_backend: Some(InternedString::new("example")),
         codegen_units: Some(123),
-        debug: Some(toml::U32OrBool::U32(1)),
+        debug: Some(cargo_toml::U32OrBool::U32(1)),
         split_debuginfo: Some("packed".to_string()),
         debug_assertions: Some(true),
         rpath: Some(true),
@@ -1490,22 +1495,22 @@ fn all_profile_options() {
         incremental: Some(true),
         dir_name: Some(InternedString::new("dir_name")),
         inherits: Some(InternedString::new("debug")),
-        strip: Some(toml::StringOrBool::String("symbols".to_string())),
+        strip: Some(cargo_toml::StringOrBool::String("symbols".to_string())),
         package: None,
         build_override: None,
         rustflags: None,
     };
     let mut overrides = BTreeMap::new();
-    let key = toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
+    let key = cargo_toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
     overrides.insert(key, base_settings.clone());
-    let profile = toml::TomlProfile {
+    let profile = cargo_toml::TomlProfile {
         build_override: Some(Box::new(base_settings.clone())),
         package: Some(overrides),
         ..base_settings
     };
-    let profile_toml = toml_edit::easy::to_string(&profile).unwrap();
-    let roundtrip: toml::TomlProfile = toml_edit::easy::from_str(&profile_toml).unwrap();
-    let roundtrip_toml = toml_edit::easy::to_string(&roundtrip).unwrap();
+    let profile_toml = toml::to_string(&profile).unwrap();
+    let roundtrip: cargo_toml::TomlProfile = toml::from_str(&profile_toml).unwrap();
+    let roundtrip_toml = toml::to_string(&roundtrip).unwrap();
     compare::assert_match_exact(&profile_toml, &roundtrip_toml);
 }
 

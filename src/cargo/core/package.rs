@@ -16,7 +16,6 @@ use lazycell::LazyCell;
 use log::{debug, warn};
 use semver::Version;
 use serde::Serialize;
-use toml_edit::easy as toml;
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;

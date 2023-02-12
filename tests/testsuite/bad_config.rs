@@ -178,8 +178,7 @@ Caused by:
     |
   1 | 4
     |  ^
-  Unexpected end of input
-  Expected `.` or `=`
+  expected `.`, `=`
 ",
         )
         .run();
@@ -199,7 +198,8 @@ fn bad_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
-  missing field `name` for key `package`
+  missing field `name`
+  in `package`
 ",
         )
         .run();
@@ -302,7 +302,8 @@ fn bad_source_in_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
-  invalid source `You shall not parse` for key `package.source`
+  invalid source `You shall not parse`
+  in `package.source`
 ",
         )
         .run();
@@ -429,9 +430,8 @@ Caused by:
     |
   8 |                 native = {
     |                           ^
-  Unexpected `
-  `
-  Expected key
+  invalid inline table
+  expected `}`
 ",
         )
         .run();
@@ -785,9 +785,8 @@ Caused by:
     |
   1 | [bar] baz = 2
     |       ^
-  Unexpected `b`
-  Expected newline or end of input
-  While parsing a Table Header
+  invalid table header
+  expected newline, `#`
 ",
         )
         .run();
@@ -1264,6 +1263,7 @@ error: failed to parse manifest at `[..]`
 
 Caused by:
   invalid type: integer `3`, expected a version string like [..]
+  in `dependencies.bar`
 ",
         )
         .run();
@@ -1294,7 +1294,8 @@ fn bad_debuginfo() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  expected a boolean or an integer for [..]
+  expected a boolean or an integer
+  in `profile.dev.debug`
 ",
         )
         .run();
@@ -1323,7 +1324,8 @@ fn bad_opt_level() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  expected a boolean or a string for key [..]
+  expected a boolean or a string
+  in `package.build`
 ",
         )
         .run();

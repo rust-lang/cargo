@@ -6,7 +6,6 @@ use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 
 use anyhow::Context as _;
-use toml_edit::easy as toml;
 
 pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
     if !ws.root().join("Cargo.lock").exists() {
@@ -21,7 +20,7 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
         .with_context(|| format!("failed to read file: {}", f.path().display()))?;
 
     let resolve = (|| -> CargoResult<Option<Resolve>> {
-        let resolve: toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
+        let resolve: toml::Table = cargo_toml::parse_document(&s, f.path(), ws.config())?;
         let v: resolver::EncodableResolve = resolve.try_into()?;
         Ok(Some(v.into_resolve(&s, ws)?))
     })()
@@ -101,7 +100,7 @@ fn resolve_to_string_orig(
 }
 
 fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
-    let toml = toml_edit::ser::to_item(resolve).unwrap();
+    let toml = toml::Table::try_from(resolve).unwrap();
 
     let mut out = String::new();
 
@@ -140,7 +139,7 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
 
     let deps = toml["package"].as_array().unwrap();
     for dep in deps {
-        let dep = dep.as_inline_table().unwrap();
+        let dep = dep.as_table().unwrap();
 
         out.push_str("[[package]]\n");
         emit_package(dep, &mut out);
@@ -150,7 +149,7 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
         let list = patch["unused"].as_array().unwrap();
         for entry in list {
             out.push_str("[[patch.unused]]\n");
-            emit_package(entry.as_inline_table().unwrap(), &mut out);
+            emit_package(entry.as_table().unwrap(), &mut out);
             out.push('\n');
         }
     }
@@ -160,11 +159,11 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
         //    (which `toml_edit::Table::to_string` only shows)
         // 2. We need to ensure all children tables have `metadata.` prefix
         let meta_table = meta
-            .clone()
-            .into_table()
-            .expect("validation ensures this is a table");
-        let mut meta_doc = toml_edit::Document::new();
-        meta_doc["metadata"] = toml_edit::Item::Table(meta_table);
+            .as_table()
+            .expect("validation ensures this is a table")
+            .clone();
+        let mut meta_doc = toml::Table::new();
+        meta_doc.insert("metadata".to_owned(), toml::Value::Table(meta_table));
 
         out.push_str(&meta_doc.to_string());
     }
@@ -200,7 +199,7 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     orig.lines().eq(current.lines())
 }
 
-fn emit_package(dep: &toml_edit::InlineTable, out: &mut String) {
+fn emit_package(dep: &toml::Table, out: &mut String) {
     out.push_str(&format!("name = {}\n", &dep["name"]));
     out.push_str(&format!("version = {}\n", &dep["version"]));
 

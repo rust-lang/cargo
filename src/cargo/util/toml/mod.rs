@@ -13,9 +13,9 @@ use lazycell::LazyCell;
 use log::{debug, trace};
 use semver::{self, VersionReq};
 use serde::de;
+use serde::de::IntoDeserializer as _;
 use serde::ser;
 use serde::{Deserialize, Serialize};
-use toml_edit::easy as toml;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -35,9 +35,6 @@ use crate::util::{
 
 mod targets;
 use self::targets::targets;
-
-pub use toml_edit::de::Error as TomlDeError;
-pub use toml_edit::TomlError as TomlEditError;
 
 /// Loads a `Cargo.toml` from a file on disk.
 ///
@@ -90,21 +87,16 @@ pub fn read_manifest_from_str(
     // Provide a helpful error message for a common user error.
     if let Some(package) = toml.get("package").or_else(|| toml.get("project")) {
         if let Some(feats) = package.get("cargo-features") {
-            let mut feats = feats.clone();
-            if let Some(value) = feats.as_value_mut() {
-                // Only keep formatting inside of the `[]` and not formatting around it
-                value.decor_mut().clear();
-            }
             bail!(
                 "cargo-features = {} was found in the wrong location: it \
                  should be set at the top of Cargo.toml before any tables",
-                feats.to_string()
+                feats
             );
         }
     }
 
     let mut unused = BTreeSet::new();
-    let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {
+    let manifest: TomlManifest = serde_ignored::deserialize(toml.into_deserializer(), |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
@@ -178,23 +170,7 @@ pub fn read_manifest_from_str(
     }
 }
 
-/// Attempts to parse a string into a [`toml::Value`]. This is not specific to any
-/// particular kind of TOML file.
-///
-/// The purpose of this wrapper is to detect invalid TOML which was previously
-/// accepted and display a warning to the user in that case. The `file` and `config`
-/// parameters are only used by this fallback path.
-pub fn parse(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Value> {
-    // At the moment, no compatibility checks are needed.
-    toml.parse()
-        .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
-}
-
-pub fn parse_document(
-    toml: &str,
-    _file: &Path,
-    _config: &Config,
-) -> CargoResult<toml_edit::Document> {
+pub fn parse_document(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Table> {
     // At the moment, no compatibility checks are needed.
     toml.parse()
         .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
