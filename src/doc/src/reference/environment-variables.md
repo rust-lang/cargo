@@ -232,7 +232,9 @@ corresponding environment variable is set to the empty string, `""`.
   Note that this is the minimum Rust version supported by the package, not the
   current Rust version.
 * `CARGO_CRATE_NAME` — The name of the crate that is currently being compiled. It is the name of the [Cargo target] with `-` converted to `_`, such as the name of the library, binary, example, integration test, or benchmark.
-* `CARGO_BIN_NAME` — The name of the binary that is currently being compiled (if it is a binary). This name does not include any file extension, such as `.exe`.
+* `CARGO_BIN_NAME` — The name of the binary that is currently being compiled.
+  Only set for [binaries] or binary [examples]. This name does not include any
+  file extension, such as `.exe`.
 * `OUT_DIR` — If the package has a build script, this is set to the folder where the build
               script should place its output. See below for more information.
               (Only set during compilation.)
@@ -256,6 +258,8 @@ corresponding environment variable is set to the empty string, `""`.
   manage its content in any way, this is the responsibility of the test code.
 
 [Cargo target]: cargo-targets.md
+[binaries]: cargo-targets.md#binaries
+[examples]: cargo-targets.md#examples
 [integration test]: cargo-targets.md#integration-tests
 [`env` macro]: ../../std/macro.env.html
 
