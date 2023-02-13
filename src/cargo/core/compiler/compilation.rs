@@ -372,7 +372,7 @@ impl<'cfg> Compilation<'cfg> {
 /// Prepares a rustc_tool process with additional environment variables
 /// that are only relevant in a context that has a unit
 fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
-    if unit.target.is_bin() {
+    if unit.target.is_executable() {
         let name = unit
             .target
             .binary_filename()

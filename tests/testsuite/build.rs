@@ -1467,6 +1467,23 @@ fn crate_env_vars() {
             "#,
         )
         .file(
+            "examples/ex-env-vars.rs",
+            r#"
+                static PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
+                static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
+                static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
+
+                fn main() {
+                    assert_eq!("foo", PKG_NAME);
+                    assert_eq!("ex-env-vars", BIN_NAME);
+                    assert_eq!("ex_env_vars", CRATE_NAME);
+
+                    // Verify CARGO_TARGET_TMPDIR isn't set for examples
+                    assert!(option_env!("CARGO_TARGET_TMPDIR").is_none());
+                }
+            "#,
+        )
+        .file(
             "tests/env.rs",
             r#"
                 #[test]
@@ -1502,6 +1519,9 @@ fn crate_env_vars() {
     p.process(&p.bin("foo-bar"))
         .with_stdout("0-5-1 @ alpha.1 in [CWD]")
         .run();
+
+    println!("example");
+    p.cargo("run --example ex-env-vars -v").run();
 
     println!("test");
     p.cargo("test -v").run();
