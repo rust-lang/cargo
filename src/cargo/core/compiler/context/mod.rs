@@ -161,11 +161,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         for unit in &self.bcx.roots {
-            // Build up a list of pending jobs, each of which represent
-            // compiling a particular package. No actual work is executed as
-            // part of this, that's all done next as part of the `execute`
-            // function which will run everything in order with proper
-            // parallelism.
             let force_rebuild = self.bcx.build_config.force_rebuild;
             super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
         }
