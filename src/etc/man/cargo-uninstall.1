@@ -4,9 +4,9 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-uninstall \- Remove a Rust binary
+cargo\-uninstall \[em] Remove a Rust binary
 .SH "SYNOPSIS"
-\fBcargo uninstall\fR [\fIoptions\fR] [\fIspec\fR\&...]
+\fBcargo uninstall\fR [\fIoptions\fR] [\fIspec\fR\[u2026]]
 .SH "DESCRIPTION"
 This command removes a package installed with \fBcargo\-install\fR(1). The \fIspec\fR
 argument is a package ID specification of the package to remove (see
@@ -40,12 +40,12 @@ The installation root is determined, in order of precedence:
 .SS "Install Options"
 .sp
 \fB\-p\fR, 
-\fB\-\-package\fR \fIspec\fR\&...
+\fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
 Package to uninstall.
 .RE
 .sp
-\fB\-\-bin\fR \fIname\fR\&...
+\fB\-\-bin\fR \fIname\fR\[u2026]
 .RS 4
 Only uninstall the binary \fIname\fR\&.
 .RE
@@ -59,7 +59,7 @@ Directory to uninstall packages from.
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.

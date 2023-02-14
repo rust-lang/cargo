@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-tree - Display a tree visualization of a dependency graph
+cargo-tree --- Display a tree visualization of a dependency graph
 
 ## SYNOPSIS
 
@@ -80,11 +80,11 @@ To learn more about feature unification, check out this
 <dt class="option-term" id="option-cargo-tree---invert"><a class="option-anchor" href="#option-cargo-tree---invert"></a><code>--invert</code> <em>spec</em></dt>
 <dd class="option-desc">Show the reverse dependencies for the given package. This flag will invert
 the tree and display the packages that depend on the given package.</p>
-<p>Note that in a workspace, by default it will only display the package's
+<p>Note that in a workspace, by default it will only display the package’s
 reverse dependencies inside the tree of the workspace member in the current
 directory. The <code>--workspace</code> flag can be used to extend it so that it will
-show the package's reverse dependencies across the entire workspace. The <code>-p</code>
-flag can be used to display the package's reverse dependencies only with the
+show the package’s reverse dependencies across the entire workspace. The <code>-p</code>
+flag can be used to display the package’s reverse dependencies only with the
 subtree of the package given to <code>-p</code>.</dd>
 
 
@@ -148,13 +148,13 @@ The default is the host platform. Use the value <code>all</code> to include <em>
 <dl>
 
 <dt class="option-term" id="option-cargo-tree---charset"><a class="option-anchor" href="#option-cargo-tree---charset"></a><code>--charset</code> <em>charset</em></dt>
-<dd class="option-desc">Chooses the character set to use for the tree. Valid values are &quot;utf8&quot; or
-&quot;ascii&quot;. Default is &quot;utf8&quot;.</dd>
+<dd class="option-desc">Chooses the character set to use for the tree. Valid values are “utf8” or
+“ascii”. Default is “utf8”.</dd>
 
 
 <dt class="option-term" id="option-cargo-tree--f"><a class="option-anchor" href="#option-cargo-tree--f"></a><code>-f</code> <em>format</em></dt>
 <dt class="option-term" id="option-cargo-tree---format"><a class="option-anchor" href="#option-cargo-tree---format"></a><code>--format</code> <em>format</em></dt>
-<dd class="option-desc">Set the format string for each package. The default is &quot;{p}&quot;.</p>
+<dd class="option-desc">Set the format string for each package. The default is “{p}”.</p>
 <p>This is an arbitrary string which will be used to display each package. The following
 strings will be replaced with the corresponding value:</p>
 <ul>
@@ -162,7 +162,7 @@ strings will be replaced with the corresponding value:</p>
 <li><code>{l}</code> — The package license.</li>
 <li><code>{r}</code> — The package repository URL.</li>
 <li><code>{f}</code> — Comma-separated list of package features that are enabled.</li>
-<li><code>{lib}</code> — The name, as used in a <code>use</code> statement, of the package's library.</li>
+<li><code>{lib}</code> — The name, as used in a <code>use</code> statement, of the package’s library.</li>
 </ul></dd>
 
 
@@ -192,8 +192,8 @@ virtual workspace will include all workspace members (equivalent to passing
 
 <dl>
 
-<dt class="option-term" id="option-cargo-tree--p"><a class="option-anchor" href="#option-cargo-tree--p"></a><code>-p</code> <em>spec</em>...</dt>
-<dt class="option-term" id="option-cargo-tree---package"><a class="option-anchor" href="#option-cargo-tree---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-tree--p"><a class="option-anchor" href="#option-cargo-tree--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-tree---package"><a class="option-anchor" href="#option-cargo-tree---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Display only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
@@ -207,7 +207,7 @@ double quotes around each pattern.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-tree---exclude"><a class="option-anchor" href="#option-cargo-tree---exclude"></a><code>--exclude</code> <em>SPEC</em>...</dt>
+<dt class="option-term" id="option-cargo-tree---exclude"><a class="option-anchor" href="#option-cargo-tree---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
 common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
@@ -290,7 +290,7 @@ be specified multiple times, which enables all specified features.</dd>
 
 <dt class="option-term" id="option-cargo-tree--v"><a class="option-anchor" href="#option-cargo-tree--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-tree---verbose"><a class="option-anchor" href="#option-cargo-tree---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>

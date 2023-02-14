@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-clean - Remove generated artifacts
+cargo-clean --- Remove generated artifacts
 
 ## SYNOPSIS
 

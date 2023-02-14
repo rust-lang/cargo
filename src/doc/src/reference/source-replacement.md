@@ -8,11 +8,11 @@ A *source* is a provider that contains crates that may be included as
 dependencies for a package. Cargo supports the ability to **replace one source
 with another** to express strategies such as:
 
-* Vendoring - custom sources can be defined which represent crates on the local
+* Vendoring --- custom sources can be defined which represent crates on the local
   filesystem. These sources are subsets of the source that they're replacing and
   can be checked into packages if necessary.
 
-* Mirroring - sources can be replaced with an equivalent version which acts as a
+* Mirroring --- sources can be replaced with an equivalent version which acts as a
   cache for crates.io itself.
 
 Cargo has a core assumption about source replacement that the source code is

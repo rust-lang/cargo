@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-uninstall - Remove a Rust binary
+cargo-uninstall --- Remove a Rust binary
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-install - Build and install a Rust binary
+cargo-install --- Build and install a Rust binary
 
 ## SYNOPSIS
 

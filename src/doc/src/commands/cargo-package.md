@@ -5,7 +5,7 @@
 
 ## NAME
 
-cargo-package - Assemble the local package into a distributable tarball
+cargo-package --- Assemble the local package into a distributable tarball
 
 ## SYNOPSIS
 
@@ -72,7 +72,7 @@ in subdirectories of the version control repository.
 
 
 <dt class="option-term" id="option-cargo-package---no-verify"><a class="option-anchor" href="#option-cargo-package---no-verify"></a><code>--no-verify</code></dt>
-<dd class="option-desc">Don't verify the contents by building them.</dd>
+<dd class="option-desc">Don’t verify the contents by building them.</dd>
 
 
 <dt class="option-term" id="option-cargo-package---no-metadata"><a class="option-anchor" href="#option-cargo-package---no-metadata"></a><code>--no-metadata</code></dt>
@@ -101,8 +101,8 @@ virtual workspace will include all workspace members (equivalent to passing
 
 <dl>
 
-<dt class="option-term" id="option-cargo-package--p"><a class="option-anchor" href="#option-cargo-package--p"></a><code>-p</code> <em>spec</em>...</dt>
-<dt class="option-term" id="option-cargo-package---package"><a class="option-anchor" href="#option-cargo-package---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-package--p"><a class="option-anchor" href="#option-cargo-package--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-package---package"><a class="option-anchor" href="#option-cargo-package---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Package only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
@@ -116,7 +116,7 @@ double quotes around each pattern.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-package---exclude"><a class="option-anchor" href="#option-cargo-package---exclude"></a><code>--exclude</code> <em>SPEC</em>...</dt>
+<dt class="option-term" id="option-cargo-package---exclude"><a class="option-anchor" href="#option-cargo-package---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
 common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
@@ -244,7 +244,7 @@ the build on the first one that fails to build. Unstable, requires
 <dl>
 <dt class="option-term" id="option-cargo-package--v"><a class="option-anchor" href="#option-cargo-package--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-package---verbose"><a class="option-anchor" href="#option-cargo-package---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>

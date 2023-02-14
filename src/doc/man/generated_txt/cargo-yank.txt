@@ -1,16 +1,17 @@
 CARGO-YANK(1)
 
 NAME
-       cargo-yank - Remove a pushed crate from the index
+       cargo-yank — Remove a pushed crate from the index
 
 SYNOPSIS
        cargo yank [options] crate@version
        cargo yank [options] --version version [crate]
 
 DESCRIPTION
-       The yank command removes a previously published crate's version from the
-       server's index. This command does not delete any data, and the crate
-       will still be available for download via the registry's download link.
+       The yank command removes a previously published crate’s version from
+       the server’s index. This command does not delete any data, and the
+       crate will still be available for download via the registry’s download
+       link.
 
        Note that existing crates locked to a yanked version will still be able
        to download the yanked version to use it. Cargo will, however, not allow
@@ -54,10 +55,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the

@@ -1,7 +1,7 @@
 CARGO-GENERATE-LOCKFILE(1)
 
 NAME
-       cargo-generate-lockfile - Generate the lockfile for a package
+       cargo-generate-lockfile — Generate the lockfile for a package
 
 SYNOPSIS
        cargo generate-lockfile [options]
@@ -17,10 +17,11 @@ DESCRIPTION
 OPTIONS
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the

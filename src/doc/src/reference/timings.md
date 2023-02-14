@@ -30,11 +30,11 @@ highlighted in orange.
 
 The second graph shows Cargo's concurrency over time. The background
 indicates CPU usage. The three lines are:
-- "Waiting" (red) — This is the number of units waiting for a CPU slot to
+- "Waiting" (red) --- This is the number of units waiting for a CPU slot to
   open.
-- "Inactive" (blue) — This is the number of units that are waiting for their
+- "Inactive" (blue) --- This is the number of units that are waiting for their
   dependencies to finish.
-- "Active" (green) — This is the number of units currently running.
+- "Active" (green) --- This is the number of units currently running.
 
 Note: This does not show the concurrency in the compiler itself. `rustc`
 coordinates with Cargo via the "job server" to stay within the concurrency

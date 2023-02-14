@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-pkgid - Print a fully qualified package specification
+cargo-pkgid --- Print a fully qualified package specification
 
 ## SYNOPSIS
 
@@ -51,7 +51,7 @@ _url_`#`_name_`:`_version_ | `https://github.com/rust-lang/cargo#crates-io@0.21.
 <dl>
 <dt class="option-term" id="option-cargo-pkgid--v"><a class="option-anchor" href="#option-cargo-pkgid--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-pkgid---verbose"><a class="option-anchor" href="#option-cargo-pkgid---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>

@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-doc - Build a package's documentation
+cargo-doc --- Build a package's documentation
 
 ## SYNOPSIS
 

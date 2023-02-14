@@ -1197,9 +1197,9 @@ However, library authors should be cautious about introducing new warnings and m
 
 The following lints are examples of those that may be introduced when updating a dependency:
 
-* [`deprecated`][deprecated-lint] — Introduced when a dependency adds the [`#[deprecated]` attribute][deprecated] to an item you are using.
-* [`unused_must_use`] — Introduced when a dependency adds the [`#[must_use]` attribute][must-use-attr] to an item where you are not consuming the result.
-* [`unused_unsafe`] — Introduced when a dependency *removes* the `unsafe` qualifier from a function, and that is the only unsafe function called in an unsafe block.
+* [`deprecated`][deprecated-lint] --- Introduced when a dependency adds the [`#[deprecated]` attribute][deprecated] to an item you are using.
+* [`unused_must_use`] --- Introduced when a dependency adds the [`#[must_use]` attribute][must-use-attr] to an item where you are not consuming the result.
+* [`unused_unsafe`] --- Introduced when a dependency *removes* the `unsafe` qualifier from a function, and that is the only unsafe function called in an unsafe block.
 
 Additionally, updating `rustc` to a new version may introduce new lints.
 

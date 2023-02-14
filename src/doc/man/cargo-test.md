@@ -5,7 +5,7 @@
 
 ## NAME
 
-cargo-test - Execute unit and integration tests of a package
+cargo-test --- Execute unit and integration tests of a package
 
 ## SYNOPSIS
 
@@ -70,10 +70,10 @@ on writing doc tests.
 When no target selection options are given, `cargo test` will build the
 following targets of the selected packages:
 
-- lib — used to link with binaries, examples, integration tests, and doc tests
+- lib --- used to link with binaries, examples, integration tests, and doc tests
 - bins (only if integration tests are built and required features are
   available)
-- examples — to ensure they compile
+- examples --- to ensure they compile
 - lib as a unit test
 - bins as unit tests
 - integration tests

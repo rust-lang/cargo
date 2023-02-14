@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-install - Build and install a Rust binary
+cargo-install --- Build and install a Rust binary
 
 ## SYNOPSIS
 
@@ -128,12 +128,12 @@ such as a newer version of <code>rustc</code>.</dd>
 <dd class="option-desc">By default, Cargo keeps track of the installed packages with a metadata file
 stored in the installation root directory. This flag tells Cargo not to use or
 create that file. With this flag, Cargo will refuse to overwrite any existing
-files unless the <code>--force</code> flag is used. This also disables Cargo's ability to
+files unless the <code>--force</code> flag is used. This also disables Cargo’s ability to
 protect against multiple concurrent invocations of Cargo installing at the
 same time.</dd>
 
 
-<dt class="option-term" id="option-cargo-install---bin"><a class="option-anchor" href="#option-cargo-install---bin"></a><code>--bin</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-install---bin"><a class="option-anchor" href="#option-cargo-install---bin"></a><code>--bin</code> <em>name</em>…</dt>
 <dd class="option-desc">Install only the specified binary.</dd>
 
 
@@ -141,7 +141,7 @@ same time.</dd>
 <dd class="option-desc">Install all binaries.</dd>
 
 
-<dt class="option-term" id="option-cargo-install---example"><a class="option-anchor" href="#option-cargo-install---example"></a><code>--example</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-install---example"><a class="option-anchor" href="#option-cargo-install---example"></a><code>--example</code> <em>name</em>…</dt>
 <dd class="option-desc">Install only the specified example.</dd>
 
 
@@ -311,7 +311,7 @@ the build on the first one that fails to build. Unstable, requires
 <dl>
 <dt class="option-term" id="option-cargo-install--v"><a class="option-anchor" href="#option-cargo-install--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-install---verbose"><a class="option-anchor" href="#option-cargo-install---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -349,13 +349,13 @@ and <code>json</code>.</li>
 <a href="../reference/external-tools.html#json-messages">the reference</a>
 for more details. Conflicts with <code>human</code> and <code>short</code>.</li>
 <li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
-the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
+the “short” rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
+contains embedded ANSI color codes for respecting rustc’s default color
 scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo’s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
 </ul></dd>
 

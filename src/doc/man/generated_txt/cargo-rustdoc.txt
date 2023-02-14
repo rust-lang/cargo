@@ -1,8 +1,8 @@
 CARGO-RUSTDOC(1)
 
 NAME
-       cargo-rustdoc - Build a package's documentation, using specified custom
-       flags
+       cargo-rustdoc — Build a package’s documentation, using specified
+       custom flags
 
 SYNOPSIS
        cargo rustdoc [options] [-- args]
@@ -59,23 +59,23 @@ OPTIONS
        use single quotes or double quotes around each glob pattern.
 
        --lib
-           Document the package's library.
+           Document the package’s library.
 
-       --bin name...
+       --bin name…
            Document the specified binary. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
        --bins
            Document all binary targets.
 
-       --example name...
+       --example name…
            Document the specified example. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
        --examples
            Document all example targets.
 
-       --test name...
+       --test name…
            Document the specified integration test. This flag may be specified
            multiple times and supports common Unix glob patterns.
 
@@ -88,7 +88,7 @@ OPTIONS
            integration tests, etc.). Targets may be enabled or disabled by
            setting the test flag in the manifest settings for the target.
 
-       --bench name...
+       --bench name…
            Document the specified benchmark. This flag may be specified
            multiple times and supports common Unix glob patterns.
 
@@ -154,7 +154,7 @@ OPTIONS
 
        --ignore-rust-version
            Document the target even if the selected Rust compiler is older than
-           the required Rust version as configured in the project's
+           the required Rust version as configured in the project’s
            rust-version field.
 
        --timings=fmts
@@ -186,10 +186,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -224,18 +225,19 @@ OPTIONS
               for more details. Conflicts with human and short.
 
            o  json-diagnostic-short: Ensure the rendered field of JSON messages
-              contains the "short" rendering from rustc. Cannot be used with
-              human or short.
+              contains the “short” rendering from rustc. Cannot be used
+              with human or short.
 
            o  json-diagnostic-rendered-ansi: Ensure the rendered field of JSON
               messages contains embedded ANSI color codes for respecting
-              rustc's default color scheme. Cannot be used with human or short.
+              rustc’s default color scheme. Cannot be used with human or
+              short.
 
            o  json-render-diagnostics: Instruct Cargo to not include rustc
               diagnostics in JSON messages printed, but instead Cargo itself
-              should render the JSON diagnostics coming from rustc. Cargo's own
-              JSON diagnostics and others coming from rustc are still emitted.
-              Cannot be used with human or short.
+              should render the JSON diagnostics coming from rustc. Cargo’s
+              own JSON diagnostics and others coming from rustc are still
+              emitted. Cannot be used with human or short.
 
    Manifest Options
        --manifest-path path

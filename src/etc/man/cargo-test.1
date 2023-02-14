@@ -4,18 +4,18 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-test \- Execute unit and integration tests of a package
+cargo\-test \[em] Execute unit and integration tests of a package
 .SH "SYNOPSIS"
 \fBcargo test\fR [\fIoptions\fR] [\fItestname\fR] [\fB\-\-\fR \fItest\-options\fR]
 .SH "DESCRIPTION"
 Compile and execute unit, integration, and documentation tests.
 .sp
 The test filtering argument \fBTESTNAME\fR and all the arguments following the two
-dashes (\fB\-\-\fR) are passed to the test binaries and thus to \fIlibtest\fR (rustc's
-built in unit\-test and micro\-benchmarking framework).  If you're passing
+dashes (\fB\-\-\fR) are passed to the test binaries and thus to \fIlibtest\fR (rustc\[cq]s
+built in unit\-test and micro\-benchmarking framework).  If you\[cq]re passing
 arguments to both Cargo and the binary, the ones after \fB\-\-\fR go to the binary,
-the ones before go to Cargo.  For details about libtest's arguments see the
-output of \fBcargo test \-\- \-\-help\fR and check out the rustc book's chapter on
+the ones before go to Cargo.  For details about libtest\[cq]s arguments see the
+output of \fBcargo test \-\- \-\-help\fR and check out the rustc book\[cq]s chapter on
 how tests work at <https://doc.rust\-lang.org/rustc/tests/index.html>\&.
 .sp
 As an example, this will filter for tests with \fBfoo\fR in their name and run them
@@ -58,7 +58,7 @@ on writing doc tests.
 .sp
 \fB\-\-no\-run\fR
 .RS 4
-Compile, but don't run tests.
+Compile, but don\[cq]t run tests.
 .RE
 .sp
 \fB\-\-no\-fail\-fast\fR
@@ -80,8 +80,8 @@ The default members of a workspace can be set explicitly with the
 virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-workspace\fR), and a non\-virtual workspace will include only the root crate itself.
 .sp
-\fB\-p\fR \fIspec\fR\&..., 
-\fB\-\-package\fR \fIspec\fR\&...
+\fB\-p\fR \fIspec\fR\[u2026], 
+\fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
 Test only the specified packages. See \fBcargo\-pkgid\fR(1) for the
 SPEC format. This flag may be specified multiple times and supports common Unix
@@ -100,7 +100,7 @@ Test all members in the workspace.
 Deprecated alias for \fB\-\-workspace\fR\&.
 .RE
 .sp
-\fB\-\-exclude\fR \fISPEC\fR\&...
+\fB\-\-exclude\fR \fISPEC\fR\[u2026]
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
 \fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
@@ -169,10 +169,10 @@ use single quotes or double quotes around each glob pattern.
 .sp
 \fB\-\-lib\fR
 .RS 4
-Test the package's library.
+Test the package\[cq]s library.
 .RE
 .sp
-\fB\-\-bin\fR \fIname\fR\&...
+\fB\-\-bin\fR \fIname\fR\[u2026]
 .RS 4
 Test the specified binary. This flag may be specified multiple times
 and supports common Unix glob patterns.
@@ -183,7 +183,7 @@ and supports common Unix glob patterns.
 Test all binary targets.
 .RE
 .sp
-\fB\-\-example\fR \fIname\fR\&...
+\fB\-\-example\fR \fIname\fR\[u2026]
 .RS 4
 Test the specified example. This flag may be specified multiple times
 and supports common Unix glob patterns.
@@ -194,7 +194,7 @@ and supports common Unix glob patterns.
 Test all example targets.
 .RE
 .sp
-\fB\-\-test\fR \fIname\fR\&...
+\fB\-\-test\fR \fIname\fR\[u2026]
 .RS 4
 Test the specified integration test. This flag may be specified
 multiple times and supports common Unix glob patterns.
@@ -211,7 +211,7 @@ Targets may be enabled or disabled by setting the \fBtest\fR flag in the
 manifest settings for the target.
 .RE
 .sp
-\fB\-\-bench\fR \fIname\fR\&...
+\fB\-\-bench\fR \fIname\fR\[u2026]
 .RS 4
 Test the specified benchmark. This flag may be specified multiple
 times and supports common Unix glob patterns.
@@ -235,7 +235,7 @@ Test all targets. This is equivalent to specifying \fB\-\-lib \-\-bins \-\-tests
 .sp
 \fB\-\-doc\fR
 .RS 4
-Test only the library's documentation. This cannot be mixed with other
+Test only the library\[cq]s documentation. This cannot be mixed with other
 target options.
 .RE
 .SS "Feature Selection"
@@ -295,7 +295,7 @@ See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles
 \fB\-\-ignore\-rust\-version\fR
 .RS 4
 Test the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project's \fBrust\-version\fR field.
+required Rust version as configured in the project\[cq]s \fBrust\-version\fR field.
 .RE
 .sp
 \fB\-\-timings=\fR\fIfmts\fR
@@ -342,7 +342,7 @@ cargo test \-\- \-\-nocapture
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -400,19 +400,19 @@ for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
-the "short" rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+the \[lq]short\[rq] rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
+contains embedded ANSI color codes for respecting rustc\[cq]s default color
 scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo\[cq]s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .RE

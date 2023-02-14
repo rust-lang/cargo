@@ -99,36 +99,36 @@ configuration). The stderr output is also saved in that same directory.
 The following is a summary of the instructions that Cargo recognizes, with each
 one detailed below.
 
-* [`cargo:rerun-if-changed=PATH`](#rerun-if-changed) — Tells Cargo when to
+* [`cargo:rerun-if-changed=PATH`](#rerun-if-changed) --- Tells Cargo when to
   re-run the script.
-* [`cargo:rerun-if-env-changed=VAR`](#rerun-if-env-changed) — Tells Cargo when
+* [`cargo:rerun-if-env-changed=VAR`](#rerun-if-env-changed) --- Tells Cargo when
   to re-run the script.
-* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) — Passes custom flags to a
+* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) --- Passes custom flags to a
   linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
-* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) — Passes custom
+* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) --- Passes custom
   flags to a linker for the binary `BIN`.
-* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) — Passes custom
+* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) --- Passes custom
   flags to a linker for binaries.
-* [`cargo:rustc-link-arg-tests=FLAG`](#rustc-link-arg-tests) — Passes custom
+* [`cargo:rustc-link-arg-tests=FLAG`](#rustc-link-arg-tests) --- Passes custom
   flags to a linker for tests.
-* [`cargo:rustc-link-arg-examples=FLAG`](#rustc-link-arg-examples) — Passes custom
+* [`cargo:rustc-link-arg-examples=FLAG`](#rustc-link-arg-examples) --- Passes custom
   flags to a linker for examples.
-* [`cargo:rustc-link-arg-benches=FLAG`](#rustc-link-arg-benches) — Passes custom
+* [`cargo:rustc-link-arg-benches=FLAG`](#rustc-link-arg-benches) --- Passes custom
   flags to a linker for benchmarks.
-* [`cargo:rustc-link-lib=LIB`](#rustc-link-lib) — Adds a library to
+* [`cargo:rustc-link-lib=LIB`](#rustc-link-lib) --- Adds a library to
   link.
-* [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) — Adds to the
+* [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) --- Adds to the
   library search path.
-* [`cargo:rustc-flags=FLAGS`](#rustc-flags) — Passes certain flags to the
+* [`cargo:rustc-flags=FLAGS`](#rustc-flags) --- Passes certain flags to the
   compiler.
-* [`cargo:rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) — Enables compile-time `cfg`
+* [`cargo:rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) --- Enables compile-time `cfg`
   settings.
-* [`cargo:rustc-env=VAR=VALUE`](#rustc-env) — Sets an environment variable.
-* [`cargo:rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) — Passes custom
+* [`cargo:rustc-env=VAR=VALUE`](#rustc-env) --- Sets an environment variable.
+* [`cargo:rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
   flags to a linker for cdylib crates.
-* [`cargo:warning=MESSAGE`](#cargo-warning) — Displays a warning on the
+* [`cargo:warning=MESSAGE`](#cargo-warning) --- Displays a warning on the
   terminal.
-* [`cargo:KEY=VALUE`](#the-links-manifest-key) — Metadata, used by `links`
+* [`cargo:KEY=VALUE`](#the-links-manifest-key) --- Metadata, used by `links`
   scripts.
 
 

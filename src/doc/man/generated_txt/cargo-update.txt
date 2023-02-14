@@ -1,7 +1,7 @@
 CARGO-UPDATE(1)
 
 NAME
-       cargo-update - Update dependencies as recorded in the local lock file
+       cargo-update — Update dependencies as recorded in the local lock file
 
 SYNOPSIS
        cargo update [options]
@@ -13,7 +13,7 @@ DESCRIPTION
 
 OPTIONS
    Update Options
-       -p spec..., --package spec...
+       -p spec…, --package spec…
            Update only the specified packages. This flag may be specified
            multiple times. See cargo-pkgid(1) for the SPEC format.
 
@@ -37,20 +37,21 @@ OPTIONS
 
        -w, --workspace
            Attempt to update only packages defined in the workspace. Other
-           packages are updated only if they don't already exist in the
-           lockfile. This option is useful for updating Cargo.lock after you've
-           changed version numbers in Cargo.toml.
+           packages are updated only if they don’t already exist in the
+           lockfile. This option is useful for updating Cargo.lock after
+           you’ve changed version numbers in Cargo.toml.
 
        --dry-run
-           Displays what would be updated, but doesn't actually write the
+           Displays what would be updated, but doesn’t actually write the
            lockfile.
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the

@@ -1,7 +1,7 @@
 CARGO-VERIFY-PROJECT(1)
 
 NAME
-       cargo-verify-project - Check correctness of crate manifest
+       cargo-verify-project — Check correctness of crate manifest
 
 SYNOPSIS
        cargo verify-project [options]
@@ -20,10 +20,11 @@ DESCRIPTION
 OPTIONS
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the

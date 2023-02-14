@@ -3,7 +3,7 @@
 
 ## NAME
 
-cargo-run - Run the current package
+cargo-run --- Run the current package
 
 ## SYNOPSIS
 

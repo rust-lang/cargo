@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-verify-project - Check correctness of crate manifest
+cargo-verify-project --- Check correctness of crate manifest
 
 ## SYNOPSIS
 
@@ -27,7 +27,7 @@ An invalid workspace will display:
 
 <dt class="option-term" id="option-cargo-verify-project--v"><a class="option-anchor" href="#option-cargo-verify-project--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-verify-project---verbose"><a class="option-anchor" href="#option-cargo-verify-project---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
