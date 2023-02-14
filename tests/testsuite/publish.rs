@@ -114,7 +114,10 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] [..]
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] foo v0.0.1 ([CWD]) has been successfully published to registry `crates-io`
 ",
         )
         .run();
@@ -155,7 +158,10 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] `dummy-registry` index
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `dummy-registry`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] foo v0.0.1 ([CWD]) has been successfully published to registry `dummy-registry`
 ",
         )
         .run();
@@ -195,7 +201,10 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] `dummy-registry` index
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `dummy-registry`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] foo v0.0.1 ([CWD]) has been successfully published to registry `dummy-registry`
 ",
         )
         .run();
@@ -246,7 +255,10 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] [..]
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -288,7 +300,10 @@ fn simple_with_index() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] [..]
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -486,7 +501,10 @@ fn publish_clean() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] [..]
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -532,7 +550,10 @@ fn publish_in_sub_repo() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] [..]
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -578,7 +599,10 @@ fn publish_when_ignored() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] [..]
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -623,7 +647,10 @@ fn ignore_when_crate_ignored() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] [..]
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -809,7 +836,10 @@ fn publish_allowed_registry() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] `alternative` index
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `alternative`.
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 ([CWD]) has been successfully published to registry `alternative`
 ",
         )
         .run();
@@ -867,7 +897,10 @@ fn publish_implicitly_to_only_allowed_registry() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] `alternative` index
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -993,7 +1026,10 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] crates.io index
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1041,7 +1077,10 @@ fn publish_with_select_features() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] crates.io index
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1089,7 +1128,10 @@ fn publish_with_all_features() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] crates.io index
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1191,7 +1233,10 @@ fn publish_with_patch() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] crates.io index
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1387,7 +1432,10 @@ fn publish_git_with_version() {
 [..]
 [..]
 [UPLOADING] foo v0.1.0 ([CWD])
-[UPDATING] crates.io index
+[PUBLISHED] foo v0.1.0 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.1.0 [..]
 ",
         )
         .run();
@@ -1506,7 +1554,10 @@ fn publish_dev_dep_no_version() {
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.1.0 [..]
-[UPDATING] crates.io index
+[PUBLISHED] foo v0.1.0 [..]
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.1.0 [..]
 ",
         )
         .run();
@@ -1602,7 +1653,10 @@ fn credentials_ambiguous_filename() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 [..]
-[UPDATING] crates.io index
+[PUBLISHED] foo v0.0.1 [..]
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -2009,7 +2063,10 @@ See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
-[UPDATING] crates.io index
+[PUBLISHED] li v0.0.1 ([CWD]/li)
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] li v0.0.1 [..]
 ",
         )
         .run();
@@ -2108,7 +2165,10 @@ See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
-[UPDATING] crates.io index
+[PUBLISHED] li v0.0.1 ([CWD]/li)
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] li v0.0.1 [..]
 ",
         )
         .run();
@@ -2200,7 +2260,10 @@ See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
-[UPDATING] crates.io index
+[PUBLISHED] li v0.0.1 ([CWD]/li)
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] li v0.0.1 [..]
 ",
         )
         .run();
@@ -2387,7 +2450,10 @@ fn http_api_not_noop() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[UPDATING] [..]
+[PUBLISHED] foo v0.0.1 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -2461,8 +2527,10 @@ See [..]
 [PACKAGING] delay v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.1 ([CWD])
-[UPDATING] crates.io index
-[WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
+[PUBLISHED] delay v0.0.1 ([CWD])
+note: Waiting up to 60 seconds for `delay v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] delay v0.0.1 ([CWD]) has been successfully published to registry `crates-io`
 ",
         )
         .run();
@@ -2541,8 +2609,10 @@ See [..]
 [PACKAGING] delay_with_underscore v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay_with_underscore v0.0.1 ([CWD])
-[UPDATING] crates.io index
-[WAITING] on `delay_with_underscore` to propagate to crates.io index (ctrl-c to wait asynchronously)
+[PUBLISHED] delay_with_underscore v0.0.1 ([CWD])
+note: Waiting up to 60 seconds for `delay_with_underscore v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] delay_with_underscore v0.0.1 ([CWD]) has been successfully published to registry `crates-io`
 ",
         )
         .run();
@@ -2631,8 +2701,10 @@ See [..]
 [PACKAGING] delay v0.0.2 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.2 ([CWD])
-[UPDATING] crates.io index
-[WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
+[PUBLISHED] delay v0.0.2 ([CWD])
+note: Waiting up to 60 seconds for `delay v0.0.2` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] delay v0.0.2 ([CWD]) has been successfully published to registry `crates-io`
 ",
         )
         .run();
@@ -2657,7 +2729,7 @@ See [..]
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").with_status(0).run();
+    p.cargo("check").with_status(0).run();
 }
 
 #[cargo_test]
@@ -2737,9 +2809,7 @@ fn timeout_waiting_for_publish() {
         .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["publish-timeout"])
         .with_status(0)
-        // There may be a variable number of "Updating crates.io index" at the
-        // end, which is timing-dependent.
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, [..]
@@ -2747,11 +2817,13 @@ See [..]
 [PACKAGING] delay v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.1 ([CWD])
-[UPDATING] crates.io index
-[WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
+[PUBLISHED] delay v0.0.1 ([CWD])
+note: Waiting up to 2 seconds for `delay v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+warning: timed out waiting for `delay v0.0.1` to be available in registry `crates-io`
+note: The registry may have a backlog that is delaying making the crate available. The crate should be available soon.
 ",
         )
-        .with_stderr_contains("warning: timed out waiting for `delay` to be in crates.io index")
         .run();
 }
 
@@ -2786,7 +2858,7 @@ fn wait_for_git_publish() {
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_status(0)
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, [..]
@@ -2794,17 +2866,10 @@ See [..]
 [PACKAGING] delay v0.0.2 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.2 ([CWD])
-[UPDATING] crates.io index
-[WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
-",
-        )
-        // The exact number of updates is timing dependent. This just checks
-        // that at least a few show up.
-        .with_stderr_contains(
-            "\
-[UPDATING] crates.io index
-[UPDATING] crates.io index
-[UPDATING] crates.io index
+[PUBLISHED] delay v0.0.2 ([CWD])
+note: Waiting up to 60 seconds for `delay v0.0.2` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] delay v0.0.2 ([CWD]) has been successfully published to registry `crates-io`
 ",
         )
         .run();

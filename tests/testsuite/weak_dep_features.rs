@@ -561,7 +561,10 @@ fn publish() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
-[UPDATING] [..]
+[PUBLISHED] foo v0.1.0 [..]
+note: Waiting up to 60 seconds for `foo v0.1.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[COMPLETED] foo v0.1.0 ([ROOT]/foo) has been successfully published to registry `crates-io`
 ",
         )
         .run();

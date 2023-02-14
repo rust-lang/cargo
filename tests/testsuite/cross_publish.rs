@@ -112,7 +112,10 @@ fn publish_with_target() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..]
 [UPLOADING] foo v0.0.0 ([CWD])
-[UPDATING] crates.io index
+[PUBLISHED] foo v0.0.0 ([CWD])
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.0.0 [..]
 ",
         )
         .run();

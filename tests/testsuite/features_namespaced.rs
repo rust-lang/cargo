@@ -894,7 +894,10 @@ fn publish_no_implicit() {
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
-[UPDATING] [..]
+[PUBLISHED] foo v0.1.0 [..]
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.1.0 [..]
 ",
         )
         .run();
@@ -1013,7 +1016,10 @@ fn publish() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
-[UPDATING] [..]
+[PUBLISHED] foo v0.1.0 [..]
+note: Waiting [..]
+You may press ctrl-c [..]
+[COMPLETED] foo v0.1.0 [..]
 ",
         )
         .run();
