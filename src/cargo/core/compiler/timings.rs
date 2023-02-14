@@ -16,6 +16,13 @@ use std::io::{BufWriter, Write};
 use std::thread::available_parallelism;
 use std::time::{Duration, Instant, SystemTime};
 
+/// Tracking information for the entire build.
+///
+/// Methods on this structure are generally called from the main thread of a
+/// running [`JobQueue`] instance (`DrainState` in specific) when the queue
+/// receives messages from spawned off threads.
+///
+/// [`JobQueue`]: super::JobQueue
 pub struct Timings<'cfg> {
     config: &'cfg Config,
     /// Whether or not timings should be captured.
@@ -253,12 +260,12 @@ impl<'cfg> Timings<'cfg> {
         self.concurrency.push(c);
     }
 
-    /// Mark that a fresh unit was encountered.
+    /// Mark that a fresh unit was encountered. (No re-compile needed)
     pub fn add_fresh(&mut self) {
         self.total_fresh += 1;
     }
 
-    /// Mark that a dirty unit was encountered.
+    /// Mark that a dirty unit was encountered. (Re-compile needed)
     pub fn add_dirty(&mut self) {
         self.total_dirty += 1;
     }
@@ -456,6 +463,8 @@ impl<'cfg> Timings<'cfg> {
         Ok(())
     }
 
+    /// Write timing data in JavaScript. Primarily for `timings.js` to put data
+    /// in a `<script>` HTML element to draw graphs.
     fn write_js_data(&self, f: &mut impl Write) -> CargoResult<()> {
         // Create a map to link indices of unlocked units.
         let unit_map: HashMap<Unit, usize> = self

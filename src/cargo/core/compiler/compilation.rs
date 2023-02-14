@@ -1,3 +1,5 @@
+//! Type definitions for the result of a compilation.
+
 use std::collections::{BTreeSet, HashMap};
 use std::env;
 use std::ffi::{OsStr, OsString};
