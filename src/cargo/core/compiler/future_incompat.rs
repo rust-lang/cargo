@@ -1,4 +1,37 @@
-//! Support for future-incompatible warning reporting.
+//! Support for [future-incompatible warning reporting][1].
+//!
+//! Here is an overview of how Cargo handles future-incompatible reports.
+//!
+//! ## Receive reports from the compiler
+//!
+//! When receiving a compiler message during a build, if it is effectively
+//! a [`FutureIncompatReport`], Cargo gathers and forwards it as a
+//! `Message::FutureIncompatReport` to the main thread.
+//!
+//! To have the correct layout of strucutures for deserializing a report
+//! emitted by the compiler, most of structure definitions, for example
+//! [`FutureIncompatReport`], are copied either partially or entirely from
+//! [compiler/rustc_errors/src/json.rs][2] in rust-lang/rust repository.
+//!
+//! ## Persist reports on disk
+//!
+//! When a build comes to an end, by calling [`save_and_display_report`]
+//! Cargo saves the report on disk, and displays it directly if requested
+//! via command line or configuration. The information of the on-disk file can
+//! be found in [`FUTURE_INCOMPAT_FILE`].
+//!
+//! During the persistent process, Cargo will attempt to query the source of
+//! each package emitting the report, for the sake of providing an upgrade
+//! information as a solution to fix the incompatibility.
+//!
+//! ## Display reports to users
+//!
+//! Users can run `cargo report future-incompat` to retrieve a report. This is
+//! done by [`OnDiskReports::load`]. Cargo simply prints reports to the
+//! standard output.
+//!
+//! [1]: https://doc.rust-lang.org/nightly/cargo/reference/future-incompat-report.html
+//! [2]: https://github.com/rust-lang/rust/blob/9bb6e60d1f1360234aae90c97964c0fa5524f141/compiler/rustc_errors/src/json.rs#L312-L315
 
 use crate::core::compiler::BuildContext;
 use crate::core::{Dependency, PackageId, QueryKind, Workspace};
