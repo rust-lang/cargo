@@ -2702,3 +2702,127 @@ See [..]
         )
         .run();
 }
+
+#[cargo_test]
+fn timeout_waiting_for_publish() {
+    // Publish doesn't happen within the timeout window.
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .delayed_index_update(20)
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "delay"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [publish]
+                timeout = 2
+            "#,
+        )
+        .build();
+
+    p.cargo("publish --no-verify -Zpublish-timeout")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["publish-timeout"])
+        .with_status(0)
+        // There may be a variable number of "Updating crates.io index" at the
+        // end, which is timing-dependent.
+        .with_stderr_contains(
+            "\
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] delay v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
+[UPLOADING] delay v0.0.1 ([CWD])
+[UPDATING] crates.io index
+[WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
+",
+        )
+        .with_stderr_contains("warning: timed out waiting for `delay` to be in crates.io index")
+        .run();
+}
+
+#[cargo_test]
+fn wait_for_git_publish() {
+    // Slow publish to an index with a git index.
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .delayed_index_update(5)
+        .build();
+
+    // Publish an earlier version
+    Package::new("delay", "0.0.1")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "delay"
+                version = "0.0.2"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(0)
+        .with_stderr_contains(
+            "\
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] delay v0.0.2 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
+[UPLOADING] delay v0.0.2 ([CWD])
+[UPDATING] crates.io index
+[WAITING] on `delay` to propagate to crates.io index (ctrl-c to wait asynchronously)
+",
+        )
+        // The exact number of updates is timing dependent. This just checks
+        // that at least a few show up.
+        .with_stderr_contains(
+            "\
+[UPDATING] crates.io index
+[UPDATING] crates.io index
+[UPDATING] crates.io index
+",
+        )
+        .run();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                [dependencies]
+                delay = "0.0.2"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check").with_status(0).run();
+}
