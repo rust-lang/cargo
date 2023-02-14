@@ -44,6 +44,9 @@ pub trait Source {
     /// Ensure that the source is fully up-to-date for the current session on the next query.
     fn invalidate_cache(&mut self);
 
+    /// If quiet, the source should not display any progress or status messages.
+    fn set_quiet(&mut self, quiet: bool);
+
     /// Fetches the full package for each name and version specified.
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
 
@@ -163,6 +166,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).invalidate_cache()
     }
 
+    fn set_quiet(&mut self, quiet: bool) {
+        (**self).set_quiet(quiet)
+    }
+
     /// Forwards to `Source::download`.
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
@@ -231,6 +238,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn invalidate_cache(&mut self) {
         (**self).invalidate_cache()
+    }
+
+    fn set_quiet(&mut self, quiet: bool) {
+        (**self).set_quiet(quiet)
     }
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {

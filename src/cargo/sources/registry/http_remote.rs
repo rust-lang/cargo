@@ -89,10 +89,13 @@ pub struct HttpRegistry<'cfg> {
 
     /// Url to get a token for the registry.
     login_url: Option<Url>,
+
+    /// Disables status messages.
+    quiet: bool,
 }
 
 /// Helper for downloading crates.
-pub struct Downloads<'cfg> {
+struct Downloads<'cfg> {
     /// When a download is started, it is added to this map. The key is a
     /// "token" (see `Download::token`). It is removed once the download is
     /// finished.
@@ -196,6 +199,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             registry_config: None,
             auth_required: false,
             login_url: None,
+            quiet: false,
         })
     }
 
@@ -231,9 +235,11 @@ impl<'cfg> HttpRegistry<'cfg> {
         // let's not flood the server with connections
         self.multi.set_max_host_connections(2)?;
 
-        self.config
-            .shell()
-            .status("Updating", self.source_id.display_index())?;
+        if !self.quiet {
+            self.config
+                .shell()
+                .status("Updating", self.source_id.display_index())?;
+        }
 
         Ok(())
     }
@@ -681,6 +687,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         self.requested_update = true;
     }
 
+    fn set_quiet(&mut self, quiet: bool) {
+        self.quiet = quiet;
+        self.downloads.progress.replace(None);
+    }
+
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let registry_config = loop {
             match self.config()? {
@@ -747,7 +758,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 impl<'cfg> Downloads<'cfg> {
     fn tick(&self) -> CargoResult<()> {
         let mut progress = self.progress.borrow_mut();
-        let progress = progress.as_mut().unwrap();
+        let Some(progress) = progress.as_mut() else { return Ok(()); };
 
         // Since the sparse protocol discovers dependencies as it goes,
         // it's not possible to get an accurate progress indication.
@@ -780,7 +791,7 @@ mod tls {
 
     thread_local!(static PTR: Cell<usize> = Cell::new(0));
 
-    pub(crate) fn with<R>(f: impl FnOnce(Option<&Downloads<'_>>) -> R) -> R {
+    pub(super) fn with<R>(f: impl FnOnce(Option<&Downloads<'_>>) -> R) -> R {
         let ptr = PTR.with(|p| p.get());
         if ptr == 0 {
             f(None)
@@ -791,7 +802,7 @@ mod tls {
         }
     }
 
-    pub(crate) fn set<R>(dl: &Downloads<'_>, f: impl FnOnce() -> R) -> R {
+    pub(super) fn set<R>(dl: &Downloads<'_>, f: impl FnOnce() -> R) -> R {
         struct Reset<'a, T: Copy>(&'a Cell<T>, T);
 
         impl<'a, T: Copy> Drop for Reset<'a, T> {

@@ -21,6 +21,7 @@ pub struct GitSource<'cfg> {
     path_source: Option<PathSource<'cfg>>,
     ident: String,
     config: &'cfg Config,
+    quiet: bool,
 }
 
 impl<'cfg> GitSource<'cfg> {
@@ -43,6 +44,7 @@ impl<'cfg> GitSource<'cfg> {
             path_source: None,
             ident,
             config,
+            quiet: false,
         };
 
         Ok(source)
@@ -162,10 +164,12 @@ impl<'cfg> Source for GitSource<'cfg> {
                         self.remote.url()
                     );
                 }
-                self.config.shell().status(
-                    "Updating",
-                    format!("git repository `{}`", self.remote.url()),
-                )?;
+                if !self.quiet {
+                    self.config.shell().status(
+                        "Updating",
+                        format!("git repository `{}`", self.remote.url()),
+                    )?;
+                }
 
                 trace!("updating git source `{:?}`", self.remote);
 
@@ -233,6 +237,10 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn invalidate_cache(&mut self) {}
+
+    fn set_quiet(&mut self, quiet: bool) {
+        self.quiet = quiet;
+    }
 }
 
 #[cfg(test)]

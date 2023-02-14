@@ -574,4 +574,8 @@ impl<'cfg> Source for PathSource<'cfg> {
     fn invalidate_cache(&mut self) {
         // Path source has no local cache.
     }
+
+    fn set_quiet(&mut self, _quiet: bool) {
+        // Path source does not display status
+    }
 }
