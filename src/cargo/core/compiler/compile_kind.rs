@@ -1,3 +1,5 @@
+//! Type definitions for cross-compilation.
+
 use crate::core::Target;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;

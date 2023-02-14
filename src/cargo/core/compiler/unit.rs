@@ -1,3 +1,5 @@
+//! Types and impls for [`Unit`].
+
 use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::manifest::{Target, TargetKind};
@@ -108,6 +110,9 @@ impl UnitInner {
 }
 
 impl Unit {
+    /// Gets the unique key for [`-Zbuild-plan`].
+    ///
+    /// [`-Zbuild-plan`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-plan
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))
     }
