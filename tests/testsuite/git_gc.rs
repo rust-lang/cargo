@@ -36,7 +36,7 @@ fn run_test(path_env: Option<&OsStr>) {
         .build();
     Package::new("bar", "0.1.0").publish();
 
-    foo.cargo("build").run();
+    foo.cargo("check").run();
 
     let index = find_index();
     let path = paths::home().join("tmp");
