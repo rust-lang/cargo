@@ -43,7 +43,7 @@ fn ctrl_c_kills_everyone() {
         )
         .build();
 
-    let mut cargo = p.cargo("build").build_command();
+    let mut cargo = p.cargo("check").build_command();
     cargo
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
