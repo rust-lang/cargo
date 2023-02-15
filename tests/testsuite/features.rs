@@ -22,7 +22,7 @@ fn invalid1() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -104,7 +104,7 @@ fn invalid3() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -139,7 +139,7 @@ fn invalid4() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -156,7 +156,7 @@ failed to select a version for `bar` which could resolve this conflict",
 
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
 
-    p.cargo("build --features test")
+    p.cargo("check --features test")
         .with_status(101)
         .with_stderr("error: Package `foo v0.0.1 ([..])` does not have the feature `test`")
         .run();
@@ -181,7 +181,7 @@ fn invalid5() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -212,7 +212,7 @@ fn invalid6() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build --features foo")
+    p.cargo("check --features foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -244,7 +244,7 @@ fn invalid7() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build --features foo")
+    p.cargo("check --features foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -278,7 +278,7 @@ fn invalid8() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build --features foo")
+    p.cargo("check --features foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -312,7 +312,7 @@ fn invalid9() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build --features bar")
+    p.cargo("check --features bar")
         .with_stderr(
             "\
 error: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
@@ -354,7 +354,7 @@ fn invalid10() {
         .file("bar/baz/src/lib.rs", "")
         .build();
 
-    p.cargo("build").with_stderr("\
+    p.cargo("check").with_stderr("\
 error: failed to select a version for `bar`.
     ... required by package `foo v0.0.1 ([..])`
 versions that meet the requirements `*` are: 0.0.1
@@ -426,7 +426,7 @@ fn no_transitive_dep_feature_requirement() {
             "#,
         )
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -571,7 +571,7 @@ fn cyclic_feature() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr("[ERROR] cyclic feature dependency: feature `default` depends on itself")
         .run();
@@ -596,7 +596,7 @@ fn cyclic_feature2() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -645,12 +645,12 @@ fn groups_on_groups_on_groups() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -693,13 +693,13 @@ fn many_cli_features() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    p.cargo("build --features")
+    p.cargo("check --features")
         .arg("bar baz")
         .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -777,12 +777,12 @@ fn union_features() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] d2 v0.0.1 ([CWD]/d2)
-[COMPILING] d1 v0.0.1 ([CWD]/d1)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] d2 v0.0.1 ([CWD]/d2)
+[CHECKING] d1 v0.0.1 ([CWD]/d1)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -823,18 +823,18 @@ fn many_features_no_rebuilds() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] a v0.1.0 ([CWD]/a)
-[COMPILING] b v0.1.0 ([CWD])
+[CHECKING] a v0.1.0 ([CWD]/a)
+[CHECKING] b v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
     p.root().move_into_the_past();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr(
             "\
 [FRESH] a v0.1.0 ([..]/a)
@@ -850,7 +850,7 @@ fn many_features_no_rebuilds() {
 fn empty_features() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    p.cargo("build --features").arg("").run();
+    p.cargo("check --features").arg("").run();
 }
 
 // Tests that all cmd lines work with `--features ""`
@@ -891,7 +891,7 @@ fn transitive_features() {
         )
         .build();
 
-    p.cargo("build --features foo").run();
+    p.cargo("check --features foo").run();
 }
 
 #[cargo_test]
@@ -1015,9 +1015,9 @@ fn no_rebuild_when_frobbing_default_feature() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build").with_stdout("").run();
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").run();
+    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -1066,9 +1066,9 @@ fn unions_work_with_no_default_features() {
         .file("a/src/lib.rs", r#"#[cfg(feature = "f1")] pub fn a() {}"#)
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build").with_stdout("").run();
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").run();
+    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -1093,10 +1093,10 @@ fn optional_and_dev_dep() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] test v0.1.0 ([..])
+[CHECKING] test v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1140,7 +1140,7 @@ fn activating_feature_activates_dep() {
         .file("foo/src/lib.rs", r#"#[cfg(feature = "a")] pub fn bar() {}"#)
         .build();
 
-    p.cargo("build --features a -v").run();
+    p.cargo("check --features a -v").run();
 }
 
 #[cargo_test]
@@ -1205,23 +1205,23 @@ fn dep_feature_in_cmd_line() {
 
     // The foo project requires that feature "some-feat" in "bar" is enabled.
     // Building without any features enabled should fail:
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains("[..]unresolved import `bar::test`")
         .run();
 
     // We should be able to enable the feature "derived-feat", which enables "some-feat",
     // on the command line. The feature is enabled, thus building should be successful:
-    p.cargo("build --features derived/derived-feat").run();
+    p.cargo("check --features derived/derived-feat").run();
 
     // Trying to enable features of transitive dependencies is an error
-    p.cargo("build --features bar/some-feat")
+    p.cargo("check --features bar/some-feat")
         .with_status(101)
         .with_stderr("error: package `foo v0.0.1 ([..])` does not have a dependency named `bar`")
         .run();
 
     // Hierarchical feature specification should still be disallowed
-    p.cargo("build --features derived/bar/some-feat")
+    p.cargo("check --features derived/bar/some-feat")
         .with_status(101)
         .with_stderr("[ERROR] multiple slashes in feature `derived/bar/some-feat` is not allowed")
         .run();
@@ -1269,7 +1269,7 @@ fn all_features_flag_enables_all_features() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    p.cargo("build --all-features").run();
+    p.cargo("check --all-features").run();
 }
 
 #[cargo_test]
@@ -1308,12 +1308,12 @@ fn many_cli_features_comma_delimited() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    p.cargo("build --features bar,baz")
+    p.cargo("check --features bar,baz")
         .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1372,15 +1372,15 @@ fn many_cli_features_comma_and_space_delimited() {
         .file("bap/src/lib.rs", "pub fn bap() {}")
         .build();
 
-    p.cargo("build --features")
+    p.cargo("check --features")
         .arg("bar,baz bam bap")
         .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1413,7 +1413,7 @@ fn only_dep_is_optional() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -1449,7 +1449,7 @@ fn all_features_all_crates() {
         .file("bar/src/main.rs", "#[cfg(feature = \"foo\")] fn main() {}")
         .build();
 
-    p.cargo("build --all-features --workspace").run();
+    p.cargo("check --all-features --workspace").run();
 }
 
 #[cargo_test]
@@ -1508,7 +1508,7 @@ fn feature_off_dylib() {
         .build();
 
     // Build the dylib with `f1` feature.
-    p.cargo("build --features f1").run();
+    p.cargo("check --features f1").run();
     // Check that building without `f1` uses a dylib without `f1`.
     p.cargo("run -p bar").run();
 }
@@ -1537,11 +1537,11 @@ fn warn_if_default_features() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             r#"
 [WARNING] `default-features = [".."]` was found in [features]. Did you mean to use `default = [".."]`?
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
             "#.trim(),
         ).run();
@@ -1585,7 +1585,7 @@ fn no_feature_for_non_optional_dep() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build --features bar/a").run();
+    p.cargo("check --features bar/a").run();
 }
 
 #[cargo_test]
@@ -1613,7 +1613,7 @@ fn features_option_given_twice() {
         )
         .build();
 
-    p.cargo("build --features a --features b").run();
+    p.cargo("check --features a --features b").run();
 }
 
 #[cargo_test]
@@ -1642,7 +1642,7 @@ fn multi_multi_features() {
         )
         .build();
 
-    p.cargo("build --features a --features").arg("b c").run();
+    p.cargo("check --features a --features").arg("b c").run();
 }
 
 #[cargo_test]
@@ -1921,7 +1921,7 @@ fn nonexistent_required_features() {
         .file("examples/ololo.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --examples")
+    p.cargo("check --examples")
         .with_stderr_contains(
             "\
 [WARNING] invalid feature `not_present` in required-features of target `ololo`: \
@@ -2075,7 +2075,7 @@ fn default_features_conflicting_warning() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
 "[WARNING] conflicting between `default-features` and `default_features` in the `a` dependency.\n
         `default_features` is ignored and not recommended for use in the future"
