@@ -62,7 +62,7 @@ fn namespaced_invalid_feature() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -93,7 +93,7 @@ fn namespaced_invalid_dependency() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -127,7 +127,7 @@ fn namespaced_non_optional_dependency() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
 
         .with_status(101)
         .with_stderr(
@@ -209,7 +209,7 @@ fn namespaced_shadowed_dep() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -269,7 +269,7 @@ fn namespaced_implicit_non_optional() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").with_status(101).with_stderr(
+    p.cargo("check").with_status(101).with_stderr(
         "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -701,7 +701,7 @@ fn optional_explicit_without_crate() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
