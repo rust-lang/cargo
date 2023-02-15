@@ -51,7 +51,7 @@ fn env_invalid() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains("[..]could not load config key `env.ENV_TEST_BOOL`")
         .run();
@@ -77,7 +77,7 @@ fn env_no_cargo_home() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains("[..]setting the `CARGO_HOME` environment variable is not supported in the `[env]` configuration table")
         .run();
