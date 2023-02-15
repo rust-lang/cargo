@@ -610,7 +610,10 @@ fn z_flags_rejected() {
 
 #[cargo_test]
 fn publish_allowed() {
-    let registry = registry::init();
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .build();
 
     let p = project()
         .file(
@@ -627,16 +630,23 @@ fn publish_allowed() {
         .file("src/lib.rs", "")
         .build();
 
-    // HACK: Inject `a` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("a", "0.0.1").file("src/lib.rs", "").publish();
-
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[WARNING] [..]
+[..]
+[PACKAGING] a v0.0.1 [..]
+[VERIFYING] a v0.0.1 [..]
+[COMPILING] a v0.0.1 [..]
+[FINISHED] [..]
+[PACKAGED] [..]
+[UPLOADING] a v0.0.1 [..]
+[UPDATING] crates.io index
+",
+        )
         .run();
 }
 
