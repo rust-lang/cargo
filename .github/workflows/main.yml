@@ -28,6 +28,16 @@ jobs:
           cargo fmt --all --manifest-path $manifest --check
         done
 
+  # Ensure there are no clippy warnings
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustup update stable && rustup default stable
+      - run: rustup component add clippy
+      # Only check cargo lib for now
+      - run: cargo clippy -p cargo --lib -- -D warnings
+
   test:
     runs-on: ${{ matrix.os }}
     env:
