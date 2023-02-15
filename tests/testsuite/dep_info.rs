@@ -505,7 +505,7 @@ fn reg_dep_source_not_tracked() {
         .file("src/lib.rs", "pub fn f() { regdep::f(); }")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     assert_deps(
         &p,
@@ -551,7 +551,7 @@ fn canonical_path() {
     real.mkdir_p();
     p.symlink(real, "target");
 
-    p.cargo("build -Z binary-dep-depinfo")
+    p.cargo("check -Z binary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .run();
 
