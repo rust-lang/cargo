@@ -625,9 +625,47 @@ impl<'cfg> RegistrySource<'cfg> {
         match path.metadata() {
             Ok(meta) if meta.len() > 0 => return Ok(unpack_dir.to_path_buf()),
             Ok(_meta) => {
-                // The file appears to be corrupted. Perhaps it failed to flush,
-                // or the filesystem was corrupted in some way. To be safe, let's
-                // assume something is wrong and clear it and start over.
+                // The `.cargo-ok` file is not in a state we expect it to be
+                // (with two bytes containing "ok").
+                //
+                // Cargo has always included a `.cargo-ok` file to detect if
+                // extraction was interrupted, but it was originally empty.
+                //
+                // In 1.34, Cargo was changed to create the `.cargo-ok` file
+                // before it started extraction to implement fine-grained
+                // locking. After it was finished extracting, it wrote two
+                // bytes to indicate it was complete. It would use the length
+                // check to detect if it was possibly interrupted.
+                //
+                // In 1.36, Cargo changed to not use fine-grained locking, and
+                // instead used a global lock. The use of `.cargo-ok` was no
+                // longer needed for locking purposes, but was kept to detect
+                // when extraction was interrupted.
+                //
+                // In 1.49, Cargo changed to not create the `.cargo-ok` file
+                // before it started extraction to deal with `.crate` files
+                // that inexplicably had a `.cargo-ok` file in them.
+                //
+                // In 1.64, Cargo changed to detect `.crate` files with
+                // `.cargo-ok` files in them in response to CVE-2022-36113,
+                // which dealt with malicious `.crate` files making
+                // `.cargo-ok` a symlink causing cargo to write "ok" to any
+                // arbitrary file on the filesystem it has permission to.
+                //
+                // This is all a long-winded way of explaining the
+                // circumstances that might cause a directory to contain a
+                // `.cargo-ok` file that is empty or otherwise corrupted.
+                // Either this was extracted by a version of Rust before 1.34,
+                // in which case everything should be fine. However, an empty
+                // file created by versions 1.36 to 1.49 indicates that the
+                // extraction was interrupted and that we need to start again.
+                //
+                // Another possibility is that the filesystem is simply
+                // corrupted, in which case deleting the directory might be
+                // the safe thing to do. That is probably unlikely, though.
+                //
+                // To be safe, this deletes the directory and starts over
+                // again.
                 log::warn!("unexpected length of {path:?}, clearing cache");
                 paths::remove_dir_all(dst.as_path_unlocked())?;
             }
