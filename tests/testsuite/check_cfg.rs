@@ -47,7 +47,7 @@ fn features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=features")
+    p.cargo("check -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
         .run();
@@ -76,7 +76,7 @@ fn features_with_deps() {
         .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=features")
+    p.cargo("check -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "values" of "feature"))
         .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
@@ -107,7 +107,7 @@ fn features_with_opt_deps() {
         .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=features")
+    p.cargo("check -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "values" of "feature"))
         .with_stderr_contains(x!("rustc" => "values" of "feature" with "bar" "default" "f_a" "f_b"))
@@ -137,7 +137,7 @@ fn features_with_namespaced_features() {
         .file("bar/src/lib.rs", "#[allow(dead_code)] fn bar() {}")
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=features")
+    p.cargo("check -v -Zcheck-cfg=features")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "values" of "feature" with "f_a" "f_b"))
         .run();
@@ -150,7 +150,7 @@ fn well_known_names() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=names")
+    p.cargo("check -v -Zcheck-cfg=names")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "names"))
         .run();
@@ -163,7 +163,7 @@ fn well_known_values() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=values")
+    p.cargo("check -v -Zcheck-cfg=values")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "values"))
         .run();
@@ -187,7 +187,7 @@ fn cli_all_options() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=features,names,values")
+    p.cargo("check -v -Zcheck-cfg=features,names,values")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "names"))
         .with_stderr_contains(x!("rustc" => "values"))
@@ -394,7 +394,7 @@ fn build_script_feedback() {
         )
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=output")
+    p.cargo("check -v -Zcheck-cfg=output")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "names" of "foo"))
         .run();
@@ -465,7 +465,7 @@ fn build_script_override() {
         )
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=output")
+    p.cargo("check -v -Zcheck-cfg=output")
         .with_stderr_contains(x!("rustc" => "names" of "foo"))
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .run();
@@ -551,7 +551,7 @@ fn config_valid() {
         )
         .build();
 
-    p.cargo("build -v -Zcheck-cfg=features,names,values")
+    p.cargo("check -v -Zcheck-cfg=features,names,values")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains(x!("rustc" => "names"))
         .with_stderr_contains(x!("rustc" => "values"))
@@ -580,7 +580,7 @@ fn config_invalid() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains("error: unstable check-cfg only takes `features`, `names`, `values` or `output` as valid inputs")
         .with_status(101)
