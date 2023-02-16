@@ -1,3 +1,4 @@
+use std::cmp;
 use std::collections::{BTreeMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -6,7 +7,6 @@ use std::path::PathBuf;
 use std::str;
 use std::task::Poll;
 use std::time::Duration;
-use std::{cmp, env};
 
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
@@ -596,7 +596,7 @@ pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeou
 pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     Ok(http_proxy_exists(config)?
         || *config.http_config()? != Default::default()
-        || env::var_os("HTTP_TIMEOUT").is_some())
+        || config.get_env_os("HTTP_TIMEOUT").is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
@@ -721,11 +721,16 @@ pub struct HttpTimeout {
 
 impl HttpTimeout {
     pub fn new(config: &Config) -> CargoResult<HttpTimeout> {
-        let config = config.http_config()?;
-        let low_speed_limit = config.low_speed_limit.unwrap_or(10);
-        let seconds = config
+        let http_config = config.http_config()?;
+        let low_speed_limit = http_config.low_speed_limit.unwrap_or(10);
+        let seconds = http_config
             .timeout
-            .or_else(|| env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
+            .or_else(|| {
+                config
+                    .get_env("HTTP_TIMEOUT")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+            })
             .unwrap_or(30);
         Ok(HttpTimeout {
             dur: Duration::new(seconds, 0),
@@ -779,7 +784,7 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     } else {
         Ok(["http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"]
             .iter()
-            .any(|v| env::var(v).is_ok()))
+            .any(|v| config.get_env(v).is_ok()))
     }
 }
 

@@ -463,7 +463,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 
 pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     // This is here just as a random location to exercise the internal error handling.
-    if std::env::var_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
+    if config.get_env_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
         return Err(crate::util::internal("internal error test"));
     }
 

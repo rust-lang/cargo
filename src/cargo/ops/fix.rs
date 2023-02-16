@@ -354,7 +354,8 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     let args = FixArgs::get()?;
     trace!("cargo-fix as rustc got file {:?}", args.file);
 
-    let workspace_rustc = std::env::var("RUSTC_WORKSPACE_WRAPPER")
+    let workspace_rustc = config
+        .get_env("RUSTC_WORKSPACE_WRAPPER")
         .map(PathBuf::from)
         .ok();
     let mut rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
@@ -388,7 +389,7 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
                     file: path.clone(),
                     fixes: file.fixes_applied,
                 }
-                .post()?;
+                .post(config)?;
             }
         }
 
@@ -403,7 +404,7 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
         // user's code with our changes. Back out everything and fall through
         // below to recompile again.
         if !output.status.success() {
-            if env::var_os(BROKEN_CODE_ENV).is_none() {
+            if config.get_env_os(BROKEN_CODE_ENV).is_none() {
                 for (path, file) in fixes.files.iter() {
                     debug!("reverting {:?} due to errors", path);
                     paths::write(path, &file.original_code)?;
@@ -420,7 +421,7 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
                 }
                 krate
             };
-            log_failed_fix(krate, &output.stderr, output.status)?;
+            log_failed_fix(config, krate, &output.stderr, output.status)?;
         }
     }
 
@@ -510,7 +511,8 @@ fn rustfix_crate(
     //   definitely can't make progress, so bail out.
     let mut fixes = FixedCrate::default();
     let mut last_fix_counts = HashMap::new();
-    let iterations = env::var("CARGO_FIX_MAX_RETRIES")
+    let iterations = config
+        .get_env("CARGO_FIX_MAX_RETRIES")
         .ok()
         .and_then(|n| n.parse().ok())
         .unwrap_or(4);
@@ -547,7 +549,7 @@ fn rustfix_crate(
                 file: path.clone(),
                 message: error,
             }
-            .post()?;
+            .post(config)?;
         }
     }
 
@@ -576,7 +578,7 @@ fn rustfix_and_fix(
     // worse by applying fixes where a bug could cause *more* broken code.
     // Instead, punt upwards which will reexec rustc over the original code,
     // displaying pretty versions of the diagnostics we just read out.
-    if !output.status.success() && env::var_os(BROKEN_CODE_ENV).is_none() {
+    if !output.status.success() && config.get_env_os(BROKEN_CODE_ENV).is_none() {
         debug!(
             "rustfixing `{:?}` failed, rustc exited with {:?}",
             filename,
@@ -585,7 +587,8 @@ fn rustfix_and_fix(
         return Ok(());
     }
 
-    let fix_mode = env::var_os("__CARGO_FIX_YOLO")
+    let fix_mode = config
+        .get_env_os("__CARGO_FIX_YOLO")
         .map(|_| rustfix::Filter::Everything)
         .unwrap_or(rustfix::Filter::MachineApplicableOnly);
 
@@ -710,7 +713,12 @@ fn exit_with(status: ExitStatus) -> ! {
     process::exit(status.code().unwrap_or(3));
 }
 
-fn log_failed_fix(krate: Option<String>, stderr: &[u8], status: ExitStatus) -> CargoResult<()> {
+fn log_failed_fix(
+    config: &Config,
+    krate: Option<String>,
+    stderr: &[u8],
+    status: ExitStatus,
+) -> CargoResult<()> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
     let diagnostics = stderr
@@ -745,7 +753,7 @@ fn log_failed_fix(krate: Option<String>, stderr: &[u8], status: ExitStatus) -> C
         errors,
         abnormal_exit,
     }
-    .post()?;
+    .post(config)?;
 
     Ok(())
 }
@@ -895,7 +903,7 @@ impl FixArgs {
                 return Message::Fixing {
                     file: self.file.display().to_string(),
                 }
-                .post()
+                .post(config)
                 .and(Ok(true));
             }
         };
@@ -922,7 +930,7 @@ impl FixArgs {
                 message,
                 edition: to_edition.previous().unwrap(),
             }
-            .post()
+            .post(config)
             .and(Ok(false)); // Do not run rustfix for this the edition.
         }
         let from_edition = self.enabled_edition.unwrap_or(Edition::Edition2015);
@@ -937,14 +945,14 @@ impl FixArgs {
                 message,
                 edition: to_edition,
             }
-            .post()
+            .post(config)
         } else {
             Message::Migrating {
                 file: self.file.display().to_string(),
                 from_edition,
                 to_edition,
             }
-            .post()
+            .post(config)
         }
         .and(Ok(true))
     }

@@ -19,7 +19,7 @@
 //! added (it just adds a little complexity). For example, hostname patterns,
 //! and revoked markers. See "FIXME" comments littered in this file.
 
-use crate::util::config::{Definition, Value};
+use crate::util::config::{Config, Definition, Value};
 use git2::cert::{Cert, SshHostKeyType};
 use git2::CertificateCheckStatus;
 use hmac::Mac;
@@ -111,6 +111,7 @@ impl Display for KnownHostLocation {
 
 /// The git2 callback used to validate a certificate (only ssh known hosts are validated).
 pub fn certificate_check(
+    config: &Config,
     cert: &Cert<'_>,
     host: &str,
     port: Option<u16>,
@@ -129,7 +130,12 @@ pub fn certificate_check(
         _ => host.to_string(),
     };
     // The error message must be constructed as a string to pass through the libgit2 C API.
-    let err_msg = match check_ssh_known_hosts(host_key, &host_maybe_port, config_known_hosts) {
+    let err_msg = match check_ssh_known_hosts(
+        config,
+        host_key,
+        &host_maybe_port,
+        config_known_hosts,
+    ) {
         Ok(()) => {
             return Ok(CertificateCheckStatus::CertificateOk);
         }
@@ -146,7 +152,7 @@ pub fn certificate_check(
             // Try checking without the port.
             if port.is_some()
                 && !matches!(port, Some(22))
-                && check_ssh_known_hosts(host_key, host, config_known_hosts).is_ok()
+                && check_ssh_known_hosts(config, host_key, host, config_known_hosts).is_ok()
             {
                 return Ok(CertificateCheckStatus::CertificateOk);
             }
@@ -288,6 +294,7 @@ pub fn certificate_check(
 
 /// Checks if the given host/host key pair is known.
 fn check_ssh_known_hosts(
+    config: &Config,
     cert_host_key: &git2::cert::CertHostkey<'_>,
     host: &str,
     config_known_hosts: Option<&Vec<Value<String>>>,
@@ -299,7 +306,7 @@ fn check_ssh_known_hosts(
 
     // Collect all the known host entries from disk.
     let mut known_hosts = Vec::new();
-    for path in known_host_files() {
+    for path in known_host_files(config) {
         if !path.exists() {
             continue;
         }
@@ -464,9 +471,12 @@ fn check_ssh_known_hosts_loaded(
 }
 
 /// Returns a list of files to try loading OpenSSH-formatted known hosts.
-fn known_host_files() -> Vec<PathBuf> {
+fn known_host_files(config: &Config) -> Vec<PathBuf> {
     let mut result = Vec::new();
-    if std::env::var_os("__CARGO_TEST_DISABLE_GLOBAL_KNOWN_HOST").is_some() {
+    if config
+        .get_env_os("__CARGO_TEST_DISABLE_GLOBAL_KNOWN_HOST")
+        .is_some()
+    {
     } else if cfg!(unix) {
         result.push(PathBuf::from("/etc/ssh/ssh_known_hosts"));
     } else if cfg!(windows) {
@@ -475,7 +485,7 @@ fn known_host_files() -> Vec<PathBuf> {
         // However, I do not know of a way to obtain that location from
         // Windows-land. The ProgramData version here is what the PowerShell
         // port of OpenSSH does.
-        if let Some(progdata) = std::env::var_os("ProgramData") {
+        if let Some(progdata) = config.get_env_os("ProgramData") {
             let mut progdata = PathBuf::from(progdata);
             progdata.push("ssh");
             progdata.push("ssh_known_hosts");

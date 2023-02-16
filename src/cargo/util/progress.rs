@@ -1,5 +1,4 @@
 use std::cmp;
-use std::env;
 use std::time::{Duration, Instant};
 
 use crate::core::shell::Verbosity;
@@ -44,7 +43,7 @@ impl<'cfg> Progress<'cfg> {
         // report no progress when -q (for quiet) or TERM=dumb are set
         // or if running on Continuous Integration service like Travis where the
         // output logs get mangled.
-        let dumb = match env::var("TERM") {
+        let dumb = match cfg.get_env("TERM") {
             Ok(term) => term == "dumb",
             Err(_) => false,
         };

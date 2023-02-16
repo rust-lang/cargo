@@ -440,17 +440,18 @@ impl Config {
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
         self.cargo_exe
             .try_borrow_with(|| {
-                fn from_env() -> CargoResult<PathBuf> {
+                let from_env = || -> CargoResult<PathBuf> {
                     // Try re-using the `cargo` set in the environment already. This allows
                     // commands that use Cargo as a library to inherit (via `cargo <subcommand>`)
                     // or set (by setting `$CARGO`) a correct path to `cargo` when the current exe
                     // is not actually cargo (e.g., `cargo-*` binaries, Valgrind, `ld.so`, etc.).
-                    let exe = env::var_os(crate::CARGO_ENV)
+                    let exe = self
+                        .get_env_os(crate::CARGO_ENV)
                         .map(PathBuf::from)
                         .ok_or_else(|| anyhow!("$CARGO not set"))?
                         .canonicalize()?;
                     Ok(exe)
-                }
+                };
 
                 fn from_current_exe() -> CargoResult<PathBuf> {
                     // Try fetching the path to `cargo` using `env::current_exe()`.
@@ -1626,7 +1627,7 @@ impl Config {
     ) -> Option<PathBuf> {
         let var = tool.to_uppercase();
 
-        match env::var_os(&var) {
+        match self.get_env_os(&var) {
             Some(tool_path) => {
                 let maybe_relative = match tool_path.to_str() {
                     Some(s) => s.contains('/') || s.contains('\\'),
