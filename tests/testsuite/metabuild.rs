@@ -22,7 +22,7 @@ fn metabuild_gated() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
         .with_stderr(
@@ -83,7 +83,7 @@ fn basic_project() -> Project {
 #[cargo_test]
 fn metabuild_basic() {
     let p = basic_project();
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .with_stdout_contains("[foo 0.0.1] Hello mb-other")
@@ -115,7 +115,7 @@ fn metabuild_error_both() {
         )
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
         .with_stderr_contains(
@@ -145,7 +145,7 @@ fn metabuild_missing_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
         .with_stderr_contains(
@@ -182,12 +182,12 @@ fn metabuild_optional_dep() {
         )
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_does_not_contain("[foo 0.0.1] Hello mb")
         .run();
 
-    p.cargo("build -vv --features mb")
+    p.cargo("check -vv --features mb")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
@@ -227,7 +227,7 @@ fn metabuild_lib_name() {
         )
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
@@ -266,12 +266,12 @@ fn metabuild_fresh() {
         )
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_does_not_contain("[foo 0.0.1] Hello mb")
         .with_stderr(
@@ -315,7 +315,7 @@ fn metabuild_links() {
         )
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
@@ -356,7 +356,7 @@ fn metabuild_override() {
         )
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .run();
 }
@@ -420,7 +420,7 @@ fn metabuild_workspace() {
         )
         .build();
 
-    p.cargo("build -vv --workspace")
+    p.cargo("check -vv --workspace")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
         .with_stdout_contains("[member1 0.0.1] Hello mb2 [..]member1")
@@ -621,7 +621,7 @@ fn metabuild_two_versions() {
         )
         .build();
 
-    p.cargo("build -vv --workspace")
+    p.cargo("check -vv --workspace")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
         .with_stdout_contains("[member2 0.0.1] Hello mb2 [..]member2")
@@ -674,7 +674,7 @@ fn metabuild_external_dependency() {
         .file("src/lib.rs", "extern crate dep;")
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[dep 1.0.0] Hello mb")
         .run();
@@ -685,7 +685,7 @@ fn metabuild_external_dependency() {
 #[cargo_test]
 fn metabuild_json_artifact() {
     let p = basic_project();
-    p.cargo("build --message-format=json")
+    p.cargo("check --message-format=json")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_json_contains_unordered(
             r#"
@@ -733,7 +733,7 @@ fn metabuild_failed_build_json() {
     let p = basic_project();
     // Modify the metabuild dep so that it fails to compile.
     p.change_file("mb/src/lib.rs", "");
-    p.cargo("build --message-format=json")
+    p.cargo("check --message-format=json")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
         .with_json_contains_unordered(
