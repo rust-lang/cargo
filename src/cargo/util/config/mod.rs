@@ -54,7 +54,7 @@ use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -106,7 +106,7 @@ macro_rules! get_value_typed {
         /// Low-level private method for getting a config value as an OptValue.
         fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
             let cv = self.get_cv(key)?;
-            let env = self.get_env::<$ty>(key)?;
+            let env = self.get_config_env::<$ty>(key)?;
             match (cv, env) {
                 (Some(CV::$variant(val, definition)), Some(env)) => {
                     if definition.is_higher_priority(&env.definition) {
@@ -742,7 +742,7 @@ impl Config {
         &self.env
     }
 
-    fn get_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
+    fn get_config_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
     where
         T: FromStr,
         <T as FromStr>::Err: fmt::Display,
@@ -762,6 +762,16 @@ impl Config {
                 Ok(None)
             }
         }
+    }
+
+    /// Wrapper around `std::env::var`.
+    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<String> {
+        Ok(std::env::var(key)?)
+    }
+
+    /// Wrapper around `std::env::var`.
+    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
+        std::env::var_os(key)
     }
 
     /// Check if the [`Config`] contains a given [`ConfigKey`].
