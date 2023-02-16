@@ -54,7 +54,7 @@ use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -765,14 +765,24 @@ impl Config {
         }
     }
 
-    /// Wrapper around `std::env::var`.
-    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<String> {
-        Ok(std::env::var(key)?)
+    /// Get the value of environment variable `key` through the `Config` snapshot.
+    ///
+    /// This can be used similarly to `std::env::var`.
+    pub fn get_env(&self, key: impl AsRef<str>) -> CargoResult<String> {
+        match self.env.get(key.as_ref()) {
+            Some(s) => Ok(s.clone()),
+            None => bail!(
+                "{} could not be found in the environment snapshot",
+                key.as_ref()
+            ),
+        }
     }
 
-    /// Wrapper around `std::env::var`.
-    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
-        std::env::var_os(key)
+    /// Get the value of environment variable `key` through the `Config` snapshot.
+    ///
+    /// This can be used similarly to `std::env::var_os`.
+    pub fn get_env_os(&self, key: impl AsRef<str>) -> Option<String> {
+        self.env.get(key.as_ref()).cloned()
     }
 
     /// Check if the [`Config`] contains a given [`ConfigKey`].
@@ -1629,10 +1639,7 @@ impl Config {
 
         match self.get_env_os(&var) {
             Some(tool_path) => {
-                let maybe_relative = match tool_path.to_str() {
-                    Some(s) => s.contains('/') || s.contains('\\'),
-                    None => false,
-                };
+                let maybe_relative = tool_path.contains('/') || tool_path.contains('\\');
                 let path = if maybe_relative {
                     self.cwd.join(tool_path)
                 } else {
