@@ -127,6 +127,38 @@ fn empty_login_token() {
 }
 
 #[cargo_test]
+fn invalid_login_token() {
+    let registry = RegistryBuilder::new()
+        .no_configure_registry()
+        .no_configure_token()
+        .build();
+    setup_new_credentials();
+
+    let check_ = |stdin: &str, stderr: &str| {
+        cargo_process("login")
+            .replace_crates_io(registry.index_url())
+            .with_stdout("please paste the token found on [..]/me below")
+            .with_stdin(stdin)
+            .with_stderr(stderr)
+            .with_status(101)
+            .run();
+    };
+    let check = |stdin: &str| {
+        check_(stdin, "[ERROR] invalid token.");
+    };
+    // first check updates index so it must be handled differently
+    check_(
+        "😄",
+        "\
+[UPDATING] crates.io index
+[ERROR] invalid token.",
+    );
+    check("\u{0016}");
+    check("\u{0000}");
+    check("你好");
+}
+
+#[cargo_test]
 fn bad_asymmetric_token_args() {
     // These cases are kept brief as the implementation is covered by clap, so this is only smoke testing that we have clap configured correctly.
     cargo_process("login --key-subject=foo tok")
