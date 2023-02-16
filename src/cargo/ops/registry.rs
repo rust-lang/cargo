@@ -898,9 +898,7 @@ pub fn registry_login(
         });
 
         if let Some(tok) = new_token.as_token() {
-            if tok.is_empty() {
-                bail!("please provide a non-empty token");
-            }
+            crates_io::check_token(tok.as_ref().expose())?;
         }
     }
     if &reg_cfg == &new_token {

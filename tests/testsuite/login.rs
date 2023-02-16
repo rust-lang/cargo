@@ -127,6 +127,51 @@ fn empty_login_token() {
 }
 
 #[cargo_test]
+fn invalid_login_token() {
+    let registry = RegistryBuilder::new()
+        .no_configure_registry()
+        .no_configure_token()
+        .build();
+    setup_new_credentials();
+
+    let check = |stdin: &str, stderr: &str| {
+        cargo_process("login")
+            .replace_crates_io(registry.index_url())
+            .with_stdout("please paste the token found on [..]/me below")
+            .with_stdin(stdin)
+            .with_stderr(stderr)
+            .with_status(101)
+            .run();
+    };
+
+    check(
+        "😄",
+        "\
+[UPDATING] crates.io index
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+    check(
+        "\u{0016}",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+    check(
+        "\u{0000}",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+    check(
+        "你好",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+}
+
+#[cargo_test]
 fn bad_asymmetric_token_args() {
     // These cases are kept brief as the implementation is covered by clap, so this is only smoke testing that we have clap configured correctly.
     cargo_process("login --key-subject=foo tok")
