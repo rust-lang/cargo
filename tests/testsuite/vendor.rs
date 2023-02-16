@@ -34,7 +34,7 @@ fn vendor_simple() {
     assert!(lock.contains("version = \"0.3.5\""));
 
     add_vendor_config(&p);
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -247,7 +247,7 @@ fn two_versions() {
     assert!(lock.contains("version = \"0.7.0\""));
 
     add_vendor_config(&p);
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -292,7 +292,7 @@ fn two_explicit_versions() {
     assert!(lock.contains("version = \"0.7.0\""));
 
     add_vendor_config(&p);
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -385,8 +385,8 @@ fn two_lockfiles() {
     assert!(lock.contains("version = \"0.7.0\""));
 
     add_vendor_config(&p);
-    p.cargo("build").cwd("foo").run();
-    p.cargo("build").cwd("bar").run();
+    p.cargo("check").cwd("foo").run();
+    p.cargo("check").cwd("bar").run();
 }
 
 #[cargo_test]
@@ -642,7 +642,7 @@ fn vendoring_git_crates() {
     p.read_file("vendor/serde_derive/src/wut.rs");
 
     add_vendor_config(&p);
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
