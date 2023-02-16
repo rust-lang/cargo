@@ -134,7 +134,7 @@ fn invalid_login_token() {
         .build();
     setup_new_credentials();
 
-    let check_ = |stdin: &str, stderr: &str| {
+    let check = |stdin: &str, stderr: &str| {
         cargo_process("login")
             .replace_crates_io(registry.index_url())
             .with_stdout("please paste the token found on [..]/me below")
@@ -143,19 +143,32 @@ fn invalid_login_token() {
             .with_status(101)
             .run();
     };
-    let check = |stdin: &str| {
-        check_(stdin, "[ERROR] invalid token.");
-    };
-    // first check updates index so it must be handled differently
-    check_(
+
+    check(
         "😄",
         "\
 [UPDATING] crates.io index
-[ERROR] invalid token.",
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
     );
-    check("\u{0016}");
-    check("\u{0000}");
-    check("你好");
+    check(
+        "\u{0016}",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+    check(
+        "\u{0000}",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+    check(
+        "你好",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
 }
 
 #[cargo_test]

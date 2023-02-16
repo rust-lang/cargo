@@ -518,16 +518,20 @@ pub fn is_url_crates_io(url: &str) -> bool {
 /// It would be easier to check just for alphanumeric tokens, but we can't be sure that all
 /// registries only create tokens in that format so that is as less restricted as possible.
 pub fn check_token(token: &str) -> Result<()> {
-    let is_valid = token.bytes().all(|b| {
+    if token.is_empty() {
+        bail!("please provide a non-empty token");
+    }
+    if token.bytes().all(|b| {
         b >= 32 // undefined in ISO-8859-1, in ASCII/ UTF-8 not-printable character
         && b < 128 // utf-8: the first bit signals a multi-byte character
         && b != 127 // 127 is a control character in ascii and not in ISO 8859-1
         || b == b't' // tab is also allowed (even when < 32)
-    });
-
-    if is_valid {
+    }) {
         Ok(())
     } else {
-        Err(anyhow::anyhow!("invalid token."))
+        Err(anyhow::anyhow!(
+            "token contains invalid characters.\nOnly printable ISO-8859-1 characters \
+             are allowed as it is sent in a HTTPS header."
+        ))
     }
 }
