@@ -565,7 +565,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // Once the main one is opened we realized that pipelining is possible
         // and multiplexing is possible with static.crates.io. All in all this
         // reduces the number of connections done to a more manageable state.
-        handle.pipewait(true)?;
+        crate::try_old_curl!(handle.pipewait(true), "pipewait");
 
         let mut headers = List::new();
         // Include a header to identify the protocol. This allows the server to
