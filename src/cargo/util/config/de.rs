@@ -215,7 +215,7 @@ impl<'config> ConfigMapAccess<'config> {
         if de.config.cli_unstable().advanced_env {
             // `CARGO_PROFILE_DEV_PACKAGE_`
             let env_prefix = format!("{}_", de.key.as_env_key());
-            for env_key in de.config.env.keys() {
+            for env_key in de.config.env_keys() {
                 if env_key.starts_with(&env_prefix) {
                     // `CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL = 3`
                     let rest = &env_key[env_prefix.len()..];
@@ -265,7 +265,7 @@ impl<'config> ConfigMapAccess<'config> {
         for field in given_fields {
             let mut field_key = de.key.clone();
             field_key.push(field);
-            for env_key in de.config.env.keys() {
+            for env_key in de.config.env_keys() {
                 if env_key.starts_with(field_key.as_env_key()) {
                     fields.insert(KeyKind::Normal(field.to_string()));
                 }
@@ -424,7 +424,7 @@ impl<'config> ValueDeserializer<'config> {
         let definition = {
             let env = de.key.as_env_key();
             let env_def = Definition::Environment(env.to_string());
-            match (de.config.env.contains_key(env), de.config.get_cv(&de.key)?) {
+            match (de.config.env_has_key(env), de.config.get_cv(&de.key)?) {
                 (true, Some(cv)) => {
                     // Both, pick highest priority.
                     if env_def.is_higher_priority(cv.definition()) {
