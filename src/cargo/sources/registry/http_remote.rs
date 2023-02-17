@@ -391,25 +391,6 @@ impl<'cfg> HttpRegistry<'cfg> {
     }
 }
 
-// copied from src/cargo/core/package.rs to keep change minimal
-//
-// When dynamically linked against libcurl, we want to ignore some failures
-// when using old versions that don't support certain features.
-macro_rules! try_old_curl {
-    ($e:expr, $msg:expr) => {
-        let result = $e;
-        if cfg!(target_os = "macos") {
-            if let Err(e) = result {
-                warn!("ignoring libcurl {} error: {}", $msg, e);
-            }
-        } else {
-            result.with_context(|| {
-                anyhow::format_err!("failed to enable {}, is curl not built right?", $msg)
-            })?;
-        }
-    };
-}
-
 impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     fn prepare(&self) -> CargoResult<()> {
         Ok(())
@@ -572,7 +553,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         // Enable HTTP/2 if possible.
         if self.multiplexing {
-            try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
+            crate::try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
         } else {
             handle.http_version(HttpVersion::V11)?;
         }
