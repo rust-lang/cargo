@@ -453,9 +453,12 @@ fn wait_for_publish(
     let now = std::time::Instant::now();
     let sleep_time = std::time::Duration::from_secs(1);
     let max = timeout.as_secs() as usize;
-    config.shell().status("Published", pkg.to_string())?;
     // Short does not include the registry name.
     let short_pkg_description = format!("{} v{}", pkg.name(), pkg.version());
+    config.shell().status(
+        "Uploaded",
+        format!("{short_pkg_description} to {source_description}"),
+    )?;
     config.shell().note(format!(
         "Waiting up to {max} seconds for `{short_pkg_description}` to be available at {source_description}.\n\
         You may press ctrl-c to skip waiting; the crate should be available shortly."
@@ -505,8 +508,8 @@ fn wait_for_publish(
     };
     if is_available {
         config.shell().status(
-            "Completed",
-            format!("{pkg} has been successfully published to {source_description}"),
+            "Published",
+            format!("{short_pkg_description} at {source_description}"),
         )?;
     }
 

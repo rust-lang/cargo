@@ -114,10 +114,10 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
-[COMPLETED] foo v0.0.1 ([CWD]) has been successfully published to registry `crates-io`
+[PUBLISHED] foo v0.0.1 at registry `crates-io`
 ",
         )
         .run();
@@ -158,10 +158,10 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `dummy-registry`
 note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `dummy-registry`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
-[COMPLETED] foo v0.0.1 ([CWD]) has been successfully published to registry `dummy-registry`
+[PUBLISHED] foo v0.0.1 at registry `dummy-registry`
 ",
         )
         .run();
@@ -201,10 +201,10 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `dummy-registry`
 note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `dummy-registry`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
-[COMPLETED] foo v0.0.1 ([CWD]) has been successfully published to registry `dummy-registry`
+[PUBLISHED] foo v0.0.1 at registry `dummy-registry`
 ",
         )
         .run();
@@ -255,10 +255,10 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -300,10 +300,10 @@ fn simple_with_index() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `[ROOT]/registry`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -501,10 +501,10 @@ fn publish_clean() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c to skip waiting; the crate should be available shortly.
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -550,10 +550,10 @@ fn publish_in_sub_repo() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -599,10 +599,10 @@ fn publish_when_ignored() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -647,10 +647,10 @@ fn ignore_when_crate_ignored() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -836,10 +836,10 @@ fn publish_allowed_registry() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `alternative`
 note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `alternative`.
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 ([CWD]) has been successfully published to registry `alternative`
+[PUBLISHED] foo v0.0.1 at registry `alternative`
 ",
         )
         .run();
@@ -897,10 +897,10 @@ fn publish_implicitly_to_only_allowed_registry() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `alternative`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1026,10 +1026,10 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1077,10 +1077,10 @@ fn publish_with_select_features() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1128,10 +1128,10 @@ fn publish_with_all_features() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1233,10 +1233,10 @@ fn publish_with_patch() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -1432,10 +1432,10 @@ fn publish_git_with_version() {
 [..]
 [..]
 [UPLOADING] foo v0.1.0 ([CWD])
-[PUBLISHED] foo v0.1.0 ([CWD])
+[UPLOADED] foo v0.1.0 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.1.0 [..]
+[PUBLISHED] foo v0.1.0 [..]
 ",
         )
         .run();
@@ -1554,10 +1554,10 @@ fn publish_dev_dep_no_version() {
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.1.0 [..]
-[PUBLISHED] foo v0.1.0 [..]
+[UPLOADED] foo v0.1.0 [..]
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.1.0 [..]
+[PUBLISHED] foo v0.1.0 [..]
 ",
         )
         .run();
@@ -1653,10 +1653,10 @@ fn credentials_ambiguous_filename() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 [..]
-[PUBLISHED] foo v0.0.1 [..]
+[UPLOADED] foo v0.0.1 [..]
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -2063,10 +2063,10 @@ See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
-[PUBLISHED] li v0.0.1 ([CWD]/li)
+[UPLOADED] li v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] li v0.0.1 [..]
+[PUBLISHED] li v0.0.1 [..]
 ",
         )
         .run();
@@ -2165,10 +2165,10 @@ See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
-[PUBLISHED] li v0.0.1 ([CWD]/li)
+[UPLOADED] li v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] li v0.0.1 [..]
+[PUBLISHED] li v0.0.1 [..]
 ",
         )
         .run();
@@ -2260,10 +2260,10 @@ See [..]
 [PACKAGING] li v0.0.1 ([CWD]/li)
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] li v0.0.1 ([CWD]/li)
-[PUBLISHED] li v0.0.1 ([CWD]/li)
+[UPLOADED] li v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] li v0.0.1 [..]
+[PUBLISHED] li v0.0.1 [..]
 ",
         )
         .run();
@@ -2450,10 +2450,10 @@ fn http_api_not_noop() {
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
-[PUBLISHED] foo v0.0.1 ([CWD])
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 note: Waiting [..]
 You may press ctrl-c [..]
-[COMPLETED] foo v0.0.1 [..]
+[PUBLISHED] foo v0.0.1 [..]
 ",
         )
         .run();
@@ -2527,10 +2527,10 @@ See [..]
 [PACKAGING] delay v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.1 ([CWD])
-[PUBLISHED] delay v0.0.1 ([CWD])
+[UPLOADED] delay v0.0.1 to registry `crates-io`
 note: Waiting up to 60 seconds for `delay v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
-[COMPLETED] delay v0.0.1 ([CWD]) has been successfully published to registry `crates-io`
+[PUBLISHED] delay v0.0.1 at registry `crates-io`
 ",
         )
         .run();
@@ -2609,10 +2609,10 @@ See [..]
 [PACKAGING] delay_with_underscore v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay_with_underscore v0.0.1 ([CWD])
-[PUBLISHED] delay_with_underscore v0.0.1 ([CWD])
+[UPLOADED] delay_with_underscore v0.0.1 to registry `crates-io`
 note: Waiting up to 60 seconds for `delay_with_underscore v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
-[COMPLETED] delay_with_underscore v0.0.1 ([CWD]) has been successfully published to registry `crates-io`
+[PUBLISHED] delay_with_underscore v0.0.1 at registry `crates-io`
 ",
         )
         .run();
@@ -2701,10 +2701,10 @@ See [..]
 [PACKAGING] delay v0.0.2 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.2 ([CWD])
-[PUBLISHED] delay v0.0.2 ([CWD])
+[UPLOADED] delay v0.0.2 to registry `crates-io`
 note: Waiting up to 60 seconds for `delay v0.0.2` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
-[COMPLETED] delay v0.0.2 ([CWD]) has been successfully published to registry `crates-io`
+[PUBLISHED] delay v0.0.2 at registry `crates-io`
 ",
         )
         .run();
@@ -2817,7 +2817,7 @@ See [..]
 [PACKAGING] delay v0.0.1 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.1 ([CWD])
-[PUBLISHED] delay v0.0.1 ([CWD])
+[UPLOADED] delay v0.0.1 to registry `crates-io`
 note: Waiting up to 2 seconds for `delay v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 warning: timed out waiting for `delay v0.0.1` to be available in registry `crates-io`
@@ -2866,10 +2866,10 @@ See [..]
 [PACKAGING] delay v0.0.2 ([CWD])
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.2 ([CWD])
-[PUBLISHED] delay v0.0.2 ([CWD])
+[UPLOADED] delay v0.0.2 to registry `crates-io`
 note: Waiting up to 60 seconds for `delay v0.0.2` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
-[COMPLETED] delay v0.0.2 ([CWD]) has been successfully published to registry `crates-io`
+[PUBLISHED] delay v0.0.2 at registry `crates-io`
 ",
         )
         .run();
