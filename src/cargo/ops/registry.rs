@@ -460,7 +460,7 @@ fn wait_for_publish(
         format!("{short_pkg_description} to {source_description}"),
     )?;
     config.shell().note(format!(
-        "Waiting up to {max} seconds for `{short_pkg_description}` to be available at {source_description}.\n\
+        "Waiting for `{short_pkg_description}` to be available at {source_description}.\n\
         You may press ctrl-c to skip waiting; the crate should be available shortly."
     ))?;
     let mut progress = Progress::with_style("Waiting", ProgressStyle::Ratio, config);

@@ -115,7 +115,7 @@ See [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `crates-io`.
+note: Waiting for `foo v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 ",
@@ -159,7 +159,7 @@ See [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPLOADED] foo v0.0.1 to registry `dummy-registry`
-note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `dummy-registry`.
+note: Waiting for `foo v0.0.1` to be available at registry `dummy-registry`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `dummy-registry`
 ",
@@ -202,7 +202,7 @@ See [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPLOADED] foo v0.0.1 to registry `dummy-registry`
-note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `dummy-registry`.
+note: Waiting for `foo v0.0.1` to be available at registry `dummy-registry`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `dummy-registry`
 ",
@@ -837,7 +837,7 @@ fn publish_allowed_registry() {
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [UPLOADED] foo v0.0.1 to registry `alternative`
-note: Waiting up to 60 seconds for `foo v0.0.1` to be available at registry `alternative`.
+note: Waiting for `foo v0.0.1` to be available at registry `alternative`.
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.0.1 at registry `alternative`
 ",
@@ -2528,7 +2528,7 @@ See [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.1 ([CWD])
 [UPLOADED] delay v0.0.1 to registry `crates-io`
-note: Waiting up to 60 seconds for `delay v0.0.1` to be available at registry `crates-io`.
+note: Waiting for `delay v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] delay v0.0.1 at registry `crates-io`
 ",
@@ -2610,7 +2610,7 @@ See [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay_with_underscore v0.0.1 ([CWD])
 [UPLOADED] delay_with_underscore v0.0.1 to registry `crates-io`
-note: Waiting up to 60 seconds for `delay_with_underscore v0.0.1` to be available at registry `crates-io`.
+note: Waiting for `delay_with_underscore v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] delay_with_underscore v0.0.1 at registry `crates-io`
 ",
@@ -2702,7 +2702,7 @@ See [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.2 ([CWD])
 [UPLOADED] delay v0.0.2 to registry `crates-io`
-note: Waiting up to 60 seconds for `delay v0.0.2` to be available at registry `crates-io`.
+note: Waiting for `delay v0.0.2` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] delay v0.0.2 at registry `crates-io`
 ",
@@ -2818,7 +2818,7 @@ See [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.1 ([CWD])
 [UPLOADED] delay v0.0.1 to registry `crates-io`
-note: Waiting up to 2 seconds for `delay v0.0.1` to be available at registry `crates-io`.
+note: Waiting for `delay v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 warning: timed out waiting for `delay v0.0.1` to be available in registry `crates-io`
 note: The registry may have a backlog that is delaying making the crate available. The crate should be available soon.
@@ -2867,7 +2867,7 @@ See [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] delay v0.0.2 ([CWD])
 [UPLOADED] delay v0.0.2 to registry `crates-io`
-note: Waiting up to 60 seconds for `delay v0.0.2` to be available at registry `crates-io`.
+note: Waiting for `delay v0.0.2` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] delay v0.0.2 at registry `crates-io`
 ",
