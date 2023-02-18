@@ -14,7 +14,7 @@ use anyhow::Context;
 use cargo_util::paths;
 use curl::easy::{HttpVersion, List};
 use curl::multi::{EasyHandle, Multi};
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -553,7 +553,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         // Enable HTTP/2 if possible.
         if self.multiplexing {
-            handle.http_version(HttpVersion::V2)?;
+            crate::try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
         } else {
             handle.http_version(HttpVersion::V11)?;
         }
@@ -565,7 +565,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // Once the main one is opened we realized that pipelining is possible
         // and multiplexing is possible with static.crates.io. All in all this
         // reduces the number of connections done to a more manageable state.
-        handle.pipewait(true)?;
+        crate::try_old_curl!(handle.pipewait(true), "pipewait");
 
         let mut headers = List::new();
         // Include a header to identify the protocol. This allows the server to
