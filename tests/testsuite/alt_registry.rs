@@ -465,7 +465,14 @@ fn publish_to_alt_registry() {
 
 #[cargo_test]
 fn publish_with_crates_io_dep() {
-    registry::alt_init();
+    // crates.io registry.
+    let _dummy_reg = registry::init();
+    // Alternative registry.
+    let _alt_reg = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative_named("alternative")
+        .build();
     let p = project()
         .file(
             "Cargo.toml",
@@ -486,10 +493,26 @@ fn publish_with_crates_io_dep() {
 
     Package::new("bar", "0.0.1").publish();
 
-    // Login so that we have the token available
-    p.cargo("login --registry alternative TOKEN").run();
-
-    p.cargo("publish --registry alternative").run();
+    p.cargo("publish --registry alternative")
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+[WARNING] [..]
+[..]
+[PACKAGING] foo v0.0.1 [..]
+[UPDATING] `dummy-registry` index
+[VERIFYING] foo v0.0.1 [..]
+[DOWNLOADING] [..]
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[COMPILING] bar v0.0.1
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] [..]
+[PACKAGED] [..]
+[UPLOADING] foo v0.0.1 [..]
+[UPDATING] `alternative` index
+",
+        )
+        .run();
 
     validate_alt_upload(
         r#"{
