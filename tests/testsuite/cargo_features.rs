@@ -635,7 +635,7 @@ fn publish_allowed() {
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr(
             "\
-[UPDATING] crates.io index
+[UPDATING] [..]
 [WARNING] [..]
 [..]
 [PACKAGING] a v0.0.1 [..]
@@ -644,7 +644,7 @@ fn publish_allowed() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] a v0.0.1 [..]
-[UPDATING] crates.io index
+[UPDATING] [..]
 ",
         )
         .run();

@@ -439,7 +439,7 @@ fn publish_to_alt_registry() {
     let _reg = RegistryBuilder::new()
         .http_api()
         .http_index()
-        .alternative_named("alternative")
+        .alternative()
         .build();
 
     let p = project().file("src/main.rs", "fn main() {}").build();
@@ -471,7 +471,7 @@ fn publish_with_crates_io_dep() {
     let _alt_reg = RegistryBuilder::new()
         .http_api()
         .http_index()
-        .alternative_named("alternative")
+        .alternative()
         .build();
     let p = project()
         .file(

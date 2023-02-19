@@ -1,7 +1,7 @@
 //! Tests for namespaced features.
 
 use super::features2::switch_to_resolver_2;
-use cargo_test_support::registry::{self, Dependency, Package};
+use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
 use cargo_test_support::{project, publish};
 
 #[cargo_test]
@@ -858,8 +858,7 @@ bar v1.0.0
 
 #[cargo_test]
 fn publish_no_implicit() {
-    // HACK below allows us to use a local registry
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     // Does not include implicit features or dep: syntax on publish.
     Package::new("opt-dep1", "1.0.0").publish();
@@ -886,15 +885,6 @@ fn publish_no_implicit() {
         )
         .file("src/lib.rs", "")
         .build();
-
-    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("foo", "0.1.0")
-        .file("src/lib.rs", "")
-        .publish();
 
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
@@ -984,8 +974,7 @@ feat = ["opt-dep1"]
 
 #[cargo_test]
 fn publish() {
-    // HACK below allows us to use a local registry
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     // Publish behavior with explicit dep: syntax.
     Package::new("bar", "1.0.0").publish();
@@ -1012,15 +1001,6 @@ fn publish() {
         .file("src/lib.rs", "")
         .build();
 
-    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("foo", "0.1.0")
-        .file("src/lib.rs", "")
-        .publish();
-
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_stderr(
@@ -1028,6 +1008,7 @@ fn publish() {
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [VERIFYING] foo v0.1.0 [..]
+[UPDATING] [..]
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
 [PACKAGED] [..]
