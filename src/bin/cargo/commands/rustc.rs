@@ -12,7 +12,7 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("args")
                 .num_args(0..)
-                .help("Rustc flags")
+                .help("Extra rustc flags")
                 .trailing_var_arg(true),
         )
         .arg_package("Package to build")
