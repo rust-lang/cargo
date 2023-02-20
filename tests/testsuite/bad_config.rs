@@ -20,7 +20,7 @@ fn bad1() {
         .with_stderr(
             "\
 [ERROR] expected table for configuration key `target.nonexistent-target`, \
-but found string in [..]config
+but found string in [..]/config
 ",
         )
         .run();
