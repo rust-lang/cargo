@@ -6,7 +6,7 @@ use crate::cargo_add::init_alt_registry;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn git_registry() {
+fn case() {
     init_alt_registry();
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = project.root();
