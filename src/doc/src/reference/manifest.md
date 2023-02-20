@@ -84,7 +84,7 @@ a keyword. [crates.io] imposes even more restrictions, such as:
 
 - Only ASCII characters are allowed.
 - Do not use reserved names.
-- Do not use special Windows name such as "nul".
+- Do not use special Windows names such as "nul".
 - Use a maximum of 64 characters of length.
 
 [alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
