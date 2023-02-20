@@ -6,7 +6,7 @@ use std::fs;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn git_autodetect() {
+fn case() {
     let project_root = &paths::root().join("foo");
     // Need to create `.git` dir manually because it cannot be tracked under a git repo
     fs::create_dir_all(project_root.join(".git")).unwrap();

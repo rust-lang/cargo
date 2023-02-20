@@ -5,7 +5,7 @@ use std::fs;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn reserved_name() {
+fn case() {
     let project_root = &paths::root().join("test");
     fs::create_dir_all(project_root).unwrap();
 

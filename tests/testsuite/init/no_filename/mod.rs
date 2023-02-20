@@ -5,7 +5,7 @@ use cargo_test_support::curr_dir;
 
 #[cfg(not(windows))]
 #[cargo_test]
-fn no_filename() {
+fn case() {
     snapbox::cmd::Command::cargo_ui()
         .arg_line("init /")
         .current_dir(paths::root())
