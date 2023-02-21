@@ -10,7 +10,7 @@ use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::util::interning::InternedString;
-use crate::util::{profile, CargoResult, StableHasher};
+use crate::util::{profile, CargoResult, Config, StableHasher};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]
@@ -43,6 +43,7 @@ impl Rustc {
         workspace_wrapper: Option<PathBuf>,
         rustup_rustc: &Path,
         cache_location: Option<PathBuf>,
+        config: &Config,
     ) -> CargoResult<Rustc> {
         let _p = profile::start("Rustc::new");
 
@@ -52,6 +53,7 @@ impl Rustc {
             &path,
             rustup_rustc,
             cache_location,
+            config,
         );
 
         let mut cmd = ProcessBuilder::new(&path);
@@ -173,10 +175,11 @@ impl Cache {
         rustc: &Path,
         rustup_rustc: &Path,
         cache_location: Option<PathBuf>,
+        config: &Config,
     ) -> Cache {
         match (
             cache_location,
-            rustc_fingerprint(wrapper, workspace_wrapper, rustc, rustup_rustc),
+            rustc_fingerprint(wrapper, workspace_wrapper, rustc, rustup_rustc, config),
         ) {
             (Some(cache_location), Ok(rustc_fingerprint)) => {
                 let empty = CacheData {
@@ -296,6 +299,7 @@ fn rustc_fingerprint(
     workspace_wrapper: Option<&Path>,
     rustc: &Path,
     rustup_rustc: &Path,
+    config: &Config,
 ) -> CargoResult<u64> {
     let mut hasher = StableHasher::new();
 
@@ -329,8 +333,8 @@ fn rustc_fingerprint(
     let maybe_rustup = rustup_rustc == rustc;
     match (
         maybe_rustup,
-        env::var("RUSTUP_HOME"),
-        env::var("RUSTUP_TOOLCHAIN"),
+        config.get_env("RUSTUP_HOME"),
+        config.get_env("RUSTUP_TOOLCHAIN"),
     ) {
         (_, Ok(rustup_home), Ok(rustup_toolchain)) => {
             debug!("adding rustup info to rustc fingerprint");
