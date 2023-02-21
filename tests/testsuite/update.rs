@@ -36,7 +36,7 @@ fn minor_update_two_places() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     Package::new("log", "0.1.1").publish();
 
     p.change_file(
@@ -52,7 +52,7 @@ fn minor_update_two_places() {
         "#,
     );
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -91,7 +91,7 @@ fn transitive_minor_update() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1.1").publish();
@@ -150,7 +150,7 @@ fn conservative() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
@@ -198,11 +198,11 @@ fn update_via_new_dep() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").env("CARGO_LOG", "cargo=trace").run();
+    p.cargo("check").env("CARGO_LOG", "cargo=trace").run();
 }
 
 #[cargo_test]
@@ -240,11 +240,11 @@ fn update_via_new_member() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -267,13 +267,13 @@ fn add_dep_deep_new_requirement() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("bar", "0.1.0").dep("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -297,13 +297,13 @@ fn everything_real_deep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("bar", "0.1.0").dep("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -339,7 +339,7 @@ fn change_package_version() {
         )
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -377,7 +377,7 @@ fn update_precise() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("serde", "0.2.0").publish();
 
@@ -412,7 +412,7 @@ fn update_precise_do_not_force_update_deps() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
@@ -448,7 +448,7 @@ fn update_aggressive() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
@@ -709,7 +709,7 @@ fn dry_run_update() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     let old_lockfile = p.read_lockfile();
 
     Package::new("log", "0.1.1").publish();

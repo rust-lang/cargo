@@ -49,21 +49,21 @@ fn replace() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 ([..])
-[COMPILING] bar v0.1.0 ([CWD]/bar)
-[COMPILING] baz v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] baz v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -95,12 +95,12 @@ fn from_config() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.1 ([..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -136,12 +136,12 @@ fn from_config_relative() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.1 ([..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -180,12 +180,12 @@ fn from_config_precedence() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.1 ([..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -220,17 +220,17 @@ fn nonexistent() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.0 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -267,17 +267,17 @@ fn patch_git() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[COMPILING] bar v0.1.0 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -314,18 +314,18 @@ fn patch_to_git() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 (file://[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -353,7 +353,7 @@ fn unused() {
         .file("bar/src/lib.rs", "not rust code")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -364,13 +364,13 @@ what is [..]
 version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
@@ -425,7 +425,7 @@ fn unused_with_mismatch_source_being_patched() {
         .file("baz/src/lib.rs", "not rust code")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -440,8 +440,8 @@ what is [..]
 version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -473,17 +473,17 @@ fn prefer_patch_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.1 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [FINISHED] [..]
@@ -526,7 +526,7 @@ fn unused_from_config() {
         .file("bar/src/lib.rs", "not rust code")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -537,13 +537,13 @@ what is [..]
 version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
@@ -598,7 +598,7 @@ fn unused_git() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
@@ -610,13 +610,13 @@ what is [..]
 version. [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.2.0 ([..])` was not used in the crate graph.
@@ -652,19 +652,19 @@ fn add_patch() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
     p.change_file(
         "Cargo.toml",
@@ -682,16 +682,16 @@ fn add_patch() {
         "#,
     );
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -716,19 +716,19 @@ fn add_patch_from_config() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
     p.change_file(
         ".cargo/config.toml",
@@ -738,16 +738,16 @@ fn add_patch_from_config() {
         "#,
     );
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -772,19 +772,19 @@ fn add_ignored_patch() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
     p.change_file(
         "Cargo.toml",
@@ -802,7 +802,7 @@ fn add_ignored_patch() {
         "#,
     );
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.1.1 ([CWD]/bar)` was not used in the crate graph.
@@ -813,7 +813,7 @@ version. [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] Patch `bar v0.1.1 ([CWD]/bar)` was not used in the crate graph.
@@ -826,11 +826,11 @@ version. [..]
         .run();
 
     p.cargo("update").run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.1 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [..]
 ",
         )
@@ -862,19 +862,19 @@ fn add_patch_with_features() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] patch for `bar` uses the features mechanism. \
 default-features and features will not take effect because the patch dependency does not support this mechanism
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.0 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] patch for `bar` uses the features mechanism. \
@@ -910,19 +910,19 @@ fn add_patch_with_setting_default_features() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] patch for `bar` uses the features mechanism. \
 default-features and features will not take effect because the patch dependency does not support this mechanism
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.0 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] patch for `bar` uses the features mechanism. \
@@ -967,11 +967,11 @@ fn no_warn_ws_patch() {
         .file("c/src/lib.rs", "")
         .build();
 
-    p.cargo("build -p a")
+    p.cargo("check -p a")
         .with_stderr(
             "\
 [UPDATING] [..]
-[COMPILING] a [..]
+[CHECKING] a [..]
 [FINISHED] [..]",
         )
         .run();
@@ -1002,12 +1002,12 @@ fn new_minor() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.1 [..]
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.1 [..]
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1052,13 +1052,13 @@ fn transitive_new_minor() {
         .file("baz/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] baz v0.1.1 [..]
-[COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.1.1 [..]
+[CHECKING] bar v0.1.0 [..]
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1090,12 +1090,12 @@ fn new_major() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.2.0 [..]
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.2.0 [..]
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1103,7 +1103,7 @@ fn new_major() {
 
     Package::new("bar", "0.2.0").publish();
     p.cargo("update").run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 
@@ -1119,14 +1119,14 @@ fn new_major() {
             bar = "0.2.0"
         "#,
     );
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.2.0 [..]
-[COMPILING] bar v0.2.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.2.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1171,13 +1171,13 @@ fn transitive_new_major() {
         .file("baz/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] baz v0.2.0 [..]
-[COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.2.0 [..]
+[CHECKING] bar v0.1.0 [..]
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1227,14 +1227,14 @@ fn shared_by_transitive() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] `dummy-registry` index
-[COMPILING] baz v0.1.2 [..]
-[COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.1.0 ([CWD])
+[CHECKING] baz v0.1.2 [..]
+[CHECKING] bar v0.1.0 [..]
+[CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1271,7 +1271,7 @@ fn remove_patch() {
         .build();
 
     // Generate a lock file where `foo` is unused
-    p.cargo("build").run();
+    p.cargo("check").run();
     let lock_file1 = p.read_lockfile();
 
     // Remove `foo` and generate a new lock file form the old one
@@ -1290,12 +1290,12 @@ fn remove_patch() {
             bar = { path = 'bar' }
         "#,
     );
-    p.cargo("build").run();
+    p.cargo("check").run();
     let lock_file2 = p.read_lockfile();
 
     // Remove the lock file and build from scratch
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
-    p.cargo("build").run();
+    p.cargo("check").run();
     let lock_file3 = p.read_lockfile();
 
     assert!(lock_file1.contains("foo"));
@@ -1325,7 +1325,7 @@ fn non_crates_io() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1363,7 +1363,7 @@ fn replace_with_crates_io() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1410,8 +1410,8 @@ fn patch_in_virtual() {
         .file("foo/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -1461,10 +1461,10 @@ fn patch_depends_on_another_patch() {
         .file("baz/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     // Nothing should be rebuilt, no registry should be updated.
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -1510,7 +1510,7 @@ fn replace_prerelease() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -1559,13 +1559,13 @@ fn patch_older() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..]
-[COMPILING] baz v1.0.1 [..]
-[COMPILING] bar v0.5.0 [..]
-[COMPILING] foo v0.1.0 [..]
+[CHECKING] baz v1.0.1 [..]
+[CHECKING] bar v0.5.0 [..]
+[CHECKING] foo v0.1.0 [..]
 [FINISHED] [..]
 ",
         )
@@ -1670,7 +1670,7 @@ fn multipatch() {
         .file("a2/src/lib.rs", "pub fn f2() {}")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -1711,7 +1711,7 @@ fn patch_same_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1763,8 +1763,8 @@ fn two_semver_compatible() {
     // assert the build succeeds and doesn't panic anywhere, and then afterwards
     // assert that the build succeeds again without updating anything or
     // building anything else.
-    p.cargo("build").run();
-    p.cargo("build")
+    p.cargo("check").run();
+    p.cargo("check")
         .with_stderr(
             "\
 warning: Patch `bar v0.1.1 [..]` was not used in the crate graph.
@@ -1817,8 +1817,8 @@ fn multipatch_select_big() {
     // assert the build succeeds, which is only possible if 0.2.0 is selected
     // since 0.1.0 is missing the function we need. Afterwards assert that the
     // build succeeds again without updating anything or building anything else.
-    p.cargo("build").run();
-    p.cargo("build")
+    p.cargo("check").run();
+    p.cargo("check")
         .with_stderr(
             "\
 warning: Patch `bar v0.1.0 [..]` was not used in the crate graph.
@@ -1887,12 +1887,12 @@ fn canonicalize_a_bunch() {
         .build();
 
     // Once to make sure it actually works
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     // Then a few more times for good measure to ensure no weird warnings about
     // `[patch]` are printed.
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -1928,7 +1928,7 @@ fn update_unused_new_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains("[WARNING] Patch `bar v0.1.4 [..] was not used in the crate graph.")
         .run();
     // unused patch should be in the lock file
@@ -1948,18 +1948,18 @@ fn update_unused_new_version() {
     fs::copy(p.root().join("Cargo.lock"), p.root().join("Cargo.lock.bak")).unwrap();
 
     // Try to build again, this should automatically update Cargo.lock.
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.6 ([..]/bar)
-[COMPILING] foo v0.0.1 ([..]/foo)
+[CHECKING] bar v0.1.6 ([..]/bar)
+[CHECKING] foo v0.0.1 ([..]/foo)
 [FINISHED] [..]
 ",
         )
         .run();
     // This should not update any registry.
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
     assert!(!p.read_lockfile().contains("unused"));
 
     // Restore the lock file, and see if `update` will work, too.

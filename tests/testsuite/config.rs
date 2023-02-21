@@ -131,7 +131,7 @@ fn read_env_vars_for_config() {
         )
         .build();
 
-    p.cargo("build").env("CARGO_BUILD_JOBS", "100").run();
+    p.cargo("check").env("CARGO_BUILD_JOBS", "100").run();
 }
 
 pub fn write_config(config: &str) {
@@ -1471,7 +1471,7 @@ target-dir = ''
 fn cargo_target_empty_env() {
     let project = project().build();
 
-    project.cargo("build")
+    project.cargo("check")
         .env("CARGO_TARGET_DIR", "")
         .with_stderr("error: the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
         .with_status(101)

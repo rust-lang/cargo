@@ -32,7 +32,7 @@ fn exported_priv_warning() {
         )
         .build();
 
-    p.cargo("build --message-format=short")
+    p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_contains(
             "\
@@ -71,15 +71,15 @@ fn exported_pub_dep() {
         )
         .build();
 
-    p.cargo("build --message-format=short")
+    p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] pub_dep v0.1.0 ([..])
-[COMPILING] pub_dep v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] pub_dep v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -98,7 +98,7 @@ pub fn requires_nightly_cargo() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --message-format=short")
+    p.cargo("check --message-format=short")
         .with_status(101)
         .with_stderr(
             "\
@@ -134,7 +134,7 @@ fn requires_feature() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --message-format=short")
+    p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_status(101)
         .with_stderr(
@@ -184,7 +184,7 @@ fn pub_dev_dependency() {
         )
         .build();
 
-    p.cargo("build --message-format=short")
+    p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_status(101)
         .with_stderr(

@@ -1301,10 +1301,10 @@ fn test_edition() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_contains(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]--edition=2018 [..]
 ",
         )
@@ -1349,7 +1349,7 @@ fn test_edition_malformed() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -1381,7 +1381,7 @@ fn test_edition_from_the_future() {
         .file("src/main.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\

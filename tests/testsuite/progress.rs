@@ -16,7 +16,7 @@ fn bad_progress_config_unknown_when() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -43,7 +43,7 @@ fn bad_progress_config_missing_width() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -66,7 +66,7 @@ fn bad_progress_config_missing_when() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -110,7 +110,7 @@ fn always_shows_progress() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains("[DOWNLOADING] [..] crates [..]")
         .with_stderr_contains("[..][DOWNLOADED] 3 crates ([..]) in [..]")
         .with_stderr_contains("[BUILDING] [..] [..]/4: [..]")
@@ -151,7 +151,7 @@ fn never_progress() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_does_not_contain("[DOWNLOADING] [..] crates [..]")
         .with_stderr_does_not_contain("[..][DOWNLOADED] 3 crates ([..]) in [..]")
         .with_stderr_does_not_contain("[BUILDING] [..] [..]/4: [..]")

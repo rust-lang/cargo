@@ -132,7 +132,7 @@ fn http_auth_offered() {
 
     // This is a "contains" check because the last error differs by platform,
     // may span multiple lines, and isn't relevant to this test.
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
@@ -203,7 +203,7 @@ fn https_something_happens() {
         )
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains(&format!(
             "[UPDATING] git repository `https://{addr}/foo/bar`",
@@ -258,7 +258,7 @@ fn ssh_something_happens() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains(&format!(
             "[UPDATING] git repository `ssh://{addr}/foo/bar`",
@@ -292,7 +292,7 @@ fn net_err_suggests_fetch_with_cli() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -329,7 +329,7 @@ Caused by:
             ",
     );
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains("[..]Unable to update[..]")
         .with_stderr_does_not_contain("[..]try enabling `git-fetch-with-cli`[..]")
@@ -363,7 +363,7 @@ fn instead_of_url_printed() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(&format!(
             "\

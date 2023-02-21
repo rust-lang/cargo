@@ -61,21 +61,21 @@ fn works_with_cli() {
         ",
     );
     let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 [..]
+[CHECKING] foo v0.0.1 [..]
 [RUNNING] `rustc [..]-W unused`
 [FINISHED] [..]
 ",
         )
         .run();
-    p.cargo("build -v -Z config-include")
+    p.cargo("check -v -Z config-include")
         .masquerade_as_nightly_cargo(&["config-include"])
         .with_stderr(
             "\
 [DIRTY] foo v0.0.1 ([..]): the rustflags changed
-[COMPILING] foo v0.0.1 [..]
+[CHECKING] foo v0.0.1 [..]
 [RUNNING] `rustc [..]-W unsafe-code -W unused`
 [FINISHED] [..]
 ",

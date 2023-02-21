@@ -50,11 +50,11 @@ fn permit_additional_workspace_fields() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         // Should not warn about unused fields.
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0 ([CWD]/bar)
+[CHECKING] bar v0.1.0 ([CWD]/bar)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -92,7 +92,7 @@ fn deny_optional_dependencies() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -277,15 +277,15 @@ fn inherit_own_dependencies() {
     Package::new("dep-build", "0.8.2").publish();
     Package::new("dep-dev", "0.5.2").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep-build v0.8.2 ([..])
 [DOWNLOADED] dep v0.1.2 ([..])
-[COMPILING] dep v0.1.2
-[COMPILING] bar v0.2.0 ([CWD])
+[CHECKING] dep v0.1.2
+[CHECKING] bar v0.2.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -414,14 +414,14 @@ fn inherit_own_detailed_dependencies() {
         .feature("testing", &vec![])
         .publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 ([..])
-[COMPILING] dep v0.1.2
-[COMPILING] bar v0.2.0 ([CWD])
+[CHECKING] dep v0.1.2
+[CHECKING] bar v0.2.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -519,7 +519,7 @@ fn inherit_from_own_undefined_field() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -568,7 +568,7 @@ fn inherited_dependencies_union_features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -576,10 +576,10 @@ fn inherited_dependencies_union_features() {
 [DOWNLOADED] fancy_dep v0.2.4 ([..])
 [DOWNLOADED] dep v0.1.0 ([..])
 [DOWNLOADED] dancy_dep v0.6.8 ([..])
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] dep v0.1.0
-[COMPILING] bar v0.2.0 ([CWD])
+[CHECKING] [..]
+[CHECKING] [..]
+[CHECKING] dep v0.1.0
+[CHECKING] bar v0.2.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -782,15 +782,15 @@ fn inherit_dependencies() {
     Package::new("dep-build", "0.8.2").publish();
     Package::new("dep-dev", "0.5.2").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep-build v0.8.2 ([..])
 [DOWNLOADED] dep v0.1.2 ([..])
-[COMPILING] dep v0.1.2
-[COMPILING] bar v0.2.0 ([CWD]/bar)
+[CHECKING] dep v0.1.2
+[CHECKING] bar v0.2.0 ([CWD]/bar)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -922,14 +922,14 @@ fn inherit_target_dependencies() {
 
     Package::new("dep", "0.1.2").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 ([..])
-[COMPILING] dep v0.1.2
-[COMPILING] bar v0.2.0 ([CWD]/bar)
+[CHECKING] dep v0.1.2
+[CHECKING] bar v0.2.0 ([CWD]/bar)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -968,11 +968,11 @@ fn inherit_dependency_override_optional() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[COMPILING] bar v0.2.0 ([CWD]/bar)
+[CHECKING] bar v0.2.0 ([CWD]/bar)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1010,16 +1010,16 @@ fn inherit_dependency_features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 ([..])
 [DOWNLOADED] dep v0.1.0 ([..])
-[COMPILING] fancy_dep v0.2.4
-[COMPILING] dep v0.1.0
-[COMPILING] bar v0.2.0 ([CWD])
+[CHECKING] fancy_dep v0.2.4
+[CHECKING] dep v0.1.0
+[CHECKING] bar v0.2.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1081,12 +1081,12 @@ fn inherit_detailed_dependencies() {
 
     let git_root = git_project.root();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`\n\
-[COMPILING] detailed v0.5.0 ({}?branch=branchy#[..])\n\
-[COMPILING] bar v0.2.0 ([CWD]/bar)\n\
+[CHECKING] detailed v0.5.0 ({}?branch=branchy#[..])\n\
+[CHECKING] bar v0.2.0 ([CWD]/bar)\n\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
@@ -1123,11 +1123,11 @@ fn inherit_path_dependencies() {
         .file("dep/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] dep v0.9.0 ([CWD]/dep)
-[COMPILING] bar v0.2.0 ([CWD]/bar)
+[CHECKING] dep v0.9.0 ([CWD]/dep)
+[CHECKING] bar v0.2.0 ([CWD]/bar)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1166,7 +1166,7 @@ fn error_workspace_false() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1209,7 +1209,7 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1252,7 +1252,7 @@ fn error_malformed_workspace_root() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1296,7 +1296,7 @@ fn error_no_root_workspace() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .cwd("bar")
         .with_status(101)
         .with_stderr(
@@ -1341,7 +1341,7 @@ fn error_inherit_unspecified_dependency() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .cwd("bar")
         .with_status(101)
         .with_stderr(

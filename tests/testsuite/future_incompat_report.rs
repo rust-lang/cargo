@@ -43,7 +43,7 @@ fn output_on_stable() {
 fn no_gate_future_incompat_report() {
     let p = simple_project();
 
-    p.cargo("build --future-incompat-report")
+    p.cargo("check --future-incompat-report")
         .with_status(0)
         .run();
 
@@ -64,17 +64,17 @@ fn test_zero_future_incompat() {
         .build();
 
     // No note if --future-incompat-report is not specified.
-    p.cargo("build")
+    p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.0 [..]
+[CHECKING] foo v0.0.0 [..]
 [FINISHED] [..]
 ",
         )
         .run();
 
-    p.cargo("build --future-incompat-report")
+    p.cargo("check --future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr(
             "\
@@ -201,7 +201,7 @@ fn test_multi_crate() {
 
     // Test that passing the correct id via '--id' doesn't generate a warning message
     let output = p
-        .cargo("build")
+        .cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .exec_with_output()
         .unwrap();

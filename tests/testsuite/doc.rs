@@ -910,7 +910,7 @@ fn no_document_build_deps() {
 fn doc_release() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("build --release").run();
+    p.cargo("check --release").run();
     p.cargo("doc --release -v")
         .with_stderr(
             "\
@@ -1550,7 +1550,7 @@ fn issue_5345() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
 
-    foo.cargo("build").run();
+    foo.cargo("check").run();
     foo.cargo("doc").run();
 }
 

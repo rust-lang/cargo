@@ -39,13 +39,13 @@ fn override_simple() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 (file://[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -86,15 +86,15 @@ fn override_with_features() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..] index
 [UPDATING] git repository `[..]`
 [WARNING] replacement for `bar` uses the features mechanism. default-features and features \
 will not take effect because the replacement dependency does not support this mechanism
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 (file://[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -135,15 +135,15 @@ fn override_with_setting_default_features() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..] index
 [UPDATING] git repository `[..]`
 [WARNING] replacement for `bar` uses the features mechanism. default-features and features \
 will not take effect because the replacement dependency does not support this mechanism
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 (file://[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -171,7 +171,7 @@ fn missing_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -205,7 +205,7 @@ fn invalid_semver_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -242,7 +242,7 @@ fn different_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -290,22 +290,22 @@ fn transitive() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.2.0 (registry [..])
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] baz v0.2.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 (file://[..])
+[CHECKING] baz v0.2.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -342,19 +342,19 @@ fn persists_across_rebuilds() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `file://[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 (file://[..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -389,12 +389,12 @@ fn replace_registry_with_path() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[COMPILING] bar v0.1.0 ([ROOT][..]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0 ([ROOT][..]/bar)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -454,7 +454,7 @@ fn use_a_spec_to_select() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -462,10 +462,10 @@ fn use_a_spec_to_select() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [DOWNLOADED] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] [..]
+[CHECKING] [..]
+[CHECKING] [..]
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -515,22 +515,22 @@ fn override_adds_some_deps() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.1 (registry [..])
-[COMPILING] baz v0.1.1
-[COMPILING] bar v0.1.0 ([..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.1.1
+[CHECKING] bar v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 
     Package::new("baz", "0.1.2").publish();
     p.cargo("update -p")
@@ -550,7 +550,7 @@ fn override_adds_some_deps() {
         )
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -599,10 +599,10 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
-    p.cargo("build").with_stdout("").run();
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -636,7 +636,7 @@ fn override_wrong_name() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -683,7 +683,7 @@ fn override_with_nothing() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -722,7 +722,7 @@ fn override_wrong_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -769,7 +769,7 @@ fn multiple_specs() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -919,7 +919,7 @@ fn no_override_self() {
         .file("src/lib.rs", "#![no_std] pub extern crate near;")
         .build();
 
-    p.cargo("build --verbose").run();
+    p.cargo("check --verbose").run();
 }
 
 #[cargo_test]
@@ -1029,7 +1029,7 @@ fn override_an_override() {
         .file("serde/src/lib.rs", "pub fn serde08_override() {}")
         .build();
 
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -1078,8 +1078,8 @@ fn overriding_nonexistent_no_spurious() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build")
+    p.cargo("check").run();
+    p.cargo("check")
         .with_stderr(
             "\
 [WARNING] package replacement is not used: [..]baz@0.1.0
@@ -1127,24 +1127,24 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         .file("local_bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .cwd("first_crate")
         .with_stdout("")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[COMPILING] bar v0.1.0 ([..])
-[COMPILING] first_crate v0.1.0 ([..])
+[CHECKING] bar v0.1.0 ([..])
+[CHECKING] first_crate v0.1.0 ([..])
 [FINISHED] [..]",
         )
         .run();
 
-    p.cargo("build")
+    p.cargo("check")
         .cwd("second_crate")
         .with_stdout("")
         .with_stderr(
             "\
-[COMPILING] second_crate v0.1.0 ([..])
+[CHECKING] second_crate v0.1.0 ([..])
 [FINISHED] [..]",
         )
         .run();
@@ -1192,7 +1192,7 @@ fn replace_to_path_dep() {
         .file("bar/baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -1293,7 +1293,7 @@ fn override_plus_dep() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains("error: cyclic package dependency: [..]")
         .run();

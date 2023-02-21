@@ -297,7 +297,7 @@ fn doesnt_create_extra_files() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     assert_eq!(
         p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
@@ -311,7 +311,7 @@ fn doesnt_create_extra_files() {
         sleep_ms(1000);
     }
     p.change_file("src/lib.rs", "fn unused() {}");
-    p.cargo("build").run();
+    p.cargo("check").run();
     assert_eq!(
         p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
         1
@@ -475,14 +475,14 @@ fn wacky_hashless_fingerprint() {
         .file("src/bin/a.rs", "fn main() { let unused = 1; }")
         .file("src/bin/b.rs", "fn main() {}")
         .build();
-    p.cargo("build --bin b")
+    p.cargo("check --bin b")
         .with_stderr_does_not_contain("[..]unused[..]")
         .run();
-    p.cargo("build --bin a")
+    p.cargo("check --bin a")
         .with_stderr_contains("[..]unused[..]")
         .run();
     // This should not pick up the cache from `a`.
-    p.cargo("build --bin b")
+    p.cargo("check --bin b")
         .with_stderr_does_not_contain("[..]unused[..]")
         .run();
 }

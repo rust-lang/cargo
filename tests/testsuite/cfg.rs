@@ -25,7 +25,7 @@ fn cfg_easy() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -51,10 +51,10 @@ fn dont_include() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] a v0.0.1 ([..])
+[CHECKING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -88,16 +88,16 @@ fn works_through_the_registry() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..] index
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [DOWNLOADED] [..]
-[COMPILING] baz v0.1.0
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([..])
+[CHECKING] baz v0.1.0
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -136,14 +136,14 @@ fn ignore_version_from_other_platform() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..] index
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([..])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -168,7 +168,7 @@ fn bad_target_spec() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -199,7 +199,7 @@ fn bad_target_spec2() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -245,7 +245,7 @@ fn multiple_match_ok() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -267,7 +267,7 @@ fn any_ok() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 // https://github.com/rust-lang/cargo/issues/5313
@@ -300,7 +300,7 @@ fn cfg_looks_at_rustflags_for_target() {
         .file("b/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("build --target x86_64-unknown-linux-gnu")
+    p.cargo("check --target x86_64-unknown-linux-gnu")
         .env("RUSTFLAGS", "--cfg with_b")
         .run();
 }
@@ -385,7 +385,7 @@ fn bad_cfg_discovery() {
 
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("build")
+    p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "bad-version")
         .with_status(101)
@@ -398,7 +398,7 @@ foo
         )
         .run();
 
-    p.cargo("build")
+    p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "no-crate-types")
         .with_status(101)
@@ -411,7 +411,7 @@ command was: `[..]compiler[..] --crate-name ___ [..]`
         )
         .run();
 
-    p.cargo("build")
+    p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "no-sysroot")
         .with_status(101)
@@ -432,7 +432,7 @@ command was: `[..]compiler[..]--crate-type [..]`
         )
         .run();
 
-    p.cargo("build")
+    p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "no-split-debuginfo")
         .with_status(101)
@@ -454,7 +454,7 @@ command was: `[..]compiler[..]--crate-type [..]`
         )
         .run();
 
-    p.cargo("build")
+    p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "bad-cfg")
         .with_status(101)

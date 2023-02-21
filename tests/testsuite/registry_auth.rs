@@ -49,7 +49,7 @@ fn requires_nightly() {
         .build();
 
     let p = make_project();
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             r#"[UPDATING] `alternative` index

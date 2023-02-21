@@ -658,7 +658,7 @@ fn fixes_missing_ampersand() {
         .with_stderr_contains("[FIXED] tests/a.rs (1 fix)")
         .with_stderr_contains("[FINISHED] [..]")
         .run();
-    p.cargo("build").run();
+    p.cargo("check").run();
     p.cargo("test").run();
 }
 
@@ -688,9 +688,9 @@ fn fix_features() {
         .build();
 
     p.cargo("fix --allow-no-vcs").run();
-    p.cargo("build").run();
+    p.cargo("check").run();
     p.cargo("fix --features bar --allow-no-vcs").run();
-    p.cargo("build --features bar").run();
+    p.cargo("check --features bar").run();
 }
 
 #[cargo_test]

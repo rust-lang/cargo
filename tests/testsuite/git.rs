@@ -531,7 +531,7 @@ fn cargo_compile_with_short_ssh_git() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stdout("")
         .with_stderr(&format!(
@@ -661,11 +661,11 @@ fn recompilation() {
         .build();
 
     // First time around we should compile both foo and bar
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
-             [COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+             [CHECKING] bar v0.5.0 ({}#[..])\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
@@ -674,12 +674,12 @@ fn recompilation() {
         .run();
 
     // Don't recompile the second time
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 
     // Modify a file manually, shouldn't trigger a recompile
     git_project.change_file("src/bar.rs", r#"pub fn bar() { println!("hello!"); }"#);
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 
     p.cargo("update")
         .with_stderr(&format!(
@@ -688,7 +688,7 @@ fn recompilation() {
         ))
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 
     // Commit the changes and make sure we don't trigger a recompile because the
     // lock file says not to change
@@ -697,7 +697,7 @@ fn recompilation() {
     git::commit(&repo);
 
     println!("compile after commit");
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
     p.root().move_into_the_past();
 
     // Update the dependency and carry on!
@@ -710,10 +710,10 @@ fn recompilation() {
         ))
         .run();
     println!("going for the last compile");
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
-            "[COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+            "[CHECKING] bar v0.5.0 ({}#[..])\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
@@ -722,9 +722,9 @@ fn recompilation() {
 
     // Make sure clean only cleans one dep
     p.cargo("clean -p foo").with_stdout("").run();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
-            "[COMPILING] foo v0.5.0 ([CWD])\n\
+            "[CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]",
         )
@@ -801,14 +801,14 @@ fn update_with_shared_deps() {
         .build();
 
     // First time around we should compile both foo and bar
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{git}`
-[COMPILING] bar v0.5.0 ({git}#[..])
-[COMPILING] [..] v0.5.0 ([..])
-[COMPILING] [..] v0.5.0 ([..])
-[COMPILING] foo v0.5.0 ([CWD])
+[CHECKING] bar v0.5.0 ({git}#[..])
+[CHECKING] [..] v0.5.0 ([..])
+[CHECKING] [..] v0.5.0 ([..])
+[CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
         ))
@@ -865,13 +865,13 @@ Caused by:
 
     // Make sure we still only compile one version of the git repo
     println!("build");
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.5.0 ({git}#[..])
-[COMPILING] [..] v0.5.0 ([CWD][..]dep[..])
-[COMPILING] [..] v0.5.0 ([CWD][..]dep[..])
-[COMPILING] foo v0.5.0 ([CWD])
+[CHECKING] bar v0.5.0 ({git}#[..])
+[CHECKING] [..] v0.5.0 ([CWD][..]dep[..])
+[CHECKING] [..] v0.5.0 ([CWD][..]dep[..])
+[CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
         ))
@@ -924,13 +924,13 @@ fn dep_with_submodule() {
         .build();
 
     project
-        .cargo("build")
+        .cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository [..]
 [UPDATING] git submodule `file://[..]/dep2`
-[COMPILING] dep1 [..]
-[COMPILING] foo [..]
+[CHECKING] dep1 [..]
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
@@ -990,14 +990,14 @@ fn dep_with_relative_submodule() {
         .build();
 
     project
-        .cargo("build")
+        .cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository [..]
 [UPDATING] git submodule `file://[..]/deployment`
-[COMPILING] deployment [..]
-[COMPILING] base [..]
-[COMPILING] foo [..]
+[CHECKING] deployment [..]
+[CHECKING] base [..]
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
@@ -1077,7 +1077,7 @@ Caused by:
         path2url(git_project.root())
     );
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(expected)
         .with_status(101)
         .run();
@@ -1125,13 +1125,13 @@ fn dep_with_skipped_submodule() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]/bar`
 [SKIPPING] git submodule `file://[..]/qux` [..]
-[COMPILING] bar [..]
-[COMPILING] foo [..]
+[CHECKING] bar [..]
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
@@ -1249,13 +1249,13 @@ fn two_deps_only_update_one() {
     println!("dep1 head sha: {}", git_repo_head_sha(&git1));
     println!("dep2 head sha: {}", git_repo_head_sha(&git2));
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "[UPDATING] git repository `[..]`\n\
              [UPDATING] git repository `[..]`\n\
-             [COMPILING] [..] v0.5.0 ([..])\n\
-             [COMPILING] [..] v0.5.0 ([..])\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+             [CHECKING] [..] v0.5.0 ([..])\n\
+             [CHECKING] [..] v0.5.0 ([..])\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
@@ -1521,11 +1521,11 @@ fn dev_deps_with_testing() {
 
     // Generate a lock file which did not use `bar` to compile, but had to update
     // `bar` to generate the lock file
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
-[COMPILING] foo v0.5.0 ([CWD])
+[CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = p2.url()
@@ -1568,7 +1568,7 @@ fn git_build_cmd_freshness() {
 
     sleep_ms(1000);
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.0 ([CWD])
@@ -1579,12 +1579,12 @@ fn git_build_cmd_freshness() {
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
-    foo.cargo("build").with_stdout("").run();
+    foo.cargo("check").with_stdout("").run();
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
     foo.change_file("src/bar.rs", "");
-    foo.cargo("build").with_stdout("").run();
+    foo.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -1626,11 +1626,11 @@ fn git_name_not_always_needed() {
 
     // Generate a lock file which did not use `bar` to compile, but had to update
     // `bar` to generate the lock file
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
-[COMPILING] foo v0.5.0 ([CWD])
+[CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = p2.url()
@@ -1668,12 +1668,12 @@ fn git_repo_changing_no_rebuild() {
         .file("build.rs", "fn main() {}")
         .build();
     p1.root().move_into_the_past();
-    p1.cargo("build")
+    p1.cargo("check")
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
 [COMPILING] [..]
-[COMPILING] [..]
+[CHECKING] [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url()
@@ -1705,12 +1705,12 @@ fn git_repo_changing_no_rebuild() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p2.cargo("build")
+    p2.cargo("check")
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
-[COMPILING] [..]
-[COMPILING] [..]
+[CHECKING] [..]
+[CHECKING] [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url()
@@ -1719,7 +1719,7 @@ fn git_repo_changing_no_rebuild() {
 
     // And now for the real test! Make sure that p1 doesn't get rebuilt
     // even though the git repo has changed.
-    p1.cargo("build").with_stdout("").run();
+    p1.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -1853,11 +1853,11 @@ fn warnings_in_git_dep() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
-             [COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+             [CHECKING] bar v0.5.0 ({}#[..])\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             bar.url(),
             bar.url(),
@@ -2035,14 +2035,14 @@ fn switch_deps_does_not_update_transitive() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
 [UPDATING] git repository `{}`
-[COMPILING] transitive [..]
-[COMPILING] dep [..]
-[COMPILING] foo [..]
+[CHECKING] transitive [..]
+[CHECKING] dep [..]
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dep1.url(),
@@ -2067,12 +2067,12 @@ fn switch_deps_does_not_update_transitive() {
         ),
     );
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
-[COMPILING] dep [..]
-[COMPILING] foo [..]
+[CHECKING] dep [..]
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dep2.url()
@@ -2119,7 +2119,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let repo = git2::Repository::open(&dep.root()).unwrap();
     let rev1 = repo.revparse_single("HEAD").unwrap().id();
@@ -2182,13 +2182,13 @@ fn switch_sources() {
         .file("b/src/lib.rs", "pub fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]a1`
-[COMPILING] a v0.5.0 ([..]a1#[..]
-[COMPILING] b v0.5.0 ([..])
-[COMPILING] foo v0.5.0 ([..])
+[CHECKING] a v0.5.0 ([..]a1#[..]
+[CHECKING] b v0.5.0 ([..])
+[CHECKING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -2209,13 +2209,13 @@ fn switch_sources() {
         ),
     );
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]a2`
-[COMPILING] a v0.5.1 ([..]a2#[..]
-[COMPILING] b v0.5.0 ([..])
-[COMPILING] foo v0.5.0 ([..])
+[CHECKING] a v0.5.1 ([..]a2#[..]
+[CHECKING] b v0.5.0 ([..])
+[CHECKING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -2252,7 +2252,7 @@ fn dont_require_submodules_are_checked_out() {
     let dst = paths::home().join("foo");
     git2::Repository::clone(&url, &dst).unwrap();
 
-    git1.cargo("build -v").cwd(&dst).run();
+    git1.cargo("check -v").cwd(&dst).run();
 }
 
 #[cargo_test]
@@ -2338,12 +2338,12 @@ fn lints_are_suppressed() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
-[COMPILING] a v0.5.0 ([..])
-[COMPILING] foo v0.0.1 ([..])
+[CHECKING] a v0.5.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -2381,12 +2381,12 @@ fn denied_lints_are_allowed() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
-[COMPILING] a v0.5.0 ([..])
-[COMPILING] foo v0.0.1 ([..])
+[CHECKING] a v0.5.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -2422,7 +2422,7 @@ fn add_a_git_dep() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     assert!(paths::home().join(".cargo/git/CACHEDIR.TAG").is_file());
 
@@ -2442,7 +2442,7 @@ fn add_a_git_dep() {
         ),
     );
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -2487,7 +2487,7 @@ fn two_at_rev_instead_of_tag() {
         .build();
 
     p.cargo("generate-lockfile").run();
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -2516,9 +2516,9 @@ fn include_overrides_gitignore() {
         .file("build.rs", "fn main() {}")
     });
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     p.change_file("ignored.txt", "Trigger rebuild.");
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr(
             "\
 [DIRTY] foo v0.5.0 ([..]): the precalculated components changed
@@ -2599,7 +2599,7 @@ fn invalid_git_dependency_manifest() {
     let git_root = git_project.root();
 
     project
-        .cargo("build")
+        .cargo("check")
         .with_status(101)
         .with_stderr(&format!(
             "\
@@ -2693,13 +2693,13 @@ fn failed_submodule_checkout() {
         .build();
 
     project
-        .cargo("build")
+        .cargo("check")
         .with_status(101)
         .with_stderr_contains("  failed to update submodule `src`")
         .with_stderr_contains("  failed to update submodule `bar`")
         .run();
     project
-        .cargo("build")
+        .cargo("check")
         .with_status(101)
         .with_stderr_contains("  failed to update submodule `src`")
         .with_stderr_contains("  failed to update submodule `bar`")
@@ -2750,14 +2750,14 @@ fn use_the_cli() {
 [RUNNING] `git fetch [..]`
 From [..]
  * [new ref]                    -> origin/HEAD
-[COMPILING] dep1 [..]
+[CHECKING] dep1 [..]
 [RUNNING] `rustc [..]`
-[COMPILING] foo [..]
+[CHECKING] foo [..]
 [RUNNING] `rustc [..]`
 [FINISHED] [..]
 ";
 
-    project.cargo("build -v").with_stderr(stderr).run();
+    project.cargo("check -v").with_stderr(stderr).run();
     assert!(paths::home().join(".cargo/git/CACHEDIR.TAG").is_file());
 }
 
@@ -2810,7 +2810,7 @@ fn templatedir_doesnt_cause_problems() {
     )
     .unwrap();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test(requires_git)]
@@ -3068,12 +3068,12 @@ fn default_not_master() {
         .build();
 
     project
-        .cargo("build")
+        .cargo("check")
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
-[COMPILING] dep1 v0.5.0 ([..])
-[COMPILING] foo v0.5.0 ([..])
+[CHECKING] dep1 v0.5.0 ([..])
+[CHECKING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
@@ -3108,7 +3108,7 @@ fn historical_lockfile_works() {
         .file("src/lib.rs", "")
         .build();
 
-    project.cargo("build").run();
+    project.cargo("check").run();
     project.change_file(
         "Cargo.lock",
         &format!(
@@ -3131,7 +3131,7 @@ dependencies = [
         ),
     );
     project
-        .cargo("build")
+        .cargo("check")
         .with_stderr("[FINISHED] [..]\n")
         .run();
 }
@@ -3188,7 +3188,7 @@ dependencies = [
             head_id
         ),
     );
-    project.cargo("build").run();
+    project.cargo("check").run();
 }
 
 #[cargo_test]
@@ -3237,15 +3237,15 @@ fn two_dep_forms() {
     // the master branch. Then it'll compile 4 crates, the 2 git deps, then
     // the two local deps.
     project
-        .cargo("build")
+        .cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..]
 [UPDATING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
+[CHECKING] [..]
+[CHECKING] [..]
+[CHECKING] [..]
+[CHECKING] [..]
 [FINISHED] [..]
 ",
         )
