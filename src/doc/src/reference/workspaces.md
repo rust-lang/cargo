@@ -110,7 +110,7 @@ is not inside a subdirectory of the workspace root.
 
 #### Package selection
 
-In a workspace, package-related cargo commands like [`cargo build`] can use
+In a workspace, package-related Cargo commands like [`cargo build`] can use
 the `-p` / `--package` or `--workspace` command-line flags to determine which
 packages to operate on. If neither of those flags are specified, Cargo will
 use the package in the current working directory. If the current directory is
