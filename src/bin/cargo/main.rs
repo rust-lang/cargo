@@ -235,7 +235,7 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
-    let mut path_dirs = if let Some(val) = env::var_os("PATH") {
+    let mut path_dirs = if let Some(val) = config.get_env_os("PATH") {
         env::split_paths(&val).collect()
     } else {
         vec![]

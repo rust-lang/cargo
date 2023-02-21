@@ -93,7 +93,7 @@ fn maybe_env<'config>(
     config: &'config Config,
     key: &ConfigKey,
     cv: &CV,
-) -> Option<Vec<(&'config String, &'config String)>> {
+) -> Option<Vec<(&'config str, &'config str)>> {
     // Only fetching a table is unable to load env values. Leaf entries should
     // work properly.
     match cv {
@@ -102,7 +102,6 @@ fn maybe_env<'config>(
     }
     let mut env: Vec<_> = config
         .env()
-        .iter()
         .filter(|(env_key, _val)| env_key.starts_with(&format!("{}_", key.as_env_key())))
         .collect();
     env.sort_by_key(|x| x.0);
@@ -162,7 +161,7 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
     }
 }
 
-fn print_toml_env(config: &Config, env: &[(&String, &String)]) {
+fn print_toml_env(config: &Config, env: &[(&str, &str)]) {
     drop_println!(
         config,
         "# The following environment variables may affect the loaded values."
@@ -173,7 +172,7 @@ fn print_toml_env(config: &Config, env: &[(&String, &String)]) {
     }
 }
 
-fn print_json_env(config: &Config, env: &[(&String, &String)]) {
+fn print_json_env(config: &Config, env: &[(&str, &str)]) {
     drop_eprintln!(
         config,
         "note: The following environment variables may affect the loaded values."
@@ -287,7 +286,6 @@ fn print_toml_unmerged(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey) 
     // special, and will just naturally get loaded as part of the config.
     let mut env: Vec<_> = config
         .env()
-        .iter()
         .filter(|(env_key, _val)| env_key.starts_with(key.as_env_key()))
         .collect();
     if !env.is_empty() {

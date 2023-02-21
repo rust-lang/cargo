@@ -2,7 +2,6 @@
 //! cross-platform way for the `cargo fix` command.
 
 use std::collections::HashSet;
-use std::env;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -61,9 +60,10 @@ pub enum Message {
 }
 
 impl Message {
-    pub fn post(&self) -> Result<(), Error> {
-        let addr =
-            env::var(DIAGNOSTICS_SERVER_VAR).context("diagnostics collector misconfigured")?;
+    pub fn post(&self, config: &Config) -> Result<(), Error> {
+        let addr = config
+            .get_env(DIAGNOSTICS_SERVER_VAR)
+            .context("diagnostics collector misconfigured")?;
         let mut client =
             TcpStream::connect(&addr).context("failed to connect to parent diagnostics target")?;
 

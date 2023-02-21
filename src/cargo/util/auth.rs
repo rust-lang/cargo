@@ -182,7 +182,6 @@ pub fn registry_credential_config(
         let index = sid.canonical_url();
         let mut names: Vec<_> = config
             .env()
-            .iter()
             .filter_map(|(k, v)| {
                 Some((
                     k.strip_prefix("CARGO_REGISTRIES_")?

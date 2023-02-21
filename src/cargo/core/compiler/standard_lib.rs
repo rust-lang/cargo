@@ -11,7 +11,6 @@ use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
 use crate::Config;
 use std::collections::{HashMap, HashSet};
-use std::env;
 use std::path::PathBuf;
 
 use super::BuildConfig;
@@ -222,7 +221,7 @@ pub fn generate_std_roots(
 }
 
 fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
-    if let Some(s) = env::var_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
+    if let Some(s) = target_data.config.get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }
 
@@ -241,7 +240,7 @@ fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<Pat
              library, try:\n        rustup component add rust-src",
             lock
         );
-        match env::var("RUSTUP_TOOLCHAIN") {
+        match target_data.config.get_env("RUSTUP_TOOLCHAIN") {
             Ok(rustup_toolchain) => {
                 anyhow::bail!("{} --toolchain {}", msg, rustup_toolchain);
             }

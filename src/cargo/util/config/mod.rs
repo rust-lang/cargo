@@ -54,7 +54,7 @@ use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -106,7 +106,7 @@ macro_rules! get_value_typed {
         /// Low-level private method for getting a config value as an OptValue.
         fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
             let cv = self.get_cv(key)?;
-            let env = self.get_env::<$ty>(key)?;
+            let env = self.get_config_env::<$ty>(key)?;
             match (cv, env) {
                 (Some(CV::$variant(val, definition)), Some(env)) => {
                     if definition.is_higher_priority(&env.definition) {
@@ -200,7 +200,7 @@ pub struct Config {
     /// Target Directory via resolved Cli parameter
     target_dir: Option<Filesystem>,
     /// Environment variables, separated to assist testing.
-    env: HashMap<String, String>,
+    env: HashMap<OsString, OsString>,
     /// Environment variables, converted to uppercase to check for case mismatch
     upper_case_env: HashMap<String, String>,
     /// Tracks which sources have been updated to avoid multiple updates.
@@ -260,23 +260,16 @@ impl Config {
             }
         });
 
-        let env: HashMap<_, _> = env::vars_os()
-            .filter_map(|(k, v)| {
-                // Ignore any key/values that are not valid Unicode.
-                match (k.into_string(), v.into_string()) {
-                    (Ok(k), Ok(v)) => Some((k, v)),
-                    _ => None,
-                }
-            })
-            .collect();
+        let env: HashMap<_, _> = env::vars_os().collect();
 
         let upper_case_env = env
-            .clone()
-            .into_iter()
-            .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k))
+            .iter()
+            .filter_map(|(k, _)| k.to_str()) // Only keep valid UTF-8
+            .map(|k| (k.to_uppercase().replace("-", "_"), k.to_owned()))
             .collect();
 
-        let cache_rustc_info = match env.get("CARGO_CACHE_RUSTC_INFO") {
+        let cache_key: &OsStr = "CARGO_CACHE_RUSTC_INFO".as_ref();
+        let cache_rustc_info = match env.get(cache_key) {
             Some(cache) => cache != "0",
             _ => true,
         };
@@ -440,17 +433,18 @@ impl Config {
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
         self.cargo_exe
             .try_borrow_with(|| {
-                fn from_env() -> CargoResult<PathBuf> {
+                let from_env = || -> CargoResult<PathBuf> {
                     // Try re-using the `cargo` set in the environment already. This allows
                     // commands that use Cargo as a library to inherit (via `cargo <subcommand>`)
                     // or set (by setting `$CARGO`) a correct path to `cargo` when the current exe
                     // is not actually cargo (e.g., `cargo-*` binaries, Valgrind, `ld.so`, etc.).
-                    let exe = env::var_os(crate::CARGO_ENV)
+                    let exe = self
+                        .get_env_os(crate::CARGO_ENV)
                         .map(PathBuf::from)
                         .ok_or_else(|| anyhow!("$CARGO not set"))?
                         .canonicalize()?;
                     Ok(exe)
-                }
+                };
 
                 fn from_current_exe() -> CargoResult<PathBuf> {
                     // Try fetching the path to `cargo` using `env::current_exe()`.
@@ -565,7 +559,7 @@ impl Config {
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
-        } else if let Some(dir) = self.env.get("CARGO_TARGET_DIR") {
+        } else if let Some(dir) = self.get_env_os("CARGO_TARGET_DIR") {
             // Check if the CARGO_TARGET_DIR environment variable is set to an empty string.
             if dir.is_empty() {
                 bail!(
@@ -663,7 +657,7 @@ impl Config {
             // Root table can't have env value.
             return Ok(cv);
         }
-        let env = self.env.get(key.as_env_key());
+        let env = self.get_env_str(key.as_env_key());
         let env_def = Definition::Environment(key.as_env_key().to_string());
         let use_env = match (&cv, env) {
             // Lists are always merged.
@@ -734,20 +728,28 @@ impl Config {
 
     /// Helper primarily for testing.
     pub fn set_env(&mut self, env: HashMap<String, String>) {
-        self.env = env;
+        self.env = env.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
     }
 
-    /// Returns all environment variables.
-    pub(crate) fn env(&self) -> &HashMap<String, String> {
-        &self.env
+    /// Returns all environment variables as an iterator, filtering out entries
+    /// that are not valid UTF-8.
+    pub(crate) fn env(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.env
+            .iter()
+            .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
     }
 
-    fn get_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
+    /// Returns all environment variable keys, filtering out entries that are not valid UTF-8.
+    fn env_keys(&self) -> impl Iterator<Item = &str> {
+        self.env.iter().filter_map(|(k, _)| k.to_str())
+    }
+
+    fn get_config_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
     where
         T: FromStr,
         <T as FromStr>::Err: fmt::Display,
     {
-        match self.env.get(key.as_env_key()) {
+        match self.get_env_str(key.as_env_key()) {
             Some(value) => {
                 let definition = Definition::Environment(key.as_env_key().to_string());
                 Ok(Some(Value {
@@ -764,16 +766,48 @@ impl Config {
         }
     }
 
+    /// Get the value of environment variable `key` through the `Config` snapshot.
+    ///
+    /// This can be used similarly to `std::env::var`.
+    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<String> {
+        let key = key.as_ref();
+        let s = match self.env.get(key) {
+            Some(s) => s,
+            None => bail!("{key:?} could not be found in the environment snapshot",),
+        };
+        match s.to_str() {
+            Some(s) => Ok(s.to_owned()),
+            None => bail!("environment variable value is not valid unicode: {s:?}"),
+        }
+    }
+
+    /// Get the value of environment variable `key` through the `Config` snapshot.
+    ///
+    /// This can be used similarly to `std::env::var_os`.
+    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
+        self.env.get(key.as_ref()).cloned()
+    }
+
+    /// Get the value of environment variable `key`.
+    /// Returns `None` if `key` is not in `self.env` or if the value is not valid UTF-8.
+    fn get_env_str(&self, key: impl AsRef<OsStr>) -> Option<&str> {
+        self.env.get(key.as_ref()).and_then(|s| s.to_str())
+    }
+
+    fn env_has_key(&self, key: impl AsRef<OsStr>) -> bool {
+        self.env.contains_key(key.as_ref())
+    }
+
     /// Check if the [`Config`] contains a given [`ConfigKey`].
     ///
     /// See `ConfigMapAccess` for a description of `env_prefix_ok`.
     fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> CargoResult<bool> {
-        if self.env.contains_key(key.as_env_key()) {
+        if self.env_has_key(key.as_env_key()) {
             return Ok(true);
         }
         if env_prefix_ok {
             let env_prefix = format!("{}_", key.as_env_key());
-            if self.env.keys().any(|k| k.starts_with(&env_prefix)) {
+            if self.env_keys().any(|k| k.starts_with(&env_prefix)) {
                 return Ok(true);
             }
         }
@@ -885,7 +919,7 @@ impl Config {
         key: &ConfigKey,
         output: &mut Vec<(String, Definition)>,
     ) -> CargoResult<()> {
-        let env_val = match self.env.get(key.as_env_key()) {
+        let env_val = match self.get_env_str(key.as_env_key()) {
             Some(v) => v,
             None => {
                 self.check_environment_key_case_mismatch(key);
@@ -1616,12 +1650,9 @@ impl Config {
     ) -> Option<PathBuf> {
         let var = tool.to_uppercase();
 
-        match env::var_os(&var) {
+        match self.get_env_os(&var).as_ref().and_then(|s| s.to_str()) {
             Some(tool_path) => {
-                let maybe_relative = match tool_path.to_str() {
-                    Some(s) => s.contains('/') || s.contains('\\'),
-                    None => false,
-                };
+                let maybe_relative = tool_path.contains('/') || tool_path.contains('\\');
                 let path = if maybe_relative {
                     self.cwd.join(tool_path)
                 } else {

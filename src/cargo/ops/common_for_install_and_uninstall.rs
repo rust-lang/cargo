@@ -506,7 +506,7 @@ pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesyst
     let config_root = config.get_path("install.root")?;
     Ok(flag
         .map(PathBuf::from)
-        .or_else(|| env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
+        .or_else(|| config.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
         .or_else(move || config_root.map(|v| v.val))
         .map(Filesystem::new)
         .unwrap_or_else(|| config.home().clone()))

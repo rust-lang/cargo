@@ -1,7 +1,6 @@
 //! See [`CompilationFiles`].
 
 use std::collections::HashMap;
-use std::env;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -628,7 +627,7 @@ fn compute_metadata(
 
     // Seed the contents of `__CARGO_DEFAULT_LIB_METADATA` to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.
-    if let Ok(ref channel) = env::var("__CARGO_DEFAULT_LIB_METADATA") {
+    if let Ok(ref channel) = cx.bcx.config.get_env("__CARGO_DEFAULT_LIB_METADATA") {
         channel.hash(&mut hasher);
     }
 
@@ -717,7 +716,7 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
         || (unit.target.is_executable() && short_name == "wasm32-unknown-emscripten")
         || (unit.target.is_executable() && short_name.contains("msvc")))
         && unit.pkg.package_id().source_id().is_path()
-        && env::var("__CARGO_DEFAULT_LIB_METADATA").is_err()
+        && bcx.config.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
     {
         return false;
     }

@@ -31,7 +31,7 @@ use crate::util::{closest_msg, config, CargoResult, Config};
 use anyhow::{bail, Context as _};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
-use std::{cmp, env, fmt, hash};
+use std::{cmp, fmt, hash};
 
 /// Collection of all profiles.
 ///
@@ -62,7 +62,7 @@ pub struct Profiles {
 impl Profiles {
     pub fn new(ws: &Workspace<'_>, requested_profile: InternedString) -> CargoResult<Profiles> {
         let config = ws.config();
-        let incremental = match env::var_os("CARGO_INCREMENTAL") {
+        let incremental = match config.get_env_os("CARGO_INCREMENTAL") {
             Some(v) => Some(v == "1"),
             None => config.build_config()?.incremental,
         };

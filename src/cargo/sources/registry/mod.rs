@@ -674,7 +674,7 @@ impl<'cfg> RegistrySource<'cfg> {
         }
         dst.create_dir()?;
         let mut tar = {
-            let size_limit = max_unpack_size(tarball.metadata()?.len());
+            let size_limit = max_unpack_size(self.config, tarball.metadata()?.len());
             let gz = GzDecoder::new(tarball);
             let gz = LimitErrorReader::new(gz, size_limit);
             Archive::new(gz)
@@ -918,21 +918,23 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 /// * <https://cran.r-project.org/web/packages/brotli/vignettes/brotli-2015-09-22.pdf>
 /// * <https://blog.cloudflare.com/results-experimenting-brotli/>
 /// * <https://tukaani.org/lzma/benchmarks.html>
-fn max_unpack_size(size: u64) -> u64 {
+fn max_unpack_size(config: &Config, size: u64) -> u64 {
     const SIZE_VAR: &str = "__CARGO_TEST_MAX_UNPACK_SIZE";
     const RATIO_VAR: &str = "__CARGO_TEST_MAX_UNPACK_RATIO";
-    let max_unpack_size = if cfg!(debug_assertions) && std::env::var(SIZE_VAR).is_ok() {
+    let max_unpack_size = if cfg!(debug_assertions) && config.get_env(SIZE_VAR).is_ok() {
         // For integration test only.
-        std::env::var(SIZE_VAR)
+        config
+            .get_env(SIZE_VAR)
             .unwrap()
             .parse()
             .expect("a max unpack size in bytes")
     } else {
         MAX_UNPACK_SIZE
     };
-    let max_compression_ratio = if cfg!(debug_assertions) && std::env::var(RATIO_VAR).is_ok() {
+    let max_compression_ratio = if cfg!(debug_assertions) && config.get_env(RATIO_VAR).is_ok() {
         // For integration test only.
-        std::env::var(RATIO_VAR)
+        config
+            .get_env(RATIO_VAR)
             .unwrap()
             .parse()
             .expect("a max compression ratio in bytes")

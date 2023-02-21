@@ -1,7 +1,6 @@
 //! Type definitions for the result of a compilation.
 
 use std::collections::{BTreeSet, HashMap};
-use std::env;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
@@ -295,7 +294,7 @@ impl<'cfg> Compilation<'cfg> {
             // These are the defaults when DYLD_FALLBACK_LIBRARY_PATH isn't
             // set or set to an empty string. Since Cargo is explicitly setting
             // the value, make sure the defaults still work.
-            if let Some(home) = env::var_os("HOME") {
+            if let Some(home) = self.config.get_env_os("HOME") {
                 search_path.push(PathBuf::from(home).join("lib"));
             }
             search_path.push(PathBuf::from("/usr/local/lib"));
@@ -362,7 +361,7 @@ impl<'cfg> Compilation<'cfg> {
                 continue;
             }
 
-            if value.is_force() || env::var_os(key).is_none() {
+            if value.is_force() || self.config.get_env_os(key).is_none() {
                 cmd.env(key, value.resolve(self.config));
             }
         }

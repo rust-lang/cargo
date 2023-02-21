@@ -215,14 +215,14 @@ pub fn create_bcx<'a, 'cfg>(
         | CompileMode::Check { .. }
         | CompileMode::Bench
         | CompileMode::RunCustomBuild => {
-            if std::env::var("RUST_FLAGS").is_ok() {
+            if ws.config().get_env("RUST_FLAGS").is_ok() {
                 config.shell().warn(
                     "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
                 )?;
             }
         }
         CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::Docscrape => {
-            if std::env::var("RUSTDOC_FLAGS").is_ok() {
+            if ws.config().get_env("RUSTDOC_FLAGS").is_ok() {
                 config.shell().warn(
                     "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
                 )?;
