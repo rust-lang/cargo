@@ -5,7 +5,7 @@ use cargo_test_support::Project;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn creates_library_when_instructed_and_has_bin_file() {
+fn case() {
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = &project.root();
 

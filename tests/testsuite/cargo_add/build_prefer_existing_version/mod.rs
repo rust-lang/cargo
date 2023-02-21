@@ -5,7 +5,7 @@ use cargo_test_support::Project;
 use crate::cargo_add::init_alt_registry;
 
 #[cargo_test]
-fn build_prefer_existing_version() {
+fn case() {
     init_alt_registry();
     let project =
         Project::from_template("tests/testsuite/cargo_add/build_prefer_existing_version/in");

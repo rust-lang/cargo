@@ -5,7 +5,7 @@ use cargo_test_support::Project;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn git_ignore_exists_no_conflicting_entries() {
+fn case() {
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = &project.root();
 

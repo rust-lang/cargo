@@ -5,7 +5,7 @@ use cargo_test_support::Project;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn invalid_key_inherit_dependency() {
+fn case() {
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = project.root();
     let cwd = &project_root;
