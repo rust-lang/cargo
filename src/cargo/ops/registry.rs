@@ -15,9 +15,9 @@ use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use pasetors::keys::{AsymmetricKeyPair, Generate};
 use pasetors::paserk::FormatAsPaserk;
-use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use termcolor::Color::Green;
 use termcolor::ColorSpec;
+use url::Url;
 
 use crate::core::dependency::DepKind;
 use crate::core::dependency::Dependency;
@@ -1206,10 +1206,8 @@ pub fn search(
         );
     } else if total_crates > limit && limit >= search_max_limit {
         let extra = if source_ids.original.is_crates_io() {
-            format!(
-                " (go to https://crates.io/search?q={} to see more)",
-                percent_encode(query.as_bytes(), NON_ALPHANUMERIC)
-            )
+            let url = Url::parse_with_params("https://crates.io/search", &[("q", query)])?;
+            format!(" (go to {url} to see more)")
         } else {
             String::new()
         };

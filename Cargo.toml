@@ -55,7 +55,6 @@ openssl = { version = '0.10.11', optional = true }
 os_info = "3.5.0"
 pasetors = { version = "0.6.4", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2"
-percent-encoding = "2.0"
 pretty_env_logger = { version = "0.4", optional = true }
 rustfix = "0.6.0"
 semver = { version = "1.0.3", features = ["serde"] }
