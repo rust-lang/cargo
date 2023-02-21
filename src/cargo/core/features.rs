@@ -793,7 +793,7 @@ const STABILISED_MULTITARGET: &str = "Multiple `--target` options are now always
 const STABILIZED_TERMINAL_WIDTH: &str =
     "The -Zterminal-width option is now always enabled for terminal output.";
 
-const STABILISED_SPARSE_REGISTRY: &str = "This flag currently still sets the default protocol\
+const STABILISED_SPARSE_REGISTRY: &str = "This flag currently still sets the default protocol \
     to `sparse` when accessing crates.io. However, this will be removed in the future. \n\
     The stable equivalent is to set the config value `registries.crates-io.protocol = 'sparse'`\n\
     or environment variable `CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse`";
