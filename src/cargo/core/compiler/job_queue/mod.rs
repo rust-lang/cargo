@@ -119,6 +119,8 @@
 //! [`push`]: Queue::push
 //! [`push_bounded`]: Queue::push_bounded
 
+mod job;
+
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Write as _;
@@ -135,11 +137,9 @@ use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, trace};
 use semver::Version;
 
+pub use self::job::Freshness::{self, Dirty, Fresh};
+pub use self::job::{Job, Work};
 use super::context::OutputFile;
-use super::job::{
-    Freshness::{self, Dirty, Fresh},
-    Job,
-};
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::compiler::future_incompat::{

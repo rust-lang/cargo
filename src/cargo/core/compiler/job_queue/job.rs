@@ -1,7 +1,9 @@
+//! See [`Job`] and [`Work`].
+
 use std::fmt;
 use std::mem;
 
-use super::job_queue::JobState;
+use super::JobState;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::util::CargoResult;
 
