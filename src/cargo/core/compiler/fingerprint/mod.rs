@@ -371,7 +371,7 @@ use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{internal, path_args, profile, StableHasher};
-use crate::CARGO_ENV;
+use crate::{Config, CARGO_ENV};
 
 use super::custom_build::BuildDeps;
 use super::job::{Job, Work};
@@ -782,6 +782,7 @@ impl LocalFingerprint {
         pkg_root: &Path,
         target_root: &Path,
         cargo_exe: &Path,
+        config: &Config,
     ) -> CargoResult<Option<StaleItem>> {
         match self {
             // We need to parse `dep_info`, learn about the crate's dependencies.
@@ -810,7 +811,7 @@ impl LocalFingerprint {
                                 .to_string(),
                         )
                     } else {
-                        env::var(key).ok()
+                        config.get_env(key).ok()
                     };
                     if current == *previous {
                         continue;
@@ -1059,6 +1060,7 @@ impl Fingerprint {
         pkg_root: &Path,
         target_root: &Path,
         cargo_exe: &Path,
+        config: &Config,
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
 
@@ -1166,7 +1168,7 @@ impl Fingerprint {
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
             if let Some(item) =
-                local.find_stale_item(mtime_cache, pkg_root, target_root, cargo_exe)?
+                local.find_stale_item(mtime_cache, pkg_root, target_root, cargo_exe, config)?
             {
                 item.log();
                 self.fs_status = FsStatus::StaleItem(item);
@@ -1328,6 +1330,7 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
         unit.pkg.root(),
         &target_root,
         cargo_exe,
+        cx.bcx.config,
     )?;
 
     let fingerprint = Arc::new(fingerprint);

@@ -426,6 +426,7 @@ impl Config {
             } else {
                 None
             },
+            self,
         )
     }
 
