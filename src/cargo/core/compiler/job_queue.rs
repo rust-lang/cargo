@@ -1,16 +1,39 @@
-//! This module implements the job queue which determines the ordering in which
-//! rustc is spawned off. It also manages the allocation of jobserver tokens to
-//! rustc beyond the implicit token each rustc owns (i.e., the ones used for
-//! parallel LLVM work and parallel rustc threads).
+//! Management of the interaction between the main `cargo` and all spawned jobs.
+//!
+//! ## Overview
+//!
+//! This module implements a job queue. A job here represents a unit of work,
+//! which is roughly a rusc invocation, a build script run, or just a no-op.
+//! The job queue primarily handles the following things:
+//!
+//! * Spawns concurrent jobs. Depending on its [`Freshness`], a job could be
+//!     either executed on a spawned thread or ran on the same thread to avoid
+//!     the threading overhead.
+//! * Controls the number of concurrency. It allocates and manages [`jobserver`]
+//!     tokens to each spawned off rustc and build scripts.
+//! * Manages the communication between the main `cargo` process and its
+//!     spawned jobs. Those [`Message`]s are sent over a [`Queue`] shared
+//!     across threads.
+//! * Schedules the execution order of each [`Job`]. Priorities are determined
+//!     when calling [`JobQueue::enqueue`] to enqueue a job. The scheduling is
+//!     relatively rudimentary and could likely be improved.
+//!
+//! A rough outline of building a queue and executing jobs is:
+//!
+//! 1. [`JobQueue::new`] to simply create one queue.
+//! 2. [`JobQueue::enqueue`] to add new jobs onto the queue.
+//! 3. Consumes the queue and executes all jobs via [`JobQueue::execute`].
+//!
+//! The primary loop happens insides [`JobQueue::execute`], which is effectively
+//! [`DrainState::drain_the_queue`]. [`DrainState`] is, as its name tells,
+//! the running state of the job queue getting drained.
+//!
+//! ## Jobserver
 //!
 //! Cargo and rustc have a somewhat non-trivial jobserver relationship with each
 //! other, which is due to scaling issues with sharing a single jobserver
 //! amongst what is potentially hundreds of threads of work on many-cored
-//! systems on (at least) linux, and likely other platforms as well.
-//!
-//! The details of this algorithm are (also) written out in
-//! src/librustc_jobserver/lib.rs. What follows is a description focusing on the
-//! Cargo side of things.
+//! systems on (at least) Linux, and likely other platforms as well.
 //!
 //! Cargo wants to complete the build as quickly as possible, fully saturating
 //! all cores (as constrained by the -j=N) parameter. Cargo also must not spawn
@@ -23,31 +46,78 @@
 //! implement prioritizes spawning as many crates (i.e., rustc processes) as
 //! possible, and then filling each rustc with tokens on demand.
 //!
-//! The primary loop is in `drain_the_queue` below.
-//!
-//! We integrate with the jobserver, originating from GNU make, to make sure
+//! We integrate with the [jobserver], originating from GNU make, to make sure
 //! that build scripts which use make to build C code can cooperate with us on
 //! the number of used tokens and avoid overfilling the system we're on.
 //!
 //! The jobserver is unfortunately a very simple protocol, so we enhance it a
 //! little when we know that there is a rustc on the other end. Via the stderr
-//! pipe we have to rustc, we get messages such as "NeedsToken" and
-//! "ReleaseToken" from rustc.
+//! pipe we have to rustc, we get messages such as `NeedsToken` and
+//! `ReleaseToken` from rustc.
 //!
-//! "NeedsToken" indicates that a rustc is interested in acquiring a token, but
-//! never that it would be impossible to make progress without one (i.e., it
-//! would be incorrect for rustc to not terminate due to an unfulfilled
-//! NeedsToken request); we do not usually fulfill all NeedsToken requests for a
+//! [`NeedsToken`] indicates that a rustc is interested in acquiring a token,
+//! but never that it would be impossible to make progress without one (i.e.,
+//! it would be incorrect for rustc to not terminate due to an unfulfilled
+//! `NeedsToken` request); we do not usually fulfill all `NeedsToken` requests for a
 //! given rustc.
 //!
-//! "ReleaseToken" indicates that a rustc is done with one of its tokens and is
-//! ready for us to re-acquire ownership -- we will either release that token
+//! [`ReleaseToken`] indicates that a rustc is done with one of its tokens and
+//! is ready for us to re-acquire ownership — we will either release that token
 //! back into the general pool or reuse it ourselves. Note that rustc will
 //! inform us that it is releasing a token even if it itself is also requesting
-//! tokens; is is up to us whether to return the token to that same rustc.
+//! tokens; is up to us whether to return the token to that same rustc.
 //!
-//! The current scheduling algorithm is relatively primitive and could likely be
-//! improved.
+//! `jobserver` also manages the allocation of tokens to rustc beyond
+//! the implicit token each rustc owns (i.e., the ones used for parallel LLVM
+//! work and parallel rustc threads).
+//!
+//! ## Scheduling
+//!
+//! The current scheduling algorithm is not really polished. It is simply based
+//! on a dependency graph [`DependencyQueue`]. We continue adding nodes onto
+//! the graph until we finalize it. When the graph gets finalized, it finds the
+//! sum of the cost of each dependencies of each node, including transitively.
+//! The sum of dependency cost turns out to be the cost of each given node.
+//!
+//! At the time being, the cost is just passed as a fixed placeholder in
+//! [`JobQueue::enqueue`]. In the future, we could explore more possibilities
+//! around it. For instance, we start persisting timing information for each
+//! build somewhere. For a subsequent build, we can look into the historical
+//! data and perform a PGO-like optimization to prioritize jobs, making a build
+//! fully pipelined.
+//!
+//! ## Message queue
+//!
+//! Each spawned thread running a process uses the message queue [`Queue`] to
+//! send messages back to the main thread (the one running `cargo`).
+//! The main thread coordinates everything, and handles printing output.
+//!
+//! It is important to be careful which messages use [`push`] vs [`push_bounded`].
+//! `push` is for priority messages (like tokens, or "finished") where the
+//! sender shouldn't block. We want to handle those so real work can proceed
+//! ASAP.
+//!
+//! `push_bounded` is only for messages being printed to stdout/stderr. Being
+//! bounded prevents a flood of messages causing a large amount of memory
+//! being used.
+//!
+//! `push` also avoids blocking which helps avoid deadlocks. For example, when
+//! the diagnostic server thread is dropped, it waits for the thread to exit.
+//! But if the thread is blocked on a full queue, and there is a critical
+//! error, the drop will deadlock. This should be fixed at some point in the
+//! future. The jobserver thread has a similar problem, though it will time
+//! out after 1 second.
+//!
+//! To access the message queue, each running `Job` is given its own [`JobState`],
+//! containing everything it needs to communicate with the main thread.
+//!
+//! See [`Message`] for all available message kinds.
+//!
+//! [jobserver]: https://docs.rs/jobserver
+//! [`NeedsToken`]: Message::NeedsToken
+//! [`ReleaseToken`]: Message::ReleaseToken
+//! [`push`]: Queue::push
+//! [`push_bounded`]: Queue::push_bounded
 
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -100,28 +170,6 @@ pub struct JobQueue<'cfg> {
 ///
 /// It is created from JobQueue when we have fully assembled the crate graph
 /// (i.e., all package dependencies are known).
-///
-/// # Message queue
-///
-/// Each thread running a process uses the message queue to send messages back
-/// to the main thread. The main thread coordinates everything, and handles
-/// printing output.
-///
-/// It is important to be careful which messages use `push` vs `push_bounded`.
-/// `push` is for priority messages (like tokens, or "finished") where the
-/// sender shouldn't block. We want to handle those so real work can proceed
-/// ASAP.
-///
-/// `push_bounded` is only for messages being printed to stdout/stderr. Being
-/// bounded prevents a flood of messages causing a large amount of memory
-/// being used.
-///
-/// `push` also avoids blocking which helps avoid deadlocks. For example, when
-/// the diagnostic server thread is dropped, it waits for the thread to exit.
-/// But if the thread is blocked on a full queue, and there is a critical
-/// error, the drop will deadlock. This should be fixed at some point in the
-/// future. The jobserver thread has a similar problem, though it will time
-/// out after 1 second.
 struct DrainState<'cfg> {
     // This is the length of the DependencyQueue when starting out
     total_units: usize,
