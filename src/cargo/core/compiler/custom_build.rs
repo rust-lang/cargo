@@ -1,5 +1,4 @@
-use super::job::{Job, Work};
-use super::{fingerprint, Context, LinkType, Unit};
+use super::{fingerprint, Context, Job, LinkType, Unit, Work};
 use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;

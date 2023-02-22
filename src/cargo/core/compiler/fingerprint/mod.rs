@@ -374,8 +374,7 @@ use crate::util::{internal, path_args, profile, StableHasher};
 use crate::{Config, CARGO_ENV};
 
 use super::custom_build::BuildDeps;
-use super::job::{Job, Work};
-use super::{BuildContext, Context, FileFlavor, Unit};
+use super::{BuildContext, Context, FileFlavor, Job, Unit, Work};
 
 pub use dirty_reason::DirtyReason;
 
