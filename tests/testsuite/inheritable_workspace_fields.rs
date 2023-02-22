@@ -287,8 +287,8 @@ fn inherit_own_dependencies() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep-build v0.8.2 ([..])
 [DOWNLOADED] dep v0.1.2 ([..])
+[DOWNLOADED] dep-build v0.8.2 ([..])
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -817,8 +817,8 @@ fn inherit_dependencies() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep-build v0.8.2 ([..])
 [DOWNLOADED] dep v0.1.2 ([..])
+[DOWNLOADED] dep-build v0.8.2 ([..])
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([CWD]/bar)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
