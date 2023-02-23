@@ -38,7 +38,7 @@ http-auth = { version = "0.1.6", default-features = false }
 humantime = "2.0.0"
 indexmap = "1"
 ignore = "0.4.7"
-is-terminal = "0.4.0"
+is-terminal = "0.4.4"
 lazy_static = "1.2.0"
 jobserver = "0.1.24"
 lazycell = "1.2.0"
