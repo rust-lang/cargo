@@ -217,8 +217,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             bail!(
                 "there is nothing to install in `{}`, because it has no binaries\n\
                  `cargo install` is only for installing programs, and can't be used with libraries.\n\
-                 To use a library crate, add it as a dependency in a Cargo project instead.",
-                pkg
+                 To use a library crate, add it as a dependency to a Cargo project with `cargo add`.",
+                pkg,
             );
         }
 
