@@ -970,7 +970,6 @@ impl<'cfg> DrainState<'cfg> {
             self.active.len(),
             self.pending_queue.len(),
             self.queue.len(),
-            self.rustc_tokens.len(),
         );
         self.timings.record_cpu();
 
