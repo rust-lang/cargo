@@ -261,6 +261,7 @@ impl RegistryBuilder {
             let server = HttpServer::new(
                 registry_path.clone(),
                 dl_path,
+                api_path.clone(),
                 token.clone(),
                 self.auth_required,
                 self.custom_responders,
@@ -585,6 +586,7 @@ pub struct HttpServer {
     listener: TcpListener,
     registry_path: PathBuf,
     dl_path: PathBuf,
+    api_path: PathBuf,
     addr: SocketAddr,
     token: Token,
     auth_required: bool,
@@ -604,6 +606,7 @@ impl HttpServer {
     pub fn new(
         registry_path: PathBuf,
         dl_path: PathBuf,
+        api_path: PathBuf,
         token: Token,
         auth_required: bool,
         api_responders: HashMap<
@@ -617,6 +620,7 @@ impl HttpServer {
             listener,
             registry_path,
             dl_path,
+            api_path,
             addr,
             token,
             auth_required,
@@ -1007,6 +1011,12 @@ impl HttpServer {
 
     pub fn check_authorized_publish(&self, req: &Request) -> Response {
         if let Some(body) = &req.body {
+            // Mimic the publish behavior for local registries by writing out the request
+            // so tests can verify publishes made to either registry type.
+            let path = self.api_path.join("api/v1/crates/new");
+            t!(fs::create_dir_all(path.parent().unwrap()));
+            t!(fs::write(&path, body));
+
             // Get the metadata of the package
             let (len, remaining) = body.split_at(4);
             let json_len = u32::from_le_bytes(len.try_into().unwrap());

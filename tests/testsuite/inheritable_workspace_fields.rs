@@ -1,5 +1,5 @@
 //! Tests for inheriting Cargo.toml fields with field.workspace = true
-use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, git, path2url, paths, project, publish, registry,
 };
@@ -107,7 +107,7 @@ Caused by:
 
 #[cargo_test]
 fn inherit_own_workspace_fields() {
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project().build();
 
@@ -160,18 +160,23 @@ fn inherit_own_workspace_fields() {
         .file("bar.txt", "") // should be included when packaging
         .build();
 
-    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("foo", "1.2.3")
-        .file("src/lib.rs", "")
-        .publish();
-
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] [..]
+[..]
+[VERIFYING] foo v1.2.3 [..]
+[COMPILING] foo v1.2.3 [..]
+[FINISHED] [..]
+[PACKAGED] [..]
+[UPLOADING] foo v1.2.3 [..]
+[UPDATING] [..]
+",
+        )
         .run();
+
     publish::validate_upload_with_contents(
         r#"
         {
@@ -242,7 +247,7 @@ repository = "https://gitlab.com/rust-lang/rust"
 
 #[cargo_test]
 fn inherit_own_dependencies() {
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
     let p = project()
         .file(
             "Cargo.toml",
@@ -282,8 +287,8 @@ fn inherit_own_dependencies() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep-build v0.8.2 ([..])
 [DOWNLOADED] dep v0.1.2 ([..])
+[DOWNLOADED] dep-build v0.8.2 ([..])
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -297,18 +302,26 @@ fn inherit_own_dependencies() {
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
 
-    // HACK: Inject `bar` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("bar", "0.2.0")
-        .file("src/lib.rs", "")
-        .publish();
-
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] [..]
+[..]
+[PACKAGING] bar v0.2.0 [..]
+[UPDATING] [..]
+[VERIFYING] bar v0.2.0 [..]
+[COMPILING] dep v0.1.2
+[COMPILING] bar v0.2.0 [..]
+[FINISHED] [..]
+[PACKAGED] [..]
+[UPLOADING] bar v0.2.0 [..]
+[UPDATING] [..]
+",
+        )
         .run();
+
     publish::validate_upload_with_contents(
         r#"
         {
@@ -387,7 +400,7 @@ version = "0.8"
 
 #[cargo_test]
 fn inherit_own_detailed_dependencies() {
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
     let p = project()
         .file(
             "Cargo.toml",
@@ -431,18 +444,26 @@ fn inherit_own_detailed_dependencies() {
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("dep"));
 
-    // HACK: Inject `bar` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("bar", "0.2.0")
-        .file("src/lib.rs", "")
-        .publish();
-
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] [..]
+[..]
+[PACKAGING] bar v0.2.0 [..]
+[UPDATING] [..]
+[VERIFYING] bar v0.2.0 [..]
+[COMPILING] dep v0.1.2
+[COMPILING] bar v0.2.0 [..]
+[FINISHED] [..]
+[PACKAGED] [..]
+[UPLOADING] bar v0.2.0 [..]
+[UPDATING] [..]
+",
+        )
         .run();
+
     publish::validate_upload_with_contents(
         r#"
         {
@@ -593,7 +614,7 @@ fn inherited_dependencies_union_features() {
 
 #[cargo_test]
 fn inherit_workspace_fields() {
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project().build();
 
@@ -657,19 +678,28 @@ fn inherit_workspace_fields() {
         .file("bar/bar.txt", "") // should be included when packaging
         .build();
 
-    // HACK: Inject `bar` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("bar", "1.2.3")
-        .file("src/lib.rs", "")
-        .publish();
-
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .cwd("bar")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] [..]
+[..]
+[VERIFYING] bar v1.2.3 [..]
+[WARNING] [..]
+[..]
+[..]
+[..]
+[COMPILING] bar v1.2.3 [..]
+[FINISHED] [..]
+[PACKAGED] [..]
+[UPLOADING] bar v1.2.3 [..]
+[UPDATING] [..]
+",
+        )
         .run();
+
     publish::validate_upload_with_contents(
         r#"
         {
@@ -746,7 +776,7 @@ repository = "https://gitlab.com/rust-lang/rust"
 
 #[cargo_test]
 fn inherit_dependencies() {
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
     let p = project()
         .file(
             "Cargo.toml",
@@ -787,8 +817,8 @@ fn inherit_dependencies() {
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep-build v0.8.2 ([..])
 [DOWNLOADED] dep v0.1.2 ([..])
+[DOWNLOADED] dep-build v0.8.2 ([..])
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([CWD]/bar)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -802,19 +832,27 @@ fn inherit_dependencies() {
     assert!(lockfile.contains("dep-dev"));
     assert!(lockfile.contains("dep-build"));
 
-    // HACK: Inject `bar` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("bar", "0.2.0")
-        .file("src/lib.rs", "")
-        .publish();
-
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .cwd("bar")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] [..]
+[..]
+[PACKAGING] bar v0.2.0 [..]
+[UPDATING] [..]
+[VERIFYING] bar v0.2.0 [..]
+[COMPILING] dep v0.1.2
+[COMPILING] bar v0.2.0 [..]
+[FINISHED] [..]
+[PACKAGED] [..]
+[UPLOADING] bar v0.2.0 [..]
+[UPDATING] [..]
+",
+        )
         .run();
+
     publish::validate_upload_with_contents(
         r#"
         {
