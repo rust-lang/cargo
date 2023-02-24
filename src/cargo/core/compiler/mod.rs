@@ -715,14 +715,7 @@ fn prepare_rustc(
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
 
-    if cx.bcx.config.cli_unstable().jobserver_per_rustc {
-        let client = cx.new_jobserver()?;
-        base.inherit_jobserver(&client);
-        base.arg("-Z").arg("jobserver-token-requests");
-        assert!(cx.rustc_clients.insert(unit.clone(), client).is_none());
-    } else {
-        base.inherit_jobserver(&cx.jobserver);
-    }
+    base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)

@@ -71,11 +71,6 @@ pub struct Context<'a, 'cfg> {
     /// metadata files in addition to the rlib itself.
     rmeta_required: HashSet<Unit>,
 
-    /// When we're in jobserver-per-rustc process mode, this keeps those
-    /// jobserver clients for each Unit (which eventually becomes a rustc
-    /// process).
-    pub rustc_clients: HashMap<Unit, Client>,
-
     /// Map of the LTO-status of each unit. This indicates what sort of
     /// compilation is happening (only object, only bitcode, both, etc), and is
     /// precalculated early on.
@@ -124,7 +119,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             primary_packages: HashSet::new(),
             files: None,
             rmeta_required: HashSet::new(),
-            rustc_clients: HashMap::new(),
             lto: HashMap::new(),
             metadata_for_doc_units: HashMap::new(),
             failed_scrape_units: Arc::new(Mutex::new(HashSet::new())),
@@ -612,24 +606,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// well because some compilations rely on that.
     pub fn rmeta_required(&self, unit: &Unit) -> bool {
         self.rmeta_required.contains(unit)
-    }
-
-    /// Used by `-Zjobserver-per-rustc`.
-    pub fn new_jobserver(&mut self) -> CargoResult<Client> {
-        let tokens = self.bcx.jobs() as usize;
-        let client = Client::new(tokens).with_context(|| "failed to create jobserver")?;
-
-        // Drain the client fully
-        for i in 0..tokens {
-            client.acquire_raw().with_context(|| {
-                format!(
-                    "failed to fully drain {}/{} token from jobserver at startup",
-                    i, tokens,
-                )
-            })?;
-        }
-
-        Ok(client)
     }
 
     /// Finds metadata for Doc/Docscrape units.
