@@ -1011,7 +1011,8 @@ impl HttpServer {
 
     pub fn check_authorized_publish(&self, req: &Request) -> Response {
         if let Some(body) = &req.body {
-            // Save the body to a file so we can inspect it in the test.
+            // Mimic the publish behavior for local registries by writing out the request
+            // so tests can verify publishes made to either registry type.
             let path = self.api_path.join("api/v1/crates/new");
             t!(fs::create_dir_all(path.parent().unwrap()));
             t!(fs::write(&path, body));
