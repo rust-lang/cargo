@@ -194,20 +194,4 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
         self.messages
             .push(Message::FutureIncompatReport(self.id, report));
     }
-
-    /// The rustc underlying this Job is about to acquire a jobserver token (i.e., block)
-    /// on the passed client.
-    ///
-    /// This should arrange for the associated client to eventually get a token via
-    /// `client.release_raw()`.
-    pub fn will_acquire(&self) {
-        self.messages.push(Message::NeedsToken(self.id));
-    }
-
-    /// The rustc underlying this Job is informing us that it is done with a jobserver token.
-    ///
-    /// Note that it does *not* write that token back anywhere.
-    pub fn release_token(&self) {
-        self.messages.push(Message::ReleaseToken(self.id));
-    }
 }

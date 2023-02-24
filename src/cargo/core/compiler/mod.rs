@@ -1701,31 +1701,6 @@ fn on_stderr_line_inner(
         return Ok(false);
     }
 
-    #[derive(serde::Deserialize)]
-    struct JobserverNotification {
-        jobserver_event: Event,
-    }
-
-    #[derive(Debug, serde::Deserialize)]
-    enum Event {
-        WillAcquire,
-        Release,
-    }
-
-    if let Ok(JobserverNotification { jobserver_event }) =
-        serde_json::from_str::<JobserverNotification>(compiler_message.get())
-    {
-        trace!(
-            "found jobserver directive from rustc: `{:?}`",
-            jobserver_event
-        );
-        match jobserver_event {
-            Event::WillAcquire => state.will_acquire(),
-            Event::Release => state.release_token(),
-        }
-        return Ok(false);
-    }
-
     // And failing all that above we should have a legitimate JSON diagnostic
     // from the compiler, so wrap it in an external Cargo JSON message
     // indicating which package it came from and then emit it.

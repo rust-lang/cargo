@@ -123,7 +123,7 @@ mod job;
 mod job_state;
 
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -133,7 +133,7 @@ use std::time::Duration;
 
 use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
-use jobserver::{Acquired, Client, HelperThread};
+use jobserver::{Acquired, HelperThread};
 use log::{debug, trace};
 use semver::Version;
 
@@ -198,13 +198,6 @@ struct DrainState<'cfg> {
     /// as we share the implicit token given to this Cargo process with a
     /// single rustc process.
     tokens: Vec<Acquired>,
-
-    /// rustc per-thread tokens, when in jobserver-per-rustc mode.
-    rustc_tokens: HashMap<JobId, Vec<Acquired>>,
-
-    /// This represents the list of rustc jobs (processes) and associated
-    /// clients that are interested in receiving a token.
-    to_send_clients: BTreeMap<JobId, Vec<Client>>,
 
     /// The list of jobs that we have not yet started executing, but have
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
@@ -387,12 +380,6 @@ enum Message {
     Token(io::Result<Acquired>),
     Finish(JobId, Artifact, CargoResult<()>),
     FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
-
-    // This client should get release_raw called on it with one of our tokens
-    NeedsToken(JobId),
-
-    // A token previously passed to a NeedsToken client is being released.
-    ReleaseToken(JobId),
 }
 
 impl<'cfg> JobQueue<'cfg> {
@@ -507,8 +494,6 @@ impl<'cfg> JobQueue<'cfg> {
             next_id: 0,
             timings: self.timings,
             tokens: Vec::new(),
-            rustc_tokens: HashMap::new(),
-            to_send_clients: BTreeMap::new(),
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(cx.bcx.config),
             finished: 0,
@@ -600,46 +585,9 @@ impl<'cfg> DrainState<'cfg> {
         self.active.len() < self.tokens.len() + 1
     }
 
-    // The oldest job (i.e., least job ID) is the one we grant tokens to first.
-    fn pop_waiting_client(&mut self) -> (JobId, Client) {
-        // FIXME: replace this with BTreeMap::first_entry when that stabilizes.
-        let key = *self
-            .to_send_clients
-            .keys()
-            .next()
-            .expect("at least one waiter");
-        let clients = self.to_send_clients.get_mut(&key).unwrap();
-        let client = clients.pop().unwrap();
-        if clients.is_empty() {
-            self.to_send_clients.remove(&key);
-        }
-        (key, client)
-    }
-
-    // If we managed to acquire some extra tokens, send them off to a waiting rustc.
-    fn grant_rustc_token_requests(&mut self) -> CargoResult<()> {
-        while !self.to_send_clients.is_empty() && self.has_extra_tokens() {
-            let (id, client) = self.pop_waiting_client();
-            // This unwrap is guaranteed to succeed. `active` must be at least
-            // length 1, as otherwise there can't be a client waiting to be sent
-            // on, so tokens.len() must also be at least one.
-            let token = self.tokens.pop().unwrap();
-            self.rustc_tokens
-                .entry(id)
-                .or_insert_with(Vec::new)
-                .push(token);
-            client
-                .release_raw()
-                .with_context(|| "failed to release jobserver token")?;
-        }
-
-        Ok(())
-    }
-
     fn handle_event(
         &mut self,
         cx: &mut Context<'_, '_>,
-        jobserver_helper: &HelperThread,
         plan: &mut BuildPlan,
         event: Message,
     ) -> Result<(), ErrorToHandle> {
@@ -699,19 +647,6 @@ impl<'cfg> DrainState<'cfg> {
                     Artifact::All => {
                         trace!("end: {:?}", id);
                         self.finished += 1;
-                        if let Some(rustc_tokens) = self.rustc_tokens.remove(&id) {
-                            // This puts back the tokens that this rustc
-                            // acquired into our primary token list.
-                            //
-                            // This represents a rustc bug: it did not
-                            // release all of its thread tokens but finished
-                            // completely. But we want to make Cargo resilient
-                            // to such rustc bugs, as they're generally not
-                            // fatal in nature (i.e., Cargo can make progress
-                            // still, and the build might not even fail).
-                            self.tokens.extend(rustc_tokens);
-                        }
-                        self.to_send_clients.remove(&id);
                         self.report_warning_count(
                             cx.bcx.config,
                             id,
@@ -756,31 +691,6 @@ impl<'cfg> DrainState<'cfg> {
                 let token = acquired_token.with_context(|| "failed to acquire jobserver token")?;
                 self.tokens.push(token);
             }
-            Message::NeedsToken(id) => {
-                trace!("queue token request");
-                jobserver_helper.request_token();
-                let client = cx.rustc_clients[&self.active[&id]].clone();
-                self.to_send_clients
-                    .entry(id)
-                    .or_insert_with(Vec::new)
-                    .push(client);
-            }
-            Message::ReleaseToken(id) => {
-                // Note that this pops off potentially a completely
-                // different token, but all tokens of the same job are
-                // conceptually the same so that's fine.
-                //
-                // self.tokens is a "pool" -- the order doesn't matter -- and
-                // this transfers ownership of the token into that pool. If we
-                // end up using it on the next go around, then this token will
-                // be truncated, same as tokens obtained through Message::Token.
-                let rustc_tokens = self
-                    .rustc_tokens
-                    .get_mut(&id)
-                    .expect("no tokens associated");
-                self.tokens
-                    .push(rustc_tokens.pop().expect("rustc releases token it has"));
-            }
         }
 
         Ok(())
@@ -795,19 +705,6 @@ impl<'cfg> DrainState<'cfg> {
         // listen for a message with a timeout, and on timeout we run the
         // previous parts of the loop again.
         let mut events = self.messages.try_pop_all();
-        trace!(
-            "tokens in use: {}, rustc_tokens: {:?}, waiting_rustcs: {:?} (events this tick: {})",
-            self.tokens.len(),
-            self.rustc_tokens
-                .iter()
-                .map(|(k, j)| (k, j.len()))
-                .collect::<Vec<_>>(),
-            self.to_send_clients
-                .iter()
-                .map(|(k, j)| (k, j.len()))
-                .collect::<Vec<_>>(),
-            events.len(),
-        );
         if events.is_empty() {
             loop {
                 self.tick_progress();
@@ -866,17 +763,13 @@ impl<'cfg> DrainState<'cfg> {
                 break;
             }
 
-            if let Err(e) = self.grant_rustc_token_requests() {
-                self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
-            }
-
             // And finally, before we block waiting for the next event, drop any
             // excess tokens we may have accidentally acquired. Due to how our
             // jobserver interface is architected we may acquire a token that we
             // don't actually use, and if this happens just relinquish it back
             // to the jobserver itself.
             for event in self.wait_for_events() {
-                if let Err(event_err) = self.handle_event(cx, jobserver_helper, plan, event) {
+                if let Err(event_err) = self.handle_event(cx, plan, event) {
                     self.handle_error(&mut cx.bcx.config.shell(), &mut errors, event_err);
                 }
             }
