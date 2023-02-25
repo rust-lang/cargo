@@ -2,13 +2,16 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
+use std::path::Path;
 
+use cargo_test_support::compare;
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, registry_path, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, no_such_file_err_msg, project, project_in, symlink_supported, t,
 };
+use cargo_util::ProcessError;
 
 use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
@@ -2102,4 +2105,40 @@ fn no_auto_fix_note() {
         .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/auto_fix[EXE]")
         .run();
     assert_has_not_installed_exe(cargo_home(), "auto_fix");
+}
+
+#[cargo_test]
+fn failed_install_retains_temp_directory() {
+    // Verifies that the temporary directory persists after a build failure.
+    Package::new("foo", "0.0.1")
+        .file("src/main.rs", "x")
+        .publish();
+    let err = cargo_process("install foo").exec_with_output().unwrap_err();
+    let err = err.downcast::<ProcessError>().unwrap();
+    let stderr = String::from_utf8(err.stderr.unwrap()).unwrap();
+    compare::match_contains(
+        "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+",
+        &stderr,
+        None,
+    )
+    .unwrap();
+    compare::match_contains(
+        "error: failed to compile `foo v0.0.1`, intermediate artifacts can be found at `[..]`",
+        &stderr,
+        None,
+    )
+    .unwrap();
+
+    // Find the path in the output.
+    let start = stderr.find("found at `").unwrap() + 10;
+    let end = stderr[start..].find('\n').unwrap() - 1;
+    let path = Path::new(&stderr[start..(end + start)]);
+    assert!(path.exists());
+    assert!(path.join("release/deps").exists());
 }
