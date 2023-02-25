@@ -984,10 +984,22 @@ impl<'cfg> RustcTargetData<'cfg> {
     }
 
     /// Information about the given target platform, learned by querying rustc.
+    ///
+    /// # Panics
+    ///
+    /// Panics, if the target platform described by `kind` can't be found.
+    /// See [`get_info`](Self::get_info) for a non-panicking alternative.
     pub fn info(&self, kind: CompileKind) -> &TargetInfo {
+        self.get_info(kind).unwrap()
+    }
+
+    /// Information about the given target platform, learned by querying rustc.
+    ///
+    /// Returns `None` if the target platform described by `kind` can't be found.
+    pub fn get_info(&self, kind: CompileKind) -> Option<&TargetInfo> {
         match kind {
-            CompileKind::Host => &self.host_info,
-            CompileKind::Target(s) => &self.target_info[&s],
+            CompileKind::Host => Some(&self.host_info),
+            CompileKind::Target(s) => self.target_info.get(&s),
         }
     }
 

@@ -130,16 +130,7 @@ impl<'cfg> Compilation<'cfg> {
                 .info(CompileKind::Host)
                 .sysroot_host_libdir
                 .clone(),
-            sysroot_target_libdir: bcx
-                .all_kinds
-                .iter()
-                .map(|&kind| {
-                    (
-                        kind,
-                        bcx.target_data.info(kind).sysroot_target_libdir.clone(),
-                    )
-                })
-                .collect(),
+            sysroot_target_libdir: get_sysroot_target_libdir(bcx)?,
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
@@ -383,6 +374,35 @@ fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
     cmd
+}
+
+fn get_sysroot_target_libdir(
+    bcx: &BuildContext<'_, '_>,
+) -> CargoResult<HashMap<CompileKind, PathBuf>> {
+    bcx.all_kinds
+        .iter()
+        .map(|&kind| {
+            let Some(info) = bcx.target_data.get_info(kind) else {
+                let target = match kind {
+                    CompileKind::Host => "host".to_owned(),
+                    CompileKind::Target(s) => s.short_name().to_owned(),
+                };
+
+                let dependency = bcx
+                    .unit_graph
+                    .iter()
+                    .find_map(|(u, _)| (u.kind == kind).then_some(u.pkg.summary().package_id()))
+                    .unwrap();
+
+                anyhow::bail!(
+                    "could not find specification for target `{target}`.\n  \
+                    Dependency `{dependency}` requires to build for target `{target}`."
+                )
+            };
+
+            Ok((kind, info.sysroot_target_libdir.clone()))
+        })
+        .collect()
 }
 
 fn target_runner(
