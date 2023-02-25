@@ -283,7 +283,8 @@ fn inherit_own_dependencies() {
     Package::new("dep-dev", "0.5.2").publish();
 
     p.cargo("check")
-        .with_stderr(
+        // Unordered because the download order is nondeterministic.
+        .with_stderr_unordered(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
@@ -813,7 +814,8 @@ fn inherit_dependencies() {
     Package::new("dep-dev", "0.5.2").publish();
 
     p.cargo("check")
-        .with_stderr(
+        // Unordered because the download order is nondeterministic.
+        .with_stderr_unordered(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
