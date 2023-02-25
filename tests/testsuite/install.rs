@@ -2163,8 +2163,8 @@ fn sparse_install() {
 [UPDATING] `dummy-registry` index
 [COMPILING] foo v0.0.1 (registry `dummy-registry`)
 [FINISHED] release [optimized] target(s) in [..]
-[INSTALLING] [ROOT]/home/.cargo/bin/foo
-[INSTALLED] package `foo v0.0.1 (registry `dummy-registry`)` (executable `foo`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 (registry `dummy-registry`)` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
@@ -2176,15 +2176,15 @@ fn sparse_install() {
     };
     assert_v1(
         r#"[v1]
-"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo"]
+"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
 "#,
     );
     cargo_process("install bar").run();
     assert_has_installed_exe(cargo_home(), "bar");
     assert_v1(
         r#"[v1]
-"bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = ["bar"]
-"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo"]
+"bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = ["bar[EXE]"]
+"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
 "#,
     );
 
@@ -2194,7 +2194,7 @@ fn sparse_install() {
     assert_has_not_installed_exe(cargo_home(), "bar");
     assert_v1(
         r#"[v1]
-"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo"]
+"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
 "#,
     );
     cargo_process("uninstall foo")
