@@ -87,7 +87,7 @@ in a temporary target directory. To avoid this, the target directory can be
 specified by setting the \fBCARGO_TARGET_DIR\fR environment variable to a relative
 path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.
-.sp
+.SS "Dealing with the Lockfile"
 By default, the \fBCargo.lock\fR file that is included with the package will be
 ignored. This means that Cargo will recompute which versions of dependencies
 to use, possibly using newer versions that have been released since the
@@ -101,6 +101,12 @@ will not receive any fixes or updates to any dependency. Note that Cargo did
 not start publishing \fBCargo.lock\fR files until version 1.37, which means
 packages published with prior versions will not have a \fBCargo.lock\fR file
 available.
+.SS "Configuration Discovery"
+This command operates on system or user level, not project level.
+This means that the local \fIconfiguration discovery\fR <https://doc.rust\-lang.org/cargo/reference/config.html#hierarchical\-structure> is ignored.
+Instead, the configuration discovery begins at \fB$CARGO_HOME/config.toml\fR\&. 
+If the package is installed with \fB\-\-path $PATH\fR, the local configuration 
+will be used, beginning discovery at \fB$PATH/.cargo/config.toml\fR\&.
 .SH "OPTIONS"
 .SS "Install Options"
 .sp
