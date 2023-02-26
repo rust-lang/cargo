@@ -103,7 +103,7 @@ OPTIONS
            Re-enable the default features
            <https://doc.rust-lang.org/cargo/reference/features.html#dependency-features>.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate
            <https://doc.rust-lang.org/cargo/reference/features.html#dependency-features>.
            When adding multiple crates, the features for a specific crate may

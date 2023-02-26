@@ -2,6 +2,7 @@
 
 
 
+
 ## NAME
 
 cargo-add --- Add dependencies to a Cargo.toml manifest file
@@ -121,6 +122,7 @@ which is defined by the <code>registry.default</code> config key which defaults 
 <dd class="option-desc">Re-enable the <a href="../reference/features.html#dependency-features">default features</a>.</dd>
 
 
+<dt class="option-term" id="option-cargo-add--F"><a class="option-anchor" href="#option-cargo-add--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-add---features"><a class="option-anchor" href="#option-cargo-add---features"></a><code>--features</code> <em>features</em></dt>
 <dd class="option-desc">Space or comma separated list of <a href="../reference/features.html#dependency-features">features to
 activate</a>. When adding multiple
