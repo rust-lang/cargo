@@ -1838,6 +1838,37 @@ fn install_path_config() {
 }
 
 #[cargo_test]
+fn uninstall_should_ignore_local_config() {
+    let project = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [install]
+            root = './'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // Will install `foo` binary to `/path/to/foo/bin/foo`
+    cargo_process("install --path foo").run();
+
+    assert_has_installed_exe(project.root(), "foo");
+
+    // Won't find the `foo` executable, because `cargo uninstall`
+    // ignores the config resolution chain of the current work directory
+    cargo_process("uninstall foo")
+        .cwd("foo")
+        .with_status(101)
+        .with_stderr_contains(
+            "[..]error: package ID specification `foo` did not match any packages[..]",
+        )
+        .run();
+
+    cargo_process("uninstall foo --root foo").run();
+}
+
+#[cargo_test]
 fn install_version_req() {
     // Try using a few versionreq styles.
     pkg("foo", "0.0.3");
