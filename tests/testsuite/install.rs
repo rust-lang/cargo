@@ -2142,3 +2142,67 @@ fn failed_install_retains_temp_directory() {
     assert!(path.exists());
     assert!(path.join("release/deps").exists());
 }
+
+#[cargo_test]
+fn sparse_install() {
+    // Checks for an issue where uninstalling something corrupted
+    // the SourceIds of sparse registries.
+    // See https://github.com/rust-lang/cargo/issues/11751
+    let _registry = registry::RegistryBuilder::new().http_index().build();
+
+    pkg("foo", "0.0.1");
+    pkg("bar", "0.0.1");
+
+    cargo_process("install foo --registry dummy-registry")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1 (registry `dummy-registry`)
+[UPDATING] `dummy-registry` index
+[COMPILING] foo v0.0.1 (registry `dummy-registry`)
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 (registry `dummy-registry`)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+    let assert_v1 = |expected| {
+        let v1 = fs::read_to_string(paths::home().join(".cargo/.crates.toml")).unwrap();
+        compare::assert_match_exact(expected, &v1);
+    };
+    assert_v1(
+        r#"[v1]
+"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
+"#,
+    );
+    cargo_process("install bar").run();
+    assert_has_installed_exe(cargo_home(), "bar");
+    assert_v1(
+        r#"[v1]
+"bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = ["bar[EXE]"]
+"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
+"#,
+    );
+
+    cargo_process("uninstall bar")
+        .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/bar[EXE]")
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "bar");
+    assert_v1(
+        r#"[v1]
+"foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
+"#,
+    );
+    cargo_process("uninstall foo")
+        .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_v1(
+        r#"[v1]
+"#,
+    );
+}
