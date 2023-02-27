@@ -200,6 +200,9 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
         add_attr(&mut ret, "ignore", reason);
     }
 
+    let mut test_name = None;
+    let mut num = 0;
+
     // Find where the function body starts, and add the boilerplate at the start.
     for token in item {
         let group = match token {
@@ -211,18 +214,35 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                     continue;
                 }
             }
+            TokenTree::Ident(i) => {
+                // The first time through it will be `fn` the second time is the
+                // name of the test.
+                if test_name.is_none() && num == 1 {
+                    test_name = Some(i.to_string())
+                } else {
+                    num += 1;
+                }
+                ret.extend(Some(TokenTree::Ident(i)));
+                continue;
+            }
             other => {
                 ret.extend(Some(other));
                 continue;
             }
         };
 
-        let mut new_body = to_token_stream(
-            r#"let _test_guard = {
+        let name = &test_name
+            .clone()
+            .map(|n| n.split("::").next().unwrap().to_string())
+            .unwrap();
+
+        let mut new_body = to_token_stream(&format!(
+            r#"let _test_guard = {{
                 let tmp_dir = env!("CARGO_TARGET_TMPDIR");
-                cargo_test_support::paths::init_root(tmp_dir)
-            };"#,
-        );
+                let test_dir = cargo_test_support::paths::test_dir(std::file!(), "{name}");
+                cargo_test_support::paths::init_root(tmp_dir, test_dir)
+            }};"#
+        ));
 
         new_body.extend(group.stream());
         ret.extend(Some(TokenTree::from(Group::new(
