@@ -7,7 +7,6 @@ use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
@@ -51,28 +50,20 @@ pub fn global_root() -> PathBuf {
     }
 }
 
-// We need to give each test a unique id. The test name could serve this
-// purpose, but the `test` crate doesn't have a way to obtain the current test
-// name.[*] Instead, we used the `cargo-test-macro` crate to automatically
-// insert an init function for each test that sets the test name in a thread
-// local variable.
-//
-// [*] It does set the thread name, but only when running concurrently. If not
-// running concurrently, all tests are run on the main thread.
+// We need to give each test a unique id. The test name serve this
+// purpose. We are able to get the test name by having the `cargo-test-macro`
+// crate automatically insert an init function for each test that sets the
+// test name in a thread local variable.
 thread_local! {
-    static TEST_ID: RefCell<Option<usize>> = RefCell::new(None);
+    static TEST_NAME: RefCell<Option<PathBuf>> = RefCell::new(None);
 }
 
 pub struct TestIdGuard {
     _private: (),
 }
 
-pub fn init_root(tmp_dir: Option<&'static str>) -> TestIdGuard {
-    static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
-
-    let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
-    TEST_ID.with(|n| *n.borrow_mut() = Some(id));
-
+pub fn init_root(tmp_dir: Option<&'static str>, test_name: PathBuf) -> TestIdGuard {
+    TEST_NAME.with(|n| *n.borrow_mut() = Some(test_name));
     let guard = TestIdGuard { _private: () };
 
     set_global_root(tmp_dir);
@@ -85,20 +76,20 @@ pub fn init_root(tmp_dir: Option<&'static str>) -> TestIdGuard {
 
 impl Drop for TestIdGuard {
     fn drop(&mut self) {
-        TEST_ID.with(|n| *n.borrow_mut() = None);
+        TEST_NAME.with(|n| *n.borrow_mut() = None);
     }
 }
 
 pub fn root() -> PathBuf {
-    let id = TEST_ID.with(|n| {
-        n.borrow().expect(
+    let test_name = TEST_NAME.with(|n| {
+        n.borrow().clone().expect(
             "Tests must use the `#[cargo_test]` attribute in \
              order to be able to use the crate root.",
         )
     });
 
     let mut root = global_root();
-    root.push(&format!("t{}", id));
+    root.push(&test_name);
     root
 }
 
@@ -344,4 +335,27 @@ pub fn windows_reserved_names_are_allowed() -> bool {
     } else {
         true
     }
+}
+
+/// This takes the test location (std::file!() should be passed) and the test name
+/// and outputs the location the test should be places in, inside of `target/tmp/cit`
+///
+/// `path: tests/testsuite/workspaces.rs`
+/// `name: `workspace_in_git
+/// `output: "testsuite/workspaces/workspace_in_git`
+pub fn test_dir(path: &str, name: &str) -> std::path::PathBuf {
+    let test_dir: std::path::PathBuf = std::path::PathBuf::from(path)
+        .components()
+        // Trim .rs from any files
+        .map(|c| c.as_os_str().to_str().unwrap().trim_end_matches(".rs"))
+        // We only want to take once we have reached `tests` or `src`. This helps when in a
+        // workspace: `workspace/more/src/...` would result in `src/...`
+        .skip_while(|c| c != &"tests" && c != &"src")
+        // We want to skip "tests" since it is taken in `skip_while`.
+        // "src" is fine since you could have test in "src" named the same as one in "tests"
+        // Skip "mod" since `snapbox` tests have a folder per test not a file and the files
+        // are named "mod.rs"
+        .filter(|c| c != &"tests" && c != &"mod")
+        .collect();
+    test_dir.join(name)
 }
