@@ -933,7 +933,7 @@ Can be overridden with the `--token` command-line option.
 
 ##### `registries.crates-io.protocol`
 * Type: string
-* Default: `git`
+* Default: `sparse`
 * Environment: `CARGO_REGISTRIES_CRATES_IO_PROTOCOL`
 
 Specifies the protocol used to access crates.io. Allowed values are `git` or `sparse`.

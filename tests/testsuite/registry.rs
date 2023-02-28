@@ -1926,6 +1926,7 @@ Caused by:
 
 #[cargo_test]
 fn disallow_network_git() {
+    let _server = RegistryBuilder::new().build();
     let p = project()
         .file(
             "Cargo.toml",
@@ -1952,7 +1953,10 @@ Caused by:
   failed to load source for dependency `foo`
 
 Caused by:
-  Unable to update registry [..]
+  Unable to update registry `crates-io`
+
+Caused by:
+  failed to update replaced source registry `crates-io`
 
 Caused by:
   attempting to make an HTTP request, but --frozen was specified

@@ -254,7 +254,7 @@ impl SourceId {
                 "unsupported registry protocol `{unknown}` (defined in {})",
                 proto.as_ref().unwrap().definition
             ),
-            None => config.cli_unstable().sparse_registry,
+            None => true,
         };
         Ok(is_sparse)
     }
