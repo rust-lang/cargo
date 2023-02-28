@@ -22,20 +22,24 @@ fn main() {
 
 #[cfg(unix)]
 fn validate(s: &str) {
-    use std::fs::File;
+    use std::fs::{self, File};
     use std::io::*;
     use std::os::unix::prelude::*;
 
-    let fds = s.split(',').collect::<Vec<_>>();
-    println!("{}", s);
-    assert_eq!(fds.len(), 2);
-    unsafe {
-        let mut read = File::from_raw_fd(fds[0].parse().unwrap());
-        let mut write = File::from_raw_fd(fds[1].parse().unwrap());
+    if let Some((r, w)) = s.split_once(',') {
+        // `--jobserver-auth=R,W`
+        unsafe {
+            let mut read = File::from_raw_fd(r.parse().unwrap());
+            let mut write = File::from_raw_fd(w.parse().unwrap());
 
-        let mut buf = [0];
-        assert_eq!(read.read(&mut buf).unwrap(), 1);
-        assert_eq!(write.write(&buf).unwrap(), 1);
+            let mut buf = [0];
+            assert_eq!(read.read(&mut buf).unwrap(), 1);
+            assert_eq!(write.write(&buf).unwrap(), 1);
+        }
+    } else {
+        // `--jobserver-auth=fifo:PATH` is the default since GNU Make 4.4
+        let (_, path) = s.split_once(':').expect("fifo:PATH");
+        assert!(fs::metadata(path).unwrap().file_type().is_fifo());
     }
 }
 
