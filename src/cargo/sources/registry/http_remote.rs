@@ -438,6 +438,13 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             return Poll::Ready(Ok(LoadResponse::NotFound));
         }
 
+        if self.config.offline() || self.config.cli_unstable().no_index_update {
+            // Return NotFound in offline mode when the file doesn't exist in the cache.
+            // If this results in resolution failure, the resolver will suggest
+            // removing the --offline flag.
+            return Poll::Ready(Ok(LoadResponse::NotFound));
+        }
+
         if let Some(result) = self.downloads.results.remove(path) {
             let result =
                 result.with_context(|| format!("download of {} failed", path.display()))?;
