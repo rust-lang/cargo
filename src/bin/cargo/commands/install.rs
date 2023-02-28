@@ -90,7 +90,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if let Some(path) = &path {
         config.reload_rooted_at(path)?;
     } else {
-        // TODO: Consider calling set_search_stop_path(home).
+        config.set_search_stop_path(config.home().clone().into_path_unlocked());
         config.reload_rooted_at(config.home().clone().into_path_unlocked())?;
     }
 

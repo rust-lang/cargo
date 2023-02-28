@@ -8,22 +8,25 @@ use serde::Serialize;
 
 use cargo_test_support::cargo_process;
 use cargo_test_support::git;
+use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{cksum, Package};
 use cargo_test_support::{basic_manifest, project, t, ProjectBuilder};
 
 fn setup() {
-    let root = paths::root();
-    t!(fs::create_dir(&root.join(".cargo")));
+    t!(fs::create_dir_all(cargo_home()));
     t!(fs::write(
-        root.join(".cargo/config"),
-        r#"
+        cargo_home().join("config"),
+        &format!(
+            "
             [source.crates-io]
             replace-with = 'my-awesome-local-registry'
 
             [source.my-awesome-local-registry]
-            directory = 'index'
-        "#
+            directory = '{}/index'
+        ",
+            paths::root().display(),
+        )
     ));
 }
 

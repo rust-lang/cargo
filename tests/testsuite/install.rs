@@ -407,6 +407,12 @@ fn install_location_precedence() {
     assert_has_installed_exe(&t1, "foo");
     assert_has_not_installed_exe(&t2, "foo");
 
+    cargo_process("uninstall foo --root")
+        .arg(&t1)
+        .env("CARGO_INSTALL_ROOT", &t2)
+        .run();
+    assert_has_not_installed_exe(&t1, "foo");
+
     println!("install CARGO_INSTALL_ROOT");
 
     cargo_process("install foo")
@@ -415,18 +421,22 @@ fn install_location_precedence() {
     assert_has_installed_exe(&t2, "foo");
     assert_has_not_installed_exe(&t3, "foo");
 
+    cargo_process("uninstall foo")
+        .env("CARGO_INSTALL_ROOT", &t2)
+        .run();
+    assert_has_not_installed_exe(&t2, "foo");
+
+    // The `install.root` config value in `root/.cargo/config` is ignored by
+    // `cargo install` and `cargo uninstall`, because they only consider the
+    // global configuration file `$CARGO_HOME/config`.
     println!("install install.root");
 
     cargo_process("install foo").run();
-    assert_has_installed_exe(&t3, "foo");
-    assert_has_not_installed_exe(&t4, "foo");
-
-    fs::remove_file(root.join(".cargo/config")).unwrap();
-
-    println!("install cargo home");
-
-    cargo_process("install foo").run();
     assert_has_installed_exe(&t4, "foo");
+    assert_has_not_installed_exe(&t3, "foo");
+
+    cargo_process("uninstall foo").run();
+    assert_has_not_installed_exe(&t4, "foo");
 }
 
 #[cargo_test]

@@ -15,6 +15,7 @@ pub fn cli() -> Command {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // Ignore local configuration, same as `cargo install` does
+    config.set_search_stop_path(config.home().clone().into_path_unlocked());
     config.reload_rooted_at(config.home().clone().into_path_unlocked())?;
 
     let root = args.get_one::<String>("root").map(String::as_str);

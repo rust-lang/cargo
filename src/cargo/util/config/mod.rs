@@ -532,9 +532,7 @@ impl Config {
     /// Sets the path where ancestor config file searching will stop. The
     /// given path is included, but its ancestors are not.
     pub fn set_search_stop_path<P: Into<PathBuf>>(&mut self, path: P) {
-        let path = path.into();
-        debug_assert!(self.cwd.starts_with(&path));
-        self.search_stop_path = Some(path);
+        self.search_stop_path = Some(path.into());
     }
 
     /// Reloads on-disk configuration values, starting at the given path and
