@@ -1876,6 +1876,8 @@ fn uninstall_should_ignore_local_config() {
         .run();
 
     cargo_process("uninstall foo --root foo").run();
+
+    assert_has_not_installed_exe(project.root(), "foo");
 }
 
 #[cargo_test]
