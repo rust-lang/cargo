@@ -133,11 +133,21 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
+    let direct_minimal_versions = match config {
+        Some(config) => config.cli_unstable().direct_minimal_versions,
+        None => false,
+    };
     let mut registry =
         RegistryQueryer::new(registry, replacements, version_prefs, minimal_versions);
     let cx = loop {
         let cx = Context::new(check_public_visible_dependencies);
-        let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
+        let cx = activate_deps_loop(
+            cx,
+            &mut registry,
+            summaries,
+            direct_minimal_versions,
+            config,
+        )?;
         if registry.reset_pending() {
             break cx;
         } else {
@@ -189,6 +199,7 @@ fn activate_deps_loop(
     mut cx: Context,
     registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, ResolveOpts)],
+    direct_minimal_versions: bool,
     config: Option<&Config>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
@@ -201,7 +212,14 @@ fn activate_deps_loop(
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let res = activate(&mut cx, registry, None, summary.clone(), opts);
+        let res = activate(
+            &mut cx,
+            registry,
+            None,
+            summary.clone(),
+            direct_minimal_versions,
+            opts,
+        );
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -399,7 +417,15 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &opts);
+            let direct_minimal_version = false; // this is an indirect dependency
+            let res = activate(
+                &mut cx,
+                registry,
+                Some((&parent, &dep)),
+                candidate,
+                direct_minimal_version,
+                &opts,
+            );
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -611,6 +637,7 @@ fn activate(
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
+    first_minimal_version: bool,
     opts: &ResolveOpts,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
@@ -662,8 +689,13 @@ fn activate(
     };
 
     let now = Instant::now();
-    let (used_features, deps) =
-        &*registry.build_deps(cx, parent.map(|p| p.0.package_id()), &candidate, opts)?;
+    let (used_features, deps) = &*registry.build_deps(
+        cx,
+        parent.map(|p| p.0.package_id()),
+        &candidate,
+        opts,
+        first_minimal_version,
+    )?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {
@@ -856,11 +888,14 @@ fn generalize_conflicting(
         })
     {
         for critical_parents_dep in critical_parents_deps.iter() {
+            // We only want `first_minimal_version=true` for direct dependencies of workspace
+            // members which isn't the case here as this has a `parent`
+            let first_minimal_version = false;
             // A dep is equivalent to one of the things it can resolve to.
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
             if let Some(others) = registry
-                .query(critical_parents_dep)
+                .query(critical_parents_dep, first_minimal_version)
                 .expect("an already used dep now error!?")
                 .expect("an already used dep now pending!?")
                 .iter()

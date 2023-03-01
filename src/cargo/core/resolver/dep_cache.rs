@@ -36,9 +36,13 @@ pub struct RegistryQueryer<'a> {
     /// versions first. That allows `cargo update -Z minimal-versions` which will
     /// specify minimum dependency versions to be used.
     minimal_versions: bool,
-    /// a cache of `Candidate`s that fulfil a `Dependency`
-    registry_cache: HashMap<Dependency, Poll<Rc<Vec<Summary>>>>,
+    /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_minimal_version`)
+    registry_cache: HashMap<(Dependency, bool), Poll<Rc<Vec<Summary>>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
+    ///
+    /// HACK: `first_minimal_version` is not kept in the cache key is it is 1:1 with
+    /// `parent.is_none()` (the first element of the cache key) as it doesn't change through
+    /// execution.
     summary_cache: HashMap<
         (Option<PackageId>, Summary, ResolveOpts),
         (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
@@ -96,8 +100,13 @@ impl<'a> RegistryQueryer<'a> {
     /// any candidates are returned which match an override then the override is
     /// applied by performing a second query for what the override should
     /// return.
-    pub fn query(&mut self, dep: &Dependency) -> Poll<CargoResult<Rc<Vec<Summary>>>> {
-        if let Some(out) = self.registry_cache.get(dep).cloned() {
+    pub fn query(
+        &mut self,
+        dep: &Dependency,
+        first_minimal_version: bool,
+    ) -> Poll<CargoResult<Rc<Vec<Summary>>>> {
+        let registry_cache_key = (dep.clone(), first_minimal_version);
+        if let Some(out) = self.registry_cache.get(&registry_cache_key).cloned() {
             return out.map(Result::Ok);
         }
 
@@ -106,7 +115,8 @@ impl<'a> RegistryQueryer<'a> {
             ret.push(s);
         })?;
         if ready.is_pending() {
-            self.registry_cache.insert(dep.clone(), Poll::Pending);
+            self.registry_cache
+                .insert((dep.clone(), first_minimal_version), Poll::Pending);
             return Poll::Pending;
         }
         for summary in ret.iter() {
@@ -128,7 +138,8 @@ impl<'a> RegistryQueryer<'a> {
             let mut summaries = match self.registry.query_vec(dep, QueryKind::Exact)? {
                 Poll::Ready(s) => s.into_iter(),
                 Poll::Pending => {
-                    self.registry_cache.insert(dep.clone(), Poll::Pending);
+                    self.registry_cache
+                        .insert((dep.clone(), first_minimal_version), Poll::Pending);
                     return Poll::Pending;
                 }
             };
@@ -192,18 +203,18 @@ impl<'a> RegistryQueryer<'a> {
 
         // When we attempt versions for a package we'll want to do so in a sorted fashion to pick
         // the "best candidates" first. VersionPreferences implements this notion.
-        self.version_prefs.sort_summaries(
-            &mut ret,
-            if self.minimal_versions {
-                VersionOrdering::MinimumVersionsFirst
-            } else {
-                VersionOrdering::MaximumVersionsFirst
-            },
-        );
+        let ordering = if first_minimal_version || self.minimal_versions {
+            VersionOrdering::MinimumVersionsFirst
+        } else {
+            VersionOrdering::MaximumVersionsFirst
+        };
+        let first_version = first_minimal_version;
+        self.version_prefs
+            .sort_summaries(&mut ret, ordering, first_version);
 
         let out = Poll::Ready(Rc::new(ret));
 
-        self.registry_cache.insert(dep.clone(), out.clone());
+        self.registry_cache.insert(registry_cache_key, out.clone());
 
         out.map(Result::Ok)
     }
@@ -218,6 +229,7 @@ impl<'a> RegistryQueryer<'a> {
         parent: Option<PackageId>,
         candidate: &Summary,
         opts: &ResolveOpts,
+        first_minimal_version: bool,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -237,22 +249,24 @@ impl<'a> RegistryQueryer<'a> {
         let mut all_ready = true;
         let mut deps = deps
             .into_iter()
-            .filter_map(|(dep, features)| match self.query(&dep) {
-                Poll::Ready(Ok(candidates)) => Some(Ok((dep, candidates, features))),
-                Poll::Pending => {
-                    all_ready = false;
-                    // we can ignore Pending deps, resolve will be repeatedly called
-                    // until there are none to ignore
-                    None
-                }
-                Poll::Ready(Err(e)) => Some(Err(e).with_context(|| {
-                    format!(
-                        "failed to get `{}` as a dependency of {}",
-                        dep.package_name(),
-                        describe_path_in_context(cx, &candidate.package_id()),
-                    )
-                })),
-            })
+            .filter_map(
+                |(dep, features)| match self.query(&dep, first_minimal_version) {
+                    Poll::Ready(Ok(candidates)) => Some(Ok((dep, candidates, features))),
+                    Poll::Pending => {
+                        all_ready = false;
+                        // we can ignore Pending deps, resolve will be repeatedly called
+                        // until there are none to ignore
+                        None
+                    }
+                    Poll::Ready(Err(e)) => Some(Err(e).with_context(|| {
+                        format!(
+                            "failed to get `{}` as a dependency of {}",
+                            dep.package_name(),
+                            describe_path_in_context(cx, &candidate.package_id()),
+                        )
+                    })),
+                },
+            )
             .collect::<CargoResult<Vec<DepInfo>>>()?;
 
         // Attempt to resolve dependencies with fewer candidates before trying

@@ -42,6 +42,7 @@ mod cross_publish;
 mod custom_target;
 mod death;
 mod dep_info;
+mod direct_minimal_versions;
 mod directory;
 mod doc;
 mod docscrape;

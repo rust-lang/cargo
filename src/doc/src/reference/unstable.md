@@ -67,6 +67,7 @@ Each new feature described below should explain how to use it.
     * [no-index-update](#no-index-update) --- Prevents cargo from updating the index cache.
     * [avoid-dev-deps](#avoid-dev-deps) --- Prevents the resolver from including dev-dependencies during resolution.
     * [minimal-versions](#minimal-versions) --- Forces the resolver to use the lowest compatible version instead of the highest.
+    * [direct-minimal-versions](#direct-minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
     * [public-dependency](#public-dependency) --- Allows dependencies to be classified as either public or private.
 * Output behavior
     * [out-dir](#out-dir) --- Adds a directory where artifacts are copied to.
@@ -175,6 +176,23 @@ that the versions specified in Cargo.toml are a correct reflection of the
 minimum versions that you are actually using. That is, if Cargo.toml says
 `foo = "1.0.0"` that you don't accidentally depend on features added only in
 `foo 1.5.0`.
+
+### direct-minimal-versions
+* Original Issue: [#4100](https://github.com/rust-lang/cargo/issues/4100)
+* Tracking Issue: [#5657](https://github.com/rust-lang/cargo/issues/5657)
+
+When a `Cargo.lock` file is generated, the `-Z direct-minimal-versions` flag will
+resolve the dependencies to the minimum SemVer version that will satisfy the
+requirements (instead of the greatest version) for direct dependencies only.
+
+The intended use-case of this flag is to check, during continuous integration,
+that the versions specified in Cargo.toml are a correct reflection of the
+minimum versions that you are actually using. That is, if Cargo.toml says
+`foo = "1.0.0"` that you don't accidentally depend on features added only in
+`foo 1.5.0`.
+
+Indirect dependencies are resolved as normal so as not to be blocked on their
+minimal version validation.
 
 ### out-dir
 * Original Issue: [#4875](https://github.com/rust-lang/cargo/issues/4875)
