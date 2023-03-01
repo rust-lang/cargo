@@ -1,6 +1,6 @@
 //! Tests for the `cargo generate-lockfile` command.
 
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{basic_manifest, paths, project, ProjectBuilder};
 use std::fs;
 
@@ -57,6 +57,16 @@ fn adding_and_removing_packages() {
 }
 
 #[cargo_test]
+fn no_index_update_sparse() {
+    let _registry = RegistryBuilder::new().http_index().build();
+    no_index_update();
+}
+
+#[cargo_test]
+fn no_index_update_git() {
+    no_index_update();
+}
+
 fn no_index_update() {
     Package::new("serde", "1.0.0").publish();
 
