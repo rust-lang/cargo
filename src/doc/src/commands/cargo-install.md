@@ -82,7 +82,8 @@ available.
 
 This command operates on system or user level, not project level.
 This means that the local [configuration discovery] is ignored.
-Instead, the configuration discovery begins at `$CARGO_HOME/config.toml`. 
+Instead, this command will only consider the global configuration from the 
+`$CARGO_HOME/config.toml` file. 
 If the package is installed with `--path $PATH`, the local configuration 
 will be used, beginning discovery at `$PATH/.cargo/config.toml`.
 

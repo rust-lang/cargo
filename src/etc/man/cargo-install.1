@@ -104,7 +104,8 @@ available.
 .SS "Configuration Discovery"
 This command operates on system or user level, not project level.
 This means that the local \fIconfiguration discovery\fR <https://doc.rust\-lang.org/cargo/reference/config.html#hierarchical\-structure> is ignored.
-Instead, the configuration discovery begins at \fB$CARGO_HOME/config.toml\fR\&. 
+Instead, this command will only consider the global configuration from the 
+\fB$CARGO_HOME/config.toml\fR file. 
 If the package is installed with \fB\-\-path $PATH\fR, the local configuration 
 will be used, beginning discovery at \fB$PATH/.cargo/config.toml\fR\&.
 .SH "OPTIONS"

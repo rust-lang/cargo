@@ -27,11 +27,12 @@ DESCRIPTION
 
        o  $HOME/.cargo
 
+   Configuration Discovery
        This command operates on system or user level, not on project level.
        This means that the local configuration discovery
        <https://doc.rust-lang.org/cargo/reference/config.html#hierarchical-structure>
-       is ignored. Instead, the configuration discovery begins at
-       $CARGO_HOME/config.toml.
+       is ignored. Instead, this command will only consider the global
+       configuration from the $CARGO_HOME/config.toml file.
 
 OPTIONS
    Install Options

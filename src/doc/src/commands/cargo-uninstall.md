@@ -26,9 +26,12 @@ The installation root is determined, in order of precedence:
 - `$HOME/.cargo`
 
 
+### Configuration Discovery
+
 This command operates on system or user level, not on project level.
 This means that the local [configuration discovery] is ignored.
-Instead, the configuration discovery begins at `$CARGO_HOME/config.toml`. 
+Instead, this command will only consider the global configuration from the 
+`$CARGO_HOME/config.toml` file. 
 
 [configuration discovery]: ../reference/config.html#hierarchical-structure
 
