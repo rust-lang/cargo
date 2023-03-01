@@ -79,7 +79,7 @@ pub fn cli() -> Command {
             .alias("duplicate"),
         )
         .arg(
-            opt("charset", "Character set to use in output: utf8, ascii")
+            opt("charset", "Character set to use in output")
                 .value_name("CHARSET")
                 .value_parser(["utf8", "ascii"])
                 .default_value("utf8"),
