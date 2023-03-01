@@ -1459,3 +1459,63 @@ fn check_fixable_warning_for_clippy() {
         .with_stderr_contains("[..] (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)")
         .run();
 }
+
+#[cargo_test]
+fn check_unused_manifest_keys() {
+    Package::new("dep", "0.1.0").publish();
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+
+            [dependencies]
+            dep = { version = "0.1.0", wxz = "wxz" }
+            foo = { version = "0.1.0", abc = "abc" }
+
+            [dev-dependencies]
+            foo = { version = "0.1.0", wxz = "wxz" }
+
+            [build-dependencies]
+            foo = { version = "0.1.0", wxz = "wxz" }
+
+            [target.'cfg(windows)'.dependencies]
+            foo = { version = "0.1.0", wxz = "wxz" }
+
+            [target.x86_64-pc-windows-gnu.dev-dependencies]
+            foo = { version = "0.1.0", wxz = "wxz" }
+
+            [target.bar.build-dependencies]
+            foo = { version = "0.1.0", wxz = "wxz" }
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] unused manifest key: dependencies.dep.wxz
+[WARNING] unused manifest key: dependencies.foo.abc
+[WARNING] unused manifest key: dev-dependencies.foo.wxz
+[WARNING] unused manifest key: build-dependencies.foo.wxz
+[WARNING] unused manifest key: target.bar.build-dependencies.foo.wxz
+[WARNING] unused manifest key: target.cfg(windows).dependencies.foo.wxz
+[WARNING] unused manifest key: target.x86_64-pc-windows-gnu.dev-dependencies.foo.wxz
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.1.0 ([..])
+[DOWNLOADED] dep v0.1.0 ([..])
+[CHECKING] [..]
+[CHECKING] [..]
+[CHECKING] bar v0.2.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}

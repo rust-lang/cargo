@@ -1215,7 +1215,7 @@ fn error_workspace_false() {
 
 Caused by:
   `workspace` cannot be false
-  in `package.description`
+  in `package.description.workspace`
 ",
         )
         .run();
@@ -1253,8 +1253,8 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] [CWD]/Cargo.toml: dependency (dep) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
 [WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.dependencies.dep.workspace
+[WARNING] [CWD]/Cargo.toml: dependency (dep) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `dep` found
 location searched: registry `crates-io`
@@ -1573,13 +1573,129 @@ fn cannot_inherit_in_patch() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] [CWD]/Cargo.toml: dependency (bar) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
 [WARNING] [CWD]/Cargo.toml: unused manifest key: patch.crates-io.bar.workspace
+[WARNING] [CWD]/Cargo.toml: dependency (bar) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
 [UPDATING] `dummy-registry` index
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
 
 Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn warn_inherit_unused_manifest_key_dep() {
+    Package::new("dep", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = []
+            [workspace.dependencies]
+            dep = { version = "0.1", wxz = "wxz" }
+
+            [package]
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+
+            [dependencies]
+            dep = { workspace = true, wxz = "wxz" }
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.dependencies.dep.wxz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: dependencies.dep.wxz
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.0 ([..])
+[CHECKING] [..]
+[CHECKING] bar v0.2.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn warn_inherit_unused_manifest_key_package() {
+    Package::new("dep", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            badges = { workspace = true, xyz = "abc"}
+
+            [workspace]
+            members = []
+            [workspace.package]
+            version = "1.2.3"
+            authors = ["Rustaceans"]
+            description = "This is a crate"
+            documentation = "https://www.rust-lang.org/learn"
+            homepage = "https://www.rust-lang.org"
+            repository = "https://github.com/example/example"
+            license = "MIT"
+            keywords = ["cli"]
+            categories = ["development-tools"]
+            publish = true
+            edition = "2018"
+            rust-version = "1.60"
+            exclude = ["foo.txt"]
+            include = ["bar.txt", "**/*.rs", "Cargo.toml"]
+            [workspace.package.badges]
+            gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
+
+            [package]
+            name = "bar"
+            version = { workspace = true, xyz = "abc"}
+            authors = { workspace = true, xyz = "abc"}
+            description = { workspace = true, xyz = "abc"}
+            documentation = { workspace = true, xyz = "abc"}
+            homepage = { workspace = true, xyz = "abc"}
+            repository = { workspace = true, xyz = "abc"}
+            license = { workspace = true, xyz = "abc"}
+            keywords = { workspace = true, xyz = "abc"}
+            categories = { workspace = true, xyz = "abc"}
+            publish = { workspace = true, xyz = "abc"}
+            edition = { workspace = true, xyz = "abc"}
+            rust-version = { workspace = true, xyz = "abc"}
+            exclude = { workspace = true, xyz = "abc"}
+            include = { workspace = true, xyz = "abc"}
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.authors.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.categories.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.description.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.documentation.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.edition.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.exclude.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.homepage.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.include.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.keywords.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.license.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.publish.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.repository.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.rust-version.xyz
+[WARNING] [CWD]/Cargo.toml: unused manifest key: package.version.xyz
+[CHECKING] bar v1.2.3 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

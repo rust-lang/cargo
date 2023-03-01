@@ -1797,7 +1797,7 @@ fn cargo_metadata_with_invalid_authors_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "", expected a sequence
+  invalid type: string "", expected a vector of strings or workspace
   in `package.authors`"#,
         )
         .run();
@@ -1847,7 +1847,7 @@ fn cargo_metadata_with_invalid_publish_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "foo", expected a boolean or vector of strings
+  invalid type: string "foo", expected a boolean, a vector of strings, or workspace
   in `package.publish`"#,
         )
         .run();
