@@ -106,6 +106,16 @@ pub enum DepKind {
     Build,
 }
 
+impl DepKind {
+    pub fn kind_table(&self) -> &'static str {
+        match self {
+            DepKind::Normal => "dependencies",
+            DepKind::Development => "dev-dependencies",
+            DepKind::Build => "build-dependencies",
+        }
+    }
+}
+
 impl ser::Serialize for DepKind {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
