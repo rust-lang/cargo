@@ -377,6 +377,23 @@ fn bad_paths() {
 }
 
 #[cargo_test]
+fn warning_for_configuration_discovery_changes() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo")
+        .with_stderr_contains(
+            "warning: the configuration discovery of `cargo install` will change in a future version.",
+        )
+        .run();
+
+    cargo_process("uninstall foo")
+        .with_stderr_contains(
+            "warning: the configuration discovery of `cargo uninstall` will change in a future version.",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn install_location_precedence() {
     pkg("foo", "0.0.1");
 

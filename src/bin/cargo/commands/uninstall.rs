@@ -14,6 +14,13 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    config.shell().warn(
+        "the configuration discovery of `cargo uninstall` will change in a \
+        future version.\n\
+        In the future, only the global configuration file \
+        `$CARGO_HOME/config.toml` will be considered by `cargo uninstall`.",
+    )?;
+
     let root = args.get_one::<String>("root").map(String::as_str);
 
     if args.is_present_with_zero_values("package") {

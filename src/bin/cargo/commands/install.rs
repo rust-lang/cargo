@@ -90,7 +90,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if let Some(path) = &path {
         config.reload_rooted_at(path)?;
     } else {
-        // TODO: Consider calling set_search_stop_path(home).
+        config.shell().warn(
+            "the configuration discovery of `cargo install` will change in a \
+            future version.\n\
+            In the future, only the global configuration file \
+            `$CARGO_HOME/config.toml` will be considered by `cargo install`.",
+        )?;
         config.reload_rooted_at(config.home().clone().into_path_unlocked())?;
     }
 
