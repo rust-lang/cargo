@@ -30,46 +30,30 @@
 //!
 //! ## Jobserver
 //!
-//! Cargo and rustc have a somewhat non-trivial jobserver relationship with each
-//! other, which is due to scaling issues with sharing a single jobserver
-//! amongst what is potentially hundreds of threads of work on many-cored
-//! systems on (at least) Linux, and likely other platforms as well.
+//! As of Feb. 2023, Cargo and rustc have a relatively simple jobserver
+//! relationship with each other. They share a single jobserver amongst what
+//! is potentially hundreds of threads of work on many-cored systems.
+//! The jobserver could come from either the environment (e.g., from a `make`
+//! invocation), or from Cargo creating its own jobserver server if there is no
+//! jobserver to inherit from.
 //!
 //! Cargo wants to complete the build as quickly as possible, fully saturating
-//! all cores (as constrained by the -j=N) parameter. Cargo also must not spawn
+//! all cores (as constrained by the `-j=N`) parameter. Cargo also must not spawn
 //! more than N threads of work: the total amount of tokens we have floating
 //! around must always be limited to N.
 //!
-//! It is not really possible to optimally choose which crate should build first
-//! or last; nor is it possible to decide whether to give an additional token to
-//! rustc first or rather spawn a new crate of work. For now, the algorithm we
-//! implement prioritizes spawning as many crates (i.e., rustc processes) as
-//! possible, and then filling each rustc with tokens on demand.
+//! It is not really possible to optimally choose which crate should build
+//! first or last; nor is it possible to decide whether to give an additional
+//! token to rustc first or rather spawn a new crate of work. The algorithm in
+//! Cargo prioritizes spawning as many crates (i.e., rustc processes) as
+//! possible. In short, the jobserver relationship among Cargo and rustc
+//! processes is **1 `cargo` to N `rustc`**. Cargo knows nothing beyond rustc
+//! processes in terms of parallelism[^parallel-rustc].
 //!
-//! We integrate with the [jobserver], originating from GNU make, to make sure
-//! that build scripts which use make to build C code can cooperate with us on
-//! the number of used tokens and avoid overfilling the system we're on.
-//!
-//! The jobserver is unfortunately a very simple protocol, so we enhance it a
-//! little when we know that there is a rustc on the other end. Via the stderr
-//! pipe we have to rustc, we get messages such as `NeedsToken` and
-//! `ReleaseToken` from rustc.
-//!
-//! [`NeedsToken`] indicates that a rustc is interested in acquiring a token,
-//! but never that it would be impossible to make progress without one (i.e.,
-//! it would be incorrect for rustc to not terminate due to an unfulfilled
-//! `NeedsToken` request); we do not usually fulfill all `NeedsToken` requests for a
-//! given rustc.
-//!
-//! [`ReleaseToken`] indicates that a rustc is done with one of its tokens and
-//! is ready for us to re-acquire ownership — we will either release that token
-//! back into the general pool or reuse it ourselves. Note that rustc will
-//! inform us that it is releasing a token even if it itself is also requesting
-//! tokens; is up to us whether to return the token to that same rustc.
-//!
-//! `jobserver` also manages the allocation of tokens to rustc beyond
-//! the implicit token each rustc owns (i.e., the ones used for parallel LLVM
-//! work and parallel rustc threads).
+//! We integrate with the [jobserver] crate, originating from GNU make
+//! [POSIX jobserver], to make sure that build scripts which use make to
+//! build C code can cooperate with us on the number of used tokens and
+//! avoid overfilling the system we're on.
 //!
 //! ## Scheduling
 //!
@@ -113,9 +97,16 @@
 //!
 //! See [`Message`] for all available message kinds.
 //!
+//! [^parallel-rustc]: In fact, `jobserver` that Cargo uses also manages the
+//!     allocation of tokens to rustc beyond the implicit token each rustc owns
+//!     (i.e., the ones used for parallel LLVM work and parallel rustc threads).
+//!     See also ["Rust Compiler Development Guide: Parallel Compilation"]
+//!     and [this comment][rustc-codegen] in rust-lang/rust.
+//!
+//! ["Rust Compiler Development Guide: Parallel Compilation"]: https://rustc-dev-guide.rust-lang.org/parallel-rustc.html
+//! [rustc-codegen]: https://github.com/rust-lang/rust/blob/5423745db8b434fcde54888b35f518f00cce00e4/compiler/rustc_codegen_ssa/src/back/write.rs#L1204-L1217
 //! [jobserver]: https://docs.rs/jobserver
-//! [`NeedsToken`]: Message::NeedsToken
-//! [`ReleaseToken`]: Message::ReleaseToken
+//! [POSIX jobserver]: https://www.gnu.org/software/make/manual/html_node/POSIX-Jobserver.html
 //! [`push`]: Queue::push
 //! [`push_bounded`]: Queue::push_bounded
 
