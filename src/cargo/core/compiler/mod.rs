@@ -715,14 +715,7 @@ fn prepare_rustc(
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
 
-    if cx.bcx.config.cli_unstable().jobserver_per_rustc {
-        let client = cx.new_jobserver()?;
-        base.inherit_jobserver(&client);
-        base.arg("-Z").arg("jobserver-token-requests");
-        assert!(cx.rustc_clients.insert(unit.clone(), client).is_none());
-    } else {
-        base.inherit_jobserver(&cx.jobserver);
-    }
+    base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
@@ -1697,31 +1690,6 @@ fn on_stderr_line_inner(
         if artifact.artifact.ends_with(".rmeta") {
             debug!("looks like metadata finished early!");
             state.rmeta_produced();
-        }
-        return Ok(false);
-    }
-
-    #[derive(serde::Deserialize)]
-    struct JobserverNotification {
-        jobserver_event: Event,
-    }
-
-    #[derive(Debug, serde::Deserialize)]
-    enum Event {
-        WillAcquire,
-        Release,
-    }
-
-    if let Ok(JobserverNotification { jobserver_event }) =
-        serde_json::from_str::<JobserverNotification>(compiler_message.get())
-    {
-        trace!(
-            "found jobserver directive from rustc: `{:?}`",
-            jobserver_event
-        );
-        match jobserver_event {
-            Event::WillAcquire => state.will_acquire(),
-            Event::Release => state.release_token(),
         }
         return Ok(false);
     }
