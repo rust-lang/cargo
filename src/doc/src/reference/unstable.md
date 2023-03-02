@@ -80,9 +80,13 @@ Each new feature described below should explain how to use it.
     * [binary-dep-depinfo](#binary-dep-depinfo) --- Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) --- Allows running tests with the "abort" panic strategy.
     * [keep-going](#keep-going) --- Build as much as possible rather than aborting on the first error.
+    * [check-cfg](#check-cfg) --- Compile-time validation of `cfg` expressions.
+    * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
+    * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
 * rustdoc
     * [`doctest-in-workspace`](#doctest-in-workspace) --- Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
+    * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) --- Passed directly to rustc.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
