@@ -843,10 +843,8 @@ impl RemainingCandidates {
     }
 }
 
-/// Attempts to find a new conflict that allows a `find_candidate` feather then the input one.
+/// Attempts to find a new conflict that allows a `find_candidate` better then the input one.
 /// It will add the new conflict to the cache if one is found.
-///
-/// Panics if the input conflict is not all active in `cx`.
 fn generalize_conflicting(
     cx: &Context,
     registry: &mut RegistryQueryer<'_>,
@@ -855,15 +853,12 @@ fn generalize_conflicting(
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
 ) -> Option<ConflictMap> {
-    if conflicting_activations.is_empty() {
-        return None;
-    }
     // We need to determine the `ContextAge` that this `conflicting_activations` will jump to, and why.
-    let (backtrack_critical_age, backtrack_critical_id) = conflicting_activations
-        .keys()
-        .map(|&c| (cx.is_active(c).expect("not currently active!?"), c))
-        .max()
-        .unwrap();
+    let (backtrack_critical_age, backtrack_critical_id) = shortcircuit_max(
+        conflicting_activations
+            .keys()
+            .map(|&c| cx.is_active(c).map(|a| (a, c))),
+    )?;
     let backtrack_critical_reason: ConflictReason =
         conflicting_activations[&backtrack_critical_id].clone();
 
@@ -958,6 +953,19 @@ fn generalize_conflicting(
     None
 }
 
+/// Returns Some of the largest item in the iterator.
+/// Returns None if any of the items are None or the iterator is empty.
+fn shortcircuit_max<I: Ord>(iter: impl Iterator<Item = Option<I>>) -> Option<I> {
+    let mut out = None;
+    for i in iter {
+        if i.is_none() {
+            return None;
+        }
+        out = std::cmp::max(out, i);
+    }
+    out
+}
+
 /// Looks through the states in `backtrack_stack` for dependencies with
 /// remaining candidates. For each one, also checks if rolling back
 /// could change the outcome of the failed resolution that caused backtracking
@@ -984,12 +992,10 @@ fn find_candidate(
     // the cause of that backtrack, so we do not update it.
     let age = if !backtracked {
         // we don't have abnormal situations. So we can ask `cx` for how far back we need to go.
-        let a = cx.is_conflicting(Some(parent.package_id()), conflicting_activations);
-        // If the `conflicting_activations` does not apply to `cx`, then something went very wrong
-        // in building it. But we will just fall back to laboriously trying all possibilities witch
-        // will give us the correct answer so only `assert` if there is a developer to debug it.
-        debug_assert!(a.is_some());
-        a
+        // If the `conflicting_activations` does not apply to `cx`,
+        // we will just fall back to laboriously trying all possibilities witch
+        // will give us the correct answer.
+        cx.is_conflicting(Some(parent.package_id()), conflicting_activations)
     } else {
         None
     };

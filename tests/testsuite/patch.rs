@@ -2541,3 +2541,105 @@ foo v0.1.0 [..]
         ))
         .run();
 }
+
+// From https://github.com/rust-lang/cargo/issues/7463
+#[cargo_test]
+fn patch_eq_conflict_panic() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "=0.1.0"
+
+                [dev-dependencies]
+                bar = "=0.1.1"
+
+                [patch.crates-io]
+                bar = {path="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `bar`.
+    ... required by package `foo v0.1.0 ([..])`
+versions that meet the requirements `=0.1.1` are: 0.1.1
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `bar v0.1.0`
+    ... which satisfies dependency `bar = "=0.1.0"` of package `foo v0.1.0 ([..])`
+
+failed to select a version for `bar` which could resolve this conflict
+"#,
+        )
+        .run();
+}
+
+// From https://github.com/rust-lang/cargo/issues/11336
+#[cargo_test]
+fn mismatched_version2() {
+    Package::new("qux", "0.1.0-beta.1").publish();
+    Package::new("qux", "0.1.0-beta.2").publish();
+    Package::new("bar", "0.1.0")
+        .dep("qux", "=0.1.0-beta.1")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                 [package]
+                 name = "foo"
+                 version = "0.1.0"
+
+                 [dependencies]
+                 bar = "0.1.0"
+                 qux = "0.1.0-beta.2"
+
+                 [patch.crates-io]
+                 qux = { path = "qux" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "qux/Cargo.toml",
+            r#"
+                [package]
+                name = "qux"
+                version = "0.1.0-beta.1"
+            "#,
+        )
+        .file("qux/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `qux`.
+    ... required by package `bar v0.1.0`
+    ... which satisfies dependency `bar = "^0.1.0"` of package `foo v0.1.0 ([..])`
+versions that meet the requirements `=0.1.0-beta.1` are: 0.1.0-beta.1
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `qux v0.1.0-beta.2`
+    ... which satisfies dependency `qux = "^0.1.0-beta.2"` of package `foo v0.1.0 ([..])`
+
+failed to select a version for `qux` which could resolve this conflict"#,
+        )
+        .run();
+}
