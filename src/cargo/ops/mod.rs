@@ -52,7 +52,7 @@ mod cargo_uninstall;
 mod common_for_install_and_uninstall;
 mod fix;
 mod lockfile;
-mod registry;
+pub(crate) mod registry;
 mod resolve;
 pub mod tree;
 mod vendor;

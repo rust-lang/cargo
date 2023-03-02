@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
+use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
@@ -1824,6 +1825,51 @@ fn fetch_downloads() {
         ))
         .run();
 
+    p.cargo("fetch").with_stdout("").run();
+}
+
+#[cargo_test]
+fn fetch_downloads_with_git2_first_then_with_gitoxide_and_vice_versa() {
+    let bar = git::new("bar", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+            .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
+    });
+    let feature_configuration = if cargo_uses_gitoxide() {
+        // When we are always using `gitoxide` by default, create the registry with git2 as well as the download…
+        "-Zgitoxide=internal-use-git2"
+    } else {
+        // …otherwise create the registry and the git download with `gitoxide`.
+        "-Zgitoxide=fetch"
+    };
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+                    [dependencies.bar]
+                    git = '{url}'
+                "#,
+                url = bar.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("fetch")
+        .arg(feature_configuration)
+        .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
+        .with_stderr(&format!(
+            "[UPDATING] git repository `{url}`",
+            url = bar.url()
+        ))
+        .run();
+
+    Package::new("bar", "1.0.0").publish(); // trigger a crates-index change.
     p.cargo("fetch").with_stdout("").run();
 }
 

@@ -100,6 +100,8 @@ Each new feature described below should explain how to use it.
     * [`cargo logout`](#cargo-logout) --- Adds the `logout` command to remove the currently saved registry token.
     * [publish-timeout](#publish-timeout) --- Controls the timeout between uploading the crate and being available in the index
     * [registry-auth](#registry-auth) --- Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
+* Other
+    * [gitoxide](#gitoxide) --- Use `gitoxide` instead of `git2` for a set of operations.
 
 ### allow-features
 
@@ -1276,6 +1278,21 @@ codegen-backend = true
 [profile.dev.package.foo]
 codegen-backend = "cranelift"
 ```
+
+### gitoxide
+
+With the 'gitoxide' unstable feature, all or the the specified git operations will be performed by 
+the `gitoxide` crate instead of `git2`.
+
+While `-Zgitoxide` enables all currently implemented features, one can individually select git operations
+to run with `gitoxide` with the `-Zgitoxide=operation[,operationN]` syntax.
+
+Valid operations are the following:
+
+* `fetch` - All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
+* `shallow-index` *(planned)* - perform a shallow clone of the index.
+* `shallow-deps` *(planned)* - perform a shallow clone of git dependencies.
+* `checkout` *(planned)* - checkout the worktree, with support for filters and submodules.
 
 ## Stabilized and removed features
 

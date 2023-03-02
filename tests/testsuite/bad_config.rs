@@ -1,5 +1,6 @@
 //! Tests for some invalid .cargo/config files.
 
+use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project, rustc_host};
 
@@ -334,23 +335,45 @@ fn bad_git_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
-            r#"
+            &format!(
+                r#"
                 [package]
                 name = "foo"
                 version = "0.0.0"
                 authors = []
 
                 [dependencies]
-                foo = { git = "file:.." }
+                foo = {{ git = "{url}" }}
             "#,
+                url = if cargo_uses_gitoxide() {
+                    "git://host.xz"
+                } else {
+                    "file:.."
+                }
+            ),
         )
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -v")
-        .with_status(101)
-        .with_stderr(
-            "\
+    let expected_stderr = if cargo_uses_gitoxide() {
+        "\
+[UPDATING] git repository `git://host.xz`
+[ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
+
+Caused by:
+  failed to load source for dependency `foo`
+
+Caused by:
+  Unable to update git://host.xz
+
+Caused by:
+  failed to clone into: [..]
+
+Caused by:
+  URLs need to specify the path to the repository
+"
+    } else {
+        "\
 [UPDATING] git repository `file:///`
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
 
@@ -365,8 +388,11 @@ Caused by:
 
 Caused by:
   [..]'file:///' is not a valid local file URI[..]
-",
-        )
+"
+    };
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr(expected_stderr)
         .run();
 }
 

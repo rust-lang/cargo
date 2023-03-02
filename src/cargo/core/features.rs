@@ -716,6 +716,8 @@ unstable_cli_options!(
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     features: Option<Vec<String>>  = (HIDDEN),
+    gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
+    jobserver_per_rustc: bool = (HIDDEN),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
@@ -827,6 +829,74 @@ where
     parse_check_cfg(crates.into_iter()).map_err(D::Error::custom)
 }
 
+#[derive(Debug, Copy, Clone, Default, Deserialize)]
+pub struct GitoxideFeatures {
+    /// All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
+    pub fetch: bool,
+    /// When cloning the index, perform a shallow clone. Maintain shallowness upon subsequent fetches.
+    pub shallow_index: bool,
+    /// When cloning git dependencies, perform a shallow clone and maintain shallowness on subsequent fetches.
+    pub shallow_deps: bool,
+    /// Checkout git dependencies using `gitoxide` (submodules are still handled by git2 ATM, and filters
+    /// like linefeed conversions are unsupported).
+    pub checkout: bool,
+    /// A feature flag which doesn't have any meaning except for preventing
+    /// `__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2=1` builds to enable all safe `gitoxide` features.
+    /// That way, `gitoxide` isn't actually used even though it's enabled.
+    pub internal_use_git2: bool,
+}
+
+impl GitoxideFeatures {
+    fn all() -> Self {
+        GitoxideFeatures {
+            fetch: true,
+            shallow_index: true,
+            checkout: true,
+            shallow_deps: true,
+            internal_use_git2: false,
+        }
+    }
+
+    /// Features we deem safe for everyday use - typically true when all tests pass with them
+    /// AND they are backwards compatible.
+    fn safe() -> Self {
+        GitoxideFeatures {
+            fetch: true,
+            shallow_index: false,
+            checkout: true,
+            shallow_deps: false,
+            internal_use_git2: false,
+        }
+    }
+}
+
+fn parse_gitoxide(
+    it: impl Iterator<Item = impl AsRef<str>>,
+) -> CargoResult<Option<GitoxideFeatures>> {
+    let mut out = GitoxideFeatures::default();
+    let GitoxideFeatures {
+        fetch,
+        shallow_index,
+        checkout,
+        shallow_deps,
+        internal_use_git2,
+    } = &mut out;
+
+    for e in it {
+        match e.as_ref() {
+            "fetch" => *fetch = true,
+            "shallow-index" => *shallow_index = true,
+            "shallow-deps" => *shallow_deps = true,
+            "checkout" => *checkout = true,
+            "internal-use-git2" => *internal_use_git2 = true,
+            _ => {
+                bail!("unstable 'gitoxide' only takes `fetch`, 'shallow-index', 'shallow-deps' and 'checkout' as valid inputs")
+            }
+        }
+    }
+    Ok(Some(out))
+}
+
 fn parse_check_cfg(
     it: impl Iterator<Item = impl AsRef<str>>,
 ) -> CargoResult<Option<(bool, bool, bool, bool)>> {
@@ -878,6 +948,13 @@ impl CliUnstable {
         }
         for flag in flags {
             self.add(flag, &mut warnings)?;
+        }
+
+        if self.gitoxide.is_none()
+            && std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2")
+                .map_or(false, |value| value == "1")
+        {
+            self.gitoxide = GitoxideFeatures::safe().into();
         }
         Ok(warnings)
     }
@@ -967,6 +1044,13 @@ impl CliUnstable {
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "doctest-in-workspace" => self.doctest_in_workspace = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
+            "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
+            "gitoxide" => {
+                self.gitoxide = v.map_or_else(
+                    || Ok(Some(GitoxideFeatures::all())),
+                    |v| parse_gitoxide(v.split(',')),
+                )?
+            }
             "host-config" => self.host_config = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "publish-timeout" => self.publish_timeout = parse_empty(k, v)?,

@@ -619,9 +619,6 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.useragent(&format!("cargo {}", version()))?;
     }
 
-    // Empty string accept encoding expands to the encodings supported by the current libcurl.
-    handle.accept_encoding("")?;
-
     fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
         let version = match s {
             "default" => SslVersion::Default,
@@ -631,13 +628,15 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
             "tlsv1.2" => SslVersion::Tlsv12,
             "tlsv1.3" => SslVersion::Tlsv13,
             _ => bail!(
-                "Invalid ssl version `{}`,\
-                 choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.",
-                s
+                "Invalid ssl version `{s}`,\
+                 choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'."
             ),
         };
         Ok(version)
     }
+
+    // Empty string accept encoding expands to the encodings supported by the current libcurl.
+    handle.accept_encoding("")?;
     if let Some(ssl_version) = &http.ssl_version {
         match ssl_version {
             SslVersionConfig::Single(s) => {
