@@ -235,20 +235,6 @@ information from `.cargo/config.toml`. See the rustc issue for more information.
 cargo test --target foo -Zdoctest-xcompile
 ```
 
-#### New `dir-name` attribute
-
-Some of the paths generated under `target/` have resulted in a de-facto "build
-protocol", where `cargo` is invoked as a part of a larger project build. So, to
-preserve the existing behavior, there is also a new attribute `dir-name`, which
-when left unspecified, defaults to the name of the profile. For example:
-
-```toml
-[profile.release-lto]
-inherits = "release"
-dir-name = "lto"  # Emits to target/lto instead of target/release-lto
-lto = true
-```
-
 ### Build-plan
 * Tracking Issue: [#5579](https://github.com/rust-lang/cargo/issues/5579)
 
