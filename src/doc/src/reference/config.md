@@ -196,7 +196,7 @@ Environment variables will take precedence over TOML configuration files.
 Currently only integer, boolean, string and some array values are supported to
 be defined by environment variables. [Descriptions below](#configuration-keys)
 indicate which keys support environment variables and otherwise they are not
-supported due to [technicial issues](https://github.com/rust-lang/cargo/issues/5416).
+supported due to [technical issues](https://github.com/rust-lang/cargo/issues/5416).
 
 In addition to the system above, Cargo recognizes a few other specific
 [environment variables][env].

@@ -74,7 +74,7 @@ See the [the reference](../reference/profiles.html) for more details on profiles
 {{#option "`--crate-type` _crate-type_"}}
 Build for the given crate type. This flag accepts a comma-separated list of
 1 or more crate types, of which the allowed values are the same as `crate-type`
-field in the manifest for configurating a Cargo target. See
+field in the manifest for configuring a Cargo target. See
 [`crate-type` field](../reference/cargo-targets.html#the-crate-type-field)
 for possible values.
 
