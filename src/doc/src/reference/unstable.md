@@ -1224,7 +1224,7 @@ println!("cargo:rustc-check-cfg=names(foo, bar)");
 cargo check -Z unstable-options -Z check-cfg=output
 ```
 
-### `cargo:rustc-check-cfg=CHECK_CFG`
+#### `cargo:rustc-check-cfg=CHECK_CFG`
 
 The `rustc-check-cfg` instruction tells Cargo to pass the given value to the
 `--check-cfg` flag to the compiler. This may be used for compile-time
