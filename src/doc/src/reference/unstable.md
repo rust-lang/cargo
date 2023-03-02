@@ -80,9 +80,13 @@ Each new feature described below should explain how to use it.
     * [binary-dep-depinfo](#binary-dep-depinfo) --- Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) --- Allows running tests with the "abort" panic strategy.
     * [keep-going](#keep-going) --- Build as much as possible rather than aborting on the first error.
+    * [check-cfg](#check-cfg) --- Compile-time validation of `cfg` expressions.
+    * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
+    * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
 * rustdoc
     * [`doctest-in-workspace`](#doctest-in-workspace) --- Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
+    * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) --- Passed directly to rustc.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
@@ -233,20 +237,6 @@ information from `.cargo/config.toml`. See the rustc issue for more information.
 
 ```sh
 cargo test --target foo -Zdoctest-xcompile
-```
-
-#### New `dir-name` attribute
-
-Some of the paths generated under `target/` have resulted in a de-facto "build
-protocol", where `cargo` is invoked as a part of a larger project build. So, to
-preserve the existing behavior, there is also a new attribute `dir-name`, which
-when left unspecified, defaults to the name of the profile. For example:
-
-```toml
-[profile.release-lto]
-inherits = "release"
-dir-name = "lto"  # Emits to target/lto instead of target/release-lto
-lto = true
 ```
 
 ### Build-plan
@@ -1238,7 +1228,7 @@ println!("cargo:rustc-check-cfg=names(foo, bar)");
 cargo check -Z unstable-options -Z check-cfg=output
 ```
 
-### `cargo:rustc-check-cfg=CHECK_CFG`
+#### `cargo:rustc-check-cfg=CHECK_CFG`
 
 The `rustc-check-cfg` instruction tells Cargo to pass the given value to the
 `--check-cfg` flag to the compiler. This may be used for compile-time
