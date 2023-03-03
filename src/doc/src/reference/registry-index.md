@@ -222,7 +222,7 @@ The sparse protocol uses the `sparse+` protocol prefix in the registry URL. For 
 the sparse index URL for [crates.io] is `sparse+https://index.crates.io/`.
 
 The sparse protocol downloads each index file using an individual HTTP request. Since
-this results in a large number of small HTTP requests, performance is signficiantly
+this results in a large number of small HTTP requests, performance is significantly
 improved with a server that supports pipelining and HTTP/2.
 
 ##### Caching
@@ -245,7 +245,7 @@ or 451 "Unavailable For Legal Reasons" code.
 ##### Sparse Limitations
 Since the URL of the registry is stored in the lockfile, it's not recommended to offer
 a registry with both protocols. Discussion about a transition plan is ongoing in issue 
-[#10964]. The [crates.io] registry is an exception, since Cargo internally substitues
+[#10964]. The [crates.io] registry is an exception, since Cargo internally substitutes
 the equivalent git URL when the sparse protocol is used.
 
 If a registry does offer both protocols, it's currently recommended to choose one protocol
