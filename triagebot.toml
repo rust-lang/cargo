@@ -40,8 +40,7 @@ warn_non_default_branch = true
 [autolabel."A-build-execution"]
 trigger_files = [
   "src/cargo/core/compiler/compilation.rs",
-  "src/cargo/core/compiler/job.rs",
-  "src/cargo/core/compiler/job_queue.rs",
+  "src/cargo/core/compiler/job_queue/",
   "src/cargo/core/compiler/mod.rs",
 ]
 
@@ -209,7 +208,7 @@ trigger_files = [
 ]
 
 [autolabel."Command-add"]
-trigger_files = ["src/bin/cargo/commands/add.rs", "src/cargo/ops/cargo_add/*"]
+trigger_files = ["src/bin/cargo/commands/add.rs", "src/cargo/ops/cargo_add/"]
 
 [autolabel."Command-bench"]
 trigger_files = ["src/bin/cargo/commands/bench.rs"]
@@ -300,7 +299,7 @@ trigger_files = ["src/bin/cargo/commands/search.rs"]
 trigger_files = ["src/bin/cargo/commands/test.rs", "src/cargo/ops/cargo_test.rs"]
 
 [autolabel."Command-tree"]
-trigger_files = ["src/bin/cargo/commands/tree.rs", "src/cargo/ops/tree/*"]
+trigger_files = ["src/bin/cargo/commands/tree.rs", "src/cargo/ops/tree/"]
 
 [autolabel."Command-uninstall"]
 trigger_files = ["src/bin/cargo/commands/uninstall.rs", "src/cargo/ops/cargo_uninstall.rs"]
