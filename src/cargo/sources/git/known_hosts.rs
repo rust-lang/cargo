@@ -20,6 +20,9 @@
 //! and revoked markers. See "FIXME" comments littered in this file.
 
 use crate::util::config::{Config, Definition, Value};
+use base64::engine::general_purpose::STANDARD;
+use base64::engine::general_purpose::STANDARD_NO_PAD;
+use base64::Engine as _;
 use git2::cert::{Cert, SshHostKeyType};
 use git2::CertificateCheckStatus;
 use hmac::Mac;
@@ -344,7 +347,7 @@ fn check_ssh_known_hosts(
         .collect();
     for (patterns, key_type, key) in BUNDLED_KEYS {
         if !configured_hosts.contains(*patterns) {
-            let key = base64::decode(key).unwrap();
+            let key = STANDARD.decode(key).unwrap();
             known_hosts.push(KnownHost {
                 location: KnownHostLocation::Bundled,
                 patterns: patterns.to_string(),
@@ -382,9 +385,8 @@ fn check_ssh_known_hosts_loaded(
     // support SHA256.
     let mut remote_fingerprint = cargo_util::Sha256::new();
     remote_fingerprint.update(remote_host_key.clone());
-    let remote_fingerprint =
-        base64::encode_config(remote_fingerprint.finish(), base64::STANDARD_NO_PAD);
-    let remote_host_key_encoded = base64::encode(remote_host_key);
+    let remote_fingerprint = STANDARD_NO_PAD.encode(remote_fingerprint.finish());
+    let remote_host_key_encoded = STANDARD.encode(remote_host_key);
 
     for known_host in known_hosts {
         // The key type from libgit2 needs to match the key type from the host file.
@@ -583,8 +585,8 @@ impl KnownHost {
 
 fn hashed_hostname_matches(host: &str, hashed: &str) -> bool {
     let Some((b64_salt, b64_host)) = hashed.split_once('|') else { return false; };
-    let Ok(salt) = base64::decode(b64_salt) else { return false; };
-    let Ok(hashed_host) = base64::decode(b64_host) else { return false; };
+    let Ok(salt) = STANDARD.decode(b64_salt) else { return false; };
+    let Ok(hashed_host) = STANDARD.decode(b64_host) else { return false; };
     let Ok(mut mac) = hmac::Hmac::<sha1::Sha1>::new_from_slice(&salt) else { return false; };
     mac.update(host.as_bytes());
     let result = mac.finalize().into_bytes();
@@ -636,7 +638,7 @@ fn parse_known_hosts_line(line: &str, location: KnownHostLocation) -> Option<Kno
 
     let patterns = parts.next()?;
     let key_type = parts.next()?;
-    let key = parts.next().map(base64::decode)?.ok()?;
+    let key = parts.next().map(|p| STANDARD.decode(p))?.ok()?;
     Some(KnownHost {
         line_type,
         location,
