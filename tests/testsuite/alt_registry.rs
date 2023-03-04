@@ -461,6 +461,32 @@ fn publish_to_alt_registry() {
 ",
         )
         .run();
+
+    validate_alt_upload(
+        r#"{
+            "authors": [],
+            "badges": {},
+            "categories": [],
+            "deps": [],
+            "description": null,
+            "documentation": null,
+            "features": {},
+            "homepage": null,
+            "keywords": [],
+            "license": null,
+            "license_file": null,
+            "links": null,
+            "name": "foo",
+            "readme": null,
+            "readme_file": null,
+            "repository": null,
+            "homepage": null,
+            "documentation": null,
+            "vers": "0.0.1"
+        }"#,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
 }
 
 #[cargo_test]
