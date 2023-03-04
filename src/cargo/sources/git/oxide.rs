@@ -96,13 +96,14 @@ fn translate_progress_to_bar(
             tasks.iter().find_map(|(_, t)| cb(t))
         }
 
+        const NUM_PHASES: usize = 2; // indexing + delta-resolution, both with same amount of objects to handle
         if let Some(objs) = find_in(&tasks, |t| progress_by_id(resolve_objects, t)) {
             // Resolving deltas.
             let objects = objs.step.load(Ordering::Relaxed);
             let total_objects = objs.done_at.expect("known amount of objects");
             let msg = format!(", ({objects}/{total_objects}) resolving deltas");
 
-            progress_bar.tick(objects, total_objects, &msg)?;
+            progress_bar.tick(total_objects + objects, total_objects * NUM_PHASES, &msg)?;
         } else if let Some((objs, read_pack)) =
             find_in(&tasks, |t| progress_by_id(read_pack_bytes, t)).and_then(|read| {
                 find_in(&tasks, |t| progress_by_id(delta_index_objects, t))
@@ -122,7 +123,7 @@ fn translate_progress_to_bar(
             let (rate, unit) = human_readable_bytes(counter.rate() as u64);
             let msg = format!(", {rate:.2}{unit}/s");
 
-            progress_bar.tick(objects, total_objects, &msg)?;
+            progress_bar.tick(objects, total_objects * NUM_PHASES, &msg)?;
         }
     }
     Ok(())
