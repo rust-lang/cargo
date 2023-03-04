@@ -69,18 +69,34 @@ fn translate_progress_to_bar(
 
     // We choose `N=10` here to make a `300ms * 10slots ~= 3000ms`
     // sliding window for tracking the data transfer rate (in bytes/s).
-    let mut last_update = Instant::now();
-    let mut counter = MetricsCounter::<10>::new(0, last_update);
+    let mut last_percentage_update = Instant::now();
+    let mut last_fast_update = Instant::now();
+    let mut counter = MetricsCounter::<10>::new(0, last_percentage_update);
 
     let mut tasks = Vec::with_capacity(10);
-    let update_interval = std::time::Duration::from_millis(300);
-    let short_check_interval = Duration::from_millis(50);
+    let slow_check_interval = std::time::Duration::from_millis(300);
+    let fast_check_interval = Duration::from_millis(50);
+    let sleep_interval = Duration::from_millis(10);
+    debug_assert_eq!(
+        slow_check_interval.as_millis() % fast_check_interval.as_millis(),
+        0,
+        "progress should be smoother by keeping these as multiples of each other"
+    );
+    debug_assert_eq!(
+        fast_check_interval.as_millis() % sleep_interval.as_millis(),
+        0,
+        "progress should be smoother by keeping these as multiples of each other"
+    );
 
     while let Some(root) = root.upgrade() {
-        let not_yet = last_update.elapsed() < update_interval;
-        if not_yet {
-            std::thread::sleep(short_check_interval);
+        std::thread::sleep(sleep_interval);
+        let needs_update = last_fast_update.elapsed() >= fast_check_interval;
+        if !needs_update {
+            continue;
         }
+        let now = Instant::now();
+        last_fast_update = now;
+
         root.sorted_snapshot(&mut tasks);
 
         fn progress_by_id(
@@ -96,13 +112,14 @@ fn translate_progress_to_bar(
             tasks.iter().find_map(|(_, t)| cb(t))
         }
 
+        const NUM_PHASES: usize = 2; // indexing + delta-resolution, both with same amount of objects to handle
         if let Some(objs) = find_in(&tasks, |t| progress_by_id(resolve_objects, t)) {
             // Resolving deltas.
             let objects = objs.step.load(Ordering::Relaxed);
             let total_objects = objs.done_at.expect("known amount of objects");
             let msg = format!(", ({objects}/{total_objects}) resolving deltas");
 
-            progress_bar.tick(objects, total_objects, &msg)?;
+            progress_bar.tick(total_objects + objects, total_objects * NUM_PHASES, &msg)?;
         } else if let Some((objs, read_pack)) =
             find_in(&tasks, |t| progress_by_id(read_pack_bytes, t)).and_then(|read| {
                 find_in(&tasks, |t| progress_by_id(delta_index_objects, t))
@@ -114,15 +131,15 @@ fn translate_progress_to_bar(
             let total_objects = objs.done_at.expect("known amount of objects");
             let received_bytes = read_pack.step.load(Ordering::Relaxed);
 
-            let now = Instant::now();
-            if !not_yet {
+            let needs_percentage_update = last_percentage_update.elapsed() >= slow_check_interval;
+            if needs_percentage_update {
                 counter.add(received_bytes, now);
-                last_update = now;
+                last_percentage_update = now;
             }
             let (rate, unit) = human_readable_bytes(counter.rate() as u64);
             let msg = format!(", {rate:.2}{unit}/s");
 
-            progress_bar.tick(objects, total_objects, &msg)?;
+            progress_bar.tick(objects, total_objects * NUM_PHASES, &msg)?;
         }
     }
     Ok(())
