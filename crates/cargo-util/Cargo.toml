@@ -1,6 +1,6 @@
 [package]
 name = "cargo-util"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/rust-lang/cargo"
@@ -9,7 +9,7 @@ description = "Miscellaneous support code used by Cargo."
 
 [dependencies]
 anyhow = "1.0.34"
-crypto-hash = "0.3.1"
+sha2 = "0.10.6"
 filetime = "0.2.9"
 hex = "0.4.2"
 jobserver = "0.1.26"
