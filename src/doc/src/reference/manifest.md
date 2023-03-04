@@ -6,52 +6,52 @@ the `cargo locate-project` section for more detail on how cargo finds the manife
 
 Every manifest file consists of the following sections:
 
-* [`cargo-features`](unstable.md) — Unstable, nightly-only features.
-* [`[package]`](#the-package-section) — Defines a package.
-  * [`name`](#the-name-field) — The name of the package.
-  * [`version`](#the-version-field) — The version of the package.
-  * [`authors`](#the-authors-field) — The authors of the package.
-  * [`edition`](#the-edition-field) — The Rust edition.
-  * [`rust-version`](#the-rust-version-field) — The minimal supported Rust version.
-  * [`description`](#the-description-field) — A description of the package.
-  * [`documentation`](#the-documentation-field) — URL of the package documentation.
-  * [`readme`](#the-readme-field) — Path to the package's README file.
-  * [`homepage`](#the-homepage-field) — URL of the package homepage.
-  * [`repository`](#the-repository-field) — URL of the package source repository.
-  * [`license`](#the-license-and-license-file-fields) — The package license.
-  * [`license-file`](#the-license-and-license-file-fields) — Path to the text of the license.
-  * [`keywords`](#the-keywords-field) — Keywords for the package.
-  * [`categories`](#the-categories-field) — Categories of the package.
-  * [`workspace`](#the-workspace-field) — Path to the workspace for the package.
-  * [`build`](#the-build-field) — Path to the package build script.
-  * [`links`](#the-links-field) — Name of the native library the package links with.
-  * [`exclude`](#the-exclude-and-include-fields) — Files to exclude when publishing.
-  * [`include`](#the-exclude-and-include-fields) — Files to include when publishing.
-  * [`publish`](#the-publish-field) — Can be used to prevent publishing the package.
-  * [`metadata`](#the-metadata-table) — Extra settings for external tools.
-  * [`default-run`](#the-default-run-field) — The default binary to run by [`cargo run`].
-  * [`autobins`](cargo-targets.md#target-auto-discovery) — Disables binary auto discovery.
-  * [`autoexamples`](cargo-targets.md#target-auto-discovery) — Disables example auto discovery.
-  * [`autotests`](cargo-targets.md#target-auto-discovery) — Disables test auto discovery.
-  * [`autobenches`](cargo-targets.md#target-auto-discovery) — Disables bench auto discovery.
-  * [`resolver`](resolver.md#resolver-versions) — Sets the dependency resolver to use.
+* [`cargo-features`](unstable.md) --- Unstable, nightly-only features.
+* [`[package]`](#the-package-section) --- Defines a package.
+  * [`name`](#the-name-field) --- The name of the package.
+  * [`version`](#the-version-field) --- The version of the package.
+  * [`authors`](#the-authors-field) --- The authors of the package.
+  * [`edition`](#the-edition-field) --- The Rust edition.
+  * [`rust-version`](#the-rust-version-field) --- The minimal supported Rust version.
+  * [`description`](#the-description-field) --- A description of the package.
+  * [`documentation`](#the-documentation-field) --- URL of the package documentation.
+  * [`readme`](#the-readme-field) --- Path to the package's README file.
+  * [`homepage`](#the-homepage-field) --- URL of the package homepage.
+  * [`repository`](#the-repository-field) --- URL of the package source repository.
+  * [`license`](#the-license-and-license-file-fields) --- The package license.
+  * [`license-file`](#the-license-and-license-file-fields) --- Path to the text of the license.
+  * [`keywords`](#the-keywords-field) --- Keywords for the package.
+  * [`categories`](#the-categories-field) --- Categories of the package.
+  * [`workspace`](#the-workspace-field) --- Path to the workspace for the package.
+  * [`build`](#the-build-field) --- Path to the package build script.
+  * [`links`](#the-links-field) --- Name of the native library the package links with.
+  * [`exclude`](#the-exclude-and-include-fields) --- Files to exclude when publishing.
+  * [`include`](#the-exclude-and-include-fields) --- Files to include when publishing.
+  * [`publish`](#the-publish-field) --- Can be used to prevent publishing the package.
+  * [`metadata`](#the-metadata-table) --- Extra settings for external tools.
+  * [`default-run`](#the-default-run-field) --- The default binary to run by [`cargo run`].
+  * [`autobins`](cargo-targets.md#target-auto-discovery) --- Disables binary auto discovery.
+  * [`autoexamples`](cargo-targets.md#target-auto-discovery) --- Disables example auto discovery.
+  * [`autotests`](cargo-targets.md#target-auto-discovery) --- Disables test auto discovery.
+  * [`autobenches`](cargo-targets.md#target-auto-discovery) --- Disables bench auto discovery.
+  * [`resolver`](resolver.md#resolver-versions) --- Sets the dependency resolver to use.
 * Target tables: (see [configuration](cargo-targets.md#configuring-a-target) for settings)
-  * [`[lib]`](cargo-targets.md#library) — Library target settings.
-  * [`[[bin]]`](cargo-targets.md#binaries) — Binary target settings.
-  * [`[[example]]`](cargo-targets.md#examples) — Example target settings.
-  * [`[[test]]`](cargo-targets.md#tests) — Test target settings.
-  * [`[[bench]]`](cargo-targets.md#benchmarks) — Benchmark target settings.
+  * [`[lib]`](cargo-targets.md#library) --- Library target settings.
+  * [`[[bin]]`](cargo-targets.md#binaries) --- Binary target settings.
+  * [`[[example]]`](cargo-targets.md#examples) --- Example target settings.
+  * [`[[test]]`](cargo-targets.md#tests) --- Test target settings.
+  * [`[[bench]]`](cargo-targets.md#benchmarks) --- Benchmark target settings.
 * Dependency tables:
-  * [`[dependencies]`](specifying-dependencies.md) — Package library dependencies.
-  * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) — Dependencies for examples, tests, and benchmarks.
-  * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) — Dependencies for build scripts.
-  * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) — Platform-specific dependencies.
-* [`[badges]`](#the-badges-section) — Badges to display on a registry.
-* [`[features]`](features.md) — Conditional compilation features.
-* [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
-* [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
-* [`[profile]`](profiles.md) — Compiler settings and optimizations.
-* [`[workspace]`](workspaces.md) — The workspace definition.
+  * [`[dependencies]`](specifying-dependencies.md) --- Package library dependencies.
+  * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) --- Dependencies for examples, tests, and benchmarks.
+  * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) --- Dependencies for build scripts.
+  * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) --- Platform-specific dependencies.
+* [`[badges]`](#the-badges-section) --- Badges to display on a registry.
+* [`[features]`](features.md) --- Conditional compilation features.
+* [`[patch]`](overriding-dependencies.md#the-patch-section) --- Override dependencies.
+* [`[replace]`](overriding-dependencies.md#the-replace-section) --- Override dependencies (deprecated).
+* [`[profile]`](profiles.md) --- Compiler settings and optimizations.
+* [`[workspace]`](workspaces.md) --- The workspace definition.
 
 <a id="package-metadata"></a>
 ### The `[package]` section
@@ -84,7 +84,7 @@ a keyword. [crates.io] imposes even more restrictions, such as:
 
 - Only ASCII characters are allowed.
 - Do not use reserved names.
-- Do not use special Windows name such as "nul".
+- Do not use special Windows names such as "nul".
 - Use a maximum of 64 characters of length.
 
 [alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
@@ -116,7 +116,7 @@ breaking change.
 #### The `authors` field
 
 The optional `authors` field lists in an array the people or organizations that are considered
-the "authors" of the package. The exact meaning is open to interpretation — it
+the "authors" of the package. The exact meaning is open to interpretation --- it
 may list the original or primary authors, current maintainers, or owners of the
 package. An optional email address may be included within angled brackets at
 the end of each author entry.

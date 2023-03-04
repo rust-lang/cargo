@@ -1,4 +1,5 @@
-/// Generate artifact information from unit dependencies for configuring the compiler environment.
+//! Generate artifact information from unit dependencies for configuring the compiler environment.
+
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::compiler::{Context, CrateType, FileFlavor, Unit};
 use crate::core::dependency::ArtifactKind;

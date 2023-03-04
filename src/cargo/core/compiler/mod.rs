@@ -1,3 +1,36 @@
+//! # Interact with the compiler
+//!
+//! If you consider [`ops::cargo_compile::compile`] as a `rustc` driver but on
+//! Cargo side, this module is kinda the `rustc_interface` for that merits.
+//! It contains all the interaction between Cargo and the rustc compiler,
+//! from preparing the context for the entire build process, to scheduling
+//! and executing each unit of work (e.g. running `rustc`), to managing and
+//! caching the output artifact of a build.
+//!
+//! However, it hasn't yet exposed a clear definition of each phase or session,
+//! like what rustc has done[^1]. Also, no one knows if Cargo really needs that.
+//! To be pragmatic, here we list a handful of items you may want to learn:
+//!
+//! * [`BuildContext`] is a static context containg all information you need
+//!   before a build gets started.
+//! * [`Context`] is the center of the world, coordinating a running build and
+//!   collecting information from it.
+//! * [`custom_build`] is the home of build script executions and output parsing.
+//! * [`fingerprint`] not only defines but also executes a set of rules to
+//!   determine if a re-compile is needed.
+//! * [`job_queue`] is where the parallelism, job scheduling, and communication
+//!   machinary happen between Cargo and the compiler.
+//! * [`layout`] defines and manages output artifacts of a build in the filesystem.
+//! * [`unit_dependencies`] is for building a dependency graph for compilation
+//!   from a result of dependency resolution.
+//! * [`Unit`] contains sufficient information to build something, usually
+//!   turning into a compiler invocation in a later phase.
+//!
+//! [^1]: Maybe [`-Zbuild-plan`](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-plan)
+//!   was designed to serve that purpose but still [in flux](https://github.com/rust-lang/cargo/issues/7614).
+//!
+//! [`ops::cargo_compile::compile`]: crate::ops::compile
+
 pub mod artifact;
 mod build_config;
 mod build_context;
@@ -9,7 +42,6 @@ mod crate_type;
 mod custom_build;
 mod fingerprint;
 pub mod future_incompat;
-mod job;
 mod job_queue;
 mod layout;
 mod links;
@@ -46,9 +78,8 @@ pub use self::context::{Context, Metadata};
 pub use self::crate_type::CrateType;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub(crate) use self::fingerprint::DirtyReason;
-pub use self::job::Freshness;
-use self::job::{Job, Work};
-use self::job_queue::{JobQueue, JobState};
+pub use self::job_queue::Freshness;
+use self::job_queue::{Job, JobQueue, JobState, Work};
 pub(crate) use self::layout::Layout;
 pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
@@ -67,18 +98,31 @@ use rustfix::diagnostics::Applicability;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
+// TODO: Rename this to `ExtraLinkArgFor` or else, and move to compiler/custom_build.rs?
+/// Represents one of the instruction from `cargo:rustc-link-arg-*` build script
+/// instruction family.
+///
+/// In other words, indicates targets that custom linker arguments applies to.
 #[derive(Clone, Hash, Debug, PartialEq, Eq)]
 pub enum LinkType {
+    /// Represents `cargo:rustc-link-arg=FLAG`.
     All,
+    /// Represents `cargo:rustc-cdylib-link-arg=FLAG`.
     Cdylib,
+    /// Represents `cargo:rustc-link-arg-bins=FLAG`.
     Bin,
+    /// Represents `cargo:rustc-link-arg-bin=BIN=FLAG`.
     SingleBin(String),
+    /// Represents `cargo:rustc-link-arg-tests=FLAG`.
     Test,
+    /// Represents `cargo:rustc-link-arg-benches=FLAG`.
     Bench,
+    /// Represents `cargo:rustc-link-arg-examples=FLAG`.
     Example,
 }
 
 impl LinkType {
+    /// Checks if this link type applies to a given [`Target`].
     pub fn applies_to(&self, target: &Target) -> bool {
         match self {
             LinkType::All => true,
@@ -140,6 +184,15 @@ impl Executor for DefaultExecutor {
     }
 }
 
+/// Builds up and enqueue a list of pending jobs onto the `job` queue.
+///
+/// Starting from the `unit`, this function recursively calls itself to build
+/// all jobs for dependencies of the `unit`. Each of these jobs represents
+/// compiling a particular package.
+///
+/// Note that **no actual work is executed as part of this**, that's all done
+/// next as part of [`JobQueue::execute`] function which will run everything
+/// in order with proper parallelism.
 fn compile<'cfg>(
     cx: &mut Context<'_, 'cfg>,
     jobs: &mut JobQueue<'cfg>,
@@ -230,6 +283,7 @@ fn make_failed_scrape_diagnostic(
     )
 }
 
+/// Creates a unit of work invoking `rustc` for building the `unit`.
 fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     let build_plan = cx.bcx.build_config.build_plan;
@@ -550,7 +604,7 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
         if json_messages {
             let art_profile = machine_message::ArtifactProfile {
                 opt_level: profile.opt_level.as_str(),
-                debuginfo: profile.debuginfo,
+                debuginfo: profile.debuginfo.to_option(),
                 debug_assertions: profile.debug_assertions,
                 overflow_checks: profile.overflow_checks,
                 test: unit_mode.is_any_test(),
@@ -638,6 +692,8 @@ where
     search_path
 }
 
+// TODO: do we really need this as a separate function?
+// Maybe we should reorganize `rustc` fn to make it more traceable and readable.
 fn prepare_rustc(
     cx: &mut Context<'_, '_>,
     crate_types: &[CrateType],
@@ -659,19 +715,13 @@ fn prepare_rustc(
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
 
-    if cx.bcx.config.cli_unstable().jobserver_per_rustc {
-        let client = cx.new_jobserver()?;
-        base.inherit_jobserver(&client);
-        base.arg("-Z").arg("jobserver-token-requests");
-        assert!(cx.rustc_clients.insert(unit.clone(), client).is_none());
-    } else {
-        base.inherit_jobserver(&cx.jobserver);
-    }
+    base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
 }
 
+/// Creates a unit of work invoking `rustdoc` for documenting the `unit`.
 fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let bcx = cx.bcx;
     // script_metadata is not needed here, it is only for tests.
@@ -857,6 +907,9 @@ fn append_crate_version_flag(unit: &Unit, rustdoc: &mut ProcessBuilder) {
         .arg(unit.pkg.version().to_string());
 }
 
+/// Adds [`--cap-lints`] to the command to execute.
+///
+/// [`--cap-lints`]: https://doc.rust-lang.org/nightly/rustc/lints/levels.html#capping-lints
 fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
@@ -870,7 +923,9 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
     }
 }
 
-/// Forward -Zallow-features if it is set for cargo.
+/// Forwards [`-Zallow-features`] if it is set for cargo.
+///
+/// [`-Zallow-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#allow-features
 fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     if let Some(allow) = &cx.bcx.config.cli_unstable().allow_features {
         let mut arg = String::from("-Zallow-features=");
@@ -879,7 +934,7 @@ fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     }
 }
 
-/// Add error-format flags to the command.
+/// Adds [`--error-format`] to the command to execute.
 ///
 /// Cargo always uses JSON output. This has several benefits, such as being
 /// easier to parse, handles changing formats (for replaying cached messages),
@@ -887,6 +942,8 @@ fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
 /// intercepting messages like rmeta artifacts, etc. rustc includes a
 /// "rendered" field in the JSON message with the message properly formatted,
 /// which Cargo will extract and display to the user.
+///
+/// [`--error-format`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--error-format-control-how-errors-are-produced
 fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
@@ -905,6 +962,7 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     }
 }
 
+/// Adds essential rustc flags and environment variables to the command to execute.
 fn build_base_args(
     cx: &mut Context<'_, '_>,
     cmd: &mut ProcessBuilder,
@@ -1003,7 +1061,7 @@ fn build_base_args(
         cmd.arg("-C").arg(&format!("codegen-units={}", n));
     }
 
-    if let Some(debuginfo) = debuginfo {
+    if let Some(debuginfo) = debuginfo.to_option() {
         cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
     }
 
@@ -1124,7 +1182,7 @@ fn build_base_args(
     Ok(())
 }
 
-/// All active features for the unit passed as --cfg
+/// All active features for the unit passed as `--cfg features=<feature-name>`.
 fn features_args(unit: &Unit) -> Vec<OsString> {
     let mut args = Vec::with_capacity(unit.features.len() * 2);
 
@@ -1136,7 +1194,10 @@ fn features_args(unit: &Unit) -> Vec<OsString> {
     args
 }
 
-/// Generate the --check-cfg arguments for the unit
+/// Generates the `--check-cfg` arguments for the `unit`.
+/// See unstable feature [`check-cfg`].
+///
+/// [`check-cfg`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#check-cfg
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     if let Some((features, well_known_names, well_known_values, _output)) =
         cx.bcx.config.cli_unstable().check_cfg
@@ -1176,6 +1237,7 @@ fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     }
 }
 
+/// Adds LTO related codegen flags.
 fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     let mut result = Vec::new();
     let mut push = |arg: &str| {
@@ -1196,6 +1258,11 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     result
 }
 
+/// Adds dependency-relevant rustc flags and environment variables
+/// to the command to execute, such as [`-L`] and [`--extern`].
+///
+/// [`-L`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#-l-add-a-directory-to-the-library-search-path
+/// [`--extern`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--extern-specify-where-an-external-library-is-located
 fn build_deps_args(
     cmd: &mut ProcessBuilder,
     cx: &mut Context<'_, '_>,
@@ -1267,7 +1334,9 @@ fn build_deps_args(
     Ok(())
 }
 
-/// Add custom flags from the output a of build-script to a `ProcessBuilder`
+/// Adds extra rustc flags and environment variables collected from the output
+/// of a build-script to the command to execute, include custom environment
+/// variables and `cfg`.
 fn add_custom_flags(
     cmd: &mut ProcessBuilder,
     build_script_outputs: &BuildScriptOutputs,
@@ -1377,6 +1446,8 @@ fn envify(s: &str) -> String {
         .collect()
 }
 
+/// Configuration of the display of messages emitted by the compiler,
+/// e.g. diagnostics, warnings, errors, and message caching.
 struct OutputOptions {
     /// What format we're emitting from Cargo itself.
     format: MessageFormat,
@@ -1395,7 +1466,9 @@ struct OutputOptions {
     /// cache will be filled with diagnostics from dependencies. When the
     /// cache is replayed without `-vv`, we don't want to show them.
     show_diagnostics: bool,
+    /// Tracks the number of warnings we've seen so far.
     warnings_seen: usize,
+    /// Tracks the number of errors we've seen so far.
     errors_seen: usize,
 }
 
@@ -1621,31 +1694,6 @@ fn on_stderr_line_inner(
         return Ok(false);
     }
 
-    #[derive(serde::Deserialize)]
-    struct JobserverNotification {
-        jobserver_event: Event,
-    }
-
-    #[derive(Debug, serde::Deserialize)]
-    enum Event {
-        WillAcquire,
-        Release,
-    }
-
-    if let Ok(JobserverNotification { jobserver_event }) =
-        serde_json::from_str::<JobserverNotification>(compiler_message.get())
-    {
-        trace!(
-            "found jobserver directive from rustc: `{:?}`",
-            jobserver_event
-        );
-        match jobserver_event {
-            Event::WillAcquire => state.will_acquire(),
-            Event::Release => state.release_token(),
-        }
-        return Ok(false);
-    }
-
     // And failing all that above we should have a legitimate JSON diagnostic
     // from the compiler, so wrap it in an external Cargo JSON message
     // indicating which package it came from and then emit it.
@@ -1677,6 +1725,9 @@ fn on_stderr_line_inner(
     Ok(true)
 }
 
+/// Creates a unit of work that replays the cached compiler message.
+///
+/// Usually used when a job is fresh and doesn't need to recompile.
 fn replay_output_cache(
     package_id: PackageId,
     manifest_path: PathBuf,

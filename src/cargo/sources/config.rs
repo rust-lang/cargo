@@ -100,7 +100,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 },
             )?;
         }
-        if let Ok(url) = std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS") {
+        if let Ok(url) = config.get_env("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS") {
             base.add(
                 CRATES_IO_REGISTRY,
                 SourceConfig {

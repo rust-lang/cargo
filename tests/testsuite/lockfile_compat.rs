@@ -111,7 +111,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("Cargo.lock", &old_lockfile)
         .build();
 
-    p.cargo("build --locked").run();
+    p.cargo("check --locked").run();
 
     let lock = p.read_lockfile();
     assert_match_exact(&old_lockfile, &lock);
@@ -158,7 +158,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     let p = p.build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let lock = p.read_lockfile();
     assert_match_exact(
@@ -223,7 +223,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     let p = p.build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -398,7 +398,7 @@ fn current_lockfile_format() {
         .file("src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let actual = p.read_lockfile();
 
@@ -460,7 +460,7 @@ dependencies = [
 
     let p = p.build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let lock = p.read_lockfile();
     assert_match_exact(
@@ -505,7 +505,7 @@ fn locked_correct_error() {
         .file("src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build --locked")
+    p.cargo("check --locked")
         .with_status(101)
         .with_stderr(
             "\
@@ -762,7 +762,7 @@ dependencies = [
         .file("Cargo.lock", &lockfile)
         .build();
 
-    p.cargo("build --locked").run();
+    p.cargo("check --locked").run();
 }
 
 #[cargo_test]
@@ -832,7 +832,7 @@ source = "git+{url}#{sha}"
         .file("Cargo.lock", &lockfile)
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     assert_eq!(p.read_file("Cargo.lock"), lockfile);
 }
@@ -874,7 +874,7 @@ dependencies = [
 ]"#,
         )
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\

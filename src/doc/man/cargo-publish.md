@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-publish - Upload a package to the registry
+cargo-publish --- Upload a package to the registry
 
 ## SYNOPSIS
 

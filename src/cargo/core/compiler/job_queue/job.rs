@@ -1,15 +1,21 @@
+//! See [`Job`] and [`Work`].
+
 use std::fmt;
 use std::mem;
 
-use super::job_queue::JobState;
+use super::JobState;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::util::CargoResult;
 
+/// Represents a unit of [`Work`] with a [`Freshness`] for caller
+/// to determine whether to re-execute or not.
 pub struct Job {
     work: Work,
     fresh: Freshness,
 }
 
+/// The basic unit of work.
+///
 /// Each proc should send its description before starting.
 /// It should send either once or close immediately.
 pub struct Work {
@@ -17,6 +23,7 @@ pub struct Work {
 }
 
 impl Work {
+    /// Creates a unit of work.
     pub fn new<F>(f: F) -> Work
     where
         F: FnOnce(&JobState<'_, '_>) -> CargoResult<()> + Send + 'static,
@@ -24,14 +31,17 @@ impl Work {
         Work { inner: Box::new(f) }
     }
 
+    /// Creates a unit of work that does nothing.
     pub fn noop() -> Work {
         Work::new(|_| Ok(()))
     }
 
+    /// Consumes this work by running it.
     pub fn call(self, tx: &JobState<'_, '_>) -> CargoResult<()> {
         (self.inner)(tx)
     }
 
+    /// Creates a new unit of work that chains `next` after ourself.
     pub fn then(self, next: Work) -> Work {
         Work::new(move |state| {
             self.call(state)?;
@@ -70,6 +80,7 @@ impl Job {
         &self.fresh
     }
 
+    /// Chains the given work by putting it in front of our own unit of work.
     pub fn before(&mut self, next: Work) {
         let prev = mem::replace(&mut self.work, Work::noop());
         self.work = next.then(prev);

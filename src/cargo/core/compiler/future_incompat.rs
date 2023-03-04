@@ -1,4 +1,37 @@
-//! Support for future-incompatible warning reporting.
+//! Support for [future-incompatible warning reporting][1].
+//!
+//! Here is an overview of how Cargo handles future-incompatible reports.
+//!
+//! ## Receive reports from the compiler
+//!
+//! When receiving a compiler message during a build, if it is effectively
+//! a [`FutureIncompatReport`], Cargo gathers and forwards it as a
+//! `Message::FutureIncompatReport` to the main thread.
+//!
+//! To have the correct layout of strucutures for deserializing a report
+//! emitted by the compiler, most of structure definitions, for example
+//! [`FutureIncompatReport`], are copied either partially or entirely from
+//! [compiler/rustc_errors/src/json.rs][2] in rust-lang/rust repository.
+//!
+//! ## Persist reports on disk
+//!
+//! When a build comes to an end, by calling [`save_and_display_report`]
+//! Cargo saves the report on disk, and displays it directly if requested
+//! via command line or configuration. The information of the on-disk file can
+//! be found in [`FUTURE_INCOMPAT_FILE`].
+//!
+//! During the persistent process, Cargo will attempt to query the source of
+//! each package emitting the report, for the sake of providing an upgrade
+//! information as a solution to fix the incompatibility.
+//!
+//! ## Display reports to users
+//!
+//! Users can run `cargo report future-incompat` to retrieve a report. This is
+//! done by [`OnDiskReports::load`]. Cargo simply prints reports to the
+//! standard output.
+//!
+//! [1]: https://doc.rust-lang.org/nightly/cargo/reference/future-incompat-report.html
+//! [2]: https://github.com/rust-lang/rust/blob/9bb6e60d1f1360234aae90c97964c0fa5524f141/compiler/rustc_errors/src/json.rs#L312-L315
 
 use crate::core::compiler::BuildContext;
 use crate::core::{Dependency, PackageId, QueryKind, Workspace};
@@ -100,18 +133,30 @@ impl Default for OnDiskReports {
 }
 
 impl OnDiskReports {
-    /// Saves a new report.
+    /// Saves a new report returning its id
     pub fn save_report(
         mut self,
         ws: &Workspace<'_>,
         suggestion_message: String,
         per_package_reports: &[FutureIncompatReportPackage],
-    ) {
+    ) -> u32 {
+        let per_package = render_report(per_package_reports);
+
+        if let Some(existing_report) = self
+            .reports
+            .iter()
+            .find(|existing| existing.per_package == per_package)
+        {
+            return existing_report.id;
+        }
+
         let report = OnDiskReport {
             id: self.next_id,
             suggestion_message,
-            per_package: render_report(per_package_reports),
+            per_package,
         };
+
+        let saved_id = report.id;
         self.next_id += 1;
         self.reports.push(report);
         if self.reports.len() > MAX_REPORTS {
@@ -138,6 +183,8 @@ impl OnDiskReports {
                 &mut ws.config().shell(),
             );
         }
+
+        saved_id
     }
 
     /// Loads the on-disk reports.
@@ -450,7 +497,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         update_message = update_message,
     );
 
-    current_reports.save_report(
+    let saved_report_id = current_reports.save_report(
         bcx.ws,
         suggestion_message.clone(),
         per_package_future_incompat_reports,
@@ -461,14 +508,14 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         drop(bcx.config.shell().note(&format!(
             "this report can be shown with `cargo report \
              future-incompatibilities --id {}`",
-            report_id
+            saved_report_id
         )));
     } else if should_display_message {
         drop(bcx.config.shell().note(&format!(
             "to see what the problems were, use the option \
              `--future-incompat-report`, or run `cargo report \
              future-incompatibilities --id {}`",
-            report_id
+            saved_report_id
         )));
     }
 }

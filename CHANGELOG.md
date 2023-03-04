@@ -1,35 +1,136 @@
 # Changelog
 
-## Cargo 1.68 (2023-03-09)
-[f6e737b1...HEAD](https://github.com/rust-lang/cargo/compare/f6e737b1...HEAD)
+## Cargo 1.69 (2023-04-20)
+[985d561f...HEAD](https://github.com/rust-lang/cargo/compare/985d561f...HEAD)
 
 ### Added
 
-- Cargo's file locking mechanism now supports Solaris by using fcntl.
-  [#11439](https://github.com/rust-lang/cargo/pull/11439)
-  [#11474](https://github.com/rust-lang/cargo/pull/11474)
-- `home` crate is now a subcrate in `rust-lang/cargo` repository. Welcome!
-  [#11359](https://github.com/rust-lang/cargo/pull/11359)
-  [#11481](https://github.com/rust-lang/cargo/pull/11481)
+- Cargo now suggests `cargo fix` or `cargo clippy --fix`
+  when compilation warnings/errors can be auto-fixed.
+  [#11558](https://github.com/rust-lang/cargo/pull/11558)
 
 ### Changed
 
-- Split up registry documentation into multiple sections.
-  [#11480](https://github.com/rust-lang/cargo/pull/11480)
+- ❗ When `default-features` is set to false of a workspace dependency,
+  and an inherited dependency of a member has `default-features = true`,
+  Cargo will enable default features of that dependency.
+  [#11409](https://github.com/rust-lang/cargo/pull/11409)
+- `cargo add` now checks only the order of `[dependencies]`
+  without considering `[dependencies.*]`.
+  [#11612](https://github.com/rust-lang/cargo/pull/11612)
+- Several documentation improvements.
+  [#11576](https://github.com/rust-lang/cargo/pull/11576)
+  [#11604](https://github.com/rust-lang/cargo/pull/11604)
+  [#11620](https://github.com/rust-lang/cargo/pull/11620)
+  [#11603](https://github.com/rust-lang/cargo/pull/11603)
 
 ### Fixed
 
-- Setting `target.cfg(…).rustflags` shouldn't erase `build.rustdocflags`.
-  [#11323](https://github.com/rust-lang/cargo/pull/11323)
+- Fixed build scripts triggering recompiles when a `rerun-if-changed` points to
+  a directory whose mtime is not preserved by the filesystem.
+  [#11613](https://github.com/rust-lang/cargo/pull/11613)
+- Fixed panics when using dependencies from `[workspace.dependencies]`
+  for `[patch]`. This usage is not supposed to be supported.
+  [#11565](https://github.com/rust-lang/cargo/pull/11565)
 
 ### Nightly only
 
-- Suggests `cargo clippy --fix` when warnings/errors should be fixed with clippy.
+## Cargo 1.68 (2023-03-09)
+[f6e737b1...rust-1.68.0](https://github.com/rust-lang/cargo/compare/f6e737b1...rust-1.68.0)
+
+### Added
+
+- 🎉 The new "sparse" protocol has been stabilized.
+  It should provide a significant performance improvement when accessing crates.io.
+  ([RFC 2789](https://github.com/rust-lang/rfcs/blob/master/text/2789-sparse-index.md))
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/registries.html#registry-protocols))
+  [#11224](https://github.com/rust-lang/cargo/pull/11224)
+  [#11480](https://github.com/rust-lang/cargo/pull/11480)
+- 🎉 `home` crate is now a subcrate in `rust-lang/cargo` repository. Welcome!
+  [#11359](https://github.com/rust-lang/cargo/pull/11359)
+  [#11481](https://github.com/rust-lang/cargo/pull/11481)
+- Long diagnostic messages now can be truncated to be more readable.
+  [#11494](https://github.com/rust-lang/cargo/pull/11494)
+- Shows the progress of crates.io index update even when `net.git-fetch-with-cli` enabled.
+  [#11579](https://github.com/rust-lang/cargo/pull/11579)
+- `cargo build --verbose` tells you more about why it recompiles.
+  [#11407](https://github.com/rust-lang/cargo/pull/11407)
+- Cargo's file locking mechanism now supports Solaris by using `fcntl`.
+  [#11439](https://github.com/rust-lang/cargo/pull/11439)
+  [#11474](https://github.com/rust-lang/cargo/pull/11474)
+- Added a new SemVer compatibility rule explaining the expectations around diagnostic lints 
+  [#11596](https://github.com/rust-lang/cargo/pull/11596)
+- `cargo vendor` generates a different source replacement entry
+  for each revision from the same git repository.
+  [#10690](https://github.com/rust-lang/cargo/pull/1090)
+- Cargo contributors can relabel issues via triagebot.
+  [doc](https://github.com/rust-lang/triagebot/wiki/Labeling)
+  [#11498](https://github.com/rust-lang/cargo/pull/11498)
+- Cargo contributors can write tests in containers.
+  [#11583](https://github.com/rust-lang/cargo/pull/11583)
+
+### Changed
+
+- Cargo now by default saves credentials to `.cargo/credentials.toml`.
+  If `.cargo/credentials` exists, writes to it for backward compatibility reasons.
+  [#11533](https://github.com/rust-lang/cargo/pull/11533)
+- To prevent sensitive data from being logged, Cargo introduces a new wrapper type internally.
+  [#11545](https://github.com/rust-lang/cargo/pull/11545)
+- Several documentation improvements.
+  [#11475](https://github.com/rust-lang/cargo/pull/11475)
+  [#11504](https://github.com/rust-lang/cargo/pull/11504)
+  [#11516](https://github.com/rust-lang/cargo/pull/11516)
+  [#11517](https://github.com/rust-lang/cargo/pull/11517)
+  [#11568](https://github.com/rust-lang/cargo/pull/11568)
+  [#11586](https://github.com/rust-lang/cargo/pull/11586)
+  [#11592](https://github.com/rust-lang/cargo/pull/11592)
+
+### Fixed
+
+- ❗ `cargo package` and `cargo publish` now respects workspace's `Cargo.lock`.
+  This is an expected behavior but previously got overlooked.
+  [#11477](https://github.com/rust-lang/cargo/pull/11477)
+- Fixed `cargo vendor` failing on resolving git dependencies inherited from a workspace.
+  [#11414](https://github.com/rust-lang/cargo/pull/11414)
+- `cargo install` can now correctly install root package when `workspace.default-members` is specified.
+  [#11067](https://github.com/rust-lang/cargo/pull/11067)
+- Fixed panic on target specific dependency errors.
+  [#11541](https://github.com/rust-lang/cargo/pull/11541)
+- Shows `--help` if there is no man page for a subcommand.
+  [#11473](https://github.com/rust-lang/cargo/pull/11473)
+- Setting `target.cfg(…).rustflags` shouldn't erase `build.rustdocflags`.
+  [#11323](https://github.com/rust-lang/cargo/pull/11323)
+- Unsupported `profile.split-debuginfo` options are now ignored,
+  which previously made Cargo fail to compile on certain platforms.
+  [#11347](https://github.com/rust-lang/cargo/pull/11347)
+  [#11633](https://github.com/rust-lang/cargo/pull/11633)
+
+### Nightly only
+
+- Implemented a inital support of asymmetric token authentication for registries.
+  ([RFC 3231](https://github.com/rust-lang/rfcs/blob/master/text/3231-cargo-asymmetric-tokens.md))
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#registry-auth))
+  [#10771](https://github.com/rust-lang/cargo/pull/10771)
+- Do not error for `auth-required: true` without `-Z sparse-registry`
+  [#11661](https://github.com/rust-lang/cargo/pull/11661)
+- Supports `codegen-backend` and `rustflags` in profiles in config file.
+  [#11562](https://github.com/rust-lang/cargo/pull/11562)
+- Suggests `cargo clippy --fix` when warnings/errors could be fixed with clippy.
   [#11399](https://github.com/rust-lang/cargo/pull/11399)
 - Fixed artifact deps not working when target field specified coexists with `optional = true`.
   [#11434](https://github.com/rust-lang/cargo/pull/11434)
+- Make Cargo distinguish `Unit`s with and without artifact targets.
+  [#11478](https://github.com/rust-lang/cargo/pull/11478)
+- `cargo metadata` supports artifact dependencies.
+  [#11550](https://github.com/rust-lang/cargo/pull/11550)
 - Allows builds of some crate to fail during optional doc-scraping.
   [#11450](https://github.com/rust-lang/cargo/pull/11450)
+- Add warning if potentially-scrapable examples are skipped due to dev-dependencies.
+  [#11503](https://github.com/rust-lang/cargo/pull/11503)
+- Don't scrape examples from library targets by default. 
+  [#11499](https://github.com/rust-lang/cargo/pull/11499)
+- Fixed examples of proc-macro crates being scraped for examples.
+  [#11497](https://github.com/rust-lang/cargo/pull/11497)
 
 ## Cargo 1.67 (2023-01-26)
 [7e484fc1...rust-1.67.0](https://github.com/rust-lang/cargo/compare/7e484fc1...rust-1.67.0)

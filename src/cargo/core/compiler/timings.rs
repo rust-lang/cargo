@@ -16,6 +16,13 @@ use std::io::{BufWriter, Write};
 use std::thread::available_parallelism;
 use std::time::{Duration, Instant, SystemTime};
 
+/// Tracking information for the entire build.
+///
+/// Methods on this structure are generally called from the main thread of a
+/// running [`JobQueue`] instance (`DrainState` in specific) when the queue
+/// receives messages from spawned off threads.
+///
+/// [`JobQueue`]: super::JobQueue
 pub struct Timings<'cfg> {
     config: &'cfg Config,
     /// Whether or not timings should be captured.
@@ -85,10 +92,6 @@ struct Concurrency {
     /// Number of units that are not yet ready, because they are waiting for
     /// dependencies to finish.
     inactive: usize,
-    /// Number of rustc "extra" threads -- i.e., how many tokens have been
-    /// provided across all current rustc instances that are not the main thread
-    /// tokens.
-    rustc_parallelism: usize,
 }
 
 impl<'cfg> Timings<'cfg> {
@@ -233,13 +236,7 @@ impl<'cfg> Timings<'cfg> {
     }
 
     /// This is called periodically to mark the concurrency of internal structures.
-    pub fn mark_concurrency(
-        &mut self,
-        active: usize,
-        waiting: usize,
-        inactive: usize,
-        rustc_parallelism: usize,
-    ) {
+    pub fn mark_concurrency(&mut self, active: usize, waiting: usize, inactive: usize) {
         if !self.enabled {
             return;
         }
@@ -248,17 +245,16 @@ impl<'cfg> Timings<'cfg> {
             active,
             waiting,
             inactive,
-            rustc_parallelism,
         };
         self.concurrency.push(c);
     }
 
-    /// Mark that a fresh unit was encountered.
+    /// Mark that a fresh unit was encountered. (No re-compile needed)
     pub fn add_fresh(&mut self) {
         self.total_fresh += 1;
     }
 
-    /// Mark that a dirty unit was encountered.
+    /// Mark that a dirty unit was encountered. (Re-compile needed)
     pub fn add_dirty(&mut self) {
         self.total_dirty += 1;
     }
@@ -300,7 +296,7 @@ impl<'cfg> Timings<'cfg> {
         if !self.enabled {
             return Ok(());
         }
-        self.mark_concurrency(0, 0, 0, 0);
+        self.mark_concurrency(0, 0, 0);
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
@@ -384,12 +380,6 @@ impl<'cfg> Timings<'cfg> {
         let num_cpus = available_parallelism()
             .map(|x| x.get().to_string())
             .unwrap_or_else(|_| "n/a".into());
-        let max_rustc_concurrency = self
-            .concurrency
-            .iter()
-            .map(|c| c.rustc_parallelism)
-            .max()
-            .unwrap();
         let rustc_info = render_rustc_info(bcx);
         let error_msg = match error {
             Some(e) => format!(
@@ -433,9 +423,6 @@ impl<'cfg> Timings<'cfg> {
   <tr>
     <td>rustc:</td><td>{}</td>
   </tr>
-  <tr>
-    <td>Max (global) rustc threads concurrency:</td><td>{}</td>
-  </tr>
 {}
 </table>
 "#,
@@ -450,12 +437,13 @@ impl<'cfg> Timings<'cfg> {
             self.start_str,
             total_time,
             rustc_info,
-            max_rustc_concurrency,
             error_msg,
         )?;
         Ok(())
     }
 
+    /// Write timing data in JavaScript. Primarily for `timings.js` to put data
+    /// in a `<script>` HTML element to draw graphs.
     fn write_js_data(&self, f: &mut impl Write) -> CargoResult<()> {
         // Create a map to link indices of unlocked units.
         let unit_map: HashMap<Unit, usize> = self

@@ -6,7 +6,6 @@ use cargo_test_support::registry::{self, RegistryBuilder};
 use cargo_test_support::t;
 use std::fs;
 use std::path::PathBuf;
-use toml_edit::easy as toml;
 
 const TOKEN: &str = "test-token";
 const TOKEN2: &str = "test-token2";
@@ -33,12 +32,12 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
     assert!(credentials.is_file());
 
     let contents = fs::read_to_string(&credentials).unwrap();
-    let toml: toml::Value = contents.parse().unwrap();
+    let toml: toml::Table = contents.parse().unwrap();
 
-    let token = match (registry, toml) {
+    let token = match registry {
         // A registry has been provided, so check that the token exists in a
         // table for the registry.
-        (Some(registry), toml::Value::Table(table)) => table
+        Some(registry) => toml
             .get("registries")
             .and_then(|registries_table| registries_table.get(registry))
             .and_then(|registry_table| match registry_table.get("token") {
@@ -46,14 +45,13 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
                 _ => None,
             }),
         // There is no registry provided, so check the global token instead.
-        (None, toml::Value::Table(table)) => table
+        None => toml
             .get("registry")
             .and_then(|registry_table| registry_table.get("token"))
             .and_then(|v| match v {
                 toml::Value::String(ref token) => Some(token.as_str().to_string()),
                 _ => None,
             }),
-        _ => None,
     };
 
     if let Some(token_val) = token {
@@ -126,6 +124,51 @@ fn empty_login_token() {
         )
         .with_status(101)
         .run();
+}
+
+#[cargo_test]
+fn invalid_login_token() {
+    let registry = RegistryBuilder::new()
+        .no_configure_registry()
+        .no_configure_token()
+        .build();
+    setup_new_credentials();
+
+    let check = |stdin: &str, stderr: &str| {
+        cargo_process("login")
+            .replace_crates_io(registry.index_url())
+            .with_stdout("please paste the token found on [..]/me below")
+            .with_stdin(stdin)
+            .with_stderr(stderr)
+            .with_status(101)
+            .run();
+    };
+
+    check(
+        "😄",
+        "\
+[UPDATING] crates.io index
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+    check(
+        "\u{0016}",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+    check(
+        "\u{0000}",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
+    check(
+        "你好",
+        "\
+[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+    );
 }
 
 #[cargo_test]

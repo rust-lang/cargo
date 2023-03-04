@@ -1,4 +1,4 @@
-use crate::util::{errors::CargoResult, IntoUrl};
+use crate::util::errors::CargoResult;
 use std::hash::{self, Hash};
 use url::Url;
 
@@ -54,17 +54,6 @@ impl CanonicalUrl {
                 last[..last.len() - 4].to_owned()
             };
             url.path_segments_mut().unwrap().pop().push(&last);
-        }
-
-        // Ignore the protocol specifier (if any).
-        if url.scheme().starts_with("sparse+") {
-            // NOTE: it is illegal to use set_scheme to change sparse+http(s) to http(s).
-            url = url
-                .to_string()
-                .strip_prefix("sparse+")
-                .expect("we just found that prefix")
-                .into_url()
-                .expect("a valid url without a protocol specifier should still be valid");
         }
 
         Ok(CanonicalUrl(url))

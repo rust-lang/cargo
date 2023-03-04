@@ -29,11 +29,11 @@ fn profile_override_basic() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr(
-            "[COMPILING] bar [..]
+            "[CHECKING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
-[COMPILING] foo [..]
+[CHECKING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
 [FINISHED] dev [optimized + debuginfo] target(s) in [..]",
         )
@@ -125,7 +125,7 @@ fn profile_override_bad_settings() {
             .file("bar/src/lib.rs", "")
             .build();
 
-        p.cargo("build")
+        p.cargo("check")
             .with_status(101)
             .with_stderr_contains(format!("Caused by:\n  {}", expected))
             .run();
@@ -257,7 +257,7 @@ fn profile_override_spec_multiple() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -323,7 +323,7 @@ fn profile_override_spec() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_contains("[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
         .with_stderr_contains("[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
         .run();
@@ -378,7 +378,7 @@ fn override_proc_macro() {
         )
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         // Shared built for the proc-macro.
         .with_stderr_contains("[RUNNING] `rustc [..]--crate-name shared [..]-C codegen-units=4[..]")
         // Shared built for the library.
@@ -414,10 +414,10 @@ fn no_warning_ws() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("build -p b")
+    p.cargo("check -p b")
         .with_stderr(
             "\
-[COMPILING] b [..]
+[CHECKING] b [..]
 [FINISHED] [..]
 ",
         )

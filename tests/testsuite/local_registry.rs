@@ -88,7 +88,7 @@ fn not_found() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -167,12 +167,12 @@ fn multiple_versions() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UNPACKING] bar v0.1.0 ([..])
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
         )
@@ -227,14 +227,14 @@ fn multiple_names() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] [..]
+[CHECKING] [..]
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
         )
@@ -281,14 +281,14 @@ fn interdependent() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
-[COMPILING] bar v0.0.1
-[COMPILING] baz v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1
+[CHECKING] baz v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
         )
@@ -349,14 +349,14 @@ fn path_dep_rewritten() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
-[COMPILING] bar v0.0.1
-[COMPILING] baz v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1
+[CHECKING] baz v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
         )
@@ -393,7 +393,7 @@ fn invalid_dir_bad() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -443,7 +443,7 @@ fn different_directory_replacing_the_registry_is_bad() {
 
     // Generate a lock file against the crates.io registry
     Package::new("bar", "0.0.1").publish();
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     // Switch back to our directory source, and now that we're replacing
     // crates.io make sure that this fails because we're replacing with a
@@ -455,7 +455,7 @@ fn different_directory_replacing_the_registry_is_bad() {
         .local(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\

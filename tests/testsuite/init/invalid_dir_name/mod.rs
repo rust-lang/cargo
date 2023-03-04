@@ -5,7 +5,7 @@ use std::fs;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn invalid_dir_name() {
+fn case() {
     let foo = &paths::root().join("foo.bar");
     fs::create_dir_all(foo).unwrap();
 

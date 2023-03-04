@@ -403,15 +403,22 @@ fn clean_verbose() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("build").run();
-    p.cargo("clean -p bar --verbose")
-        .with_stderr(
-            "\
-[REMOVING] [..]
-[REMOVING] [..]
-[REMOVING] [..]
-[REMOVING] [..]
+    let mut expected = String::from(
+        "\
+[REMOVING] [..]target/debug/.fingerprint/bar[..]
+[REMOVING] [..]target/debug/deps/libbar[..].rlib
+[REMOVING] [..]target/debug/deps/bar-[..].d
+[REMOVING] [..]target/debug/deps/libbar[..].rmeta
 ",
-        )
+    );
+    if cfg!(target_os = "macos") {
+        // Rust 1.69 has changed so that split-debuginfo=unpacked includes unpacked for rlibs.
+        for obj in p.glob("target/debug/deps/bar-*.o") {
+            expected.push_str(&format!("[REMOVING] [..]{}", obj.unwrap().display()));
+        }
+    }
+    p.cargo("clean -p bar --verbose")
+        .with_stderr_unordered(&expected)
         .run();
     p.cargo("build").run();
 }

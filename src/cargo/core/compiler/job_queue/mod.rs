@@ -1,59 +1,122 @@
-//! This module implements the job queue which determines the ordering in which
-//! rustc is spawned off. It also manages the allocation of jobserver tokens to
-//! rustc beyond the implicit token each rustc owns (i.e., the ones used for
-//! parallel LLVM work and parallel rustc threads).
+//! Management of the interaction between the main `cargo` and all spawned jobs.
 //!
-//! Cargo and rustc have a somewhat non-trivial jobserver relationship with each
-//! other, which is due to scaling issues with sharing a single jobserver
-//! amongst what is potentially hundreds of threads of work on many-cored
-//! systems on (at least) linux, and likely other platforms as well.
+//! ## Overview
 //!
-//! The details of this algorithm are (also) written out in
-//! src/librustc_jobserver/lib.rs. What follows is a description focusing on the
-//! Cargo side of things.
+//! This module implements a job queue. A job here represents a unit of work,
+//! which is roughly a rusc invocation, a build script run, or just a no-op.
+//! The job queue primarily handles the following things:
+//!
+//! * Spawns concurrent jobs. Depending on its [`Freshness`], a job could be
+//!     either executed on a spawned thread or ran on the same thread to avoid
+//!     the threading overhead.
+//! * Controls the number of concurrency. It allocates and manages [`jobserver`]
+//!     tokens to each spawned off rustc and build scripts.
+//! * Manages the communication between the main `cargo` process and its
+//!     spawned jobs. Those [`Message`]s are sent over a [`Queue`] shared
+//!     across threads.
+//! * Schedules the execution order of each [`Job`]. Priorities are determined
+//!     when calling [`JobQueue::enqueue`] to enqueue a job. The scheduling is
+//!     relatively rudimentary and could likely be improved.
+//!
+//! A rough outline of building a queue and executing jobs is:
+//!
+//! 1. [`JobQueue::new`] to simply create one queue.
+//! 2. [`JobQueue::enqueue`] to add new jobs onto the queue.
+//! 3. Consumes the queue and executes all jobs via [`JobQueue::execute`].
+//!
+//! The primary loop happens insides [`JobQueue::execute`], which is effectively
+//! [`DrainState::drain_the_queue`]. [`DrainState`] is, as its name tells,
+//! the running state of the job queue getting drained.
+//!
+//! ## Jobserver
+//!
+//! As of Feb. 2023, Cargo and rustc have a relatively simple jobserver
+//! relationship with each other. They share a single jobserver amongst what
+//! is potentially hundreds of threads of work on many-cored systems.
+//! The jobserver could come from either the environment (e.g., from a `make`
+//! invocation), or from Cargo creating its own jobserver server if there is no
+//! jobserver to inherit from.
 //!
 //! Cargo wants to complete the build as quickly as possible, fully saturating
-//! all cores (as constrained by the -j=N) parameter. Cargo also must not spawn
+//! all cores (as constrained by the `-j=N`) parameter. Cargo also must not spawn
 //! more than N threads of work: the total amount of tokens we have floating
 //! around must always be limited to N.
 //!
-//! It is not really possible to optimally choose which crate should build first
-//! or last; nor is it possible to decide whether to give an additional token to
-//! rustc first or rather spawn a new crate of work. For now, the algorithm we
-//! implement prioritizes spawning as many crates (i.e., rustc processes) as
-//! possible, and then filling each rustc with tokens on demand.
+//! It is not really possible to optimally choose which crate should build
+//! first or last; nor is it possible to decide whether to give an additional
+//! token to rustc first or rather spawn a new crate of work. The algorithm in
+//! Cargo prioritizes spawning as many crates (i.e., rustc processes) as
+//! possible. In short, the jobserver relationship among Cargo and rustc
+//! processes is **1 `cargo` to N `rustc`**. Cargo knows nothing beyond rustc
+//! processes in terms of parallelism[^parallel-rustc].
 //!
-//! The primary loop is in `drain_the_queue` below.
+//! We integrate with the [jobserver] crate, originating from GNU make
+//! [POSIX jobserver], to make sure that build scripts which use make to
+//! build C code can cooperate with us on the number of used tokens and
+//! avoid overfilling the system we're on.
 //!
-//! We integrate with the jobserver, originating from GNU make, to make sure
-//! that build scripts which use make to build C code can cooperate with us on
-//! the number of used tokens and avoid overfilling the system we're on.
+//! ## Scheduling
 //!
-//! The jobserver is unfortunately a very simple protocol, so we enhance it a
-//! little when we know that there is a rustc on the other end. Via the stderr
-//! pipe we have to rustc, we get messages such as "NeedsToken" and
-//! "ReleaseToken" from rustc.
+//! The current scheduling algorithm is not really polished. It is simply based
+//! on a dependency graph [`DependencyQueue`]. We continue adding nodes onto
+//! the graph until we finalize it. When the graph gets finalized, it finds the
+//! sum of the cost of each dependencies of each node, including transitively.
+//! The sum of dependency cost turns out to be the cost of each given node.
 //!
-//! "NeedsToken" indicates that a rustc is interested in acquiring a token, but
-//! never that it would be impossible to make progress without one (i.e., it
-//! would be incorrect for rustc to not terminate due to an unfulfilled
-//! NeedsToken request); we do not usually fulfill all NeedsToken requests for a
-//! given rustc.
+//! At the time being, the cost is just passed as a fixed placeholder in
+//! [`JobQueue::enqueue`]. In the future, we could explore more possibilities
+//! around it. For instance, we start persisting timing information for each
+//! build somewhere. For a subsequent build, we can look into the historical
+//! data and perform a PGO-like optimization to prioritize jobs, making a build
+//! fully pipelined.
 //!
-//! "ReleaseToken" indicates that a rustc is done with one of its tokens and is
-//! ready for us to re-acquire ownership -- we will either release that token
-//! back into the general pool or reuse it ourselves. Note that rustc will
-//! inform us that it is releasing a token even if it itself is also requesting
-//! tokens; is is up to us whether to return the token to that same rustc.
+//! ## Message queue
 //!
-//! The current scheduling algorithm is relatively primitive and could likely be
-//! improved.
+//! Each spawned thread running a process uses the message queue [`Queue`] to
+//! send messages back to the main thread (the one running `cargo`).
+//! The main thread coordinates everything, and handles printing output.
+//!
+//! It is important to be careful which messages use [`push`] vs [`push_bounded`].
+//! `push` is for priority messages (like tokens, or "finished") where the
+//! sender shouldn't block. We want to handle those so real work can proceed
+//! ASAP.
+//!
+//! `push_bounded` is only for messages being printed to stdout/stderr. Being
+//! bounded prevents a flood of messages causing a large amount of memory
+//! being used.
+//!
+//! `push` also avoids blocking which helps avoid deadlocks. For example, when
+//! the diagnostic server thread is dropped, it waits for the thread to exit.
+//! But if the thread is blocked on a full queue, and there is a critical
+//! error, the drop will deadlock. This should be fixed at some point in the
+//! future. The jobserver thread has a similar problem, though it will time
+//! out after 1 second.
+//!
+//! To access the message queue, each running `Job` is given its own [`JobState`],
+//! containing everything it needs to communicate with the main thread.
+//!
+//! See [`Message`] for all available message kinds.
+//!
+//! [^parallel-rustc]: In fact, `jobserver` that Cargo uses also manages the
+//!     allocation of tokens to rustc beyond the implicit token each rustc owns
+//!     (i.e., the ones used for parallel LLVM work and parallel rustc threads).
+//!     See also ["Rust Compiler Development Guide: Parallel Compilation"]
+//!     and [this comment][rustc-codegen] in rust-lang/rust.
+//!
+//! ["Rust Compiler Development Guide: Parallel Compilation"]: https://rustc-dev-guide.rust-lang.org/parallel-rustc.html
+//! [rustc-codegen]: https://github.com/rust-lang/rust/blob/5423745db8b434fcde54888b35f518f00cce00e4/compiler/rustc_codegen_ssa/src/back/write.rs#L1204-L1217
+//! [jobserver]: https://docs.rs/jobserver
+//! [POSIX jobserver]: https://www.gnu.org/software/make/manual/html_node/POSIX-Jobserver.html
+//! [`push`]: Queue::push
+//! [`push_bounded`]: Queue::push_bounded
 
-use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, HashMap, HashSet};
+mod job;
+mod job_state;
+
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io;
-use std::marker;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread::{self, Scope};
@@ -61,15 +124,14 @@ use std::time::Duration;
 
 use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
-use jobserver::{Acquired, Client, HelperThread};
+use jobserver::{Acquired, HelperThread};
 use log::{debug, trace};
 use semver::Version;
 
+pub use self::job::Freshness::{self, Dirty, Fresh};
+pub use self::job::{Job, Work};
+pub use self::job_state::JobState;
 use super::context::OutputFile;
-use super::job::{
-    Freshness::{self, Dirty, Fresh},
-    Job,
-};
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::compiler::future_incompat::{
@@ -100,28 +162,6 @@ pub struct JobQueue<'cfg> {
 ///
 /// It is created from JobQueue when we have fully assembled the crate graph
 /// (i.e., all package dependencies are known).
-///
-/// # Message queue
-///
-/// Each thread running a process uses the message queue to send messages back
-/// to the main thread. The main thread coordinates everything, and handles
-/// printing output.
-///
-/// It is important to be careful which messages use `push` vs `push_bounded`.
-/// `push` is for priority messages (like tokens, or "finished") where the
-/// sender shouldn't block. We want to handle those so real work can proceed
-/// ASAP.
-///
-/// `push_bounded` is only for messages being printed to stdout/stderr. Being
-/// bounded prevents a flood of messages causing a large amount of memory
-/// being used.
-///
-/// `push` also avoids blocking which helps avoid deadlocks. For example, when
-/// the diagnostic server thread is dropped, it waits for the thread to exit.
-/// But if the thread is blocked on a full queue, and there is a critical
-/// error, the drop will deadlock. This should be fixed at some point in the
-/// future. The jobserver thread has a similar problem, though it will time
-/// out after 1 second.
 struct DrainState<'cfg> {
     // This is the length of the DependencyQueue when starting out
     total_units: usize,
@@ -149,13 +189,6 @@ struct DrainState<'cfg> {
     /// as we share the implicit token given to this Cargo process with a
     /// single rustc process.
     tokens: Vec<Acquired>,
-
-    /// rustc per-thread tokens, when in jobserver-per-rustc mode.
-    rustc_tokens: HashMap<JobId, Vec<Acquired>>,
-
-    /// This represents the list of rustc jobs (processes) and associated
-    /// clients that are interested in receiving a token.
-    to_send_clients: BTreeMap<JobId, Vec<Client>>,
 
     /// The list of jobs that we have not yet started executing, but have
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
@@ -256,44 +289,6 @@ impl std::fmt::Display for JobId {
     }
 }
 
-/// A `JobState` is constructed by `JobQueue::run` and passed to `Job::run`. It includes everything
-/// necessary to communicate between the main thread and the execution of the job.
-///
-/// The job may execute on either a dedicated thread or the main thread. If the job executes on the
-/// main thread, the `output` field must be set to prevent a deadlock.
-pub struct JobState<'a, 'cfg> {
-    /// Channel back to the main thread to coordinate messages and such.
-    ///
-    /// When the `output` field is `Some`, care must be taken to avoid calling `push_bounded` on
-    /// the message queue to prevent a deadlock.
-    messages: Arc<Queue<Message>>,
-
-    /// Normally output is sent to the job queue with backpressure. When the job is fresh
-    /// however we need to immediately display the output to prevent a deadlock as the
-    /// output messages are processed on the same thread as they are sent from. `output`
-    /// defines where to output in this case.
-    ///
-    /// Currently the `Shell` inside `Config` is wrapped in a `RefCell` and thus can't be passed
-    /// between threads. This means that it isn't possible for multiple output messages to be
-    /// interleaved. In the future, it may be wrapped in a `Mutex` instead. In this case
-    /// interleaving is still prevented as the lock would be held for the whole printing of an
-    /// output message.
-    output: Option<&'a DiagDedupe<'cfg>>,
-
-    /// The job id that this state is associated with, used when sending
-    /// messages back to the main thread.
-    id: JobId,
-
-    /// Whether or not we're expected to have a call to `rmeta_produced`. Once
-    /// that method is called this is dynamically set to `false` to prevent
-    /// sending a double message later on.
-    rmeta_required: Cell<bool>,
-
-    // Historical versions of Cargo made use of the `'a` argument here, so to
-    // leave the door open to future refactorings keep it here.
-    _marker: marker::PhantomData<&'a ()>,
-}
-
 /// Handler for deduplicating diagnostics.
 struct DiagDedupe<'cfg> {
     seen: RefCell<HashSet<u64>>,
@@ -376,111 +371,6 @@ enum Message {
     Token(io::Result<Acquired>),
     Finish(JobId, Artifact, CargoResult<()>),
     FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
-
-    // This client should get release_raw called on it with one of our tokens
-    NeedsToken(JobId),
-
-    // A token previously passed to a NeedsToken client is being released.
-    ReleaseToken(JobId),
-}
-
-impl<'a, 'cfg> JobState<'a, 'cfg> {
-    pub fn running(&self, cmd: &ProcessBuilder) {
-        self.messages.push(Message::Run(self.id, cmd.to_string()));
-    }
-
-    pub fn build_plan(
-        &self,
-        module_name: String,
-        cmd: ProcessBuilder,
-        filenames: Arc<Vec<OutputFile>>,
-    ) {
-        self.messages
-            .push(Message::BuildPlanMsg(module_name, cmd, filenames));
-    }
-
-    pub fn stdout(&self, stdout: String) -> CargoResult<()> {
-        if let Some(dedupe) = self.output {
-            writeln!(dedupe.config.shell().out(), "{}", stdout)?;
-        } else {
-            self.messages.push_bounded(Message::Stdout(stdout));
-        }
-        Ok(())
-    }
-
-    pub fn stderr(&self, stderr: String) -> CargoResult<()> {
-        if let Some(dedupe) = self.output {
-            let mut shell = dedupe.config.shell();
-            shell.print_ansi_stderr(stderr.as_bytes())?;
-            shell.err().write_all(b"\n")?;
-        } else {
-            self.messages.push_bounded(Message::Stderr(stderr));
-        }
-        Ok(())
-    }
-
-    /// See [`Message::Diagnostic`] and [`Message::WarningCount`].
-    pub fn emit_diag(&self, level: String, diag: String, fixable: bool) -> CargoResult<()> {
-        if let Some(dedupe) = self.output {
-            let emitted = dedupe.emit_diag(&diag)?;
-            if level == "warning" {
-                self.messages.push(Message::WarningCount {
-                    id: self.id,
-                    emitted,
-                    fixable,
-                });
-            }
-        } else {
-            self.messages.push_bounded(Message::Diagnostic {
-                id: self.id,
-                level,
-                diag,
-                fixable,
-            });
-        }
-        Ok(())
-    }
-
-    /// See [`Message::Warning`].
-    pub fn warning(&self, warning: String) -> CargoResult<()> {
-        self.messages.push_bounded(Message::Warning {
-            id: self.id,
-            warning,
-        });
-        Ok(())
-    }
-
-    /// A method used to signal to the coordinator thread that the rmeta file
-    /// for an rlib has been produced. This is only called for some rmeta
-    /// builds when required, and can be called at any time before a job ends.
-    /// This should only be called once because a metadata file can only be
-    /// produced once!
-    pub fn rmeta_produced(&self) {
-        self.rmeta_required.set(false);
-        self.messages
-            .push(Message::Finish(self.id, Artifact::Metadata, Ok(())));
-    }
-
-    pub fn future_incompat_report(&self, report: Vec<FutureBreakageItem>) {
-        self.messages
-            .push(Message::FutureIncompatReport(self.id, report));
-    }
-
-    /// The rustc underlying this Job is about to acquire a jobserver token (i.e., block)
-    /// on the passed client.
-    ///
-    /// This should arrange for the associated client to eventually get a token via
-    /// `client.release_raw()`.
-    pub fn will_acquire(&self) {
-        self.messages.push(Message::NeedsToken(self.id));
-    }
-
-    /// The rustc underlying this Job is informing us that it is done with a jobserver token.
-    ///
-    /// Note that it does *not* write that token back anywhere.
-    pub fn release_token(&self) {
-        self.messages.push(Message::ReleaseToken(self.id));
-    }
 }
 
 impl<'cfg> JobQueue<'cfg> {
@@ -595,8 +485,6 @@ impl<'cfg> JobQueue<'cfg> {
             next_id: 0,
             timings: self.timings,
             tokens: Vec::new(),
-            rustc_tokens: HashMap::new(),
-            to_send_clients: BTreeMap::new(),
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(cx.bcx.config),
             finished: 0,
@@ -688,46 +576,9 @@ impl<'cfg> DrainState<'cfg> {
         self.active.len() < self.tokens.len() + 1
     }
 
-    // The oldest job (i.e., least job ID) is the one we grant tokens to first.
-    fn pop_waiting_client(&mut self) -> (JobId, Client) {
-        // FIXME: replace this with BTreeMap::first_entry when that stabilizes.
-        let key = *self
-            .to_send_clients
-            .keys()
-            .next()
-            .expect("at least one waiter");
-        let clients = self.to_send_clients.get_mut(&key).unwrap();
-        let client = clients.pop().unwrap();
-        if clients.is_empty() {
-            self.to_send_clients.remove(&key);
-        }
-        (key, client)
-    }
-
-    // If we managed to acquire some extra tokens, send them off to a waiting rustc.
-    fn grant_rustc_token_requests(&mut self) -> CargoResult<()> {
-        while !self.to_send_clients.is_empty() && self.has_extra_tokens() {
-            let (id, client) = self.pop_waiting_client();
-            // This unwrap is guaranteed to succeed. `active` must be at least
-            // length 1, as otherwise there can't be a client waiting to be sent
-            // on, so tokens.len() must also be at least one.
-            let token = self.tokens.pop().unwrap();
-            self.rustc_tokens
-                .entry(id)
-                .or_insert_with(Vec::new)
-                .push(token);
-            client
-                .release_raw()
-                .with_context(|| "failed to release jobserver token")?;
-        }
-
-        Ok(())
-    }
-
     fn handle_event(
         &mut self,
         cx: &mut Context<'_, '_>,
-        jobserver_helper: &HelperThread,
         plan: &mut BuildPlan,
         event: Message,
     ) -> Result<(), ErrorToHandle> {
@@ -787,19 +638,6 @@ impl<'cfg> DrainState<'cfg> {
                     Artifact::All => {
                         trace!("end: {:?}", id);
                         self.finished += 1;
-                        if let Some(rustc_tokens) = self.rustc_tokens.remove(&id) {
-                            // This puts back the tokens that this rustc
-                            // acquired into our primary token list.
-                            //
-                            // This represents a rustc bug: it did not
-                            // release all of its thread tokens but finished
-                            // completely. But we want to make Cargo resilient
-                            // to such rustc bugs, as they're generally not
-                            // fatal in nature (i.e., Cargo can make progress
-                            // still, and the build might not even fail).
-                            self.tokens.extend(rustc_tokens);
-                        }
-                        self.to_send_clients.remove(&id);
                         self.report_warning_count(
                             cx.bcx.config,
                             id,
@@ -844,31 +682,6 @@ impl<'cfg> DrainState<'cfg> {
                 let token = acquired_token.with_context(|| "failed to acquire jobserver token")?;
                 self.tokens.push(token);
             }
-            Message::NeedsToken(id) => {
-                trace!("queue token request");
-                jobserver_helper.request_token();
-                let client = cx.rustc_clients[&self.active[&id]].clone();
-                self.to_send_clients
-                    .entry(id)
-                    .or_insert_with(Vec::new)
-                    .push(client);
-            }
-            Message::ReleaseToken(id) => {
-                // Note that this pops off potentially a completely
-                // different token, but all tokens of the same job are
-                // conceptually the same so that's fine.
-                //
-                // self.tokens is a "pool" -- the order doesn't matter -- and
-                // this transfers ownership of the token into that pool. If we
-                // end up using it on the next go around, then this token will
-                // be truncated, same as tokens obtained through Message::Token.
-                let rustc_tokens = self
-                    .rustc_tokens
-                    .get_mut(&id)
-                    .expect("no tokens associated");
-                self.tokens
-                    .push(rustc_tokens.pop().expect("rustc releases token it has"));
-            }
         }
 
         Ok(())
@@ -883,19 +696,6 @@ impl<'cfg> DrainState<'cfg> {
         // listen for a message with a timeout, and on timeout we run the
         // previous parts of the loop again.
         let mut events = self.messages.try_pop_all();
-        trace!(
-            "tokens in use: {}, rustc_tokens: {:?}, waiting_rustcs: {:?} (events this tick: {})",
-            self.tokens.len(),
-            self.rustc_tokens
-                .iter()
-                .map(|(k, j)| (k, j.len()))
-                .collect::<Vec<_>>(),
-            self.to_send_clients
-                .iter()
-                .map(|(k, j)| (k, j.len()))
-                .collect::<Vec<_>>(),
-            events.len(),
-        );
         if events.is_empty() {
             loop {
                 self.tick_progress();
@@ -954,17 +754,13 @@ impl<'cfg> DrainState<'cfg> {
                 break;
             }
 
-            if let Err(e) = self.grant_rustc_token_requests() {
-                self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
-            }
-
             // And finally, before we block waiting for the next event, drop any
             // excess tokens we may have accidentally acquired. Due to how our
             // jobserver interface is architected we may acquire a token that we
             // don't actually use, and if this happens just relinquish it back
             // to the jobserver itself.
             for event in self.wait_for_events() {
-                if let Err(event_err) = self.handle_event(cx, jobserver_helper, plan, event) {
+                if let Err(event_err) = self.handle_event(cx, plan, event) {
                     self.handle_error(&mut cx.bcx.config.shell(), &mut errors, event_err);
                 }
             }
@@ -985,7 +781,7 @@ impl<'cfg> DrainState<'cfg> {
         } else {
             "optimized"
         });
-        if profile.debuginfo.unwrap_or(0) != 0 {
+        if profile.debuginfo.is_turned_on() {
             opt_type += " + debuginfo";
         }
 
@@ -1058,7 +854,6 @@ impl<'cfg> DrainState<'cfg> {
             self.active.len(),
             self.pending_queue.len(),
             self.queue.len(),
-            self.rustc_tokens.len(),
         );
         self.timings.record_cpu();
 
@@ -1119,52 +914,9 @@ impl<'cfg> DrainState<'cfg> {
         let is_fresh = job.freshness().is_fresh();
         let rmeta_required = cx.rmeta_required(unit);
 
-        let doit = move |state: JobState<'_, '_>| {
-            let mut sender = FinishOnDrop {
-                messages: &state.messages,
-                id,
-                result: None,
-            };
-            sender.result = Some(job.run(&state));
-
-            // If the `rmeta_required` wasn't consumed but it was set
-            // previously, then we either have:
-            //
-            // 1. The `job` didn't do anything because it was "fresh".
-            // 2. The `job` returned an error and didn't reach the point where
-            //    it called `rmeta_produced`.
-            // 3. We forgot to call `rmeta_produced` and there's a bug in Cargo.
-            //
-            // Ruling out the third, the other two are pretty common for 2
-            // we'll just naturally abort the compilation operation but for 1
-            // we need to make sure that the metadata is flagged as produced so
-            // send a synthetic message here.
-            if state.rmeta_required.get() && sender.result.as_ref().unwrap().is_ok() {
-                state
-                    .messages
-                    .push(Message::Finish(state.id, Artifact::Metadata, Ok(())));
-            }
-
-            // Use a helper struct with a `Drop` implementation to guarantee
-            // that a `Finish` message is sent even if our job panics. We
-            // shouldn't panic unless there's a bug in Cargo, so we just need
-            // to make sure nothing hangs by accident.
-            struct FinishOnDrop<'a> {
-                messages: &'a Queue<Message>,
-                id: JobId,
-                result: Option<CargoResult<()>>,
-            }
-
-            impl Drop for FinishOnDrop<'_> {
-                fn drop(&mut self) {
-                    let result = self
-                        .result
-                        .take()
-                        .unwrap_or_else(|| Err(format_err!("worker panicked")));
-                    self.messages
-                        .push(Message::Finish(self.id, Artifact::All, result));
-                }
-            }
+        let doit = move |diag_dedupe| {
+            let state = JobState::new(id, messages, diag_dedupe, rmeta_required);
+            state.run_to_finish(job);
         };
 
         match is_fresh {
@@ -1172,25 +924,11 @@ impl<'cfg> DrainState<'cfg> {
                 self.timings.add_fresh();
                 // Running a fresh job on the same thread is often much faster than spawning a new
                 // thread to run the job.
-                doit(JobState {
-                    id,
-                    messages,
-                    output: Some(&self.diag_dedupe),
-                    rmeta_required: Cell::new(rmeta_required),
-                    _marker: marker::PhantomData,
-                });
+                doit(Some(&self.diag_dedupe));
             }
             false => {
                 self.timings.add_dirty();
-                scope.spawn(move || {
-                    doit(JobState {
-                        id,
-                        messages: messages.clone(),
-                        output: None,
-                        rmeta_required: Cell::new(rmeta_required),
-                        _marker: marker::PhantomData,
-                    })
-                });
+                scope.spawn(move || doit(None));
             }
         }
     }

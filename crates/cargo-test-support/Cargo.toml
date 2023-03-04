@@ -12,24 +12,21 @@ anyhow = "1.0.34"
 cargo-test-macro = { path = "../cargo-test-macro" }
 cargo-util = { path = "../cargo-util" }
 crates-io = { path = "../crates-io" }
-snapbox = { version = "0.4.0", features = ["diff", "path"] }
 filetime = "0.2"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
-pasetors = { version = "0.6.4", features = ["v3", "paserk", "std", "serde"] }
-time = { version = "0.3", features = ["parsing", "formatting"]}
 git2 = "0.16.0"
 glob = "0.3"
 itertools = "0.10.0"
 lazy_static = "1.0"
+pasetors = { version = "0.6.4", features = ["v3", "paserk", "std", "serde"] }
 serde = { version = "1.0.123", features = ["derive"] }
 serde_json = "1.0"
+snapbox = { version = "0.4.0", features = ["diff", "path"] }
 tar = { version = "0.4.38", default-features = false }
 termcolor = "1.1.2"
-toml_edit = { version = "0.15.0", features = ["serde", "easy", "perf"] }
+time = { version = "0.3", features = ["parsing", "formatting"]}
+toml = "0.7.0"
 url = "2.2.2"
 
 [target.'cfg(windows)'.dependencies]
-winapi = "0.3"
-
-[features]
-deny-warnings = []
+windows-sys = { version = "0.45.0", features = ["Win32_Storage_FileSystem"] }

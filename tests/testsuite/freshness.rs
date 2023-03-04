@@ -1477,7 +1477,7 @@ fn reuse_panic_pm() {
         .with_stderr_unordered(
             "\
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
 [COMPILING] somepm [..]
 [RUNNING] `rustc --crate-name somepm [..]
@@ -2740,6 +2740,76 @@ fn changing_linker() {
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
 [ERROR] [..]linker[..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn verify_source_before_recompile() {
+    Package::new("bar", "0.1.0")
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [source.crates-io]
+            replace-with = 'vendor'
+
+            [source.vendor]
+            directory = 'vendor'
+        "#,
+    );
+    // Sanity check: vendoring works correctly.
+    p.cargo("check --verbose")
+        .with_stderr_contains("[RUNNING] `rustc --crate-name bar [CWD]/vendor/bar/src/lib.rs[..]")
+        .run();
+    // Now modify vendored crate.
+    p.change_file(
+        "vendor/bar/src/lib.rs",
+        r#"compile_error!("You shall not pass!");"#,
+    );
+    // Should ignore modifed sources without any recompile.
+    p.cargo("check --verbose")
+        .with_stderr(
+            "\
+[FRESH] bar v0.1.0
+[FRESH] foo v0.1.0 ([CWD])
+[FINISHED] dev [..]
+",
+        )
+        .run();
+
+    // Add a `RUSTFLAGS` to trigger a recompile.
+    //
+    // Cargo should refuse to build because of checksum verfication failure.
+    // Cargo shouldn't recompile dependency `bar`.
+    p.cargo("check --verbose")
+        .env("RUSTFLAGS", "-W warnings")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the listed checksum of `[CWD]/vendor/bar/src/lib.rs` has changed:
+expected: [..]
+actual:   [..]
+
+directory sources are not [..]
 ",
         )
         .run();

@@ -606,10 +606,10 @@ mod imp {
     use super::{ProcessBuilder, ProcessError};
     use anyhow::Result;
     use std::io;
-    use winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
-    use winapi::um::consoleapi::SetConsoleCtrlHandler;
+    use windows_sys::Win32::Foundation::{BOOL, FALSE, TRUE};
+    use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
 
-    unsafe extern "system" fn ctrlc_handler(_: DWORD) -> BOOL {
+    unsafe extern "system" fn ctrlc_handler(_: u32) -> BOOL {
         // Do nothing; let the child process handle it.
         TRUE
     }
@@ -626,7 +626,7 @@ mod imp {
     }
 
     pub fn command_line_too_big(err: &io::Error) -> bool {
-        use winapi::shared::winerror::ERROR_FILENAME_EXCED_RANGE;
+        use windows_sys::Win32::Foundation::ERROR_FILENAME_EXCED_RANGE;
         err.raw_os_error() == Some(ERROR_FILENAME_EXCED_RANGE as i32)
     }
 }

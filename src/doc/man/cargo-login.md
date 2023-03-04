@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-login - Save an API token from the registry locally
+cargo-login --- Save an API token from the registry locally
 
 ## SYNOPSIS
 

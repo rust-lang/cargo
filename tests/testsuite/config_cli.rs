@@ -395,8 +395,7 @@ Caused by:
   |
 1 | abc
   |    ^
-Unexpected end of input
-Expected `.` or `=`
+expected `.`, `=`
 ",
     );
 
@@ -559,8 +558,7 @@ Caused by:
   |
 1 | missing.toml
   |             ^
-Unexpected end of input
-Expected `.` or `=`
+expected `.`, `=`
 ",
     );
 }

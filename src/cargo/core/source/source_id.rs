@@ -81,6 +81,14 @@ impl SourceId {
     ///
     /// The canonical url will be calculated, but the precise field will not
     fn new(kind: SourceKind, url: Url, name: Option<&str>) -> CargoResult<SourceId> {
+        if kind == SourceKind::SparseRegistry {
+            // Sparse URLs are different because they store the kind prefix (sparse+)
+            // in the URL. This is because the prefix is necessary to differentiate
+            // from regular registries (git-based). The sparse+ prefix is included
+            // everywhere, including user-facing locations such as the `config.toml`
+            // file that defines the registry, or whenever Cargo displays it to the user.
+            assert!(url.as_str().starts_with("sparse+"));
+        }
         let source_id = SourceId::wrap(SourceIdInner {
             kind,
             canonical_url: CanonicalUrl::new(&url)?,
@@ -152,7 +160,7 @@ impl SourceId {
                     .with_precise(Some("locked".to_string())))
             }
             "sparse" => {
-                let url = url.into_url()?;
+                let url = string.into_url()?;
                 Ok(SourceId::new(SourceKind::SparseRegistry, url, None)?
                     .with_precise(Some("locked".to_string())))
             }
@@ -721,6 +729,7 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 ref url,
                 ..
             } => {
+                // Sparse registry URL already includes the `sparse+` prefix
                 write!(f, "{url}")
             }
             SourceIdInner {
@@ -863,5 +872,15 @@ mod tests {
         let source_id = SourceId::for_directory(path).unwrap();
         assert_eq!(gen_hash(source_id), 17459999773908528552);
         assert_eq!(crate::util::hex::short_hash(&source_id), "6568fe2c2fab5bfe");
+    }
+
+    #[test]
+    fn serde_roundtrip() {
+        let url = "sparse+https://my-crates.io/".into_url().unwrap();
+        let source_id = SourceId::for_registry(&url).unwrap();
+        let formatted = format!("{}", source_id.as_url());
+        let deserialized = SourceId::from_url(&formatted).unwrap();
+        assert_eq!(formatted, "sparse+https://my-crates.io/");
+        assert_eq!(source_id, deserialized);
     }
 }

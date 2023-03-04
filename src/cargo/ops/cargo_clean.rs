@@ -203,6 +203,8 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                         rm_rf_glob(&split_debuginfo_obj, config, &mut progress)?;
                         let split_debuginfo_dwo = dir_glob.join(format!("{}.*.dwo", crate_name));
                         rm_rf_glob(&split_debuginfo_dwo, config, &mut progress)?;
+                        let split_debuginfo_dwp = dir_glob.join(format!("{}.*.dwp", crate_name));
+                        rm_rf_glob(&split_debuginfo_dwp, config, &mut progress)?;
 
                         // Remove the uplifted copy.
                         if let Some(uplift_dir) = uplift_dir {

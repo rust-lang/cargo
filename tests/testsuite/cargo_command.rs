@@ -433,7 +433,6 @@ fn cargo_cmd_bins_vs_explicit_path() {
     }
 }
 
-#[test]
 #[cargo_test]
 fn cargo_subcommand_args() {
     let p = echo_subcommand();

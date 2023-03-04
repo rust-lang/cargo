@@ -1,7 +1,7 @@
 CARGO-OWNER(1)
 
 NAME
-       cargo-owner - Manage the owners of a crate on the registry
+       cargo-owner — Manage the owners of a crate on the registry
 
 SYNOPSIS
        cargo owner [options] --add login [crate]
@@ -25,10 +25,10 @@ DESCRIPTION
 
 OPTIONS
    Owner Options
-       -a, --add login...
+       -a, --add login…
            Invite the given user or team as an owner.
 
-       -r, --remove login...
+       -r, --remove login…
            Remove the given user or team as an owner.
 
        -l, --list
@@ -58,10 +58,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -96,6 +97,12 @@ OPTIONS
            the command-line overrides section
            <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
            for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example.
 
        -h, --help
            Prints help information.

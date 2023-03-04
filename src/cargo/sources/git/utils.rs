@@ -2,6 +2,8 @@
 //! authentication/cloning.
 
 use crate::core::{GitReference, Verbosity};
+use crate::sources::git::oxide;
+use crate::sources::git::oxide::cargo_config_to_gitoxide_overrides;
 use crate::util::errors::CargoResult;
 use crate::util::{human_readable_bytes, network, Config, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
@@ -12,11 +14,11 @@ use log::{debug, info};
 use serde::ser;
 use serde::Serialize;
 use std::borrow::Cow;
-use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use url::Url;
 
@@ -472,7 +474,12 @@ impl<'a> GitCheckout<'a> {
 /// credentials until we give it a reason to not do so. To ensure we don't
 /// just sit here looping forever we keep track of authentications we've
 /// attempted and we don't try the same ones again.
-fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F) -> CargoResult<T>
+fn with_authentication<T, F>(
+    cargo_config: &Config,
+    url: &str,
+    cfg: &git2::Config,
+    mut f: F,
+) -> CargoResult<T>
 where
     F: FnMut(&mut git2::Credentials<'_>) -> CargoResult<T>,
 {
@@ -577,7 +584,10 @@ where
     if ssh_username_requested {
         debug_assert!(res.is_err());
         let mut attempts = vec![String::from("git")];
-        if let Ok(s) = env::var("USER").or_else(|_| env::var("USERNAME")) {
+        if let Ok(s) = cargo_config
+            .get_env("USER")
+            .or_else(|_| cargo_config.get_env("USERNAME"))
+        {
             attempts.push(s);
         }
         if let Some(ref s) = cred_helper.username {
@@ -730,7 +740,7 @@ pub fn with_fetch_options(
     let config_known_hosts = ssh_config.and_then(|ssh| ssh.known_hosts.as_ref());
     let diagnostic_home_config = config.diagnostic_home_config();
     network::with_retry(config, || {
-        with_authentication(url, git_config, |f| {
+        with_authentication(config, url, git_config, |f| {
             let port = Url::parse(url).ok().and_then(|url| url.port());
             let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
@@ -740,6 +750,7 @@ pub fn with_fetch_options(
             rcb.credentials(f);
             rcb.certificate_check(|cert, host| {
                 super::known_hosts::certificate_check(
+                    config,
                     cert,
                     host,
                     port,
@@ -794,7 +805,7 @@ pub fn with_fetch_options(
 
 pub fn fetch(
     repo: &mut git2::Repository,
-    url: &str,
+    orig_url: &str,
     reference: &GitReference,
     config: &Config,
 ) -> CargoResult<()> {
@@ -810,7 +821,7 @@ pub fn fetch(
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository
-    let oid_to_fetch = match github_fast_path(repo, url, reference, config) {
+    let oid_to_fetch = match github_fast_path(repo, orig_url, reference, config) {
         Ok(FastPathRev::UpToDate) => return Ok(()),
         Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
         Ok(FastPathRev::Indeterminate) => None,
@@ -824,7 +835,7 @@ pub fn fetch(
     // repo check to see if it's a little too old and could benefit from a gc.
     // In theory this shouldn't be too expensive compared to the network
     // request we're about to issue.
-    maybe_gc_repo(repo)?;
+    maybe_gc_repo(repo, config)?;
 
     clean_repo_temp_files(repo);
 
@@ -872,53 +883,157 @@ pub fn fetch(
     // flavors of authentication possible while also still giving us all the
     // speed and portability of using `libgit2`.
     if let Some(true) = config.net_config()?.git_fetch_with_cli {
-        return fetch_with_cli(repo, url, &refspecs, tags, config);
+        return fetch_with_cli(repo, orig_url, &refspecs, tags, config);
     }
+    if config
+        .cli_unstable()
+        .gitoxide
+        .map_or(false, |git| git.fetch)
+    {
+        let git2_repo = repo;
+        let config_overrides = cargo_config_to_gitoxide_overrides(config)?;
+        let repo_reinitialized = AtomicBool::default();
+        let res = oxide::with_retry_and_progress(
+            &git2_repo.path().to_owned(),
+            config,
+            &|repo_path,
+              should_interrupt,
+              mut progress,
+              url_for_authentication: &mut dyn FnMut(&gix::bstr::BStr)| {
+                // The `fetch` operation here may fail spuriously due to a corrupt
+                // repository. It could also fail, however, for a whole slew of other
+                // reasons (aka network related reasons). We want Cargo to automatically
+                // recover from corrupt repositories, but we don't want Cargo to stomp
+                // over other legitimate errors.
+                //
+                // Consequently we save off the error of the `fetch` operation and if it
+                // looks like a "corrupt repo" error then we blow away the repo and try
+                // again. If it looks like any other kind of error, or if we've already
+                // blown away the repository, then we want to return the error as-is.
+                loop {
+                    let res = oxide::open_repo(
+                        repo_path,
+                        config_overrides.clone(),
+                        oxide::OpenMode::ForFetch,
+                    )
+                    .map_err(crate::sources::git::fetch::Error::from)
+                    .and_then(|repo| {
+                        debug!("initiating fetch of {:?} from {}", refspecs, orig_url);
+                        let url_for_authentication = &mut *url_for_authentication;
+                        let remote = repo
+                            .remote_at(orig_url)?
+                            .with_fetch_tags(if tags {
+                                gix::remote::fetch::Tags::All
+                            } else {
+                                gix::remote::fetch::Tags::Included
+                            })
+                            .with_refspecs(
+                                refspecs.iter().map(|s| s.as_str()),
+                                gix::remote::Direction::Fetch,
+                            )
+                            .map_err(crate::sources::git::fetch::Error::Other)?;
+                        let url = remote
+                            .url(gix::remote::Direction::Fetch)
+                            .expect("set at init")
+                            .to_owned();
+                        let connection =
+                            remote.connect(gix::remote::Direction::Fetch, &mut progress)?;
+                        let mut authenticate = connection.configured_credentials(url)?;
+                        let connection = connection.with_credentials(
+                            move |action: gix::protocol::credentials::helper::Action| {
+                                if let Some(url) = action
+                                    .context()
+                                    .and_then(|ctx| ctx.url.as_ref().filter(|url| *url != orig_url))
+                                {
+                                    url_for_authentication(url.as_ref());
+                                }
+                                authenticate(action)
+                            },
+                        );
+                        let outcome = connection
+                            .prepare_fetch(gix::remote::ref_map::Options::default())?
+                            .receive(should_interrupt)?;
+                        Ok(outcome)
+                    });
+                    let err = match res {
+                        Ok(_) => break,
+                        Err(e) => e,
+                    };
+                    debug!("fetch failed: {}", err);
 
-    debug!("doing a fetch for {}", url);
-    let git_config = git2::Config::open_default()?;
-    with_fetch_options(&git_config, url, config, &mut |mut opts| {
-        if tags {
-            opts.download_tags(git2::AutotagOption::All);
-        }
-        // The `fetch` operation here may fail spuriously due to a corrupt
-        // repository. It could also fail, however, for a whole slew of other
-        // reasons (aka network related reasons). We want Cargo to automatically
-        // recover from corrupt repositories, but we don't want Cargo to stomp
-        // over other legitimate errors.
-        //
-        // Consequently we save off the error of the `fetch` operation and if it
-        // looks like a "corrupt repo" error then we blow away the repo and try
-        // again. If it looks like any other kind of error, or if we've already
-        // blown away the repository, then we want to return the error as-is.
-        let mut repo_reinitialized = false;
-        loop {
-            debug!("initiating fetch of {:?} from {}", refspecs, url);
-            let res = repo
-                .remote_anonymous(url)?
-                .fetch(&refspecs, Some(&mut opts), None);
-            let err = match res {
-                Ok(()) => break,
-                Err(e) => e,
-            };
-            debug!("fetch failed: {}", err);
-
-            if !repo_reinitialized && matches!(err.class(), ErrorClass::Reference | ErrorClass::Odb)
-            {
-                repo_reinitialized = true;
-                debug!(
-                    "looks like this is a corrupt repository, reinitializing \
+                    if !repo_reinitialized.load(Ordering::Relaxed)
+                        // We check for errors that could occour if the configuration, refs or odb files are corrupted.
+                        // We don't check for errors related to writing as `gitoxide` is expected to create missing leading
+                        // folder before writing files into it, or else not even open a directory as git repository (which is
+                        // also handled here).
+                        && err.is_corrupted()
+                    {
+                        repo_reinitialized.store(true, Ordering::Relaxed);
+                        debug!(
+                            "looks like this is a corrupt repository, reinitializing \
                      and trying again"
-                );
-                if reinitialize(repo).is_ok() {
-                    continue;
-                }
-            }
+                        );
+                        if oxide::reinitialize(repo_path).is_ok() {
+                            continue;
+                        }
+                    }
 
-            return Err(err.into());
+                    return Err(err.into());
+                }
+                Ok(())
+            },
+        );
+        if repo_reinitialized.load(Ordering::Relaxed) {
+            *git2_repo = git2::Repository::open(git2_repo.path())?;
         }
-        Ok(())
-    })
+        res
+    } else {
+        debug!("doing a fetch for {}", orig_url);
+        let git_config = git2::Config::open_default()?;
+        with_fetch_options(&git_config, orig_url, config, &mut |mut opts| {
+            if tags {
+                opts.download_tags(git2::AutotagOption::All);
+            }
+            // The `fetch` operation here may fail spuriously due to a corrupt
+            // repository. It could also fail, however, for a whole slew of other
+            // reasons (aka network related reasons). We want Cargo to automatically
+            // recover from corrupt repositories, but we don't want Cargo to stomp
+            // over other legitimate errors.
+            //
+            // Consequently we save off the error of the `fetch` operation and if it
+            // looks like a "corrupt repo" error then we blow away the repo and try
+            // again. If it looks like any other kind of error, or if we've already
+            // blown away the repository, then we want to return the error as-is.
+            let mut repo_reinitialized = false;
+            loop {
+                debug!("initiating fetch of {:?} from {}", refspecs, orig_url);
+                let res = repo
+                    .remote_anonymous(orig_url)?
+                    .fetch(&refspecs, Some(&mut opts), None);
+                let err = match res {
+                    Ok(()) => break,
+                    Err(e) => e,
+                };
+                debug!("fetch failed: {}", err);
+
+                if !repo_reinitialized
+                    && matches!(err.class(), ErrorClass::Reference | ErrorClass::Odb)
+                {
+                    repo_reinitialized = true;
+                    debug!(
+                        "looks like this is a corrupt repository, reinitializing \
+                     and trying again"
+                    );
+                    if reinitialize(repo).is_ok() {
+                        continue;
+                    }
+                }
+
+                return Err(err.into());
+            }
+            Ok(())
+        })
+    }
 }
 
 fn fetch_with_cli(
@@ -978,7 +1093,7 @@ fn fetch_with_cli(
 /// we may not even have `git` installed on the system! As a result we
 /// opportunistically try a `git gc` when the pack directory looks too big, and
 /// failing that we just blow away the repository and start over.
-fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
+fn maybe_gc_repo(repo: &mut git2::Repository, config: &Config) -> CargoResult<()> {
     // Here we arbitrarily declare that if you have more than 100 files in your
     // `pack` folder that we need to do a gc.
     let entries = match repo.path().join("objects/pack").read_dir() {
@@ -988,7 +1103,8 @@ fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
             return Ok(());
         }
     };
-    let max = env::var("__CARGO_PACKFILE_LIMIT")
+    let max = config
+        .get_env("__CARGO_PACKFILE_LIMIT")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(100);

@@ -1,7 +1,7 @@
 CARGO-METADATA(1)
 
 NAME
-       cargo-metadata - Machine-readable metadata about the current package
+       cargo-metadata — Machine-readable metadata about the current package
 
 SYNOPSIS
        cargo metadata [options]
@@ -290,8 +290,8 @@ OUTPUT FORMAT
 OPTIONS
    Output Options
        --no-deps
-           Output information only about the workspace members and don't fetch
-           dependencies.
+           Output information only about the workspace members and don’t
+           fetch dependencies.
 
        --format-version version
            Specify the version of the output format to use. Currently 1 is the
@@ -303,7 +303,7 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/appendix/glossary.html#target>.
            Without this flag, the resolve includes all targets.
 
-           Note that the dependencies listed in the "packages" array still
+           Note that the dependencies listed in the “packages” array still
            includes all dependencies. Each package definition is intended to be
            an unaltered reproduction of the information within Cargo.toml.
 
@@ -330,10 +330,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -399,6 +400,12 @@ OPTIONS
            the command-line overrides section
            <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
            for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example.
 
        -h, --help
            Prints help information.

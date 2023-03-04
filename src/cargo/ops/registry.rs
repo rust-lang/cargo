@@ -1,3 +1,4 @@
+use std::cmp;
 use std::collections::{BTreeMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -6,7 +7,6 @@ use std::path::PathBuf;
 use std::str;
 use std::task::Poll;
 use std::time::Duration;
-use std::{cmp, env};
 
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
@@ -15,9 +15,9 @@ use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use pasetors::keys::{AsymmetricKeyPair, Generate};
 use pasetors::paserk::FormatAsPaserk;
-use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use termcolor::Color::Green;
 use termcolor::ColorSpec;
+use url::Url;
 
 use crate::core::dependency::DepKind;
 use crate::core::dependency::Dependency;
@@ -202,21 +202,20 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     )?
     .unwrap();
 
-    let hash = cargo_util::Sha256::new()
-        .update_file(tarball.file())?
-        .finish_hex();
-    let mutation = auth::Mutation::Publish {
-        name: pkg.name().as_str(),
-        vers: &ver,
-        cksum: &hash,
-    };
-
     if !opts.dry_run {
+        let hash = cargo_util::Sha256::new()
+            .update_file(tarball.file())?
+            .finish_hex();
+        let mutation = Some(auth::Mutation::Publish {
+            name: pkg.name().as_str(),
+            vers: &ver,
+            cksum: &hash,
+        });
         registry.set_token(Some(auth::auth_token(
             &opts.config,
             &reg_ids.original,
             None,
-            Some(mutation),
+            mutation,
         )?));
     }
 
@@ -597,7 +596,7 @@ pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeou
 pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     Ok(http_proxy_exists(config)?
         || *config.http_config()? != Default::default()
-        || env::var_os("HTTP_TIMEOUT").is_some())
+        || config.get_env_os("HTTP_TIMEOUT").is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
@@ -620,9 +619,6 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.useragent(&format!("cargo {}", version()))?;
     }
 
-    // Empty string accept encoding expands to the encodings supported by the current libcurl.
-    handle.accept_encoding("")?;
-
     fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
         let version = match s {
             "default" => SslVersion::Default,
@@ -632,13 +628,15 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
             "tlsv1.2" => SslVersion::Tlsv12,
             "tlsv1.3" => SslVersion::Tlsv13,
             _ => bail!(
-                "Invalid ssl version `{}`,\
-                 choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.",
-                s
+                "Invalid ssl version `{s}`,\
+                 choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'."
             ),
         };
         Ok(version)
     }
+
+    // Empty string accept encoding expands to the encodings supported by the current libcurl.
+    handle.accept_encoding("")?;
     if let Some(ssl_version) = &http.ssl_version {
         match ssl_version {
             SslVersionConfig::Single(s) => {
@@ -722,11 +720,16 @@ pub struct HttpTimeout {
 
 impl HttpTimeout {
     pub fn new(config: &Config) -> CargoResult<HttpTimeout> {
-        let config = config.http_config()?;
-        let low_speed_limit = config.low_speed_limit.unwrap_or(10);
-        let seconds = config
+        let http_config = config.http_config()?;
+        let low_speed_limit = http_config.low_speed_limit.unwrap_or(10);
+        let seconds = http_config
             .timeout
-            .or_else(|| env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
+            .or_else(|| {
+                config
+                    .get_env("HTTP_TIMEOUT")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+            })
             .unwrap_or(30);
         Ok(HttpTimeout {
             dur: Duration::new(seconds, 0),
@@ -780,7 +783,7 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     } else {
         Ok(["http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"]
             .iter()
-            .any(|v| env::var(v).is_ok()))
+            .any(|v| config.get_env(v).is_ok()))
     }
 }
 
@@ -899,9 +902,7 @@ pub fn registry_login(
         });
 
         if let Some(tok) = new_token.as_token() {
-            if tok.is_empty() {
-                bail!("please provide a non-empty token");
-            }
+            crates_io::check_token(tok.as_ref().expose())?;
         }
     }
     if &reg_cfg == &new_token {
@@ -1204,10 +1205,8 @@ pub fn search(
         );
     } else if total_crates > limit && limit >= search_max_limit {
         let extra = if source_ids.original.is_crates_io() {
-            format!(
-                " (go to https://crates.io/search?q={} to see more)",
-                percent_encode(query.as_bytes(), NON_ALPHANUMERIC)
-            )
+            let url = Url::parse_with_params("https://crates.io/search", &[("q", query)])?;
+            format!(" (go to {url} to see more)")
         } else {
             String::new()
         };

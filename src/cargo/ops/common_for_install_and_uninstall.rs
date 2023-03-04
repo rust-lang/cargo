@@ -9,7 +9,6 @@ use std::task::Poll;
 use anyhow::{bail, format_err, Context as _};
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
-use toml_edit::easy as toml;
 
 use crate::core::compiler::{DirtyReason, Freshness};
 use crate::core::Target;
@@ -507,7 +506,7 @@ pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesyst
     let config_root = config.get_path("install.root")?;
     Ok(flag
         .map(PathBuf::from)
-        .or_else(|| env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
+        .or_else(|| config.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
         .or_else(move || config_root.map(|v| v.val))
         .map(Filesystem::new)
         .unwrap_or_else(|| config.home().clone()))

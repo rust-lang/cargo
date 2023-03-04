@@ -65,8 +65,9 @@ The [`#[cargo_test]` attribute](#cargo_test-attribute) is used in place of `#[te
 #### `#[cargo_test]` attribute
 
 The `#[cargo_test]` attribute injects code which does some setup before starting the test.
-It will create a filesystem "sandbox" under the "cargo integration test" directory for each test, such as `/path/to/cargo/target/tmp/cit/t123/`.
-The sandbox will contain a `home` directory that will be used instead of your normal home directory.
+It will create a filesystem "sandbox" under the "cargo integration test" directory for each test, such as
+`/path/to/cargo/target/tmp/cit/testsuite/bad_config/bad1`. The sandbox will contain a `home` directory that
+will be used instead of your normal home directory.
 
 The `#[cargo_test]` attribute takes several options that will affect how the test is generated.
 They are listed in parentheses separated with commas, such as:
@@ -77,34 +78,34 @@ They are listed in parentheses separated with commas, such as:
 
 The options it supports are:
 
-* `nightly` — This will cause the test to be ignored if not running on the nightly toolchain.
+* `nightly` --- This will cause the test to be ignored if not running on the nightly toolchain.
   This is useful for tests that use unstable options in `rustc` or `rustdoc`.
   These tests are run in Cargo's CI, but are disabled in rust-lang/rust's CI due to the difficulty of updating both repos simultaneously.
   A `reason` field is required to explain why it is nightly-only.
-* `build_std_real` — This is a "real" `-Zbuild-std` test (in the `build_std` integration test).
+* `build_std_real` --- This is a "real" `-Zbuild-std` test (in the `build_std` integration test).
   This only runs on nightly, and only if the environment variable `CARGO_RUN_BUILD_STD_TESTS` is set (these tests on run on Linux).
-* `build_std_mock` — This is a "mock" `-Zbuild-std` test (which uses a mock standard library).
+* `build_std_mock` --- This is a "mock" `-Zbuild-std` test (which uses a mock standard library).
   This only runs on nightly, and is disabled for windows-gnu.
-* `requires_` — This indicates a command that is required to be installed to be run.
+* `requires_` --- This indicates a command that is required to be installed to be run.
   For example, `requires_rustfmt` means the test will only run if the executable `rustfmt` is installed.
   These tests are *always* run on CI.
   This is mainly used to avoid requiring contributors from having every dependency installed.
-* `>=1.64` — This indicates that the test will only run with the given version of `rustc` or newer.
+* `>=1.64` --- This indicates that the test will only run with the given version of `rustc` or newer.
   This can be used when a new `rustc` feature has been stabilized that the test depends on.
   If this is specified, a `reason` is required to explain why it is being checked.
-* `public_network_test` — This tests contacts the public internet.
+* `public_network_test` --- This tests contacts the public internet.
   These tests are disabled unless the `CARGO_PUBLIC_NETWORK_TESTS` environment variable is set.
   Use of this should be *extremely rare*, please avoid using it if possible.
   The hosts it contacts should have a relatively high confidence that they are reliable and stable (such as github.com), especially in CI.
   The tests should be carefully considered for developer security and privacy as well.
-* `container_test` — This indicates that it is a test that uses Docker.
+* `container_test` --- This indicates that it is a test that uses Docker.
   These tests are disabled unless the `CARGO_CONTAINER_TESTS` environment variable is set.
   This requires that you have Docker installed.
   The SSH tests also assume that you have OpenSSH installed.
   These should work on Linux, macOS, and Windows where possible.
   Unfortunately these tests are not run in CI for macOS or Windows (no Docker on macOS, and Windows does not support Linux images).
   See [`crates/cargo-test-support/src/containers.rs`](https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/containers.rs) for more on writing these tests.
-* `ignore_windows="reason"` — Indicates that the test should be ignored on windows for the given reason.
+* `ignore_windows="reason"` --- Indicates that the test should be ignored on windows for the given reason.
 
 #### Testing Nightly Features
 
@@ -171,7 +172,7 @@ use cargo_test_support::Project;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn <name>() {
+fn case() {
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = project.root();
     let cwd = &project_root;
@@ -200,7 +201,7 @@ Then populate
 - This attribute injects code which does some setup before starting the
   test, creating a filesystem "sandbox" under the "cargo integration test"
   directory for each test such as
-  `/path/to/cargo/target/cit/t123/`
+  `/path/to/cargo/target/tmp/cit/testsuite/cargo_add/add_basic`
 - The sandbox will contain a `home` directory that will be used instead of your normal home directory
 
 `Project`:
@@ -267,9 +268,9 @@ environment. The general process is:
 
    `cargo test --test testsuite -- features2::inactivate_targets`.
 2. In another terminal, head into the sandbox directory to inspect the files and run `cargo` directly.
-    1. The sandbox directories start with `t0` for the first test.
+    1. The sandbox directories match the format of `tests/testsuite`, just replace `tests` with `target/tmp/cit` 
 
-       `cd target/tmp/cit/t0`
+       `cd target/tmp/cit/testsuite/features2/inactivate_target`
     2. Set up the environment so that the sandbox configuration takes effect:
 
        `export CARGO_HOME=$(pwd)/home/.cargo`

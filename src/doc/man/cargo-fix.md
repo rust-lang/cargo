@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-fix - Automatically fix lint warnings reported by rustc
+cargo-fix --- Automatically fix lint warnings reported by rustc
 
 ## SYNOPSIS
 

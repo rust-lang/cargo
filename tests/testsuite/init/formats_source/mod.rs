@@ -5,7 +5,7 @@ use cargo_test_support::{process, Project};
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn formats_source() {
+fn case() {
     // This cannot use `requires_rustfmt` because rustfmt is not available in
     // the rust-lang/rust environment. Additionally, if running cargo without
     // rustup (but with rustup installed), this test also fails due to HOME

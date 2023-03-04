@@ -4,7 +4,7 @@ use cargo_test_support::prelude::*;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn both_lib_and_bin() {
+fn case() {
     let cwd = paths::root();
 
     snapbox::cmd::Command::cargo_ui()

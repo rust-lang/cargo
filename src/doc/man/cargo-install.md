@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-install - Build and install a Rust binary
+cargo-install --- Build and install a Rust binary
 
 ## SYNOPSIS
 
@@ -55,6 +55,8 @@ specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
 path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.
 
+### Dealing with the Lockfile
+
 By default, the `Cargo.lock` file that is included with the package will be
 ignored. This means that Cargo will recompute which versions of dependencies
 to use, possibly using newer versions that have been released since the
@@ -68,6 +70,16 @@ will not receive any fixes or updates to any dependency. Note that Cargo did
 not start publishing `Cargo.lock` files until version 1.37, which means
 packages published with prior versions will not have a `Cargo.lock` file
 available.
+
+### Configuration Discovery
+
+This command operates on system or user level, not project level.
+This means that the local [configuration discovery] is ignored.
+Instead, the configuration discovery begins at `$CARGO_HOME/config.toml`. 
+If the package is installed with `--path $PATH`, the local configuration 
+will be used, beginning discovery at `$PATH/.cargo/config.toml`.
+
+[configuration discovery]: ../reference/config.html#hierarchical-structure
 
 ## OPTIONS
 

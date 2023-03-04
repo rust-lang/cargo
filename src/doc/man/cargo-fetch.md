@@ -5,7 +5,7 @@
 
 ## NAME
 
-cargo-fetch - Fetch dependencies of a package from the network
+cargo-fetch --- Fetch dependencies of a package from the network
 
 ## SYNOPSIS
 

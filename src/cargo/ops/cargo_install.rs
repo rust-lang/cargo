@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
-use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
+use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Target, Workspace};
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
@@ -14,6 +14,7 @@ use crate::{drop_println, ops};
 
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::paths;
+use itertools::Itertools;
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
 
@@ -216,8 +217,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             bail!(
                 "there is nothing to install in `{}`, because it has no binaries\n\
                  `cargo install` is only for installing programs, and can't be used with libraries.\n\
-                 To use a library crate, add it as a dependency in a Cargo project instead.",
-                pkg
+                 To use a library crate, add it as a dependency to a Cargo project with `cargo add`.",
+                pkg,
             );
         }
 
@@ -307,7 +308,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         let compile = ops::compile_ws(&self.ws, &self.opts, &exec).with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
-                td.into_path();
+                drop(td.into_path());
             }
 
             format!(
@@ -360,10 +361,16 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             //
             // Note that we know at this point that _if_ bins or examples is set to `::Just`,
             // they're `::Just([])`, which is `FilterRule::none()`.
-            if self.pkg.targets().iter().any(|t| t.is_executable()) {
+            let binaries: Vec<_> = self
+                .pkg
+                .targets()
+                .iter()
+                .filter(|t| t.is_executable())
+                .collect();
+            if !binaries.is_empty() {
                 self.config
                     .shell()
-                    .warn("none of the package's binaries are available for install using the selected features")?;
+                    .warn(make_warning_about_missing_features(&binaries))?;
             }
 
             return Ok(false);
@@ -546,6 +553,45 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
     }
 }
 
+fn make_warning_about_missing_features(binaries: &[&Target]) -> String {
+    let max_targets_listed = 7;
+    let target_features_message = binaries
+        .iter()
+        .take(max_targets_listed)
+        .map(|b| {
+            let name = b.description_named();
+            let features = b
+                .required_features()
+                .unwrap_or(&Vec::new())
+                .iter()
+                .map(|f| format!("`{f}`"))
+                .join(", ");
+            format!("  {name} requires the features: {features}")
+        })
+        .join("\n");
+
+    let additional_bins_message = if binaries.len() > max_targets_listed {
+        format!(
+            "\n{} more targets also requires features not enabled. See them in the Cargo.toml file.",
+            binaries.len() - max_targets_listed
+        )
+    } else {
+        "".into()
+    };
+
+    let example_features = binaries[0]
+        .required_features()
+        .map(|f| f.join(" "))
+        .unwrap_or_default();
+
+    format!(
+        "\
+none of the package's binaries are available for install using the selected features
+{target_features_message}{additional_bins_message}
+Consider enabling some of the needed features by passing, e.g., `--features=\"{example_features}\"`"
+    )
+}
+
 pub fn install(
     config: &Config,
     root: Option<&str>,
@@ -658,7 +704,7 @@ pub fn install(
     if installed_anything {
         // Print a warning that if this directory isn't in PATH that they won't be
         // able to run these commands.
-        let path = env::var_os("PATH").unwrap_or_default();
+        let path = config.get_env_os("PATH").unwrap_or_default();
         let dst_in_path = env::split_paths(&path).any(|path| path == dst);
 
         if !dst_in_path {

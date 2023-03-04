@@ -3,10 +3,17 @@
 use cargo_credential::{Credential, Error};
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
-use winapi::shared::minwindef::{DWORD, FILETIME, LPBYTE, TRUE};
-use winapi::shared::winerror;
-use winapi::um::wincred;
-use winapi::um::winnt::LPWSTR;
+
+use windows_sys::core::PWSTR;
+use windows_sys::Win32::Foundation::ERROR_NOT_FOUND;
+use windows_sys::Win32::Foundation::FILETIME;
+use windows_sys::Win32::Foundation::TRUE;
+use windows_sys::Win32::Security::Credentials::CredDeleteW;
+use windows_sys::Win32::Security::Credentials::CredReadW;
+use windows_sys::Win32::Security::Credentials::CredWriteW;
+use windows_sys::Win32::Security::Credentials::CREDENTIALW;
+use windows_sys::Win32::Security::Credentials::CRED_PERSIST_LOCAL_MACHINE;
+use windows_sys::Win32::Security::Credentials::CRED_TYPE_GENERIC;
 
 struct WindowsCredential;
 
@@ -31,13 +38,13 @@ impl Credential for WindowsCredential {
 
     fn get(&self, index_url: &str) -> Result<String, Error> {
         let target_name = target_name(index_url);
-        let mut p_credential: wincred::PCREDENTIALW = std::ptr::null_mut();
+        let p_credential: *mut CREDENTIALW = std::ptr::null_mut() as *mut _;
         unsafe {
-            if wincred::CredReadW(
+            if CredReadW(
                 target_name.as_ptr(),
-                wincred::CRED_TYPE_GENERIC,
+                CRED_TYPE_GENERIC,
                 0,
-                &mut p_credential,
+                p_credential as *mut _ as *mut _,
             ) != TRUE
             {
                 return Err(
@@ -59,21 +66,24 @@ impl Credential for WindowsCredential {
             Some(name) => wstr(&format!("Cargo registry token for {}", name)),
             None => wstr("Cargo registry token"),
         };
-        let mut credential = wincred::CREDENTIALW {
+        let mut credential = CREDENTIALW {
             Flags: 0,
-            Type: wincred::CRED_TYPE_GENERIC,
-            TargetName: target_name.as_ptr() as LPWSTR,
-            Comment: comment.as_ptr() as LPWSTR,
-            LastWritten: FILETIME::default(),
-            CredentialBlobSize: token.len() as DWORD,
-            CredentialBlob: token.as_ptr() as LPBYTE,
-            Persist: wincred::CRED_PERSIST_LOCAL_MACHINE,
+            Type: CRED_TYPE_GENERIC,
+            TargetName: target_name.as_ptr() as PWSTR,
+            Comment: comment.as_ptr() as PWSTR,
+            LastWritten: FILETIME {
+                dwLowDateTime: 0,
+                dwHighDateTime: 0,
+            },
+            CredentialBlobSize: token.len() as u32,
+            CredentialBlob: token.as_ptr() as *mut u8,
+            Persist: CRED_PERSIST_LOCAL_MACHINE,
             AttributeCount: 0,
             Attributes: std::ptr::null_mut(),
             TargetAlias: std::ptr::null_mut(),
             UserName: std::ptr::null_mut(),
         };
-        let result = unsafe { wincred::CredWriteW(&mut credential, 0) };
+        let result = unsafe { CredWriteW(&mut credential, 0) };
         if result != TRUE {
             let err = std::io::Error::last_os_error();
             return Err(format!("failed to store token: {}", err).into());
@@ -83,11 +93,10 @@ impl Credential for WindowsCredential {
 
     fn erase(&self, index_url: &str) -> Result<(), Error> {
         let target_name = target_name(index_url);
-        let result =
-            unsafe { wincred::CredDeleteW(target_name.as_ptr(), wincred::CRED_TYPE_GENERIC, 0) };
+        let result = unsafe { CredDeleteW(target_name.as_ptr(), CRED_TYPE_GENERIC, 0) };
         if result != TRUE {
             let err = std::io::Error::last_os_error();
-            if err.raw_os_error() == Some(winerror::ERROR_NOT_FOUND as i32) {
+            if err.raw_os_error() == Some(ERROR_NOT_FOUND as i32) {
                 eprintln!("not currently logged in to `{}`", index_url);
                 return Ok(());
             }

@@ -1,26 +1,5 @@
-//! Module for generating dep-info files.
-//!
-//! `rustc` generates a dep-info file with a `.d` extension at the same
-//! location of the output artifacts as a result of using `--emit=dep-info`.
-//! This dep-info file is a Makefile-like syntax that indicates the
-//! dependencies needed to build the artifact. Example:
-//!
-//! ```makefile
-//! /path/to/target/debug/deps/cargo-b6219d178925203d: src/bin/main.rs src/bin/cargo/cli.rs # … etc.
-//! ```
-//!
-//! The fingerprint module has code to parse these files, and stores them as
-//! binary format in the fingerprint directory. These are used to quickly scan
-//! for any changed files.
-//!
-//! On top of all this, Cargo emits its own dep-info files in the output
-//! directory. This is done for every "uplifted" artifact. These are intended
-//! to be used with external build systems so that they can detect if Cargo
-//! needs to be re-executed. It includes all the entries from the `rustc`
-//! dep-info file, and extends it with any `rerun-if-changed` entries from
-//! build scripts. It also includes sources from any path dependencies. Registry
-//! dependencies are not included under the assumption that changes to them can
-//! be detected via changes to `Cargo.lock`.
+//! dep-info files for external build system integration.
+//! See [`output_depinfo`] for more.
 
 use cargo_util::paths::normalize_path;
 use std::collections::{BTreeSet, HashSet};
@@ -32,7 +11,14 @@ use crate::util::{internal, CargoResult};
 use cargo_util::paths;
 use log::debug;
 
+/// Bacially just normalizes a given path and converts it to a string.
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
+    fn wrap_path(path: &Path) -> CargoResult<String> {
+        path.to_str()
+            .ok_or_else(|| internal(format!("path `{:?}` not utf-8", path)))
+            .map(|f| f.replace(" ", "\\ "))
+    }
+
     let path = path.as_ref();
     if let Some(basedir) = basedir {
         let norm_path = normalize_path(path);
@@ -46,12 +32,15 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
     }
 }
 
-fn wrap_path(path: &Path) -> CargoResult<String> {
-    path.to_str()
-        .ok_or_else(|| internal(format!("path `{:?}` not utf-8", path)))
-        .map(|f| f.replace(" ", "\\ "))
-}
-
+/// Collects all dependencies of the `unit` for the output dep info file.
+///
+/// Dependencies will be stored in `deps`, including:
+///
+/// * dependencies from [fingerprint dep-info]
+/// * paths from `rerun-if-changed` build script instruction
+/// * ...and traverse transitive dependencies recursively
+///
+/// [fingerprint dep-info]: super::fingerprint#fingerprint-dep-info-files
 fn add_deps_for_unit(
     deps: &mut BTreeSet<PathBuf>,
     cx: &mut Context<'_, '_>,
@@ -105,9 +94,23 @@ fn add_deps_for_unit(
     Ok(())
 }
 
-/// Save a `.d` dep-info file for the given unit.
+/// Save a `.d` dep-info file for the given unit. This is the third kind of
+/// dep-info mentioned in [`fingerprint`] module.
 ///
-/// This only saves files for uplifted artifacts.
+/// Argument `unit` is expected to be the root unit, which will be uplifted.
+///
+/// Cargo emits its own dep-info files in the output directory. This is
+/// only done for every "uplifted" artifact. These are intended to be used
+/// with external build systems so that they can detect if Cargo needs to be
+/// re-executed.
+///
+/// It includes all the entries from the `rustc` dep-info file, and extends it
+/// with any `rerun-if-changed` entries from build scripts. It also includes
+/// sources from any path dependencies. Registry dependencies are not included
+/// under the assumption that changes to them can be detected via changes to
+/// `Cargo.lock`.
+///
+/// [`fingerprint`]: super::fingerprint#dep-info-files
 pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
     let bcx = cx.bcx;
     let mut deps = BTreeSet::new();

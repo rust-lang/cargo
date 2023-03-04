@@ -60,8 +60,8 @@ Caused by:
     |
   3 |                 b-cargo-test = `
     |                                ^
-  Unexpected ```
-  Expected quoted string
+  invalid string
+  expected `\"`, `'`
 ",
         )
         .run();

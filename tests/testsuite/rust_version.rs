@@ -20,8 +20,8 @@ fn rust_version_satisfied() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build --ignore-rust-version").run();
+    p.cargo("check").run();
+    p.cargo("check --ignore-rust-version").run();
 }
 
 #[cargo_test]
@@ -41,7 +41,7 @@ fn rust_version_bad_caret() {
         )
         .file("src/main.rs", "fn main() {}")
         .build()
-        .cargo("build")
+        .cargo("check")
         .with_status(101)
         .with_stderr(
             "error: failed to parse manifest at `[..]`\n\n\
@@ -67,7 +67,7 @@ fn rust_version_bad_pre_release() {
         )
         .file("src/main.rs", "fn main() {}")
         .build()
-        .cargo("build")
+        .cargo("check")
         .with_status(101)
         .with_stderr(
             "error: failed to parse manifest at `[..]`\n\n\
@@ -93,7 +93,7 @@ fn rust_version_bad_nonsense() {
         )
         .file("src/main.rs", "fn main() {}")
         .build()
-        .cargo("build")
+        .cargo("check")
         .with_status(101)
         .with_stderr(
             "error: failed to parse manifest at `[..]`\n\n\
@@ -120,14 +120,14 @@ fn rust_version_too_high() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "error: package `foo v0.0.1 ([..])` cannot be built because it requires \
              rustc 1.9876.0 or newer, while the currently active rustc version is [..]\n\n",
         )
         .run();
-    p.cargo("build --ignore-rust-version").run();
+    p.cargo("check --ignore-rust-version").run();
 }
 
 #[cargo_test]
@@ -152,7 +152,7 @@ fn rust_version_dependency_fails() {
         .file("src/main.rs", "fn main(){}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index\n \
@@ -165,7 +165,7 @@ fn rust_version_dependency_fails() {
              where `ver` is the latest version of `bar` supporting rustc [..]",
         )
         .run();
-    p.cargo("build --ignore-rust-version").run();
+    p.cargo("check --ignore-rust-version").run();
 }
 
 #[cargo_test]
@@ -186,7 +186,7 @@ fn rust_version_older_than_edition() {
         )
         .file("src/main.rs", "fn main() {}")
         .build()
-        .cargo("build")
+        .cargo("check")
         .with_status(101)
         .with_stderr_contains("  rust-version 1.1 is older than first version (1.31.0) required by the specified edition (2018)",
         )

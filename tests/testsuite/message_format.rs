@@ -29,17 +29,17 @@ fn double_json_works() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --message-format json,json-render-diagnostics")
+    p.cargo("check --message-format json,json-render-diagnostics")
         .run();
-    p.cargo("build --message-format json,json-diagnostic-short")
+    p.cargo("check --message-format json,json-diagnostic-short")
         .run();
-    p.cargo("build --message-format json,json-diagnostic-rendered-ansi")
+    p.cargo("check --message-format json,json-diagnostic-rendered-ansi")
         .run();
-    p.cargo("build --message-format json --message-format json-diagnostic-rendered-ansi")
+    p.cargo("check --message-format json --message-format json-diagnostic-rendered-ansi")
         .run();
-    p.cargo("build --message-format json-diagnostic-rendered-ansi")
+    p.cargo("check --message-format json-diagnostic-rendered-ansi")
         .run();
-    p.cargo("build --message-format json-diagnostic-short,json-diagnostic-rendered-ansi")
+    p.cargo("check --message-format json-diagnostic-short,json-diagnostic-rendered-ansi")
         .run();
 }
 
@@ -62,7 +62,7 @@ fn cargo_renders() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build --message-format json-render-diagnostics")
+    p.cargo("check --message-format json-render-diagnostics")
         .with_status(101)
         .with_stdout(
             "{\"reason\":\"compiler-artifact\",[..]\n\
@@ -70,8 +70,8 @@ fn cargo_renders() {
         )
         .with_stderr_contains(
             "\
-[COMPILING] bar [..]
-[COMPILING] foo [..]
+[CHECKING] bar [..]
+[CHECKING] foo [..]
 error[..]`main`[..]
 ",
         )
@@ -85,11 +85,11 @@ fn cargo_renders_short() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build --message-format json-render-diagnostics,json-diagnostic-short")
+    p.cargo("check --message-format json-render-diagnostics,json-diagnostic-short")
         .with_status(101)
         .with_stderr_contains(
             "\
-[COMPILING] foo [..]
+[CHECKING] foo [..]
 error[..]`main`[..]
 ",
         )
@@ -104,7 +104,7 @@ fn cargo_renders_ansi() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build --message-format json-diagnostic-rendered-ansi")
+    p.cargo("check --message-format json-diagnostic-rendered-ansi")
         .with_status(101)
         .with_stdout_contains("[..]\\u001b[38;5;9merror[..]")
         .run();

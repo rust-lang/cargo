@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-pkgid - Print a fully qualified package specification
+cargo-pkgid --- Print a fully qualified package specification
 
 ## SYNOPSIS
 

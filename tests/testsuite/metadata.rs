@@ -1797,7 +1797,8 @@ fn cargo_metadata_with_invalid_authors_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "", expected a sequence for key `package.authors`"#,
+  invalid type: string "", expected a vector of strings or workspace
+  in `package.authors`"#,
         )
         .run();
 }
@@ -1821,7 +1822,8 @@ fn cargo_metadata_with_invalid_version_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: integer `1`, expected SemVer version for key `package.version`"#,
+  invalid type: integer `1`, expected SemVer version
+  in `package.version`"#,
         )
         .run();
 }
@@ -1845,7 +1847,8 @@ fn cargo_metadata_with_invalid_publish_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "foo", expected a boolean or vector of strings for key `package.publish`"#,
+  invalid type: string "foo", expected a boolean, a vector of strings, or workspace
+  in `package.publish`"#,
         )
         .run();
 }

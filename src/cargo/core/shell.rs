@@ -557,12 +557,17 @@ mod imp {
 #[cfg(windows)]
 mod imp {
     use std::{cmp, mem, ptr};
-    use winapi::um::fileapi::*;
-    use winapi::um::handleapi::*;
-    use winapi::um::processenv::*;
-    use winapi::um::winbase::*;
-    use winapi::um::wincon::*;
-    use winapi::um::winnt::*;
+
+    use windows_sys::core::PCSTR;
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::Storage::FileSystem::{
+        CreateFileA, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+    };
+    use windows_sys::Win32::System::Console::{
+        GetConsoleScreenBufferInfo, GetStdHandle, CONSOLE_SCREEN_BUFFER_INFO, STD_ERROR_HANDLE,
+    };
+    use windows_sys::Win32::System::SystemServices::{GENERIC_READ, GENERIC_WRITE};
 
     pub(super) use super::{default_err_erase_line as err_erase_line, TtyWidth};
 
@@ -578,13 +583,13 @@ mod imp {
             // INVALID_HANDLE_VALUE. Use an alternate method which works
             // in that case as well.
             let h = CreateFileA(
-                "CONOUT$\0".as_ptr() as *const CHAR,
+                "CONOUT$\0".as_ptr() as PCSTR,
                 GENERIC_READ | GENERIC_WRITE,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 ptr::null_mut(),
                 OPEN_EXISTING,
                 0,
-                ptr::null_mut(),
+                0,
             );
             if h == INVALID_HANDLE_VALUE {
                 return TtyWidth::NoTty;

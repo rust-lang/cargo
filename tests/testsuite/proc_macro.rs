@@ -58,7 +58,7 @@ fn probe_cfg_before_crate_type_discovery() {
         )
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -117,8 +117,8 @@ fn noop() {
         )
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build").run();
+    p.cargo("check").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -242,7 +242,7 @@ fn plugin_and_proc_macro() {
         .build();
 
     let msg = "  `lib.plugin` and `lib.proc-macro` cannot both be `true`";
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(msg)
         .run();
@@ -375,7 +375,7 @@ fn proc_macro_crate_type_warning() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr_contains(
             "[WARNING] library `foo` should only specify `proc-macro = true` instead of setting `crate-type`")
         .run();
@@ -398,7 +398,7 @@ fn proc_macro_conflicting_warning() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr_contains(
 "[WARNING] conflicting between `proc-macro` and `proc_macro` in the `foo` library target.\n
         `proc_macro` is ignored and not recommended for use in the future",
@@ -423,7 +423,7 @@ fn proc_macro_crate_type_warning_plugin() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr_contains(
             "[WARNING] proc-macro library `foo` should not specify `plugin = true`")
         .with_stderr_contains(
@@ -447,7 +447,7 @@ fn proc_macro_crate_type_multiple() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`

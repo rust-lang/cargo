@@ -1,5 +1,4 @@
-use super::job::{Job, Work};
-use super::{fingerprint, Context, LinkType, Unit};
+use super::{fingerprint, Context, Job, LinkType, Unit, Work};
 use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
@@ -187,7 +186,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     // carried over.
     let to_exec = to_exec.into_os_string();
     let mut cmd = cx.compilation.host_process(to_exec, &unit.pkg)?;
-    let debug = unit.profile.debuginfo.unwrap_or(0) != 0;
+    let debug = unit.profile.debuginfo.is_turned_on();
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
         .env("NUM_JOBS", &bcx.jobs().to_string())
@@ -332,6 +331,15 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     // Need a separate copy for the fresh closure.
     let targets_fresh = targets.clone();
 
+    let env_profile_name = unit.profile.name.to_uppercase();
+    let built_with_debuginfo = cx
+        .bcx
+        .unit_graph
+        .get(unit)
+        .and_then(|deps| deps.iter().find(|dep| dep.unit.target == unit.target))
+        .map(|dep| dep.unit.profile.debuginfo.is_turned_on())
+        .unwrap_or(false);
+
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
     //
@@ -405,7 +413,26 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 },
                 true,
             )
-            .with_context(|| format!("failed to run custom build command for `{}`", pkg_descr));
+            .with_context(|| {
+                let mut build_error_context =
+                    format!("failed to run custom build command for `{}`", pkg_descr);
+
+                // If we're opting into backtraces, mention that build dependencies' backtraces can
+                // be improved by requesting debuginfo to be built, if we're not building with
+                // debuginfo already.
+                if let Ok(show_backtraces) = std::env::var("RUST_BACKTRACE") {
+                    if !built_with_debuginfo && show_backtraces != "0" {
+                        build_error_context.push_str(&format!(
+                            "\n\
+                            note: To improve backtraces for build dependencies, set the \
+                            CARGO_PROFILE_{env_profile_name}_BUILD_OVERRIDE_DEBUG=true environment \
+                            variable to enable debug information generation.",
+                        ));
+                    }
+                }
+
+                build_error_context
+            });
 
         if let Err(error) = output {
             insert_warnings_in_build_outputs(

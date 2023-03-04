@@ -139,7 +139,7 @@ fn cargo_compile_with_root_dev_deps() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains("[..]can't find crate for `bar`")
         .run();
@@ -275,10 +275,10 @@ fn no_rebuild_dependency() {
         .file("bar/src/bar.rs", "pub fn bar() {}")
         .build();
     // First time around we should compile both foo and bar
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
-            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+            "[CHECKING] bar v0.5.0 ([CWD]/bar)\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
         )
@@ -293,9 +293,9 @@ fn no_rebuild_dependency() {
         "#,
     );
     // Don't compile bar, but do recompile foo.
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
-            "[COMPILING] foo v0.5.0 ([..])\n\
+            "[CHECKING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
         )
@@ -341,16 +341,16 @@ fn deep_dependencies_trigger_rebuild() {
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
-            "[COMPILING] baz v0.5.0 ([CWD]/baz)\n\
-             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+            "[CHECKING] baz v0.5.0 ([CWD]/baz)\n\
+             [CHECKING] bar v0.5.0 ([CWD]/bar)\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
         )
         .run();
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 
     // Make sure an update to baz triggers a rebuild of bar
     //
@@ -359,11 +359,11 @@ fn deep_dependencies_trigger_rebuild() {
     sleep_ms(1000);
     p.change_file("baz/src/baz.rs", r#"pub fn baz() { println!("hello!"); }"#);
     sleep_ms(1000);
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
-            "[COMPILING] baz v0.5.0 ([CWD]/baz)\n\
-             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+            "[CHECKING] baz v0.5.0 ([CWD]/baz)\n\
+             [CHECKING] bar v0.5.0 ([CWD]/bar)\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
         )
@@ -379,10 +379,10 @@ fn deep_dependencies_trigger_rebuild() {
         "#,
     );
     sleep_ms(1000);
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
-            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+            "[CHECKING] bar v0.5.0 ([CWD]/bar)\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
         )
@@ -464,10 +464,10 @@ fn nested_deps_recompile() {
         .file("src/bar/src/bar.rs", "pub fn gimme() -> i32 { 92 }")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
-            "[COMPILING] bar v0.5.0 ([CWD]/src/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
+            "[CHECKING] bar v0.5.0 ([CWD]/src/bar)\n\
+             [CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
         )
@@ -477,9 +477,9 @@ fn nested_deps_recompile() {
     p.change_file("src/main.rs", r#"fn main() {}"#);
 
     // This shouldn't recompile `bar`
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
-            "[COMPILING] foo v0.5.0 ([CWD])\n\
+            "[CHECKING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
         )
@@ -507,7 +507,7 @@ fn error_message_for_missing_manifest() {
         .file("src/bar/not-a-manifest", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -559,7 +559,7 @@ fn override_relative() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -595,7 +595,7 @@ fn override_self() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -648,7 +648,7 @@ fn override_path_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -808,11 +808,11 @@ fn custom_target_no_rebuild() {
         )
         .file("b/src/lib.rs", "")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] a v0.5.0 ([..])
-[COMPILING] foo v0.5.0 ([..])
+[CHECKING] a v0.5.0 ([..])
+[CHECKING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -822,11 +822,11 @@ fn custom_target_no_rebuild() {
         p.root().join("target"),
         p.root().join("target_moved")
     ));
-    p.cargo("build --manifest-path=b/Cargo.toml")
+    p.cargo("check --manifest-path=b/Cargo.toml")
         .env("CARGO_TARGET_DIR", "target_moved")
         .with_stderr(
             "\
-[COMPILING] b v0.5.0 ([..])
+[CHECKING] b v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -866,14 +866,14 @@ fn override_and_depend() {
         .file("b/src/lib.rs", "")
         .file("b/.cargo/config", r#"paths = ["../a"]"#)
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .cwd("b")
         .with_stderr(
             "\
 [WARNING] skipping duplicate package `a2` found at `[..]`
-[COMPILING] a2 v0.5.0 ([..])
-[COMPILING] a1 v0.5.0 ([..])
-[COMPILING] b v0.5.0 ([..])
+[CHECKING] a2 v0.5.0 ([..])
+[CHECKING] a1 v0.5.0 ([..])
+[CHECKING] b v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -890,7 +890,7 @@ fn missing_path_dependency() {
             r#"paths = ["../whoa-this-does-not-exist"]"#,
         )
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -943,7 +943,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         .build();
 
     // Generate a lock file
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     // Change the dependency on `bar` to an invalid path
     p.change_file(
@@ -961,7 +961,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
 
     // Make sure we get a nice error. In the past this actually stack
     // overflowed!
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\

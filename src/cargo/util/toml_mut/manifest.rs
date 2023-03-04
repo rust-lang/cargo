@@ -59,17 +59,9 @@ impl DepTable {
     /// Keys to the table.
     pub fn to_table(&self) -> Vec<&str> {
         if let Some(target) = &self.target {
-            vec!["target", target, self.kind_table()]
+            vec!["target", target, self.kind.kind_table()]
         } else {
-            vec![self.kind_table()]
-        }
-    }
-
-    fn kind_table(&self) -> &str {
-        match self.kind {
-            DepKind::Normal => "dependencies",
-            DepKind::Development => "dev-dependencies",
-            DepKind::Build => "build-dependencies",
+            vec![self.kind.kind_table()]
         }
     }
 }
@@ -164,7 +156,7 @@ impl Manifest {
         let mut sections = Vec::new();
 
         for table in DepTable::KINDS {
-            let dependency_type = table.kind_table();
+            let dependency_type = table.kind.kind_table();
             // Dependencies can be in the three standard sections...
             if self
                 .data

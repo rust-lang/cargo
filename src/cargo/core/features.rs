@@ -58,6 +58,9 @@
 //!
 //! ## `-Z` options
 //!
+//! New `-Z` options cover all other functionality that isn't covered with
+//! `cargo-features` or `-Z unstable-options`.
+//!
 //! The steps to add a new `-Z` option are:
 //!
 //! 1. Add the option to the [`CliUnstable`] struct below. Flags can take an
@@ -67,6 +70,43 @@
 //!    [`Config::cli_unstable`] to get an instance of [`CliUnstable`]
 //!    and check if the option has been enabled on the [`CliUnstable`] instance.
 //!    Nightly gating is already handled, so no need to worry about that.
+//!
+//! ### `-Z` vs `cargo-features`
+//!
+//! In some cases there might be some changes that `cargo-features` is unable
+//! to sufficiently encompass. An example would be a syntax change in
+//! `Cargo.toml` that also impacts the index or resolver. The resolver doesn't
+//! know about `cargo-features`, so it needs a `-Z` flag to enable the
+//! experimental functionality.
+//!
+//! In those cases, you usually should introduce both a `-Z` flag (to enable
+//! the changes outside of the manifest) and a `cargo-features` entry (to
+//! enable the new syntax in `Cargo.toml`). The `cargo-features` entry ensures
+//! that any experimental syntax that gets uploaded to crates.io is clearly
+//! intended for nightly-only builds. Otherwise, users accessing those crates
+//! may get confusing errors, particularly if the syntax changes during the
+//! development cycle, and the user tries to access it with a stable release.
+//!
+//! ### `-Z` with external files
+//!
+//! Some files, such as `config.toml` config files, or the `config.json` index
+//! file, are used in a global location which can make interaction with stable
+//! releases problematic. In general, before the feature is stabilized, stable
+//! Cargo should behave roughly similar to how it behaved *before* the
+//! unstable feature was introduced. If Cargo would normally have ignored or
+//! warned about the introduction of something, then it probably should
+//! continue to do so.
+//!
+//! For example, Cargo generally ignores (or warns) about `config.toml`
+//! entries it doesn't know about. This allows a limited degree of
+//! forwards-compatibility with future versions of Cargo that add new entries.
+//!
+//! Whether or not to warn on stable may need to be decided on a case-by-case
+//! basis. For example, you may want to avoid generating a warning for options
+//! that are not critical to Cargo's operation in order to reduce the
+//! annoyance of constant warnings. However, ignoring some options may prevent
+//! proper operation, so a warning may be valuable for a user trying to
+//! diagnose why it isn't working correctly.
 //!
 //! ## Stabilization
 //!
@@ -676,8 +716,10 @@ unstable_cli_options!(
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     features: Option<Vec<String>>  = (HIDDEN),
+    gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
     jobserver_per_rustc: bool = (HIDDEN),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
+    direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
@@ -753,7 +795,7 @@ const STABILISED_MULTITARGET: &str = "Multiple `--target` options are now always
 const STABILIZED_TERMINAL_WIDTH: &str =
     "The -Zterminal-width option is now always enabled for terminal output.";
 
-const STABILISED_SPARSE_REGISTRY: &str = "This flag currently still sets the default protocol\
+const STABILISED_SPARSE_REGISTRY: &str = "This flag currently still sets the default protocol \
     to `sparse` when accessing crates.io. However, this will be removed in the future. \n\
     The stable equivalent is to set the config value `registries.crates-io.protocol = 'sparse'`\n\
     or environment variable `CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse`";
@@ -785,6 +827,74 @@ where
     };
 
     parse_check_cfg(crates.into_iter()).map_err(D::Error::custom)
+}
+
+#[derive(Debug, Copy, Clone, Default, Deserialize)]
+pub struct GitoxideFeatures {
+    /// All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
+    pub fetch: bool,
+    /// When cloning the index, perform a shallow clone. Maintain shallowness upon subsequent fetches.
+    pub shallow_index: bool,
+    /// When cloning git dependencies, perform a shallow clone and maintain shallowness on subsequent fetches.
+    pub shallow_deps: bool,
+    /// Checkout git dependencies using `gitoxide` (submodules are still handled by git2 ATM, and filters
+    /// like linefeed conversions are unsupported).
+    pub checkout: bool,
+    /// A feature flag which doesn't have any meaning except for preventing
+    /// `__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2=1` builds to enable all safe `gitoxide` features.
+    /// That way, `gitoxide` isn't actually used even though it's enabled.
+    pub internal_use_git2: bool,
+}
+
+impl GitoxideFeatures {
+    fn all() -> Self {
+        GitoxideFeatures {
+            fetch: true,
+            shallow_index: true,
+            checkout: true,
+            shallow_deps: true,
+            internal_use_git2: false,
+        }
+    }
+
+    /// Features we deem safe for everyday use - typically true when all tests pass with them
+    /// AND they are backwards compatible.
+    fn safe() -> Self {
+        GitoxideFeatures {
+            fetch: true,
+            shallow_index: false,
+            checkout: true,
+            shallow_deps: false,
+            internal_use_git2: false,
+        }
+    }
+}
+
+fn parse_gitoxide(
+    it: impl Iterator<Item = impl AsRef<str>>,
+) -> CargoResult<Option<GitoxideFeatures>> {
+    let mut out = GitoxideFeatures::default();
+    let GitoxideFeatures {
+        fetch,
+        shallow_index,
+        checkout,
+        shallow_deps,
+        internal_use_git2,
+    } = &mut out;
+
+    for e in it {
+        match e.as_ref() {
+            "fetch" => *fetch = true,
+            "shallow-index" => *shallow_index = true,
+            "shallow-deps" => *shallow_deps = true,
+            "checkout" => *checkout = true,
+            "internal-use-git2" => *internal_use_git2 = true,
+            _ => {
+                bail!("unstable 'gitoxide' only takes `fetch`, 'shallow-index', 'shallow-deps' and 'checkout' as valid inputs")
+            }
+        }
+    }
+    Ok(Some(out))
 }
 
 fn parse_check_cfg(
@@ -838,6 +948,13 @@ impl CliUnstable {
         }
         for flag in flags {
             self.add(flag, &mut warnings)?;
+        }
+
+        if self.gitoxide.is_none()
+            && std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2")
+                .map_or(false, |value| value == "1")
+        {
+            self.gitoxide = GitoxideFeatures::safe().into();
         }
         Ok(warnings)
     }
@@ -908,6 +1025,7 @@ impl CliUnstable {
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
+            "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "check-cfg" => {
@@ -927,6 +1045,12 @@ impl CliUnstable {
             "doctest-in-workspace" => self.doctest_in_workspace = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
+            "gitoxide" => {
+                self.gitoxide = v.map_or_else(
+                    || Ok(Some(GitoxideFeatures::all())),
+                    |v| parse_gitoxide(v.split(',')),
+                )?
+            }
             "host-config" => self.host_config = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "publish-timeout" => self.publish_timeout = parse_empty(k, v)?,

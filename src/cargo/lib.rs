@@ -1,10 +1,10 @@
 // For various reasons, some idioms are still allow'ed, but we would like to
 // test and enforce them.
 #![warn(rust_2018_idioms)]
-#![cfg_attr(test, deny(warnings))]
 // Due to some of the default clippy lints being somewhat subjective and not
 // necessarily an improvement, we prefer to not use them at this time.
 #![allow(clippy::all)]
+#![warn(clippy::self_named_module_files)]
 #![allow(rustdoc::private_intra_doc_links)]
 
 //! # Cargo as a library

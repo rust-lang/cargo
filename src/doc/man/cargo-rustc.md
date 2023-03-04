@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-rustc - Compile the current package, and pass extra options to the compiler
+cargo-rustc --- Compile the current package, and pass extra options to the compiler
 
 ## SYNOPSIS
 
@@ -55,13 +55,13 @@ Build with the given profile.
 
 The `rustc` subcommand will treat the following named profiles with special behaviors:
 
-* `check` — Builds in the same way as the {{man "cargo-check" 1}} command with
+* `check` --- Builds in the same way as the {{man "cargo-check" 1}} command with
   the `dev` profile.
-* `test` — Builds in the same way as the {{man "cargo-test" 1}} command,
+* `test` --- Builds in the same way as the {{man "cargo-test" 1}} command,
   enabling building in test mode which will enable tests and enable the `test`
   cfg option. See [rustc
   tests](https://doc.rust-lang.org/rustc/tests/index.html) for more detail.
-* `bench` — Builds in the same was as the {{man "cargo-bench" 1}} command,
+* `bench` --- Builds in the same was as the {{man "cargo-bench" 1}} command,
   similar to the `test` profile.
 
 See the [the reference](../reference/profiles.html) for more details on profiles.
@@ -74,7 +74,7 @@ See the [the reference](../reference/profiles.html) for more details on profiles
 {{#option "`--crate-type` _crate-type_"}}
 Build for the given crate type. This flag accepts a comma-separated list of
 1 or more crate types, of which the allowed values are the same as `crate-type`
-field in the manifest for configurating a Cargo target. See
+field in the manifest for configuring a Cargo target. See
 [`crate-type` field](../reference/cargo-targets.html#the-crate-type-field)
 for possible values.
 

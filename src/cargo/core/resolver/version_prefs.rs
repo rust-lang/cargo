@@ -42,7 +42,12 @@ impl VersionPreferences {
     /// Sort the given vector of summaries in-place, with all summaries presumed to be for
     /// the same package.  Preferred versions appear first in the result, sorted by
     /// `version_ordering`, followed by non-preferred versions sorted the same way.
-    pub fn sort_summaries(&self, summaries: &mut Vec<Summary>, version_ordering: VersionOrdering) {
+    pub fn sort_summaries(
+        &self,
+        summaries: &mut Vec<Summary>,
+        version_ordering: VersionOrdering,
+        first_version: bool,
+    ) {
         let should_prefer = |pkg_id: &PackageId| {
             self.try_to_use.contains(pkg_id)
                 || self
@@ -66,6 +71,9 @@ impl VersionPreferences {
                 _ => previous_cmp,
             }
         });
+        if first_version {
+            let _ = summaries.split_off(1);
+        }
     }
 }
 
@@ -115,13 +123,13 @@ mod test {
             summ("foo", "1.0.9"),
         ];
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst);
+        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst, false);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.2.4, foo/1.1.0, foo/1.0.9".to_string()
         );
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst);
+        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst, false);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.0.9, foo/1.1.0, foo/1.2.4".to_string()
@@ -140,13 +148,13 @@ mod test {
             summ("foo", "1.0.9"),
         ];
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst);
+        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst, false);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.2.4, foo/1.1.0, foo/1.0.9".to_string()
         );
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst);
+        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst, false);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.0.9, foo/1.1.0, foo/1.2.4".to_string()
@@ -166,13 +174,13 @@ mod test {
             summ("foo", "1.0.9"),
         ];
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst);
+        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst, false);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.1.0, foo/1.2.4, foo/1.0.9".to_string()
         );
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst);
+        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst, false);
         assert_eq!(
             describe(&summaries),
             "foo/1.1.0, foo/1.2.3, foo/1.0.9, foo/1.2.4".to_string()

@@ -12,6 +12,7 @@ pub fn cli() -> Command {
         .arg_quiet()
         .arg(
             Arg::new("args")
+                .help("Arguments for the binary or example to run")
                 .value_parser(value_parser!(std::ffi::OsString))
                 .num_args(0..)
                 .trailing_var_arg(true),

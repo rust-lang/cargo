@@ -4,7 +4,7 @@ use cargo_test_support::Project;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
-fn cant_create_library_when_both_binlib_present() {
+fn case() {
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = &project.root();
 

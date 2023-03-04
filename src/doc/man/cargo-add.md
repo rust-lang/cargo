@@ -1,10 +1,11 @@
 # cargo-add(1)
+
 {{*set actionverb="Add"}}
 {{*set nouns="adds"}}
 
 ## NAME
 
-cargo-add - Add dependencies to a Cargo.toml manifest file
+cargo-add --- Add dependencies to a Cargo.toml manifest file
 
 ## SYNOPSIS
 
@@ -115,7 +116,7 @@ Disable the [default features](../reference/features.html#dependency-features).
 Re-enable the [default features](../reference/features.html#dependency-features).
 {{/option}}
 
-{{#option "`--features` _features_" }}
+{{#option "`-F` _features_" "`--features` _features_" }}
 Space or comma separated list of [features to
 activate](../reference/features.html#dependency-features). When adding multiple
 crates, the features for a specific crate may be enabled with

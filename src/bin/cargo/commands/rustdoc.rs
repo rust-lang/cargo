@@ -6,7 +6,12 @@ pub fn cli() -> Command {
     subcommand("rustdoc")
         .about("Build a package's documentation, using specified custom flags.")
         .arg_quiet()
-        .arg(Arg::new("args").num_args(0..).trailing_var_arg(true))
+        .arg(
+            Arg::new("args")
+                .help("Extra rustdoc flags")
+                .num_args(0..)
+                .trailing_var_arg(true),
+        )
         .arg(flag(
             "open",
             "Opens the docs in a browser after the operation",

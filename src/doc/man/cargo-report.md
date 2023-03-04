@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-report - Generate and display various kinds of reports
+cargo-report --- Generate and display various kinds of reports
 
 ## SYNOPSIS
 
@@ -10,7 +10,7 @@ cargo-report - Generate and display various kinds of reports
 
 ### DESCRIPTION
 
-Displays a report of the given _type_ - currently, only `future-incompat` is supported
+Displays a report of the given _type_ --- currently, only `future-incompat` is supported
 
 ## OPTIONS
 

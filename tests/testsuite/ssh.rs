@@ -6,6 +6,7 @@
 //! NOTE: The container tests almost certainly won't work on Windows.
 
 use cargo_test_support::containers::{Container, ContainerHandle, MkFile};
+use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::{paths, process, project, Project};
 use std::fs;
 use std::io::Write;
@@ -415,7 +416,11 @@ fn invalid_github_key() {
         .build();
     p.cargo("fetch")
         .with_status(101)
-        .with_stderr_contains("  error: SSH host key has changed for `github.com`")
+        .with_stderr_contains(if cargo_uses_gitoxide() {
+            "  git@github.com: Permission denied (publickey)."
+        } else {
+            "  error: SSH host key has changed for `github.com`"
+        })
         .run();
 }
 
@@ -447,16 +452,7 @@ fn bundled_github_works() {
         )
         .file("src/lib.rs", "")
         .build();
-    let err = if cfg!(windows) {
-        "error authenticating: unable to connect to agent pipe; class=Ssh (23)"
-    } else {
-        "error authenticating: failed connecting with agent; class=Ssh (23)"
-    };
-    p.cargo("fetch")
-        .env("SSH_AUTH_SOCK", &bogus_auth_sock)
-        .with_status(101)
-        .with_stderr(&format!(
-            "\
+    let shared_stderr = "\
 [UPDATING] git repository `ssh://git@github.com/rust-lang/bitflags.git`
 error: failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
@@ -472,7 +468,29 @@ Caused by:
 Caused by:
   failed to authenticate when downloading repository
 
-  * attempted ssh-agent authentication, but no usernames succeeded: `git`
+  *";
+    let err = if cfg!(windows) {
+        "error authenticating: unable to connect to agent pipe; class=Ssh (23)"
+    } else {
+        "error authenticating: failed connecting with agent; class=Ssh (23)"
+    };
+    let expected = if cargo_uses_gitoxide() {
+        format!(
+            "{shared_stderr} attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
+
+  if the git CLI succeeds then `net.git-fetch-with-cli` may help here
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+Caused by:
+  Credentials provided for \"ssh://git@github.com/rust-lang/bitflags.git\" were not accepted by the remote
+
+Caused by:
+  git@github.com: Permission denied (publickey).
+"
+        )
+    } else {
+        format!(
+            "{shared_stderr} attempted ssh-agent authentication, but no usernames succeeded: `git`
 
   if the git CLI succeeds then `net.git-fetch-with-cli` may help here
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
@@ -480,8 +498,58 @@ Caused by:
 Caused by:
   {err}
 "
-        ))
+        )
+    };
+    p.cargo("fetch")
+        .env("SSH_AUTH_SOCK", &bogus_auth_sock)
+        .with_status(101)
+        .with_stderr(&expected)
         .run();
+
+    let shared_stderr = "\
+[UPDATING] git repository `ssh://git@github.com:22/rust-lang/bitflags.git`
+error: failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `bitflags`
+
+Caused by:
+  Unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[..]
+
+Caused by:
+  failed to authenticate when downloading repository
+
+  *";
+
+    let expected = if cargo_uses_gitoxide() {
+        format!(
+            "{shared_stderr} attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
+
+  if the git CLI succeeds then `net.git-fetch-with-cli` may help here
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+Caused by:
+  Credentials provided for \"ssh://git@github.com:22/rust-lang/bitflags.git\" were not accepted by the remote
+
+Caused by:
+  git@github.com: Permission denied (publickey).
+"
+        )
+    } else {
+        format!(
+            "{shared_stderr} attempted ssh-agent authentication, but no usernames succeeded: `git`
+
+  if the git CLI succeeds then `net.git-fetch-with-cli` may help here
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+Caused by:
+  {err}
+"
+        )
+    };
 
     // Explicit :22 should also work with bundled.
     p.change_file(
@@ -498,32 +566,7 @@ Caused by:
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &bogus_auth_sock)
         .with_status(101)
-        .with_stderr(&format!(
-            "\
-[UPDATING] git repository `ssh://git@github.com:22/rust-lang/bitflags.git`
-error: failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bitflags`
-
-Caused by:
-  Unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[..]
-
-Caused by:
-  failed to authenticate when downloading repository
-
-  * attempted ssh-agent authentication, but no usernames succeeded: `git`
-
-  if the git CLI succeeds then `net.git-fetch-with-cli` may help here
-  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
-
-Caused by:
-  {err}
-"
-        ))
+        .with_stderr(&expected)
         .run();
 }
 

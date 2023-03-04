@@ -107,7 +107,7 @@ and version which is used for specifying dependencies between packages.
 A package contains multiple [*targets*](#target), each of which is a
 [*crate*](#crate). The `Cargo.toml` file describes the type of the crates
 (binary or library) within the package, along with some metadata about each
-one -- how each is to be built, what their direct dependencies are, etc., as
+one --- how each is to be built, what their direct dependencies are, etc., as
 described throughout this book.
 
 The *package root* is the directory where the package's `Cargo.toml` manifest
@@ -162,14 +162,14 @@ A *source* is a provider that contains [*crates*](#crate) that may be included
 as dependencies for a [*package*](#package). There are several kinds of
 sources:
 
-- **Registry source** — See [registry](#registry).
-- **Local registry source** — A set of crates stored as compressed files on
+- **Registry source** --- See [registry](#registry).
+- **Local registry source** --- A set of crates stored as compressed files on
   the filesystem. See [Local Registry Sources].
-- **Directory source** — A set of crates stored as uncompressed files on the
+- **Directory source** --- A set of crates stored as uncompressed files on the
   filesystem. See [Directory Sources].
-- **Path source** — An individual package located on the filesystem (such as a
+- **Path source** --- An individual package located on the filesystem (such as a
   [path dependency]) or a set of multiple packages (such as [path overrides]).
-- **Git source** — Packages located in a git repository (such as a [git
+- **Git source** --- Packages located in a git repository (such as a [git
   dependency] or [git source]).
 
 See [Source Replacement] for more information.
@@ -182,21 +182,21 @@ See [package ID specification](#package).
 
 The meaning of the term *target* depends on the context:
 
-- **Cargo Target** — Cargo [*packages*](#package) consist of *targets* which
+- **Cargo Target** --- Cargo [*packages*](#package) consist of *targets* which
   correspond to [*artifacts*](#artifact) that will be produced. Packages can
   have library, binary, example, test, and benchmark targets. The
   [list of targets][targets] are configured in the `Cargo.toml`
   [*manifest*](#manifest), often inferred automatically by the [directory
   layout] of the source files.
-- **Target Directory** — Cargo places all built artifacts and intermediate
+- **Target Directory** --- Cargo places all built artifacts and intermediate
   files in the *target* directory. By default this is a directory named
   `target` at the [*workspace*](#workspace) root, or the package root if not
   using a workspace. The directory may be changed with the `--target-dir`
   command-line option, the `CARGO_TARGET_DIR` [environment variable], or the
   `build.target-dir` [config option].
-- **Target Architecture** — The OS and machine architecture for the built
+- **Target Architecture** --- The OS and machine architecture for the built
   artifacts are typically referred to as a *target*.
-- **Target Triple** — A triple is a specific format for specifying a target
+- **Target Triple** --- A triple is a specific format for specifying a target
   architecture. Triples may be referred to as a *target triple* which is the
   architecture for the artifact produced, and the *host triple* which is the
   architecture that the compiler is running on. The target triple can be
@@ -221,11 +221,11 @@ The meaning of the term *target* depends on the context:
 Cargo *test targets* generate binaries which help verify proper operation and
 correctness of code. There are two types of test artifacts:
 
-* **Unit test** — A *unit test* is an executable binary compiled directly from
+* **Unit test** --- A *unit test* is an executable binary compiled directly from
   a library or a binary target. It contains the entire contents of the library
   or binary code, and runs `#[test]` annotated functions, intended to verify
   individual units of code.
-* **Integration test target** — An [*integration test
+* **Integration test target** --- An [*integration test
   target*][integration-tests] is an executable binary compiled from a *test
   target* which is a distinct [*crate*](#crate) whose source is located in the
   `tests` directory or specified by the [`[[test]]` table][targets] in the

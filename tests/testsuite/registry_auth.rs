@@ -42,12 +42,26 @@ static SUCCESS_OUTPUT: &'static str = "\
 
 #[cargo_test]
 fn requires_nightly() {
-    let _registry = RegistryBuilder::new().alternative().auth_required().build();
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .http_api()
+        .build();
 
     let p = make_project();
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
-        .with_stderr_contains("  authenticated registries require `-Z registry-auth`")
+        .with_stderr(
+            r#"[UPDATING] `alternative` index
+[DOWNLOADING] crates ...
+error: failed to download from `[..]/dl/bar/0.0.1/download`
+
+Caused by:
+  failed to get successful HTTP response from `[..]`, got 401
+  body:
+  Unauthorized message from server.
+"#,
+        )
         .run();
 }
 

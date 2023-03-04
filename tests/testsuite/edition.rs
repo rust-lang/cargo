@@ -31,7 +31,7 @@ fn edition_works_for_build_script() {
         .file("a/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]

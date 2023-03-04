@@ -53,14 +53,14 @@ fn simple() {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -71,11 +71,11 @@ fn simple() {
     assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
 
     // Don't download a second time
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -113,16 +113,16 @@ fn deps() {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
-[COMPILING] baz v0.0.1
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.0.1
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -161,7 +161,7 @@ fn nonexistent() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -205,7 +205,7 @@ fn wrong_case() {
         .build();
 
     // #5678 to make this work
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -251,7 +251,7 @@ fn mis_hyphenated() {
         .build();
 
     // #2775 to make this work
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -297,7 +297,7 @@ fn wrong_version() {
     Package::new("foo", "0.0.1").publish();
     Package::new("foo", "0.0.2").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -312,7 +312,7 @@ required by package `foo v0.0.1 ([..])`
     Package::new("foo", "0.0.3").publish();
     Package::new("foo", "0.0.4").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -357,7 +357,7 @@ fn bad_cksum() {
     pkg.publish();
     t!(File::create(&pkg.archive_dst()));
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -403,7 +403,7 @@ fn update_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -416,14 +416,14 @@ required by package `foo v0.0.1 ([..])`
 
     Package::new("notyet", "0.0.1").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
-[COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] notyet v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -531,14 +531,14 @@ fn lockfile_locks() {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -547,7 +547,7 @@ fn lockfile_locks() {
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -581,16 +581,16 @@ fn lockfile_locks_transitively() {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
-[COMPILING] baz v0.0.1
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.0.1
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -600,7 +600,7 @@ fn lockfile_locks_transitively() {
     Package::new("baz", "0.0.2").publish();
     Package::new("bar", "0.0.2").dep("baz", "*").publish();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -639,16 +639,16 @@ fn yanks_are_not_used() {
         .yanked(true)
         .publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
-[COMPILING] baz v0.0.1
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] baz v0.0.1
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -687,7 +687,7 @@ fn relying_on_a_yank_is_bad() {
     Package::new("baz", "0.0.2").yanked(true).publish();
     Package::new("bar", "0.0.1").dep("baz", "=0.0.2").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -731,13 +731,13 @@ fn yanks_in_lockfiles_are_ok() {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 
     p.cargo("update")
         .with_status(101)
@@ -783,14 +783,14 @@ fn yanks_in_lockfiles_are_ok_for_other_update() {
     Package::new("bar", "0.0.1").publish();
     Package::new("baz", "0.0.1").publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
     Package::new("baz", "0.0.1").publish();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 
     Package::new("baz", "0.0.2").publish();
 
@@ -845,7 +845,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep() {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     registry_path().join("3").rm_rf();
 
@@ -866,7 +866,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep() {
         "#,
     );
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -898,11 +898,11 @@ fn update_with_lockfile_if_packages_missing() {
         .build();
 
     Package::new("bar", "0.0.1").publish();
-    p.cargo("build").run();
+    p.cargo("check").run();
     p.root().move_into_the_past();
 
     paths::home().join(".cargo/registry").rm_rf();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -944,7 +944,7 @@ fn update_lockfile() {
 
     println!("0.0.1");
     Package::new("bar", "0.0.1").publish();
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("bar", "0.0.2").publish();
     Package::new("bar", "0.0.3").publish();
@@ -960,13 +960,13 @@ fn update_lockfile() {
         .run();
 
     println!("0.0.2 build");
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.2 (registry `dummy-registry`)
-[COMPILING] bar v0.0.2
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.2
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -983,13 +983,13 @@ fn update_lockfile() {
         .run();
 
     println!("0.0.3 build");
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.3 (registry `dummy-registry`)
-[COMPILING] bar v0.0.3
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.3
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1052,14 +1052,14 @@ fn dev_dependency_not_used() {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dev_dep("baz", "*").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1145,15 +1145,15 @@ fn updating_a_dep() {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[COMPILING] bar v0.0.1
-[COMPILING] a v0.0.1 ([CWD]/a)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1
+[CHECKING] a v0.0.1 ([CWD]/a)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1181,15 +1181,15 @@ fn updating_a_dep() {
     Package::new("bar", "0.1.0").publish();
 
     println!("second");
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
-[COMPILING] bar v0.1.0
-[COMPILING] a v0.0.1 ([CWD]/a)
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] a v0.0.1 ([CWD]/a)
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1253,16 +1253,16 @@ fn git_and_registry_dep() {
     Package::new("a", "0.0.1").publish();
 
     p.root().move_into_the_past();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..]
 [UPDATING] [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.0.1 (registry `dummy-registry`)
-[COMPILING] a v0.0.1
-[COMPILING] b v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] a v0.0.1
+[CHECKING] b v0.0.1 ([..])
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1270,7 +1270,7 @@ fn git_and_registry_dep() {
     p.root().move_into_the_past();
 
     println!("second");
-    p.cargo("build").with_stdout("").run();
+    p.cargo("check").with_stdout("").run();
 }
 
 #[cargo_test]
@@ -1440,14 +1440,14 @@ fn update_transitive_dependency() {
         )
         .run();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
 [DOWNLOADED] b v0.1.1 (registry `dummy-registry`)
-[COMPILING] b v0.1.1
-[COMPILING] a v0.1.0
-[COMPILING] foo v0.5.0 ([..])
+[CHECKING] b v0.1.1
+[CHECKING] a v0.1.0
+[CHECKING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1572,14 +1572,14 @@ fn update_multiple_packages() {
         )
         .run();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains("[DOWNLOADED] a v0.1.1 (registry `dummy-registry`)")
         .with_stderr_contains("[DOWNLOADED] b v0.1.1 (registry `dummy-registry`)")
         .with_stderr_contains("[DOWNLOADED] c v0.1.1 (registry `dummy-registry`)")
-        .with_stderr_contains("[COMPILING] a v0.1.1")
-        .with_stderr_contains("[COMPILING] b v0.1.1")
-        .with_stderr_contains("[COMPILING] c v0.1.1")
-        .with_stderr_contains("[COMPILING] foo v0.5.0 ([..])")
+        .with_stderr_contains("[CHECKING] a v0.1.1")
+        .with_stderr_contains("[CHECKING] b v0.1.1")
+        .with_stderr_contains("[CHECKING] c v0.1.1")
+        .with_stderr_contains("[CHECKING] foo v0.5.0 ([..])")
         .run();
 }
 
@@ -1702,7 +1702,7 @@ fn use_semver() {
 
     Package::new("foo", "1.2.3-alpha.0").publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -1750,7 +1750,7 @@ fn use_semver_package_incorrectly() {
         .file("b/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1801,14 +1801,14 @@ fn only_download_relevant() {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 ([..])
-[COMPILING] baz v0.1.0
-[COMPILING] bar v0.5.0 ([..])
+[CHECKING] baz v0.1.0
+[CHECKING] bar v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -1848,7 +1848,7 @@ fn resolve_and_backtracking() {
         .publish();
     Package::new("foo", "0.1.0").publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -1883,7 +1883,7 @@ fn upstream_warnings_on_extra_verbose() {
         .file("src/lib.rs", "fn unused() {}")
         .publish();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .with_stderr_contains("[WARNING] [..]unused[..]")
         .run();
 }
@@ -1907,7 +1907,7 @@ fn disallow_network_http() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --frozen")
+    p.cargo("check --frozen")
         .with_status(101)
         .with_stderr(
             "\
@@ -1942,7 +1942,7 @@ fn disallow_network_git() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --frozen")
+    p.cargo("check --frozen")
         .with_status(101)
         .with_stderr(
             "\
@@ -2004,7 +2004,7 @@ fn add_dep_dont_update_registry() {
 
     Package::new("remote", "0.3.4").publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     p.change_file(
         "Cargo.toml",
@@ -2020,10 +2020,10 @@ fn add_dep_dont_update_registry() {
         "#,
     );
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.5.0 ([..])
+[CHECKING] bar v0.5.0 ([..])
 [FINISHED] [..]
 ",
         )
@@ -2073,7 +2073,7 @@ fn bump_version_dont_update_registry() {
 
     Package::new("remote", "0.3.4").publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     p.change_file(
         "Cargo.toml",
@@ -2088,10 +2088,10 @@ fn bump_version_dont_update_registry() {
         "#,
     );
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.6.0 ([..])
+[CHECKING] bar v0.6.0 ([..])
 [FINISHED] [..]
 ",
         )
@@ -2144,7 +2144,7 @@ fn toml_lies_but_index_is_truth() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v").run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -2182,7 +2182,7 @@ fn vv_prints_warnings() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -vv").run();
+    p.cargo("check -vv").run();
 }
 
 #[cargo_test]
@@ -2217,7 +2217,7 @@ fn bad_and_or_malicious_packages_rejected() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("check -vv")
         .with_status(101)
         .with_stderr(
             "\
@@ -2267,7 +2267,7 @@ fn git_init_templatedir_missing() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     remove_dir_all(paths::home().join(".cargo/registry")).unwrap();
     fs::write(
@@ -2279,8 +2279,8 @@ fn git_init_templatedir_missing() {
     )
     .unwrap();
 
-    p.cargo("build").run();
-    p.cargo("build").run();
+    p.cargo("check").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -2347,9 +2347,9 @@ fn rename_deps_and_features() {
         )
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build --features bar/foo01").run();
-    p.cargo("build --features bar/another").run();
+    p.cargo("check").run();
+    p.cargo("check --features bar/foo01").run();
+    p.cargo("check --features bar/another").run();
 }
 
 #[cargo_test]
@@ -2385,7 +2385,7 @@ fn ignore_invalid_json_lines() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -2421,7 +2421,7 @@ fn readonly_registry_still_works() {
     p.cargo("generate-lockfile").run();
     p.cargo("fetch --locked").run();
     chmod_readonly(&paths::home(), true);
-    p.cargo("build").run();
+    p.cargo("check").run();
     // make sure we un-readonly the files afterwards so "cargo clean" can remove them (#6934)
     chmod_readonly(&paths::home(), false);
 
@@ -2529,7 +2529,7 @@ fn package_lock_inside_package_is_overwritten() {
         .file(".cargo-ok", "")
         .publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let id = SourceId::for_registry(registry.index_url()).unwrap();
     let hash = cargo::util::hex::short_hash(&id);
@@ -2567,7 +2567,7 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
         .symlink(".cargo-ok", "src/lib.rs")
         .publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let id = SourceId::for_registry(registry.index_url()).unwrap();
     let hash = cargo::util::hex::short_hash(&id);
@@ -2663,7 +2663,7 @@ fn reach_max_unpack_size() {
     // Size of bar.crate is around 180 bytes.
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .env("__CARGO_TEST_MAX_UNPACK_SIZE", "8") // hit 8 bytes limit and boom!
         .env("__CARGO_TEST_MAX_UNPACK_RATIO", "0")
         .with_status(101)
@@ -2687,12 +2687,12 @@ Caused by:
         .run();
 
     // Restore to the default ratio and it should compile.
-    p.cargo("build")
+    p.cargo("check")
         .env("__CARGO_TEST_MAX_UNPACK_SIZE", "8")
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([..])
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] dev [..]
 ",
         )
@@ -2733,7 +2733,7 @@ fn sparse_retry() {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -2745,8 +2745,8 @@ body:
 internal server error
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
@@ -2865,4 +2865,49 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         )
         .with_status(101)
         .run();
+}
+
+#[cargo_test]
+fn corrupted_ok_overwritten() {
+    // Checks what happens if .cargo-ok gets truncated, such as if the file is
+    // created, but the flush/close is interrupted.
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+",
+        )
+        .run();
+    let ok = glob::glob(
+        paths::home()
+            .join(".cargo/registry/src/*/bar-1.0.0/.cargo-ok")
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap()
+    .next()
+    .unwrap()
+    .unwrap();
+    // Simulate cargo being interrupted, or filesystem corruption.
+    fs::write(&ok, "").unwrap();
+    assert_eq!(fs::read_to_string(&ok).unwrap(), "");
+    p.cargo("fetch").with_stderr("").run();
+    assert_eq!(fs::read_to_string(&ok).unwrap(), "ok");
 }

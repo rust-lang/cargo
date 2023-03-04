@@ -2,7 +2,7 @@
 //! the new `dep = { artifact = "bin", … }` syntax in manifests.
 
 use cargo_test_support::compare::match_exact;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
     basic_bin_manifest, basic_manifest, cross_compile, project, publish, registry, rustc_host,
     Project,
@@ -20,7 +20,7 @@ fn check_with_invalid_artifact_dependency() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "unknown" }
             "#,
@@ -63,7 +63,7 @@ Caused by:
                 name = "foo"
                 version = "0.0.0"
                 authors = []
-                
+
                 [dependencies]
                 bar = { path = "bar/", lib = true }
             "#,
@@ -95,7 +95,7 @@ Caused by:
                 name = "foo"
                 version = "0.0.0"
                 authors = []
-                
+
                 [dependencies]
                 bar = { path = "bar/", target = "target" }
             "#,
@@ -131,7 +131,7 @@ fn check_with_invalid_target_triple() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin", target = "unknown-target-triple" }
             "#,
@@ -160,7 +160,7 @@ fn build_without_nightly_aborts_with_error() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin" }
             "#,
@@ -193,7 +193,7 @@ fn disallow_artifact_and_no_artifact_dep_to_same_package_within_the_same_dep_cat
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin" }
                 bar_stable = { path = "bar/", package = "bar" }
@@ -230,7 +230,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
                 features = ["d1f1"]
                 artifact = "bin"
                 lib = true
-                
+
                 [dependencies.d2]
                 path = "d2"
                 features = ["d2f2"]
@@ -269,7 +269,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
             r#"fn main() {
                 #[cfg(feature = "d1f1")]
                 d2::f1();
-                
+
                 // Using f2 is only possible as features are unififed across the same target.
                 // Our own manifest would only enable f1, and f2 comes in because a parent crate
                 // enables the feature in its manifest.
@@ -344,7 +344,7 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
                 artifact = "bin"
                 lib = true
                 target = "$TARGET"
-                
+
                 [dependencies.d2]
                 path = "d2"
                 features = ["d2f2"]
@@ -514,7 +514,7 @@ fn build_script_with_bin_artifacts() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = ["bin", "staticlib", "cdylib"] }
             "#,
@@ -524,24 +524,24 @@ fn build_script_with_bin_artifacts() {
             fn main() {
                 let baz: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR_baz").expect("CARGO_BIN_FILE_BAR_baz").into();
                 println!("{}", baz.display());
-                assert!(&baz.is_file()); 
-                
+                assert!(&baz.is_file());
+
                 let lib: std::path::PathBuf = std::env::var("CARGO_STATICLIB_FILE_BAR_bar").expect("CARGO_STATICLIB_FILE_BAR_bar").into();
                 println!("{}", lib.display());
-                assert!(&lib.is_file()); 
-                
+                assert!(&lib.is_file());
+
                 let lib: std::path::PathBuf = std::env::var("CARGO_CDYLIB_FILE_BAR_bar").expect("CARGO_CDYLIB_FILE_BAR_bar").into();
                 println!("{}", lib.display());
-                assert!(&lib.is_file()); 
-                
+                assert!(&lib.is_file());
+
                 let dir: std::path::PathBuf = std::env::var("CARGO_BIN_DIR_BAR").expect("CARGO_BIN_DIR_BAR").into();
                 println!("{}", dir.display());
                 assert!(dir.is_dir());
-                
+
                 let bar: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR").expect("CARGO_BIN_FILE_BAR").into();
                 println!("{}", bar.display());
-                assert!(&bar.is_file()); 
-                
+                assert!(&bar.is_file());
+
                 let bar2: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR_bar").expect("CARGO_BIN_FILE_BAR_bar").into();
                 println!("{}", bar2.display());
                 assert_eq!(bar, bar2);
@@ -554,7 +554,7 @@ fn build_script_with_bin_artifacts() {
                 name = "bar"
                 version = "0.5.0"
                 authors = []
-                
+
                 [lib]
                 crate-type = ["staticlib", "cdylib"]
             "#,
@@ -622,7 +622,7 @@ fn build_script_with_bin_artifact_and_lib_false() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = "bin" }
             "#,
@@ -665,7 +665,7 @@ fn lib_with_bin_artifact_and_lib_false() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin" }
             "#,
@@ -706,7 +706,7 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar-baz = { path = "bar/", artifact = "bin:baz-suffix", lib = true }
             "#,
@@ -724,10 +724,10 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
                 name = "bar-baz"
                 version = "0.5.0"
                 authors = []
-                
+
                 [[bin]]
                 name = "bar"
-                
+
                 [[bin]]
                 name = "baz-suffix"
             "#,
@@ -802,7 +802,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar-baz = { path = "bar/", artifact = ["bin:baz-suffix", "staticlib", "cdylib"], lib = true }
             "#,
@@ -812,7 +812,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
             r#"
             pub fn foo() {
                 bar_baz::exists();
-                
+
                 env!("CARGO_BIN_DIR_BAR_BAZ");
                 let _b = include_bytes!(env!("CARGO_BIN_FILE_BAR_BAZ_baz-suffix"));
                 let _b = include_bytes!(env!("CARGO_STATICLIB_FILE_BAR_BAZ"));
@@ -829,13 +829,13 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
                 name = "bar-baz"
                 version = "0.5.0"
                 authors = []
-                
+
                 [lib]
                 crate-type = ["rlib", "staticlib", "cdylib"]
-                
+
                 [[bin]]
                 name = "bar"
-                
+
                 [[bin]]
                 name = "baz-suffix"
             "#,
@@ -871,10 +871,10 @@ fn allow_artifact_and_no_artifact_dep_to_same_package_within_different_dep_categ
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin" }
-                
+
                 [dev-dependencies]
                 bar = { path = "bar/", package = "bar" }
             "#,
@@ -947,7 +947,7 @@ fn disallow_using_example_binaries_as_artifacts() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin:one-example" }
             "#,
@@ -980,10 +980,10 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = "bin" }
-                
+
                 [dependencies]
                 bar = { path = "bar/" }
             "#,
@@ -1030,7 +1030,7 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies.bar]
                 path = "bar/"
                 artifact = "bin"
@@ -1043,7 +1043,7 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
         .file("build.rs", r#"
                 fn main() {
                     let bar: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR").expect("CARGO_BIN_FILE_BAR").into();
-                    assert!(&bar.is_file()); 
+                    assert!(&bar.is_file());
                 }"#)
         .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
         .file("bar/src/main.rs", "fn main() {}")
@@ -1092,12 +1092,12 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies.bar]
                 path = "bar/"
                 artifact = "bin"
                 target = "{}"
-                
+
                 [build-dependencies.bar-native]
                 package = "bar"
                 path = "bar/"
@@ -1112,10 +1112,10 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
         .file("build.rs", r#"
                 fn main() {
                     let bar: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR").expect("CARGO_BIN_FILE_BAR").into();
-                    assert!(&bar.is_file()); 
+                    assert!(&bar.is_file());
                     let bar_native: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR_NATIVE_bar").expect("CARGO_BIN_FILE_BAR_NATIVE_bar").into();
-                    assert!(&bar_native.is_file()); 
-                    assert_ne!(bar_native, bar, "should build different binaries due to different targets"); 
+                    assert!(&bar_native.is_file());
+                    assert_ne!(bar_native, bar, "should build different binaries due to different targets");
                 }"#)
         .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
         .file("bar/src/main.rs", "fn main() {}")
@@ -1147,7 +1147,7 @@ fn non_build_script_deps_adopt_specified_target_unconditionally() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies.bar]
                 path = "bar/"
                 artifact = "bin"
@@ -1198,7 +1198,7 @@ fn no_cross_doctests_works_with_artifacts() {
                 version = "0.0.1"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin", lib = true }
             "#,
@@ -1290,7 +1290,7 @@ fn build_script_deps_adopts_target_platform_if_target_equals_target() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = "bin", target = "target" }
             "#,
@@ -1299,7 +1299,7 @@ fn build_script_deps_adopts_target_platform_if_target_equals_target() {
         .file("build.rs", r#"
                 fn main() {
                     let bar: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR").expect("CARGO_BIN_FILE_BAR").into();
-                    assert!(&bar.is_file()); 
+                    assert!(&bar.is_file());
                 }"#)
         .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
         .file("bar/src/main.rs", "fn main() {}")
@@ -1345,10 +1345,10 @@ fn profile_override_basic() {
 
                 [build-dependencies]
                 bar = { path = "bar", artifact = "bin" }
-                
+
                 [dependencies]
                 bar = { path = "bar", artifact = "bin" }
-                
+
                 [profile.dev.build-override]
                 opt-level = 1
 
@@ -1399,7 +1399,7 @@ fn dependencies_of_dependencies_work_in_artifacts() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = "bin" }
             "#,
@@ -1420,7 +1420,7 @@ fn dependencies_of_dependencies_work_in_artifacts() {
                 name = "bar"
                 version = "0.5.0"
                 authors = []
-                
+
                 [dependencies]
                 baz = "1.0.0"
             "#,
@@ -1479,7 +1479,7 @@ fn targets_are_picked_up_from_non_workspace_artifact_deps() {
                 name = "foo"
                 version = "0.0.0"
                 authors = []
-                
+
                 [dependencies]
                 uses-artifact = { version = "1.0.0" }
             "#,
@@ -1510,7 +1510,7 @@ fn allow_dep_renames_with_multiple_versions() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = "bin" }
                 bar_stable = { package = "bar", version = "1.0.0", artifact = "bin" }
@@ -1556,10 +1556,10 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate_if_these_are_not_the
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = "bin", lib = false }
-                
+
                 [dependencies]
                 bar = { path = "bar/" }
             "#,
@@ -1603,7 +1603,7 @@ fn prevent_no_lib_warning_with_artifact_dependencies() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin" }
             "#,
@@ -1637,10 +1637,10 @@ fn show_no_lib_warning_with_artifact_dependencies_that_have_no_lib_but_lib_true(
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = "bin" }
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin", lib = true }
             "#,
@@ -1670,7 +1670,7 @@ fn resolver_2_build_dep_without_lib() {
                 version = "0.0.0"
                 authors = []
                 edition = "2021"
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = "bin" }
             "#,
@@ -1679,7 +1679,7 @@ fn resolver_2_build_dep_without_lib() {
         .file("build.rs", r#"
                 fn main() {
                     let bar: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR").expect("CARGO_BIN_FILE_BAR").into();
-                    assert!(&bar.is_file()); 
+                    assert!(&bar.is_file());
                 }"#)
         .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
         .file("bar/src/main.rs", "fn main() {}")
@@ -1701,7 +1701,7 @@ fn check_missing_crate_type_in_package_fails() {
                         name = "foo"
                         version = "0.0.0"
                         authors = []
-                        
+
                         [dependencies]
                         bar = {{ path = "bar/", artifact = "{}" }}
                     "#,
@@ -1762,16 +1762,16 @@ fn env_vars_and_build_products_for_various_build_targets() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
-                
+
                 [lib]
                 doctest = true
-                
+
                 [build-dependencies]
                 bar = { path = "bar/", artifact = ["cdylib", "staticlib"] }
-                
+
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin", lib = true }
-                
+
                 [dev-dependencies]
                 bar = { path = "bar/", artifact = "bin:baz" }
             "#,
@@ -1779,11 +1779,11 @@ fn env_vars_and_build_products_for_various_build_targets() {
         .file("build.rs", r#"
             fn main() {
                 let file: std::path::PathBuf = std::env::var("CARGO_CDYLIB_FILE_BAR").expect("CARGO_CDYLIB_FILE_BAR").into();
-                assert!(&file.is_file()); 
-                
+                assert!(&file.is_file());
+
                 let file: std::path::PathBuf = std::env::var("CARGO_STATICLIB_FILE_BAR").expect("CARGO_STATICLIB_FILE_BAR").into();
-                assert!(&file.is_file()); 
-                
+                assert!(&file.is_file());
+
                 assert!(std::env::var("CARGO_BIN_FILE_BAR").is_err());
                 assert!(std::env::var("CARGO_BIN_FILE_BAR_baz").is_err());
             }
@@ -1809,7 +1809,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
                     assert!(option_env!("CARGO_STATICLIB_FILE_BAR").is_none());
                     assert!(option_env!("CARGO_CDYLIB_FILE_BAR").is_none());
                 }
-                
+
                 #[cfg(test)]
                 #[test]
                 fn env_unit() {
@@ -1841,13 +1841,13 @@ fn env_vars_and_build_products_for_various_build_targets() {
                 name = "bar"
                 version = "0.5.0"
                 authors = []
-                
+
                 [lib]
                 crate-type = ["staticlib", "cdylib", "rlib"]
-                
+
                 [[bin]]
                 name = "bar"
-                
+
                 [[bin]]
                 name = "baz"
             "#,
@@ -1872,8 +1872,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
 
 #[cargo_test]
 fn publish_artifact_dep() {
-    // HACK below allows us to use a local registry
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     Package::new("bar", "1.0.0").publish();
     Package::new("baz", "1.0.0").publish();
@@ -1895,22 +1894,13 @@ fn publish_artifact_dep() {
 
             [dependencies]
             bar = { version = "1.0", artifact = "bin", lib = true }
-            
+
             [build-dependencies]
             baz = { version = "1.0", artifact = ["bin:a", "cdylib", "staticlib"], target = "target" }
             "#,
         )
         .file("src/lib.rs", "")
         .build();
-
-    // HACK: Inject `foo` directly into the index so `publish` won't block for it to be in
-    // the index.
-    //
-    // This is to ensure we can verify the Summary we post to the registry as doing so precludes
-    // the registry from processing the publish.
-    Package::new("foo", "0.1.0")
-        .file("src/lib.rs", "")
-        .publish();
 
     p.cargo("publish -Z bindeps --no-verify")
         .replace_crates_io(registry.index_url())
@@ -2093,7 +2083,7 @@ fn rustdoc_works_on_libs_with_artifacts_and_lib_false() {
                 name = "bar"
                 version = "0.5.0"
                 authors = []
-                
+
                 [lib]
                 crate-type = ["staticlib", "cdylib"]
             "#,
@@ -2264,7 +2254,7 @@ fn build_script_features_for_shared_dependency() {
                         assert!(var_os("CARGO_FEATURE_F2").is_some());
                     } else {
                         assert!(var_os("CARGO_FEATURE_F1").is_some());
-                        assert!(var_os("CARGO_FEATURE_F2").is_none()); 
+                        assert!(var_os("CARGO_FEATURE_F2").is_none());
                     }
                 }
             "#
@@ -2854,5 +2844,55 @@ fn same_target_artifact_dep_sharing() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn check_transitive_artifact_dependency_with_different_target() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [dependencies]
+                bar = { path = "bar/" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.0"
+
+                [dependencies]
+                baz = { path = "baz/", artifact = "bin", target = "custom-target" }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "bar/baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.0.0"
+
+                [dependencies]
+            "#,
+        )
+        .file("bar/baz/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_contains(
+            "error: could not find specification for target `custom-target`.\n  \
+            Dependency `baz v0.0.0 [..]` requires to build for target `custom-target`.",
+        )
+        .with_status(101)
         .run();
 }
