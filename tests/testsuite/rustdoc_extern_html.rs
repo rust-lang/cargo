@@ -404,8 +404,8 @@ fn alt_sparse_registry() {
             "#,
         )
         .build();
-    p.cargo("doc -v --no-deps -Zrustdoc-map -Zsparse-registry")
-        .masquerade_as_nightly_cargo(&["rustdoc-map", "sparse-registry"])
+    p.cargo("doc -v --no-deps -Zrustdoc-map")
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo \
             [..]bar=https://example.com/bar/1.0.0/[..]grimm=https://docs.rs/grimm/1.0.0/[..]",

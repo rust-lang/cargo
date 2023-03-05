@@ -88,8 +88,7 @@ fn vendor_sample_config_alt_registry() {
 
     Package::new("log", "0.3.5").alternative(true).publish();
 
-    p.cargo("vendor --respect-source-config -Z sparse-registry")
-        .masquerade_as_nightly_cargo(&["sparse-registry"])
+    p.cargo("vendor --respect-source-config")
         .with_stdout(format!(
             r#"[source."{0}"]
 registry = "{0}"
