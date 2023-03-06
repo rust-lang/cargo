@@ -36,7 +36,7 @@ units do not show when code generation starts).
 The "custom build" units are `build.rs` scripts, which when run are
 highlighted in orange.
 
-![build-unit-timing](../images/build-unit-time.png)
+![build-unit-time](../images/build-unit-time.png)
 
 The second graph shows Cargo's concurrency over time. The background
 indicates CPU usage. The three lines are:
