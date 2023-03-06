@@ -726,7 +726,8 @@ impl DependencyUI {
                     .get(next)
                     .into_iter()
                     .flatten()
-                    .map(|s| s.as_str()),
+                    .map(|s| s.as_str())
+                    .filter(|s| !activated.contains(s)),
             );
             activated.extend(
                 self.available_features
