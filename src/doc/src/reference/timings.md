@@ -18,7 +18,7 @@ The first table displays the build information of the project, including the
 number of units built, the maximum number of concurrency, build time, and the 
 version information of the currently used compiler.
 
-![build-timing](../images/build-timing.PNG)
+![build-info](../images/build-info.png)
 
 The "unit" graph shows the duration of each unit over time. A "unit" is a single
 compiler invocation. There are lines that show which additional units are 
@@ -36,7 +36,7 @@ units do not show when code generation starts).
 The "custom build" units are `build.rs` scripts, which when run are
 highlighted in orange.
 
-![build-unit-timing](../images/build-unit-timing.PNG)
+![build-unit-timing](../images/build-unit-time.png)
 
 The second graph shows Cargo's concurrency over time. The background
 indicates CPU usage. The three lines are:
@@ -46,7 +46,7 @@ indicates CPU usage. The three lines are:
   dependencies to finish.
 - "Active" (green) --- This is the number of units currently running.
 
-![cargo-concurrency-over-time](../images/cargo-concurrency-over-time.PNG)
+![cargo-concurrency-over-time](../images/cargo-concurrency-over-time.png)
 
 Note: This does not show the concurrency in the compiler itself. `rustc`
 coordinates with Cargo via the "job server" to stay within the concurrency
@@ -62,5 +62,5 @@ Tips for addressing compile times:
 - If there are a large number of crates bottlenecked on a single crate, focus
   your attention on improving that one crate to improve parallelism.
 
-The last table lists the total time spent on "unit", "Codegen" time, and the 
-features that unit has.
+The last table lists the total time and "codegen" time spent on each unit,
+as well as the features that were enabled during each unit's compilation.
