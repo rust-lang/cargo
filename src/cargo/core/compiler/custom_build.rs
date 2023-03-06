@@ -231,14 +231,11 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     for cfg in bcx.target_data.cfg(unit.kind) {
         match *cfg {
             Cfg::Name(ref n) => {
-                cfg_map.insert(n.clone(), None);
+                cfg_map.insert(n.clone(), Vec::new());
             }
             Cfg::KeyPair(ref k, ref v) => {
-                if let Some(ref mut values) =
-                    *cfg_map.entry(k.clone()).or_insert_with(|| Some(Vec::new()))
-                {
-                    values.push(v.clone())
-                }
+                let values = cfg_map.entry(k.clone()).or_default();
+                values.push(v.clone());
             }
         }
     }
@@ -249,14 +246,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             continue;
         }
         let k = format!("CARGO_CFG_{}", super::envify(&k));
-        match v {
-            Some(list) => {
-                cmd.env(&k, list.join(","));
-            }
-            None => {
-                cmd.env(&k, "");
-            }
-        }
+        cmd.env(&k, v.join(","));
     }
 
     // Also inform the build script of the rustc compiler context.

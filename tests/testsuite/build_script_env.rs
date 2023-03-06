@@ -239,3 +239,65 @@ fn cfg_paradox() {
         .with_stderr_contains("[..]--cfg=bertrand[..]")
         .run();
 }
+
+/// This test checks how Cargo handles rustc cfgs which are defined both with
+/// and without a value. The expected behavior is that the environment variable
+/// is going to contain all the values.
+///
+/// For example, this configuration:
+/// ```
+/// target_has_atomic
+/// target_has_atomic="16"
+/// target_has_atomic="32"
+/// target_has_atomic="64"
+/// target_has_atomic="8"
+/// target_has_atomic="ptr"
+/// ```
+///
+/// Should result in the following environment variable:
+///
+/// ```
+/// CARGO_CFG_TARGET_HAS_ATOMIC=16,32,64,8,ptr
+/// ```
+///
+/// On the other hand, configuration symbols without any value should result in
+/// an empty string.
+///
+/// For example, this configuration:
+///
+/// ```
+/// target_thread_local
+/// ```
+///
+/// Should result in the following environment variable:
+///
+/// ```
+/// CARGO_CFG_TARGET_THREAD_LOCAL=
+/// ```
+#[cargo_test(nightly, reason = "affected rustc cfg is unstable")]
+#[cfg(target_arch = "x86_64")]
+fn rustc_cfg_with_and_without_value() {
+    let build_rs = r#"
+        fn main() {
+            let cfg = std::env::var("CARGO_CFG_TARGET_HAS_ATOMIC");
+            eprintln!("CARGO_CFG_TARGET_HAS_ATOMIC={cfg:?}");
+            let cfg = std::env::var("CARGO_CFG_WINDOWS");
+            eprintln!("CARGO_CFG_WINDOWS={cfg:?}");
+            let cfg = std::env::var("CARGO_CFG_UNIX");
+            eprintln!("CARGO_CFG_UNIX={cfg:?}");
+        }
+    "#;
+    let p = project()
+        .file("src/lib.rs", r#""#)
+        .file("build.rs", build_rs)
+        .build();
+
+    let mut check = p.cargo("check -vv");
+    #[cfg(target_has_atomic = "64")]
+    check.with_stderr_contains("[foo 0.0.1] CARGO_CFG_TARGET_HAS_ATOMIC=Ok(\"[..]64[..]\")");
+    #[cfg(windows)]
+    check.with_stderr_contains("[foo 0.0.1] CARGO_CFG_WINDOWS=Ok(\"\")");
+    #[cfg(unix)]
+    check.with_stderr_contains("[foo 0.0.1] CARGO_CFG_UNIX=Ok(\"\")");
+    check.run();
+}
