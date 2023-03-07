@@ -343,6 +343,10 @@ impl<'cfg> Compilation<'cfg> {
                 "CARGO_PKG_RUST_VERSION",
                 &pkg.rust_version().unwrap_or(&String::new()),
             )
+            .env(
+                "CARGO_PKG_README",
+                metadata.readme.as_ref().unwrap_or(&String::new()),
+            )
             .cwd(pkg.root());
 
         // Apply any environment variables from the config
