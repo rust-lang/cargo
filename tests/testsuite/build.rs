@@ -639,7 +639,9 @@ fn cargo_compile_with_invalid_code() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("[ERROR] could not compile `foo` due to previous error\n")
+        .with_stderr_contains(
+            "[ERROR] could not compile `foo` (bin \"foo\") due to previous error\n",
+        )
         .run();
     assert!(p.root().join("Cargo.lock").is_file());
 }
@@ -5699,7 +5701,7 @@ fn signal_display() {
             "\
 [COMPILING] pm [..]
 [COMPILING] foo [..]
-[ERROR] could not compile `foo`
+[ERROR] could not compile `foo` [..]
 
 Caused by:
   process didn't exit successfully: `rustc [..]` (signal: 6, SIGABRT: process abort signal)
