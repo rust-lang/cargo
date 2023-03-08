@@ -104,6 +104,8 @@
   which previously made Cargo fail to compile on certain platforms.
   [#11347](https://github.com/rust-lang/cargo/pull/11347)
   [#11633](https://github.com/rust-lang/cargo/pull/11633)
+- Don't panic in Windows headless session with really long file names.
+  [#11759](https://github.com/rust-lang/cargo/pull/11759)
 
 ### Nightly only
 
