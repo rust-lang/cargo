@@ -65,9 +65,8 @@ The [`#[cargo_test]` attribute](#cargo_test-attribute) is used in place of `#[te
 #### `#[cargo_test]` attribute
 
 The `#[cargo_test]` attribute injects code which does some setup before starting the test.
-It will create a filesystem "sandbox" under the "cargo integration test" directory for each test, such as
-`/path/to/cargo/target/tmp/cit/testsuite/bad_config/bad1`. The sandbox will contain a `home` directory that
-will be used instead of your normal home directory.
+It will create a filesystem "sandbox" under the "cargo integration test" directory for each test, such as `/path/to/cargo/target/tmp/cit/t123/`.
+The sandbox will contain a `home` directory that will be used instead of your normal home directory.
 
 The `#[cargo_test]` attribute takes several options that will affect how the test is generated.
 They are listed in parentheses separated with commas, such as:
@@ -201,7 +200,7 @@ Then populate
 - This attribute injects code which does some setup before starting the
   test, creating a filesystem "sandbox" under the "cargo integration test"
   directory for each test such as
-  `/path/to/cargo/target/tmp/cit/testsuite/cargo_add/add_basic`
+  `/path/to/cargo/target/cit/t123/`
 - The sandbox will contain a `home` directory that will be used instead of your normal home directory
 
 `Project`:
@@ -268,9 +267,9 @@ environment. The general process is:
 
    `cargo test --test testsuite -- features2::inactivate_targets`.
 2. In another terminal, head into the sandbox directory to inspect the files and run `cargo` directly.
-    1. The sandbox directories match the format of `tests/testsuite`, just replace `tests` with `target/tmp/cit` 
+    1. The sandbox directories start with `t0` for the first test.
 
-       `cd target/tmp/cit/testsuite/features2/inactivate_target`
+       `cd target/tmp/cit/t0`
     2. Set up the environment so that the sandbox configuration takes effect:
 
        `export CARGO_HOME=$(pwd)/home/.cargo`
