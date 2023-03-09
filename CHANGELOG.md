@@ -18,15 +18,6 @@
   ([docs](https://doc.rust-lang.org/nightly/cargo/reference/registries.html#registry-protocols))
   [#11791](https://github.com/rust-lang/cargo/pull/11791)
   [#11783](https://github.com/rust-lang/cargo/pull/11783)
-- Enhanced the documentation of timing report with graphs.
-  [#11798](https://github.com/rust-lang/cargo/pull/11798)
-- Switched to `sha2` calculate SHA256 internally.
-  [#11795](https://github.com/rust-lang/cargo/pull/11795)
-  [#11807](https://github.com/rust-lang/cargo/pull/11807)
-- Updated `base64` to `0.21.0` internally.
-  [#11796](https://github.com/rust-lang/cargo/pull/11796)
-- Cargo the project itself integrated `cargo-deny` in its CI pipeline.
-  [#11761](https://github.com/rust-lang/cargo/pull/11761)
 
 ### Fixed
 
@@ -38,6 +29,23 @@
   [#11805](https://github.com/rust-lang/cargo/pull/11805)
 - Don't panic when [`patch`] involved in dependency resolution results in a conflict.
   [#11770](https://github.com/rust-lang/cargo/pull/11770)
+
+### Documentation improvements
+
+- Cleaned-up unstable documentation.
+  [#11793](https://github.com/rust-lang/cargo/pull/11793)
+- Enhanced the documentation of timing report with graphs.
+  [#11798](https://github.com/rust-lang/cargo/pull/11798)
+
+### Internal improvements
+
+- Switched to `sha2` crate for SHA256 calculation.
+  [#11795](https://github.com/rust-lang/cargo/pull/11795)
+  [#11807](https://github.com/rust-lang/cargo/pull/11807)
+- Updated to `base64` v0.21.0.
+  [#11796](https://github.com/rust-lang/cargo/pull/11796)
+- Integrated `cargo-deny` in Cargo its own CI pipeline.
+  [#11761](https://github.com/rust-lang/cargo/pull/11761)
 
 ### Nightly only
 
