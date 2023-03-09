@@ -5,4 +5,4 @@ intended to give you links into the code which is hopefully commented with
 more in-depth information.
 
 If you feel something is missing that would help you, feel free to ask on
-Zulip.
+[Zulip](https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo).
