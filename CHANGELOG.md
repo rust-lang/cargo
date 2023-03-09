@@ -30,6 +30,21 @@
 - Don't panic when [`patch`] involved in dependency resolution results in a conflict.
   [#11770](https://github.com/rust-lang/cargo/pull/11770)
 
+### Nightly only
+
+- Added `-Zdirect-minimal-versions`. This behaves like `-Zminimal-versions` but
+  only for direct dependencies.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions))
+  [#11688](https://github.com/rust-lang/cargo/pull/11688)
+- Added `-Zgitoxide` which switches all `git fetch` operation in Cargo to
+  use `gitoxide` crate. This is still an MVP but could improve the performance
+  up to 2 times.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html##gitoxide))
+  [#11448](https://github.com/rust-lang/cargo/pull/11448)
+  [#11800](https://github.com/rust-lang/cargo/pull/11800)
+- Removed `-Zjobserver-per-rustc`. Its rustc counterpart never got landed.
+  [#11764](https://github.com/rust-lang/cargo/pull/11764)
+
 ### Documentation improvements
 
 - Cleaned-up unstable documentation.
@@ -46,21 +61,6 @@
   [#11796](https://github.com/rust-lang/cargo/pull/11796)
 - Integrated `cargo-deny` in Cargo its own CI pipeline.
   [#11761](https://github.com/rust-lang/cargo/pull/11761)
-
-### Nightly only
-
-- Added `-Zdirect-minimal-versions`. This behaves like `-Zminimal-versions` but
-  only for direct dependencies.
-  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions))
-  [#11688](https://github.com/rust-lang/cargo/pull/11688)
-- Added `-Zgitoxide` which switches all `git fetch` operation in Cargo to
-  use `gitoxide` crate. This is still an MVP but could improve the performance
-  up to 2 times.
-  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html##gitoxide))
-  [#11448](https://github.com/rust-lang/cargo/pull/11448)
-  [#11800](https://github.com/rust-lang/cargo/pull/11800)
-- Removed `-Zjobserver-per-rustc`. Its rustc counterpart never got landed.
-  [#11764](https://github.com/rust-lang/cargo/pull/11764)
 
 ## Cargo 1.69 (2023-04-20)
 [985d561f...rust-1.69.0](https://github.com/rust-lang/cargo/compare/985d561f...rust-1.69.0)
@@ -122,6 +122,16 @@
 - Fixed `.cargo-ok` file being truncated wrongly, preventing from using a dependency.
   [#11665](https://github.com/rust-lang/cargo/pull/11665)
   [#11724](https://github.com/rust-lang/cargo/pull/11724)
+
+### Nightly only
+
+- `-Zrustdoc-scrape-example` must fail with bad build script.
+  [#11694](https://github.com/rust-lang/cargo/pull/11694)
+- Updated 1password credential manager integration to the version 2 CLI.
+  [#11692](https://github.com/rust-lang/cargo/pull/11692)
+- Emit an error message for transitive artifact dependencies with targets the
+  package doesn't directly interact with.
+  [#11643](https://github.com/rust-lang/cargo/pull/11643)
 
 ### Documentation improvements
 
@@ -197,16 +207,6 @@
 - Pull requests in Cargo now get autolabelled for label `A-*` and `Command-*`.
   [#11664](https://github.com/rust-lang/cargo/pull/11664)
   [#11679](https://github.com/rust-lang/cargo/pull/11679)
-
-### Nightly only
-
-- `-Zrustdoc-scrape-example` must fail with bad build script.
-  [#11694](https://github.com/rust-lang/cargo/pull/11694)
-- Updated 1password credential manager integration to the version 2 CLI.
-  [#11692](https://github.com/rust-lang/cargo/pull/11692)
-- Emit an error message for transitive artifact dependencies with targets the
-  package doesn't directly interact with.
-  [#11643](https://github.com/rust-lang/cargo/pull/11643)
 
 ## Cargo 1.68 (2023-03-09)
 [f6e737b1...rust-1.68.0](https://github.com/rust-lang/cargo/compare/f6e737b1...rust-1.68.0)
