@@ -1,5 +1,59 @@
 # Changelog
 
+## Cargo 1.70 (2023-06-01)
+[9880b408...HEAD](https://github.com/rust-lang/cargo/compare/9880b408...HEAD)
+
+### Added
+
+- The `CARGO_PKG_README` environment variable is now set to the path to the
+  README  file when compiling a crate.
+  [#11645](https://github.com/rust-lang/cargo/pull/11645)
+- Cargo now displays richer information of Cargo target failed to compile.
+  [#11636](https://github.com/rust-lang/cargo/pull/11636)
+
+### Changed
+
+- 🎉 The `sparse` protocol is now the default protocol for crates.io!
+  ([RFC 2789](https://github.com/rust-lang/rfcs/blob/master/text/2789-sparse-index.md))
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/registries.html#registry-protocols))
+  [#11791](https://github.com/rust-lang/cargo/pull/11791)
+  [#11783](https://github.com/rust-lang/cargo/pull/11783)
+- Enhanced the documentation of timing report with graphs.
+  [#11798](https://github.com/rust-lang/cargo/pull/11798)
+- Switched to `sha2` calculate SHA256 internally.
+  [#11795](https://github.com/rust-lang/cargo/pull/11795)
+  [#11807](https://github.com/rust-lang/cargo/pull/11807)
+- Updated `base64` to `0.21.0` internally.
+  [#11796](https://github.com/rust-lang/cargo/pull/11796)
+- Cargo the project itself integrated `cargo-deny` in its CI pipeline.
+  [#11761](https://github.com/rust-lang/cargo/pull/11761)
+
+### Fixed
+
+- Removed duplicates of possible values in `--charset` option of `cargo tree`.
+  [#11785](https://github.com/rust-lang/cargo/pull/11785)
+- Fixed `CARGO_CFG_` vars for configs defined both with and without value.
+  [#11790](https://github.com/rust-lang/cargo/pull/11790)
+- Broke endless loop on cyclic features in added dependency in `cargo add`.
+  [#11805](https://github.com/rust-lang/cargo/pull/11805)
+- Don't panic when [`patch`] involved in dependency resolution results in a conflict.
+  [#11770](https://github.com/rust-lang/cargo/pull/11770)
+
+### Nightly only
+
+- Added `-Zdirect-minimal-versions`. This behaves like `-Zminimal-versions` but
+  only for direct dependencies.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions))
+  [#11688](https://github.com/rust-lang/cargo/pull/11688)
+- Added `-Zgitoxide` which switches all `git fetch` operation in Cargo to
+  use `gitoxide` crate. This is still an MVP but could improve the performance
+  up to 2 times.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html##gitoxide))
+  [#11448](https://github.com/rust-lang/cargo/pull/11448)
+  [#11800](https://github.com/rust-lang/cargo/pull/11800)
+- Removed `-Zjobserver-per-rustc`. Its rustc counterpart never got landed.
+  [#11764](https://github.com/rust-lang/cargo/pull/11764)
+
 ## Cargo 1.69 (2023-04-20)
 [985d561f...rust-1.69.0](https://github.com/rust-lang/cargo/compare/985d561f...rust-1.69.0)
 
