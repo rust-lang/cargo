@@ -211,6 +211,31 @@ f1 = 123
     assert_eq!(s, S { f1: Some(456) });
 }
 
+#[cfg(windows)]
+#[cargo_test]
+fn environment_variable_casing() {
+    // Issue #11814: Environment variable names are case-insensitive on Windows.
+    let config = ConfigBuilder::new()
+        .env("Path", "abc")
+        .env("Two-Words", "abc")
+        .env("two_words", "def")
+        .build();
+
+    let var = config.get_env("PATH").unwrap();
+    assert_eq!(var, String::from("abc"));
+
+    let var = config.get_env("path").unwrap();
+    assert_eq!(var, String::from("abc"));
+
+    let var = config.get_env("TWO-WORDS").unwrap();
+    assert_eq!(var, String::from("abc"));
+
+    // Make sure that we can still distinguish between dashes and underscores
+    // in variable names.
+    let var = config.get_env("Two_Words").unwrap();
+    assert_eq!(var, String::from("def"));
+}
+
 #[cargo_test]
 fn config_works_with_extension() {
     write_config_toml(

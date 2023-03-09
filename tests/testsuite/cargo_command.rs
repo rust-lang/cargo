@@ -104,6 +104,32 @@ fn list_command_looks_at_path() {
     );
 }
 
+#[cfg(windows)]
+#[cargo_test]
+fn list_command_looks_at_path_case_mismatch() {
+    let proj = project()
+        .executable(Path::new("path-test").join("cargo-1"), "")
+        .build();
+
+    let mut path = path();
+    path.push(proj.root().join("path-test"));
+    let path = env::join_paths(path.iter()).unwrap();
+
+    // See issue #11814: Environment variable names are case-insensitive on Windows.
+    // We need to check that having "Path" instead of "PATH" is okay.
+    let output = cargo_process("-v --list")
+        .env("Path", &path)
+        .env_remove("PATH")
+        .exec_with_output()
+        .unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
+    assert!(
+        output.contains("\n    1                   "),
+        "missing 1: {}",
+        output
+    );
+}
+
 #[cargo_test]
 fn list_command_handles_known_external_commands() {
     let p = project()
