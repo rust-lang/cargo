@@ -201,8 +201,12 @@ pub struct Config {
     target_dir: Option<Filesystem>,
     /// Environment variables, separated to assist testing.
     env: HashMap<OsString, OsString>,
-    /// Environment variables, converted to uppercase to check for case mismatch
-    upper_case_env: HashMap<String, String>,
+    /// Environment variables converted to uppercase to check for case mismatch
+    /// (relevant on Windows, where environment variables are case-insensitive).
+    case_insensitive_env: HashMap<OsString, OsString>,
+    /// Environment variables converted to uppercase and with "-" replaced by "_"
+    /// (the format expected by Cargo).
+    normalized_env: HashMap<String, String>,
     /// Tracks which sources have been updated to avoid multiple updates.
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
     /// Cache of credentials from configuration or credential providers.
@@ -262,10 +266,16 @@ impl Config {
 
         let env: HashMap<_, _> = env::vars_os().collect();
 
-        let upper_case_env = env
+        let case_insensitive_env: HashMap<_, _> = env
+            .keys()
+            .map(|k| (k.to_ascii_uppercase(), k.to_owned()))
+            .collect();
+
+        let normalized_env = env
             .iter()
-            .filter_map(|(k, _)| k.to_str()) // Only keep valid UTF-8
-            .map(|k| (k.to_uppercase().replace("-", "_"), k.to_owned()))
+            // Only keep entries where both the key and value are valid UTF-8
+            .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
+            .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
             .collect();
 
         let cache_key: &OsStr = "CARGO_CACHE_RUSTC_INFO".as_ref();
@@ -303,7 +313,8 @@ impl Config {
             creation_time: Instant::now(),
             target_dir: None,
             env,
-            upper_case_env,
+            case_insensitive_env,
+            normalized_env,
             updated_sources: LazyCell::new(),
             credential_cache: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
@@ -772,10 +783,10 @@ impl Config {
     /// This can be used similarly to `std::env::var`.
     pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<String> {
         let key = key.as_ref();
-        let s = match self.env.get(key) {
-            Some(s) => s,
-            None => bail!("{key:?} could not be found in the environment snapshot",),
-        };
+        let s = self
+            .get_env_os(key)
+            .ok_or_else(|| anyhow!("{key:?} could not be found in the environment snapshot"))?;
+
         match s.to_str() {
             Some(s) => Ok(s.to_owned()),
             None => bail!("environment variable value is not valid unicode: {s:?}"),
@@ -786,7 +797,26 @@ impl Config {
     ///
     /// This can be used similarly to `std::env::var_os`.
     pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
-        self.env.get(key.as_ref()).cloned()
+        match self.env.get(key.as_ref()) {
+            Some(s) => Some(s.clone()),
+            None => {
+                if cfg!(windows) {
+                    self.get_env_case_insensitive(key).cloned()
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// Wrapper for `self.env.get` when `key` should be case-insensitive.
+    /// This is relevant on Windows, where environment variables are case-insensitive.
+    fn get_env_case_insensitive(&self, key: impl AsRef<OsStr>) -> Option<&OsString> {
+        let upper_case_key = key.as_ref().to_ascii_uppercase();
+        // `self.case_insensitive_env` holds pairs like `("PATH", "Path")`
+        // or `("MY-VAR", "my-var")`.
+        let env_key = self.case_insensitive_env.get(&upper_case_key)?;
+        self.env.get(env_key)
     }
 
     /// Get the value of environment variable `key`.
@@ -821,7 +851,7 @@ impl Config {
     }
 
     fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
-        if let Some(env_key) = self.upper_case_env.get(key.as_env_key()) {
+        if let Some(env_key) = self.normalized_env.get(key.as_env_key()) {
             let _ = self.shell().warn(format!(
                 "Environment variables are expected to use uppercase letters and underscores, \
                 the variable `{}` will be ignored and have no effect",
