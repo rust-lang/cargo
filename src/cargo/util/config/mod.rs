@@ -205,7 +205,7 @@ pub struct Config {
     /// (relevant on Windows, where environment variables are case-insensitive).
     case_insensitive_env: HashMap<OsString, OsString>,
     /// Environment variables converted to uppercase and with "-" replaced by "_"
-    /// (the format expected by Cargo).
+    /// (the format expected by Cargo). This only contains entries that were valid UTF-8.
     normalized_env: HashMap<String, String>,
     /// Tracks which sources have been updated to avoid multiple updates.
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
@@ -741,6 +741,15 @@ impl Config {
     /// Helper primarily for testing.
     pub fn set_env(&mut self, env: HashMap<String, String>) {
         self.env = env.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
+        self.case_insensitive_env = self
+            .env
+            .keys()
+            .map(|k| (k.to_ascii_uppercase(), k.to_owned()))
+            .collect();
+        self.normalized_env = self
+            .env()
+            .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
+            .collect();
     }
 
     /// Returns all environment variables as an iterator, filtering out entries
