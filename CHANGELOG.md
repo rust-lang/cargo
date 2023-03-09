@@ -45,14 +45,14 @@
 - Removed `-Zjobserver-per-rustc`. Its rustc counterpart never got landed.
   [#11764](https://github.com/rust-lang/cargo/pull/11764)
 
-### Documentation improvements
+### Documentation
 
 - Cleaned-up unstable documentation.
   [#11793](https://github.com/rust-lang/cargo/pull/11793)
 - Enhanced the documentation of timing report with graphs.
   [#11798](https://github.com/rust-lang/cargo/pull/11798)
 
-### Internal improvements
+### Internal
 
 - Switched to `sha2` crate for SHA256 calculation.
   [#11795](https://github.com/rust-lang/cargo/pull/11795)
@@ -133,7 +133,7 @@
   package doesn't directly interact with.
   [#11643](https://github.com/rust-lang/cargo/pull/11643)
 
-### Documentation improvements
+### Documentation
 
 - Clarified the difference between `CARGO_CRATE_NAME` and `CARGO_PKG_NAME`.
   [#11576](https://github.com/rust-lang/cargo/pull/11576)
@@ -162,7 +162,7 @@
 - Documented `-F` flag as an alias for `--features` in `cargo add`.
   [#11774](https://github.com/rust-lang/cargo/pull/11774)
 
-### Internal improvements
+### Internal
 
 - Disable network SSH tests on Windows.
   [#11610](https://github.com/rust-lang/cargo/pull/11610)
