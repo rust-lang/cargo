@@ -1271,6 +1271,8 @@ codegen-backend = "cranelift"
 
 ### gitoxide
 
+* Tracking Issue: [#11813](https://github.com/rust-lang/cargo/issues/11813)
+
 With the 'gitoxide' unstable feature, all or the the specified git operations will be performed by 
 the `gitoxide` crate instead of `git2`.
 
