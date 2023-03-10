@@ -154,6 +154,48 @@ If you need to test with registry dependencies, see
 If you need to test git dependencies, see [`support::git`] to create a git
 dependency.
 
+#### Cross compilation
+
+There are some utilities to help support tests that need to work against a
+target other than the host. See [Running cross
+tests](running.md#running-cross-tests) for more an introduction on cross
+compilation tests.
+
+Tests that need to do cross-compilation should include this at the top of the
+test to disable it in scenarios where cross compilation isn't available:
+
+```rust,ignore
+if cargo_test_support::cross_compile::disabled() {
+    return;
+}
+```
+
+The name of the target can be fetched with the [`cross_compile::alternate()`]
+function. The name of the host target can be fetched with
+[`cargo_test_support::rustc_host()`].
+
+The cross-tests need to distinguish between targets which can *build* versus
+those which can actually *run* the resulting executable. Unfortunately, macOS is
+currently unable to run an alternate target (Apple removed 32-bit support a
+long time ago). For building, `x86_64-apple-darwin` will target
+`x86_64-apple-ios` as its alternate. However, the iOS target can only execute
+binaries if the iOS simulator is installed and configured. The simulator is
+not available in CI, so all tests that need to run cross-compiled binaries are
+disabled on CI. If you are running on macOS locally, and have the simulator
+installed, then it should be able to run them.
+
+If the test needs to run the cross-compiled binary, then it should have
+something like this to exit the test before doing so:
+
+```rust,ignore
+if cargo_test_support::cross_compile::can_run_on_host() {
+    return;
+}
+```
+
+[`cross_compile::alternate()`]: https://github.com/rust-lang/cargo/blob/d58902e22e148426193cf3b8c4449fd3c05c0afd/crates/cargo-test-support/src/cross_compile.rs#L208-L225
+[`cargo_test_support::rustc_host()`]: https://github.com/rust-lang/cargo/blob/d58902e22e148426193cf3b8c4449fd3c05c0afd/crates/cargo-test-support/src/lib.rs#L1137-L1140
+
 ### UI Tests
 
 UI Tests are a bit more spread out and generally look like:
