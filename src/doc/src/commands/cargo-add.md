@@ -91,9 +91,6 @@ which is defined by the <code>registry.default</code> config key which defaults 
 
 </dl>
 
-
-</dl>
-
 ### Dependency options
 
 <dl>

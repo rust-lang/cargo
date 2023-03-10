@@ -85,9 +85,6 @@ Add as a dependency to the [given target platform](../reference/specifying-depen
 
 {{/options}}
 
-
-</dl>
-
 ### Dependency options
 
 {{#options}}

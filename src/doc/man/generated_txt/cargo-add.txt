@@ -76,8 +76,6 @@ OPTIONS
            Add as a dependency to the given target platform
            <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#platform-specific-dependencies>.
 
-</dl>
-
    Dependency options
        --dry-run
            Don’t actually write the manifest
@@ -228,4 +226,3 @@ EXAMPLES
 
 SEE ALSO
        cargo(1), cargo-remove(1)
-
