@@ -124,6 +124,30 @@ macro_rules! get_value_typed {
     };
 }
 
+/// Generate `case_insensitive_env` and `normalized_env` from the `env`.
+fn make_case_insensitive_and_normalized_env(
+    env: &HashMap<OsString, OsString>,
+) -> (HashMap<String, String>, HashMap<String, String>) {
+    // See `Config.case_insensitive_env`.
+    // Maps from uppercased key to actual environment key.
+    // For example, `"PATH" => "Path"`.
+    let case_insensitive_env: HashMap<_, _> = env
+        .keys()
+        .filter_map(|k| k.to_str())
+        .map(|k| (k.to_uppercase(), k.to_owned()))
+        .collect();
+    // See `Config.normalized_env`.
+    // Maps from normalized (uppercased with "-" replaced by "_") key
+    // to actual environment key. For example, `"MY_KEY" => "my-key"`.
+    let normalized_env = env
+        .iter()
+        // Only keep entries where both the key and value are valid UTF-8
+        .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
+        .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
+        .collect();
+    (case_insensitive_env, normalized_env)
+}
+
 /// Indicates why a config value is being loaded.
 #[derive(Clone, Copy, Debug)]
 enum WhyLoad {
@@ -266,19 +290,7 @@ impl Config {
         });
 
         let env: HashMap<_, _> = env::vars_os().collect();
-
-        let case_insensitive_env: HashMap<_, _> = env
-            .keys()
-            .filter_map(|k| k.to_str())
-            .map(|k| (k.to_uppercase(), k.to_owned()))
-            .collect();
-
-        let normalized_env = env
-            .iter()
-            // Only keep entries where both the key and value are valid UTF-8
-            .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
-            .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
-            .collect();
+        let (case_insensitive_env, normalized_env) = make_case_insensitive_and_normalized_env(&env);
 
         let cache_key: &OsStr = "CARGO_CACHE_RUSTC_INFO".as_ref();
         let cache_rustc_info = match env.get(cache_key) {
@@ -743,14 +755,10 @@ impl Config {
     /// Helper primarily for testing.
     pub fn set_env(&mut self, env: HashMap<String, String>) {
         self.env = env.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
-        self.case_insensitive_env = self
-            .env_keys()
-            .map(|k| (k.to_uppercase(), k.to_owned()))
-            .collect();
-        self.normalized_env = self
-            .env()
-            .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
-            .collect();
+        let (case_insensitive_env, normalized_env) =
+            make_case_insensitive_and_normalized_env(&self.env);
+        self.case_insensitive_env = case_insensitive_env;
+        self.normalized_env = normalized_env;
     }
 
     /// Returns all environment variables as an iterator, filtering out entries
