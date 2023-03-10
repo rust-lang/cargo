@@ -203,9 +203,10 @@ pub struct Config {
     env: HashMap<OsString, OsString>,
     /// Environment variables converted to uppercase to check for case mismatch
     /// (relevant on Windows, where environment variables are case-insensitive).
-    case_insensitive_env: HashMap<OsString, OsString>,
+    case_insensitive_env: HashMap<String, String>,
     /// Environment variables converted to uppercase and with "-" replaced by "_"
-    /// (the format expected by Cargo). This only contains entries that were valid UTF-8.
+    /// (the format expected by Cargo). This only contains entries where the key and variable are
+    /// both valid UTF-8.
     normalized_env: HashMap<String, String>,
     /// Tracks which sources have been updated to avoid multiple updates.
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
@@ -268,7 +269,8 @@ impl Config {
 
         let case_insensitive_env: HashMap<_, _> = env
             .keys()
-            .map(|k| (k.to_ascii_uppercase(), k.to_owned()))
+            .filter_map(|k| k.to_str())
+            .map(|k| (k.to_uppercase(), k.to_owned()))
             .collect();
 
         let normalized_env = env
@@ -742,9 +744,8 @@ impl Config {
     pub fn set_env(&mut self, env: HashMap<String, String>) {
         self.env = env.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
         self.case_insensitive_env = self
-            .env
-            .keys()
-            .map(|k| (k.to_ascii_uppercase(), k.to_owned()))
+            .env_keys()
+            .map(|k| (k.to_uppercase(), k.to_owned()))
             .collect();
         self.normalized_env = self
             .env()
@@ -820,11 +821,12 @@ impl Config {
 
     /// Wrapper for `self.env.get` when `key` should be case-insensitive.
     /// This is relevant on Windows, where environment variables are case-insensitive.
+    /// Note that this only works on keys that are valid UTF-8.
     fn get_env_case_insensitive(&self, key: impl AsRef<OsStr>) -> Option<&OsString> {
-        let upper_case_key = key.as_ref().to_ascii_uppercase();
+        let upper_case_key = key.as_ref().to_str()?.to_uppercase();
         // `self.case_insensitive_env` holds pairs like `("PATH", "Path")`
         // or `("MY-VAR", "my-var")`.
-        let env_key = self.case_insensitive_env.get(&upper_case_key)?;
+        let env_key: &OsStr = self.case_insensitive_env.get(&upper_case_key)?.as_ref();
         self.env.get(env_key)
     }
 
