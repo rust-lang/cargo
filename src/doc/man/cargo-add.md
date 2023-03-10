@@ -81,6 +81,8 @@ Add as a [build dependency](../reference/specifying-dependencies.html#build-depe
 
 {{#option "`--target` _target_" }}
 Add as a dependency to the [given target platform](../reference/specifying-dependencies.html#platform-specific-dependencies).
+
+To avoid unexpected shell expansions, you may use quotes around each target, e.g., `--target 'cfg(unix)'`.
 {{/option}}
 
 {{/options}}
@@ -165,6 +167,10 @@ Add dependencies to only the specified package.
 4. Add support for serializing data structures to json with `derive`s
 
        cargo add serde serde_json -F serde/derive
+
+5. Add `windows` as a platform specific dependency on `cfg(windows)`
+
+       cargo add windows --target 'cfg(windows)'
 
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-remove" 1}}
