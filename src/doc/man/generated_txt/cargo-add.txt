@@ -76,7 +76,8 @@ OPTIONS
            Add as a dependency to the given target platform
            <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#platform-specific-dependencies>.
 
-</dl>
+           To avoid unexpected shell expansions, you may use quotes around each
+           target, e.g., --target 'cfg(unix)'.
 
    Dependency options
        --dry-run
@@ -225,6 +226,10 @@ EXAMPLES
        4. Add support for serializing data structures to json with derives
 
               cargo add serde serde_json -F serde/derive
+
+       5. Add windows as a platform specific dependency on cfg(windows)
+
+              cargo add windows --target 'cfg(windows)'
 
 SEE ALSO
        cargo(1), cargo-remove(1)

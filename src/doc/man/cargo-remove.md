@@ -30,6 +30,8 @@ Remove as a [build dependency](../reference/specifying-dependencies.html#build-d
 
 {{#option "`--target` _target_" }}
 Remove as a dependency to the [given target platform](../reference/specifying-dependencies.html#platform-specific-dependencies).
+
+To avoid unexpected shell expansions, you may use quotes around each target, e.g., `--target 'cfg(unix)'`.
 {{/option}}
 
 {{/options}}

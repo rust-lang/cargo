@@ -96,8 +96,9 @@ Add as a \fIbuild dependency\fR <https://doc.rust\-lang.org/cargo/reference/spec
 \fB\-\-target\fR \fItarget\fR
 .RS 4
 Add as a dependency to the \fIgiven target platform\fR <https://doc.rust\-lang.org/cargo/reference/specifying\-dependencies.html#platform\-specific\-dependencies>\&.
+.sp
+To avoid unexpected shell expansions, you may use quotes around each target, e.g., \fB\-\-target 'cfg(unix)'\fR\&.
 .RE
-</dl>
 .SS "Dependency options"
 .sp
 \fB\-\-dry\-run\fR
@@ -305,6 +306,16 @@ cargo add nom@5
 .RS 4
 .nf
 cargo add serde serde_json \-F serde/derive
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 5.\h'+01'Add \fBwindows\fR as a platform specific dependency on \fBcfg(windows)\fR
+.sp
+.RS 4
+.nf
+cargo add windows \-\-target 'cfg(windows)'
 .fi
 .RE
 .RE

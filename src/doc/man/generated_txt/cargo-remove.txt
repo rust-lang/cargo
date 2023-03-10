@@ -23,6 +23,9 @@ OPTIONS
            Remove as a dependency to the given target platform
            <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#platform-specific-dependencies>.
 
+           To avoid unexpected shell expansions, you may use quotes around each
+           target, e.g., --target 'cfg(unix)'.
+
    Miscellaneous Options
        --dry-run
            Don’t actually write to the manifest.

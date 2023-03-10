@@ -86,10 +86,8 @@ which is defined by the <code>registry.default</code> config key which defaults 
 
 
 <dt class="option-term" id="option-cargo-add---target"><a class="option-anchor" href="#option-cargo-add---target"></a><code>--target</code> <em>target</em></dt>
-<dd class="option-desc">Add as a dependency to the <a href="../reference/specifying-dependencies.html#platform-specific-dependencies">given target platform</a>.</dd>
-
-
-</dl>
+<dd class="option-desc">Add as a dependency to the <a href="../reference/specifying-dependencies.html#platform-specific-dependencies">given target platform</a>.</p>
+<p>To avoid unexpected shell expansions, you may use quotes around each target, e.g., <code>--target 'cfg(unix)'</code>.</dd>
 
 
 </dl>
@@ -271,6 +269,10 @@ details on environment variables that Cargo reads.
 4. Add support for serializing data structures to json with `derive`s
 
        cargo add serde serde_json -F serde/derive
+
+5. Add `windows` as a platform specific dependency on `cfg(windows)`
+
+       cargo add windows --target 'cfg(windows)'
 
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-remove(1)](cargo-remove.html)

@@ -25,6 +25,8 @@ Remove as a \fIbuild dependency\fR <https://doc.rust\-lang.org/cargo/reference/s
 \fB\-\-target\fR \fItarget\fR
 .RS 4
 Remove as a dependency to the \fIgiven target platform\fR <https://doc.rust\-lang.org/cargo/reference/specifying\-dependencies.html#platform\-specific\-dependencies>\&.
+.sp
+To avoid unexpected shell expansions, you may use quotes around each target, e.g., \fB\-\-target 'cfg(unix)'\fR\&.
 .RE
 .SS "Miscellaneous Options"
 .sp
