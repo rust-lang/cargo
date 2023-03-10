@@ -120,6 +120,7 @@ mod rustdoc;
 mod rustdoc_extern_html;
 mod rustdocflags;
 mod rustflags;
+mod rustup;
 mod search;
 mod shell_quoting;
 mod source_replacement;
