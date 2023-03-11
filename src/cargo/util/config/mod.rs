@@ -1644,6 +1644,48 @@ impl Config {
     /// as a path.
     fn get_tool(&self, tool: &str, from_config: &Option<ConfigRelativePath>) -> PathBuf {
         self.maybe_get_tool(tool, from_config)
+            .or_else(|| {
+                // This is an optimization to circumvent the rustup proxies
+                // which can have a significant performance hit. The goal here
+                // is to determine if calling `rustc` from PATH would end up
+                // calling the proxies.
+                //
+                // This is somewhat cautious trying to determine if it is safe
+                // to circumvent rustup, because there are some situations
+                // where users may do things like modify PATH, call cargo
+                // directly, use a custom rustup toolchain link without a
+                // cargo executable, etc. However, there is still some risk
+                // this may make the wrong decision in unusual circumstances.
+                //
+                // First, we must be running under rustup in the first place.
+                let toolchain = self.get_env_os("RUSTUP_TOOLCHAIN")?;
+                // If the tool on PATH is the same as `rustup` on path, then
+                // there is pretty good evidence that it will be a proxy.
+                let tool_resolved = paths::resolve_executable(Path::new(tool)).ok()?;
+                let rustup_resolved = paths::resolve_executable(Path::new("rustup")).ok()?;
+                let tool_meta = tool_resolved.metadata().ok()?;
+                let rustup_meta = rustup_resolved.metadata().ok()?;
+                // This works on the assumption that rustup and its proxies
+                // use hard links to a single binary. If rustup ever changes
+                // that setup, then I think the worst consequence is that this
+                // optimization will not work, and it will take the slow path.
+                if tool_meta.len() != rustup_meta.len() {
+                    return None;
+                }
+                // Try to find the tool in rustup's toolchain directory.
+                let tool_exe = Path::new(tool).with_extension(env::consts::EXE_EXTENSION);
+                let toolchain_exe = home::rustup_home()
+                    .ok()?
+                    .join("toolchains")
+                    .join(&toolchain)
+                    .join("bin")
+                    .join(&tool_exe);
+                if toolchain_exe.exists() {
+                    Some(toolchain_exe)
+                } else {
+                    None
+                }
+            })
             .unwrap_or_else(|| PathBuf::from(tool))
     }
 

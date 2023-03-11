@@ -165,7 +165,6 @@ fn typical_rustup() {
         .with_stderr(
             "\
 [CHECKING] foo v0.0.1 [..]
-rustc proxy running
 real rustc running
 [FINISHED] [..]
 ",
@@ -184,7 +183,6 @@ real rustc running
         .with_stderr(
             "\
 [CHECKING] foo v0.0.1 [..]
-rustc proxy running
 real rustc running
 [FINISHED] [..]
 ",
