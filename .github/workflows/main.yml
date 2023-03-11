@@ -12,6 +12,9 @@ defaults:
 permissions:
   contents: read
 
+env:
+  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+
 jobs:
   # Check Code style quickly by running `rustfmt` over all code
   rustfmt:
@@ -97,9 +100,6 @@ jobs:
     - name: Configure extra test environment
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
-    - name: Enable sparse
-      run: echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV
-      if: "!contains(matrix.rust, 'stable')"
 
     - run: cargo test
     - name: Clear intermediate test output
