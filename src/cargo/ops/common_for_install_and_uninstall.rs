@@ -631,7 +631,7 @@ where
 
     fn multi_err<T>(kind: &str, source: &T, mut pkgs: Vec<&Package>) -> String
     where
-    T: Source
+        T: Source,
     {
         pkgs.sort_unstable_by_key(|a| a.name());
         let first_pkg = pkgs.iter().nth(0).unwrap();

@@ -4,7 +4,7 @@ use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
 use std::path::Path;
 
-use cargo_test_support::{compare};
+use cargo_test_support::compare;
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, registry_path, Package};
@@ -572,14 +572,14 @@ fn multiple_binaries_error() {
     cargo_process("install --git")
         .arg(p.url().to_string())
         .with_status(101)
-        .with_stderr(
-            format!("\
+        .with_stderr(format!(
+            "\
 [UPDATING] git repository [..]
 [ERROR] multiple packages with binaries found: bar, foo. \
 When installing a git repository, cargo will always search the entire repo for any Cargo.toml.\n\
 Please specify a package, e.g. `cargo install --git {git_url} bar`.
-"),
-        )
+"
+        ))
         .run();
 }
 
@@ -591,18 +591,20 @@ fn multiple_examples_error() {
         .file("examples/ex1.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
-        .file("bar/examples/ex1.rs", "fn main() {}",)
+        .file("bar/examples/ex1.rs", "fn main() {}")
         .build();
-    
+
     let git_url = p.url().to_string();
     cargo_process("install --example ex1 --git")
         .arg(p.url().to_string())
         .with_status(101)
-        .with_stderr(format!("\
+        .with_stderr(format!(
+            "\
 [UPDATING] git repository [..]
 [ERROR] multiple packages with examples found: bar, foo. \
 When installing a git repository, cargo will always search the entire repo for any Cargo.toml.\n\
-Please specify a package, e.g. `cargo install --git {git_url} bar`."))
+Please specify a package, e.g. `cargo install --git {git_url} bar`."
+        ))
         .run();
 }
 
@@ -767,7 +769,6 @@ fn multiple_crates_auto_examples() {
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
 }
-
 
 #[cargo_test]
 fn no_binaries_or_examples() {
