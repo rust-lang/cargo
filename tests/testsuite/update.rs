@@ -385,7 +385,7 @@ fn update_precise() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[UPDATING] serde v0.2.1 -> v0.2.0
+[DOWNGRADING] serde v0.2.1 -> v0.2.0
 ",
         )
         .run();
@@ -492,7 +492,7 @@ fn update_precise_first_run() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[UPDATING] serde v0.2.1 -> v0.2.0
+[DOWNGRADING] serde v0.2.1 -> v0.2.0
 ",
         )
         .run();
