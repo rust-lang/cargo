@@ -616,9 +616,10 @@ where
         let examples = candidates
             .iter()
             .filter(|cand| cand.targets().iter().filter(|t| t.is_example()).count() > 0);
-        let pkg = match one(binaries, |v| multi_err("binaries", v))? {
+        let git_url = source.source_id().url().to_string();
+        let pkg = match one(binaries, |v| multi_err("binaries", &git_url, v))? {
             Some(p) => p,
-            None => match one(examples, |v| multi_err("examples", v))? {
+            None => match one(examples, |v| multi_err("examples", &git_url, v))? {
                 Some(p) => p,
                 None => bail!(
                     "no packages found with binaries or \
@@ -629,17 +630,20 @@ where
         Ok(pkg.clone())
     };
 
-    fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
+    fn multi_err(kind: &str, git_url: &str, mut pkgs: Vec<&Package>) -> String {
         pkgs.sort_unstable_by_key(|a| a.name());
+        let first_pkg = pkgs[0];
         format!(
             "multiple packages with {} found: {}. When installing a git repository, \
-            cargo will always search the entire repo for any Cargo.toml. \
-            Please specify which to install.",
+            cargo will always search the entire repo for any Cargo.toml.\n\
+            Please specify a package, e.g. `cargo install --git {} {}`.",
             kind,
             pkgs.iter()
                 .map(|p| p.name().as_str())
                 .collect::<Vec<_>>()
-                .join(", ")
+                .join(", "),
+            git_url,
+            first_pkg.name()
         )
     }
 }

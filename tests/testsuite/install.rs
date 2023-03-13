@@ -560,7 +560,7 @@ Available binaries:
 }
 
 #[cargo_test]
-fn multiple_crates_error() {
+fn multiple_packages_containing_binaries() {
     let p = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
@@ -568,18 +568,99 @@ fn multiple_crates_error() {
         .file("a/src/main.rs", "fn main() {}")
         .build();
 
+    let git_url = p.url().to_string();
     cargo_process("install --git")
         .arg(p.url().to_string())
         .with_status(101)
-        .with_stderr(
+        .with_stderr(format!(
             "\
 [UPDATING] git repository [..]
 [ERROR] multiple packages with binaries found: bar, foo. \
-When installing a git repository, cargo will always search the entire repo for any Cargo.toml. \
-Please specify which to install.
-",
-        )
+When installing a git repository, cargo will always search the entire repo for any Cargo.toml.
+Please specify a package, e.g. `cargo install --git {git_url} bar`.
+"
+        ))
         .run();
+}
+
+#[cargo_test]
+fn multiple_packages_matching_example() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .file("examples/ex1.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .file("bar/examples/ex1.rs", "fn main() {}")
+        .build();
+
+    let git_url = p.url().to_string();
+    cargo_process("install --example ex1 --git")
+        .arg(p.url().to_string())
+        .with_status(101)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository [..]
+[ERROR] multiple packages with examples found: bar, foo. \
+When installing a git repository, cargo will always search the entire repo for any Cargo.toml.
+Please specify a package, e.g. `cargo install --git {git_url} bar`."
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn multiple_binaries_deep_select_uses_package_name() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("bar/baz/src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .arg("baz")
+        .run();
+}
+
+#[cargo_test]
+fn multiple_binaries_in_selected_package_installs_all() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/bin/bin1.rs", "fn main() {}")
+        .file("bar/src/bin/bin2.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .arg("bar")
+        .run();
+
+    let cargo_home = cargo_home();
+    assert_has_installed_exe(&cargo_home, "bin1");
+    assert_has_installed_exe(&cargo_home, "bin2");
+}
+
+#[cargo_test]
+fn multiple_binaries_in_selected_package_with_bin_option_installs_only_one() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/bin/bin1.rs", "fn main() {}")
+        .file("bar/src/bin/bin2.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --bin bin1 --git")
+        .arg(p.url().to_string())
+        .arg("bar")
+        .run();
+
+    let cargo_home = cargo_home();
+    assert_has_installed_exe(&cargo_home, "bin1");
+    assert_has_not_installed_exe(&cargo_home, "bin2");
 }
 
 #[cargo_test]
