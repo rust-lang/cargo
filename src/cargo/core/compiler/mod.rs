@@ -42,7 +42,7 @@ mod crate_type;
 mod custom_build;
 pub(crate) mod fingerprint;
 pub mod future_incompat;
-mod job_queue;
+pub(crate) mod job_queue;
 mod layout;
 mod links;
 mod lto;

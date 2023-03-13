@@ -6,20 +6,26 @@
 //! The [`compile`] function will do all the work to compile a workspace. A
 //! rough outline is:
 //!
-//! - Resolve the dependency graph (see [`ops::resolve`]).
-//! - Download any packages needed (see [`PackageSet`](crate::core::PackageSet)).
-//! - Generate a list of top-level "units" of work for the targets the user
+//! 1. Resolve the dependency graph (see [`ops::resolve`]).
+//! 2. Download any packages needed (see [`PackageSet`](crate::core::PackageSet)).
+//! 3. Generate a list of top-level "units" of work for the targets the user
 //!   requested on the command-line. Each [`Unit`] corresponds to a compiler
 //!   invocation. This is done in this module ([`UnitGenerator::generate_root_units`]).
-//! - Build the graph of `Unit` dependencies (see [`unit_dependencies`]).
-//! - Create a [`Context`] which will perform the following steps:
-//!     - Prepare the `target` directory (see [`Layout`]).
-//!     - Create a job queue (see `JobQueue`). The queue checks the
+//! 4. Starting from the root [`Unit`]s, generate the [`UnitGraph`] by walking the dependency graph
+//!   from the resolver.  See also [`unit_dependencies`].
+//! 5. Construct the [`BuildContext`] with all of the information collected so
+//!   far. This is the end of the "front end" of compilation.
+//! 6. Create a [`Context`] which oordinates the compilation process a
+//!   and will perform the following steps:
+//!     1. Prepare the `target` directory (see [`Layout`]).
+//!     2. Create a [`JobQueue`]. The queue checks the
 //!       fingerprint of each `Unit` to determine if it should run or be
 //!       skipped.
-//!     - Execute the queue. Each leaf in the queue's dependency graph is
-//!       executed, and then removed from the graph when finished. This
-//!       repeats until the queue is empty.
+//!     3. Execute the queue via [`drain_the_queue`]. Each leaf in the queue's dependency graph is
+//!        executed, and then removed from the graph when finished. This repeats until the queue is
+//!        empty.  Note that this is the only point in cargo that currently uses threads.
+//! 7. The result of the compilation is stored in the [`Compilation`] struct. This can be used for
+//!    various things, such as running tests after the compilation  has finished.
 //!
 //! **Note**: "target" inside this module generally refers to ["Cargo Target"],
 //! which corresponds to artifact that will be built in a package. Not to be
@@ -27,6 +33,8 @@
 //!
 //! [`unit_dependencies`]: crate::core::compiler::unit_dependencies
 //! [`Layout`]: crate::core::compiler::Layout
+//! [`JobQueue`]: crate::core::compiler::job_queue
+//! [`drain_the_queue`]: crate::core::compiler::job_queue
 //! ["Cargo Target"]: https://doc.rust-lang.org/nightly/cargo/reference/cargo-targets.html
 
 use std::collections::{HashMap, HashSet};
