@@ -576,7 +576,7 @@ fn multiple_packages_containing_binaries() {
             "\
 [UPDATING] git repository [..]
 [ERROR] multiple packages with binaries found: bar, foo. \
-When installing a git repository, cargo will always search the entire repo for any Cargo.toml.\n\
+When installing a git repository, cargo will always search the entire repo for any Cargo.toml.
 Please specify a package, e.g. `cargo install --git {git_url} bar`.
 "
         ))
@@ -602,7 +602,7 @@ fn multiple_packages_matching_example() {
             "\
 [UPDATING] git repository [..]
 [ERROR] multiple packages with examples found: bar, foo. \
-When installing a git repository, cargo will always search the entire repo for any Cargo.toml.\n\
+When installing a git repository, cargo will always search the entire repo for any Cargo.toml.
 Please specify a package, e.g. `cargo install --git {git_url} bar`."
         ))
         .run();
