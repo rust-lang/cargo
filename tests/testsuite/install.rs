@@ -560,7 +560,7 @@ Available binaries:
 }
 
 #[cargo_test]
-fn multiple_binaries_error() {
+fn multiple_packages_containing_binaries() {
     let p = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
@@ -584,7 +584,7 @@ Please specify a package, e.g. `cargo install --git {git_url} bar`.
 }
 
 #[cargo_test]
-fn multiple_examples_error() {
+fn multiple_packages_matching_example() {
     let p = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/lib.rs", "")
