@@ -6,6 +6,7 @@
     - [Working on Cargo](./process/working-on-cargo.md)
     - [Release process](./process/release.md)
     - [Unstable features](./process/unstable.md)
+- [Design Principles](./design.md)
 - [Architecture](./architecture/index.md)
     - [Codebase Overview](./architecture/codebase.md)
     - [SubCommands](./architecture/subcommands.md)
@@ -18,4 +19,3 @@
     - [Writing Tests](./tests/writing.md)
     - [Benchmarking and Profiling](./tests/profiling.md)
     - [Crater](./tests/crater.md)
-- [Design Principles](./design.md)
