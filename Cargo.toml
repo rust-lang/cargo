@@ -139,3 +139,5 @@ doc = false
 vendored-openssl = ["openssl/vendored"]
 vendored-libgit2 = ["libgit2-sys/vendored"]
 pretty-env-logger = ["pretty_env_logger"]
+# This is primarily used by rust-lang/rust distributing cargo the executable.
+all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx']
