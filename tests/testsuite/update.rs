@@ -551,6 +551,7 @@ fn update_precise_first_run() {
             "lib"
           ],
           "name": "bar",
+          "harness": true,
           "src_path": "[..]/foo/src/lib.rs"
         }
       ],
@@ -592,6 +593,7 @@ fn update_precise_first_run() {
           ],
           "name": "serde",
           "src_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/src/lib.rs",
+          "harness": true,
           "test": true
         }
       ],

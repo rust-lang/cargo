@@ -3855,6 +3855,7 @@ fn compiler_json_error_format() {
                     "edition": "2015",
                     "name":"build-script-build",
                     "src_path":"[..]build.rs",
+                    "harness": true,
                     "test": false
                 },
                 "profile": {
@@ -3882,6 +3883,7 @@ fn compiler_json_error_format() {
                     "edition": "2015",
                     "name":"bar",
                     "src_path":"[..]lib.rs",
+                    "harness": true,
                     "test": true
                 },
                 "message":"{...}"
@@ -3908,6 +3910,7 @@ fn compiler_json_error_format() {
                     "edition": "2015",
                     "name":"bar",
                     "src_path":"[..]lib.rs",
+                    "harness": true,
                     "test": true
                 },
                 "filenames":[
@@ -3939,6 +3942,7 @@ fn compiler_json_error_format() {
                     "edition": "2015",
                     "name":"foo",
                     "src_path":"[..]main.rs",
+                    "harness": true,
                     "test": true
                 },
                 "message":"{...}"
@@ -3956,6 +3960,7 @@ fn compiler_json_error_format() {
                     "edition": "2015",
                     "name":"foo",
                     "src_path":"[..]main.rs",
+                    "harness": true,
                     "test": true
                 },
                 "profile": {
@@ -4027,6 +4032,7 @@ fn message_format_json_forward_stderr() {
                         "edition": "2015",
                         "name":"foo",
                         "src_path":"[..]",
+                        "harness": true,
                         "test": true
                     },
                     "message":"{...}"
@@ -4044,6 +4050,7 @@ fn message_format_json_forward_stderr() {
                         "edition": "2015",
                         "name":"foo",
                         "src_path":"[..]",
+                        "harness": true,
                         "test": true
                     },
                     "profile":{

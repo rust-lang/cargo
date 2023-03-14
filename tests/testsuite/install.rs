@@ -93,6 +93,7 @@ fn simple_with_message_format() {
                     "edition": "2015",
                     "doc": true,
                     "doctest": true,
+                    "harness": true,
                     "test": true
                 },
                 "profile": "{...}",
@@ -118,6 +119,7 @@ fn simple_with_message_format() {
                     "edition": "2015",
                     "doc": true,
                     "doctest": false,
+                    "harness": true,
                     "test": true
                 },
                 "profile": "{...}",

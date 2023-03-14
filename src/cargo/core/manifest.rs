@@ -283,6 +283,8 @@ struct SerializedTarget<'a> {
     doctest: bool,
     /// Whether tests should be run for the target (`test` field in `Cargo.toml`)
     test: bool,
+    /// Whether this should be run with `--test`
+    harness: bool,
 }
 
 impl ser::Serialize for Target {
@@ -305,6 +307,7 @@ impl ser::Serialize for Target {
             doc: self.documented(),
             doctest: self.doctested() && self.doctestable(),
             test: self.tested(),
+            harness: self.harness(),
         }
         .serialize(s)
     }

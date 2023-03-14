@@ -55,6 +55,7 @@ fn cargo_metadata_simple() {
                         "test": true,
                         "edition": "2015",
                         "name": "foo",
+                        "harness": true,
                         "src_path": "[..]/foo/src/foo.rs"
                     }
                 ],
@@ -153,6 +154,7 @@ crate-type = ["lib", "staticlib"]
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
+                        "harness": true,
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
                     }
@@ -240,6 +242,7 @@ optional_feat = []
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
+                        "harness": true,
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
                     }
@@ -358,6 +361,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
+                        "harness": true,
                         "kind": [
                             "lib"
                         ],
@@ -403,6 +407,7 @@ fn cargo_metadata_with_deps_and_version() {
                             "lib"
                         ],
                         "name": "baz",
+                        "harness": true,
                         "src_path": "[..]src/lib.rs"
                     }
                 ],
@@ -469,6 +474,7 @@ fn cargo_metadata_with_deps_and_version() {
                             "bin"
                         ],
                         "name": "foo",
+                        "harness": true,
                         "src_path": "[..]src/foo.rs"
                     }
                 ],
@@ -510,6 +516,7 @@ fn cargo_metadata_with_deps_and_version() {
                             "lib"
                         ],
                         "name": "foobar",
+                        "harness": true,
                         "src_path": "[..]src/lib.rs"
                     }
                 ],
@@ -646,6 +653,7 @@ name = "ex"
                         "test": true,
                         "edition": "2015",
                         "name": "foo",
+                        "harness": true,
                         "src_path": "[..]/foo/src/lib.rs"
                     },
                     {
@@ -656,6 +664,7 @@ name = "ex"
                         "test": false,
                         "edition": "2015",
                         "name": "ex",
+                        "harness": true,
                         "src_path": "[..]/foo/examples/ex.rs"
                     }
                 ],
@@ -741,6 +750,7 @@ crate-type = ["rlib", "dylib"]
                         "test": true,
                         "edition": "2015",
                         "name": "foo",
+                        "harness": true,
                         "src_path": "[..]/foo/src/lib.rs"
                     },
                     {
@@ -751,6 +761,7 @@ crate-type = ["rlib", "dylib"]
                         "test": false,
                         "edition": "2015",
                         "name": "ex",
+                        "harness": true,
                         "src_path": "[..]/foo/examples/ex.rs"
                     }
                 ],
@@ -843,6 +854,7 @@ fn workspace_metadata() {
                         "test": true,
                         "edition": "2015",
                         "name": "bar",
+                        "harness": true,
                         "src_path": "[..]bar/src/lib.rs"
                     }
                 ],
@@ -882,6 +894,7 @@ fn workspace_metadata() {
                         "test": true,
                         "edition": "2015",
                         "name": "baz",
+                        "harness": true,
                         "src_path": "[..]baz/src/lib.rs"
                     }
                 ],
@@ -1027,6 +1040,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                         "test": true,
                         "edition": "2015",
                         "name": "bar",
+                        "harness": true,
                         "src_path": "[..]bar/src/lib.rs"
                     }
                 ],
@@ -1073,6 +1087,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                   ],
                   "name": "artifact",
                   "src_path": "[..]/foo/artifact/src/main.rs",
+                  "harness": true,
                   "test": true
                 }
               ],
@@ -1109,6 +1124,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                         "test": true,
                         "edition": "2015",
                         "name": "baz",
+                        "harness": true,
                         "src_path": "[..]baz/src/lib.rs"
                     }
                 ],
@@ -1259,6 +1275,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                       "doc": true,
                       "doctest": true,
                       "edition": "2015",
+                      "harness": true,
                       "kind": [
                         "staticlib",
                         "cdylib",
@@ -1279,6 +1296,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                         "bin"
                       ],
                       "name": "bar-name",
+                      "harness": true,
                       "src_path": "[..]/foo/artifact/src/main.rs",
                       "test": true
                     },
@@ -1293,6 +1311,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                         "bin"
                       ],
                       "name": "baz-name",
+                      "harness": true,
                       "src_path": "[..]/foo/artifact/src/main.rs",
                       "test": true
                     }
@@ -1490,6 +1509,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                       ],
                       "name": "bar",
                       "src_path": "[..]/foo/bar/src/lib.rs",
+                      "harness": true,
                       "test": true
                     },
                     {
@@ -1504,6 +1524,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                       ],
                       "name": "build-script-build",
                       "src_path": "[..]/foo/bar/build.rs",
+                      "harness": true,
                       "test": false
                     }
                   ],
@@ -1545,6 +1566,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                       ],
                       "name": "a-name",
                       "src_path": "[..]/foo/bin-only-artifact/src/main.rs",
+                      "harness": true,
                       "test": true
                     },
                     {
@@ -1559,6 +1581,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                       ],
                       "name": "b-name",
                       "src_path": "[..]/foo/bin-only-artifact/src/main.rs",
+                      "harness": true,
                       "test": true
                     }
                   ],
@@ -1600,6 +1623,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                       ],
                       "name": "non-artifact",
                       "src_path": "[..]/foo/non-artifact/src/lib.rs",
+                      "harness": true,
                       "test": true
                     }
                   ],
@@ -1940,6 +1964,7 @@ const MANIFEST_OUTPUT: &str = r#"
             "test": true,
             "edition": "2015",
             "name":"foo",
+            "harness": true,
             "src_path":"[..]/foo/src/foo.rs"
         }],
         "features":{},
@@ -2133,6 +2158,7 @@ fn package_metadata() {
                         "test": true,
                         "edition": "2015",
                         "name": "foo",
+                        "harness": true,
                         "src_path": "[..]foo/src/lib.rs"
                     }
                 ],
@@ -2212,6 +2238,7 @@ fn package_publish() {
                         "test": true,
                         "edition": "2015",
                         "name": "foo",
+                        "harness": true,
                         "src_path": "[..]foo/src/lib.rs"
                     }
                 ],
@@ -2294,6 +2321,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "kind": [
                             "lib"
                         ],
+                        "harness": true,
                         "name": "bar",
                         "src_path": "[..]src/lib.rs"
                     }
@@ -2383,6 +2411,7 @@ fn package_edition_2018() {
                                     "lib"
                                 ],
                                 "name": "foo",
+                                "harness": true,
                                 "src_path": "[..]src/lib.rs"
                             }
                         ],
@@ -2517,6 +2546,7 @@ fn target_edition_2018() {
                                     "lib"
                                 ],
                                 "name": "foo",
+                                "harness": true,
                                 "src_path": "[..]src/lib.rs"
                             },
                             {
@@ -2531,6 +2561,7 @@ fn target_edition_2018() {
                                     "bin"
                                 ],
                                 "name": "foo",
+                                "harness": true,
                                 "src_path": "[..]src/main.rs"
                             }
                         ],
@@ -2624,6 +2655,7 @@ fn rename_dependency() {
                         "lib"
                     ],
                     "name": "bar",
+                    "harness": true,
                     "src_path": "[..]"
                 }
             ],
@@ -2665,6 +2697,7 @@ fn rename_dependency() {
                         "lib"
                     ],
                     "name": "bar",
+                    "harness": true,
                     "src_path": "[..]"
                 }
             ],
@@ -2731,6 +2764,7 @@ fn rename_dependency() {
                         "lib"
                     ],
                     "name": "foo",
+                    "harness": true,
                     "src_path": "[..]"
                 }
             ],
@@ -2853,6 +2887,7 @@ fn metadata_links() {
                         "lib"
                       ],
                       "name": "foo",
+                      "harness": true,
                       "src_path": "[..]/foo/src/lib.rs"
                     },
                     {
@@ -2867,6 +2902,7 @@ fn metadata_links() {
                         "custom-build"
                       ],
                       "name": "build-script-build",
+                      "harness": true,
                       "src_path": "[..]/foo/build.rs"
                     }
                   ],
@@ -2956,6 +2992,7 @@ fn deps_with_bin_only() {
                       "edition": "2015",
                       "doc": true,
                       "doctest": true,
+                      "harness": true,
                       "test": true
                     }
                   ],
@@ -3061,6 +3098,7 @@ fn filter_platform() {
           "edition": "2015",
           "test": true,
           "doc": true,
+          "harness": true,
           "doctest": true
         }
       ],
@@ -3105,6 +3143,7 @@ fn filter_platform() {
           "edition": "2015",
           "test": true,
           "doc": true,
+          "harness": true,
           "doctest": true
         }
       ],
@@ -3149,6 +3188,7 @@ fn filter_platform() {
           "edition": "2015",
           "test": true,
           "doc": true,
+          "harness": true,
           "doctest": true
         }
       ],
@@ -3193,6 +3233,7 @@ fn filter_platform() {
           "edition": "2015",
           "test": true,
           "doc": true,
+          "harness": true,
           "doctest": true
         }
       ],
@@ -3299,6 +3340,7 @@ fn filter_platform() {
           "src_path": "[..]/foo/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "harness": true,
           "doc": true,
           "doctest": true
         }
@@ -4084,6 +4126,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                       ],
                       "name": "bar",
                       "src_path": "[..]/foo/bar/src/lib.rs",
+                      "harness": true,
                       "test": true
                     }
                   ],
@@ -4127,6 +4170,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                       ],
                       "name": "artifact",
                       "src_path": "[..]/foo/artifact/src/main.rs",
+                      "harness": true,
                       "test": true
                     }
                   ],
@@ -4170,6 +4214,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                       ],
                       "name": "baz",
                       "src_path": "[..]/foo/baz/src/lib.rs",
+                      "harness": true,
                       "test": true
                     }
                   ],

@@ -35,6 +35,7 @@ fn manifest_output(readme_value: &str) -> String {
         "test": true,
         "edition": "2015",
         "name":"foo",
+        "harness": true,
         "src_path":"[..]/foo/src/foo.rs"
     }}],
     "features":{{}},

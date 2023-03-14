@@ -1700,6 +1700,7 @@ fn doc_json_artifacts() {
         "edition": "2015",
         "doc": true,
         "doctest": true,
+        "harness": true,
         "test": true
     },
     "profile": "{...}",
@@ -1722,6 +1723,7 @@ fn doc_json_artifacts() {
         "edition": "2015",
         "doc": true,
         "doctest": true,
+        "harness": true,
         "test": true
     },
     "profile": "{...}",
@@ -1744,6 +1746,7 @@ fn doc_json_artifacts() {
         "edition": "2015",
         "doc": true,
         "doctest": false,
+        "harness": true,
         "test": true
     },
     "profile": "{...}",
