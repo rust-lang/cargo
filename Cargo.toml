@@ -100,11 +100,6 @@ unicode-xid = "0.2.0"
 url = "2.2.2"
 walkdir = "2.2"
 
-# A noop dependency that changes in the Rust repository, it's a bit of a hack.
-# See the `src/tools/rustc-workspace-hack/README.md` file in `rust-lang/rust`
-# for more information.
-rustc-workspace-hack = "1.0.0"
-
 [target.'cfg(windows)'.dependencies]
 fwdansi = "1.1.0"
 
