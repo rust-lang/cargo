@@ -24,12 +24,7 @@ jobs:
     - run: rustup update stable && rustup default stable
     - run: rustup component add rustfmt
     - run: cargo fmt --all --check
-    - run: |
-        for manifest in `find crates benches/benchsuite benches/capture -name Cargo.toml`
-        do
-          echo check fmt for $manifest
-          cargo fmt --all --manifest-path $manifest --check
-        done
+    - run: cargo fmt --all --check --manifest-path crates/resolver-tests/Cargo.toml
 
   # Ensure there are no clippy warnings
   clippy:
@@ -39,7 +34,8 @@ jobs:
       - run: rustup update stable && rustup default stable
       - run: rustup component add clippy
       # Only check cargo lib for now
-      - run: cargo clippy -p cargo --lib -- -D warnings
+      # TODO: check every members
+      - run: cargo clippy -p cargo --lib --no-deps -- -D warnings
 
   test:
     runs-on: ${{ matrix.os }}
@@ -101,47 +97,41 @@ jobs:
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
 
-    - run: cargo test
+    - run: cargo test -p cargo
     - name: Clear intermediate test output
       run: ci/clean-test-output.sh
     - name: gitoxide tests (all git-related tests)
-      run: cargo test git
+      run: cargo test -p cargo git
       env:
         __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
       # The testsuite generates a huge amount of data, and fetch-smoke-test was
     # running out of disk space.
     - name: Clear test output
       run: ci/clean-test-output.sh
+    # This only tests `cargo fix` because fix-proxy-mode is one of the most
+    # complicated subprocess management in Cargo.
     - name: Check operability of rustc invocation with argfile
+      run: 'cargo test -p cargo --test testsuite -- fix::'
       env:
         __CARGO_TEST_FORCE_ARGFILE: 1
-      run: |
-        # This only tests `cargo fix` because fix-proxy-mode is one of the most
-        # complicated subprocess management in Cargo.
-        cargo test --test testsuite -- fix::
-    - run: cargo test --manifest-path crates/cargo-test-support/Cargo.toml
-      env:
-        CARGO_TARGET_DIR: target
+    - run: cargo test -p cargo-test-support
     - run: cargo test -p cargo-platform
     - run: cargo test -p cargo-util
-    - run: cargo test --manifest-path crates/home/Cargo.toml
-    - run: cargo test --manifest-path crates/mdman/Cargo.toml
-    - run: cargo build --manifest-path crates/credential/cargo-credential-1password/Cargo.toml
-    - run: cargo build --manifest-path crates/credential/cargo-credential-gnome-secret/Cargo.toml
+    - run: cargo test -p home
+    - run: cargo test -p mdman
+    - run: cargo build -p cargo-credential-1password
+    - run: cargo build -p cargo-credential-gnome-secret
       if: matrix.os == 'ubuntu-latest'
-    - run: cargo build --manifest-path crates/credential/cargo-credential-macos-keychain/Cargo.toml
+    - run: cargo build -p cargo-credential-macos-keychain
       if: matrix.os == 'macos-latest'
-    - run: cargo build --manifest-path crates/credential/cargo-credential-wincred/Cargo.toml
+    - run: cargo build -p cargo-credential-wincred
       if: matrix.os == 'windows-latest'
     - name: Check benchmarks
-      env:
-        # Share the target dir to try to cache a few build-time deps.
-        CARGO_TARGET_DIR: target
       run: |
         # This only tests one benchmark since it can take over 10 minutes to
         # download all workspaces.
-        cargo test --manifest-path benches/benchsuite/Cargo.toml --all-targets -- cargo
-        cargo check --manifest-path benches/capture/Cargo.toml
+        cargo test -p benchsuite --all-targets -- cargo
+        cargo check -p capture
     # The testsuite generates a huge amount of data, and fetch-smoke-test was
     # running out of disk space.
     - name: Clear benchmark output
@@ -164,7 +154,7 @@ jobs:
       - run: rustup target add i686-unknown-linux-gnu
       - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
       - run: rustup component add rustfmt || echo "rustfmt not available"
-      - run: cargo test
+      - run: cargo test -p cargo
         env:
           __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
 
@@ -175,7 +165,7 @@ jobs:
     - run: rustup update nightly && rustup default nightly
     - run: rustup component add rust-src
     - run: cargo build
-    - run: cargo test --test build-std
+    - run: cargo test -p cargo --test build-std
       env:
         CARGO_RUN_BUILD_STD_TESTS: 1
   docs:
@@ -192,7 +182,8 @@ jobs:
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.27/mdbook-v0.4.27-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
-    - run: cargo doc --document-private-items --no-deps
+    # TODO: should check all workspace members
+    - run: cargo doc -p cargo --document-private-items --no-deps
       env:
         RUSTDOCFLAGS: -D warnings
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
