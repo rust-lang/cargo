@@ -1,3 +1,26 @@
+[workspace]
+resolver = "2"
+members = [
+  "benches/benchsuite",
+  "benches/capture",
+  "crates/cargo-platform",
+  "crates/cargo-test-macro",
+  "crates/cargo-test-support",
+  "crates/cargo-util",
+  "crates/crates-io",
+  "crates/credential/*",
+  "crates/home",
+  "crates/mdman",
+  "crates/resolver-tests",
+]
+exclude = [
+  # For linkchecker (downloaded during CI) and semver-check
+  # TODO: Either move semver-check to crates/ folder,
+  # or make linkchecker run from a given directory.
+  "src/doc/", 
+  "target/", # exclude bench testing
+]
+
 [package]
 name = "cargo"
 version = "0.71.0"
