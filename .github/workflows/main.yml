@@ -103,10 +103,7 @@ jobs:
 
     - run: cargo test
     - name: Clear intermediate test output
-      run: |
-          df -h
-          rm -rf target/tmp
-          df -h
+      run: ci/clean-test-output.sh
     - name: gitoxide tests (all git-related tests)
       run: cargo test git
       env:
@@ -114,10 +111,7 @@ jobs:
       # The testsuite generates a huge amount of data, and fetch-smoke-test was
     # running out of disk space.
     - name: Clear test output
-      run: |
-        df -h
-        rm -rf target/tmp
-        df -h
+      run: ci/clean-test-output.sh
     - name: Check operability of rustc invocation with argfile
       env:
         __CARGO_TEST_FORCE_ARGFILE: 1
@@ -151,10 +145,7 @@ jobs:
     # The testsuite generates a huge amount of data, and fetch-smoke-test was
     # running out of disk space.
     - name: Clear benchmark output
-      run: |
-        df -h
-        rm -rf target/tmp
-        df -h
+      run: ci/clean-test-output.sh
     - name: Fetch smoke test
       run: ci/fetch-smoke-test.sh
 
