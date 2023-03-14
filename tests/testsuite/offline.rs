@@ -657,7 +657,7 @@ fn main(){
         .with_status(0)
         .with_stderr(
             "\
-[UPDATING] present_dep v1.2.9 -> v1.2.3
+[DOWNGRADING] present_dep v1.2.9 -> v1.2.3
 ",
         )
         .run();
