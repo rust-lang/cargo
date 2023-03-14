@@ -8,6 +8,7 @@ use cargo_util::paths;
 
 pub fn cli() -> Command {
     subcommand("install")
+        .alias("i")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
         .arg_quiet()
         .arg(
