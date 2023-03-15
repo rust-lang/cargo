@@ -360,13 +360,11 @@ impl<'cfg> PackageRegistry<'cfg> {
                 }
 
                 if *summary.package_id().source_id().canonical_url() == canonical {
-                    return Err(anyhow::anyhow!(
-                        "patch for `{}` in `{}` points to the same source, but \
-                        patches must point to different sources",
+                    log::warn!(
+                        "patch for `{}` in `{}` points to the same source",
                         dep.package_name(),
                         url
-                    ))
-                    .context(format!("failed to resolve patches for `{}`", url));
+                    )
                 }
                 unlocked_summaries.push(summary);
             }
