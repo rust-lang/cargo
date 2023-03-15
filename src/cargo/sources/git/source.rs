@@ -29,7 +29,13 @@ impl<'cfg> GitSource<'cfg> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
-        let ident = ident(&source_id);
+        let ident = ident_shallow(
+            &source_id,
+            config
+                .cli_unstable()
+                .gitoxide
+                .map_or(false, |gix| gix.fetch && gix.shallow_deps),
+        );
 
         let source = GitSource {
             remote,
@@ -74,6 +80,14 @@ fn ident(id: &SourceId) -> String {
     let ident = if ident.is_empty() { "_empty" } else { ident };
 
     format!("{}-{}", ident, short_hash(id.canonical_url()))
+}
+
+fn ident_shallow(id: &SourceId, is_shallow: bool) -> String {
+    let mut ident = ident(id);
+    if is_shallow {
+        ident.push_str("-shallow");
+    }
+    ident
 }
 
 impl<'cfg> Debug for GitSource<'cfg> {

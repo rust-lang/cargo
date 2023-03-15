@@ -2092,15 +2092,20 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_main
         .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
         .run();
 
-    let db_clone = gix::open_opts(
-        glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
-            .next()
-            .unwrap()?,
+    let shallow_db_clone = gix::open_opts(
+        glob::glob(
+            paths::home()
+                .join(".cargo/git/db/bar-*-shallow")
+                .to_str()
+                .unwrap(),
+        )?
+        .next()
+        .unwrap()?,
         gix::open::Options::isolated(),
     )?;
-    assert!(db_clone.is_shallow());
+    assert!(shallow_db_clone.is_shallow());
     assert_eq!(
-        db_clone
+        shallow_db_clone
             .rev_parse_single("origin/master")?
             .ancestors()
             .all()?
@@ -2145,16 +2150,24 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_main
         .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
         .run();
 
+    let db_clone = gix::open_opts(
+        glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
+            .map(Result::unwrap)
+            .filter(|p| !p.to_string_lossy().ends_with("-shallow"))
+            .next()
+            .unwrap(),
+        gix::open::Options::isolated(),
+    )?;
     assert_eq!(
         db_clone
             .rev_parse_single("origin/master")?
             .ancestors()
             .all()?
             .count(),
-        2,
-        "the new commit was fetched into our DB clone"
+        3,
+        "we created an entirely new non-shallow clone"
     );
-    assert!(db_clone.is_shallow());
+    assert!(!db_clone.is_shallow());
     assert_eq!(
         dep_checkout.head_id()?.ancestors().all()?.count(),
         1,
@@ -2168,8 +2181,14 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_main
             .unwrap(),
     )?
     .map(|path| -> anyhow::Result<usize> {
-        let dep_checkout = gix::open_opts(path?, gix::open::Options::isolated())?;
-        assert!(dep_checkout.is_shallow());
+        let path = path?;
+        let dep_checkout = gix::open_opts(&path, gix::open::Options::isolated())?;
+        dbg!(dep_checkout.git_dir());
+        assert_eq!(
+            dep_checkout.is_shallow(),
+            path.to_string_lossy().contains("-shallow"),
+            "checkouts of shallow db repos are shallow as well"
+        );
         let depth = dep_checkout.head_id()?.ancestors().all()?.count();
         Ok(depth)
     })
@@ -2178,8 +2197,8 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_main
     .expect("two checkout repos");
 
     assert_eq!(
-        max_history_depth, 2,
-        "the new checkout sees all commits of the DB"
+        max_history_depth, 3,
+        "we see the previous shallow checkout as well as new new unshallow one"
     );
 
     Ok(())
