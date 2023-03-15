@@ -742,7 +742,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     // Using the push method with multiple arguments ensures that the entries
     // for all mutually-incompatible VCS in terms of syntax are in sync.
     let mut ignore = IgnoreList::new();
-    ignore.push("/target", "^target/", "target");
+    ignore.push("/target", "^target$", "target");
     if !opts.bin {
         ignore.push("/Cargo.lock", "^Cargo.lock$", "Cargo.lock");
     }
