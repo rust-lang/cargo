@@ -100,6 +100,23 @@ fn simple_git() {
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
 
+#[cargo_test(requires_hg)]
+fn simple_hg() {
+    cargo_process("new --lib foo --edition 2015 --vcs hg").run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/lib.rs").is_file());
+    assert!(paths::root().join("foo/.hg").is_dir());
+    assert!(paths::root().join("foo/.hgignore").is_file());
+
+    let fp = paths::root().join("foo/.hgignore");
+    let contents = fs::read_to_string(&fp).unwrap();
+    assert_eq!(contents, "^target$\n^Cargo.lock$\n",);
+
+    cargo_process("build").cwd(&paths::root().join("foo")).run();
+}
+
 #[cargo_test]
 fn no_argument() {
     cargo_process("new")
