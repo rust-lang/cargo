@@ -644,7 +644,10 @@ fn publish_allowed() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] a v0.0.1 [..]
-[UPDATING] [..]
+[UPLOADED] a v0.0.1 to registry `crates-io`
+note: Waiting for `a v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] a v0.0.1 at registry `crates-io`
 ",
         )
         .run();

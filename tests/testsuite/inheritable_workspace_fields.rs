@@ -172,7 +172,10 @@ fn inherit_own_workspace_fields() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] foo v1.2.3 [..]
-[UPDATING] [..]
+[UPLOADED] foo v1.2.3 to registry `crates-io`
+note: Waiting for `foo v1.2.3` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] foo v1.2.3 at registry `crates-io`
 ",
         )
         .run();
@@ -318,7 +321,10 @@ fn inherit_own_dependencies() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] bar v0.2.0 [..]
-[UPDATING] [..]
+[UPLOADED] bar v0.2.0 to registry `crates-io`
+note: Waiting for `bar v0.2.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] bar v0.2.0 at registry `crates-io`
 ",
         )
         .run();
@@ -460,7 +466,10 @@ fn inherit_own_detailed_dependencies() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] bar v0.2.0 [..]
-[UPDATING] [..]
+[UPLOADED] bar v0.2.0 to registry `crates-io`
+note: Waiting for `bar v0.2.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] bar v0.2.0 at registry `crates-io`
 ",
         )
         .run();
@@ -696,7 +705,10 @@ fn inherit_workspace_fields() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] bar v1.2.3 [..]
-[UPDATING] [..]
+[UPLOADED] bar v1.2.3 to registry `crates-io`
+note: Waiting for `bar v1.2.3` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] bar v1.2.3 at registry `crates-io`
 ",
         )
         .run();
@@ -850,7 +862,10 @@ fn inherit_dependencies() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] bar v0.2.0 [..]
-[UPDATING] [..]
+[UPLOADED] bar v0.2.0 to registry `crates-io`
+note: Waiting for `bar v0.2.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] bar v0.2.0 at registry `crates-io`
 ",
         )
         .run();

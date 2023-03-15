@@ -328,7 +328,10 @@ fn publish_with_registry_dependency() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] foo v0.0.1 [..]
-[UPDATING] `alternative` index
+[UPLOADED] foo v0.0.1 to registry `alternative`
+note: Waiting for `foo v0.0.1` to be available at registry `alternative`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] foo v0.0.1 at registry `alternative`
 ",
         )
         .run();
@@ -457,7 +460,10 @@ fn publish_to_alt_registry() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] foo v0.0.1 [..]
-[UPDATING] `alternative` index
+[UPLOADED] foo v0.0.1 to registry `alternative`
+note: Waiting for `foo v0.0.1` to be available at registry `alternative`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] foo v0.0.1 at registry `alternative`
 ",
         )
         .run();
@@ -535,7 +541,10 @@ fn publish_with_crates_io_dep() {
 [FINISHED] [..]
 [PACKAGED] [..]
 [UPLOADING] foo v0.0.1 [..]
-[UPDATING] `alternative` index
+[UPLOADED] foo v0.0.1 to registry `alternative`
+note: Waiting for `foo v0.0.1` to be available at registry `alternative`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] foo v0.0.1 at registry `alternative`
 ",
         )
         .run();
