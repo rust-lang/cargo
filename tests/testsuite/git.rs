@@ -1868,30 +1868,31 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
         .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
         .run();
 
-    let repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
+    let shallow_repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
     assert_eq!(
-        repo.rev_parse_single("origin/HEAD")?
+        shallow_repo
+            .rev_parse_single("origin/HEAD")?
             .ancestors()
             .all()?
             .count(),
         1,
         "shallow clones always start at depth of 1 to minimize download size"
     );
-    assert!(repo.is_shallow());
+    assert!(shallow_repo.is_shallow());
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .run();
 
+    let repo = gix::open_opts(find_remote_index(false), gix::open::Options::isolated())?;
     assert_eq!(
         repo.rev_parse_single("origin/HEAD")?
             .ancestors()
             .all()?
             .count(),
         3,
-        "the repo was forcefully reinitialized and fetch again with full history - that way we take control and know the state of the repo \
-         instead of allowing a non-shallow aware implementation to cause trouble later"
+        "an entirely new repo was cloned which is never shallow"
     );
     assert!(!repo.is_shallow());
     Ok(())
@@ -2220,7 +2221,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
-        .arg("-Zgitoxide=fetch") // NOTE: intentionally missing shallow flag
+        .arg("-Zgitoxide=fetch,shallow-index") // NOTE: the flag needs to be consistent or else a different index is created
         .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
         .run();
 
@@ -2252,6 +2253,20 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
     assert!(repo.is_shallow());
 
     Ok(())
+}
+
+pub fn find_remote_index(shallow: bool) -> std::path::PathBuf {
+    glob::glob(
+        paths::home()
+            .join(".cargo/registry/index/*")
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap()
+    .map(Result::unwrap)
+    .filter(|p| p.to_string_lossy().ends_with("-shallow") == shallow)
+    .next()
+    .unwrap()
 }
 
 #[cargo_test]
@@ -2294,15 +2309,16 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
         .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
         .run();
 
+    let shallow_repo = gix::open_opts(find_remote_index(true), gix::open::Options::isolated())?;
     assert_eq!(
-        repo.rev_parse_single("origin/HEAD")?
+        shallow_repo.rev_parse_single("origin/HEAD")?
             .ancestors()
             .all()?
             .count(),
         1,
-        "follow-up fetches maintain can shallow an existing unshallow repo - this doesn't have any benefit as we still have the objects locally"
+        "the follow up clones an entirely new index which is now shallow and which is in its own location"
     );
-    assert!(repo.is_shallow());
+    assert!(shallow_repo.is_shallow());
 
     Package::new("bar", "1.2.0").publish();
     Package::new("bar", "1.3.0").publish();
@@ -2312,14 +2328,28 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
         .run();
 
     assert_eq!(
-        repo.rev_parse_single("origin/HEAD")?
+        shallow_repo.rev_parse_single("origin/HEAD")?
             .ancestors()
             .all()?
             .count(),
         3,
         "even if depth (at remote) is specified again, the current shallow boundary is maintained and not moved"
     );
-    assert!(repo.is_shallow());
+    assert!(shallow_repo.is_shallow());
+
+    p.cargo("update")
+        .arg("-Zgitoxide=fetch")
+        .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
+        .run();
+
+    assert_eq!(
+        repo.rev_parse_single("origin/HEAD")?
+            .ancestors()
+            .all()?
+            .count(),
+        5,
+        "we can separately fetch the non-shallow index as well and it sees all commits"
+    );
 
     Ok(())
 }

@@ -549,10 +549,14 @@ mod index;
 mod local;
 mod remote;
 
-fn short_name(id: SourceId) -> String {
+fn short_name(id: SourceId, is_shallow: bool) -> String {
     let hash = hex::short_hash(&id);
     let ident = id.url().host_str().unwrap_or("").to_string();
-    format!("{}-{}", ident, hash)
+    let mut name = format!("{}-{}", ident, hash);
+    if is_shallow {
+        name.push_str("-shallow");
+    }
+    name
 }
 
 impl<'cfg> RegistrySource<'cfg> {
@@ -562,7 +566,14 @@ impl<'cfg> RegistrySource<'cfg> {
         config: &'cfg Config,
     ) -> CargoResult<RegistrySource<'cfg>> {
         assert!(source_id.is_remote_registry());
-        let name = short_name(source_id);
+        let name = short_name(
+            source_id,
+            config
+                .cli_unstable()
+                .gitoxide
+                .map_or(false, |gix| gix.fetch && gix.shallow_index)
+                && !source_id.is_sparse(),
+        );
         let ops = if source_id.is_sparse() {
             Box::new(http_remote::HttpRegistry::new(source_id, config, &name)?) as Box<_>
         } else {
@@ -584,7 +595,7 @@ impl<'cfg> RegistrySource<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
     ) -> RegistrySource<'cfg> {
-        let name = short_name(source_id);
+        let name = short_name(source_id, false);
         let ops = local::LocalRegistry::new(path, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
     }
