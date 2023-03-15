@@ -22,6 +22,8 @@
 //!
 //! ## Overview
 //!
+//! Major components of cargo include:
+//!
 //! - [`ops`]:
 //!   Every major operation is implemented here. Each command is a thin wrapper around ops.
 //!   - [`ops::cargo_compile`]:
@@ -95,6 +97,29 @@
 //! - [`resolver-tests`](https://github.com/rust-lang/cargo/tree/master/crates/resolver-tests)
 //!   This is a dedicated package that defines tests for the [dependency
 //!   resolver][core::resolver].
+//!
+//! ### File Overview
+//!
+//! Files that interact with cargo include
+//!
+//! - Package
+//!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::TomlManifest`] and then
+//!     translated to [`core::manifest::Manifest`] which maybe stored in a [`core::Package`].
+//!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
+//!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`core::resolver::Resolve`]
+//!     - At the lowest level, [`ops::load_pkg_lockfile`] and [`ops::write_pkg_lockfile`] are used
+//!     - See [`core::resolver::encode`] for versioning of `Cargo.lock`
+//!   - `target/`: Used for build artifacts and abstracted with [`core::compiler::layout`]. `Layout` handles locking the target directory and providing paths to parts inside. There is a separate `Layout` for each build `target`.
+//!     - `target/debug/.fingerprint`: Tracker whether nor not a crate needs to be rebuilt.  See [`core::compiler::fingerprint`]
+//! - `$CARGO_HOME/`:
+//!   - `registry/`: Package registry cache which is managed in [`sources::registry`].  Be careful
+//!     as the lock [`util::Config::acquire_package_cache_lock`] must be manually acquired.
+//!     - `index`/: Fast-to-access crate metadata (no need to download / extract `*.crate` files)
+//!     - `cache/*/*.crate`: Local cache of published crates
+//!     - `src/*/*`: Extracted from `*.crate` by [`sources::registry::RegistrySource`]
+//!   - `git/`: Git source cache.  See [`sources::git`].
+//! - `**/.cargo/config.toml`: Environment dependent (env variables, files) configuration.  See
+//!   [`util::config`]
 //!
 //! ## Contribute to Cargo documentations
 //!

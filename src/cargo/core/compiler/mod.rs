@@ -43,7 +43,7 @@ mod custom_build;
 pub(crate) mod fingerprint;
 pub mod future_incompat;
 pub(crate) mod job_queue;
-mod layout;
+pub(crate) mod layout;
 mod links;
 mod lto;
 mod output_depinfo;

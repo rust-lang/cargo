@@ -78,7 +78,7 @@ pub use self::version_prefs::{VersionOrdering, VersionPreferences};
 mod conflict_cache;
 mod context;
 mod dep_cache;
-mod encode;
+pub(crate) mod encode;
 pub(crate) mod errors;
 pub mod features;
 mod resolve;
