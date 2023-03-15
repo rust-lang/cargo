@@ -189,7 +189,7 @@ pub(crate) fn create_index_line(
     json.to_string()
 }
 
-pub(crate) fn write_to_index(registry_path: &PathBuf, name: &str, line: String, local: bool) {
+pub(crate) fn write_to_index(registry_path: &Path, name: &str, line: String, local: bool) {
     let file = cargo_util::registry::make_dep_path(name, false);
 
     // Write file/line in the index.

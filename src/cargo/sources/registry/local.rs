@@ -18,6 +18,7 @@ pub struct LocalRegistry<'cfg> {
     src_path: Filesystem,
     config: &'cfg Config,
     updated: bool,
+    quiet: bool,
 }
 
 impl<'cfg> LocalRegistry<'cfg> {
@@ -28,6 +29,7 @@ impl<'cfg> LocalRegistry<'cfg> {
             root: Filesystem::new(root.to_path_buf()),
             config,
             updated: false,
+            quiet: false,
         }
     }
 }
@@ -104,6 +106,10 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // Local registry has no cache - just reads from disk.
     }
 
+    fn set_quiet(&mut self, _quiet: bool) {
+        self.quiet = true;
+    }
+
     fn is_updated(&self) -> bool {
         self.updated
     }
@@ -124,7 +130,9 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
             return Ok(MaybeLock::Ready(crate_file));
         }
 
-        self.config.shell().status("Unpacking", pkg)?;
+        if !self.quiet {
+            self.config.shell().status("Unpacking", pkg)?;
+        }
 
         // We don't actually need to download anything per-se, we just need to
         // verify the checksum matches the .crate file itself.

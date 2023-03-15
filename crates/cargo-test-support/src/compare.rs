@@ -211,6 +211,7 @@ fn substitute_macros(input: &str) -> String {
         ("[DOWNLOADING]", " Downloading"),
         ("[DOWNLOADED]", "  Downloaded"),
         ("[UPLOADING]", "   Uploading"),
+        ("[UPLOADED]", "    Uploaded"),
         ("[VERIFYING]", "   Verifying"),
         ("[ARCHIVING]", "   Archiving"),
         ("[INSTALLING]", "  Installing"),
@@ -232,6 +233,7 @@ fn substitute_macros(input: &str) -> String {
         ("[EXECUTABLE]", "  Executable"),
         ("[SKIPPING]", "    Skipping"),
         ("[WAITING]", "     Waiting"),
+        ("[PUBLISHED]", "   Published"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {

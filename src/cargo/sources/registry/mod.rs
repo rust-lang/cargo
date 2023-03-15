@@ -474,6 +474,9 @@ pub trait RegistryData {
     /// Invalidates locally cached data.
     fn invalidate_cache(&mut self);
 
+    /// If quiet, the source should not display any progress or status messages.
+    fn set_quiet(&mut self, quiet: bool);
+
     /// Is the local cached data up-to-date?
     fn is_updated(&self) -> bool;
 
@@ -830,6 +833,10 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn invalidate_cache(&mut self) {
         self.index.clear_summaries_cache();
         self.ops.invalidate_cache();
+    }
+
+    fn set_quiet(&mut self, quiet: bool) {
+        self.ops.set_quiet(quiet);
     }
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {

@@ -67,6 +67,10 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         self.inner.invalidate_cache()
     }
 
+    fn set_quiet(&mut self, quiet: bool) {
+        self.inner.set_quiet(quiet);
+    }
+
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         let id = id.with_source_id(self.replace_with);
         let pkg = self

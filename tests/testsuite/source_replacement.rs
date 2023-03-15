@@ -220,7 +220,10 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] dev [..]
 [PACKAGED] [..]
 [UPLOADING] foo v0.0.1 ([..])
-[UPDATING] crates.io index
+[UPLOADED] foo v0.0.1 to registry `crates-io`
+note: Waiting for `foo v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] foo v0.0.1 at registry `crates-io`
 ",
         )
         .run();

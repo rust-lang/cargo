@@ -217,6 +217,10 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     }
 
     fn invalidate_cache(&mut self) {
-        // Path source has no local cache.
+        // Directory source has no local cache.
+    }
+
+    fn set_quiet(&mut self, _quiet: bool) {
+        // Directory source does not display status
     }
 }
