@@ -593,13 +593,13 @@ pub struct HttpServer {
     custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
 }
 
-/// A helper struct that collects the arguments for [HttpServer::check_authorized].
+/// A helper struct that collects the arguments for [`HttpServer::check_authorized`].
 /// Based on looking at the request, these are the fields that the authentication header should attest to.
-pub struct Mutation<'a> {
-    pub mutation: &'a str,
-    pub name: Option<&'a str>,
-    pub vers: Option<&'a str>,
-    pub cksum: Option<&'a str>,
+struct Mutation<'a> {
+    mutation: &'a str,
+    name: Option<&'a str>,
+    vers: Option<&'a str>,
+    cksum: Option<&'a str>,
 }
 
 impl HttpServer {
@@ -1204,7 +1204,7 @@ impl Package {
     }
 
     /// Adds a platform-specific dependency. Example:
-    /// ```
+    /// ```toml
     /// [target.'cfg(windows)'.dependencies]
     /// foo = {version = "1.0"}
     /// ```
