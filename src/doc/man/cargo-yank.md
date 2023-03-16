@@ -27,26 +27,26 @@ current directory.
 
 ### How yank works
 
-For example, the `foo` crate published version `0.22.0` and another crate `bar`
-declared a dependency on version `foo = 0.22`. Now `foo` releases a new, but
-not semver compatible, version `0.23.0`, and finds a critical issue with `0.22.0`.
-If `0.22.0` is yanked, no new project or checkout without an existing lockfile will be
-able to use crate `bar` as it relies on `0.22`.
+For example, the `foo` crate published version `1.5.0` and another crate `bar`
+declared a dependency on version `foo = "1.5"`. Now `foo` releases a new, but
+not semver compatible, version `2.0.0`, and finds a critical issue with `1.5.0`.
+If `1.5.0` is yanked, no new project or checkout without an existing lockfile
+will be able to use crate `bar` as it relies on `1.5`.
 
-In this case, the maintainers of `foo` should first publish a semver compatible version
-such as `0.22.1` prior to yanking `0.22.0` so that `bar` and all projects that depend
-on `bar` will continue to work.
+In this case, the maintainers of `foo` should first publish a semver compatible
+version such as `1.5.1` prior to yanking `1.5.0` so that `bar` and all projects
+that depend on `bar` will continue to work.
 
-As another example, consider a crate `bar` with published versions `0.22.0`, `0.22.1`, 
-`0.22.2`, `0.23.0` and `0.24.0`. The following table identifies the versions
-cargo could use in the absence of a lockfile for different SemVer requirements,
-following a given release being yanked:
+As another example, consider a crate `bar` with published versions `1.5.0`,
+`1.5.1`, `1.5.2`, `2.0.0` and `3.0.0`. The following table identifies the
+versions cargo could use in the absence of a lockfile for different SemVer
+requirements, following a given release being yanked:
 
-| Yanked Version / SemVer requirement | `bar = "0.22.0"`                          | `bar = "=0.22.0"` | `bar = "0.23.0"` |
-|-------------------------------------|-------------------------------------------|-------------------|------------------|
-| `0.22.0`                            | Use either `0.22.1` or `0.22.2`           | **Return Error**  | Use `0.23.0`     |
-| `0.22.1`                            | Use either `0.22.0` or `0.22.2`           | Use `0.22.0`      | Use `0.23.0`     |
-| `0.23.0`                            | Use either `0.22.0`, `0.21.0` or `0.22.2` | Use `0.22.0`      | **Return Error** |
+| Yanked Version / SemVer requirement | `bar = "1.5.0"`                         | `bar = "=1.5.0"` | `bar = "2.0.0"`  |
+|-------------------------------------|-----------------------------------------|------------------|------------------|
+| `1.5.0`                             | Use either `1.5.1` or `1.5.2`           | **Return Error** | Use `2.0.0`      |
+| `1.5.1`                             | Use either `1.5.0` or `1.5.2`           | Use `1.5.0`      | Use `2.0.0`      |
+| `2.0.0`                             | Use either `1.5.0`, `1.5.1` or `0.22.2` | Use `1.5.0`      | **Return Error** |
 
 ### When to yank
 
@@ -58,8 +58,9 @@ typically a less disruptive mechanism to inform users and encourage them to
 upgrade, and avoids the possibility of significant downstream disruption
 irrespective of susceptibility to the vulnerability in question.
 
-A common workflow is to yank a crate having already published a semver compatible version,
-to reduce the probability of preventing dependent crates from compiling.
+A common workflow is to yank a crate having already published a semver
+compatible version, to reduce the probability of preventing dependent
+crates from compiling.
 
 ## OPTIONS
 
