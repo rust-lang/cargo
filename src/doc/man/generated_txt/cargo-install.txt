@@ -215,6 +215,11 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 
+       --ignore-rust-version
+           Install the target even if the selected Rust compiler is older than
+           the required Rust version as configured in the project’s
+           rust-version field.
+
        --timings=fmts
            Output information how long each compilation takes, and track
            concurrency information over time. Accepts an optional
