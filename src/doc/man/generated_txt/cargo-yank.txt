@@ -13,19 +13,17 @@ DESCRIPTION
        crate will still be available for download via the registry’s download
        link.
 
-       Crates should only be yanked in exceptional circumstances, for example,
-       license/copyright issues, accidental inclusion of PII
-       <https://en.wikipedia.org/wiki/Personal_data>, credentials, etc... In
-       the case of security vulnerabilities, RustSec <https://rustsec.org/> is
-       typically a less disruptive mechanism to inform users and encourage them
-       to upgrade, and avoids the possibility of significant downstream
-       disruption irrespective of susceptibility to the vulnerability in
-       question.
-
        Cargo will not use a yanked version for any new project or checkout
        without a pre-existing lockfile, and will generate an error if there are
        no longer any compatible versions for your crate.
 
+       This command requires you to be authenticated with either the --token
+       option or using cargo-login(1).
+
+       If the crate name is not specified, it will use the package name from
+       the current directory.
+
+   How yank works
        For example, the foo crate published version 0.22.0 and another crate
        bar declared a dependency on version foo = 0.22. Now foo releases a new,
        but not semver compatible, version 0.23.0, and finds a critical issue
@@ -55,15 +53,19 @@ DESCRIPTION
        |                       | 0.21.0 or 0.22.2      | 0.22.0    | Error    |
        +-----------------------+-----------------------+-----------+----------+
 
+   When to yank
+       Crates should only be yanked in exceptional circumstances, for example,
+       license/copyright issues, accidental inclusion of PII
+       <https://en.wikipedia.org/wiki/Personal_data>, credentials, etc… In
+       the case of security vulnerabilities, RustSec <https://rustsec.org/> is
+       typically a less disruptive mechanism to inform users and encourage them
+       to upgrade, and avoids the possibility of significant downstream
+       disruption irrespective of susceptibility to the vulnerability in
+       question.
+
        A common workflow is to yank a crate having already published a semver
        compatible version, to reduce the probability of preventing dependent
        crates from compiling.
-
-       This command requires you to be authenticated with either the --token
-       option or using cargo-login(1).
-
-       If the crate name is not specified, it will use the package name from
-       the current directory.
 
 OPTIONS
    Yank Options
