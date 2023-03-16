@@ -50,17 +50,18 @@ requirements, following a given release being yanked:
 
 ### When to yank
 
-Crates should only be yanked in exceptional circumstances, for example,
-license/copyright issues, accidental inclusion of
-[PII](https://en.wikipedia.org/wiki/Personal_data), credentials, etc...
-In the case of security vulnerabilities, [RustSec](https://rustsec.org/) is
-typically a less disruptive mechanism to inform users and encourage them to
-upgrade, and avoids the possibility of significant downstream disruption
+Crates should only be yanked in exceptional circumstances, for example, an
+accidental publish, an unintentional SemVer breakages, or a significantly
+broken and unusable crate. In the case of security vulnerabilities, [RustSec]
+is typically a less disruptive mechanism to inform users and encourage them
+to upgrade, and avoids the possibility of significant downstream disruption
 irrespective of susceptibility to the vulnerability in question.
 
 A common workflow is to yank a crate having already published a semver
 compatible version, to reduce the probability of preventing dependent
 crates from compiling.
+
+[RustSec]: https://rustsec.org/
 
 ## OPTIONS
 
