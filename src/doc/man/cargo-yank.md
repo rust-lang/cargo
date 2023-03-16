@@ -61,7 +61,16 @@ A common workflow is to yank a crate having already published a semver
 compatible version, to reduce the probability of preventing dependent
 crates from compiling.
 
+To address copyright, licensing, or personal data issues with your published
+crate, contact the maintainers of the registry you used. For crates.io, refer
+to their [policies] and contact them at <help@crates.io>.
+
+If your credentials have been leaked, the recommended process is to revoke them
+immediately. Once a crate is published, it's impossible to know if those leaked
+credentials have been copied, so taking swift action is crucial.
+
 [RustSec]: https://rustsec.org/
+[policies]: https://crates.io/policies
 
 ## OPTIONS
 
