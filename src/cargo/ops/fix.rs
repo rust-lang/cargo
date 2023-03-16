@@ -17,10 +17,10 @@
 //! Cargo begins a normal `cargo check` operation with itself set as a proxy
 //! for rustc by setting `primary_unit_rustc` in the build config. When
 //! cargo launches rustc to check a crate, it is actually launching itself.
-//! The `FIX_ENV` environment variable is set so that cargo knows it is in
+//! The `FIX_ENV_INTERNAL` environment variable is set so that cargo knows it is in
 //! fix-proxy-mode.
 //!
-//! Each proxied cargo-as-rustc detects it is in fix-proxy-mode (via `FIX_ENV`
+//! Each proxied cargo-as-rustc detects it is in fix-proxy-mode (via `FIX_ENV_INTERNAL`
 //! environment variable in `main`) and does the following:
 //!
 //! - Acquire a lock from the `LockServer` from the master cargo process.
@@ -67,16 +67,16 @@ use crate::{drop_eprint, drop_eprintln};
 /// Indicates Cargo is in fix-proxy-mode if presents.
 /// The value of it is the socket address of the [`LockServer`] being used.
 /// See the [module-level documentation](mod@super::fix) for more.
-const FIX_ENV: &str = "__CARGO_FIX_PLZ";
+const FIX_ENV_INTERNAL: &str = "__CARGO_FIX_PLZ";
 /// **Internal only.**
 /// For passing [`FixOptions::broken_code`] through to cargo running in proxy mode.
-const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
+const BROKEN_CODE_ENV_INTERNAL: &str = "__CARGO_FIX_BROKEN_CODE";
 /// **Internal only.**
 /// For passing [`FixOptions::edition`] through to cargo running in proxy mode.
-const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
+const EDITION_ENV_INTERNAL: &str = "__CARGO_FIX_EDITION";
 /// **Internal only.**
 /// For passing [`FixOptions::idioms`] through to cargo running in proxy mode.
-const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
+const IDIOMS_ENV_INTERNAL: &str = "__CARGO_FIX_IDIOMS";
 
 pub struct FixOptions {
     pub edition: bool,
@@ -97,20 +97,20 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
     let mut wrapper = ProcessBuilder::new(env::current_exe()?);
-    wrapper.env(FIX_ENV, lock_server.addr().to_string());
+    wrapper.env(FIX_ENV_INTERNAL, lock_server.addr().to_string());
     let _started = lock_server.start()?;
 
     opts.compile_opts.build_config.force_rebuild = true;
 
     if opts.broken_code {
-        wrapper.env(BROKEN_CODE_ENV, "1");
+        wrapper.env(BROKEN_CODE_ENV_INTERNAL, "1");
     }
 
     if opts.edition {
-        wrapper.env(EDITION_ENV, "1");
+        wrapper.env(EDITION_ENV_INTERNAL, "1");
     }
     if opts.idioms {
-        wrapper.env(IDIOMS_ENV, "1");
+        wrapper.env(IDIOMS_ENV_INTERNAL, "1");
     }
 
     *opts
@@ -352,7 +352,7 @@ pub fn fix_get_proxy_lock_addr() -> Option<String> {
     // ALLOWED: For the internal mechanism of `cargo fix` only.
     // Shouldn't be set directly by anyone.
     #[allow(clippy::disallowed_methods)]
-    env::var(FIX_ENV).ok()
+    env::var(FIX_ENV_INTERNAL).ok()
 }
 
 /// Entry point for `cargo` running as a proxy for `rustc`.
@@ -373,7 +373,7 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
         .ok();
     let mut rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
     rustc.retry_with_argfile(true);
-    rustc.env_remove(FIX_ENV);
+    rustc.env_remove(FIX_ENV_INTERNAL);
     args.apply(&mut rustc);
 
     trace!("start rustfixing {:?}", args.file);
@@ -417,7 +417,7 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
         // user's code with our changes. Back out everything and fall through
         // below to recompile again.
         if !output.status.success() {
-            if config.get_env_os(BROKEN_CODE_ENV).is_none() {
+            if config.get_env_os(BROKEN_CODE_ENV_INTERNAL).is_none() {
                 for (path, file) in fixes.files.iter() {
                     debug!("reverting {:?} due to errors", path);
                     paths::write(path, &file.original_code)?;
@@ -591,7 +591,7 @@ fn rustfix_and_fix(
     // worse by applying fixes where a bug could cause *more* broken code.
     // Instead, punt upwards which will reexec rustc over the original code,
     // displaying pretty versions of the diagnostics we just read out.
-    if !output.status.success() && config.get_env_os(BROKEN_CODE_ENV).is_none() {
+    if !output.status.success() && config.get_env_os(BROKEN_CODE_ENV_INTERNAL).is_none() {
         debug!(
             "rustfixing `{:?}` failed, rustc exited with {:?}",
             filename,
@@ -863,12 +863,12 @@ impl FixArgs {
         // ALLOWED: For the internal mechanism of `cargo fix` only.
         // Shouldn't be set directly by anyone.
         #[allow(clippy::disallowed_methods)]
-        let idioms = env::var(IDIOMS_ENV).is_ok();
+        let idioms = env::var(IDIOMS_ENV_INTERNAL).is_ok();
 
         // ALLOWED: For the internal mechanism of `cargo fix` only.
         // Shouldn't be set directly by anyone.
         #[allow(clippy::disallowed_methods)]
-        let prepare_for_edition = env::var(EDITION_ENV).ok().map(|_| {
+        let prepare_for_edition = env::var(EDITION_ENV_INTERNAL).ok().map(|_| {
             enabled_edition
                 .unwrap_or(Edition::Edition2015)
                 .saturating_next()
