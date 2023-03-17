@@ -946,10 +946,7 @@ impl CliUnstable {
             self.add(flag, &mut warnings)?;
         }
 
-        if self.gitoxide.is_none()
-            && std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2")
-                .map_or(false, |value| value == "1")
-        {
+        if self.gitoxide.is_none() && cargo_use_gitoxide_instead_of_git2() {
             self.gitoxide = GitoxideFeatures::safe().into();
         }
         Ok(warnings)
@@ -1171,9 +1168,15 @@ impl CliUnstable {
 
 /// Returns the current release channel ("stable", "beta", "nightly", "dev").
 pub fn channel() -> String {
+    // ALLOWED: For testing cargo itself only.
+    #[allow(clippy::disallowed_methods)]
     if let Ok(override_channel) = env::var("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS") {
         return override_channel;
     }
+    // ALLOWED: the process of rustc boostrapping reads this through
+    // `std::env`. We should make the behavior consistent. Also, we
+    // don't advertise this for bypassing nightly.
+    #[allow(clippy::disallowed_methods)]
     if let Ok(staging) = env::var("RUSTC_BOOTSTRAP") {
         if staging == "1" {
             return "dev".to_string();
@@ -1182,4 +1185,13 @@ pub fn channel() -> String {
     crate::version()
         .release_channel
         .unwrap_or_else(|| String::from("dev"))
+}
+
+/// Only for testing and developing. See ["Running with gitoxide as default git backend in tests"][1].
+///
+/// [1]: https://doc.crates.io/contrib/tests/running.html#running-with-gitoxide-as-default-git-backend-in-tests
+// ALLOWED: For testing cargo itself only.
+#[allow(clippy::disallowed_methods)]
+fn cargo_use_gitoxide_instead_of_git2() -> bool {
+    std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2").map_or(false, |value| value == "1")
 }

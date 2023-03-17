@@ -15,6 +15,9 @@ pub struct ResolverProgress {
     time_to_print: Duration,
     printed: bool,
     deps_time: Duration,
+    /// Provides an escape hatch for machine with slow CPU for debugging and
+    /// testing Cargo itself.
+    /// See [rust-lang/cargo#6596](https://github.com/rust-lang/cargo/pull/6596) for more.
     #[cfg(debug_assertions)]
     slow_cpu_multiplier: u64,
 }
@@ -31,6 +34,9 @@ impl ResolverProgress {
             // Architectures that do not have a modern processor, hardware emulation, etc.
             // In the test code we have `slow_cpu_multiplier`, but that is not accessible here.
             #[cfg(debug_assertions)]
+            // ALLOWED: For testing cargo itself only. However, it was communicated as an public
+            // interface to other developers, so keep it as-is, shouldn't add `__CARGO` prefix.
+            #[allow(clippy::disallowed_methods)]
             slow_cpu_multiplier: std::env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER")
                 .ok()
                 .and_then(|m| m.parse().ok())

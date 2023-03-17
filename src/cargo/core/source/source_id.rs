@@ -428,9 +428,7 @@ impl SourceId {
             _ => return false,
         }
         let url = self.inner.url.as_str();
-        url == CRATES_IO_INDEX
-            || url == CRATES_IO_HTTP_INDEX
-            || std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS").as_deref() == Ok(url)
+        url == CRATES_IO_INDEX || url == CRATES_IO_HTTP_INDEX || is_overridden_crates_io_url(url)
     }
 
     /// Hashes `self`.
@@ -883,4 +881,11 @@ mod tests {
         assert_eq!(formatted, "sparse+https://my-crates.io/");
         assert_eq!(source_id, deserialized);
     }
+}
+
+/// Check if `url` equals to the overridden crates.io URL.
+// ALLOWED: For testing Cargo itself only.
+#[allow(clippy::disallowed_methods)]
+fn is_overridden_crates_io_url(url: &str) -> bool {
+    std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS").map_or(false, |v| v == url)
 }

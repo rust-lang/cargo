@@ -22,6 +22,8 @@ pub struct Profiler {
 }
 
 fn enabled_level() -> Option<usize> {
+    // ALLOWED: for profiling Cargo itself, not intended to be used beyond Cargo contributors.
+    #[allow(clippy::disallowed_methods)]
     env::var("CARGO_PROFILE").ok().and_then(|s| s.parse().ok())
 }
 
