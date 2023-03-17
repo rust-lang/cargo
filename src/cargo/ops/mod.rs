@@ -53,7 +53,7 @@ mod common_for_install_and_uninstall;
 mod fix;
 pub(crate) mod lockfile;
 pub(crate) mod registry;
-mod resolve;
+pub(crate) mod resolve;
 pub mod tree;
 mod vendor;
 

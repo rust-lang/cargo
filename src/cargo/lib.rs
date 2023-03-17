@@ -31,8 +31,9 @@
 //!     This is the entry point for all the compilation commands. This is a
 //!     good place to start if you want to follow how compilation starts and
 //!     flows to completion.
-//! - [`core::resolver`]:
-//!   This is the dependency and feature resolvers.
+//! - [`ops::resolve`]:
+//!   Top-level API for dependency and feature resolver (e.g. [`ops::resolve_ws`])
+//!   - [`core::resolver`]: The core algorithm
 //! - [`core::compiler`]:
 //!   This is the code responsible for running `rustc` and `rustdoc`.
 //!   - [`core::compiler::build_context`]:
