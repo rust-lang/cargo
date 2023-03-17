@@ -72,9 +72,9 @@ use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRo
 use crate::ops::{self, RegistryCredentialConfig};
 use crate::util::auth::Secret;
 use crate::util::errors::CargoResult;
-use crate::util::validate_package_name;
 use crate::util::CanonicalUrl;
 use crate::util::{internal, toml as cargo_toml};
+use crate::util::{try_canonicalize, validate_package_name};
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_util::paths;
@@ -433,11 +433,11 @@ impl Config {
                     // commands that use Cargo as a library to inherit (via `cargo <subcommand>`)
                     // or set (by setting `$CARGO`) a correct path to `cargo` when the current exe
                     // is not actually cargo (e.g., `cargo-*` binaries, Valgrind, `ld.so`, etc.).
-                    let exe = self
-                        .get_env_os(crate::CARGO_ENV)
-                        .map(PathBuf::from)
-                        .ok_or_else(|| anyhow!("$CARGO not set"))?
-                        .canonicalize()?;
+                    let exe = try_canonicalize(
+                        self.get_env_os(crate::CARGO_ENV)
+                            .map(PathBuf::from)
+                            .ok_or_else(|| anyhow!("$CARGO not set"))?,
+                    )?;
                     Ok(exe)
                 };
 
@@ -446,7 +446,7 @@ impl Config {
                     // The method varies per operating system and might fail; in particular,
                     // it depends on `/proc` being mounted on Linux, and some environments
                     // (like containers or chroots) may not have that available.
-                    let exe = env::current_exe()?.canonicalize()?;
+                    let exe = try_canonicalize(env::current_exe()?)?;
                     Ok(exe)
                 }
 

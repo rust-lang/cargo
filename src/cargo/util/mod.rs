@@ -157,6 +157,9 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
             return Err(Error::new(ErrorKind::NotFound, "the path was not found"));
         }
 
+        // This code is based on the unstable `std::path::aboslute` and could be replaced with it
+        // if it's stabilized.
+
         let path = path.as_ref().as_os_str();
         let mut path_u16 = Vec::with_capacity(path.len() + 1);
         path_u16.extend(path.encode_wide());
@@ -168,39 +171,38 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
         }
         path_u16.push(0);
 
-        unsafe {
-            SetLastError(0);
-            let len = GetFullPathNameW(path_u16.as_ptr(), 0, &mut [] as *mut u16, ptr::null_mut());
-            if len == 0 {
-                let error = GetLastError();
-                if error != 0 {
-                    return Err(Error::from_raw_os_error(error as i32));
+        loop {
+            unsafe {
+                SetLastError(0);
+                let len =
+                    GetFullPathNameW(path_u16.as_ptr(), 0, &mut [] as *mut u16, ptr::null_mut());
+                if len == 0 {
+                    let error = GetLastError();
+                    if error != 0 {
+                        return Err(Error::from_raw_os_error(error as i32));
+                    }
+                }
+                let mut result = vec![0u16; len as usize];
+
+                let write_len = GetFullPathNameW(
+                    path_u16.as_ptr(),
+                    result.len().try_into().unwrap(),
+                    result.as_mut_ptr().cast::<u16>(),
+                    ptr::null_mut(),
+                );
+                if write_len == 0 {
+                    let error = GetLastError();
+                    if error != 0 {
+                        return Err(Error::from_raw_os_error(error as i32));
+                    }
+                }
+
+                if write_len <= len {
+                    return Ok(PathBuf::from(OsString::from_wide(
+                        &result[0..(write_len as usize)],
+                    )));
                 }
             }
-            let mut result: Vec<u16> = std::iter::repeat(0).take(len as usize).collect();
-
-            let write_len = GetFullPathNameW(
-                path_u16.as_ptr(),
-                result.len().try_into().unwrap(),
-                result.as_mut_ptr().cast::<u16>(),
-                ptr::null_mut(),
-            );
-            if write_len == 0 {
-                let error = GetLastError();
-                if error != 0 {
-                    return Err(Error::from_raw_os_error(error as i32));
-                }
-            }
-            assert_eq!(
-                write_len + 1,
-                len,
-                "mismatching requested and written lengths for path {:?}",
-                path
-            );
-
-            Ok(PathBuf::from(OsString::from_wide(
-                &result[0..(write_len as usize)],
-            )))
         }
     })
 }

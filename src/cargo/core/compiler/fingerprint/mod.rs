@@ -367,9 +367,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
-use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::{self, try_canonicalize};
 use crate::util::{internal, path_args, profile, StableHasher};
 use crate::{Config, CARGO_ENV};
 
@@ -1941,8 +1941,8 @@ pub fn translate_dep_info(
 ) -> CargoResult<()> {
     let depinfo = parse_rustc_dep_info(rustc_dep_info)?;
 
-    let target_root = target_root.canonicalize()?;
-    let pkg_root = pkg_root.canonicalize()?;
+    let target_root = try_canonicalize(target_root)?;
+    let pkg_root = try_canonicalize(pkg_root)?;
     let mut on_disk_info = EncodedDepInfo::default();
     on_disk_info.env = depinfo.env;
 
@@ -1985,7 +1985,7 @@ pub fn translate_dep_info(
         // If canonicalization fails, just use the abs path. There is currently
         // a bug where --remap-path-prefix is affecting .d files, causing them
         // to point to non-existent paths.
-        let canon_file = abs_file.canonicalize().unwrap_or_else(|_| abs_file.clone());
+        let canon_file = try_canonicalize(&abs_file).unwrap_or_else(|_| abs_file.clone());
 
         let (ty, path) = if let Ok(stripped) = canon_file.strip_prefix(&target_root) {
             (DepInfoPathType::TargetRootRelative, stripped)
