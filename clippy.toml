@@ -1,0 +1,6 @@
+disallowed-methods = [
+    { path = "std::env::var", reason = "Use `Config::get_env` instead. See rust-lang/cargo#11588" },
+    { path = "std::env::var_os", reason = "Use `Config::get_env_os` instead. See rust-lang/cargo#11588" },
+    { path = "std::env::vars", reason = "Not recommended to use in Cargo. See rust-lang/cargo#11588" },
+    { path = "std::env::vars_os", reason = "Not recommended to use in Cargo. See rust-lang/cargo#11588" },
+]
