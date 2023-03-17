@@ -410,6 +410,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 // If we're opting into backtraces, mention that build dependencies' backtraces can
                 // be improved by requesting debuginfo to be built, if we're not building with
                 // debuginfo already.
+                //
+                // ALLOWED: Other tools like `rustc` might read it directly
+                // through `std::env`. We should make their behavior consistent.
+                #[allow(clippy::disallowed_methods)]
                 if let Ok(show_backtraces) = std::env::var("RUST_BACKTRACE") {
                     if !built_with_debuginfo && show_backtraces != "0" {
                         build_error_context.push_str(&format!(
@@ -727,6 +731,10 @@ impl BuildOutput {
                                 None => return false,
                                 Some(n) => n,
                             };
+                            // ALLOWED: the process of rustc boostrapping reads this through
+                            // `std::env`. We should make the behavior consistent. Also, we
+                            // don't advertise this for bypassing nightly.
+                            #[allow(clippy::disallowed_methods)]
                             std::env::var("RUSTC_BOOTSTRAP")
                                 .map_or(false, |var| var.split(',').any(|s| s == name))
                         };

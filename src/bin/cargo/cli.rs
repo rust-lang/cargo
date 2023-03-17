@@ -413,6 +413,9 @@ impl GlobalArgs {
 }
 
 pub fn cli() -> Command {
+    // ALLOWED: `RUSTUP_HOME` should only be read from process env, otherwise
+    // other tools may point to executables from incompatible distributions.
+    #[allow(clippy::disallowed_methods)]
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
         "cargo [+toolchain] [OPTIONS] [COMMAND]"

@@ -63,9 +63,19 @@ use crate::util::Config;
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 use crate::{drop_eprint, drop_eprintln};
 
+/// **Internal only.**
+/// Indicates Cargo is in fix-proxy-mode if presents.
+/// The value of it is the socket address of the [`LockServer`] being used.
+/// See the [module-level documentation](mod@super::fix) for more.
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
+/// **Internal only.**
+/// For passing [`FixOptions::broken_code`] through to cargo running in proxy mode.
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
+/// **Internal only.**
+/// For passing [`FixOptions::edition`] through to cargo running in proxy mode.
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
+/// **Internal only.**
+/// For passing [`FixOptions::idioms`] through to cargo running in proxy mode.
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
 
 pub struct FixOptions {
@@ -339,6 +349,9 @@ to prevent this issue from happening.
 /// Returns `None` if `fix` is not being run (not in proxy mode). Returns
 /// `Some(...)` if in `fix` proxy mode
 pub fn fix_get_proxy_lock_addr() -> Option<String> {
+    // ALLOWED: For the internal mechanism of `cargo fix` only.
+    // Shouldn't be set directly by anyone.
+    #[allow(clippy::disallowed_methods)]
     env::var(FIX_ENV).ok()
 }
 
@@ -847,8 +860,14 @@ impl FixArgs {
         }
 
         let file = file.ok_or_else(|| anyhow::anyhow!("could not find .rs file in rustc args"))?;
+        // ALLOWED: For the internal mechanism of `cargo fix` only.
+        // Shouldn't be set directly by anyone.
+        #[allow(clippy::disallowed_methods)]
         let idioms = env::var(IDIOMS_ENV).is_ok();
 
+        // ALLOWED: For the internal mechanism of `cargo fix` only.
+        // Shouldn't be set directly by anyone.
+        #[allow(clippy::disallowed_methods)]
         let prepare_for_edition = env::var(EDITION_ENV).ok().map(|_| {
             enabled_edition
                 .unwrap_or(Edition::Edition2015)
