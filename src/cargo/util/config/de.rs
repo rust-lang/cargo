@@ -424,7 +424,7 @@ impl<'config> ValueDeserializer<'config> {
         let definition = {
             let env = de.key.as_env_key();
             let env_def = Definition::Environment(env.to_string());
-            match (de.config.env_has_key(env), de.config.get_cv(&de.key)?) {
+            match (de.config.env.contains_key(env), de.config.get_cv(&de.key)?) {
                 (true, Some(cv)) => {
                     // Both, pick highest priority.
                     if env_def.is_higher_priority(cv.definition()) {
