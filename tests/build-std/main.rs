@@ -217,6 +217,8 @@ fn custom_test_framework() {
         .join("rustlib")
         .join(rustc_host())
         .join("bin");
+    // ALLOWED: For testing.
+    #[allow(clippy::disallowed_methods)]
     let path = env::var_os("PATH").unwrap_or_default();
     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
     paths.insert(0, sysroot_bin);
