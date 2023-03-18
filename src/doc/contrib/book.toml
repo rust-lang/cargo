@@ -8,3 +8,10 @@ git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/con
 
 [output.html.redirect]
 "/apidoc/cargo/index.html" = "https://doc.rust-lang.org/nightly/nightly-rustc/cargo/"
+"/architecture/index.html" = "../implementation/architecture.html"
+"/architecture/console.html" = "../implementation/console.html"
+"/architecture/subcommands.html" = "../implementation/subcommands.html"
+"/architecture/codebase.html" = "https://doc.rust-lang.org/nightly/nightly-rustc/cargo"
+"/architecture/compilation.html" = "https://doc.rust-lang.org/nightly/nightly-rustc/cargo"
+"/architecture/files.html" = "https://doc.rust-lang.org/nightly/nightly-rustc/cargo"
+"/architecture/packages.html" = "https://doc.rust-lang.org/nightly/nightly-rustc/cargo"
