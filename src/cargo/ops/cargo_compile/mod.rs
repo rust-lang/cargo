@@ -15,7 +15,7 @@
 //!   from the resolver.  See also [`unit_dependencies`].
 //! 5. Construct the [`BuildContext`] with all of the information collected so
 //!   far. This is the end of the "front end" of compilation.
-//! 6. Create a [`Context`] which oordinates the compilation process a
+//! 6. Create a [`Context`] which coordinates the compilation process
 //!   and will perform the following steps:
 //!     1. Prepare the `target` directory (see [`Layout`]).
 //!     2. Create a [`JobQueue`]. The queue checks the
