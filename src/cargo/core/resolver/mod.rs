@@ -37,6 +37,17 @@
 //! everything to bail out immediately and return success, and only if *nothing*
 //! works do we actually return an error up the stack.
 //!
+//! Resolution is currently performed twice
+//! 1. With all features enabled (this is what gets saved to `Cargo.lock`)
+//! 2. With only the specific features the user selected on the command-line. Ideally this
+//!    run will get removed in the future when transitioning to the new feature resolver.
+//!
+//! A new feature-specific resolver was added in 2020 which adds more sophisticated feature
+//! resolution. It is located in the [`features`] module. The original dependency resolver still
+//! performs feature unification, as it can help reduce the dependencies it has to consider during
+//! resolution (rather than assuming every optional dependency of every package is enabled).
+//! Checking if a feature is enabled must go through the new feature resolver.
+//!
 //! ## Performance
 //!
 //! Note that this is a relatively performance-critical portion of Cargo. The
