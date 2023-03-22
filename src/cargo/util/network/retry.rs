@@ -151,12 +151,14 @@ fn with_retry_repeats_the_call_then_works() {
         code: 501,
         url: "Uri".to_string(),
         body: Vec::new(),
+        headers: Vec::new(),
     }
     .into();
     let error2 = HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
         body: Vec::new(),
+        headers: Vec::new(),
     }
     .into();
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
@@ -176,12 +178,14 @@ fn with_retry_finds_nested_spurious_errors() {
         code: 501,
         url: "Uri".to_string(),
         body: Vec::new(),
+        headers: Vec::new(),
     });
     let error1 = anyhow::Error::from(error1.context("A non-spurious wrapping err"));
     let error2 = anyhow::Error::from(HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
         body: Vec::new(),
+        headers: Vec::new(),
     });
     let error2 = anyhow::Error::from(error2.context("A second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
@@ -200,6 +204,7 @@ fn default_retry_schedule() {
             code: 500,
             url: "Uri".to_string(),
             body: Vec::new(),
+            headers: Vec::new(),
         }))
     };
     let config = Config::default().unwrap();

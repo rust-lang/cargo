@@ -3274,3 +3274,148 @@ or use environment variable CARGO_REGISTRY_TOKEN
         .with_status(101)
         .run();
 }
+
+const SAMPLE_HEADERS: &[&str] = &[
+    "x-amz-cf-pop: SFO53-P2",
+    "x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==",
+    "x-cache: Hit from cloudfront",
+    "server: AmazonS3",
+    "x-amz-version-id: pvsJYY_JGsWiSETZvLJKb7DeEW5wWq1W",
+    "x-amz-server-side-encryption: AES256",
+    "content-type: text/plain",
+    "via: 1.1 bcbc5b46216015493e082cfbcf77ef10.cloudfront.net (CloudFront)",
+];
+
+#[cargo_test]
+fn debug_header_message_index() {
+    // The error message should include some headers for debugging purposes.
+    let _server = RegistryBuilder::new()
+        .http_index()
+        .add_responder("/index/3/b/bar", |_, _| Response {
+            code: 503,
+            headers: SAMPLE_HEADERS.iter().map(|s| s.to_string()).collect(),
+            body: b"Please slow down".to_vec(),
+        })
+        .build();
+    Package::new("bar", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch").with_status(101).with_stderr("\
+[UPDATING] `dummy-registry` index
+warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar`, got 503
+debug headers:
+x-amz-cf-pop: SFO53-P2
+x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+x-cache: Hit from cloudfront
+body:
+Please slow down
+warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar`, got 503
+debug headers:
+x-amz-cf-pop: SFO53-P2
+x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+x-cache: Hit from cloudfront
+body:
+Please slow down
+warning: spurious network error (1 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar`, got 503
+debug headers:
+x-amz-cf-pop: SFO53-P2
+x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+x-cache: Hit from cloudfront
+body:
+Please slow down
+error: failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to query replaced source registry `crates-io`
+
+Caused by:
+  download of 3/b/bar failed
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar`, got 503
+  debug headers:
+  x-amz-cf-pop: SFO53-P2
+  x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+  x-cache: Hit from cloudfront
+  body:
+  Please slow down
+").run();
+}
+
+#[cargo_test]
+fn debug_header_message_dl() {
+    // Same as debug_header_message_index, but for the dl endpoint which goes
+    // through a completely different code path.
+    let _server = RegistryBuilder::new()
+        .http_index()
+        .add_responder("/dl/bar/1.0.0/download", |_, _| Response {
+            code: 503,
+            headers: SAMPLE_HEADERS.iter().map(|s| s.to_string()).collect(),
+            body: b"Please slow down".to_vec(),
+        })
+        .build();
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch").with_status(101).with_stderr("\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 503
+debug headers:
+x-amz-cf-pop: SFO53-P2
+x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+x-cache: Hit from cloudfront
+body:
+Please slow down
+warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 503
+debug headers:
+x-amz-cf-pop: SFO53-P2
+x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+x-cache: Hit from cloudfront
+body:
+Please slow down
+warning: spurious network error (1 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 503
+debug headers:
+x-amz-cf-pop: SFO53-P2
+x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+x-cache: Hit from cloudfront
+body:
+Please slow down
+error: failed to download from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 503
+  debug headers:
+  x-amz-cf-pop: SFO53-P2
+  x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+  x-cache: Hit from cloudfront
+  body:
+  Please slow down
+").run();
+}

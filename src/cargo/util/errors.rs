@@ -8,11 +8,22 @@ use super::truncate_with_ellipsis;
 
 pub type CargoResult<T> = anyhow::Result<T>;
 
+/// These are headers that are included in error messages to help with
+/// diagnosing issues.
+pub const DEBUG_HEADERS: &[&str] = &[
+    "x-amz-cf-id",
+    "x-amz-cf-pop",
+    "x-amz-id-2",
+    "x-cache",
+    "x-served-by",
+];
+
 #[derive(Debug)]
 pub struct HttpNotSuccessful {
     pub code: u32,
     pub url: String,
     pub body: Vec<u8>,
+    pub headers: Vec<String>,
 }
 
 impl fmt::Display for HttpNotSuccessful {
@@ -23,9 +34,13 @@ impl fmt::Display for HttpNotSuccessful {
 
         write!(
             f,
-            "failed to get successful HTTP response from `{}`, got {}\nbody:\n{body}",
-            self.url, self.code
-        )
+            "failed to get successful HTTP response from `{}`, got {}\n",
+            self.url, self.code,
+        )?;
+        if !self.headers.is_empty() {
+            write!(f, "debug headers:\n{}\n", self.headers.join("\n"))?;
+        }
+        write!(f, "body:\n{body}",)
     }
 }
 

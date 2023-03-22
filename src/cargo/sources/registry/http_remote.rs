@@ -7,7 +7,7 @@ use crate::ops::{self};
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
-use crate::util::errors::{CargoResult, HttpNotSuccessful};
+use crate::util::errors::{CargoResult, HttpNotSuccessful, DEBUG_HEADERS};
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
 use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
@@ -142,6 +142,7 @@ struct Headers {
     last_modified: Option<String>,
     etag: Option<String>,
     www_authenticate: Vec<String>,
+    others: Vec<String>,
 }
 
 enum StatusCode {
@@ -293,6 +294,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                             code,
                             url: url.to_owned(),
                             body: data,
+                            headers: download.header_map.take().others,
                         }
                         .into());
                     }
@@ -546,6 +548,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         code: 401,
                         body: result.data,
                         url: self.full_url(path),
+                        headers: result.header_map.others,
                     }
                     .into());
                     if self.auth_required {
@@ -665,7 +668,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                             LAST_MODIFIED => header_map.last_modified = Some(value.to_string()),
                             ETAG => header_map.etag = Some(value.to_string()),
                             WWW_AUTHENTICATE => header_map.www_authenticate.push(value.to_string()),
-                            _ => {}
+                            _ => {
+                                if DEBUG_HEADERS.iter().any(|prefix| tag.starts_with(prefix)) {
+                                    header_map.others.push(format!("{tag}: {value}"));
+                                }
+                            }
                         }
                     }
                 });
