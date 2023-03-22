@@ -1,22 +1,9 @@
+//! Utilities for retrying a network operation.
+
 use anyhow::Error;
 
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::Config;
-use std::task::Poll;
-
-pub trait PollExt<T> {
-    fn expect(self, msg: &str) -> T;
-}
-
-impl<T> PollExt<T> for Poll<T> {
-    #[track_caller]
-    fn expect(self, msg: &str) -> T {
-        match self {
-            Poll::Ready(val) => val,
-            Poll::Pending => panic!("{}", msg),
-        }
-    }
-}
 
 pub struct Retry<'a> {
     config: &'a Config,
@@ -105,7 +92,7 @@ fn maybe_spurious(err: &Error) -> bool {
 /// # let download_something = || return Ok(());
 /// # let config = Config::default().unwrap();
 /// use cargo::util::network;
-/// let cargo_result = network::with_retry(&config, || download_something());
+/// let cargo_result = network::retry::with_retry(&config, || download_something());
 /// ```
 pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
 where
@@ -117,24 +104,6 @@ where
             return Ok(ret);
         }
     }
-}
-
-// When dynamically linked against libcurl, we want to ignore some failures
-// when using old versions that don't support certain features.
-#[macro_export]
-macro_rules! try_old_curl {
-    ($e:expr, $msg:expr) => {
-        let result = $e;
-        if cfg!(target_os = "macos") {
-            if let Err(e) = result {
-                warn!("ignoring libcurl {} error: {}", $msg, e);
-            }
-        } else {
-            result.with_context(|| {
-                anyhow::format_err!("failed to enable {}, is curl not built right?", $msg)
-            })?;
-        }
-    };
 }
 
 #[test]

@@ -8,7 +8,7 @@ use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
-use crate::util::network::Retry;
+use crate::util::network::retry::Retry;
 use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use anyhow::Context;
 use cargo_util::paths;

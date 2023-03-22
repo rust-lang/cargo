@@ -28,7 +28,7 @@ use crate::ops;
 use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::interning::InternedString;
-use crate::util::network::Retry;
+use crate::util::network::retry::Retry;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
 pub const MANIFEST_PREAMBLE: &str = "\
