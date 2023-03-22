@@ -288,14 +288,13 @@ impl<'cfg> HttpRegistry<'cfg> {
                     304 => StatusCode::NotModified,
                     401 => StatusCode::Unauthorized,
                     404 | 410 | 451 => StatusCode::NotFound,
-                    code => {
-                        let url = handle.effective_url()?.unwrap_or(&url);
-                        return Err(HttpNotSuccessful {
-                            code,
-                            url: url.to_owned(),
-                            body: data,
-                            headers: download.header_map.take().others,
-                        }
+                    _ => {
+                        return Err(HttpNotSuccessful::new_from_handle(
+                            &mut handle,
+                            &url,
+                            data,
+                            download.header_map.take().others,
+                        )
                         .into());
                     }
                 };
@@ -548,6 +547,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         code: 401,
                         body: result.data,
                         url: self.full_url(path),
+                        ip: None,
                         headers: result.header_map.others,
                     }
                     .into());

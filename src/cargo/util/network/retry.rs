@@ -150,6 +150,7 @@ fn with_retry_repeats_the_call_then_works() {
     let error1 = HttpNotSuccessful {
         code: 501,
         url: "Uri".to_string(),
+        ip: None,
         body: Vec::new(),
         headers: Vec::new(),
     }
@@ -157,6 +158,7 @@ fn with_retry_repeats_the_call_then_works() {
     let error2 = HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
+        ip: None,
         body: Vec::new(),
         headers: Vec::new(),
     }
@@ -177,6 +179,7 @@ fn with_retry_finds_nested_spurious_errors() {
     let error1 = anyhow::Error::from(HttpNotSuccessful {
         code: 501,
         url: "Uri".to_string(),
+        ip: None,
         body: Vec::new(),
         headers: Vec::new(),
     });
@@ -184,6 +187,7 @@ fn with_retry_finds_nested_spurious_errors() {
     let error2 = anyhow::Error::from(HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
+        ip: None,
         body: Vec::new(),
         headers: Vec::new(),
     });
@@ -203,6 +207,7 @@ fn default_retry_schedule() {
         Err(anyhow::Error::from(HttpNotSuccessful {
             code: 500,
             url: "Uri".to_string(),
+            ip: None,
             body: Vec::new(),
             headers: Vec::new(),
         }))

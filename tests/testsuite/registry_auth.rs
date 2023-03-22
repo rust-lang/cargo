@@ -57,7 +57,7 @@ fn requires_nightly() {
 error: failed to download from `[..]/dl/bar/0.0.1/download`
 
 Caused by:
-  failed to get successful HTTP response from `[..]`, got 401
+  failed to get successful HTTP response from `[..]` (127.0.0.1), got 401
   body:
   Unauthorized message from server.
 "#,
@@ -415,7 +415,7 @@ fn incorrect_token_git() {
 [ERROR] failed to download from `http://[..]/dl/bar/0.0.1/download`
 
 Caused by:
-  failed to get successful HTTP response from `http://[..]/dl/bar/0.0.1/download`, got 401
+  failed to get successful HTTP response from `http://[..]/dl/bar/0.0.1/download` (127.0.0.1), got 401
   body:
   Unauthorized message from server.",
         )

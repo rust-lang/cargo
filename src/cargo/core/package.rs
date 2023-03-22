@@ -880,13 +880,12 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
 
                     let code = handle.response_code()?;
                     if code != 200 && code != 0 {
-                        let url = handle.effective_url()?.unwrap_or(url);
-                        return Err(HttpNotSuccessful {
-                            code,
-                            url: url.to_string(),
-                            body: data,
+                        return Err(HttpNotSuccessful::new_from_handle(
+                            &mut handle,
+                            &url,
+                            data,
                             headers,
-                        }
+                        )
                         .into());
                     }
                     Ok(data)

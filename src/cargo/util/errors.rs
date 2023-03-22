@@ -1,6 +1,7 @@
 #![allow(unknown_lints)]
 
 use anyhow::Error;
+use curl::easy::Easy;
 use std::fmt;
 use std::path::PathBuf;
 
@@ -22,8 +23,33 @@ pub const DEBUG_HEADERS: &[&str] = &[
 pub struct HttpNotSuccessful {
     pub code: u32,
     pub url: String,
+    pub ip: Option<String>,
     pub body: Vec<u8>,
     pub headers: Vec<String>,
+}
+
+impl HttpNotSuccessful {
+    pub fn new_from_handle(
+        handle: &mut Easy,
+        initial_url: &str,
+        body: Vec<u8>,
+        headers: Vec<String>,
+    ) -> HttpNotSuccessful {
+        let ip = handle.primary_ip().ok().flatten().map(|s| s.to_string());
+        let url = handle
+            .effective_url()
+            .ok()
+            .flatten()
+            .unwrap_or(initial_url)
+            .to_string();
+        HttpNotSuccessful {
+            code: handle.response_code().unwrap_or(0),
+            url,
+            ip,
+            body,
+            headers,
+        }
+    }
 }
 
 impl fmt::Display for HttpNotSuccessful {
@@ -34,9 +60,13 @@ impl fmt::Display for HttpNotSuccessful {
 
         write!(
             f,
-            "failed to get successful HTTP response from `{}`, got {}\n",
-            self.url, self.code,
+            "failed to get successful HTTP response from `{}`",
+            self.url
         )?;
+        if let Some(ip) = &self.ip {
+            write!(f, " ({ip})")?;
+        }
+        write!(f, ", got {}\n", self.code,)?;
         if !self.headers.is_empty() {
             write!(f, "debug headers:\n{}\n", self.headers.join("\n"))?;
         }

@@ -2743,10 +2743,10 @@ fn sparse_retry_single() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]`, got 500
+warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]` (127.0.0.1), got 500
 body:
 internal server error
-warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `[..]`, got 500
+warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `[..]` (127.0.0.1), got 500
 body:
 internal server error
 [DOWNLOADING] crates ...
@@ -2816,7 +2816,7 @@ fn sparse_retry_multiple() {
                 &mut expected,
                 "warning: spurious network error ({remain} tries remaining): \
                 failed to get successful HTTP response from \
-                `http://127.0.0.1:[..]/{ab}/{cd}/{name}`, got 500\n\
+                `http://127.0.0.1:[..]/{ab}/{cd}/{name}` (127.0.0.1), got 500\n\
                 body:\n\
                 internal server error\n"
             )
@@ -2876,10 +2876,12 @@ fn dl_retry_single() {
         .with_stderr("\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 500
+warning: spurious network error (3 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 500
 body:
 internal server error
-warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 500
+warning: spurious network error (2 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 500
 body:
 internal server error
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -2954,7 +2956,7 @@ fn dl_retry_multiple() {
                 &mut expected,
                 "warning: spurious network error ({remain} tries remaining): \
                 failed to get successful HTTP response from \
-                `http://127.0.0.1:[..]/dl/{name}/1.0.0/download`, got 500\n\
+                `http://127.0.0.1:[..]/dl/{name}/1.0.0/download` (127.0.0.1), got 500\n\
                 body:\n\
                 internal server error\n"
             )
@@ -3315,21 +3317,24 @@ fn debug_header_message_index() {
         .build();
     p.cargo("fetch").with_status(101).with_stderr("\
 [UPDATING] `dummy-registry` index
-warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar`, got 503
+warning: spurious network error (3 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
 debug headers:
 x-amz-cf-pop: SFO53-P2
 x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
 x-cache: Hit from cloudfront
 body:
 Please slow down
-warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar`, got 503
+warning: spurious network error (2 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
 debug headers:
 x-amz-cf-pop: SFO53-P2
 x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
 x-cache: Hit from cloudfront
 body:
 Please slow down
-warning: spurious network error (1 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar`, got 503
+warning: spurious network error (1 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
 debug headers:
 x-amz-cf-pop: SFO53-P2
 x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
@@ -3345,7 +3350,7 @@ Caused by:
   download of 3/b/bar failed
 
 Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar`, got 503
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
   debug headers:
   x-amz-cf-pop: SFO53-P2
   x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
@@ -3386,21 +3391,24 @@ fn debug_header_message_dl() {
     p.cargo("fetch").with_status(101).with_stderr("\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 503
+warning: spurious network error (3 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
 debug headers:
 x-amz-cf-pop: SFO53-P2
 x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
 x-cache: Hit from cloudfront
 body:
 Please slow down
-warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 503
+warning: spurious network error (2 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
 debug headers:
 x-amz-cf-pop: SFO53-P2
 x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
 x-cache: Hit from cloudfront
 body:
 Please slow down
-warning: spurious network error (1 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 503
+warning: spurious network error (1 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
 debug headers:
 x-amz-cf-pop: SFO53-P2
 x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
@@ -3410,7 +3418,7 @@ Please slow down
 error: failed to download from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`
 
 Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 503
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
   debug headers:
   x-amz-cf-pop: SFO53-P2
   x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
