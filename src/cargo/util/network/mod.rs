@@ -3,6 +3,7 @@
 use std::task::Poll;
 
 pub mod retry;
+pub mod sleep;
 
 pub trait PollExt<T> {
     fn expect(self, msg: &str) -> T;

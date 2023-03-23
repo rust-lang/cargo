@@ -1,37 +1,71 @@
 //! Utilities for retrying a network operation.
 
+use crate::util::errors::HttpNotSuccessful;
+use crate::{CargoResult, Config};
 use anyhow::Error;
-
-use crate::util::errors::{CargoResult, HttpNotSuccessful};
-use crate::util::Config;
+use rand::Rng;
+use std::cmp::min;
+use std::time::Duration;
 
 pub struct Retry<'a> {
     config: &'a Config,
-    remaining: u32,
+    retries: u64,
+    max_retries: u64,
 }
+
+pub enum RetryResult<T> {
+    Success(T),
+    Err(anyhow::Error),
+    Retry(u64),
+}
+
+/// Maximum amount of time a single retry can be delayed (milliseconds).
+const MAX_RETRY_SLEEP: u64 = 10 * 1000;
+/// The minimum initial amount of time a retry will be delayed (milliseconds).
+///
+/// The actual amount of time will be a random value above this.
+const INITIAL_RETRY_SLEEP_BASE: u64 = 500;
+/// The maximum amount of additional time the initial retry will take (milliseconds).
+///
+/// The initial delay will be [`INITIAL_RETRY_SLEEP_BASE`] plus a random range
+/// from 0 to this value.
+const INITIAL_RETRY_JITTER: u64 = 1000;
 
 impl<'a> Retry<'a> {
     pub fn new(config: &'a Config) -> CargoResult<Retry<'a>> {
         Ok(Retry {
             config,
-            remaining: config.net_config()?.retry.unwrap_or(2),
+            retries: 0,
+            max_retries: config.net_config()?.retry.unwrap_or(3) as u64,
         })
     }
 
     /// Returns `Ok(None)` for operations that should be re-tried.
-    pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> CargoResult<Option<T>> {
+    pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> RetryResult<T> {
         match f() {
-            Err(ref e) if maybe_spurious(e) && self.remaining > 0 => {
+            Err(ref e) if maybe_spurious(e) && self.retries < self.max_retries => {
                 let msg = format!(
                     "spurious network error ({} tries remaining): {}",
-                    self.remaining,
+                    self.max_retries - self.retries,
                     e.root_cause(),
                 );
-                self.config.shell().warn(msg)?;
-                self.remaining -= 1;
-                Ok(None)
+                if let Err(e) = self.config.shell().warn(msg) {
+                    return RetryResult::Err(e);
+                }
+                self.retries += 1;
+                let sleep = if self.retries == 1 {
+                    let mut rng = rand::thread_rng();
+                    INITIAL_RETRY_SLEEP_BASE + rng.gen_range(0..INITIAL_RETRY_JITTER)
+                } else {
+                    min(
+                        ((self.retries - 1) * 3) * 1000 + INITIAL_RETRY_SLEEP_BASE,
+                        MAX_RETRY_SLEEP,
+                    )
+                };
+                RetryResult::Retry(sleep)
             }
-            other => other.map(Some),
+            Err(e) => RetryResult::Err(e),
+            Ok(r) => RetryResult::Success(r),
         }
     }
 }
@@ -100,8 +134,10 @@ where
 {
     let mut retry = Retry::new(config)?;
     loop {
-        if let Some(ret) = retry.r#try(&mut callback)? {
-            return Ok(ret);
+        match retry.r#try(&mut callback) {
+            RetryResult::Success(r) => return Ok(r),
+            RetryResult::Err(e) => return Err(e),
+            RetryResult::Retry(sleep) => std::thread::sleep(Duration::from_millis(sleep)),
         }
     }
 }
@@ -153,6 +189,43 @@ fn with_retry_finds_nested_spurious_errors() {
     *config.shell() = Shell::from_write(Box::new(Vec::new()));
     let result = with_retry(&config, || results.pop().unwrap());
     assert!(result.is_ok())
+}
+
+#[test]
+fn default_retry_schedule() {
+    use crate::core::Shell;
+
+    let spurious = || -> CargoResult<()> {
+        Err(anyhow::Error::from(HttpNotSuccessful {
+            code: 500,
+            url: "Uri".to_string(),
+            body: Vec::new(),
+        }))
+    };
+    let config = Config::default().unwrap();
+    *config.shell() = Shell::from_write(Box::new(Vec::new()));
+    let mut retry = Retry::new(&config).unwrap();
+    match retry.r#try(|| spurious()) {
+        RetryResult::Retry(sleep) => {
+            assert!(
+                sleep >= INITIAL_RETRY_SLEEP_BASE
+                    && sleep < INITIAL_RETRY_SLEEP_BASE + INITIAL_RETRY_JITTER
+            );
+        }
+        _ => panic!("unexpected non-retry"),
+    }
+    match retry.r#try(|| spurious()) {
+        RetryResult::Retry(sleep) => assert_eq!(sleep, 3500),
+        _ => panic!("unexpected non-retry"),
+    }
+    match retry.r#try(|| spurious()) {
+        RetryResult::Retry(sleep) => assert_eq!(sleep, 6500),
+        _ => panic!("unexpected non-retry"),
+    }
+    match retry.r#try(|| spurious()) {
+        RetryResult::Err(_) => {}
+        _ => panic!("unexpected non-retry"),
+    }
 }
 
 #[test]

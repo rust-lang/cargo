@@ -28,7 +28,8 @@ use crate::ops;
 use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::interning::InternedString;
-use crate::util::network::retry::Retry;
+use crate::util::network::retry::{Retry, RetryResult};
+use crate::util::network::sleep::SleepTracker;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
 pub const MANIFEST_PREAMBLE: &str = "\
@@ -319,6 +320,8 @@ pub struct Downloads<'a, 'cfg> {
     /// Set of packages currently being downloaded. This should stay in sync
     /// with `pending`.
     pending_ids: HashSet<PackageId>,
+    /// Downloads that have failed and are waiting to retry again later.
+    sleeping: SleepTracker<(Download<'cfg>, Easy)>,
     /// The final result of each download. A pair `(token, result)`. This is a
     /// temporary holding area, needed because curl can report multiple
     /// downloads at once, but the main loop (`wait`) is written to only
@@ -442,6 +445,7 @@ impl<'cfg> PackageSet<'cfg> {
             next: 0,
             pending: HashMap::new(),
             pending_ids: HashSet::new(),
+            sleeping: SleepTracker::new(),
             results: Vec::new(),
             progress: RefCell::new(Some(Progress::with_style(
                 "Downloading",
@@ -800,7 +804,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
 
     /// Returns the number of crates that are still downloading.
     pub fn remaining(&self) -> usize {
-        self.pending.len()
+        self.pending.len() + self.sleeping.len()
     }
 
     /// Blocks the current thread waiting for a package to finish downloading.
@@ -831,51 +835,52 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             let ret = {
                 let timed_out = &dl.timed_out;
                 let url = &dl.url;
-                dl.retry
-                    .r#try(|| {
-                        if let Err(e) = result {
-                            // If this error is "aborted by callback" then that's
-                            // probably because our progress callback aborted due to
-                            // a timeout. We'll find out by looking at the
-                            // `timed_out` field, looking for a descriptive message.
-                            // If one is found we switch the error code (to ensure
-                            // it's flagged as spurious) and then attach our extra
-                            // information to the error.
-                            if !e.is_aborted_by_callback() {
-                                return Err(e.into());
-                            }
-
-                            return Err(match timed_out.replace(None) {
-                                Some(msg) => {
-                                    let code = curl_sys::CURLE_OPERATION_TIMEDOUT;
-                                    let mut err = curl::Error::new(code);
-                                    err.set_extra(msg);
-                                    err
-                                }
-                                None => e,
-                            }
-                            .into());
+                dl.retry.r#try(|| {
+                    if let Err(e) = result {
+                        // If this error is "aborted by callback" then that's
+                        // probably because our progress callback aborted due to
+                        // a timeout. We'll find out by looking at the
+                        // `timed_out` field, looking for a descriptive message.
+                        // If one is found we switch the error code (to ensure
+                        // it's flagged as spurious) and then attach our extra
+                        // information to the error.
+                        if !e.is_aborted_by_callback() {
+                            return Err(e.into());
                         }
 
-                        let code = handle.response_code()?;
-                        if code != 200 && code != 0 {
-                            let url = handle.effective_url()?.unwrap_or(url);
-                            return Err(HttpNotSuccessful {
-                                code,
-                                url: url.to_string(),
-                                body: data,
+                        return Err(match timed_out.replace(None) {
+                            Some(msg) => {
+                                let code = curl_sys::CURLE_OPERATION_TIMEDOUT;
+                                let mut err = curl::Error::new(code);
+                                err.set_extra(msg);
+                                err
                             }
-                            .into());
+                            None => e,
                         }
-                        Ok(data)
-                    })
-                    .with_context(|| format!("failed to download from `{}`", dl.url))?
+                        .into());
+                    }
+
+                    let code = handle.response_code()?;
+                    if code != 200 && code != 0 {
+                        let url = handle.effective_url()?.unwrap_or(url);
+                        return Err(HttpNotSuccessful {
+                            code,
+                            url: url.to_string(),
+                            body: data,
+                        }
+                        .into());
+                    }
+                    Ok(data)
+                })
             };
             match ret {
-                Some(data) => break (dl, data),
-                None => {
-                    self.pending_ids.insert(dl.id);
-                    self.enqueue(dl, handle)?
+                RetryResult::Success(data) => break (dl, data),
+                RetryResult::Err(e) => {
+                    return Err(e.context(format!("failed to download from `{}`", dl.url)))
+                }
+                RetryResult::Retry(sleep) => {
+                    debug!("download retry {} for {sleep}ms", dl.url);
+                    self.sleeping.push(sleep, (dl, handle));
                 }
             }
         };
@@ -963,6 +968,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // actually block waiting for I/O to happen, which we achieve with the
         // `wait` method on `multi`.
         loop {
+            self.add_sleepers()?;
             let n = tls::set(self, || {
                 self.set
                     .multi
@@ -985,15 +991,29 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             if let Some(pair) = results.pop() {
                 break Ok(pair);
             }
-            assert!(!self.pending.is_empty());
-            let min_timeout = Duration::new(1, 0);
-            let timeout = self.set.multi.get_timeout()?.unwrap_or(min_timeout);
-            let timeout = timeout.min(min_timeout);
-            self.set
-                .multi
-                .wait(&mut [], timeout)
-                .with_context(|| "failed to wait on curl `Multi`")?;
+            assert_ne!(self.remaining(), 0);
+            if self.pending.is_empty() {
+                let delay = self.sleeping.time_to_next().unwrap();
+                debug!("sleeping main thread for {delay:?}");
+                std::thread::sleep(delay);
+            } else {
+                let min_timeout = Duration::new(1, 0);
+                let timeout = self.set.multi.get_timeout()?.unwrap_or(min_timeout);
+                let timeout = timeout.min(min_timeout);
+                self.set
+                    .multi
+                    .wait(&mut [], timeout)
+                    .with_context(|| "failed to wait on curl `Multi`")?;
+            }
         }
+    }
+
+    fn add_sleepers(&mut self) -> CargoResult<()> {
+        for (dl, handle) in self.sleeping.to_retry() {
+            self.pending_ids.insert(dl.id);
+            self.enqueue(dl, handle)?;
+        }
+        Ok(())
     }
 
     fn progress(&self, token: usize, total: u64, cur: u64) -> bool {
@@ -1061,7 +1081,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 return Ok(());
             }
         }
-        let pending = self.pending.len();
+        let pending = self.remaining();
         let mut msg = if pending == 1 {
             format!("{} crate", pending)
         } else {

@@ -8,11 +8,12 @@ use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
-use crate::util::network::retry::Retry;
+use crate::util::network::retry::{Retry, RetryResult};
+use crate::util::network::sleep::SleepTracker;
 use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use anyhow::Context;
 use cargo_util::paths;
-use curl::easy::{HttpVersion, List};
+use curl::easy::{Easy, HttpVersion, List};
 use curl::multi::{EasyHandle, Multi};
 use log::{debug, trace, warn};
 use std::cell::RefCell;
@@ -103,6 +104,8 @@ struct Downloads<'cfg> {
     /// Set of paths currently being downloaded.
     /// This should stay in sync with `pending`.
     pending_paths: HashSet<PathBuf>,
+    /// Downloads that have failed and are waiting to retry again later.
+    sleeping: SleepTracker<(Download<'cfg>, Easy)>,
     /// The final result of each download.
     results: HashMap<PathBuf, CargoResult<CompletedDownload>>,
     /// The next ID to use for creating a token (see `Download::token`).
@@ -184,6 +187,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                 next: 0,
                 pending: HashMap::new(),
                 pending_paths: HashSet::new(),
+                sleeping: SleepTracker::new(),
                 results: HashMap::new(),
                 progress: RefCell::new(Some(Progress::with_style(
                     "Fetch",
@@ -265,6 +269,7 @@ impl<'cfg> HttpRegistry<'cfg> {
         };
         for (token, result) in results {
             let (mut download, handle) = self.downloads.pending.remove(&token).unwrap();
+            assert!(self.downloads.pending_paths.remove(&download.path));
             let mut handle = self.multi.remove(handle)?;
             let data = download.data.take();
             let url = self.full_url(&download.path);
@@ -289,21 +294,19 @@ impl<'cfg> HttpRegistry<'cfg> {
                 };
                 Ok((data, code))
             }) {
-                Ok(Some((data, code))) => Ok(CompletedDownload {
+                RetryResult::Success((data, code)) => Ok(CompletedDownload {
                     response_code: code,
                     data,
                     header_map: download.header_map.take(),
                 }),
-                Ok(None) => {
-                    // retry the operation
-                    let handle = self.multi.add(handle)?;
-                    self.downloads.pending.insert(token, (download, handle));
+                RetryResult::Err(e) => Err(e),
+                RetryResult::Retry(sleep) => {
+                    debug!("download retry {:?} for {sleep}ms", download.path);
+                    self.downloads.sleeping.push(sleep, (download, handle));
                     continue;
                 }
-                Err(e) => Err(e),
             };
 
-            assert!(self.downloads.pending_paths.remove(&download.path));
             self.downloads.results.insert(download.path, result);
             self.downloads.downloads_finished += 1;
         }
@@ -394,6 +397,25 @@ impl<'cfg> HttpRegistry<'cfg> {
                 "config.json is never stored in the index cache",
             ))),
         }
+    }
+
+    fn add_sleepers(&mut self) -> CargoResult<()> {
+        for (dl, handle) in self.downloads.sleeping.to_retry() {
+            let mut handle = self.multi.add(handle)?;
+            handle.set_token(dl.token)?;
+            assert!(
+                self.downloads.pending_paths.insert(dl.path.to_path_buf()),
+                "path queued for download more than once"
+            );
+            assert!(
+                self.downloads
+                    .pending
+                    .insert(dl.token, (dl, handle))
+                    .is_none(),
+                "dl token queued more than once"
+            );
+        }
+        Ok(())
     }
 }
 
@@ -730,6 +752,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         loop {
             self.handle_completed_downloads()?;
+            self.add_sleepers()?;
 
             let remaining_in_multi = tls::set(&self.downloads, || {
                 self.multi
@@ -738,19 +761,25 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             })?;
             trace!("{} transfers remaining", remaining_in_multi);
 
-            if remaining_in_multi == 0 {
+            if remaining_in_multi + self.downloads.sleeping.len() as u32 == 0 {
                 return Ok(());
             }
 
-            // We have no more replies to provide the caller with,
-            // so we need to wait until cURL has something new for us.
-            let timeout = self
-                .multi
-                .get_timeout()?
-                .unwrap_or_else(|| Duration::new(1, 0));
-            self.multi
-                .wait(&mut [], timeout)
-                .with_context(|| "failed to wait on curl `Multi`")?;
+            if self.downloads.pending.is_empty() {
+                let delay = self.downloads.sleeping.time_to_next().unwrap();
+                debug!("sleeping main thread for {delay:?}");
+                std::thread::sleep(delay);
+            } else {
+                // We have no more replies to provide the caller with,
+                // so we need to wait until cURL has something new for us.
+                let timeout = self
+                    .multi
+                    .get_timeout()?
+                    .unwrap_or_else(|| Duration::new(1, 0));
+                self.multi
+                    .wait(&mut [], timeout)
+                    .with_context(|| "failed to wait on curl `Multi`")?;
+            }
         }
     }
 }
@@ -779,7 +808,7 @@ impl<'cfg> Downloads<'cfg> {
             &format!(
                 " {} complete; {} pending",
                 self.downloads_finished,
-                self.pending.len()
+                self.pending.len() + self.sleeping.len()
             ),
         )
     }
