@@ -411,7 +411,7 @@ fn yank() {
 fn owner() {
     let (p, _t) = get_token_test();
 
-    p.cargo("owner --add username --registry alternative -Z credential-process")
+    p.cargo("owner --registry alternative -Z credential-process add username")
         .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             "\

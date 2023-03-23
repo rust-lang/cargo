@@ -1,0 +1,876 @@
+a === Command {
+    name: "owner",
+    long_flag: None,
+    short_flag: None,
+    display_name: None,
+    bin_name: None,
+    author: None,
+    version: None,
+    long_version: None,
+    about: Some(
+        StyledStr {
+            pieces: [
+                (
+                    None,
+                    "Manage the owners of a crate on the registry",
+                ),
+            ],
+        },
+    ),
+    long_about: None,
+    before_help: None,
+    before_long_help: None,
+    after_help: Some(
+        StyledStr {
+            pieces: [
+                (
+                    None,
+                    "Run `cargo help owner` for more detailed information.\n",
+                ),
+            ],
+        },
+    ),
+    after_long_help: None,
+    aliases: [],
+    short_flag_aliases: [],
+    long_flag_aliases: [],
+    usage_str: Some(
+        StyledStr {
+            pieces: [
+                (
+                    None,
+                    "cargo owner add    OWNER_NAME <CRATE_NAME> [OPTIONS] \n       cargo owner remove OWNER_NAME <CRATE_NAME> [OPTIONS]\n       cargo owner list   <CRATE_NAME> [OPTIONS]",
+                ),
+            ],
+        },
+    ),
+    usage_name: None,
+    help_str: None,
+    disp_ord: None,
+    term_w: None,
+    max_w: None,
+    template: None,
+    settings: AppFlags(
+        ARG_REQUIRED_ELSE_HELP | COLOR_AUTO,
+    ),
+    g_settings: AppFlags(
+        COLOR_AUTO,
+    ),
+    args: MKeyMap {
+        args: [
+            Arg {
+                id: "crate",
+                help: None,
+                long_help: None,
+                action: Some(
+                    Set,
+                ),
+                value_parser: None,
+                blacklist: [],
+                settings: ArgFlags(
+                    NO_OP,
+                ),
+                overrides: [],
+                groups: [],
+                requires: [],
+                r_ifs: [],
+                r_unless: [],
+                short: None,
+                long: None,
+                aliases: [],
+                short_aliases: [],
+                disp_ord: None,
+                val_names: [],
+                num_vals: None,
+                val_delim: None,
+                default_vals: [],
+                default_vals_ifs: [],
+                terminator: None,
+                index: None,
+                help_heading: Some(
+                    None,
+                ),
+                value_hint: None,
+                default_missing_vals: [],
+            },
+            Arg {
+                id: "quiet",
+                help: Some(
+                    StyledStr {
+                        pieces: [
+                            (
+                                None,
+                                "Do not print cargo log messages",
+                            ),
+                        ],
+                    },
+                ),
+                long_help: None,
+                action: Some(
+                    SetTrue,
+                ),
+                value_parser: None,
+                blacklist: [],
+                settings: ArgFlags(
+                    NO_OP,
+                ),
+                overrides: [],
+                groups: [],
+                requires: [],
+                r_ifs: [],
+                r_unless: [],
+                short: Some(
+                    'q',
+                ),
+                long: Some(
+                    "quiet",
+                ),
+                aliases: [],
+                short_aliases: [],
+                disp_ord: Some(
+                    0,
+                ),
+                val_names: [],
+                num_vals: None,
+                val_delim: None,
+                default_vals: [],
+                default_vals_ifs: [],
+                terminator: None,
+                index: None,
+                help_heading: Some(
+                    None,
+                ),
+                value_hint: None,
+                default_missing_vals: [],
+            },
+            Arg {
+                id: "index",
+                help: Some(
+                    StyledStr {
+                        pieces: [
+                            (
+                                None,
+                                "Registry index to modify owners for",
+                            ),
+                        ],
+                    },
+                ),
+                long_help: None,
+                action: Some(
+                    Set,
+                ),
+                value_parser: None,
+                blacklist: [],
+                settings: ArgFlags(
+                    NO_OP,
+                ),
+                overrides: [],
+                groups: [],
+                requires: [],
+                r_ifs: [],
+                r_unless: [],
+                short: None,
+                long: Some(
+                    "index",
+                ),
+                aliases: [],
+                short_aliases: [],
+                disp_ord: Some(
+                    4,
+                ),
+                val_names: [
+                    "INDEX",
+                ],
+                num_vals: None,
+                val_delim: None,
+                default_vals: [],
+                default_vals_ifs: [],
+                terminator: None,
+                index: None,
+                help_heading: Some(
+                    None,
+                ),
+                value_hint: None,
+                default_missing_vals: [],
+            },
+            Arg {
+                id: "token",
+                help: Some(
+                    StyledStr {
+                        pieces: [
+                            (
+                                None,
+                                "API token to use when authenticating",
+                            ),
+                        ],
+                    },
+                ),
+                long_help: None,
+                action: Some(
+                    Set,
+                ),
+                value_parser: None,
+                blacklist: [],
+                settings: ArgFlags(
+                    NO_OP,
+                ),
+                overrides: [],
+                groups: [],
+                requires: [],
+                r_ifs: [],
+                r_unless: [],
+                short: None,
+                long: Some(
+                    "token",
+                ),
+                aliases: [],
+                short_aliases: [],
+                disp_ord: Some(
+                    5,
+                ),
+                val_names: [
+                    "TOKEN",
+                ],
+                num_vals: None,
+                val_delim: None,
+                default_vals: [],
+                default_vals_ifs: [],
+                terminator: None,
+                index: None,
+                help_heading: Some(
+                    None,
+                ),
+                value_hint: None,
+                default_missing_vals: [],
+            },
+            Arg {
+                id: "registry",
+                help: Some(
+                    StyledStr {
+                        pieces: [
+                            (
+                                None,
+                                "Registry to use",
+                            ),
+                        ],
+                    },
+                ),
+                long_help: None,
+                action: Some(
+                    Set,
+                ),
+                value_parser: None,
+                blacklist: [],
+                settings: ArgFlags(
+                    NO_OP,
+                ),
+                overrides: [],
+                groups: [],
+                requires: [],
+                r_ifs: [],
+                r_unless: [],
+                short: None,
+                long: Some(
+                    "registry",
+                ),
+                aliases: [],
+                short_aliases: [],
+                disp_ord: Some(
+                    6,
+                ),
+                val_names: [
+                    "REGISTRY",
+                ],
+                num_vals: None,
+                val_delim: None,
+                default_vals: [],
+                default_vals_ifs: [],
+                terminator: None,
+                index: None,
+                help_heading: Some(
+                    None,
+                ),
+                value_hint: None,
+                default_missing_vals: [],
+            },
+        ],
+        keys: [],
+    },
+    subcommands: [
+        Command {
+            name: "add",
+            long_flag: None,
+            short_flag: None,
+            display_name: None,
+            bin_name: None,
+            author: None,
+            version: None,
+            long_version: None,
+            about: Some(
+                StyledStr {
+                    pieces: [
+                        (
+                            None,
+                            "Name of a user or team to invite as an owner",
+                        ),
+                    ],
+                },
+            ),
+            long_about: None,
+            before_help: None,
+            before_long_help: None,
+            after_help: None,
+            after_long_help: None,
+            aliases: [],
+            short_flag_aliases: [],
+            long_flag_aliases: [],
+            usage_str: Some(
+                StyledStr {
+                    pieces: [
+                        (
+                            None,
+                            "cargo owner add [OWNER_NAME] <CRATE_NAME> [OPTIONS]",
+                        ),
+                    ],
+                },
+            ),
+            usage_name: None,
+            help_str: None,
+            disp_ord: Some(
+                1,
+            ),
+            term_w: None,
+            max_w: None,
+            template: None,
+            settings: AppFlags(
+                COLOR_AUTO,
+            ),
+            g_settings: AppFlags(
+                COLOR_AUTO,
+            ),
+            args: MKeyMap {
+                args: [
+                    Arg {
+                        id: "quiet",
+                        help: Some(
+                            StyledStr {
+                                pieces: [
+                                    (
+                                        None,
+                                        "Do not print cargo log messages",
+                                    ),
+                                ],
+                            },
+                        ),
+                        long_help: None,
+                        action: Some(
+                            SetTrue,
+                        ),
+                        value_parser: None,
+                        blacklist: [],
+                        settings: ArgFlags(
+                            NO_OP,
+                        ),
+                        overrides: [],
+                        groups: [],
+                        requires: [],
+                        r_ifs: [],
+                        r_unless: [],
+                        short: Some(
+                            'q',
+                        ),
+                        long: Some(
+                            "quiet",
+                        ),
+                        aliases: [],
+                        short_aliases: [],
+                        disp_ord: Some(
+                            0,
+                        ),
+                        val_names: [],
+                        num_vals: None,
+                        val_delim: None,
+                        default_vals: [],
+                        default_vals_ifs: [],
+                        terminator: None,
+                        index: None,
+                        help_heading: Some(
+                            None,
+                        ),
+                        value_hint: None,
+                        default_missing_vals: [],
+                    },
+                    Arg {
+                        id: "ownername",
+                        help: None,
+                        long_help: None,
+                        action: Some(
+                            Set,
+                        ),
+                        value_parser: None,
+                        blacklist: [],
+                        settings: ArgFlags(
+                            REQUIRED,
+                        ),
+                        overrides: [],
+                        groups: [],
+                        requires: [],
+                        r_ifs: [],
+                        r_unless: [],
+                        short: None,
+                        long: None,
+                        aliases: [],
+                        short_aliases: [],
+                        disp_ord: None,
+                        val_names: [
+                            "OWNER_NAME",
+                        ],
+                        num_vals: Some(
+                            1,
+                        ),
+                        val_delim: Some(
+                            ',',
+                        ),
+                        default_vals: [],
+                        default_vals_ifs: [],
+                        terminator: None,
+                        index: None,
+                        help_heading: Some(
+                            None,
+                        ),
+                        value_hint: None,
+                        default_missing_vals: [],
+                    },
+                    Arg {
+                        id: "cratename",
+                        help: None,
+                        long_help: None,
+                        action: Some(
+                            Set,
+                        ),
+                        value_parser: None,
+                        blacklist: [],
+                        settings: ArgFlags(
+                            NO_OP,
+                        ),
+                        overrides: [],
+                        groups: [],
+                        requires: [],
+                        r_ifs: [],
+                        r_unless: [],
+                        short: None,
+                        long: None,
+                        aliases: [],
+                        short_aliases: [],
+                        disp_ord: None,
+                        val_names: [
+                            "CRATE_NAME",
+                        ],
+                        num_vals: Some(
+                            1,
+                        ),
+                        val_delim: None,
+                        default_vals: [],
+                        default_vals_ifs: [],
+                        terminator: None,
+                        index: None,
+                        help_heading: Some(
+                            None,
+                        ),
+                        value_hint: None,
+                        default_missing_vals: [],
+                    },
+                ],
+                keys: [],
+            },
+            subcommands: [],
+            replacers: FlatMap {
+                keys: [],
+                values: [],
+            },
+            groups: [],
+            current_help_heading: None,
+            current_disp_ord: Some(
+                1,
+            ),
+            subcommand_value_name: None,
+            subcommand_heading: None,
+            external_value_parser: None,
+            long_help_exists: false,
+        },
+        Command {
+            name: "remove",
+            long_flag: None,
+            short_flag: None,
+            display_name: None,
+            bin_name: None,
+            author: None,
+            version: None,
+            long_version: None,
+            about: Some(
+                StyledStr {
+                    pieces: [
+                        (
+                            None,
+                            "Name of a user or team to remove as an owner",
+                        ),
+                    ],
+                },
+            ),
+            long_about: None,
+            before_help: None,
+            before_long_help: None,
+            after_help: None,
+            after_long_help: None,
+            aliases: [],
+            short_flag_aliases: [],
+            long_flag_aliases: [],
+            usage_str: Some(
+                StyledStr {
+                    pieces: [
+                        (
+                            None,
+                            "cargo owner remove [OWNER_NAME] <CRATE_NAME> [OPTIONS]",
+                        ),
+                    ],
+                },
+            ),
+            usage_name: None,
+            help_str: None,
+            disp_ord: Some(
+                2,
+            ),
+            term_w: None,
+            max_w: None,
+            template: None,
+            settings: AppFlags(
+                COLOR_AUTO,
+            ),
+            g_settings: AppFlags(
+                COLOR_AUTO,
+            ),
+            args: MKeyMap {
+                args: [
+                    Arg {
+                        id: "quiet",
+                        help: Some(
+                            StyledStr {
+                                pieces: [
+                                    (
+                                        None,
+                                        "Do not print cargo log messages",
+                                    ),
+                                ],
+                            },
+                        ),
+                        long_help: None,
+                        action: Some(
+                            SetTrue,
+                        ),
+                        value_parser: None,
+                        blacklist: [],
+                        settings: ArgFlags(
+                            NO_OP,
+                        ),
+                        overrides: [],
+                        groups: [],
+                        requires: [],
+                        r_ifs: [],
+                        r_unless: [],
+                        short: Some(
+                            'q',
+                        ),
+                        long: Some(
+                            "quiet",
+                        ),
+                        aliases: [],
+                        short_aliases: [],
+                        disp_ord: Some(
+                            0,
+                        ),
+                        val_names: [],
+                        num_vals: None,
+                        val_delim: None,
+                        default_vals: [],
+                        default_vals_ifs: [],
+                        terminator: None,
+                        index: None,
+                        help_heading: Some(
+                            None,
+                        ),
+                        value_hint: None,
+                        default_missing_vals: [],
+                    },
+                    Arg {
+                        id: "ownername",
+                        help: None,
+                        long_help: None,
+                        action: Some(
+                            Set,
+                        ),
+                        value_parser: None,
+                        blacklist: [],
+                        settings: ArgFlags(
+                            REQUIRED,
+                        ),
+                        overrides: [],
+                        groups: [],
+                        requires: [],
+                        r_ifs: [],
+                        r_unless: [],
+                        short: None,
+                        long: None,
+                        aliases: [],
+                        short_aliases: [],
+                        disp_ord: None,
+                        val_names: [
+                            "OWNER_NAME",
+                        ],
+                        num_vals: Some(
+                            1,
+                        ),
+                        val_delim: Some(
+                            ',',
+                        ),
+                        default_vals: [],
+                        default_vals_ifs: [],
+                        terminator: None,
+                        index: None,
+                        help_heading: Some(
+                            None,
+                        ),
+                        value_hint: None,
+                        default_missing_vals: [],
+                    },
+                    Arg {
+                        id: "cratename",
+                        help: None,
+                        long_help: None,
+                        action: Some(
+                            Set,
+                        ),
+                        value_parser: None,
+                        blacklist: [],
+                        settings: ArgFlags(
+                            NO_OP,
+                        ),
+                        overrides: [],
+                        groups: [],
+                        requires: [],
+                        r_ifs: [],
+                        r_unless: [],
+                        short: None,
+                        long: None,
+                        aliases: [],
+                        short_aliases: [],
+                        disp_ord: None,
+                        val_names: [
+                            "CRATE_NAME",
+                        ],
+                        num_vals: Some(
+                            1,
+                        ),
+                        val_delim: None,
+                        default_vals: [],
+                        default_vals_ifs: [],
+                        terminator: None,
+                        index: None,
+                        help_heading: Some(
+                            None,
+                        ),
+                        value_hint: None,
+                        default_missing_vals: [],
+                    },
+                ],
+                keys: [],
+            },
+            subcommands: [],
+            replacers: FlatMap {
+                keys: [],
+                values: [],
+            },
+            groups: [],
+            current_help_heading: None,
+            current_disp_ord: Some(
+                1,
+            ),
+            subcommand_value_name: None,
+            subcommand_heading: None,
+            external_value_parser: None,
+            long_help_exists: false,
+        },
+        Command {
+            name: "list",
+            long_flag: None,
+            short_flag: None,
+            display_name: None,
+            bin_name: None,
+            author: None,
+            version: None,
+            long_version: None,
+            about: Some(
+                StyledStr {
+                    pieces: [
+                        (
+                            None,
+                            "List owners of a crate",
+                        ),
+                    ],
+                },
+            ),
+            long_about: None,
+            before_help: None,
+            before_long_help: None,
+            after_help: None,
+            after_long_help: None,
+            aliases: [],
+            short_flag_aliases: [],
+            long_flag_aliases: [],
+            usage_str: Some(
+                StyledStr {
+                    pieces: [
+                        (
+                            None,
+                            "cargo owner list <CRATE_NAME> [OPTIONS]",
+                        ),
+                    ],
+                },
+            ),
+            usage_name: None,
+            help_str: None,
+            disp_ord: Some(
+                3,
+            ),
+            term_w: None,
+            max_w: None,
+            template: None,
+            settings: AppFlags(
+                COLOR_AUTO,
+            ),
+            g_settings: AppFlags(
+                COLOR_AUTO,
+            ),
+            args: MKeyMap {
+                args: [
+                    Arg {
+                        id: "quiet",
+                        help: Some(
+                            StyledStr {
+                                pieces: [
+                                    (
+                                        None,
+                                        "Do not print cargo log messages",
+                                    ),
+                                ],
+                            },
+                        ),
+                        long_help: None,
+                        action: Some(
+                            SetTrue,
+                        ),
+                        value_parser: None,
+                        blacklist: [],
+                        settings: ArgFlags(
+                            NO_OP,
+                        ),
+                        overrides: [],
+                        groups: [],
+                        requires: [],
+                        r_ifs: [],
+                        r_unless: [],
+                        short: Some(
+                            'q',
+                        ),
+                        long: Some(
+                            "quiet",
+                        ),
+                        aliases: [],
+                        short_aliases: [],
+                        disp_ord: Some(
+                            0,
+                        ),
+                        val_names: [],
+                        num_vals: None,
+                        val_delim: None,
+                        default_vals: [],
+                        default_vals_ifs: [],
+                        terminator: None,
+                        index: None,
+                        help_heading: Some(
+                            None,
+                        ),
+                        value_hint: None,
+                        default_missing_vals: [],
+                    },
+                    Arg {
+                        id: "cratename",
+                        help: None,
+                        long_help: None,
+                        action: Some(
+                            Set,
+                        ),
+                        value_parser: None,
+                        blacklist: [],
+                        settings: ArgFlags(
+                            NO_OP,
+                        ),
+                        overrides: [],
+                        groups: [],
+                        requires: [],
+                        r_ifs: [],
+                        r_unless: [],
+                        short: None,
+                        long: None,
+                        aliases: [],
+                        short_aliases: [],
+                        disp_ord: None,
+                        val_names: [
+                            "CRATE_NAME",
+                        ],
+                        num_vals: Some(
+                            1,
+                        ),
+                        val_delim: None,
+                        default_vals: [],
+                        default_vals_ifs: [],
+                        terminator: None,
+                        index: None,
+                        help_heading: Some(
+                            None,
+                        ),
+                        value_hint: None,
+                        default_missing_vals: [],
+                    },
+                ],
+                keys: [],
+            },
+            subcommands: [],
+            replacers: FlatMap {
+                keys: [],
+                values: [],
+            },
+            groups: [],
+            current_help_heading: None,
+            current_disp_ord: Some(
+                1,
+            ),
+            subcommand_value_name: None,
+            subcommand_heading: None,
+            external_value_parser: None,
+            long_help_exists: false,
+        },
+    ],
+    replacers: FlatMap {
+        keys: [],
+        values: [],
+    },
+    groups: [],
+    current_help_heading: None,
+    current_disp_ord: Some(
+        7,
+    ),
+    subcommand_value_name: None,
+    subcommand_heading: None,
+    external_value_parser: None,
+    long_help_exists: false,
+}

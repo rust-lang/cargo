@@ -47,7 +47,7 @@ fn simple_list() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -l")
+    p.cargo("owner list")
         .replace_crates_io(registry.index_url())
         .with_stdout(
             "\
@@ -78,7 +78,7 @@ fn simple_add() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -a username")
+    p.cargo("owner add username")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
@@ -116,7 +116,7 @@ fn simple_add_with_asymmetric() {
 
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
-    p.cargo("owner -a username")
+    p.cargo("owner add username")
         .arg("-Zregistry-auth")
         .masquerade_as_nightly_cargo(&["registry-auth"])
         .replace_crates_io(registry.index_url())
@@ -144,7 +144,7 @@ fn simple_remove() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -r username")
+    p.cargo("owner remove username")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
@@ -183,7 +183,7 @@ fn simple_remove_with_asymmetric() {
 
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
-    p.cargo("owner -r username")
+    p.cargo("owner remove username")
         .arg("-Zregistry-auth")
         .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["registry-auth"])
