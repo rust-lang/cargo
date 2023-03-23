@@ -918,7 +918,7 @@ consists of a sub-table for each named registry.
 * Default: none
 * Environment: `CARGO_REGISTRIES_<name>_INDEX`
 
-Specifies the URL of the git index for the registry.
+Specifies the URL of the index for the registry.
 
 ##### `registries.<name>.token`
 * Type: string
