@@ -1,14 +1,59 @@
 //! High-level APIs for executing the resolver.
 //!
-//! This module provides functions for running the resolver given a workspace.
+//! This module provides functions for running the resolver given a workspace, including loading
+//! the `Cargo.lock` file and checkinf if it needs updating.
+//!
 //! There are roughly 3 main functions:
 //!
-//! - `resolve_ws`: A simple, high-level function with no options.
-//! - `resolve_ws_with_opts`: A medium-level function with options like
+//! - [`resolve_ws`]: A simple, high-level function with no options.
+//! - [`resolve_ws_with_opts`]: A medium-level function with options like
 //!   user-provided features. This is the most appropriate function to use in
 //!   most cases.
-//! - `resolve_with_previous`: A low-level function for running the resolver,
+//! - [`resolve_with_previous`]: A low-level function for running the resolver,
 //!   providing the most power and flexibility.
+//!
+//! ### Data Structures
+//!
+//! - [`Workspace`]:
+//!   Usually created by [`crate::util::command_prelude::ArgMatchesExt::workspace`] which discovers the root of the
+//!   workspace, and loads all the workspace members as a [`Package`] object
+//!   - [`Package`]
+//!     Corresponds with `Cargo.toml` manifest (deserialized as [`Manifest`]) and its associated files.
+//!     - [`Target`]s are crates such as the library, binaries, integration test, or examples.
+//!       They are what is actually compiled by `rustc`.
+//!       Each `Target` defines a crate root, like `src/lib.rs` or `examples/foo.rs`.
+//!     - [`PackageId`] --- A unique identifier for a package.
+//! - [`PackageRegistry`]:
+//!   The primary interface for how the dependency
+//!   resolver finds packages. It contains the `SourceMap`, and handles things
+//!   like the `[patch]` table. The dependency resolver
+//!   sends a query to the `PackageRegistry` to "get me all packages that match
+//!   this dependency declaration". The `Registry` trait provides a generic interface
+//!   to the `PackageRegistry`, but this is only used for providing an alternate
+//!   implementation of the `PackageRegistry` for testing.
+//! - [`SourceMap`]: Map of all available sources.
+//!   - [`Source`]: An abstraction for something that can fetch packages (a remote
+//!     registry, a git repo, the local filesystem, etc.). Check out the [source
+//!     implementations] for all the details about registries, indexes, git
+//!     dependencies, etc.
+//!       * [`SourceId`]: A unique identifier for a source.
+//!   - [`Summary`]: A of a [`Manifest`], and is essentially
+//!     the information that can be found in a registry index. Queries against the
+//!     `PackageRegistry` yields a `Summary`. The resolver uses the summary
+//!     information to build the dependency graph.
+//! - [`PackageSet`] --- Contains all of the `Package` objects. This works with the
+//!   [`Downloads`] struct to coordinate downloading packages. It has a reference
+//!   to the `SourceMap` to get the `Source` objects which tell the `Downloads`
+//!   struct which URLs to fetch.
+//!
+//! [`Package`]: crate::core::package
+//! [`Target`]: crate::core::Target
+//! [`Manifest`]: crate::core::Manifest
+//! [`Source`]: crate::core::Source
+//! [`SourceMap`]: crate::core::SourceMap
+//! [`PackageRegistry`]: crate::core::registry::PackageRegistry
+//! [source implementations]: crate::sources
+//! [`Downloads`]: crate::core::package::Downloads
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};

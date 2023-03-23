@@ -1,8 +1,4 @@
-# Files
-
-See [nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo/index.html)
-
-## Filesystems
+# Filesystem
 
 Cargo tends to get run on a very wide array of file systems. Different file
 systems can have a wide range of capabilities, and Cargo should strive to do

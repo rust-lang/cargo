@@ -1,4 +1,4 @@
-# SubCommands
+# New Subcommands
 
 Cargo is a single binary composed of a set of [`clap`] subcommands. All
 subcommands live in [`src/bin/cargo/commands`] directory.
