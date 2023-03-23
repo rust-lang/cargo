@@ -1003,7 +1003,6 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
                 .map(|s| s.collect::<Vec<_>>())
                 .and_then(|t| Some(t.iter().map(|s| s.as_str()).collect::<Vec<_>>()))
                 .unwrap();
-            println!("v name == {:#?}", v);
             let msg = registry.add_owners(&name, &v).with_context(|| {
                 format!(
                     "failed to invite owners to crate `{}` on registry at {}",
