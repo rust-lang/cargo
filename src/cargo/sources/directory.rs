@@ -156,6 +156,10 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         Ok(())
     }
 
+    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
+        Poll::Ready(Ok(self.packages.contains_key(&package)))
+    }
+
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         self.packages
             .get(&id)

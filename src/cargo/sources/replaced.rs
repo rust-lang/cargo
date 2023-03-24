@@ -121,6 +121,10 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         true
     }
 
+    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
+        self.inner.contains(package)
+    }
+
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
         let pkgs = pkgs
             .iter()

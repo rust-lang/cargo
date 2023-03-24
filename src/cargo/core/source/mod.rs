@@ -94,6 +94,9 @@ pub trait Source {
         false
     }
 
+    /// Returns whether a package exists within the source.
+    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>>;
+
     /// Add a number of crates that should be whitelisted for showing up during
     /// queries, even if they are yanked. Currently only applies to registry
     /// sources.
@@ -197,6 +200,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).is_replaced()
     }
 
+    /// Forwards to `Source::contains`.
+    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
+        (**self).contains(package)
+    }
+
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
         (**self).add_to_yanked_whitelist(pkgs);
     }
@@ -268,6 +276,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).is_replaced()
     }
 
+    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
+        (**self).contains(package)
+    }
+
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
         (**self).add_to_yanked_whitelist(pkgs);
     }
@@ -322,6 +334,11 @@ impl<'src> SourceMap<'src> {
     /// Like `HashMap::len`.
     pub fn len(&self) -> usize {
         self.map.len()
+    }
+
+    /// Like `HashMap::iter`.
+    pub fn sources<'a>(&'a self) -> impl Iterator<Item = (&'a SourceId, &'a (dyn Source + 'src))> {
+        self.map.iter().map(|(a, b)| (a, &**b))
     }
 
     /// Like `HashMap::iter_mut`.

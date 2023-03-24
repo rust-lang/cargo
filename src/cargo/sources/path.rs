@@ -561,6 +561,14 @@ impl<'cfg> Source for PathSource<'cfg> {
         }
     }
 
+    fn contains(&mut self, pid: PackageId) -> Poll<CargoResult<bool>> {
+        self.update()?;
+        Poll::Ready(Ok(self
+            .packages
+            .iter()
+            .any(|package| package.package_id() == pid)))
+    }
+
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 
     fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {

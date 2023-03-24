@@ -230,6 +230,13 @@ impl<'cfg> Source for GitSource<'cfg> {
         format!("Git repository {}", self.source_id)
     }
 
+    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
+        match &mut self.path_source {
+            Some(path_source) => path_source.contains(package),
+            None => Poll::Pending,
+        }
+    }
+
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 
     fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {

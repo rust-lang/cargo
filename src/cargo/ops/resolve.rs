@@ -224,6 +224,16 @@ pub fn resolve_ws_with_opts<'cfg>(
         force_all_targets,
     )?;
 
+    pkg_set.warn_deps_defined_in_multiple_registries(
+        ws,
+        &resolved_with_overrides,
+        &member_ids,
+        has_dev_units,
+        requested_targets,
+        target_data,
+        force_all_targets,
+    )?;
+
     Ok(WorkspaceResolve {
         pkg_set,
         workspace_resolve: resolve,

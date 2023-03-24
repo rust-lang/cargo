@@ -164,7 +164,7 @@ use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::task::Poll;
+use std::task::{ready, Poll};
 
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
@@ -877,6 +877,16 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
     fn describe(&self) -> String {
         self.source_id.display_index()
+    }
+
+    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
+        Poll::Ready(Ok(ready!(self.index.summaries(
+            package.name(),
+            &OptVersionReq::Any,
+            &mut *self.ops
+        ))?
+        .next()
+        .is_some()))
     }
 
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {

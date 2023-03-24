@@ -6,6 +6,7 @@ use std::hash;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::task::Poll;
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
@@ -597,6 +598,84 @@ impl<'cfg> PackageSet<'cfg> {
                 }
             }
         }
+
+        Ok(())
+    }
+
+    pub(crate) fn warn_deps_defined_in_multiple_registries(
+        &self,
+        ws: &Workspace<'cfg>,
+        resolve: &Resolve,
+        root_ids: &[PackageId],
+        has_dev_units: HasDevUnits,
+        requested_kinds: &[CompileKind],
+        target_data: &RustcTargetData<'_>,
+        force_all_targets: ForceAllTargets,
+    ) -> CargoResult<()> {
+        let _lock = self.config.acquire_package_cache_lock()?;
+
+        let mut results = Vec::new();
+
+        let mut sources = self.sources_mut();
+        let mut pending: Vec<(PackageId, SourceId)> = root_ids
+            .iter()
+            .flat_map(|root_id| {
+                PackageSet::filter_deps(
+                    *root_id,
+                    resolve,
+                    has_dev_units,
+                    requested_kinds,
+                    target_data,
+                    force_all_targets,
+                )
+                .map(|(pid, _)| {
+                    sources.sources().filter_map(move |(sid, _)| {
+                        if sid != &pid.source_id() {
+                            Some((pid, *sid))
+                        } else {
+                            None
+                        }
+                    })
+                })
+            })
+            .flatten()
+            .collect();
+
+        while !pending.is_empty() {
+            // dbg!(&pending);
+
+            pending.retain(|(pid, sid)| {
+                if let Some(source) = sources.get_mut(*sid) {
+                    match source.contains(*pid) {
+                        Poll::Ready(result) => {
+                            results.push((*pid, *sid, result));
+                        }
+                        Poll::Pending => {
+                            return true;
+                        }
+                    }
+                }
+                // TODO: Error?
+                false
+            });
+
+            for (_, source) in sources.sources_mut() {
+                source.block_until_ready()?;
+            }
+        }
+
+        // dbg!(&results);
+        for (pid, sid, exists) in results.into_iter() {
+            if exists? {
+                ws.config().shell().warn(&format!(
+                    "package `{}` from {} is also defined in {}",
+                    pid,
+                    pid.source_id(),
+                    sid
+                ))?;
+            }
+        }
+
         Ok(())
     }
 
