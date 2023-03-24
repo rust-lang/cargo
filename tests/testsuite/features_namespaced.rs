@@ -942,6 +942,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.1.0"
           }
         "#,
@@ -1057,6 +1058,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.1.0"
           }
         "#,
