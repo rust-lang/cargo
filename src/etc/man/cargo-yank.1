@@ -92,13 +92,16 @@ A common workflow is to yank a crate having already published a semver
 compatible version, to reduce the probability of preventing dependent
 crates from compiling.
 .sp
-To address copyright, licensing, or personal data issues with your published
-crate, contact the maintainers of the registry you used. For crates.io, refer
-to their \fIpolicies\fR <https://crates.io/policies> and contact them at <help@crates.io>\&.
+When addressing copyright, licensing, or personal data issues with a published
+crate, simply yanking it may not suffice. In such cases, contact the maintainers
+of the registry you used. For crates.io, refer to their \fIpolicies\fR <https://crates.io/policies> and contact
+them at <help@crates.io>\&.
 .sp
-If your credentials have been leaked, the recommended process is to revoke them
-immediately. Once a crate is published, it\[cq]s impossible to know if those leaked
-credentials have been copied, so taking swift action is crucial.
+If credentials have been leaked, the recommended course of action is to revoke
+them immediately. Once a crate has been published, it is impossible to determine
+if the leaked credentials have been copied. Yanking the crate only prevents new
+users from downloading it, but cannot stop those who have already downloaded it
+from keeping or even spreading the leaked credentials.
 .SH "OPTIONS"
 .SS "Yank Options"
 .sp
