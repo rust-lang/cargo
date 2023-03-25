@@ -628,22 +628,26 @@ impl<'cfg> PackageSet<'cfg> {
                     target_data,
                     force_all_targets,
                 )
-                .map(|(pid, _)| {
-                    sources.sources().filter_map(move |(sid, _)| {
-                        if sid != &pid.source_id() {
-                            Some((pid, *sid))
-                        } else {
-                            None
-                        }
-                    })
+                .filter_map(|(pid, deps)| {
+                    if deps.iter().any(|dep| dep.registry_id().is_some()) {
+                        // If an explicit registry was given in the dependency,
+                        // we don't want to warn.
+                        None
+                    } else {
+                        Some(sources.sources().filter_map(move |(sid, _)| {
+                            if sid != &pid.source_id() {
+                                Some((pid, *sid))
+                            } else {
+                                None
+                            }
+                        }))
+                    }
                 })
             })
             .flatten()
             .collect();
 
         while !pending.is_empty() {
-            // dbg!(&pending);
-
             pending.retain(|(pid, sid)| {
                 if let Some(source) = sources.get_mut(*sid) {
                     match source.contains(*pid) {
@@ -664,7 +668,6 @@ impl<'cfg> PackageSet<'cfg> {
             }
         }
 
-        // dbg!(&results);
         for (pid, sid, exists) in results.into_iter() {
             if exists? {
                 ws.config().shell().warn(&format!(
