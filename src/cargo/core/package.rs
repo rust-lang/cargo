@@ -612,6 +612,12 @@ impl<'cfg> PackageSet<'cfg> {
         target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
+        // There's no point doing this if we don't have multiple registries in
+        // the first place.
+        if self.sources().len() < 2 {
+            return Ok(());
+        }
+
         let _lock = self.config.acquire_package_cache_lock()?;
 
         let mut results = Vec::new();
