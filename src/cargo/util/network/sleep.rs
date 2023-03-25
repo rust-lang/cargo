@@ -4,12 +4,19 @@ use core::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::time::{Duration, Instant};
 
+/// A tracker for network requests that have failed, and are awaiting to be
+/// retried in the future.
 pub struct SleepTracker<T> {
+    /// This is a priority queue that tracks the time when the next sleeper
+    /// should awaken (based on the [`Sleeper::wakeup`] property).
     heap: BinaryHeap<Sleeper<T>>,
 }
 
+/// An individual network request that is waiting to be retried in the future.
 struct Sleeper<T> {
+    /// The time when this requests should be retried.
     wakeup: Instant,
+    /// Information about the network request.
     data: T,
 }
 
@@ -21,6 +28,8 @@ impl<T> PartialEq for Sleeper<T> {
 
 impl<T> PartialOrd for Sleeper<T> {
     fn partial_cmp(&self, other: &Sleeper<T>) -> Option<Ordering> {
+        // This reverses the comparison so that the BinaryHeap tracks the
+        // entry with the *lowest* wakeup time.
         Some(other.wakeup.cmp(&self.wakeup))
     }
 }
