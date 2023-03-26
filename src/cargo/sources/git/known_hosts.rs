@@ -362,7 +362,7 @@ fn check_ssh_known_hosts(
         }
     }
     for (patterns, key_type, key) in BUNDLED_REVOCATIONS {
-        let key = STANDARD.decode(key).unwrap();
+        let key = base64::decode(key).unwrap();
         known_hosts.push(KnownHost {
             location: KnownHostLocation::Bundled,
             patterns: patterns.to_string(),
