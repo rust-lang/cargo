@@ -45,6 +45,10 @@ the target directory.</dd>
 <dd class="option-desc">Remove all artifacts in the <code>release</code> directory.</dd>
 
 
+<dt class="option-term" id="option-cargo-clean---keep-directory"><a class="option-anchor" href="#option-cargo-clean---keep-directory"></a><code>--keep-directory</code></dt>
+<dd class="option-desc">Keep the target directory when removing everything.</dd>
+
+
 <dt class="option-term" id="option-cargo-clean---profile"><a class="option-anchor" href="#option-cargo-clean---profile"></a><code>--profile</code> <em>name</em></dt>
 <dd class="option-desc">Remove all artifacts in the directory with the given profile name.</dd>
 

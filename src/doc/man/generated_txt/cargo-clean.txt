@@ -29,6 +29,9 @@ OPTIONS
        --release
            Remove all artifacts in the release directory.
 
+       --keep-directory
+           Keep the target directory when removing everything.
+
        --profile name
            Remove all artifacts in the directory with the given profile name.
 
