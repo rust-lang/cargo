@@ -702,7 +702,7 @@ impl Trait for Foo {}
 
 fn main() {
     let x = Foo;
-    x.foo(1); // Error: this function takes 0 arguments
+    x.foo(1); // Error: this method takes 0 arguments but 1 argument was supplied
 }
 ```
 
