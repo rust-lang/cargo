@@ -44,6 +44,10 @@ the target directory.
 Remove all artifacts in the `release` directory.
 {{/option}}
 
+{{#option "`--keep-directory`" }}
+Keep the target directory when removing everything.
+{{/option}}
+
 {{#option "`--profile` _name_" }}
 Remove all artifacts in the directory with the given profile name.
 {{/option}}

@@ -24,6 +24,8 @@ pub struct CleanOptions<'a> {
     pub requested_profile: InternedString,
     /// Whether to just clean the doc directory
     pub doc: bool,
+    /// Whether to keep the target directory
+    pub keep_directory: bool,
 }
 
 /// Cleans the package's build artifacts.
@@ -52,8 +54,15 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     //
     // Note that we don't bother grabbing a lock here as we're just going to
     // blow it all away anyway.
+    //
+    // If the user wants to keep the target directory, make sure we aren't going
+    // to keep the profile directory.
     if opts.spec.is_empty() {
-        return clean_entire_folder(&target_dir.into_path_unlocked(), config);
+        return clean_folder(
+            &target_dir.into_path_unlocked(),
+            config,
+            opts.keep_directory && !opts.profile_specified,
+        );
     }
 
     // Clean specific packages.
@@ -283,17 +292,29 @@ fn rm_rf_glob(
     Ok(())
 }
 
-fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -> CargoResult<()> {
-    if fs::symlink_metadata(path).is_err() {
-        return Ok(());
+struct SkipLast<I: Iterator>(std::iter::Peekable<I>);
+
+impl<I: Iterator> Iterator for SkipLast<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let value = self.0.next()?;
+
+        if self.0.peek().is_none() {
+            None
+        } else {
+            Some(value)
+        }
     }
+}
 
-    config
-        .shell()
-        .verbose(|shell| shell.status("Removing", path.display()))?;
-    progress.display_now()?;
-
-    for entry in walkdir::WalkDir::new(path).contents_first(true) {
+/// Remove files that appear in the iterator. This is abstracted because when we want to keep the root directory
+/// we should skip the last element of [`walkdir::WalkDir`] iterator which is naively implemented via [`SkipLast`].
+fn rm_rf_via<I: IntoIterator<Item = Result<walkdir::DirEntry, walkdir::Error>>>(
+    iterator: I,
+    progress: &mut dyn CleaningProgressBar,
+) -> CargoResult<()> {
+    for entry in iterator {
         let entry = entry?;
         progress.on_clean()?;
         if entry.file_type().is_dir() {
@@ -306,10 +327,44 @@ fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -
     Ok(())
 }
 
-fn clean_entire_folder(path: &Path, config: &Config) -> CargoResult<()> {
+fn rm_rf_keep(
+    path: &Path,
+    config: &Config,
+    progress: &mut dyn CleaningProgressBar,
+    keep_folder: bool,
+) -> CargoResult<()> {
+    if fs::symlink_metadata(path).is_err() {
+        return Ok(());
+    }
+
+    config
+        .shell()
+        .verbose(|shell| shell.status("Removing", path.display()))?;
+    progress.display_now()?;
+
+    let walk_dir = walkdir::WalkDir::new(path).contents_first(true).into_iter();
+
+    // If we keep the root folder, we need to skip the last element which is the root directory
+    // given by the walkdir recursive iterator.
+    if keep_folder {
+        rm_rf_via(SkipLast(walk_dir.peekable()), progress)
+    } else {
+        rm_rf_via(walk_dir, progress)
+    }
+}
+
+fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -> CargoResult<()> {
+    rm_rf_keep(path, config, progress, false)
+}
+
+fn clean_folder(path: &Path, config: &Config, keep_folder: bool) -> CargoResult<()> {
     let num_paths = walkdir::WalkDir::new(path).into_iter().count();
     let mut progress = CleaningFolderBar::new(config, num_paths);
-    rm_rf(path, config, &mut progress)
+    rm_rf_keep(path, config, &mut progress, keep_folder)
+}
+
+fn clean_entire_folder(path: &Path, config: &Config) -> CargoResult<()> {
+    clean_folder(path, config, false)
 }
 
 trait CleaningProgressBar {

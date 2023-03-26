@@ -13,6 +13,10 @@ pub fn cli() -> Command {
         .arg_target_dir()
         .arg_release("Whether or not to clean release artifacts")
         .arg_profile("Clean artifacts of the specified profile")
+        .arg(flag(
+            "keep-directory",
+            "Whether to keep the target directory when cleaning everything",
+        ))
         .arg_doc("Whether or not to clean just the documentation directory")
         .after_help("Run `cargo help clean` for more detailed information.\n")
 }
@@ -31,6 +35,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         requested_profile: args.get_profile_name(config, "dev", ProfileChecking::Custom)?,
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),
+        keep_directory: args.flag("keep-directory"),
     };
     ops::clean(&ws, &opts)?;
     Ok(())
