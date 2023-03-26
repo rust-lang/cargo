@@ -43,6 +43,20 @@ static BUNDLED_KEYS: &[(&str, &str, &str)] = &[
     ("github.com", "ssh-rsa", "AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk="),
 ];
 
+/// List of keys that public hosts have rotated away from.
+///
+/// We explicitly distrust these keys as users with the old key in their
+/// local configuration will otherwise be vulnerable to MITM attacks if the
+/// attacker has access to the old key. As there is no other way to distribute
+/// revocations of ssh host keys, we need to bundle them with the client.
+///
+/// Unlike [`BUNDLED_KEYS`], these revocations will not be ignored if the user
+/// has their own entries: we *know* that these keys are bad.
+static BUNDLED_REVOCATIONS: &[(&str, &str, &str)] = &[
+    // Used until March 24, 2023: https://github.blog/2023-03-23-we-updated-our-rsa-ssh-host-key/
+    ("github.com", "ssh-rsa", "AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=="),
+];
+
 enum KnownHostError {
     /// Some general error happened while validating the known hosts.
     CheckError(anyhow::Error),
@@ -346,6 +360,16 @@ fn check_ssh_known_hosts(
                 line_type: KnownHostLineType::Key,
             });
         }
+    }
+    for (patterns, key_type, key) in BUNDLED_REVOCATIONS {
+        let key = STANDARD.decode(key).unwrap();
+        known_hosts.push(KnownHost {
+            location: KnownHostLocation::Bundled,
+            patterns: patterns.to_string(),
+            key_type: key_type.to_string(),
+            key,
+            line_type: KnownHostLineType::Revoked,
+        });
     }
     check_ssh_known_hosts_loaded(&known_hosts, host, remote_key_type, remote_host_key)
 }
