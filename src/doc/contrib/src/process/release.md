@@ -46,7 +46,7 @@ subup --up-branch update-cargo \
     --commit-message "Update cargo" \
     --test="src/tools/linkchecker tidy \
         src/tools/cargo \
-        src/tools/rustfmt \
+        src/tools/rustfmt" \
     src/tools/cargo
 ```
 
@@ -59,7 +59,7 @@ subup --up-branch update-beta-cargo \
     --commit-message "[beta] Update cargo" \
     --test="src/tools/linkchecker tidy \
         src/tools/cargo \
-        src/tools/rustfmt \
+        src/tools/rustfmt" \
     rust-1.66.0:src/tools/cargo
 ```
 
