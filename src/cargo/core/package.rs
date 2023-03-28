@@ -1370,7 +1370,7 @@ mod warn_multiple {
             while !self.pending_checks.is_empty() {
                 self.pending_checks.retain(|(pid, sid)| {
                     if let Some(source) = sources.get_mut(*sid) {
-                        match source.contains(*pid) {
+                        match source.contains_package_name(&pid.name()) {
                             Poll::Ready(Ok(exists)) => {
                                 if exists {
                                     results.push(Ok((*pid, *sid)));

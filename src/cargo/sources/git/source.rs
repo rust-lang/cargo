@@ -230,9 +230,9 @@ impl<'cfg> Source for GitSource<'cfg> {
         format!("Git repository {}", self.source_id)
     }
 
-    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
+    fn contains_package_name(&mut self, name: &str) -> Poll<CargoResult<bool>> {
         match &mut self.path_source {
-            Some(path_source) => path_source.contains(package),
+            Some(path_source) => path_source.contains_package_name(name),
             None => Poll::Pending,
         }
     }

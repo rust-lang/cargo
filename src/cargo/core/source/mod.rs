@@ -94,8 +94,8 @@ pub trait Source {
         false
     }
 
-    /// Returns whether a package exists within the source.
-    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>>;
+    /// Returns whether a specific package is defined within the source.
+    fn contains_package_name(&mut self, name: &str) -> Poll<CargoResult<bool>>;
 
     /// Add a number of crates that should be whitelisted for showing up during
     /// queries, even if they are yanked. Currently only applies to registry
@@ -201,8 +201,8 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::contains`.
-    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
-        (**self).contains(package)
+    fn contains_package_name(&mut self, name: &str) -> Poll<CargoResult<bool>> {
+        (**self).contains_package_name(name)
     }
 
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
@@ -276,8 +276,8 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).is_replaced()
     }
 
-    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
-        (**self).contains(package)
+    fn contains_package_name(&mut self, name: &str) -> Poll<CargoResult<bool>> {
+        (**self).contains_package_name(name)
     }
 
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {

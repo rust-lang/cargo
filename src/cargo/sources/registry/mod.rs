@@ -879,9 +879,9 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         self.source_id.display_index()
     }
 
-    fn contains(&mut self, package: PackageId) -> Poll<CargoResult<bool>> {
+    fn contains_package_name(&mut self, name: &str) -> Poll<CargoResult<bool>> {
         Poll::Ready(Ok(ready!(self.index.summaries(
-            package.name(),
+            name.into(),
             &OptVersionReq::Any,
             &mut *self.ops
         ))?
