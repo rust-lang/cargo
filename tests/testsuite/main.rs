@@ -134,6 +134,7 @@ mod update;
 mod vendor;
 mod verify_project;
 mod version;
+mod warn_multiple_registries;
 mod warn_on_failure;
 mod weak_dep_features;
 mod workspaces;
