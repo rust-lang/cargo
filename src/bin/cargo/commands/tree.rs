@@ -12,24 +12,12 @@ use std::str::FromStr;
 pub fn cli() -> Command {
     subcommand("tree")
         .about("Display a tree visualization of a dependency graph")
-        .arg_quiet()
-        .arg_manifest_path()
-        .arg_package_spec_no_all(
-            "Package to be used as the root of the tree",
-            "Display the tree for all packages in the workspace",
-            "Exclude specific workspace members",
-        )
         .arg(
             flag("all", "Deprecated, use --no-dedupe instead")
                 .short('a')
                 .hide(true),
         )
-        .arg(flag("all-targets", "Deprecated, use --target=all instead").hide(true))
-        .arg_features()
-        .arg_target_triple(
-            "Filter dependencies matching the given target-triple (default host platform). \
-            Pass `all` to include all targets.",
-        )
+        .arg_quiet()
         .arg(flag("no-dev-dependencies", "Deprecated, use -e=no-dev instead").hide(true))
         .arg(
             multi_opt(
@@ -96,6 +84,18 @@ pub fn cli() -> Command {
                 .short('V')
                 .hide(true),
         )
+        .arg_package_spec_no_all(
+            "Package to be used as the root of the tree",
+            "Display the tree for all packages in the workspace",
+            "Exclude specific workspace members",
+        )
+        .arg_features()
+        .arg(flag("all-targets", "Deprecated, use --target=all instead").hide(true))
+        .arg_target_triple(
+            "Filter dependencies matching the given target-triple (default host platform). \
+            Pass `all` to include all targets.",
+        )
+        .arg_manifest_path()
         .after_help("Run `cargo help tree` for more detailed information.\n")
 }
 

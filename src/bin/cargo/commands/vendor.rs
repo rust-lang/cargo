@@ -5,8 +5,6 @@ use std::path::PathBuf;
 pub fn cli() -> Command {
     subcommand("vendor")
         .about("Vendor all dependencies for a project locally")
-        .arg_quiet()
-        .arg_manifest_path()
         .arg(
             Arg::new("path")
                 .action(ArgAction::Set)
@@ -38,6 +36,8 @@ pub fn cli() -> Command {
         .arg(flag("relative-path", "Not supported").hide(true))
         .arg(flag("only-git-deps", "Not supported").hide(true))
         .arg(flag("disallow-duplicates", "Not supported").hide(true))
+        .arg_quiet()
+        .arg_manifest_path()
         .after_help("Run `cargo help vendor` for more detailed information.\n")
 }
 

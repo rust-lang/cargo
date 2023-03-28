@@ -3,30 +3,37 @@ Upload a package to the registry
 Usage: cargo[EXE] publish [OPTIONS]
 
 Options:
-  -q, --quiet                   Do not print cargo log messages
-      --index <INDEX>           Registry index URL to upload the package to
-      --token <TOKEN>           Token to use when uploading
-      --no-verify               Don't verify the contents by building them
-      --allow-dirty             Allow dirty working directories to be packaged
-      --target <TRIPLE>         Build for the target triple
-      --target-dir <DIRECTORY>  Directory for all generated artifacts
-  -p, --package [<SPEC>]        Package to publish
-      --manifest-path <PATH>    Path to Cargo.toml
-  -F, --features <FEATURES>     Space or comma separated list of features to activate
-      --all-features            Activate all available features
-      --no-default-features     Do not activate the `default` feature
+      --dry-run              Perform all checks without uploading
+      --index <INDEX>        Registry index URL to upload the package to
+      --registry <REGISTRY>  Registry to publish to
+      --token <TOKEN>        Token to use when uploading
+      --no-verify            Don't verify the contents by building them
+      --allow-dirty          Allow dirty working directories to be packaged
+  -q, --quiet                Do not print cargo log messages
+  -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>         Coloring: auto, always, never
+      --config <KEY=VALUE>   Override a configuration value
+  -Z <FLAG>                  Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                 Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Package to publish
+
+Feature Selection:
+  -F, --features <FEATURES>  Space or comma separated list of features to activate
+      --all-features         Activate all available features
+      --no-default-features  Do not activate the `default` feature
+
+Compilation Options:
   -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
       --keep-going              Do not abort the build as soon as there is an error (unstable)
-      --dry-run                 Perform all checks without uploading
-      --registry <REGISTRY>     Registry to publish to
-  -h, --help                    Print help
-  -v, --verbose...              Use verbose output (-vv very verbose/build.rs output)
-      --color <WHEN>            Coloring: auto, always, never
-      --frozen                  Require Cargo.lock and cache are up to date
-      --locked                  Require Cargo.lock is up to date
-      --offline                 Run without accessing the network
-      --config <KEY=VALUE>      Override a configuration value
-  -Z <FLAG>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
-                                details
+      --target <TRIPLE>         Build for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
 
 Run `cargo help publish` for more detailed information.

@@ -7,9 +7,7 @@ use cargo::ops;
 pub fn cli() -> Command {
     subcommand("search")
         .about("Search packages in crates.io")
-        .arg_quiet()
         .arg(Arg::new("query").num_args(0..))
-        .arg_index()
         .arg(
             opt(
                 "limit",
@@ -17,7 +15,9 @@ pub fn cli() -> Command {
             )
             .value_name("LIMIT"),
         )
+        .arg_index()
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_quiet()
         .after_help("Run `cargo help search` for more detailed information.\n")
 }
 

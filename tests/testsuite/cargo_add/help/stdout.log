@@ -42,26 +42,30 @@ Options:
       --ignore-rust-version
           Ignore `rust-version` specification in packages (unstable)
 
-      --manifest-path <PATH>
-          Path to Cargo.toml
-
-  -p, --package [<SPEC>]
-          Package to modify
-
-  -q, --quiet
-          Do not print cargo log messages
-
       --dry-run
           Don't actually write the manifest
 
-  -h, --help
-          Print help (see a summary with '-h')
+  -q, --quiet
+          Do not print cargo log messages
 
   -v, --verbose...
           Use verbose output (-vv very verbose/build.rs output)
 
       --color <WHEN>
           Coloring: auto, always, never
+
+      --config <KEY=VALUE>
+          Override a configuration value
+
+  -Z <FLAG>
+          Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Manifest Options:
+      --manifest-path <PATH>
+          Path to Cargo.toml
 
       --frozen
           Require Cargo.lock and cache are up to date
@@ -72,11 +76,9 @@ Options:
       --offline
           Run without accessing the network
 
-      --config <KEY=VALUE>
-          Override a configuration value
-
-  -Z <FLAG>
-          Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+Package Selection:
+  -p, --package [<SPEC>]
+          Package to modify
 
 Source:
       --path <PATH>

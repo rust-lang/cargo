@@ -7,8 +7,8 @@ pub fn cli() -> Command {
     subcommand("fetch")
         .about("Fetch dependencies of a package from the network")
         .arg_quiet()
-        .arg_manifest_path()
         .arg_target_triple("Fetch dependencies for the target triple")
+        .arg_manifest_path()
         .after_help("Run `cargo help fetch` for more detailed information.\n")
 }
 

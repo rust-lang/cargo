@@ -8,31 +8,12 @@ const CRATE_TYPE_ARG_NAME: &str = "crate-type";
 pub fn cli() -> Command {
     subcommand("rustc")
         .about("Compile a package, and pass extra options to the compiler")
-        .arg_quiet()
         .arg(
             Arg::new("args")
                 .num_args(0..)
                 .help("Extra rustc flags")
                 .trailing_var_arg(true),
         )
-        .arg_package("Package to build")
-        .arg_jobs()
-        .arg_targets_all(
-            "Build only this package's library",
-            "Build only the specified binary",
-            "Build all binaries",
-            "Build only the specified example",
-            "Build all examples",
-            "Build only the specified test target",
-            "Build all tests",
-            "Build only the specified bench target",
-            "Build all benches",
-            "Build all targets",
-        )
-        .arg_release("Build artifacts in release mode, with optimizations")
-        .arg_profile("Build artifacts with the specified profile")
-        .arg_features()
-        .arg_target_triple("Target triple which compiles will be for")
         .arg(
             opt(
                 PRINT_ARG_NAME,
@@ -45,13 +26,32 @@ pub fn cli() -> Command {
             "CRATE-TYPE",
             "Comma separated list of types of crates for the compiler to emit",
         ))
-        .arg_target_dir()
-        .arg_manifest_path()
-        .arg_message_format()
-        .arg_unit_graph()
-        .arg_ignore_rust_version()
         .arg_future_incompat_report()
+        .arg_ignore_rust_version()
+        .arg_message_format()
+        .arg_quiet()
+        .arg_package("Package to build")
+        .arg_targets_all(
+            "Build only this package's library",
+            "Build only the specified binary",
+            "Build all binaries",
+            "Build only the specified example",
+            "Build all examples",
+            "Build only the specified test target",
+            "Build all tests",
+            "Build only the specified bench target",
+            "Build all benches",
+            "Build all targets",
+        )
+        .arg_features()
+        .arg_jobs()
+        .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_profile("Build artifacts with the specified profile")
+        .arg_target_triple("Target triple which compiles will be for")
+        .arg_target_dir()
+        .arg_unit_graph()
         .arg_timings()
+        .arg_manifest_path()
         .after_help("Run `cargo help rustc` for more detailed information.\n")
 }
 

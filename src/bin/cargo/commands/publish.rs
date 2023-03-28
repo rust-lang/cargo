@@ -5,8 +5,9 @@ use cargo::ops::{self, PublishOpts};
 pub fn cli() -> Command {
     subcommand("publish")
         .about("Upload a package to the registry")
-        .arg_quiet()
+        .arg_dry_run("Perform all checks without uploading")
         .arg_index()
+        .arg(opt("registry", "Registry to publish to").value_name("REGISTRY"))
         .arg(opt("token", "Token to use when uploading").value_name("TOKEN"))
         .arg(flag(
             "no-verify",
@@ -16,14 +17,13 @@ pub fn cli() -> Command {
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
-        .arg_target_triple("Build for the target triple")
-        .arg_target_dir()
+        .arg_quiet()
         .arg_package("Package to publish")
-        .arg_manifest_path()
         .arg_features()
         .arg_jobs()
-        .arg_dry_run("Perform all checks without uploading")
-        .arg(opt("registry", "Registry to publish to").value_name("REGISTRY"))
+        .arg_target_triple("Build for the target triple")
+        .arg_target_dir()
+        .arg_manifest_path()
         .after_help("Run `cargo help publish` for more detailed information.\n")
 }
 
