@@ -1,6 +1,6 @@
 error: unexpected argument '--flag' found
 
-  note: argument '--tag' exists
+  tip: a similar argument exists: '--tag'
 
 Usage: cargo add [OPTIONS] <DEP>[@<VERSION>] ...
        cargo add [OPTIONS] --path <PATH> ...
