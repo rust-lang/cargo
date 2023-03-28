@@ -652,7 +652,7 @@ impl<'cfg> PackageSet<'cfg> {
         // Now we have a list of multiply defined packages, we can output that
         // list, and suggest to the user how they can avoid the warning.
         for (pid, others) in multiply_defined.into_iter() {
-            let other_sources = others
+            let mut other_sources = others
                 .into_iter()
                 .map(|sid| format!("`{}`", sid.display_registry_name()))
                 .collect::<Vec<_>>();
@@ -675,8 +675,7 @@ impl<'cfg> PackageSet<'cfg> {
                 ))?;
 
                 ws.config().shell().note(&format!(
-                    r#"
-To handle this warning, specify the exact registry in use for the
+                    r#"To handle this warning, specify the exact registry in use for the
 `{}` dependency in Cargo.toml, eg:
 
 {} = {{ version = "{}", registry = "{}" }}

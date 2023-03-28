@@ -2412,6 +2412,12 @@ fn can_update_with_alt_reg() {
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.1 (registry `alternative`)
+[WARNING] package `bar v0.1.1 (registry `alternative`)` from registry `alternative` is also defined in registry `crates-io`
+[NOTE] To handle this warning, specify the exact registry in use for the
+`bar v0.1.1 (registry `alternative`)` dependency in Cargo.toml, eg:
+
+bar = { version = \"0.1.1\", registry = \"alternative\" }
+
 [CHECKING] bar v0.1.1 (registry `alternative`)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2457,6 +2463,12 @@ fn can_update_with_alt_reg() {
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.2 (registry `alternative`)
+[WARNING] package `bar v0.1.2 (registry `alternative`)` from registry `alternative` is also defined in registry `crates-io`
+[NOTE] To handle this warning, specify the exact registry in use for the
+`bar v0.1.2 (registry `alternative`)` dependency in Cargo.toml, eg:
+
+bar = { version = \"0.1.2\", registry = \"alternative\" }
+
 [CHECKING] bar v0.1.2 (registry `alternative`)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
