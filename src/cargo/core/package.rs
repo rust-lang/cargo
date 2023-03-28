@@ -616,19 +616,31 @@ impl<'cfg> PackageSet<'cfg> {
         target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
-        // There's no point doing this if we don't have multiple registries in
-        // the first place.
-        if self.sources().len() < 2 {
+        // We need to build the possible sources that could cause confusion:
+        // we're only actually interested in registries here, since non-registry
+        // sources are more explicitly defined in Cargo.toml.
+        let registry_source_ids = self
+            .sources()
+            .sources()
+            .filter_map(|(sid, _source)| {
+                if sid.is_registry() {
+                    Some(sid.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // If there are only zero or one registries, then there's nothing to
+        // check.
+        if registry_source_ids.len() < 2 {
             return Ok(());
         }
 
-        // We may implicitly start a source update, so let's ensure we have the
-        // appropriate lock before doing so.
-        let _lock = self.config.acquire_package_cache_lock()?;
-
-        // We need to build a list of package+source combinations to check. In
-        // essence, this needs to be every package depended upon on every source
-        // it's _not_ defined in as a dependency.
+        // We need to build a list of package+source combinations to check. This
+        // is essentially the Cartesian product of all package dependencies
+        // combined with all registry sources that are not the actual source
+        // that dependency comes from.
         let mut sources = self.sources_mut();
         let mut pending: Vec<(PackageId, SourceId)> = root_ids
             .iter()
@@ -647,6 +659,12 @@ impl<'cfg> PackageSet<'cfg> {
                         // we don't want to warn, and no further work is
                         // required.
                         None
+                    } else if !pid.source_id().is_registry() {
+                        // Dependencies that are coming in from non-registry
+                        // sources — such as Git repos, directories, and paths —
+                        // should also be ignored, as the user will have
+                        // specified the source in their Cargo.toml already.
+                        None
                     } else {
                         Some(sources.sources().filter_map(move |(sid, _)| {
                             if sid != &pid.source_id() {
@@ -662,6 +680,11 @@ impl<'cfg> PackageSet<'cfg> {
             })
             .flatten()
             .collect();
+
+        // We may implicitly start a source update when checking if a source
+        // contains a specific package, so let's ensure we have the appropriate
+        // lock before doing so.
+        let _lock = self.config.acquire_package_cache_lock()?;
 
         // Now we iterate over the pending list of checks until all the results
         // are available.
@@ -688,6 +711,8 @@ impl<'cfg> PackageSet<'cfg> {
                 source.block_until_ready()?;
             }
         }
+
+        drop(_lock);
 
         // Now we have a list of multiply defined packages, we can output that
         // list, and suggest to the user how they can avoid the warning.
