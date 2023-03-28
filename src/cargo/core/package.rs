@@ -6,7 +6,6 @@ use std::hash;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::task::Poll;
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
@@ -619,114 +618,50 @@ impl<'cfg> PackageSet<'cfg> {
         // We need to build the possible sources that could cause confusion:
         // we're only actually interested in registries here, since non-registry
         // sources are more explicitly defined in Cargo.toml.
-        let registry_source_ids = self
-            .sources()
-            .sources()
-            .filter_map(|(sid, _source)| {
-                if sid.is_registry() {
-                    Some(sid.clone())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // If there are only zero or one registries, then there's nothing to
-        // check.
-        if registry_source_ids.len() < 2 {
-            return Ok(());
-        }
+        let mut check = match warn_multiple::DependencyConfusionChecker::new(
+            self.sources().sources().map(|(sid, _source)| sid),
+        ) {
+            Some(check) => check,
+            None => {
+                return Ok(());
+            }
+        };
 
         // We need to build a list of package+source combinations to check. This
         // is essentially the Cartesian product of all package dependencies
         // combined with all registry sources that are not the actual source
         // that dependency comes from.
-        let mut sources = self.sources_mut();
-        let mut pending: Vec<(PackageId, SourceId)> = root_ids
-            .iter()
-            .flat_map(|root_id| {
-                PackageSet::filter_deps(
-                    *root_id,
-                    resolve,
-                    has_dev_units,
-                    requested_kinds,
-                    target_data,
-                    force_all_targets,
-                )
-                .filter_map(|(pid, deps)| {
-                    if deps.iter().any(|dep| dep.registry_id().is_some()) {
-                        // If an explicit registry was given in the dependency,
-                        // we don't want to warn, and no further work is
-                        // required.
-                        None
-                    } else if !pid.source_id().is_registry() {
-                        // Dependencies that are coming in from non-registry
-                        // sources — such as Git repos, directories, and paths —
-                        // should also be ignored, as the user will have
-                        // specified the source in their Cargo.toml already.
-                        None
-                    } else {
-                        Some(sources.sources().filter_map(move |(sid, _)| {
-                            if sid != &pid.source_id() {
-                                Some((pid, *sid))
-                            } else {
-                                // There's no point checking if the package
-                                // exists in the registry it was defined in!
-                                None
-                            }
-                        }))
-                    }
-                })
-            })
-            .flatten()
-            .collect();
-
-        // We may implicitly start a source update when checking if a source
-        // contains a specific package, so let's ensure we have the appropriate
-        // lock before doing so.
-        let _lock = self.config.acquire_package_cache_lock()?;
-
-        // Now we iterate over the pending list of checks until all the results
-        // are available.
-        let mut multiply_defined = HashMap::new();
-        while !pending.is_empty() {
-            pending.retain(|(pid, sid)| {
-                if let Some(source) = sources.get_mut(*sid) {
-                    match source.contains(*pid) {
-                        Poll::Ready(result) => {
-                            multiply_defined
-                                .entry(*pid)
-                                .or_insert_with(Vec::default)
-                                .push((*sid, result));
-                        }
-                        Poll::Pending => {
-                            return true;
-                        }
-                    }
-                }
-                false
-            });
-
-            for (_, source) in sources.sources_mut() {
-                source.block_until_ready()?;
-            }
+        for (pid, deps) in root_ids.iter().flat_map(|root_id| {
+            PackageSet::filter_deps(
+                *root_id,
+                resolve,
+                has_dev_units,
+                requested_kinds,
+                target_data,
+                force_all_targets,
+            )
+        }) {
+            check.check_package_deps(pid, deps);
         }
 
-        drop(_lock);
+        let multiply_defined = check.find_packages_defined_in_multiple_registries(
+            self.config.acquire_package_cache_lock()?,
+            self.sources_mut(),
+        )?;
 
         // Now we have a list of multiply defined packages, we can output that
         // list, and suggest to the user how they can avoid the warning.
         for (pid, others) in multiply_defined.into_iter() {
             let other_sources = others
                 .into_iter()
-                .filter_map(|(sid, maybe_exists)| match maybe_exists {
-                    Ok(true) => Some(Ok(format!("`{}`", sid.display_registry_name()))),
-                    Ok(false) => None,
-                    Err(e) => Some(Err(e)),
-                })
-                .collect::<Result<Vec<_>, _>>()?;
+                .map(|sid| format!("`{}`", sid.display_registry_name()))
+                .collect::<Vec<_>>();
 
             if !other_sources.is_empty() {
+                // There's no technical reason to sort, but it keeps the test
+                // output stable.
+                other_sources.sort();
+
                 ws.config().shell().warn(&format!(
                     "package `{}` from {} is also defined in {} {}",
                     pid,
@@ -1333,5 +1268,150 @@ mod tls {
             p.set(dl as *const Downloads<'_, '_> as usize);
             f()
         })
+    }
+}
+
+mod warn_multiple {
+    use std::{
+        cell::RefMut,
+        collections::{HashMap, HashSet},
+        task::Poll,
+    };
+
+    use crate::{
+        core::{Dependency, PackageId, SourceId, SourceMap},
+        util::config::PackageCacheLock,
+        CargoResult,
+    };
+
+    /// Checks if packages are defined in more than one registry source.
+    pub(super) struct DependencyConfusionChecker {
+        registry_source_ids: Vec<SourceId>,
+        pending_checks: Vec<(PackageId, SourceId)>,
+    }
+
+    impl DependencyConfusionChecker {
+        /// Instantiates a new checker based on the given sources. Only sources
+        /// that are actual registries will be used.
+        ///
+        /// If there are fewer than two registry sources, this function returns
+        /// `None`, and no further action is required to check for dependency
+        /// confusion.
+        pub(super) fn new<'a>(sources_iter: impl Iterator<Item = &'a SourceId>) -> Option<Self> {
+            let registry_source_ids = sources_iter
+                .filter_map(|sid| {
+                    // We're only interested in registry sources, since other
+                    // sources are always explicitly used in dependencies.
+                    if sid.is_registry() {
+                        Some(sid.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            // If there are only zero or one registries, then there's nothing to
+            // check, since no dependency confusion can occur if there is no
+            // other possible source.
+            if registry_source_ids.len() > 1 {
+                Some(Self {
+                    registry_source_ids,
+                    pending_checks: Vec::new(),
+                })
+            } else {
+                None
+            }
+        }
+
+        /// Enqueues a package dependency to be checked for possible dependency
+        /// confusion, if required.
+        pub(super) fn check_package_deps(&mut self, pid: PackageId, deps: &HashSet<Dependency>) {
+            // If an explicit registry was given in a dependency, we don't want
+            // to warn, and no further work is required.
+            if deps.iter().any(|dep| dep.registry_id().is_some()) {
+                return;
+            }
+
+            // Dependencies that are coming in from non-registry sources — such
+            // as Git repos, directories, and paths — should also be ignored, as
+            // the user will have specified the source in their Cargo.toml
+            // already.
+            let package_sid = pid.source_id();
+            if !package_sid.is_registry() {
+                return;
+            }
+
+            // Add a check for the package to the pending list for all registry
+            // sources that are not the actual source the package is coming
+            // from.
+            for sid in self.registry_source_ids.iter() {
+                if sid != &package_sid {
+                    self.pending_checks.push((pid, *sid));
+                }
+            }
+        }
+
+        /// Returns packages that are available in multiple registry sources.
+        ///
+        /// Note that this requires package cache to be locked, as checking if a
+        /// source contains a particular package may trigger a pull from that
+        /// source.
+        pub(super) fn find_packages_defined_in_multiple_registries(
+            mut self,
+            _lock: PackageCacheLock<'_>,
+            mut sources: RefMut<'_, SourceMap<'_>>,
+        ) -> CargoResult<HashMap<PackageId, Vec<SourceId>>> {
+            // Basically, we want to iterate over the pending checks until we've
+            // ascertained what the result of each one is. The result may be a
+            // package+source combination that could cause dependency confusion,
+            // an error generated when checking if the source contains a
+            // package, or nothing if there's no confusion possible.
+            let mut results: Vec<CargoResult<(PackageId, SourceId)>> = Vec::new();
+            while !self.pending_checks.is_empty() {
+                self.pending_checks.retain(|(pid, sid)| {
+                    if let Some(source) = sources.get_mut(*sid) {
+                        match source.contains(*pid) {
+                            Poll::Ready(Ok(exists)) => {
+                                if exists {
+                                    results.push(Ok((*pid, *sid)));
+                                }
+                            }
+                            Poll::Ready(Err(e)) => {
+                                results.push(Err(e));
+                            }
+                            Poll::Pending => {
+                                // This is the only scenario where we retain the
+                                // pending check.
+                                return true;
+                            }
+                        }
+                    } else {
+                        // This shouldn't happen in practice unless the source
+                        // map was modified after `Self::new` was invoked, in
+                        // which case there are probably bigger problems anyway.
+                        results.push(Err(anyhow::format_err!(
+                            "cannot find source from ID {:?}",
+                            sid
+                        )));
+                    }
+                    false
+                });
+
+                for (_sid, source) in sources.sources_mut() {
+                    source.block_until_ready()?;
+                }
+            }
+
+            // Now we can turn the raw results into a neat HashMap keyed by each
+            // potentially affected package, which can then be used to report
+            // back to the user.
+            let mut by_package = HashMap::new();
+            for result in results.into_iter() {
+                let (pid, sid) = result?;
+                by_package.entry(pid).or_insert_with(Vec::default).push(sid);
+            }
+
+            Ok(by_package)
+        }
     }
 }
