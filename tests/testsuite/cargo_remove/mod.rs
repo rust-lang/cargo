@@ -5,6 +5,7 @@ mod dry_run;
 mod gc_patch;
 mod gc_profile;
 mod gc_replace;
+mod help;
 mod invalid_arg;
 mod invalid_dep;
 mod invalid_package;

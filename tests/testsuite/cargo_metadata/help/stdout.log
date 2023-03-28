@@ -1,0 +1,26 @@
+Output the resolved dependencies of a package, the concrete used versions including overrides, in
+machine-readable format
+
+Usage: cargo[EXE] metadata [OPTIONS]
+
+Options:
+  -q, --quiet                     Do not print cargo log messages
+  -F, --features <FEATURES>       Space or comma separated list of features to activate
+      --all-features              Activate all available features
+      --no-default-features       Do not activate the `default` feature
+      --filter-platform <TRIPLE>  Only include resolve dependencies matching the given target-triple
+      --no-deps                   Output information only about the workspace members and don't
+                                  fetch dependencies
+      --manifest-path <PATH>      Path to Cargo.toml
+      --format-version <VERSION>  Format version [possible values: 1]
+  -h, --help                      Print help
+  -v, --verbose...                Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>              Coloring: auto, always, never
+      --frozen                    Require Cargo.lock and cache are up to date
+      --locked                    Require Cargo.lock is up to date
+      --offline                   Run without accessing the network
+      --config <KEY=VALUE>        Override a configuration value
+  -Z <FLAG>                       Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                                  details
+
+Run `cargo help metadata` for more detailed information.

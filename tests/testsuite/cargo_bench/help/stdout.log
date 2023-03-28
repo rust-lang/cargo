@@ -1,0 +1,50 @@
+Execute all benchmarks of a local package
+
+Usage: cargo[EXE] bench [OPTIONS] [BENCHNAME] [-- [args]...]
+
+Arguments:
+  [BENCHNAME]  If specified, only run benches containing this string in their names
+  [args]...    Arguments for the bench binary
+
+Options:
+  -q, --quiet                   Do not print cargo log messages
+      --lib                     Benchmark only this package's library
+      --bins                    Benchmark all binaries
+      --bin [<NAME>]            Benchmark only the specified binary
+      --examples                Benchmark all examples
+      --example [<NAME>]        Benchmark only the specified example
+      --tests                   Benchmark all tests
+      --test [<NAME>]           Benchmark only the specified test target
+      --benches                 Benchmark all benches
+      --bench [<NAME>]          Benchmark only the specified bench target
+      --all-targets             Benchmark all targets
+      --no-run                  Compile, but don't run benchmarks
+  -p, --package [<SPEC>]        Package to run benchmarks for
+      --workspace               Benchmark all packages in the workspace
+      --exclude <SPEC>          Exclude packages from the benchmark
+      --all                     Alias for --workspace (deprecated)
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error (unstable)
+      --profile <PROFILE-NAME>  Build artifacts with the specified profile
+  -F, --features <FEATURES>     Space or comma separated list of features to activate
+      --all-features            Activate all available features
+      --no-default-features     Do not activate the `default` feature
+      --target <TRIPLE>         Build for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+      --manifest-path <PATH>    Path to Cargo.toml
+      --ignore-rust-version     Ignore `rust-version` specification in packages
+      --message-format <FMT>    Error format
+      --no-fail-fast            Run all benchmarks regardless of failure
+      --unit-graph              Output build graph in JSON (unstable)
+      --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json
+  -h, --help                    Print help
+  -v, --verbose...              Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>            Coloring: auto, always, never
+      --frozen                  Require Cargo.lock and cache are up to date
+      --locked                  Require Cargo.lock is up to date
+      --offline                 Run without accessing the network
+      --config <KEY=VALUE>      Override a configuration value
+  -Z <FLAG>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                                details
+
+Run `cargo help bench` for more detailed information.

@@ -1,0 +1,24 @@
+Remove a pushed crate from the index
+
+Usage: cargo[EXE] yank [OPTIONS] [crate]
+
+Arguments:
+  [crate]  
+
+Options:
+  -q, --quiet                Do not print cargo log messages
+      --version <VERSION>    The version to yank or un-yank
+      --undo                 Undo a yank, putting a version back into the index
+      --index <INDEX>        Registry index to yank from
+      --token <TOKEN>        API token to use when authenticating
+      --registry <REGISTRY>  Registry to use
+  -h, --help                 Print help
+  -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>         Coloring: auto, always, never
+      --frozen               Require Cargo.lock and cache are up to date
+      --locked               Require Cargo.lock is up to date
+      --offline              Run without accessing the network
+      --config <KEY=VALUE>   Override a configuration value
+  -Z <FLAG>                  Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+
+Run `cargo help yank` for more detailed information.

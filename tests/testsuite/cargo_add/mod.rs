@@ -35,6 +35,7 @@ mod git_normalized_name;
 mod git_registry;
 mod git_rev;
 mod git_tag;
+mod help;
 mod infer_prerelease;
 mod invalid_arg;
 mod invalid_git_name;
