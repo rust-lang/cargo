@@ -602,6 +602,10 @@ impl<'cfg> PackageSet<'cfg> {
         Ok(())
     }
 
+    /// Check if any dependency packages are defined in more than one registry
+    /// without an explicit registry defined in the dependency definition. If
+    /// there are, this function will warn the user that they may be at risk of
+    /// a dependency confusion attack.
     pub(crate) fn warn_deps_defined_in_multiple_registries(
         &self,
         ws: &Workspace<'cfg>,
@@ -618,10 +622,13 @@ impl<'cfg> PackageSet<'cfg> {
             return Ok(());
         }
 
+        // We may implicitly start a source update, so let's ensure we have the
+        // appropriate lock before doing so.
         let _lock = self.config.acquire_package_cache_lock()?;
 
-        let mut results = Vec::new();
-
+        // We need to build a list of package+source combinations to check. In
+        // essence, this needs to be every package depended upon on every source
+        // it's _not_ defined in as a dependency.
         let mut sources = self.sources_mut();
         let mut pending: Vec<(PackageId, SourceId)> = root_ids
             .iter()
@@ -637,13 +644,16 @@ impl<'cfg> PackageSet<'cfg> {
                 .filter_map(|(pid, deps)| {
                     if deps.iter().any(|dep| dep.registry_id().is_some()) {
                         // If an explicit registry was given in the dependency,
-                        // we don't want to warn.
+                        // we don't want to warn, and no further work is
+                        // required.
                         None
                     } else {
                         Some(sources.sources().filter_map(move |(sid, _)| {
                             if sid != &pid.source_id() {
                                 Some((pid, *sid))
                             } else {
+                                // There's no point checking if the package
+                                // exists in the registry it was defined in!
                                 None
                             }
                         }))
@@ -653,19 +663,24 @@ impl<'cfg> PackageSet<'cfg> {
             .flatten()
             .collect();
 
+        // Now we iterate over the pending list of checks until all the results
+        // are available.
+        let mut multiply_defined = HashMap::new();
         while !pending.is_empty() {
             pending.retain(|(pid, sid)| {
                 if let Some(source) = sources.get_mut(*sid) {
                     match source.contains(*pid) {
                         Poll::Ready(result) => {
-                            results.push((*pid, *sid, result));
+                            multiply_defined
+                                .entry(*pid)
+                                .or_insert_with(Vec::default)
+                                .push((*sid, result));
                         }
                         Poll::Pending => {
                             return true;
                         }
                     }
                 }
-                // TODO: Error?
                 false
             });
 
@@ -674,13 +689,42 @@ impl<'cfg> PackageSet<'cfg> {
             }
         }
 
-        for (pid, sid, exists) in results.into_iter() {
-            if exists? {
+        // Now we have a list of multiply defined packages, we can output that
+        // list, and suggest to the user how they can avoid the warning.
+        for (pid, others) in multiply_defined.into_iter() {
+            let other_sources = others
+                .into_iter()
+                .filter_map(|(sid, maybe_exists)| match maybe_exists {
+                    Ok(true) => Some(Ok(format!("`{}`", sid.display_registry_name()))),
+                    Ok(false) => None,
+                    Err(e) => Some(Err(e)),
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            if !other_sources.is_empty() {
                 ws.config().shell().warn(&format!(
-                    "package `{}` from {} is also defined in {}",
+                    "package `{}` from {} is also defined in {} {}",
                     pid,
                     pid.source_id(),
-                    sid
+                    if other_sources.len() == 1 {
+                        "registry"
+                    } else {
+                        "registries"
+                    },
+                    other_sources.join(", "),
+                ))?;
+
+                ws.config().shell().note(&format!(
+                    r#"
+To handle this warning, specify the exact registry in use for the
+`{}` dependency in Cargo.toml, eg:
+
+{} = {{ version = "{}", registry = "{}" }}
+"#,
+                    pid,
+                    pid.name(),
+                    pid.version(),
+                    pid.source_id().display_registry_name(),
                 ))?;
             }
         }
