@@ -23,6 +23,9 @@ changes, and sets the direction for the project.
 The team meets on a weekly basis on a video chat. If you are interested in
 participating, feel free to contact us on [Zulip].
 
+If you would like more direct mentorship, you can join our
+[office hours](https://github.com/rust-lang/cargo/wiki/Office-Hours).
+
 ## Roadmap
 
 The [Roadmap Project Board] is used for tracking major initiatives. This gives
