@@ -56,6 +56,14 @@ debugger.
 
 [`bench` profile]: ../reference/profiles.html#bench
 
+### Working directory of benchmarks
+
+The working directory of every benchmark is set to the root directory of the 
+package the benchmark belongs to.
+Setting the working directory of benchmarks to the package's root directory 
+makes it possible for benchmarks to reliably access the package's files using 
+relative paths, regardless from where `cargo bench` was executed from.
+
 ## OPTIONS
 
 ### Benchmark Options

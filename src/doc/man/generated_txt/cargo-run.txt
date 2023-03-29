@@ -13,6 +13,10 @@ DESCRIPTION
        to run. If you’re passing arguments to both Cargo and the binary, the
        ones after -- go to the binary, the ones before go to Cargo.
 
+       Unlike cargo-test(1) and cargo-bench(1), cargo run sets the working
+       directory of the binary executed to the current working directory, same
+       as if it was executed in the shell directly.
+
 OPTIONS
    Package Selection
        By default, the package in the current working directory is selected.
