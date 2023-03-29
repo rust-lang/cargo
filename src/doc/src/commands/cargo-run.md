@@ -17,6 +17,10 @@ All the arguments following the two dashes (`--`) are passed to the binary to
 run. If you're passing arguments to both Cargo and the binary, the ones after
 `--` go to the binary, the ones before go to Cargo.
 
+Unlike [cargo-test(1)](cargo-test.html) and [cargo-bench(1)](cargo-bench.html), `cargo run` sets the 
+working directory of the binary executed to the current working directory, same 
+as if it was executed in the shell directly.
+
 ## OPTIONS
 
 ### Package Selection
