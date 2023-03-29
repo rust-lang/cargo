@@ -119,6 +119,14 @@ to the name of the registry to use.
 some-crate = { version = "1.0", registry = "my-registry" }
 ```
 
+To explicitly depend on a package on [crates.io], the `registry` key can be set
+to `crates-io`.
+
+```toml
+[dependencies]
+some-crate = { version = "1.0", registry = "crates-io" }
+```
+
 > **Note**: [crates.io] does not allow packages to be published with
 > dependencies on other registries.
 
