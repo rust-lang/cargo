@@ -675,7 +675,7 @@ impl<'cfg> PackageSet<'cfg> {
                 ))?;
 
                 ws.config().shell().note(&format!(
-                    r#"to handle this warning, specify the exact registry in use for the
+                    r#"you can specify the exact registry to use for the
 `{}` dependency in Cargo.toml, eg:
 
 {} = {{ version = "{}", registry = "{}" }}

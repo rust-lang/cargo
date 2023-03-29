@@ -2413,7 +2413,7 @@ fn can_update_with_alt_reg() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.1 (registry `alternative`)
 [WARNING] package `bar v0.1.1 (registry `alternative`)` from registry `alternative` is also defined in registry `crates-io`
-[NOTE] to handle this warning, specify the exact registry in use for the
+[NOTE] you can specify the exact registry to use for the
 `bar v0.1.1 (registry `alternative`)` dependency in Cargo.toml, eg:
 
 bar = { version = \"0.1.1\", registry = \"alternative\" }
@@ -2464,7 +2464,7 @@ bar = { version = \"0.1.1\", registry = \"alternative\" }
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.2 (registry `alternative`)
 [WARNING] package `bar v0.1.2 (registry `alternative`)` from registry `alternative` is also defined in registry `crates-io`
-[NOTE] to handle this warning, specify the exact registry in use for the
+[NOTE] you can specify the exact registry to use for the
 `bar v0.1.2 (registry `alternative`)` dependency in Cargo.toml, eg:
 
 bar = { version = \"0.1.2\", registry = \"alternative\" }

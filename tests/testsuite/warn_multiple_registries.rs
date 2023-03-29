@@ -51,7 +51,7 @@ fn same_version_in_two_registries() {
 [DOWNLOADED] in-alternative v0.1.0 (registry `alternative`)
 [DOWNLOADED] bar v0.1.2 (registry `dummy-registry`)
 [WARNING] package `bar v0.1.2` from registry `crates-io` is also defined in registry `alternative`
-[NOTE] to handle this warning, specify the exact registry in use for the
+[NOTE] you can specify the exact registry to use for the
 `bar v0.1.2` dependency in Cargo.toml, eg:
 
 bar = { version = \"0.1.2\", registry = \"crates-io\" }
@@ -106,7 +106,7 @@ fn different_versions_in_two_registries() {
 [DOWNLOADED] in-alternative v0.1.0 (registry `alternative`)
 [DOWNLOADED] bar v0.1.2 (registry `dummy-registry`)
 [WARNING] package `bar v0.1.2` from registry `crates-io` is also defined in registry `alternative`
-[NOTE] to handle this warning, specify the exact registry in use for the
+[NOTE] you can specify the exact registry to use for the
 `bar v0.1.2` dependency in Cargo.toml, eg:
 
 bar = { version = \"0.1.2\", registry = \"crates-io\" }
@@ -333,19 +333,19 @@ fn other_dep_types() {
 [DOWNLOADED] build v0.1.3 (registry `dummy-registry`)
 [DOWNLOADED] dev v0.1.4 (registry `dummy-registry`)
 [WARNING] package `main v0.1.2` from registry `crates-io` is also defined in registry `alternative`
-[NOTE] to handle this warning, specify the exact registry in use for the
+[NOTE] you can specify the exact registry to use for the
 `main v0.1.2` dependency in Cargo.toml, eg:
 
 main = { version = \"0.1.2\", registry = \"crates-io\" }
 
 [WARNING] package `build v0.1.3` from registry `crates-io` is also defined in registry `alternative`
-[NOTE] to handle this warning, specify the exact registry in use for the
+[NOTE] you can specify the exact registry to use for the
 `build v0.1.3` dependency in Cargo.toml, eg:
 
 build = { version = \"0.1.3\", registry = \"crates-io\" }
 
 [WARNING] package `dev v0.1.4` from registry `crates-io` is also defined in registry `alternative`
-[NOTE] to handle this warning, specify the exact registry in use for the
+[NOTE] you can specify the exact registry to use for the
 `dev v0.1.4` dependency in Cargo.toml, eg:
 
 dev = { version = \"0.1.4\", registry = \"crates-io\" }
