@@ -206,7 +206,7 @@ target.
 #### `cargo:rustc-link-arg-benches=FLAG`
 
 The `rustc-link-arg-benches` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building an benchmark
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a benchmark
 target.
 
 <a id="rustc-link-search"></a>
