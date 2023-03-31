@@ -20,16 +20,16 @@ pub enum RetryResult<T> {
 }
 
 /// Maximum amount of time a single retry can be delayed (milliseconds).
-const MAX_RETRY_SLEEP: u64 = 10 * 1000;
+const MAX_RETRY_SLEEP_MS: u64 = 10 * 1000;
 /// The minimum initial amount of time a retry will be delayed (milliseconds).
 ///
 /// The actual amount of time will be a random value above this.
-const INITIAL_RETRY_SLEEP_BASE: u64 = 500;
+const INITIAL_RETRY_SLEEP_BASE_MS: u64 = 500;
 /// The maximum amount of additional time the initial retry will take (milliseconds).
 ///
-/// The initial delay will be [`INITIAL_RETRY_SLEEP_BASE`] plus a random range
+/// The initial delay will be [`INITIAL_RETRY_SLEEP_BASE_MS`] plus a random range
 /// from 0 to this value.
-const INITIAL_RETRY_JITTER: u64 = 1000;
+const INITIAL_RETRY_JITTER_MS: u64 = 1000;
 
 impl<'a> Retry<'a> {
     pub fn new(config: &'a Config) -> CargoResult<Retry<'a>> {
@@ -55,11 +55,11 @@ impl<'a> Retry<'a> {
                 self.retries += 1;
                 let sleep = if self.retries == 1 {
                     let mut rng = rand::thread_rng();
-                    INITIAL_RETRY_SLEEP_BASE + rng.gen_range(0..INITIAL_RETRY_JITTER)
+                    INITIAL_RETRY_SLEEP_BASE_MS + rng.gen_range(0..INITIAL_RETRY_JITTER_MS)
                 } else {
                     min(
-                        ((self.retries - 1) * 3) * 1000 + INITIAL_RETRY_SLEEP_BASE,
-                        MAX_RETRY_SLEEP,
+                        ((self.retries - 1) * 3) * 1000 + INITIAL_RETRY_SLEEP_BASE_MS,
+                        MAX_RETRY_SLEEP_MS,
                     )
                 };
                 RetryResult::Retry(sleep)
@@ -208,8 +208,8 @@ fn default_retry_schedule() {
     match retry.r#try(|| spurious()) {
         RetryResult::Retry(sleep) => {
             assert!(
-                sleep >= INITIAL_RETRY_SLEEP_BASE
-                    && sleep < INITIAL_RETRY_SLEEP_BASE + INITIAL_RETRY_JITTER
+                sleep >= INITIAL_RETRY_SLEEP_BASE_MS
+                    && sleep < INITIAL_RETRY_SLEEP_BASE_MS + INITIAL_RETRY_JITTER_MS
             );
         }
         _ => panic!("unexpected non-retry"),
