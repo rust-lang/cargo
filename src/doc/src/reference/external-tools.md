@@ -105,10 +105,15 @@ structure:
            This property is not included if no required features are set.
         */
         "required-features": ["feat1"],
+        /* Whether the target should be documented by `cargo doc`. */
+        "doc": true,
         /* Whether or not this target has doc tests enabled, and
            the target is compatible with doc testing.
         */
         "doctest": true
+        /* Whether or not this target should be built and run with `--test`
+        */
+        "test": true
     },
     /* The message emitted by the compiler.
 
@@ -146,6 +151,7 @@ following structure:
         "name": "my-package",
         "src_path": "/path/to/my-package/src/lib.rs",
         "edition": "2018",
+        "doc": true,
         "doctest": true,
         "test": true
     },
