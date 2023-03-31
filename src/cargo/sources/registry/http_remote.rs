@@ -269,7 +269,12 @@ impl<'cfg> HttpRegistry<'cfg> {
         };
         for (token, result) in results {
             let (mut download, handle) = self.downloads.pending.remove(&token).unwrap();
-            assert!(self.downloads.pending_paths.remove(&download.path));
+            let was_present = self.downloads.pending_paths.remove(&download.path);
+            assert!(
+                was_present,
+                "expected pending_paths to contain {:?}",
+                download.path
+            );
             let mut handle = self.multi.remove(handle)?;
             let data = download.data.take();
             let url = self.full_url(&download.path);
@@ -403,17 +408,10 @@ impl<'cfg> HttpRegistry<'cfg> {
         for (dl, handle) in self.downloads.sleeping.to_retry() {
             let mut handle = self.multi.add(handle)?;
             handle.set_token(dl.token)?;
-            assert!(
-                self.downloads.pending_paths.insert(dl.path.to_path_buf()),
-                "path queued for download more than once"
-            );
-            assert!(
-                self.downloads
-                    .pending
-                    .insert(dl.token, (dl, handle))
-                    .is_none(),
-                "dl token queued more than once"
-            );
+            let is_new = self.downloads.pending_paths.insert(dl.path.to_path_buf());
+            assert!(is_new, "path queued for download more than once");
+            let previous = self.downloads.pending.insert(dl.token, (dl, handle));
+            assert!(previous.is_none(), "dl token queued more than once");
         }
         Ok(())
     }
@@ -477,8 +475,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             let result =
                 result.with_context(|| format!("download of {} failed", path.display()))?;
 
+            let is_new = self.fresh.insert(path.to_path_buf());
             assert!(
-                self.fresh.insert(path.to_path_buf()),
+                is_new,
                 "downloaded the index file `{}` twice",
                 path.display()
             );
@@ -634,10 +633,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         let token = self.downloads.next;
         self.downloads.next += 1;
         debug!("downloading {} as {}", path.display(), token);
-        assert!(
-            self.downloads.pending_paths.insert(path.to_path_buf()),
-            "path queued for download more than once"
-        );
+        let is_new = self.downloads.pending_paths.insert(path.to_path_buf());
+        assert!(is_new, "path queued for download more than once");
 
         // Each write should go to self.downloads.pending[&token].data.
         // Since the write function must be 'static, we access downloads through a thread-local.
