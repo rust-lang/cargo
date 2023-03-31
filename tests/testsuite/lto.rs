@@ -627,6 +627,11 @@ fn dylib() {
 }
 
 #[cargo_test]
+// This is currently broken on windows-gnu, see https://github.com/rust-lang/rust/issues/109797
+#[cfg_attr(
+    all(target_os = "windows", target_env = "gnu"),
+    ignore = "windows-gnu not working"
+)]
 fn test_profile() {
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "pub fn foo() -> i32 { 123 } ")
