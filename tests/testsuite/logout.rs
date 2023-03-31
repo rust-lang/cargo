@@ -44,7 +44,7 @@ fn check_config_token(registry: Option<&str>, should_be_set: bool) {
     }
 }
 
-fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str) {
+fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str, note: &str) {
     let msg = reg.unwrap_or("crates-io");
     check_config_token(reg, true);
     let mut cargo = cargo_process(&format!("logout -Z unstable-options {}", flag));
@@ -55,9 +55,10 @@ fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str) {
         .masquerade_as_nightly_cargo(&["cargo-logout"])
         .with_stderr(&format!(
             "\
-[LOGOUT] token for `{}` has been removed from local storage
-",
-            msg
+[LOGOUT] token for `{msg}` has been removed from local storage
+[NOTE] This does not revoke the token on the registry server.\n    \
+If you need to revoke the token, visit {note} and follow the instructions there.
+"
         ))
         .run();
     check_config_token(reg, false);
@@ -68,12 +69,7 @@ fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str) {
     }
     cargo
         .masquerade_as_nightly_cargo(&["cargo-logout"])
-        .with_stderr(&format!(
-            "\
-[LOGOUT] not currently logged in to `{}`
-",
-            msg
-        ))
+        .with_stderr(&format!("[LOGOUT] not currently logged in to `{msg}`"))
         .run();
     check_config_token(reg, false);
 }
@@ -81,11 +77,16 @@ fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str) {
 #[cargo_test]
 fn default_registry() {
     let registry = registry::init();
-    simple_logout_test(&registry, None, "");
+    simple_logout_test(&registry, None, "", "<https://crates.io/me>");
 }
 
 #[cargo_test]
 fn other_registry() {
     let registry = registry::alt_init();
-    simple_logout_test(&registry, Some("alternative"), "--registry alternative");
+    simple_logout_test(
+        &registry,
+        Some("alternative"),
+        "--registry alternative",
+        "the `alternative` website",
+    );
 }
