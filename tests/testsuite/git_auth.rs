@@ -299,6 +299,7 @@ fn net_err_suggests_fetch_with_cli() {
 [UPDATING] git repository `ssh://needs-proxy.invalid/git`
 warning: spurious network error[..]
 warning: spurious network error[..]
+warning: spurious network error[..]
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
 
 Caused by:

@@ -110,7 +110,7 @@ user-agent = "…"            # the user-agent header
 root = "/some/path"         # `cargo install` destination directory
 
 [net]
-retry = 2                   # network retries
+retry = 3                   # network retries
 git-fetch-with-cli = true   # use the `git` executable for git operations
 offline = true              # do not access the network
 
@@ -724,7 +724,7 @@ The `[net]` table controls networking configuration.
 
 ##### `net.retry`
 * Type: integer
-* Default: 2
+* Default: 3
 * Environment: `CARGO_NET_RETRY`
 
 Number of times to retry possibly spurious network errors.

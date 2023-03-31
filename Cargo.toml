@@ -56,6 +56,7 @@ os_info = "3.5.0"
 pasetors = { version = "0.6.4", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2"
 pretty_env_logger = { version = "0.4", optional = true }
+rand = "0.8.5"
 rustfix = "0.6.0"
 semver = { version = "1.0.3", features = ["serde"] }
 serde = { version = "1.0.123", features = ["derive"] }
