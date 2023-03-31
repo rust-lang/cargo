@@ -97,7 +97,7 @@ pub struct RegistryBuilder {
     /// Write the registry in configuration.
     configure_registry: bool,
     /// API responders.
-    custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
+    custom_responders: HashMap<String, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
     /// If nonzero, the git index update to be delayed by the given number of seconds.
     delayed_index_update: usize,
 }
@@ -167,10 +167,11 @@ impl RegistryBuilder {
     #[must_use]
     pub fn add_responder<R: 'static + Send + Fn(&Request, &HttpServer) -> Response>(
         mut self,
-        url: &'static str,
+        url: impl Into<String>,
         responder: R,
     ) -> Self {
-        self.custom_responders.insert(url, Box::new(responder));
+        self.custom_responders
+            .insert(url.into(), Box::new(responder));
         self
     }
 
@@ -601,7 +602,7 @@ pub struct HttpServer {
     addr: SocketAddr,
     token: Token,
     auth_required: bool,
-    custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
+    custom_responders: HashMap<String, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
     delayed_index_update: usize,
 }
 
@@ -621,10 +622,7 @@ impl HttpServer {
         api_path: PathBuf,
         token: Token,
         auth_required: bool,
-        api_responders: HashMap<
-            &'static str,
-            Box<dyn Send + Fn(&Request, &HttpServer) -> Response>,
-        >,
+        api_responders: HashMap<String, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
         delayed_index_update: usize,
     ) -> HttpServerHandle {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
