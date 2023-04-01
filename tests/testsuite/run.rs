@@ -579,6 +579,7 @@ fn autobins_disables() {
 }
 
 #[cargo_test]
+#[ignore = "temporarily disabled for beta due to clap update"]
 fn run_bins() {
     let p = project()
         .file("src/lib.rs", "")
