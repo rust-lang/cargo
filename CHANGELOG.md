@@ -69,8 +69,6 @@
 
 - Added `-C` flag for changing current dir before build starts.
   [#10952](https://github.com/rust-lang/cargo/pull/10952)
-- Added support for SSH known hosts marker `@revoked`.
-  [#11635](https://github.com/rust-lang/cargo/pull/11635)
 - Cargo now suggests `cargo fix` or `cargo clippy --fix`
   when compilation warnings/errors are auto-fixable.
   [#11558](https://github.com/rust-lang/cargo/pull/11558)
@@ -207,6 +205,20 @@
 - Pull requests in Cargo now get autolabelled for label `A-*` and `Command-*`.
   [#11664](https://github.com/rust-lang/cargo/pull/11664)
   [#11679](https://github.com/rust-lang/cargo/pull/11679)
+
+## Cargo 1.68.2 (2023-03-28)
+[115f3455...rust-1.68.0](https://github.com/rust-lang/cargo/compare/115f3455...rust-1.68.0)
+
+- Updated the GitHub RSA SSH host key bundled within cargo.
+  The key was [rotated by
+  GitHub](https://github.blog/2023-03-23-we-updated-our-rsa-ssh-host-key/) on
+  2023-03-24 after the old one leaked.
+  [#11883](https://github.com/rust-lang/cargo/pull/11883)
+- Added support for SSH known hosts marker `@revoked`.
+  [#11635](https://github.com/rust-lang/cargo/pull/11635)
+- Marked the old GitHub RSA host key as revoked. This will prevent Cargo from
+  accepting the leaked key even when trusted by the system.
+  [#11889](https://github.com/rust-lang/cargo/pull/11889)
 
 ## Cargo 1.68 (2023-03-09)
 [f6e737b1...rust-1.68.0](https://github.com/rust-lang/cargo/compare/f6e737b1...rust-1.68.0)
