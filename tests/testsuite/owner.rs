@@ -15,6 +15,128 @@ fn setup(name: &str, content: Option<&str>) {
 }
 
 #[cargo_test]
+fn no_subcommand_return_help() {
+    setup("foo", None);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("owner")
+        .with_status(1)
+        .with_stderr(
+            "\
+Manage the owners of a crate on the registry
+
+Usage: cargo owner [OPTIONS] add    OWNER_NAME <CRATE_NAME>
+       cargo owner [OPTIONS] remove OWNER_NAME <CRATE_NAME>
+       cargo owner [OPTIONS] list   <CRATE_NAME>
+
+Commands:
+  add     Name of a user or team to invite as an owner
+  remove  Name of a user or team to remove as an owner
+  list    List owners of a crate
+
+Arguments:
+  [crate]  
+
+Options:
+  -q, --quiet                Do not print cargo log messages
+  -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)
+      --index <INDEX>        Registry index to modify owners for
+      --color <WHEN>         Coloring: auto, always, never
+      --token <TOKEN>        API token to use when authenticating
+      --registry <REGISTRY>  Registry to use
+      --frozen               Require Cargo.lock and cache are up to date
+      --locked               Require Cargo.lock is up to date
+      --offline              Run without accessing the network
+      --config <KEY=VALUE>   Override a configuration value
+  -Z <FLAG>                  Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                 Print help
+
+Run `cargo help owner` for more detailed information.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn add_no_ownername_return_error() {
+    setup("foo", None);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("owner add")
+        .with_status(1)
+        .with_stderr(
+            "\
+error: the following required arguments were not provided:
+  <OWNER_NAME>
+
+Usage: cargo owner [OPTIONS] add [OWNER_NAME] <CRATE_NAME>
+
+For more information, try '--help'.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn remove_no_ownername_return_error() {
+    setup("foo", None);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("owner remove")
+        .with_status(1)
+        .with_stderr(
+            "\
+error: the following required arguments were not provided:
+  <OWNER_NAME>
+
+Usage: cargo owner [OPTIONS] remove [OWNER_NAME] <CRATE_NAME>
+
+For more information, try '--help'.",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn simple_list() {
     let registry = registry::init();
     let content = r#"{

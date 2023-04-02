@@ -169,15 +169,15 @@ may change over time! The owner of a crate is the only person allowed to publish
 new versions of the crate, but an owner may designate additional owners.
 
 ```console
-$ cargo owner --add github-handle
-$ cargo owner --remove github-handle
-$ cargo owner --add github:rust-lang:owners
-$ cargo owner --remove github:rust-lang:owners
+$ cargo owner add github-handle
+$ cargo owner remove github-handle
+$ cargo owner add github:rust-lang:owners
+$ cargo owner remove github:rust-lang:owners
 ```
 
 The owner IDs given to these commands must be GitHub user names or GitHub teams.
 
-If a user name is given to `--add`, that user is invited as a “named” owner, with
+If a user name is given to `add`, that user is invited as a “named” owner, with
 full rights to the crate. In addition to being able to publish or yank versions
 of the crate, they have the ability to add or remove owners, *including* the
 owner that made *them* an owner. Needless to say, you shouldn’t make people you

@@ -1364,7 +1364,6 @@ fn both_index_and_default() {
     let p = project().file("src/lib.rs", "").build();
     for cmd in &[
         "publish",
-        // "owner add someone",
         "search",
         "yank --version 1.0.0",
         "install foo",
