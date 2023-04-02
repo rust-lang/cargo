@@ -133,6 +133,20 @@ pub fn truncate_with_ellipsis(s: &str, max_width: usize) -> String {
     prefix
 }
 
+/// Formats a slice of strings by joining them together using comma, "and" word
+/// or both, depending on the number of words.
+pub fn and_joined_words(words: &[&str]) -> String {
+    match words.len() {
+        0 => String::default(),
+        1 => words.first().map(|w| w.to_string()).unwrap(),
+        2 => words.join(" and "),
+        len => {
+            let (left, right) = words.split_at(len - 2);
+            format!("{}, {}", left.join(", "), right.join(" and "))
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -164,5 +178,23 @@ mod test {
             (1., "EiB")
         );
         assert_eq!(human_readable_bytes(u64::MAX), (16., "EiB"));
+    }
+
+    #[test]
+    fn test_and_joined_words() {
+        assert_eq!(and_joined_words(&[]), String::from(""));
+        assert_eq!(and_joined_words(&["foo"]), String::from("foo"));
+        assert_eq!(
+            and_joined_words(&["foo", "bar"]),
+            String::from("foo and bar")
+        );
+        assert_eq!(
+            and_joined_words(&["foo", "bar", "baz"]),
+            String::from("foo, bar and baz")
+        );
+        assert_eq!(
+            and_joined_words(&["foo", "bar", "baz", "qux"]),
+            String::from("foo, bar, baz and qux")
+        );
     }
 }

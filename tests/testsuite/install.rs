@@ -189,7 +189,7 @@ fn multiple_pkgs() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
-[SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
+[SUMMARY] Successfully installed foo and bar! Failed to install baz (see error(s) above).
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 [ERROR] some crates failed to install
 ",
@@ -203,7 +203,7 @@ fn multiple_pkgs() {
             "\
 [REMOVING] [CWD]/home/.cargo/bin/foo[EXE]
 [REMOVING] [CWD]/home/.cargo/bin/bar[EXE]
-[SUMMARY] Successfully uninstalled foo, bar!
+[SUMMARY] Successfully uninstalled foo and bar!
 ",
         )
         .run();
@@ -249,7 +249,7 @@ fn multiple_pkgs_path_set() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
-[SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
+[SUMMARY] Successfully installed foo and bar! Failed to install baz (see error(s) above).
 [ERROR] some crates failed to install
 ",
         )
@@ -262,7 +262,7 @@ fn multiple_pkgs_path_set() {
             "\
 [REMOVING] [CWD]/home/.cargo/bin/foo[EXE]
 [REMOVING] [CWD]/home/.cargo/bin/bar[EXE]
-[SUMMARY] Successfully uninstalled foo, bar!
+[SUMMARY] Successfully uninstalled foo and bar!
 ",
         )
         .run();

@@ -9,7 +9,7 @@ use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
-use crate::util::{Config, Filesystem, Rustc, ToSemver, VersionReqExt};
+use crate::util::{and_joined_words, Config, Filesystem, Rustc, ToSemver, VersionReqExt};
 use crate::{drop_println, ops};
 
 use anyhow::{bail, format_err, Context as _};
@@ -686,12 +686,15 @@ pub fn install(
 
         let mut summary = vec![];
         if !succeeded.is_empty() {
-            summary.push(format!("Successfully installed {}!", succeeded.join(", ")));
+            summary.push(format!(
+                "Successfully installed {}!",
+                and_joined_words(&succeeded)
+            ));
         }
         if !failed.is_empty() {
             summary.push(format!(
                 "Failed to install {} (see error(s) above).",
-                failed.join(", ")
+                and_joined_words(&failed)
             ));
         }
         if !succeeded.is_empty() || !failed.is_empty() {

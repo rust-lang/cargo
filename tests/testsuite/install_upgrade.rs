@@ -616,7 +616,7 @@ fn multiple_report() {
 [INSTALLING] [..]/.cargo/bin/x[EXE]
 [INSTALLING] [..]/.cargo/bin/y[EXE]
 [INSTALLED] package `three v1.0.0` (executables `three[EXE]`, `x[EXE]`, `y[EXE]`)
-[SUMMARY] Successfully installed one, two, three!
+[SUMMARY] Successfully installed one, two and three!
 [WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
 ",
         )
@@ -639,7 +639,7 @@ fn multiple_report() {
 [REPLACING] [..]/.cargo/bin/x[EXE]
 [REPLACING] [..]/.cargo/bin/y[EXE]
 [REPLACED] package `three v1.0.0` with `three v1.0.1` (executables `three[EXE]`, `x[EXE]`, `y[EXE]`)
-[SUMMARY] Successfully installed one, two, three!
+[SUMMARY] Successfully installed one, two and three!
 [WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
 ",
         )
@@ -854,7 +854,7 @@ fn partially_already_installed_does_one_update() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/baz[EXE]
 [INSTALLED] package `baz v1.0.0` (executable `baz[EXE]`)
-[SUMMARY] Successfully installed foo, bar, baz!
+[SUMMARY] Successfully installed foo, bar and baz!
 [WARNING] be sure to add [..]
 ",
         )

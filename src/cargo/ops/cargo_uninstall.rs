@@ -3,8 +3,8 @@ use crate::core::{PackageIdSpec, SourceId};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
-use crate::util::Config;
 use crate::util::Filesystem;
+use crate::util::{and_joined_words, Config};
 use anyhow::bail;
 use cargo_util::paths;
 use std::collections::BTreeSet;
@@ -45,13 +45,13 @@ pub fn uninstall(
         if !succeeded.is_empty() {
             summary.push(format!(
                 "Successfully uninstalled {}!",
-                succeeded.join(", ")
+                and_joined_words(&succeeded)
             ));
         }
         if !failed.is_empty() {
             summary.push(format!(
                 "Failed to uninstall {} (see error(s) above).",
-                failed.join(", ")
+                and_joined_words(&failed)
             ));
         }
 
