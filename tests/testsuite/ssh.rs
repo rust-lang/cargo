@@ -469,11 +469,6 @@ Caused by:
   failed to authenticate when downloading repository
 
   *";
-    let err = if cfg!(windows) {
-        "error authenticating: unable to connect to agent pipe; class=Ssh (23)"
-    } else {
-        "error authenticating: failed connecting with agent; class=Ssh (23)"
-    };
     let expected = if cargo_uses_gitoxide() {
         format!(
             "{shared_stderr} attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
@@ -496,7 +491,7 @@ Caused by:
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 Caused by:
-  {err}
+  no authentication methods succeeded
 "
         )
     };
@@ -546,7 +541,7 @@ Caused by:
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 Caused by:
-  {err}
+  no authentication methods succeeded
 "
         )
     };
