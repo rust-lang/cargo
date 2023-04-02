@@ -1362,12 +1362,7 @@ fn both_index_and_registry() {
 #[cargo_test]
 fn both_index_and_default() {
     let p = project().file("src/lib.rs", "").build();
-    for cmd in &[
-        "publish",
-        "search",
-        "yank --version 1.0.0",
-        "install foo",
-    ] {
+    for cmd in &["publish", "search", "yank --version 1.0.0", "install foo"] {
         p.cargo(cmd)
             .env("CARGO_REGISTRY_DEFAULT", "undefined")
             .arg(format!("--index=index_url"))
