@@ -9,8 +9,10 @@ use cargo_test_support::registry::{
 use cargo_test_support::{basic_manifest, project};
 use cargo_test_support::{git, install::cargo_home, t};
 use cargo_util::paths::remove_dir_all;
+use std::fmt::Write;
 use std::fs::{self, File};
 use std::path::Path;
+use std::sync::Arc;
 use std::sync::Mutex;
 
 fn setup_http() -> TestRegistry {
@@ -2704,7 +2706,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn sparse_retry() {
+fn sparse_retry_single() {
     let fail_count = Mutex::new(0);
     let _registry = RegistryBuilder::new()
         .http_index()
@@ -2741,10 +2743,10 @@ fn sparse_retry() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `[..]`, got 500
+warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]`, got 500
 body:
 internal server error
-warning: spurious network error (1 tries remaining): failed to get successful HTTP response from `[..]`, got 500
+warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `[..]`, got 500
 body:
 internal server error
 [DOWNLOADING] crates ...
@@ -2755,6 +2757,224 @@ internal server error
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn sparse_retry_multiple() {
+    // Tests retry behavior of downloading lots of packages with various
+    // failure rates accessing the sparse index.
+
+    // The index is the number of retries, the value is the number of packages
+    // that retry that number of times. Thus 50 packages succeed on first try,
+    // 25 on second, etc.
+    const RETRIES: &[u32] = &[50, 25, 12, 6];
+
+    let pkgs: Vec<_> = RETRIES
+        .iter()
+        .enumerate()
+        .flat_map(|(retries, num)| {
+            (0..*num)
+                .into_iter()
+                .map(move |n| (retries as u32, format!("{}-{n}-{retries}", rand_prefix())))
+        })
+        .collect();
+
+    let mut builder = RegistryBuilder::new().http_index();
+    let fail_counts: Arc<Mutex<Vec<u32>>> = Arc::new(Mutex::new(vec![0; pkgs.len()]));
+    let mut cargo_toml = r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        "#
+    .to_string();
+    // The expected stderr output.
+    let mut expected = "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+"
+    .to_string();
+    for (n, (retries, name)) in pkgs.iter().enumerate() {
+        let count_clone = fail_counts.clone();
+        let retries = *retries;
+        let ab = &name[..2];
+        let cd = &name[2..4];
+        builder = builder.add_responder(format!("/index/{ab}/{cd}/{name}"), move |req, server| {
+            let mut fail_counts = count_clone.lock().unwrap();
+            if fail_counts[n] < retries {
+                fail_counts[n] += 1;
+                server.internal_server_error(req)
+            } else {
+                server.index(req)
+            }
+        });
+        write!(&mut cargo_toml, "{name} = \"1.0.0\"\n").unwrap();
+        for retry in 0..retries {
+            let remain = 3 - retry;
+            write!(
+                &mut expected,
+                "warning: spurious network error ({remain} tries remaining): \
+                failed to get successful HTTP response from \
+                `http://127.0.0.1:[..]/{ab}/{cd}/{name}`, got 500\n\
+                body:\n\
+                internal server error\n"
+            )
+            .unwrap();
+        }
+        write!(
+            &mut expected,
+            "[DOWNLOADED] {name} v1.0.0 (registry `dummy-registry`)\n"
+        )
+        .unwrap();
+    }
+    let _server = builder.build();
+    for (_, name) in &pkgs {
+        Package::new(name, "1.0.0").publish();
+    }
+    let p = project()
+        .file("Cargo.toml", &cargo_toml)
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch").with_stderr_unordered(expected).run();
+}
+
+#[cargo_test]
+fn dl_retry_single() {
+    // Tests retry behavior of downloading a package.
+    // This tests a single package which exercises the code path that causes
+    // it to block.
+    let fail_count = Mutex::new(0);
+    let _server = RegistryBuilder::new()
+        .http_index()
+        .add_responder("/dl/bar/1.0.0/download", move |req, server| {
+            let mut fail_count = fail_count.lock().unwrap();
+            if *fail_count < 2 {
+                *fail_count += 1;
+                server.internal_server_error(req)
+            } else {
+                server.dl(req)
+            }
+        })
+        .build();
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch")
+        .with_stderr("\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 500
+body:
+internal server error
+warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 500
+body:
+internal server error
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+").run();
+}
+
+/// Creates a random prefix to randomly spread out the package names
+/// to somewhat evenly distribute the different failures at different
+/// points.
+fn rand_prefix() -> String {
+    use rand::Rng;
+    const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
+    let mut rng = rand::thread_rng();
+    (0..5)
+        .map(|_| CHARS[rng.gen_range(0..CHARS.len())] as char)
+        .collect()
+}
+
+#[cargo_test]
+fn dl_retry_multiple() {
+    // Tests retry behavior of downloading lots of packages with various
+    // failure rates.
+
+    // The index is the number of retries, the value is the number of packages
+    // that retry that number of times. Thus 50 packages succeed on first try,
+    // 25 on second, etc.
+    const RETRIES: &[u32] = &[50, 25, 12, 6];
+
+    let pkgs: Vec<_> = RETRIES
+        .iter()
+        .enumerate()
+        .flat_map(|(retries, num)| {
+            (0..*num)
+                .into_iter()
+                .map(move |n| (retries as u32, format!("{}-{n}-{retries}", rand_prefix())))
+        })
+        .collect();
+
+    let mut builder = RegistryBuilder::new().http_index();
+    let fail_counts: Arc<Mutex<Vec<u32>>> = Arc::new(Mutex::new(vec![0; pkgs.len()]));
+    let mut cargo_toml = r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        "#
+    .to_string();
+    // The expected stderr output.
+    let mut expected = "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+"
+    .to_string();
+    for (n, (retries, name)) in pkgs.iter().enumerate() {
+        let count_clone = fail_counts.clone();
+        let retries = *retries;
+        builder =
+            builder.add_responder(format!("/dl/{name}/1.0.0/download"), move |req, server| {
+                let mut fail_counts = count_clone.lock().unwrap();
+                if fail_counts[n] < retries {
+                    fail_counts[n] += 1;
+                    server.internal_server_error(req)
+                } else {
+                    server.dl(req)
+                }
+            });
+        write!(&mut cargo_toml, "{name} = \"1.0.0\"\n").unwrap();
+        for retry in 0..retries {
+            let remain = 3 - retry;
+            write!(
+                &mut expected,
+                "warning: spurious network error ({remain} tries remaining): \
+                failed to get successful HTTP response from \
+                `http://127.0.0.1:[..]/dl/{name}/1.0.0/download`, got 500\n\
+                body:\n\
+                internal server error\n"
+            )
+            .unwrap();
+        }
+        write!(
+            &mut expected,
+            "[DOWNLOADED] {name} v1.0.0 (registry `dummy-registry`)\n"
+        )
+        .unwrap();
+    }
+    let _server = builder.build();
+    for (_, name) in &pkgs {
+        Package::new(name, "1.0.0").publish();
+    }
+    let p = project()
+        .file("Cargo.toml", &cargo_toml)
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch").with_stderr_unordered(expected).run();
 }
 
 #[cargo_test]

@@ -29,7 +29,7 @@ pub fn with_retry_and_progress(
 ) -> CargoResult<()> {
     std::thread::scope(|s| {
         let mut progress_bar = Progress::new("Fetch", config);
-        network::with_retry(config, || {
+        network::retry::with_retry(config, || {
             let progress_root: Arc<gix::progress::tree::Root> =
                 gix::progress::tree::root::Options {
                     initial_capacity: 10,

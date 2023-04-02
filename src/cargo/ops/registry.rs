@@ -956,6 +956,20 @@ pub fn registry_logout(config: &Config, reg: Option<&str>) -> CargoResult<()> {
             reg_name
         ),
     )?;
+    let location = if source_ids.original.is_crates_io() {
+        "<https://crates.io/me>".to_string()
+    } else {
+        // The URL for the source requires network access to load the config.
+        // That could be a fairly heavy operation to perform just to provide a
+        // help message, so for now this just provides some generic text.
+        // Perhaps in the future this could have an API to fetch the config if
+        // it is cached, but avoid network access otherwise?
+        format!("the `{reg_name}` website")
+    };
+    config.shell().note(format!(
+        "This does not revoke the token on the registry server.\n    \
+        If you need to revoke the token, visit {location} and follow the instructions there."
+    ))?;
     Ok(())
 }
 

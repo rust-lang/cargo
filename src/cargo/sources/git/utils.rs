@@ -739,7 +739,7 @@ pub fn with_fetch_options(
     let ssh_config = config.net_config()?.ssh.as_ref();
     let config_known_hosts = ssh_config.and_then(|ssh| ssh.known_hosts.as_ref());
     let diagnostic_home_config = config.diagnostic_home_config();
-    network::with_retry(config, || {
+    network::retry::with_retry(config, || {
         with_authentication(config, url, git_config, |f| {
             let port = Url::parse(url).ok().and_then(|url| url.port());
             let mut last_update = Instant::now();

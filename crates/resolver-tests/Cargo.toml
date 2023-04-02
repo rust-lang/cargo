@@ -8,5 +8,5 @@ cargo = { path = "../.." }
 cargo-util = { path = "../cargo-util" }
 is-terminal = "0.4.0"
 lazy_static = "1.3.0"
-proptest = "0.9.1"
+proptest = "1.1.0"
 varisat = "0.2.1"

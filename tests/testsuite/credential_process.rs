@@ -383,6 +383,9 @@ fn logout() {
             "\
 token for `crates-io` has been erased!
 [LOGOUT] token for `crates-io` has been removed from local storage
+[NOTE] This does not revoke the token on the registry server.
+    If you need to revoke the token, visit <https://crates.io/me> \
+    and follow the instructions there.
 ",
         )
         .run();
