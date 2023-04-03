@@ -567,7 +567,7 @@ where
         }
 
         // Whelp, we tried our best
-        Err(git2::Error::from_str("no authentication available"))
+        Err(git2::Error::from_str("no authentication methods succeeded"))
     });
 
     // Ok, so if it looks like we're going to be doing ssh authentication, we
@@ -612,7 +612,7 @@ where
                         return git2::Cred::ssh_key_from_agent(&s);
                     }
                 }
-                Err(git2::Error::from_str("no authentication available"))
+                Err(git2::Error::from_str("no authentication methods succeeded"))
             });
 
             // If we made two attempts then that means:

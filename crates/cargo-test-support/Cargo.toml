@@ -14,7 +14,7 @@ cargo-util = { path = "../cargo-util" }
 crates-io = { path = "../crates-io" }
 filetime = "0.2"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
-git2 = "0.16.0"
+git2 = "0.17.0"
 glob = "0.3"
 itertools = "0.10.0"
 lazy_static = "1.0"
