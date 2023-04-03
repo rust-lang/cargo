@@ -3319,26 +3319,14 @@ fn debug_header_message_index() {
 [UPDATING] `dummy-registry` index
 warning: spurious network error (3 tries remaining): \
     failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
-debug headers:
-x-amz-cf-pop: SFO53-P2
-x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
-x-cache: Hit from cloudfront
 body:
 Please slow down
 warning: spurious network error (2 tries remaining): \
     failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
-debug headers:
-x-amz-cf-pop: SFO53-P2
-x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
-x-cache: Hit from cloudfront
 body:
 Please slow down
 warning: spurious network error (1 tries remaining): \
     failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
-debug headers:
-x-amz-cf-pop: SFO53-P2
-x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
-x-cache: Hit from cloudfront
 body:
 Please slow down
 error: failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
@@ -3393,26 +3381,14 @@ fn debug_header_message_dl() {
 [DOWNLOADING] crates ...
 warning: spurious network error (3 tries remaining): \
     failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
-debug headers:
-x-amz-cf-pop: SFO53-P2
-x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
-x-cache: Hit from cloudfront
 body:
 Please slow down
 warning: spurious network error (2 tries remaining): \
     failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
-debug headers:
-x-amz-cf-pop: SFO53-P2
-x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
-x-cache: Hit from cloudfront
 body:
 Please slow down
 warning: spurious network error (1 tries remaining): \
     failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
-debug headers:
-x-amz-cf-pop: SFO53-P2
-x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
-x-cache: Hit from cloudfront
 body:
 Please slow down
 error: failed to download from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`

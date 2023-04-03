@@ -44,10 +44,13 @@ impl<'a> Retry<'a> {
     pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> RetryResult<T> {
         match f() {
             Err(ref e) if maybe_spurious(e) && self.retries < self.max_retries => {
+                let err_msg = e
+                    .downcast_ref::<HttpNotSuccessful>()
+                    .map(|http_err| http_err.display_short())
+                    .unwrap_or_else(|| e.root_cause().to_string());
                 let msg = format!(
-                    "spurious network error ({} tries remaining): {}",
+                    "spurious network error ({} tries remaining): {err_msg}",
                     self.max_retries - self.retries,
-                    e.root_cause(),
                 );
                 if let Err(e) = self.config.shell().warn(msg) {
                     return RetryResult::Err(e);

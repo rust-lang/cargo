@@ -2,7 +2,7 @@
 
 use anyhow::Error;
 use curl::easy::Easy;
-use std::fmt;
+use std::fmt::{self, Write};
 use std::path::PathBuf;
 
 use super::truncate_with_ellipsis;
@@ -50,27 +50,41 @@ impl HttpNotSuccessful {
             headers,
         }
     }
-}
 
-impl fmt::Display for HttpNotSuccessful {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    /// Renders the error in a compact form.
+    pub fn display_short(&self) -> String {
+        self.render(false)
+    }
+
+    fn render(&self, show_headers: bool) -> String {
+        let mut result = String::new();
         let body = std::str::from_utf8(&self.body)
             .map(|s| truncate_with_ellipsis(s, 512))
             .unwrap_or_else(|_| format!("[{} non-utf8 bytes]", self.body.len()));
 
         write!(
-            f,
+            result,
             "failed to get successful HTTP response from `{}`",
             self.url
-        )?;
+        )
+        .unwrap();
         if let Some(ip) = &self.ip {
-            write!(f, " ({ip})")?;
+            write!(result, " ({ip})").unwrap();
         }
-        write!(f, ", got {}\n", self.code,)?;
-        if !self.headers.is_empty() {
-            write!(f, "debug headers:\n{}\n", self.headers.join("\n"))?;
+        write!(result, ", got {}\n", self.code).unwrap();
+        if show_headers {
+            if !self.headers.is_empty() {
+                write!(result, "debug headers:\n{}\n", self.headers.join("\n")).unwrap();
+            }
         }
-        write!(f, "body:\n{body}",)
+        write!(result, "body:\n{body}").unwrap();
+        result
+    }
+}
+
+impl fmt::Display for HttpNotSuccessful {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.render(true))
     }
 }
 
