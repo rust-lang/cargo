@@ -120,7 +120,7 @@ impl Fixtures {
         } else {
             fs::create_dir_all(&index).unwrap();
             git("init --bare");
-            git("remote add origin https://github.com/rust-lang/crates.io-index");
+            git("remote add origin https://github.com/rust-lang/crates.io-index-archive");
         }
         git(&format!("fetch origin {}", CRATES_IO_COMMIT));
         git("branch -f master FETCH_HEAD");
