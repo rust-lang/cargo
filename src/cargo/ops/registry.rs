@@ -39,8 +39,6 @@ use crate::util::{truncate_with_ellipsis, IntoUrl};
 use crate::util::{Progress, ProgressStyle};
 use crate::{drop_print, drop_println, version};
 
-use crate::util::command_prelude::ArgMatches;
-
 /// Registry settings loaded from config files.
 ///
 /// This is loaded based on the `--registry` flag and the config settings.
@@ -974,21 +972,17 @@ pub fn registry_logout(config: &Config, reg: Option<&str>) -> CargoResult<()> {
 }
 
 pub struct OwnersOptions {
+    pub krate: Option<String>,
     pub token: Option<Secret<String>>,
     pub index: Option<String>,
     pub subcommand: Option<String>,
-    pub subcommand_arg: Option<ArgMatches>,
+    pub ownernames: Option<Vec<String>>,
     pub registry: Option<String>,
 }
 
 pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
-    let name = match opts
-        .subcommand_arg
-        .as_ref()
-        .unwrap()
-        .get_one::<String>("cratename")
-    {
-        Some(ref name) => name.clone().to_string(),
+    let name = match opts.krate {
+        Some(ref name) => name.clone(),
         None => {
             let manifest_path = find_root_manifest_for_wd(config.cwd())?;
             let ws = Workspace::new(&manifest_path, config)?;
@@ -1010,11 +1004,9 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     match opts.subcommand.as_ref().map(|s| s.as_str()) {
         Some("add") => {
             let v = opts
-                .subcommand_arg
+                .ownernames
                 .as_ref()
-                .unwrap()
-                .get_many::<String>("ownername")
-                .map(|s| s.collect::<Vec<_>>())
+                .map(|s| s.iter().collect::<Vec<_>>())
                 .and_then(|t| Some(t.iter().map(|s| s.as_str()).collect::<Vec<_>>()))
                 .unwrap();
             let msg = registry.add_owners(&name, &v).with_context(|| {
@@ -1030,11 +1022,9 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
         Some("remove") => {
             let v = opts
-                .subcommand_arg
+                .ownernames
                 .as_ref()
-                .unwrap()
-                .get_many::<String>("ownername")
-                .map(|s| s.collect::<Vec<_>>())
+                .map(|s| s.iter().collect::<Vec<_>>())
                 .and_then(|t| Some(t.iter().map(|s| s.as_str()).collect::<Vec<_>>()))
                 .unwrap();
             config

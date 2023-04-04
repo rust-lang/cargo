@@ -6,66 +6,50 @@ use cargo::util::auth::Secret;
 pub fn cli() -> Command {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
-        .arg(Arg::new("crate").action(ArgAction::Set))
+        .arg(Arg::new("crate"))
         .arg_required_else_help(true)
+        .args_conflicts_with_subcommands(true)
         .override_usage(
             "\
-       cargo owner [OPTIONS] add    OWNER_NAME <CRATE_NAME>
-       cargo owner [OPTIONS] remove OWNER_NAME <CRATE_NAME>
-       cargo owner [OPTIONS] list   <CRATE_NAME>",
+       cargo owner [OPTIONS] add    <OWNER_NAME> [CRATE_NAME]
+       cargo owner [OPTIONS] remove <OWNER_NAME> [CRATE_NAME]
+       cargo owner [OPTIONS] list   [CRATE_NAME]",
         )
         .arg_quiet()
         .subcommands([
             Command::new("add")
                 .about("Name of a user or team to invite as an owner")
-                .override_usage(
-                    "\
-                   cargo owner [OPTIONS] add [OWNER_NAME] <CRATE_NAME>",
-                )
                 .arg_quiet()
                 .args([
                     Arg::new("ownername")
-                        .action(ArgAction::Set)
                         .required(true)
-                        .num_args(1)
                         .value_delimiter(',')
-                        .value_name("OWNER_NAME"),
+                        .value_name("OWNER_NAME")
+                        .help("Name of the owner you want to invite"),
                     Arg::new("cratename")
-                        .action(ArgAction::Set)
-                        .num_args(1)
-                        .value_name("CRATE_NAME"),
+                        .value_name("CRATE_NAME")
+                        .help("Crate name that you want to manage the owner"),
                 ]),
             Command::new("remove")
                 .about("Name of a user or team to remove as an owner")
-                .override_usage(
-                    "\
-                   cargo owner [OPTIONS] remove [OWNER_NAME] <CRATE_NAME>",
-                )
                 .arg_quiet()
                 .args([
                     Arg::new("ownername")
-                        .action(ArgAction::Set)
                         .required(true)
-                        .num_args(1)
                         .value_delimiter(',')
-                        .value_name("OWNER_NAME"),
+                        .value_name("OWNER_NAME")
+                        .help("Name of the owner you want to remove"),
                     Arg::new("cratename")
-                        .action(ArgAction::Set)
-                        .num_args(1)
-                        .value_name("CRATE_NAME"),
+                        .value_name("CRATE_NAME")
+                        .help("Crate name that you want to manage the owner"),
                 ]),
             Command::new("list")
                 .about("List owners of a crate")
-                .override_usage(
-                    "\
-                   cargo owner [OPTIONS] list <CRATE_NAME>",
-                )
                 .arg_quiet()
                 .arg(
                     Arg::new("cratename")
-                        .action(ArgAction::Set)
-                        .num_args(1)
-                        .value_name("CRATE_NAME"),
+                        .value_name("CRATE_NAME")
+                        .help("Crate name which you want to list all owner names"),
                 ),
         ])
         .arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
@@ -87,10 +71,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     };
 
     let opts = OwnersOptions {
+        krate: arg.clone().get_one::<String>("cratename").cloned(),
         token: args.get_one::<String>("token").cloned().map(Secret::from),
         index: args.get_one::<String>("index").cloned(),
         subcommand: Some(sc.to_owned()),
-        subcommand_arg: Some(arg.clone()),
+        ownernames: Some(
+            arg.get_many::<String>("ownername")
+                .map(|s| s.cloned().collect::<Vec<_>>())
+                .unwrap(),
+        ),
         registry,
     };
 
