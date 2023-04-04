@@ -205,6 +205,40 @@ explaining the format of the entry.
 The JSON objects should not be modified after they are added except for the
 `yanked` field whose value may change at any time.
 
+> **Note**: The index JSON format has subtle differences from the JSON format of the [Publish API] and [`cargo metadata`].
+> If you are using one of those as a source to generate index entries, you are encouraged to carefully inspect the documentation differences between them.
+>
+> For the [Publish API], the differences are:
+>
+> * `deps`
+>     * `name` --- When the dependency is [renamed] in `Cargo.toml`, the publish API puts the original package name in the `name` field and the aliased name in the `explicit_name_in_toml` field.
+>       The index places the aliased name in the `name` field, and the original package name in the `package` field.
+>     * `req` --- The Publish API field is called `version_req`.
+> * `cksum` --- The publish API does not specify the checksum, it must be computed by the registry before adding to the index.
+> * `features` --- Some features may be placed in the `features2` field.
+>   Note: This is only a legacy requirement for [crates.io]; other registries should not need to bother with modifying the features map.
+>   The `v` field indicates the presence of the `features2` field.
+> * The publish API includes several other fields, such as `description` and `readme`, which don't appear in the index.
+>   These are intended to make it easier for a registry to obtain the metadata about the crate to display on a website without needing to extract and parse the `.crate` file.
+>   This additional information is typically added to a database on the registry server.
+>
+> For [`cargo metadata`], the differences are:
+>
+> * `vers` --- The `cargo metadata` field is called `version`.
+> * `deps`
+>   * `name` --- When the dependency is [renamed] in `Cargo.toml`, `cargo metadata` puts the original package name in the `name` field and the aliased name in the `rename` field.
+>     The index places the aliased name in the `name` field, and the original package name in the `package` field.
+>   * `default_features` --- The `cargo metadata` field is called `uses_default_features`.
+>   * `registry` --- `cargo metadata` uses a value of `null` to indicate that the dependency comes from [crates.io].
+>     The index uses a value of `null` to indicate that the dependency comes from the same registry as the index.
+>     When creating an index entry, a registry other than [crates.io] should translate a value of `null` to be `https://github.com/rust-lang/crates.io-index` and translate a URL that matches the current index to be `null`.
+>   * `cargo metadata` includes some extra fields, such as `source` and `path`.
+> * The index includes additional fields such as `yanked`, `cksum`, and `v`.
+
+[renamed]: specifying-dependencies.md#renaming-dependencies-in-cargotoml
+[Publish API]: registry-web-api.md#publish
+[`cargo metadata`]: ../commands/cargo-metadata.md
+
 ### Index Protocols
 Cargo supports two remote registry protocols: `git` and `sparse`. The `git` protocol
 stores index files in a git repository and the `sparse` protocol fetches individual
