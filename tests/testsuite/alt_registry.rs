@@ -438,6 +438,33 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
 }
 
 #[cargo_test]
+fn cargo_registries_crates_io_protocol() {
+    let _ = RegistryBuilder::new()
+        .no_configure_token()
+        .alternative()
+        .build();
+    // Should not produce a warning due to the registries.crates-io.protocol = 'sparse' configuration
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            "[registries.crates-io]
+            protocol = 'sparse'",
+        )
+        .build();
+
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+error: no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn publish_to_alt_registry() {
     let _reg = RegistryBuilder::new()
         .http_api()

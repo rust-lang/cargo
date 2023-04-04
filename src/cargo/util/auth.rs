@@ -133,6 +133,8 @@ pub fn registry_credential_config(
         secret_key_subject: Option<String>,
         #[serde(rename = "default")]
         _default: Option<String>,
+        #[serde(rename = "protocol")]
+        _protocol: Option<String>,
     }
 
     log::trace!("loading credential config for {}", sid);
