@@ -184,7 +184,7 @@ owner that made *them* an owner. Needless to say, you shouldn’t make people yo
 don’t fully trust into a named owner. In order to become a named owner, a user
 must have logged into [crates.io] previously.
 
-If a team name is given to `--add`, that team is invited as a “team” owner, with
+If a team name is given to `add`, that team is invited as a “team” owner, with
 restricted right to the crate. While they have permission to publish or yank
 versions of the crate, they *do not* have the ability to add or remove owners.
 In addition to being more convenient for managing groups of owners, teams are

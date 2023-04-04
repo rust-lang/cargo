@@ -765,6 +765,11 @@ fn no_api() {
         .with_stderr_contains(&err)
         .run();
 
+    p.cargo("owner --registry alternative --list")
+        .with_status(101)
+        .with_stderr_contains(&err)
+        .run();
+
     p.cargo("yank --registry alternative --version=0.0.1 bar")
         .with_status(101)
         .with_stderr_contains(&err)

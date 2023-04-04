@@ -39,9 +39,9 @@ fn no_subcommand_return_help() {
             "\
 Manage the owners of a crate on the registry
 
-Usage: cargo owner [OPTIONS] add    OWNER_NAME <CRATE_NAME>
-       cargo owner [OPTIONS] remove OWNER_NAME <CRATE_NAME>
-       cargo owner [OPTIONS] list   <CRATE_NAME>
+Usage: cargo owner [OPTIONS] add    <OWNER_NAME> [CRATE_NAME]
+       cargo owner [OPTIONS] remove <OWNER_NAME> [CRATE_NAME]
+       cargo owner [OPTIONS] list   [CRATE_NAME]
 
 Commands:
   add     Name of a user or team to invite as an owner
@@ -54,13 +54,13 @@ Arguments:
 Options:
   -q, --quiet                Do not print cargo log messages
   -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)
-      --index <INDEX>        Registry index to modify owners for
       --color <WHEN>         Coloring: auto, always, never
-      --token <TOKEN>        API token to use when authenticating
-      --registry <REGISTRY>  Registry to use
       --frozen               Require Cargo.lock and cache are up to date
+      --index <INDEX>        Registry index to modify owners for
       --locked               Require Cargo.lock is up to date
+      --token <TOKEN>        API token to use when authenticating
       --offline              Run without accessing the network
+      --registry <REGISTRY>  Registry to use
       --config <KEY=VALUE>   Override a configuration value
   -Z <FLAG>                  Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
   -h, --help                 Print help
@@ -96,7 +96,7 @@ fn add_no_ownername_return_error() {
 error: the following required arguments were not provided:
   <OWNER_NAME>
 
-Usage: cargo owner [OPTIONS] add [OWNER_NAME] <CRATE_NAME>
+Usage: cargo owner add <OWNER_NAME> [CRATE_NAME]
 
 For more information, try '--help'.",
         )
@@ -129,7 +129,7 @@ fn remove_no_ownername_return_error() {
 error: the following required arguments were not provided:
   <OWNER_NAME>
 
-Usage: cargo owner [OPTIONS] remove [OWNER_NAME] <CRATE_NAME>
+Usage: cargo owner remove <OWNER_NAME> [CRATE_NAME]
 
 For more information, try '--help'.",
         )
@@ -169,15 +169,18 @@ fn simple_list() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner list")
-        .replace_crates_io(registry.index_url())
-        .with_stdout(
-            "\
+    let commands = ["-l", "--list", "list"];
+    for command in commands.iter() {
+        p.cargo(&format!("owner {}", command))
+            .replace_crates_io(registry.index_url())
+            .with_stdout(
+                "\
 github:rust-lang:core (Core)
 octocat
 ",
-        )
-        .run();
+            )
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -200,17 +203,20 @@ fn simple_add() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner add username")
-        .replace_crates_io(registry.index_url())
-        .with_status(101)
-        .with_stderr(
-            "    Updating crates.io index
+    let commands = ["-a", "--add", "add"];
+    for command in commands.iter() {
+        p.cargo(&format!("owner {} username", command))
+            .replace_crates_io(registry.index_url())
+            .with_status(101)
+            .with_stderr(
+                "    Updating crates.io index
 error: failed to invite owners to crate `foo` on registry at file://[..]
 
 Caused by:
   EOF while parsing a value at line 1 column 0",
-        )
-        .run();
+            )
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -238,12 +244,15 @@ fn simple_add_with_asymmetric() {
 
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
-    p.cargo("owner add username")
-        .arg("-Zregistry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
-        .replace_crates_io(registry.index_url())
-        .with_status(0)
-        .run();
+    let commands = ["-a", "--add", "add"];
+    for command in commands.iter() {
+        p.cargo(&format!("owner {} username", command))
+            .arg("-Zregistry-auth")
+            .masquerade_as_nightly_cargo(&["registry-auth"])
+            .replace_crates_io(registry.index_url())
+            .with_status(0)
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -266,18 +275,21 @@ fn simple_remove() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner remove username")
-        .replace_crates_io(registry.index_url())
-        .with_status(101)
-        .with_stderr(
-            "    Updating crates.io index
+    let commands = ["remove", "--remove", "-r"];
+    for command in commands.iter() {
+        p.cargo(&format!("owner {} username", command))
+            .replace_crates_io(registry.index_url())
+            .with_status(101)
+            .with_stderr(
+                "    Updating crates.io index
        Owner removing [\"username\"] from crate foo
 error: failed to remove owners from crate `foo` on registry at file://[..]
 
 Caused by:
   EOF while parsing a value at line 1 column 0",
-        )
-        .run();
+            )
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -305,10 +317,13 @@ fn simple_remove_with_asymmetric() {
 
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
-    p.cargo("owner remove username")
-        .arg("-Zregistry-auth")
-        .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["registry-auth"])
-        .with_status(0)
-        .run();
+    let commands = ["-r", "--remove", "remove"];
+    for command in commands.iter() {
+        p.cargo(&format!("owner {} username", command))
+            .arg("-Zregistry-auth")
+            .replace_crates_io(registry.index_url())
+            .masquerade_as_nightly_cargo(&["registry-auth"])
+            .with_status(0)
+            .run();
+    }
 }

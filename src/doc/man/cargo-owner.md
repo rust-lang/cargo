@@ -6,9 +6,9 @@ cargo-owner --- Manage the owners of a crate on the registry
 
 ## SYNOPSIS
 
-`cargo owner` [_options_] `--add` _login_ [_crate_]\
-`cargo owner` [_options_] `--remove` _login_ [_crate_]\
-`cargo owner` [_options_] `--list` [_crate_]
+`cargo owner` [_options_] `add` _login_ [_crate_]\
+`cargo owner` [_options_] `remove` _login_ [_crate_]\
+`cargo owner` [_options_] `list` [_crate_]
 
 ## DESCRIPTION
 
@@ -27,21 +27,27 @@ information about owners and publishing.
 
 ## OPTIONS
 
-### Owner Options
+### Subcommand
 
 {{#options}}
 
-{{#option "`-a`" "`--add` _login_..." }}
+{{#option "`add` _login_..." }}
 Invite the given user or team as an owner.
 {{/option}}
 
-{{#option "`-r`" "`--remove` _login_..." }}
+{{#option "`remove` _login_..." }}
 Remove the given user or team as an owner.
 {{/option}}
 
-{{#option "`-l`" "`--list`" }}
+{{#option "`list`" }}
 List owners of a crate.
 {{/option}}
+
+{{/options}}
+
+### Owner Options
+
+{{#options}}
 
 {{> options-token }}
 
@@ -67,15 +73,15 @@ List owners of a crate.
 
 1. List owners of a package:
 
-       cargo owner --list foo
+       cargo owner list foo
 
 2. Invite an owner to a package:
 
-       cargo owner --add username foo
+       cargo owner add username foo
 
 3. Remove an owner from a package:
 
-       cargo owner --remove username foo
+       cargo owner remove username foo
 
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-login" 1}}, {{man "cargo-publish" 1}}

@@ -6,9 +6,9 @@ cargo-owner --- Manage the owners of a crate on the registry
 
 ## SYNOPSIS
 
-`cargo owner` [_options_] `--add` _login_ [_crate_]\
-`cargo owner` [_options_] `--remove` _login_ [_crate_]\
-`cargo owner` [_options_] `--list` [_crate_]
+`cargo owner` [_options_] `add` _login_ [_crate_]\
+`cargo owner` [_options_] `remove` _login_ [_crate_]\
+`cargo owner` [_options_] `list` [_crate_]
 
 ## DESCRIPTION
 
@@ -27,24 +27,27 @@ information about owners and publishing.
 
 ## OPTIONS
 
-### Owner Options
+### Subcommand
 
 <dl>
 
-<dt class="option-term" id="option-cargo-owner--a"><a class="option-anchor" href="#option-cargo-owner--a"></a><code>-a</code></dt>
-<dt class="option-term" id="option-cargo-owner---add"><a class="option-anchor" href="#option-cargo-owner---add"></a><code>--add</code> <em>login</em>…</dt>
+<dt class="option-term" id="option-cargo-owner-add"><a class="option-anchor" href="#option-cargo-owner-add"></a><code>add</code> <em>login</em>…</dt>
 <dd class="option-desc">Invite the given user or team as an owner.</dd>
 
 
-<dt class="option-term" id="option-cargo-owner--r"><a class="option-anchor" href="#option-cargo-owner--r"></a><code>-r</code></dt>
-<dt class="option-term" id="option-cargo-owner---remove"><a class="option-anchor" href="#option-cargo-owner---remove"></a><code>--remove</code> <em>login</em>…</dt>
+<dt class="option-term" id="option-cargo-owner-remove"><a class="option-anchor" href="#option-cargo-owner-remove"></a><code>remove</code> <em>login</em>…</dt>
 <dd class="option-desc">Remove the given user or team as an owner.</dd>
 
 
-<dt class="option-term" id="option-cargo-owner--l"><a class="option-anchor" href="#option-cargo-owner--l"></a><code>-l</code></dt>
-<dt class="option-term" id="option-cargo-owner---list"><a class="option-anchor" href="#option-cargo-owner---list"></a><code>--list</code></dt>
+<dt class="option-term" id="option-cargo-owner-list"><a class="option-anchor" href="#option-cargo-owner-list"></a><code>list</code></dt>
 <dd class="option-desc">List owners of a crate.</dd>
 
+
+</dl>
+
+### Owner Options
+
+<dl>
 
 <dt class="option-term" id="option-cargo-owner---token"><a class="option-anchor" href="#option-cargo-owner---token"></a><code>--token</code> <em>token</em></dt>
 <dd class="option-desc">API token to use when authenticating. This overrides the token stored in
@@ -157,15 +160,15 @@ details on environment variables that Cargo reads.
 
 1. List owners of a package:
 
-       cargo owner --list foo
+       cargo owner list foo
 
 2. Invite an owner to a package:
 
-       cargo owner --add username foo
+       cargo owner add username foo
 
 3. Remove an owner from a package:
 
-       cargo owner --remove username foo
+       cargo owner remove username foo
 
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-login(1)](cargo-login.html), [cargo-publish(1)](cargo-publish.html)

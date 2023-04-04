@@ -6,11 +6,11 @@
 .SH "NAME"
 cargo\-owner \[em] Manage the owners of a crate on the registry
 .SH "SYNOPSIS"
-\fBcargo owner\fR [\fIoptions\fR] \fB\-\-add\fR \fIlogin\fR [\fIcrate\fR]
+\fBcargo owner\fR [\fIoptions\fR] \fBadd\fR \fIlogin\fR [\fIcrate\fR]
 .br
-\fBcargo owner\fR [\fIoptions\fR] \fB\-\-remove\fR \fIlogin\fR [\fIcrate\fR]
+\fBcargo owner\fR [\fIoptions\fR] \fBremove\fR \fIlogin\fR [\fIcrate\fR]
 .br
-\fBcargo owner\fR [\fIoptions\fR] \fB\-\-list\fR [\fIcrate\fR]
+\fBcargo owner\fR [\fIoptions\fR] \fBlist\fR [\fIcrate\fR]
 .SH "DESCRIPTION"
 This command will modify the owners for a crate on the registry. Owners of a
 crate can upload new versions and yank old versions. Non\-team owners can also
@@ -25,25 +25,23 @@ current directory.
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/publishing.html#cargo\-owner> for more
 information about owners and publishing.
 .SH "OPTIONS"
-.SS "Owner Options"
+.SS "Subcommand"
 .sp
-\fB\-a\fR, 
-\fB\-\-add\fR \fIlogin\fR\[u2026]
+\fBadd\fR \fIlogin\fR\[u2026]
 .RS 4
 Invite the given user or team as an owner.
 .RE
 .sp
-\fB\-r\fR, 
-\fB\-\-remove\fR \fIlogin\fR\[u2026]
+\fBremove\fR \fIlogin\fR\[u2026]
 .RS 4
 Remove the given user or team as an owner.
 .RE
 .sp
-\fB\-l\fR, 
-\fB\-\-list\fR
+\fBlist\fR
 .RS 4
 List owners of a crate.
 .RE
+.SS "Owner Options"
 .sp
 \fB\-\-token\fR \fItoken\fR
 .RS 4
@@ -163,7 +161,7 @@ details on environment variables that Cargo reads.
 .sp
 .RS 4
 .nf
-cargo owner \-\-list foo
+cargo owner list foo
 .fi
 .RE
 .RE
@@ -173,7 +171,7 @@ cargo owner \-\-list foo
 .sp
 .RS 4
 .nf
-cargo owner \-\-add username foo
+cargo owner add username foo
 .fi
 .RE
 .RE
@@ -183,7 +181,7 @@ cargo owner \-\-add username foo
 .sp
 .RS 4
 .nf
-cargo owner \-\-remove username foo
+cargo owner remove username foo
 .fi
 .RE
 .RE

@@ -6,16 +6,36 @@ use cargo::util::auth::Secret;
 pub fn cli() -> Command {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
+        .arg_quiet()
         .arg(Arg::new("crate"))
         .arg_required_else_help(true)
-        .args_conflicts_with_subcommands(true)
+        // The following three parameters are planned to be replaced in the form of subcommands.
+        // refer to issue: https://github.com/rust-lang/cargo/issues/4352
+        .arg(
+            multi_opt(
+                "add",
+                "LOGIN",
+                "Name of a user or team to invite as an owner",
+            )
+            .short('a')
+            .hide(true),
+        )
+        .arg(
+            multi_opt(
+                "remove",
+                "LOGIN",
+                "Name of a user or team to remove as an owner",
+            )
+            .short('r')
+            .hide(true),
+        )
+        .arg(flag("list", "List owners of a crate").short('l').hide(true))
         .override_usage(
             "\
        cargo owner [OPTIONS] add    <OWNER_NAME> [CRATE_NAME]
        cargo owner [OPTIONS] remove <OWNER_NAME> [CRATE_NAME]
        cargo owner [OPTIONS] list   [CRATE_NAME]",
         )
-        .arg_quiet()
         .subcommands([
             Command::new("add")
                 .about("Name of a user or team to invite as an owner")
@@ -61,25 +81,40 @@ pub fn cli() -> Command {
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let registry = args.registry(config)?;
 
-    let Some((sc, arg)) = args.subcommand() else {
-    return Err(CliError::new(
-        anyhow::format_err!(
-            "you need to specify the subcommands to be operated: add, remove or list."
-        ),
-        101,
-    ));
+    let (sc, krate, ownernames) = if let Some((sc, arg)) = args.subcommand() {
+        let ownernames = if sc == "list" {
+            Vec::<String>::new()
+        } else {
+            arg.get_many::<String>("ownername")
+                .map(|s| s.cloned().collect::<Vec<_>>())
+                .unwrap()
+        };
+        (
+            sc,
+            arg.clone().get_one::<String>("cratename").cloned(),
+            ownernames,
+        )
+    } else {
+        (
+            "",
+            args.get_one::<String>("crate").cloned(),
+            Vec::<String>::new(),
+        )
     };
 
     let opts = OwnersOptions {
-        krate: arg.clone().get_one::<String>("cratename").cloned(),
+        krate: krate,
         token: args.get_one::<String>("token").cloned().map(Secret::from),
         index: args.get_one::<String>("index").cloned(),
+        to_add: args
+            .get_many::<String>("add")
+            .map(|xs| xs.cloned().collect()),
+        to_remove: args
+            .get_many::<String>("remove")
+            .map(|xs| xs.cloned().collect()),
+        list: args.flag("list"),
         subcommand: Some(sc.to_owned()),
-        ownernames: Some(
-            arg.get_many::<String>("ownername")
-                .map(|s| s.cloned().collect::<Vec<_>>())
-                .unwrap(),
-        ),
+        ownernames: Some(ownernames),
         registry,
     };
 

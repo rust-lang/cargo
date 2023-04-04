@@ -4,9 +4,9 @@ NAME
        cargo-owner — Manage the owners of a crate on the registry
 
 SYNOPSIS
-       cargo owner [options] --add login [crate]
-       cargo owner [options] --remove login [crate]
-       cargo owner [options] --list [crate]
+       cargo owner [options] add login [crate]
+       cargo owner [options] remove login [crate]
+       cargo owner [options] list [crate]
 
 DESCRIPTION
        This command will modify the owners for a crate on the registry. Owners
@@ -24,16 +24,17 @@ DESCRIPTION
        for more information about owners and publishing.
 
 OPTIONS
-   Owner Options
-       -a, --add login…
+   Subcommand
+       add login…
            Invite the given user or team as an owner.
 
-       -r, --remove login…
+       remove login…
            Remove the given user or team as an owner.
 
-       -l, --list
+       list
            List owners of a crate.
 
+   Owner Options
        --token token
            API token to use when authenticating. This overrides the token
            stored in the credentials file (which is created by cargo-login(1)).
@@ -124,15 +125,15 @@ EXIT STATUS
 EXAMPLES
        1. List owners of a package:
 
-              cargo owner --list foo
+              cargo owner list foo
 
        2. Invite an owner to a package:
 
-              cargo owner --add username foo
+              cargo owner add username foo
 
        3. Remove an owner from a package:
 
-              cargo owner --remove username foo
+              cargo owner remove username foo
 
 SEE ALSO
        cargo(1), cargo-login(1), cargo-publish(1)
