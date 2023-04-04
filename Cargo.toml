@@ -30,7 +30,7 @@ filetime = "0.2.9"
 flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
 git2 = "0.17.0"
 git2-curl = "0.18.0"
-gix = { version = "0.39.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree"] }
+gix = { version = "0.41.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree"] }
 gix-features-for-configuration-only = { version = "0.28.0", package = "gix-features", features = [ "parallel" ] }
 glob = "0.3.0"
 hex = "0.4"
