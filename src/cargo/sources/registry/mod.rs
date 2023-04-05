@@ -810,7 +810,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
                 let matched = match kind {
                     QueryKind::Exact => dep.matches(&s),
-                    QueryKind::Fuzzy => true,
+                    QueryKind::Alternatives => true,
+                    QueryKind::Normalized => true,
                 };
                 if matched {
                     f(s);
