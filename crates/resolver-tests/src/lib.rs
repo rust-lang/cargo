@@ -11,7 +11,7 @@ use std::task::Poll;
 use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
-use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
+use cargo::core::resolver::{self, ResolveOpts, ResolveVersion, VersionPreferences};
 use cargo::core::source::{GitReference, QueryKind, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
@@ -196,6 +196,7 @@ pub fn resolve_with_config_raw(
         &VersionPreferences::default(),
         Some(config),
         true,
+        ResolveVersion::default(),
     );
 
     // The largest test in our suite takes less then 30 sec.

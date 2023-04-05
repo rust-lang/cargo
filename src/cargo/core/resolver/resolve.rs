@@ -80,6 +80,8 @@ pub enum ResolveVersion {
     /// V3 by default staring in 1.53.
     #[default]
     V3,
+    /// Weak dependency features are not treated as non-weak.
+    V4,
 }
 
 impl Resolve {

@@ -158,6 +158,7 @@ impl EncodableResolve {
         let mut checksums = HashMap::new();
 
         let mut version = match self.version {
+            Some(4) => ResolveVersion::V4,
             Some(3) => ResolveVersion::V3,
             Some(n) => bail!(
                 "lock file version `{}` was found, but this version of Cargo \
@@ -612,6 +613,7 @@ impl ser::Serialize for Resolve {
             metadata,
             patch,
             version: match self.version() {
+                ResolveVersion::V4 => Some(4),
                 ResolveVersion::V3 => Some(3),
                 ResolveVersion::V2 | ResolveVersion::V1 => None,
             },

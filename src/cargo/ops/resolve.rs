@@ -495,6 +495,8 @@ pub fn resolve_with_previous<'cfg>(
         None => root_replace.to_vec(),
     };
 
+    let version = previous.map(|p| p.version()).unwrap_or_default();
+
     ws.preload(registry);
     let mut resolved = resolver::resolve(
         &summaries,
@@ -505,6 +507,7 @@ pub fn resolve_with_previous<'cfg>(
         ws.unstable_features()
             .require(Feature::public_dependency())
             .is_ok(),
+        version,
     )?;
     let patches: Vec<_> = registry
         .patches()

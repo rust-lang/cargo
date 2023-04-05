@@ -13,8 +13,8 @@ use crate::core::resolver::context::Context;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
-    VersionPreferences,
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, ResolveVersion,
+    VersionOrdering, VersionPreferences,
 };
 use crate::core::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, QueryKind, Registry, Summary,
@@ -230,6 +230,7 @@ impl<'a> RegistryQueryer<'a> {
         candidate: &Summary,
         opts: &ResolveOpts,
         first_minimal_version: bool,
+        version: ResolveVersion,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -242,7 +243,7 @@ impl<'a> RegistryQueryer<'a> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(parent, candidate, opts)?;
+        let (used_features, deps) = resolve_features(parent, candidate, opts, version)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -294,6 +295,7 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
+    version: ResolveVersion,
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
@@ -313,6 +315,10 @@ pub fn resolve_features<'b>(
                 .deps
                 .get(&dep.name_in_toml())
                 .map(|(weak, _)| {
+                    // Preserve old behaviour on older resolve versions.
+                    if version <= ResolveVersion::V3 {
+                        return false;
+                    }
                     *weak && !reqs.features.contains(&dep.name_in_toml())
                 })
                 .unwrap_or(true);
@@ -339,7 +345,10 @@ pub fn resolve_features<'b>(
     // validation is done either in `build_requirements` or
     // `build_feature_map`.
     if parent.is_none() {
-        for dep_name in reqs.deps.keys() {
+        for (dep_name, (weak, _)) in reqs.deps.iter() {
+            if *weak && !reqs.features.contains(dep_name) {
+                continue;
+            }
             if !valid_dep_names.contains(dep_name) {
                 let e = RequirementError::MissingDependency(*dep_name);
                 return Err(e.into_activate_error(parent, s));

@@ -138,6 +138,7 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
+    version: ResolveVersion,
 ) -> CargoResult<Resolve> {
     let _p = profile::start("resolving");
     let minimal_versions = match config {
@@ -158,6 +159,7 @@ pub fn resolve(
             summaries,
             direct_minimal_versions,
             config,
+            version,
         )?;
         if registry.reset_pending() {
             break cx;
@@ -190,7 +192,7 @@ pub fn resolve(
         cksums,
         BTreeMap::new(),
         Vec::new(),
-        ResolveVersion::default(),
+        version,
         summaries,
     );
 
@@ -212,6 +214,7 @@ fn activate_deps_loop(
     summaries: &[(Summary, ResolveOpts)],
     direct_minimal_versions: bool,
     config: Option<&Config>,
+    version: ResolveVersion,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = RemainingDeps::new();
@@ -230,6 +233,7 @@ fn activate_deps_loop(
             summary.clone(),
             direct_minimal_versions,
             opts,
+            version,
         );
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
@@ -436,6 +440,7 @@ fn activate_deps_loop(
                 candidate,
                 direct_minimal_version,
                 &opts,
+                version,
             );
 
             let successfully_activated = match res {
@@ -650,6 +655,7 @@ fn activate(
     candidate: Summary,
     first_minimal_version: bool,
     opts: &ResolveOpts,
+    version: ResolveVersion,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
@@ -706,6 +712,7 @@ fn activate(
         &candidate,
         opts,
         first_minimal_version,
+        version,
     )?;
 
     // Record what list of features is active for this package.
