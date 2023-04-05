@@ -164,7 +164,7 @@ use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::task::Poll;
+use std::task::{ready, Poll};
 
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
@@ -756,7 +756,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let req = OptVersionReq::exact(package.version());
         let summary_with_cksum = self
             .index
-            .summaries(package.name(), &req, &mut *self.ops)?
+            .summaries(&package.name(), &req, &mut *self.ops)?
             .expect("a downloaded dep now pending!?")
             .map(|s| s.summary.clone())
             .next()
@@ -786,36 +786,73 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         {
             debug!("attempting query without update");
             let mut called = false;
-            let pend =
-                self.index
-                    .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                        if dep.matches(&s) {
-                            called = true;
-                            f(s);
-                        }
-                    })?;
-            if pend.is_pending() {
-                return Poll::Pending;
-            }
+            ready!(self.index.query_inner(
+                &dep.package_name(),
+                dep.version_req(),
+                &mut *self.ops,
+                &self.yanked_whitelist,
+                &mut |s| {
+                    if dep.matches(&s) {
+                        called = true;
+                        f(s);
+                    }
+                },
+            ))?;
             if called {
-                return Poll::Ready(Ok(()));
+                Poll::Ready(Ok(()))
             } else {
                 debug!("falling back to an update");
                 self.invalidate_cache();
-                return Poll::Pending;
+                Poll::Pending
+            }
+        } else {
+            let mut called = false;
+            ready!(self.index.query_inner(
+                &dep.package_name(),
+                dep.version_req(),
+                &mut *self.ops,
+                &self.yanked_whitelist,
+                &mut |s| {
+                    let matched = match kind {
+                        QueryKind::Exact => dep.matches(&s),
+                        QueryKind::Fuzzy => true,
+                    };
+                    if matched {
+                        f(s);
+                        called = true;
+                    }
+                }
+            ))?;
+            if called {
+                return Poll::Ready(Ok(()));
+            }
+            let mut any_pending = false;
+            if kind == QueryKind::Fuzzy {
+                // Attempt to handle misspellings by searching for a chain of related
+                // names to the original name. The resolver will later
+                // reject any candidates that have the wrong name, and with this it'll
+                // along the way produce helpful "did you mean?" suggestions.
+                for name_permutation in
+                    index::UncanonicalizedIter::new(&dep.package_name()).take(1024)
+                {
+                    any_pending |= self
+                        .index
+                        .query_inner(
+                            &name_permutation,
+                            dep.version_req(),
+                            &mut *self.ops,
+                            &self.yanked_whitelist,
+                            f,
+                        )?
+                        .is_pending();
+                }
+            }
+            if any_pending {
+                Poll::Pending
+            } else {
+                Poll::Ready(Ok(()))
             }
         }
-
-        self.index
-            .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                let matched = match kind {
-                    QueryKind::Exact => dep.matches(&s),
-                    QueryKind::Fuzzy => true,
-                };
-                if matched {
-                    f(s);
-                }
-            })
     }
 
     fn supports_checksums(&self) -> bool {
