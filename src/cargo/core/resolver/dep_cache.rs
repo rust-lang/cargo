@@ -301,15 +301,24 @@ pub fn resolve_features<'b>(
 
     let reqs = build_requirements(parent, s, opts)?;
     let mut ret = Vec::new();
-    let default_dep = BTreeSet::new();
+    let default_dep = (false, BTreeSet::new());
     let mut valid_dep_names = HashSet::new();
 
     // Next, collect all actually enabled dependencies and their features.
     for dep in deps {
         // Skip optional dependencies, but not those enabled through a
         // feature
-        if dep.is_optional() && !reqs.deps.contains_key(&dep.name_in_toml()) {
-            continue;
+        if dep.is_optional() {
+            let disabled = reqs
+                .deps
+                .get(&dep.name_in_toml())
+                .map(|(weak, _)| {
+                    *weak && !reqs.features.contains(&dep.name_in_toml())
+                })
+                .unwrap_or(true);
+            if disabled {
+                continue;
+            }
         }
         valid_dep_names.insert(dep.name_in_toml());
         // So we want this dependency. Move the features we want from
@@ -319,7 +328,8 @@ pub fn resolve_features<'b>(
             .deps
             .get(&dep.name_in_toml())
             .unwrap_or(&default_dep)
-            .clone();
+            .clone()
+            .1;
         base.extend(dep.features().iter());
         ret.push((dep.clone(), Rc::new(base)));
     }
@@ -400,11 +410,11 @@ fn build_requirements<'a, 'b: 'a>(
 #[derive(Debug)]
 struct Requirements<'a> {
     summary: &'a Summary,
-    /// The deps map is a mapping of dependency name to list of features enabled.
+    /// The deps map is a mapping of dependency name to (weak, list of features enabled).
     ///
-    /// The resolver will activate all of these dependencies, with the given
-    /// features enabled.
-    deps: HashMap<InternedString, BTreeSet<InternedString>>,
+    /// Non-weak deps will all be activated, while for weak deps the
+    /// corresponding feature needs to be enabled first.
+    deps: HashMap<InternedString, (bool, BTreeSet<InternedString>)>,
     /// The set of features enabled on this package which is later used when
     /// compiling to instruct the code what features were enabled.
     features: HashSet<InternedString>,
@@ -457,7 +467,16 @@ impl Requirements<'_> {
         {
             self.require_feature(package)?;
         }
-        self.deps.entry(package).or_default().insert(feat);
+
+        let dep = self
+            .deps
+            .entry(package)
+            .or_insert_with(|| (weak, BTreeSet::new()));
+        // If the feature is non-weak, mark the entire dep as non-weak.
+        dep.0 &= weak;
+        // Add the feature as to be enabled.
+        dep.1.insert(feat);
+
         Ok(())
     }
 
@@ -494,9 +513,6 @@ impl Requirements<'_> {
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                // Weak features are always activated in the dependency
-                // resolver. They will be narrowed inside the new feature
-                // resolver.
                 weak,
             } => self.require_dep_feature(*dep_name, *dep_feature, *weak)?,
         };
