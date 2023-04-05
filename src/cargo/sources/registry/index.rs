@@ -360,15 +360,15 @@ impl<'cfg> RegistryIndex<'cfg> {
             .chars()
             .flat_map(|c| c.to_lowercase())
             .collect::<String>();
-        let raw_path = make_dep_path(&fs_name, false);
 
         let mut any_pending = false;
         // Attempt to handle misspellings by searching for a chain of related
-        // names to the original `raw_path` name. Only return summaries
+        // names to the original `fs_name` name. Only return summaries
         // associated with the first hit, however. The resolver will later
         // reject any candidates that have the wrong name, and with this it'll
         // along the way produce helpful "did you mean?" suggestions.
-        for (i, path) in UncanonicalizedIter::new(&raw_path).take(1024).enumerate() {
+        for (i, name_permutation) in UncanonicalizedIter::new(&fs_name).take(1024).enumerate() {
+            let path = make_dep_path(&name_permutation, false);
             let summaries = Summaries::parse(
                 root,
                 &cache_root,
