@@ -4,14 +4,14 @@ use cargo::core::SourceId;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{
-    self, registry_path, Dependency, Package, RegistryBuilder, TestRegistry,
+    self, registry_path, Dependency, Package, RegistryBuilder, Response, TestRegistry,
 };
 use cargo_test_support::{basic_manifest, project};
 use cargo_test_support::{git, install::cargo_home, t};
 use cargo_util::paths::remove_dir_all;
 use std::fs::{self, File};
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 fn setup_http() -> TestRegistry {
     RegistryBuilder::new().http_index().build()
@@ -2910,4 +2910,61 @@ fn corrupted_ok_overwritten() {
     assert_eq!(fs::read_to_string(&ok).unwrap(), "");
     p.cargo("fetch").with_stderr("").run();
     assert_eq!(fs::read_to_string(&ok).unwrap(), "ok");
+}
+
+#[cargo_test]
+fn not_found_permutations() {
+    // Test for querying permutations for a missing dependency.
+    let misses = Arc::new(Mutex::new(Vec::new()));
+    let misses2 = misses.clone();
+    let _registry = RegistryBuilder::new()
+        .http_index()
+        .not_found_handler(move |req, _server| {
+            let mut misses = misses2.lock().unwrap();
+            misses.push(req.url.path().to_string());
+            Response {
+                code: 404,
+                headers: vec![],
+                body: b"not found".to_vec(),
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                a-b-c = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+error: no matching package named `a-b-c` found
+location searched: registry `crates-io`
+required by package `foo v0.0.1 ([ROOT]/foo)`
+",
+        )
+        .run();
+    let misses = misses.lock().unwrap();
+    assert_eq!(
+        &*misses,
+        &[
+            "/index/a-/b-/a-b-c",
+            "/index/a_/b-/a_b-c",
+            "/index/a-/b_/a-b_c",
+            "/index/a_/b_/a_b_c"
+        ]
+    );
 }

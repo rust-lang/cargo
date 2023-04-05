@@ -78,6 +78,8 @@ impl Token {
     }
 }
 
+type RequestCallback = Box<dyn Send + Fn(&Request, &HttpServer) -> Response>;
+
 /// A builder for initializing registries.
 pub struct RegistryBuilder {
     /// If set, configures an alternate registry with the given name.
@@ -97,7 +99,9 @@ pub struct RegistryBuilder {
     /// Write the registry in configuration.
     configure_registry: bool,
     /// API responders.
-    custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
+    custom_responders: HashMap<String, RequestCallback>,
+    /// Handler for 404 responses.
+    not_found_handler: RequestCallback,
 }
 
 pub struct TestRegistry {
@@ -147,6 +151,13 @@ impl TestRegistry {
 impl RegistryBuilder {
     #[must_use]
     pub fn new() -> RegistryBuilder {
+        let not_found = |_req: &Request, _server: &HttpServer| -> Response {
+            Response {
+                code: 404,
+                headers: vec![],
+                body: b"not found".to_vec(),
+            }
+        };
         RegistryBuilder {
             alternative: None,
             token: None,
@@ -157,6 +168,7 @@ impl RegistryBuilder {
             configure_registry: true,
             configure_token: true,
             custom_responders: HashMap::new(),
+            not_found_handler: Box::new(not_found),
         }
     }
 
@@ -164,10 +176,20 @@ impl RegistryBuilder {
     #[must_use]
     pub fn add_responder<R: 'static + Send + Fn(&Request, &HttpServer) -> Response>(
         mut self,
-        url: &'static str,
+        url: impl Into<String>,
         responder: R,
     ) -> Self {
-        self.custom_responders.insert(url, Box::new(responder));
+        self.custom_responders
+            .insert(url.into(), Box::new(responder));
+        self
+    }
+
+    #[must_use]
+    pub fn not_found_handler<R: 'static + Send + Fn(&Request, &HttpServer) -> Response>(
+        mut self,
+        responder: R,
+    ) -> Self {
+        self.not_found_handler = Box::new(responder);
         self
     }
 
@@ -265,6 +287,7 @@ impl RegistryBuilder {
                 token.clone(),
                 self.auth_required,
                 self.custom_responders,
+                self.not_found_handler,
             );
             let index_url = if self.http_index {
                 server.index_url()
@@ -590,7 +613,8 @@ pub struct HttpServer {
     addr: SocketAddr,
     token: Token,
     auth_required: bool,
-    custom_responders: HashMap<&'static str, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
+    custom_responders: HashMap<String, RequestCallback>,
+    not_found_handler: RequestCallback,
 }
 
 /// A helper struct that collects the arguments for [HttpServer::check_authorized].
@@ -609,10 +633,8 @@ impl HttpServer {
         api_path: PathBuf,
         token: Token,
         auth_required: bool,
-        api_responders: HashMap<
-            &'static str,
-            Box<dyn Send + Fn(&Request, &HttpServer) -> Response>,
-        >,
+        custom_responders: HashMap<String, RequestCallback>,
+        not_found_handler: RequestCallback,
     ) -> HttpServerHandle {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
@@ -624,7 +646,8 @@ impl HttpServer {
             addr,
             token,
             auth_required,
-            custom_responders: api_responders,
+            custom_responders,
+            not_found_handler,
         };
         let handle = Some(thread::spawn(move || server.start()));
         HttpServerHandle { addr, handle }
@@ -916,12 +939,8 @@ impl HttpServer {
     }
 
     /// Not found response
-    pub fn not_found(&self, _req: &Request) -> Response {
-        Response {
-            code: 404,
-            headers: vec![],
-            body: b"not found".to_vec(),
-        }
+    pub fn not_found(&self, req: &Request) -> Response {
+        (self.not_found_handler)(req, self)
     }
 
     /// Respond OK without doing anything
