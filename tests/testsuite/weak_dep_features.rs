@@ -631,3 +631,179 @@ feat2 = ["bar?/feat"]
         )],
     );
 }
+
+#[cargo_test]
+fn disabled_weak_direct_dep() {
+    // Issue #10801
+    // A weak direct dependency should be included in Cargo.lock,
+    // even if disabled, and even if on lockfile version 4.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { version = "1.0", optional = true }
+
+                [features]
+                f1 = ["bar?/feat"]
+            "#,
+        )
+        .file("src/lib.rs", &require(&["f1"], &[]))
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 3"#),
+        "lockfile version is not 3!\n{lockfile}",
+    );
+    // Previous behavior: bar is inside lockfile.
+    assert!(
+        lockfile.contains(r#"name = "bar""#),
+        "bar not found\n{lockfile}",
+    );
+
+    // Update to new lockfile version
+    let new_lockfile = lockfile.replace("version = 3", "version = 4");
+    p.change_file("Cargo.lock", &new_lockfile);
+
+    p.cargo("check --features f1")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // New behavior: bar is still there because it is a direct (optional) dependency.
+    assert!(
+        lockfile.contains(r#"name = "bar""#),
+        "bar not found\n{lockfile}",
+    );
+
+    p.cargo("check --features f1,bar")
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 [..]
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn disabled_weak_optional_deps() {
+    // Issue #10801
+    // A weak dependency of a dependency should not be included in Cargo.lock,
+    // at least on lockfile version 4.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    Package::new("dep", "1.0.0")
+        .add_dep(Dependency::new("bar", "1.0").optional(true))
+        .feature("feat", &["bar?/feat"])
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                dep = { version = "1.0", features = ["feat"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    let lockfile = p.read_lockfile();
+
+    assert!(
+        lockfile.contains(r#"version = 3"#),
+        "lockfile version is not 3!\n{lockfile}",
+    );
+    // Previous behavior: bar is inside lockfile.
+    assert!(
+        lockfile.contains(r#"name = "bar""#),
+        "bar not found\n{lockfile}",
+    );
+
+    // Update to new lockfile version
+    let new_lockfile = lockfile.replace("version = 3", "version = 4");
+    p.change_file("Cargo.lock", &new_lockfile);
+
+    // Note how we are not downloading bar here
+    p.cargo("check")
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v1.0.0 [..]
+[CHECKING] dep v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // New behavior: bar is gone.
+    assert!(
+        !lockfile.contains(r#"name = "bar""#),
+        "bar inside lockfile!\n{lockfile}",
+    );
+
+    // Note how we are not downloading bar here
+    p.cargo("check --features dep/bar")
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 [..]
+[CHECKING] bar v1.0.0
+[CHECKING] dep v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // bar is still not there, even if dep/bar is enabled on the command line.
+    // This might be unintuitive, but it matches what happens on lock version 3
+    // if there was no optional feat = bar?/feat feature in bar.
+    assert!(
+        !lockfile.contains(r#"name = "bar""#),
+        "bar inside lockfile!\n{lockfile}",
+    );
+}
