@@ -2566,6 +2566,8 @@ fn wait_for_first_publish_underscore() {
     // Counter for number of tries before the package is "published"
     let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
     let arc2 = arc.clone();
+    let misses = Arc::new(Mutex::new(Vec::new()));
+    let misses2 = misses.clone();
 
     // Registry returns an invalid response.
     let registry = registry::RegistryBuilder::new()
@@ -2578,6 +2580,14 @@ fn wait_for_first_publish_underscore() {
                 server.not_found(req)
             } else {
                 server.index(req)
+            }
+        })
+        .not_found_handler(move |req, _| {
+            misses.lock().unwrap().push(req.url.to_string());
+            Response {
+                body: b"not found".to_vec(),
+                code: 404,
+                headers: vec![],
             }
         })
         .build();
@@ -2621,6 +2631,13 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
     let lock = arc2.lock().unwrap();
     assert_eq!(*lock, 2);
     drop(lock);
+    {
+        let misses = misses2.lock().unwrap();
+        assert!(
+            misses.len() == 1,
+            "should only have 1 not found URL; instead found {misses:?}"
+        );
+    }
 
     let p = project()
         .file(
