@@ -592,7 +592,7 @@ fn run_bins() {
             "\
 error: unexpected argument '--bins' found
 
-  note: argument '--bin' exists",
+  tip: a similar argument exists: '--bin'",
         )
         .run();
 }

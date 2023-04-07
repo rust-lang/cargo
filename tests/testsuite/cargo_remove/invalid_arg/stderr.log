@@ -1,6 +1,6 @@
 error: unexpected argument '--flag' found
 
-  note: to pass '--flag' as a value, use '-- --flag'
+  tip: to pass '--flag' as a value, use '-- --flag'
 
 Usage: cargo[EXE] remove <DEP_ID>...
 
