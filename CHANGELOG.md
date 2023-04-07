@@ -70,7 +70,7 @@
 - Added `-C` flag for changing current dir before build starts.
   [#10952](https://github.com/rust-lang/cargo/pull/10952)
 - Cargo now suggests `cargo fix` or `cargo clippy --fix`
-  when compilation warnings/errors are auto-fixable.
+  when compilation warnings are auto-fixable.
   [#11558](https://github.com/rust-lang/cargo/pull/11558)
 - Cargo now suggests `cargo add` if you try to install a library crate.
   [#11410](https://github.com/rust-lang/cargo/pull/11410)
