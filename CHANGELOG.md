@@ -83,7 +83,7 @@
   and an inherited dependency of a member has `default-features = true`,
   Cargo will enable default features of that dependency.
   [#11409](https://github.com/rust-lang/cargo/pull/11409)
-- ❗ Deny `CARGO_HOME` in `[env]` configuration stable. Cargo itself doesn't
+- ❗ Deny `CARGO_HOME` in `[env]` configuration table. Cargo itself doesn't
   pick up this value, but recursive calls to cargo will. We consider it as a
   wrong behavior to only pass it to recursive invocations.
   [#11644](https://github.com/rust-lang/cargo/pull/11644)
