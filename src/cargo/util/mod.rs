@@ -157,7 +157,7 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
             return Err(Error::new(ErrorKind::NotFound, "the path was not found"));
         }
 
-        // This code is based on the unstable `std::path::aboslute` and could be replaced with it
+        // This code is based on the unstable `std::path::absolute` and could be replaced with it
         // if it's stabilized.
 
         let path = path.as_ref().as_os_str();
