@@ -1664,6 +1664,11 @@ impl Config {
                 //
                 // First, we must be running under rustup in the first place.
                 let toolchain = self.get_env_os("RUSTUP_TOOLCHAIN")?;
+                // This currently does not support toolchain paths.
+                // This also enforces UTF-8.
+                if toolchain.to_str()?.contains(&['/', '\\']) {
+                    return None;
+                }
                 // If the tool on PATH is the same as `rustup` on path, then
                 // there is pretty good evidence that it will be a proxy.
                 let tool_resolved = paths::resolve_executable(Path::new(tool)).ok()?;
