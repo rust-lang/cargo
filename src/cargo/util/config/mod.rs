@@ -1643,6 +1643,11 @@ impl Config {
     /// Looks for a path for `tool` in an environment variable or config path, defaulting to `tool`
     /// as a path.
     fn get_tool(&self, tool: &str, from_config: &Option<ConfigRelativePath>) -> PathBuf {
+        // This function is designed to only work with rustup proxies. This
+        // assert is to ensure that if it is ever used for something else in
+        // the future that you must ensure that it is a proxy-able tool, or if
+        // not then you need to use `maybe_get_tool` instead.
+        assert!(matches!(tool, "rustc" | "rustdoc"));
         self.maybe_get_tool(tool, from_config)
             .or_else(|| {
                 // This is an optimization to circumvent the rustup proxies
