@@ -368,3 +368,35 @@ fn login_with_generate_asymmetric_token() {
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert!(credentials.contains("secret-key = \"k3.secret."));
 }
+
+#[cargo_test]
+fn default_registry_configured() {
+    // When registry.default is set, login should use that one when
+    // --registry is not used.
+    let cargo_home = paths::home().join(".cargo");
+    cargo_home.mkdir_p();
+    cargo_util::paths::write(
+        &cargo_home.join("config.toml"),
+        r#"
+            [registry]
+            default = "dummy-registry"
+
+            [registries.dummy-registry]
+            index = "https://127.0.0.1/index"
+        "#,
+    )
+    .unwrap();
+
+    cargo_process("login")
+        .arg("a-new-token")
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[LOGIN] token for `crates.io` saved
+",
+        )
+        .run();
+
+    check_token(Some("a-new-token"), None);
+    check_token(None, Some("alternative"));
+}

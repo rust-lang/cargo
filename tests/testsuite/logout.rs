@@ -1,6 +1,7 @@
 //! Tests for the `cargo logout` command.
 
 use super::login::check_token;
+use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::TestRegistry;
 use cargo_test_support::{cargo_process, registry};
 
@@ -51,7 +52,7 @@ If you need to revoke the token, visit {note} and follow the instructions there.
 }
 
 #[cargo_test]
-fn default_registry() {
+fn default_registry_unconfigured() {
     let registry = registry::init();
     simple_logout_test(&registry, None, "", "<https://crates.io/me>");
 }
@@ -67,4 +68,55 @@ fn other_registry() {
     );
     // It should not touch crates.io.
     check_token(Some("sekrit"), None);
+}
+
+#[cargo_test]
+fn default_registry_configured() {
+    // When registry.default is set, logout should use that one when
+    // --registry is not used.
+    let cargo_home = paths::home().join(".cargo");
+    cargo_home.mkdir_p();
+    cargo_util::paths::write(
+        &cargo_home.join("config.toml"),
+        r#"
+            [registry]
+            default = "dummy-registry"
+
+            [registries.dummy-registry]
+            index = "https://127.0.0.1/index"
+        "#,
+    )
+    .unwrap();
+    cargo_util::paths::write(
+        &cargo_home.join("credentials.toml"),
+        r#"
+        [registry]
+        token = "crates-io-token"
+
+        [registries.dummy-registry]
+        token = "dummy-token"
+        "#,
+    )
+    .unwrap();
+    check_token(Some("dummy-token"), Some("dummy-registry"));
+    check_token(Some("crates-io-token"), None);
+
+    cargo_process("logout -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["cargo-logout"])
+        .with_stderr(
+            "\
+[LOGOUT] token for `crates-io` has been removed from local storage
+[NOTE] This does not revoke the token on the registry server.
+    If you need to revoke the token, visit <https://crates.io/me> \
+    and follow the instructions there.
+",
+        )
+        .run();
+    check_token(Some("dummy-token"), Some("dummy-registry"));
+    check_token(None, None);
+
+    cargo_process("logout -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["cargo-logout"])
+        .with_stderr("[LOGOUT] not currently logged in to `crates-io`")
+        .run();
 }
