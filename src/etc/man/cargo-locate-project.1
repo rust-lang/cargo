@@ -104,7 +104,8 @@ See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/
 .RS 4
 Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
-the directories searched for discovering \fB\&.cargo/config.toml\fR, for example.
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
 .RE
 .sp
 \fB\-h\fR, 
