@@ -219,6 +219,15 @@ impl Registry {
         self.token = token;
     }
 
+    fn token(&self) -> Result<&str> {
+        let token = match self.token.as_ref() {
+            Some(s) => s,
+            None => bail!("no upload token found, please run `cargo login`"),
+        };
+        check_token(token)?;
+        Ok(token)
+    }
+
     pub fn host(&self) -> &str {
         &self.host
     }
@@ -278,16 +287,12 @@ impl Registry {
 
         let url = format!("{}/api/v1/crates/new", self.host);
 
-        let token = match self.token.as_ref() {
-            Some(s) => s,
-            None => bail!("no upload token found, please run `cargo login`"),
-        };
         self.handle.put(true)?;
         self.handle.url(&url)?;
         self.handle.in_filesize(size as u64)?;
         let mut headers = List::new();
         headers.append("Accept: application/json")?;
-        headers.append(&format!("Authorization: {}", token))?;
+        headers.append(&format!("Authorization: {}", self.token()?))?;
         self.handle.http_headers(headers)?;
 
         let started = Instant::now();
@@ -390,12 +395,7 @@ impl Registry {
         headers.append("Content-Type: application/json")?;
 
         if self.auth_required || authorized == Auth::Authorized {
-            let token = match self.token.as_ref() {
-                Some(s) => s,
-                None => bail!("no upload token found, please run `cargo login`"),
-            };
-            check_token(token)?;
-            headers.append(&format!("Authorization: {}", token))?;
+            headers.append(&format!("Authorization: {}", self.token()?))?;
         }
         self.handle.http_headers(headers)?;
         match body {

@@ -2908,3 +2908,44 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 
     p.cargo("check").with_status(0).run();
 }
+
+#[cargo_test]
+fn invalid_token() {
+    // Checks publish behavior with an invalid token.
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .env("CARGO_REGISTRY_TOKEN", "\x16")
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [..]
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+error: failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  token contains invalid characters.
+  Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.
+",
+        )
+        .with_status(101)
+        .run();
+}
