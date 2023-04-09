@@ -405,7 +405,9 @@ OPTIONS
            Changes the current working directory before executing any specified
            operations. This affects things like where cargo looks by default
            for the project manifest (Cargo.toml), as well as the directories
-           searched for discovering .cargo/config.toml, for example.
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
 
        -h, --help
            Prints help information.
