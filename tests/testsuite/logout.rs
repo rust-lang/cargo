@@ -105,18 +105,18 @@ fn default_registry_configured() {
         .masquerade_as_nightly_cargo(&["cargo-logout"])
         .with_stderr(
             "\
-[LOGOUT] token for `crates-io` has been removed from local storage
+[LOGOUT] token for `dummy-registry` has been removed from local storage
 [NOTE] This does not revoke the token on the registry server.
-    If you need to revoke the token, visit <https://crates.io/me> \
+    If you need to revoke the token, visit the `dummy-registry` website \
     and follow the instructions there.
 ",
         )
         .run();
-    check_token(Some("dummy-token"), Some("dummy-registry"));
-    check_token(None, None);
+    check_token(None, Some("dummy-registry"));
+    check_token(Some("crates-io-token"), None);
 
     cargo_process("logout -Zunstable-options")
         .masquerade_as_nightly_cargo(&["cargo-logout"])
-        .with_stderr("[LOGOUT] not currently logged in to `crates-io`")
+        .with_stderr("[LOGOUT] not currently logged in to `dummy-registry`")
         .run();
 }

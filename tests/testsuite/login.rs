@@ -373,16 +373,13 @@ fn login_with_generate_asymmetric_token() {
 fn default_registry_configured() {
     // When registry.default is set, login should use that one when
     // --registry is not used.
+    let _alternative = RegistryBuilder::new().alternative().build();
     let cargo_home = paths::home().join(".cargo");
-    cargo_home.mkdir_p();
-    cargo_util::paths::write(
-        &cargo_home.join("config.toml"),
-        r#"
+    cargo_util::paths::append(
+        &cargo_home.join("config"),
+        br#"
             [registry]
-            default = "dummy-registry"
-
-            [registries.dummy-registry]
-            index = "https://127.0.0.1/index"
+            default = "alternative"
         "#,
     )
     .unwrap();
@@ -391,12 +388,12 @@ fn default_registry_configured() {
         .arg("a-new-token")
         .with_stderr(
             "\
-[UPDATING] crates.io index
-[LOGIN] token for `crates.io` saved
+[UPDATING] `alternative` index
+[LOGIN] token for `alternative` saved
 ",
         )
         .run();
 
-    check_token(Some("a-new-token"), None);
-    check_token(None, Some("alternative"));
+    check_token(None, None);
+    check_token(Some("a-new-token"), Some("alternative"));
 }
