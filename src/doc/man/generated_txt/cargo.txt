@@ -95,6 +95,9 @@ COMMANDS
        cargo-login(1)
            Save an API token from the registry locally.
 
+       cargo-logout(1)
+           Remove an API token from the registry locally.
+
        cargo-owner(1)
            Manage the owners of a crate on the registry.
 

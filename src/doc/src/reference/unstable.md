@@ -101,7 +101,6 @@ Each new feature described below should explain how to use it.
     * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
 * Registries
     * [credential-process](#credential-process) --- Adds support for fetching registry tokens from an external authentication program.
-    * [`cargo logout`](#cargo-logout) --- Adds the `logout` command to remove the currently saved registry token.
     * [publish-timeout](#publish-timeout) --- Controls the timeout between uploading the crate and being available in the index
     * [registry-auth](#registry-auth) --- Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
 * Other
@@ -905,12 +904,11 @@ The `credential-process` feature adds a config setting to fetch registry
 authentication tokens by calling an external process.
 
 Token authentication is used by the [`cargo login`], [`cargo publish`],
-[`cargo owner`], and [`cargo yank`] commands. Additionally, this feature adds
-a new `cargo logout` command.
+[`cargo owner`], [`cargo yank`], and [`cargo logout`] commands.
 
 To use this feature, you must pass the `-Z credential-process` flag on the
 command-line. Additionally, you must remove any current tokens currently saved
-in the [`credentials.toml` file] (which can be done with the new `logout` command).
+in the [`credentials.toml` file] (which can be done with the [`cargo logout`] command).
 
 #### `credential-process` Configuration
 
@@ -999,7 +997,7 @@ A basic authenticator is a process that returns a token on stdout. Newlines
 will be trimmed. The process inherits the user's stdin and stderr. It should
 exit 0 on success, and nonzero on error.
 
-With this form, [`cargo login`] and `cargo logout` are not supported and
+With this form, [`cargo login`] and [`cargo logout`] are not supported and
 return an error if used.
 
 ##### Cargo authenticator
@@ -1044,28 +1042,8 @@ The following environment variables will be provided to the executed command:
 * `CARGO_REGISTRY_INDEX_URL` --- The URL of the registry index.
 * `CARGO_REGISTRY_NAME_OPT` --- Optional name of the registry. Should not be used as a storage key. Not always available.
 
-#### `cargo logout`
-
-A new `cargo logout` command has been added to make it easier to remove a
-token from storage. This supports both [`credentials.toml` file] tokens and
-`credential-process` tokens.
-
-When used with `credentials.toml` file tokens, it needs the `-Z unstable-options`
-command-line option:
-
-```console
-cargo logout -Z unstable-options
-```
-
-When used with the `credential-process` config, use the `-Z
-credential-process` command-line option:
-
-
-```console
-cargo logout -Z credential-process
-```
-
 [`cargo login`]: ../commands/cargo-login.md
+[`cargo logout`]: ../commands/cargo-logout.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`cargo owner`]: ../commands/cargo-owner.md
 [`cargo yank`]: ../commands/cargo-yank.md
@@ -1487,5 +1465,9 @@ terminal where Cargo can automatically detect the width.
 
 Sparse registry support has been stabilized in the 1.68 release.
 See [Registry Protocols](registries.md#registry-protocols) for more information.
+
+#### `cargo logout`
+
+The [`cargo logout`] command has been stabilized in the 1.70 release.
 
 [target triple]: ../appendix/glossary.md#target '"target" (glossary)'

@@ -296,7 +296,7 @@ Cargo will search `PATH` for its executable.
 
 Configuration values with sensitive information are stored in the
 `$CARGO_HOME/credentials.toml` file. This file is automatically created and updated
-by [`cargo login`]. It follows the same format as Cargo config files.
+by [`cargo login`] and [`cargo logout`]. It follows the same format as Cargo config files.
 
 ```toml
 [registry]
@@ -1193,6 +1193,7 @@ Sets the width for progress bar.
 
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo login`]: ../commands/cargo-login.md
+[`cargo logout`]: ../commands/cargo-logout.md
 [`cargo doc`]: ../commands/cargo-doc.md
 [`cargo new`]: ../commands/cargo-new.md
 [`cargo publish`]: ../commands/cargo-publish.md

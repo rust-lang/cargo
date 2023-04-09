@@ -268,7 +268,7 @@ the credential-process configuration value must pass the \
 
     cargo_process("logout -Z credential-process")
         .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["credential-process", "cargo-logout"])
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\
@@ -377,7 +377,7 @@ fn logout() {
     .unwrap();
 
     cargo_process("logout -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process", "cargo-logout"])
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .replace_crates_io(server.index_url())
         .with_stderr(
             "\

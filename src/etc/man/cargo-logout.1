@@ -1,25 +1,27 @@
 '\" t
-.TH "CARGO\-LOGIN" "1"
+.TH "CARGO\-LOGOUT" "1"
 .nh
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-login \[em] Save an API token from the registry locally
+cargo\-logout \[em] Remove an API token from the registry locally
 .SH "SYNOPSIS"
-\fBcargo login\fR [\fIoptions\fR] [\fItoken\fR]
+\fBcargo logout\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
-This command will save the API token to disk so that commands that require
-authentication, such as \fBcargo\-publish\fR(1), will be automatically
-authenticated. The token is saved in \fB$CARGO_HOME/credentials.toml\fR\&. \fBCARGO_HOME\fR
+This command will remove the API token from the local credential storage.
+Credentials are stored in \fB$CARGO_HOME/credentials.toml\fR where \fB$CARGO_HOME\fR
 defaults to \fB\&.cargo\fR in your home directory.
 .sp
-If the \fItoken\fR argument is not specified, it will be read from stdin.
+If \fB\-\-registry\fR is not specified, then the credentials for the default
+registry will be removed (configured by
+\fI\f(BIregistry.default\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#registrydefault>, which defaults
+to <https://crates.io/>).
 .sp
-The API token for crates.io may be retrieved from <https://crates.io/me>\&.
-.sp
-Take care to keep the token secret, it should not be shared with anyone else.
+This will not revoke the token on the server. If you need to revoke the token,
+visit the registry website and follow its instructions (see
+<https://crates.io/me> to revoke the token for <https://crates.io/>).
 .SH "OPTIONS"
-.SS "Login Options"
+.SS "Logout Options"
 .sp
 \fB\-\-registry\fR \fIregistry\fR
 .RS 4
@@ -123,13 +125,23 @@ details on environment variables that Cargo reads.
 .SH "EXAMPLES"
 .sp
 .RS 4
-\h'-04' 1.\h'+01'Save the API token to disk:
+\h'-04' 1.\h'+01'Remove the default registry token:
 .sp
 .RS 4
 .nf
-cargo login
+cargo logout
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Remove the token for a specific registry:
+.sp
+.RS 4
+.nf
+cargo logout \-\-registry my\-registry
 .fi
 .RE
 .RE
 .SH "SEE ALSO"
-\fBcargo\fR(1), \fBcargo\-logout\fR(1), \fBcargo\-publish\fR(1)
+\fBcargo\fR(1), \fBcargo\-login\fR(1)

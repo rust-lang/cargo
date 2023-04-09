@@ -1,27 +1,27 @@
-CARGO-LOGIN(1)
+CARGO-LOGOUT(1)
 
 NAME
-       cargo-login — Save an API token from the registry locally
+       cargo-logout — Remove an API token from the registry locally
 
 SYNOPSIS
-       cargo login [options] [token]
+       cargo logout [options]
 
 DESCRIPTION
-       This command will save the API token to disk so that commands that
-       require authentication, such as cargo-publish(1), will be automatically
-       authenticated. The token is saved in $CARGO_HOME/credentials.toml.
-       CARGO_HOME defaults to .cargo in your home directory.
+       This command will remove the API token from the local credential
+       storage. Credentials are stored in $CARGO_HOME/credentials.toml where
+       $CARGO_HOME defaults to .cargo in your home directory.
 
-       If the token argument is not specified, it will be read from stdin.
+       If --registry is not specified, then the credentials for the default
+       registry will be removed (configured by registry.default
+       <https://doc.rust-lang.org/cargo/reference/config.html#registrydefault>,
+       which defaults to <https://crates.io/>).
 
-       The API token for crates.io may be retrieved from
-       <https://crates.io/me>.
-
-       Take care to keep the token secret, it should not be shared with anyone
-       else.
+       This will not revoke the token on the server. If you need to revoke the
+       token, visit the registry website and follow its instructions (see
+       <https://crates.io/me> to revoke the token for <https://crates.io/>).
 
 OPTIONS
-   Login Options
+   Logout Options
        --registry registry
            Name of the registry to use. Registry names are defined in Cargo
            config files
@@ -102,10 +102,14 @@ EXIT STATUS
        o  101: Cargo failed to complete.
 
 EXAMPLES
-       1. Save the API token to disk:
+       1. Remove the default registry token:
 
-              cargo login
+              cargo logout
+
+       2. Remove the token for a specific registry:
+
+              cargo logout --registry my-registry
 
 SEE ALSO
-       cargo(1), cargo-logout(1), cargo-publish(1)
+       cargo(1), cargo-login(1)
 

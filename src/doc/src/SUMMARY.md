@@ -82,6 +82,7 @@
         * [cargo uninstall](commands/cargo-uninstall.md)
     * [Publishing Commands](commands/publishing-commands.md)
         * [cargo login](commands/cargo-login.md)
+        * [cargo logout](commands/cargo-logout.md)
         * [cargo owner](commands/cargo-owner.md)
         * [cargo package](commands/cargo-package.md)
         * [cargo publish](commands/cargo-publish.md)
