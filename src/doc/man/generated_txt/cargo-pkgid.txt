@@ -36,7 +36,7 @@ DESCRIPTION
        |                 | https://github.com/rust-lang/crates.io-index#bitflags |
        +-----------------+--------------------------------------------------+
        |                 |                                                  |
-       | url#name:version | https://github.com/rust-lang/cargo#crates-io@0.21.0 |
+       | url#name@version | https://github.com/rust-lang/cargo#crates-io@0.21.0 |
        +-----------------+--------------------------------------------------+
 
 OPTIONS
