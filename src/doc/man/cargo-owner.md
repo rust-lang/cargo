@@ -6,9 +6,9 @@ cargo-owner --- Manage the owners of a crate on the registry
 
 ## SYNOPSIS
 
-`cargo owner` [_options_] `add` _login_ [_crate_]\
-`cargo owner` [_options_] `remove` _login_ [_crate_]\
-`cargo owner` [_options_] `list` [_crate_]
+`cargo owner` `add` _login_ [_crate_] [_options_]\
+`cargo owner` `remove` _login_ [_crate_] [_options_]\
+`cargo owner` `list` [_crate_] [_options_]
 
 ## DESCRIPTION
 

@@ -4,9 +4,9 @@ NAME
        cargo-owner — Manage the owners of a crate on the registry
 
 SYNOPSIS
-       cargo owner [options] add login [crate]
-       cargo owner [options] remove login [crate]
-       cargo owner [options] list [crate]
+       cargo owner add login [crate] [options]
+       cargo owner remove login [crate] [options]
+       cargo owner list [crate] [options]
 
 DESCRIPTION
        This command will modify the owners for a crate on the registry. Owners

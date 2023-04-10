@@ -39,17 +39,14 @@ fn no_subcommand_return_help() {
             "\
 Manage the owners of a crate on the registry
 
-Usage: cargo owner [OPTIONS] add    <OWNER_NAME> [CRATE_NAME]
-       cargo owner [OPTIONS] remove <OWNER_NAME> [CRATE_NAME]
-       cargo owner [OPTIONS] list   [CRATE_NAME]
+Usage: cargo owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
+       cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
+       cargo owner list   [CRATE_NAME] [OPTIONS]
 
 Commands:
   add     Name of a user or team to invite as an owner
   remove  Name of a user or team to remove as an owner
   list    List owners of a crate
-
-Arguments:
-  [crate]  
 
 Options:
   -q, --quiet                Do not print cargo log messages
@@ -220,7 +217,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn simple_add_with_asymmetric() {
+fn simple_flag_add_with_asymmetric() {
     let registry = registry::RegistryBuilder::new()
         .http_api()
         .token(cargo_test_support::registry::Token::rfc_key())
@@ -244,15 +241,45 @@ fn simple_add_with_asymmetric() {
 
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
-    let commands = ["-a", "--add", "add"];
-    for command in commands.iter() {
-        p.cargo(&format!("owner {} username", command))
-            .arg("-Zregistry-auth")
-            .masquerade_as_nightly_cargo(&["registry-auth"])
-            .replace_crates_io(registry.index_url())
-            .with_status(0)
-            .run();
-    }
+    p.cargo("owner --add username")
+        .arg("-Zregistry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .with_status(0)
+        .run();
+}
+
+#[cargo_test]
+fn simple_subcommand_add_with_asymmetric() {
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .token(cargo_test_support::registry::Token::rfc_key())
+        .build();
+    setup("foo", None);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // The http_api server will check that the authorization is correct.
+    // If the authorization was not sent then we would get an unauthorized error.
+    p.cargo("owner add username")
+        .arg("-Zregistry-auth")
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .with_status(0)
+        .run();
 }
 
 #[cargo_test]
@@ -293,7 +320,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn simple_remove_with_asymmetric() {
+fn simple_flag_remove_with_asymmetric() {
     let registry = registry::RegistryBuilder::new()
         .http_api()
         .token(cargo_test_support::registry::Token::rfc_key())
@@ -317,13 +344,43 @@ fn simple_remove_with_asymmetric() {
 
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
-    let commands = ["-r", "--remove", "remove"];
-    for command in commands.iter() {
-        p.cargo(&format!("owner {} username", command))
-            .arg("-Zregistry-auth")
-            .replace_crates_io(registry.index_url())
-            .masquerade_as_nightly_cargo(&["registry-auth"])
-            .with_status(0)
-            .run();
-    }
+    p.cargo("owner --remove username")
+        .arg("-Zregistry-auth")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .with_status(0)
+        .run();
+}
+
+#[cargo_test]
+fn simple_subcommand_remove_with_asymmetric() {
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .token(cargo_test_support::registry::Token::rfc_key())
+        .build();
+    setup("foo", None);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // The http_api server will check that the authorization is correct.
+    // If the authorization was not sent then we would get an unauthorized error.
+    p.cargo("owner remove username")
+        .arg("-Zregistry-auth")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .with_status(0)
+        .run();
 }
