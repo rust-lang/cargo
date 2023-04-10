@@ -522,10 +522,11 @@ pub fn check_token(token: &str) -> Result<()> {
         bail!("please provide a non-empty token");
     }
     if token.bytes().all(|b| {
-        b >= 32 // undefined in ISO-8859-1, in ASCII/ UTF-8 not-printable character
-        && b < 128 // utf-8: the first bit signals a multi-byte character
-        && b != 127 // 127 is a control character in ascii and not in ISO 8859-1
-        || b == b't' // tab is also allowed (even when < 32)
+        // This is essentially the US-ASCII limitation of
+        // https://www.rfc-editor.org/rfc/rfc9110#name-field-values. That is,
+        // visible ASCII characters (0x21-0x7e), space, and tab. We want to be
+        // able to pass this in an HTTP header without encoding.
+        b >= 32 && b < 127 || b == b'\t'
     }) {
         Ok(())
     } else {

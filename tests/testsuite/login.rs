@@ -134,40 +134,45 @@ fn invalid_login_token() {
         .build();
     setup_new_credentials();
 
-    let check = |stdin: &str, stderr: &str| {
+    let check = |stdin: &str, stderr: &str, status: i32| {
         cargo_process("login")
             .replace_crates_io(registry.index_url())
             .with_stdout("please paste the token found on [..]/me below")
             .with_stdin(stdin)
             .with_stderr(stderr)
-            .with_status(101)
+            .with_status(status)
             .run();
     };
 
+    let invalid = |stdin: &str| {
+        check(
+            stdin,
+            "[ERROR] token contains invalid characters.
+Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+            101,
+        )
+    };
+    let valid = |stdin: &str| check(stdin, "[LOGIN] token for `crates.io` saved", 0);
+
+    // Update config.json so that the rest of the tests don't need to care
+    // whether or not `Updating` is printed.
     check(
-        "😄",
+        "test",
         "\
 [UPDATING] crates.io index
-[ERROR] token contains invalid characters.
-Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+[LOGIN] token for `crates.io` saved
+",
+        0,
     );
-    check(
-        "\u{0016}",
-        "\
-[ERROR] token contains invalid characters.
-Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
-    );
-    check(
-        "\u{0000}",
-        "\
-[ERROR] token contains invalid characters.
-Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
-    );
-    check(
-        "你好",
-        "\
-[ERROR] token contains invalid characters.
-Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+
+    invalid("😄");
+    invalid("\u{0016}");
+    invalid("\u{0000}");
+    invalid("你好");
+    valid("foo\tbar");
+    valid("foo bar");
+    valid(
+        r##"!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~"##,
     );
 }
 
