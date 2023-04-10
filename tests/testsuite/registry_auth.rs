@@ -1,4 +1,4 @@
-//! Tests for normal registry dependencies.
+//! Tests for registry authentication.
 
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{project, Execs, Project};
