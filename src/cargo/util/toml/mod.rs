@@ -510,6 +510,9 @@ impl<'de> de::Deserialize<'de> for TomlDebugInfo {
                 E: de::Error,
             {
                 let debuginfo = match value {
+                    "none" => TomlDebugInfo::None,
+                    "limited" => TomlDebugInfo::Limited,
+                    "full" => TomlDebugInfo::Full,
                     "line-directives-only" => TomlDebugInfo::LineDirectivesOnly,
                     "line-tables-only" => TomlDebugInfo::LineTablesOnly,
                     _ => return Err(de::Error::invalid_value(Unexpected::Str(value), &self)),
