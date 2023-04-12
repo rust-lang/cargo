@@ -31,6 +31,23 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
     // This must be completed before config is initialized
     assert_eq!(config.is_init(), false);
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
+        // This is a temporary hack. This cannot access `Config`, so this is a bit messy.
+        // This does not properly parse `-Z` flags that appear after the subcommand.
+        // The error message is not as helpful as the standard one.
+        let nightly_features_allowed = matches!(&*features::channel(), "nightly" | "dev");
+        if !nightly_features_allowed
+            || (nightly_features_allowed
+                && !args
+                    .get_many("unstable-features")
+                    .map(|mut z| z.any(|value: &String| value == "unstable-options"))
+                    .unwrap_or(false))
+        {
+            return Err(anyhow::format_err!(
+                "the `-C` flag is unstable, \
+                 pass `-Z unstable-options` on the nightly channel to enable it"
+            )
+            .into());
+        }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
     }
 
@@ -476,7 +493,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
         )
         .arg(
             Arg::new("directory")
-                .help("Change to DIRECTORY before doing anything")
+                .help("Change to DIRECTORY before doing anything (nightly-only)")
                 .short('C')
                 .value_name("DIRECTORY")
                 .value_hint(clap::ValueHint::DirPath)

@@ -6,6 +6,7 @@ use cargo_test_support::Project;
 use crate::cargo_remove::init_registry;
 
 #[cargo_test]
+#[ignore = "temporarily disabled for beta due to clap update"]
 fn case() {
     init_registry();
     let project = Project::from_template(curr_dir!().join("in"));

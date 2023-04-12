@@ -4,6 +4,7 @@ use cargo_test_support::prelude::*;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
+#[ignore = "temporarily disabled for beta due to clap update"]
 fn case() {
     snapbox::cmd::Command::cargo_ui()
         .arg_line("init foo --flag")
