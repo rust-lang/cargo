@@ -1,45 +1,96 @@
-use std::cmp;
+use std::{cmp, mem};
 
-pub fn lev_distance(me: &str, t: &str) -> usize {
+/// Finds the [edit distance] between two strings.
+///
+/// Returns `None` if the distance exceeds the limit.
+///
+/// [edit distance]: https://en.wikipedia.org/wiki/Edit_distance
+pub fn lev_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
     // Comparing the strings lowercased will result in a difference in capitalization being less distance away
     // than being a completely different letter. Otherwise `CHECK` is as far away from `check` as it
     // is from `build` (both with a distance of 5). For a single letter shortcut (e.g. `b` or `c`), they will
     // all be as far away from any capital single letter entry (all with a distance of 1).
     // By first lowercasing the strings, `C` and `c` are closer than `C` and `b`, for example.
-    let me = me.to_lowercase();
-    let t = t.to_lowercase();
+    let a = a.to_lowercase();
+    let b = b.to_lowercase();
 
-    let t_len = t.chars().count();
-    if me.is_empty() {
-        return t_len;
+    let mut a = &a.chars().collect::<Vec<_>>()[..];
+    let mut b = &b.chars().collect::<Vec<_>>()[..];
+
+    // Ensure that `b` is the shorter string, minimizing memory use.
+    if a.len() < b.len() {
+        mem::swap(&mut a, &mut b);
     }
-    if t.is_empty() {
-        return me.chars().count();
+
+    let min_dist = a.len() - b.len();
+    // If we know the limit will be exceeded, we can return early.
+    if min_dist > limit {
+        return None;
     }
 
-    let mut dcol = (0..=t_len).collect::<Vec<_>>();
-    let mut t_last = 0;
-
-    for (i, sc) in me.chars().enumerate() {
-        let mut current = i;
-        dcol[0] = current + 1;
-
-        for (j, tc) in t.chars().enumerate() {
-            let next = dcol[j + 1];
-
-            if sc == tc {
-                dcol[j + 1] = current;
-            } else {
-                dcol[j + 1] = cmp::min(current, next);
-                dcol[j + 1] = cmp::min(dcol[j + 1], dcol[j]) + 1;
-            }
-
-            current = next;
-            t_last = j;
+    // Strip common prefix.
+    while let Some(((b_char, b_rest), (a_char, a_rest))) = b.split_first().zip(a.split_first()) {
+        if a_char != b_char {
+            break;
         }
+        a = a_rest;
+        b = b_rest;
+    }
+    // Strip common suffix.
+    while let Some(((b_char, b_rest), (a_char, a_rest))) = b.split_last().zip(a.split_last()) {
+        if a_char != b_char {
+            break;
+        }
+        a = a_rest;
+        b = b_rest;
     }
 
-    dcol[t_last + 1]
+    // If either string is empty, the distance is the length of the other.
+    // We know that `b` is the shorter string, so we don't need to check `a`.
+    if b.len() == 0 {
+        return Some(min_dist);
+    }
+
+    let mut prev_prev = vec![usize::MAX; b.len() + 1];
+    let mut prev = (0..=b.len()).collect::<Vec<_>>();
+    let mut current = vec![0; b.len() + 1];
+
+    // row by row
+    for i in 1..=a.len() {
+        current[0] = i;
+        let a_idx = i - 1;
+
+        // column by column
+        for j in 1..=b.len() {
+            let b_idx = j - 1;
+
+            // There is no cost to substitute a character with itself.
+            let substitution_cost = if a[a_idx] == b[b_idx] { 0 } else { 1 };
+
+            current[j] = cmp::min(
+                // deletion
+                prev[j] + 1,
+                cmp::min(
+                    // insertion
+                    current[j - 1] + 1,
+                    // substitution
+                    prev[j - 1] + substitution_cost,
+                ),
+            );
+
+            if (i > 1) && (j > 1) && (a[a_idx] == b[b_idx - 1]) && (a[a_idx - 1] == b[b_idx]) {
+                // transposition
+                current[j] = cmp::min(current[j], prev_prev[j - 2] + 1);
+            }
+        }
+
+        // Rotate the buffers, reusing the memory.
+        [prev_prev, prev, current] = [prev, current, prev_prev];
+    }
+
+    // `prev` because we already rotated the buffers.
+    let distance = prev[b.len()];
+    (distance <= limit).then_some(distance)
 }
 
 /// Find the closest element from `iter` matching `choice`. The `key` callback
@@ -51,8 +102,7 @@ pub fn closest<'a, T>(
 ) -> Option<T> {
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
-    iter.map(|e| (lev_distance(choice, key(&e)), e))
-        .filter(|&(d, _)| d < 4)
+    iter.filter_map(|e| Some((lev_distance(choice, key(&e), 3)?, e)))
         .min_by_key(|t| t.0)
         .map(|t| t.1)
 }
@@ -78,16 +128,16 @@ fn test_lev_distance() {
         .filter_map(from_u32)
         .map(|i| i.to_string())
     {
-        assert_eq!(lev_distance(&c, &c), 0);
+        assert_eq!(lev_distance(&c, &c, usize::MAX), Some(0));
     }
 
     let a = "\nMäry häd ä little lämb\n\nLittle lämb\n";
     let b = "\nMary häd ä little lämb\n\nLittle lämb\n";
     let c = "Mary häd ä little lämb\n\nLittle lämb\n";
-    assert_eq!(lev_distance(a, b), 1);
-    assert_eq!(lev_distance(b, a), 1);
-    assert_eq!(lev_distance(a, c), 2);
-    assert_eq!(lev_distance(c, a), 2);
-    assert_eq!(lev_distance(b, c), 1);
-    assert_eq!(lev_distance(c, b), 1);
+    assert_eq!(lev_distance(a, b, usize::MAX), Some(1));
+    assert_eq!(lev_distance(b, a, usize::MAX), Some(1));
+    assert_eq!(lev_distance(a, c, usize::MAX), Some(2));
+    assert_eq!(lev_distance(c, a, usize::MAX), Some(2));
+    assert_eq!(lev_distance(b, c, usize::MAX), Some(1));
+    assert_eq!(lev_distance(c, b, usize::MAX), Some(1));
 }

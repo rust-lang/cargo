@@ -308,8 +308,7 @@ pub(super) fn activation_error(
             candidates.dedup_by(|a, b| a.name() == b.name());
             let mut candidates: Vec<_> = candidates
                 .iter()
-                .map(|n| (lev_distance(&*new_dep.package_name(), &*n.name()), n))
-                .filter(|&(d, _)| d < 4)
+                .filter_map(|n| Some((lev_distance(&*new_dep.package_name(), &*n.name(), 3)?, n)))
                 .collect();
             candidates.sort_by_key(|o| o.0);
             let mut msg: String;

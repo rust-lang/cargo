@@ -1245,8 +1245,9 @@ impl<'cfg> Workspace<'cfg> {
             optional_dependency_names_per_member.insert(member, optional_dependency_names_raw);
         }
 
-        let levenshtein_test =
-            |a: InternedString, b: InternedString| lev_distance(a.as_str(), b.as_str()) < 4;
+        let levenshtein_test = |a: InternedString, b: InternedString| {
+            lev_distance(a.as_str(), b.as_str(), 3).is_some()
+        };
 
         let suggestions: Vec<_> = cli_features
             .features
