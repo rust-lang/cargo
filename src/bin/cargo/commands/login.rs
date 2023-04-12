@@ -34,10 +34,11 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let registry = args.registry(config)?;
     ops::registry_login(
         config,
         args.get_one::<String>("token").map(|s| s.as_str().into()),
-        args.get_one("registry").map(String::as_str),
+        registry.as_deref(),
         args.flag("generate-keypair"),
         args.flag("secret-key"),
         args.get_one("key-subject").map(String::as_str),

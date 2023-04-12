@@ -3192,3 +3192,85 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
         ]
     );
 }
+
+#[cargo_test]
+fn default_auth_error() {
+    // Check for the error message for an authentication error when default is set.
+    let crates_io = RegistryBuilder::new().http_api().build();
+    let _alternative = RegistryBuilder::new().http_api().alternative().build();
+
+    paths::home().join(".cargo/credentials.toml").rm_rf();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Test output before setting the default.
+    p.cargo("publish --no-verify")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+error: no token found, please run `cargo login`
+or use environment variable CARGO_REGISTRY_TOKEN
+",
+        )
+        .with_status(101)
+        .run();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+error: no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+",
+        )
+        .with_status(101)
+        .run();
+
+    // Test the output with the default.
+    cargo_util::paths::append(
+        &cargo_home().join("config"),
+        br#"
+            [registry]
+            default = "alternative"
+        "#,
+    )
+    .unwrap();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+error: no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+",
+        )
+        .with_status(101)
+        .run();
+
+    p.cargo("publish --no-verify --registry crates-io")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+error: no token found, please run `cargo login --registry crates-io`
+or use environment variable CARGO_REGISTRY_TOKEN
+",
+        )
+        .with_status(101)
+        .run();
+}

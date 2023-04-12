@@ -27,14 +27,15 @@ fn setup_new_credentials_at(config: PathBuf) {
     ));
 }
 
-fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
+/// Asserts whether or not the token is set to the given value for the given registry.
+pub fn check_token(expected_token: Option<&str>, registry: Option<&str>) {
     let credentials = credentials_toml();
     assert!(credentials.is_file());
 
     let contents = fs::read_to_string(&credentials).unwrap();
     let toml: toml::Table = contents.parse().unwrap();
 
-    let token = match registry {
+    let actual_token = match registry {
         // A registry has been provided, so check that the token exists in a
         // table for the registry.
         Some(registry) => toml
@@ -54,10 +55,15 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
             }),
     };
 
-    if let Some(token_val) = token {
-        token_val == expected_token
-    } else {
-        false
+    match (actual_token, expected_token) {
+        (None, None) => {}
+        (Some(actual), Some(expected)) => assert_eq!(actual, expected),
+        (None, Some(expected)) => {
+            panic!("expected `{registry:?}` to be `{expected}`, but was not set")
+        }
+        (Some(actual), None) => {
+            panic!("expected `{registry:?}` to be unset, but was set to `{actual}`")
+        }
     }
 }
 
@@ -75,10 +81,10 @@ fn registry_credentials() {
     cargo_process("login --registry").arg(reg).arg(TOKEN).run();
 
     // Ensure that we have not updated the default token
-    assert!(check_token(ORIGINAL_TOKEN, None));
+    check_token(Some(ORIGINAL_TOKEN), None);
 
     // Also ensure that we get the new token for the registry
-    assert!(check_token(TOKEN, Some(reg)));
+    check_token(Some(TOKEN), Some(reg));
 
     let reg2 = "alternative2";
     cargo_process("login --registry")
@@ -88,9 +94,9 @@ fn registry_credentials() {
 
     // Ensure not overwriting 1st alternate registry token with
     // 2nd alternate registry token (see rust-lang/cargo#7701).
-    assert!(check_token(ORIGINAL_TOKEN, None));
-    assert!(check_token(TOKEN, Some(reg)));
-    assert!(check_token(TOKEN2, Some(reg2)));
+    check_token(Some(ORIGINAL_TOKEN), None);
+    check_token(Some(TOKEN), Some(reg));
+    check_token(Some(TOKEN2), Some(reg2));
 }
 
 #[cargo_test]
@@ -366,4 +372,33 @@ fn login_with_generate_asymmetric_token() {
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert!(credentials.contains("secret-key = \"k3.secret."));
+}
+
+#[cargo_test]
+fn default_registry_configured() {
+    // When registry.default is set, login should use that one when
+    // --registry is not used.
+    let _alternative = RegistryBuilder::new().alternative().build();
+    let cargo_home = paths::home().join(".cargo");
+    cargo_util::paths::append(
+        &cargo_home.join("config"),
+        br#"
+            [registry]
+            default = "alternative"
+        "#,
+    )
+    .unwrap();
+
+    cargo_process("login")
+        .arg("a-new-token")
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+[LOGIN] token for `alternative` saved
+",
+        )
+        .run();
+
+    check_token(None, None);
+    check_token(Some("a-new-token"), Some("alternative"));
 }

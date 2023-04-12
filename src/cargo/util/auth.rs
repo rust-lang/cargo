@@ -347,6 +347,8 @@ impl fmt::Display for AuthorizationErrorReason {
 pub struct AuthorizationError {
     /// Url that was attempted
     pub sid: SourceId,
+    /// The `registry.default` config value.
+    pub default_registry: Option<String>,
     /// Url where the user could log in.
     pub login_url: Option<Url>,
     /// Specific reason indicating what failed
@@ -356,9 +358,14 @@ impl Error for AuthorizationError {}
 impl fmt::Display for AuthorizationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.sid.is_crates_io() {
+            let args = if self.default_registry.is_some() {
+                " --registry crates-io"
+            } else {
+                ""
+            };
             write!(
                 f,
-                "{}, please run `cargo login`\nor use environment variable CARGO_REGISTRY_TOKEN",
+                "{}, please run `cargo login{args}`\nor use environment variable CARGO_REGISTRY_TOKEN",
                 self.reason
             )
         } else if let Some(name) = self.sid.alt_registry_key() {
@@ -421,6 +428,7 @@ pub fn auth_token(
         Some(token) => Ok(token.expose()),
         None => Err(AuthorizationError {
             sid: sid.clone(),
+            default_registry: config.default_registry()?,
             login_url: login_url.cloned(),
             reason: AuthorizationErrorReason::TokenMissing,
         }
