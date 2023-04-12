@@ -26,7 +26,7 @@ use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{SourceMap, Summary, Workspace};
 use crate::ops;
 use crate::util::config::PackageCacheLock;
-use crate::util::errors::{CargoResult, HttpNotSuccessful};
+use crate::util::errors::{CargoResult, HttpNotSuccessful, DEBUG_HEADERS};
 use crate::util::interning::InternedString;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
@@ -378,6 +378,9 @@ struct Download<'cfg> {
 
     /// Actual downloaded data, updated throughout the lifetime of this download.
     data: RefCell<Vec<u8>>,
+
+    /// HTTP headers for debugging.
+    headers: RefCell<Vec<String>>,
 
     /// The URL that we're downloading from, cached here for error messages and
     /// reenqueuing.
@@ -762,6 +765,19 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             });
             Ok(buf.len())
         })?;
+        handle.header_function(move |data| {
+            tls::with(|downloads| {
+                if let Some(downloads) = downloads {
+                    // Headers contain trailing \r\n, trim them to make it easier
+                    // to work with.
+                    let h = String::from_utf8_lossy(data).trim().to_string();
+                    if DEBUG_HEADERS.iter().any(|p| h.starts_with(p)) {
+                        downloads.pending[&token].0.headers.borrow_mut().push(h);
+                    }
+                }
+            });
+            true
+        })?;
 
         handle.progress(true)?;
         handle.progress_function(move |dl_total, dl_cur, _, _| {
@@ -787,6 +803,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let dl = Download {
             token,
             data: RefCell::new(Vec::new()),
+            headers: RefCell::new(Vec::new()),
             id,
             url,
             descriptor,
@@ -826,6 +843,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 .remove(&token)
                 .expect("got a token for a non-in-progress transfer");
             let data = mem::take(&mut *dl.data.borrow_mut());
+            let headers = mem::take(&mut *dl.headers.borrow_mut());
             let mut handle = self.set.multi.remove(handle)?;
             self.pending_ids.remove(&dl.id);
 
@@ -862,12 +880,12 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
 
                     let code = handle.response_code()?;
                     if code != 200 && code != 0 {
-                        let url = handle.effective_url()?.unwrap_or(url);
-                        return Err(HttpNotSuccessful {
-                            code,
-                            url: url.to_string(),
-                            body: data,
-                        }
+                        return Err(HttpNotSuccessful::new_from_handle(
+                            &mut handle,
+                            &url,
+                            data,
+                            headers,
+                        )
                         .into());
                     }
                     Ok(data)

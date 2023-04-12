@@ -44,10 +44,13 @@ impl<'a> Retry<'a> {
     pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> RetryResult<T> {
         match f() {
             Err(ref e) if maybe_spurious(e) && self.retries < self.max_retries => {
+                let err_msg = e
+                    .downcast_ref::<HttpNotSuccessful>()
+                    .map(|http_err| http_err.display_short())
+                    .unwrap_or_else(|| e.root_cause().to_string());
                 let msg = format!(
-                    "spurious network error ({} tries remaining): {}",
+                    "spurious network error ({} tries remaining): {err_msg}",
                     self.max_retries - self.retries,
-                    e.root_cause(),
                 );
                 if let Err(e) = self.config.shell().warn(msg) {
                     return RetryResult::Err(e);
@@ -150,13 +153,17 @@ fn with_retry_repeats_the_call_then_works() {
     let error1 = HttpNotSuccessful {
         code: 501,
         url: "Uri".to_string(),
+        ip: None,
         body: Vec::new(),
+        headers: Vec::new(),
     }
     .into();
     let error2 = HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
+        ip: None,
         body: Vec::new(),
+        headers: Vec::new(),
     }
     .into();
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
@@ -175,13 +182,17 @@ fn with_retry_finds_nested_spurious_errors() {
     let error1 = anyhow::Error::from(HttpNotSuccessful {
         code: 501,
         url: "Uri".to_string(),
+        ip: None,
         body: Vec::new(),
+        headers: Vec::new(),
     });
     let error1 = anyhow::Error::from(error1.context("A non-spurious wrapping err"));
     let error2 = anyhow::Error::from(HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
+        ip: None,
         body: Vec::new(),
+        headers: Vec::new(),
     });
     let error2 = anyhow::Error::from(error2.context("A second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
@@ -199,7 +210,9 @@ fn default_retry_schedule() {
         Err(anyhow::Error::from(HttpNotSuccessful {
             code: 500,
             url: "Uri".to_string(),
+            ip: None,
             body: Vec::new(),
+            headers: Vec::new(),
         }))
     };
     let config = Config::default().unwrap();
