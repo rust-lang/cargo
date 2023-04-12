@@ -380,6 +380,11 @@ OPTIONS
            option must appear before the command name, for example cargo -C
            path/to/my-project build.
 
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
+
        -h, --help
            Prints help information.
 

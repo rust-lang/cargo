@@ -67,8 +67,6 @@
 
 ### Added
 
-- Added `-C` flag for changing current dir before build starts.
-  [#10952](https://github.com/rust-lang/cargo/pull/10952)
 - Cargo now suggests `cargo fix` or `cargo clippy --fix`
   when compilation warnings are auto-fixable.
   [#11558](https://github.com/rust-lang/cargo/pull/11558)
@@ -130,6 +128,8 @@
 - Emit an error message for transitive artifact dependencies with targets the
   package doesn't directly interact with.
   [#11643](https://github.com/rust-lang/cargo/pull/11643)
+- Added `-C` flag for changing current dir before build starts.
+  [#10952](https://github.com/rust-lang/cargo/pull/10952)
 
 ### Documentation
 
