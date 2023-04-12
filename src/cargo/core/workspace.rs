@@ -19,9 +19,9 @@ use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lev_distance;
 use crate::util::toml::{read_manifest, InheritableFields, TomlDependency, TomlProfiles};
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
@@ -1245,8 +1245,8 @@ impl<'cfg> Workspace<'cfg> {
             optional_dependency_names_per_member.insert(member, optional_dependency_names_raw);
         }
 
-        let levenshtein_test = |a: InternedString, b: InternedString| {
-            lev_distance(a.as_str(), b.as_str(), 3).is_some()
+        let edit_distance_test = |a: InternedString, b: InternedString| {
+            edit_distance(a.as_str(), b.as_str(), 3).is_some()
         };
 
         let suggestions: Vec<_> = cli_features
@@ -1258,12 +1258,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds member features which are similar to the requested feature.
                     let summary_features = summary_features
                         .iter()
-                        .filter(move |feature| levenshtein_test(**feature, *typo));
+                        .filter(move |feature| edit_distance_test(**feature, *typo));
 
                     // Finds optional dependencies which name is similar to the feature
                     let optional_dependency_features = optional_dependency_names
                         .iter()
-                        .filter(move |feature| levenshtein_test(**feature, *typo));
+                        .filter(move |feature| edit_distance_test(**feature, *typo));
 
                     summary_features
                         .chain(optional_dependency_features)
@@ -1279,13 +1279,13 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `pkg/feat` that are very similar to current `pkg/feat`.
                     let pkg_feat_similar = dependencies_features
                         .iter()
-                        .filter(|(name, _)| levenshtein_test(**name, *dep_name))
+                        .filter(|(name, _)| edit_distance_test(**name, *dep_name))
                         .map(|(name, features)| {
                             (
                                 name,
                                 features
                                     .iter()
-                                    .filter(|feature| levenshtein_test(**feature, *dep_feature))
+                                    .filter(|feature| edit_distance_test(**feature, *dep_feature))
                                     .collect::<Vec<_>>(),
                             )
                         })
@@ -1299,12 +1299,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `member/optional_dep` features which name is similar to current `pkg/feat`.
                     let optional_dependency_features = optional_dependency_names_per_member
                         .iter()
-                        .filter(|(package, _)| levenshtein_test(package.name(), *dep_name))
+                        .filter(|(package, _)| edit_distance_test(package.name(), *dep_name))
                         .map(|(package, optional_dependencies)| {
                             optional_dependencies
                                 .into_iter()
                                 .filter(|optional_dependency| {
-                                    levenshtein_test(**optional_dependency, *dep_name)
+                                    edit_distance_test(**optional_dependency, *dep_name)
                                 })
                                 .map(move |optional_dependency| {
                                     format!("{}/{}", package.name(), optional_dependency)
@@ -1315,12 +1315,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `member/feat` features which name is similar to current `pkg/feat`.
                     let summary_features = summary_features_per_member
                         .iter()
-                        .filter(|(package, _)| levenshtein_test(package.name(), *dep_name))
+                        .filter(|(package, _)| edit_distance_test(package.name(), *dep_name))
                         .map(|(package, summary_features)| {
                             summary_features
                                 .into_iter()
                                 .filter(|summary_feature| {
-                                    levenshtein_test(**summary_feature, *dep_feature)
+                                    edit_distance_test(**summary_feature, *dep_feature)
                                 })
                                 .map(move |summary_feature| {
                                     format!("{}/{}", package.name(), summary_feature)

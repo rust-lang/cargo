@@ -2,9 +2,9 @@ use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
+use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::lev_distance;
 use crate::util::{Config, Progress, ProgressStyle};
 
 use anyhow::Context as _;
@@ -118,7 +118,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         let matches: Vec<_> = resolve.iter().filter(|id| spec.matches(*id)).collect();
         if matches.is_empty() {
             let mut suggestion = String::new();
-            suggestion.push_str(&lev_distance::closest_msg(
+            suggestion.push_str(&edit_distance::closest_msg(
                 &spec.name(),
                 resolve.iter(),
                 |id| id.name().as_str(),

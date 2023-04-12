@@ -5,7 +5,7 @@ use std::{cmp, mem};
 /// Returns `None` if the distance exceeds the limit.
 ///
 /// [edit distance]: https://en.wikipedia.org/wiki/Edit_distance
-pub fn lev_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
+pub fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
     // Comparing the strings lowercased will result in a difference in capitalization being less distance away
     // than being a completely different letter. Otherwise `CHECK` is as far away from `check` as it
     // is from `build` (both with a distance of 5). For a single letter shortcut (e.g. `b` or `c`), they will
@@ -100,9 +100,9 @@ pub fn closest<'a, T>(
     iter: impl Iterator<Item = T>,
     key: impl Fn(&T) -> &'a str,
 ) -> Option<T> {
-    // Only consider candidates with a lev_distance of 3 or less so we don't
+    // Only consider candidates with an edit distance of 3 or less so we don't
     // suggest out-of-the-blue options.
-    iter.filter_map(|e| Some((lev_distance(choice, key(&e), 3)?, e)))
+    iter.filter_map(|e| Some((edit_distance(choice, key(&e), 3)?, e)))
         .min_by_key(|t| t.0)
         .map(|t| t.1)
 }
@@ -121,23 +121,23 @@ pub fn closest_msg<'a, T>(
 }
 
 #[test]
-fn test_lev_distance() {
+fn test_edit_distance() {
     use std::char::{from_u32, MAX};
     // Test bytelength agnosticity
     for c in (0u32..MAX as u32)
         .filter_map(from_u32)
         .map(|i| i.to_string())
     {
-        assert_eq!(lev_distance(&c, &c, usize::MAX), Some(0));
+        assert_eq!(edit_distance(&c, &c, usize::MAX), Some(0));
     }
 
     let a = "\nMäry häd ä little lämb\n\nLittle lämb\n";
     let b = "\nMary häd ä little lämb\n\nLittle lämb\n";
     let c = "Mary häd ä little lämb\n\nLittle lämb\n";
-    assert_eq!(lev_distance(a, b, usize::MAX), Some(1));
-    assert_eq!(lev_distance(b, a, usize::MAX), Some(1));
-    assert_eq!(lev_distance(a, c, usize::MAX), Some(2));
-    assert_eq!(lev_distance(c, a, usize::MAX), Some(2));
-    assert_eq!(lev_distance(b, c, usize::MAX), Some(1));
-    assert_eq!(lev_distance(c, b, usize::MAX), Some(1));
+    assert_eq!(edit_distance(a, b, usize::MAX), Some(1));
+    assert_eq!(edit_distance(b, a, usize::MAX), Some(1));
+    assert_eq!(edit_distance(a, c, usize::MAX), Some(2));
+    assert_eq!(edit_distance(c, a, usize::MAX), Some(2));
+    assert_eq!(edit_distance(b, c, usize::MAX), Some(1));
+    assert_eq!(edit_distance(c, b, usize::MAX), Some(1));
 }
