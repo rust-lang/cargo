@@ -160,6 +160,30 @@ fn cargo_compile_manifest_path() {
 }
 
 #[cargo_test]
+fn chdir_gated() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .build();
+    p.cargo("-C foo build")
+        .cwd(p.root().parent().unwrap())
+        .with_stderr(
+            "error: the `-C` flag is unstable, \
+            pass `-Z unstable-options` on the nightly channel to enable it",
+        )
+        .with_status(101)
+        .run();
+    // No masquerade should also fail.
+    p.cargo("-C foo -Z unstable-options build")
+        .cwd(p.root().parent().unwrap())
+        .with_stderr(
+            "error: the `-C` flag is unstable, \
+            pass `-Z unstable-options` on the nightly channel to enable it",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_directory_not_cwd() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -167,7 +191,8 @@ fn cargo_compile_directory_not_cwd() {
         .file(".cargo/config.toml", &"")
         .build();
 
-    p.cargo("-C foo build")
+    p.cargo("-Zunstable-options -C foo build")
+        .masquerade_as_nightly_cargo(&["chdir"])
         .cwd(p.root().parent().unwrap())
         .run();
     assert!(p.bin("foo").is_file());
@@ -181,7 +206,8 @@ fn cargo_compile_directory_not_cwd_with_invalid_config() {
         .file(".cargo/config.toml", &"!")
         .build();
 
-    p.cargo("-C foo build")
+    p.cargo("-Zunstable-options -C foo build")
+        .masquerade_as_nightly_cargo(&["chdir"])
         .cwd(p.root().parent().unwrap())
         .with_status(101)
         .with_stderr_contains(
