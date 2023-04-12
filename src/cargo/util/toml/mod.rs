@@ -477,8 +477,9 @@ impl<'de> de::Deserialize<'de> for TomlDebugInfo {
             type Value = TomlDebugInfo;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter
-                    .write_str("a boolean, 0-2, \"line-tables-only\", or \"line-directives-only\"")
+                formatter.write_str(
+                    "a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"",
+                )
             }
 
             fn visit_i64<E>(self, value: i64) -> Result<TomlDebugInfo, E>

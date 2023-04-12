@@ -67,9 +67,11 @@ amount of debug information included in the compiled binary.
 
 The valid options are:
 
-* `0` or `false`: no debug info at all
-* `1`: line tables only
-* `2` or `true`: full debug info
+* `0`, `false`, or `"none"`: no debug info at all
+* `"line-directives-only"`: line info directives only. For the nvptx* targets this enables [profiling](https://reviews.llvm.org/D46061). For other use cases, `line-tables-only` is the better, more compatible choice.
+* `"line-tables-only"`: line tables only. Generates the minimal amount of debug info for backtraces with filename/line number info, but not anything else, i.e. no variable or function parameter info.
+* `1` or `"limited"`: debug info without type or variable-level information. Generates more detailed module-level info than `line-tables-only`.
+* `2`, `true`, or `"full"`: full debug info
 
 You may wish to also configure the [`split-debuginfo`](#split-debuginfo) option
 depending on your needs as well.

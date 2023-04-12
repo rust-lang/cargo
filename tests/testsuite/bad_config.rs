@@ -1320,7 +1320,7 @@ fn bad_debuginfo() {
 error: failed to parse manifest [..]
 
 Caused by:
-  invalid value: string \"a\", expected a boolean, 0-2, \"line-tables-only\", or \"line-directives-only\"
+  invalid value: string \"a\", expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
   in `profile.dev.debug`
 ",
         )
@@ -1352,7 +1352,7 @@ fn bad_debuginfo2() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: floating point `3.6`, expected a boolean, 0-2, \"line-tables-only\", or \"line-directives-only\"
+  invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
   in `profile.dev.debug`
 ",
         )

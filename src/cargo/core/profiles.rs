@@ -762,7 +762,7 @@ impl DebugInfo {
         }
     }
 
-    /// Returns true if the debuginfo level is high enough (at least 1). Helper
+    /// Returns true if any debuginfo will be generated. Helper
     /// for a common operation on the usual `Option` representation.
     pub(crate) fn is_turned_on(&self) -> bool {
         !matches!(self.to_option(), None | Some(TomlDebugInfo::None))
