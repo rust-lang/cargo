@@ -12,10 +12,20 @@ pub type CargoResult<T> = anyhow::Result<T>;
 /// These are headers that are included in error messages to help with
 /// diagnosing issues.
 pub const DEBUG_HEADERS: &[&str] = &[
+    // This is the unique ID that identifies the request in CloudFront which
+    // can be used for looking at the AWS logs.
     "x-amz-cf-id",
+    // This is the CloudFront POP (Point of Presence) that identifies the
+    // region where the request was routed. This can help identify if an issue
+    // is region-specific.
     "x-amz-cf-pop",
+    // The unique token used for troubleshooting S3 requests via AWS logs or support.
+    "x-amz-request-id",
+    // Another token used in conjunction with x-amz-request-id.
     "x-amz-id-2",
+    // Whether or not there was a cache hit or miss (both CloudFront and Fastly).
     "x-cache",
+    // The cache server that processed the request (Fastly).
     "x-served-by",
 ];
 
