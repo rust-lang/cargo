@@ -55,6 +55,8 @@ pub fn dylib_path_envvar() -> &'static str {
         // penalty starting in 10.13. Cargo's testsuite ran more than twice as
         // slow with it on CI.
         "DYLD_FALLBACK_LIBRARY_PATH"
+    } else if cfg!(target_os = "aix") {
+        "LIBPATH"
     } else {
         "LD_LIBRARY_PATH"
     }
