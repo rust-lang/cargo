@@ -10,11 +10,6 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    if !config.cli_unstable().credential_process {
-        config
-            .cli_unstable()
-            .fail_if_stable_command(config, "logout", 8933)?;
-    }
     let registry = args.registry(config)?;
     ops::registry_logout(config, registry.as_deref())?;
     Ok(())

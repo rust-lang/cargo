@@ -34,6 +34,10 @@ This command will inform Cargo of your API token and store it locally in your
 shared with anyone else. If it leaks for any reason, you should revoke it
 immediately.
 
+> **Note**: The [`cargo logout`] command can be used to remove the token from
+> `credentials.toml`. This can be useful if you no longer need it stored on
+> the local machine.
+
 ### Before publishing a new crate
 
 Keep in mind that crate names on [crates.io] are allocated on a first-come-first-serve
@@ -264,6 +268,7 @@ request the org owner to do so.
 
 [Rust API Guidelines]: https://rust-lang.github.io/api-guidelines/
 [`cargo login`]: ../commands/cargo-login.md
+[`cargo logout`]: ../commands/cargo-logout.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`categories`]: manifest.md#the-categories-field

@@ -5,31 +5,14 @@ use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::TestRegistry;
 use cargo_test_support::{cargo_process, registry};
 
-#[cargo_test]
-fn gated() {
-    registry::init();
-    cargo_process("logout")
-        .masquerade_as_nightly_cargo(&["cargo-logout"])
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] the `cargo logout` command is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/8933 for more information about \
-the `cargo logout` command.
-",
-        )
-        .run();
-}
-
 fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str, note: &str) {
     let msg = reg.unwrap_or("crates-io");
     check_token(Some(registry.token()), reg);
-    let mut cargo = cargo_process(&format!("logout -Z unstable-options {}", flag));
+    let mut cargo = cargo_process(&format!("logout {}", flag));
     if reg.is_none() {
         cargo.replace_crates_io(registry.index_url());
     }
     cargo
-        .masquerade_as_nightly_cargo(&["cargo-logout"])
         .with_stderr(&format!(
             "\
 [LOGOUT] token for `{msg}` has been removed from local storage
@@ -40,12 +23,11 @@ If you need to revoke the token, visit {note} and follow the instructions there.
         .run();
     check_token(None, reg);
 
-    let mut cargo = cargo_process(&format!("logout -Z unstable-options {}", flag));
+    let mut cargo = cargo_process(&format!("logout {}", flag));
     if reg.is_none() {
         cargo.replace_crates_io(registry.index_url());
     }
     cargo
-        .masquerade_as_nightly_cargo(&["cargo-logout"])
         .with_stderr(&format!("[LOGOUT] not currently logged in to `{msg}`"))
         .run();
     check_token(None, reg);

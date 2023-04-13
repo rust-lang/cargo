@@ -102,6 +102,9 @@ available at <https://rust-lang.org>.
 [cargo-login(1)](cargo-login.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Save an API token from the registry locally.
 
+[cargo-logout(1)](cargo-logout.html)\
+&nbsp;&nbsp;&nbsp;&nbsp;Remove an API token from the registry locally.
+
 [cargo-owner(1)](cargo-owner.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Manage the owners of a crate on the registry.
 
