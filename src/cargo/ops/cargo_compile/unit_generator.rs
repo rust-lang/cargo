@@ -111,20 +111,7 @@ impl<'a> UnitGenerator<'a, '_> {
         // why this is done. However, if the package has its own
         // `package.target` key, then this gets used instead of
         // `$HOST`
-        let explicit_kinds = if let Some(k) = pkg.manifest().forced_kind() {
-            vec![k]
-        } else {
-            self.requested_kinds
-                .iter()
-                .map(|kind| match kind {
-                    CompileKind::Host => pkg
-                        .manifest()
-                        .default_kind()
-                        .unwrap_or(self.explicit_host_kind),
-                    CompileKind::Target(t) => CompileKind::Target(*t),
-                })
-                .collect()
-        };
+        let explicit_kinds = pkg.explicit_kinds(self.requested_kinds, self.explicit_host_kind);
 
         explicit_kinds
             .into_iter()
