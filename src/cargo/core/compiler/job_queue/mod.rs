@@ -487,7 +487,7 @@ impl<'cfg> JobQueue<'cfg> {
             timings: self.timings,
             tokens: Vec::new(),
             pending_queue: Vec::new(),
-            print: DiagnosticPrinter::new(cx.bcx.config),
+            print: DiagnosticPrinter::new(cx.bcx.config, &cx.bcx.rustc().workspace_wrapper),
             finished: 0,
             per_package_future_incompat_reports: Vec::new(),
         };

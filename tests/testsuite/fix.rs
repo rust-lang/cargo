@@ -5,8 +5,8 @@ use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::git::{self, init};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, is_nightly, project};
+use cargo_test_support::{basic_manifest, is_nightly, project, Project};
+use cargo_test_support::{tools, wrapped_clippy_driver};
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -53,8 +53,7 @@ fn fix_broken_if_requested() {
         .run();
 }
 
-#[cargo_test]
-fn broken_fixes_backed_out() {
+fn rustc_shim_for_cargo_fix() -> Project {
     // This works as follows:
     // - Create a `rustc` shim (the "foo" project) which will pretend that the
     //   verification step fails.
@@ -109,7 +108,6 @@ fn broken_fixes_backed_out() {
                             fs::File::create(&first).unwrap();
                         }
                     }
-
                     let status = Command::new("rustc")
                         .args(env::args().skip(1))
                         .status()
@@ -142,7 +140,13 @@ fn broken_fixes_backed_out() {
     // Build our rustc shim
     p.cargo("build").cwd("foo").run();
 
-    // Attempt to fix code, but our shim will always fail the second compile
+    p
+}
+
+#[cargo_test]
+fn broken_fixes_backed_out() {
+    let p = rustc_shim_for_cargo_fix();
+    // Attempt to fix code, but our shim will always fail the second compile.
     p.cargo("fix --allow-no-vcs --lib")
         .cwd("bar")
         .env("__CARGO_FIX_YOLO", "1")
@@ -160,7 +164,50 @@ fn broken_fixes_backed_out() {
              and we would appreciate a bug report! You're likely to see \n\
              a number of compiler warnings after this message which cargo\n\
              attempted to fix but failed. If you could open an issue at\n\
-             [..]\n\
+             https://github.com/rust-lang/rust/issues\n\
+             quoting the full output of this command we'd be very appreciative!\n\
+             Note that you may be able to make some more progress in the near-term\n\
+             fixing code with the `--broken-code` flag\n\
+             \n\
+             The following errors were reported:\n\
+             error: expected one of `!` or `::`, found `rust`\n\
+             ",
+        )
+        .with_stderr_contains("Original diagnostics will follow.")
+        .with_stderr_contains("[WARNING] variable does not need to be mutable")
+        .with_stderr_does_not_contain("[..][FIXED][..]")
+        .run();
+
+    // Make sure the fix which should have been applied was backed out
+    assert!(p.read_file("bar/src/lib.rs").contains("let mut x = 3;"));
+}
+
+#[cargo_test]
+fn broken_clippy_fixes_backed_out() {
+    let p = rustc_shim_for_cargo_fix();
+    // Attempt to fix code, but our shim will always fail the second compile.
+    // Also, we use `clippy` as a workspace wrapper to make sure that we properly
+    // generate the report bug text.
+    p.cargo("fix --allow-no-vcs --lib")
+        .cwd("bar")
+        .env("__CARGO_FIX_YOLO", "1")
+        .env("RUSTC", p.root().join("foo/target/debug/foo"))
+        //  We can't use `clippy` so we use a `rustc` workspace wrapper instead
+        .env("RUSTC_WORKSPACE_WRAPPER", wrapped_clippy_driver())
+        .with_stderr_contains(
+            "warning: failed to automatically apply fixes suggested by rustc \
+             to crate `bar`\n\
+             \n\
+             after fixes were automatically applied the compiler reported \
+             errors within these files:\n\
+             \n  \
+             * src/lib.rs\n\
+             \n\
+             This likely indicates a bug in either rustc or cargo itself,\n\
+             and we would appreciate a bug report! You're likely to see \n\
+             a number of compiler warnings after this message which cargo\n\
+             attempted to fix but failed. If you could open an issue at\n\
+             https://github.com/rust-lang/rust-clippy/issues\n\
              quoting the full output of this command we'd be very appreciative!\n\
              Note that you may be able to make some more progress in the near-term\n\
              fixing code with the `--broken-code` flag\n\
