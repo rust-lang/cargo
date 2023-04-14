@@ -5,8 +5,8 @@ use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::git::{self, init};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, is_nightly, project};
+use cargo_test_support::{basic_manifest, is_nightly, project, Project};
+use cargo_test_support::{tools, wrapped_clippy_driver};
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -53,8 +53,7 @@ fn fix_broken_if_requested() {
         .run();
 }
 
-#[cargo_test]
-fn broken_fixes_backed_out() {
+fn rustc_shim_for_cargo_fix() -> Project {
     // This works as follows:
     // - Create a `rustc` shim (the "foo" project) which will pretend that the
     //   verification step fails.
@@ -141,7 +140,13 @@ fn broken_fixes_backed_out() {
     // Build our rustc shim
     p.cargo("build").cwd("foo").run();
 
-    // Attempt to fix code, but our shim will always fail the second compile
+    p
+}
+
+#[cargo_test]
+fn broken_fixes_backed_out() {
+    let p = rustc_shim_for_cargo_fix();
+    // Attempt to fix code, but our shim will always fail the second compile.
     p.cargo("fix --allow-no-vcs --lib")
         .cwd("bar")
         .env("__CARGO_FIX_YOLO", "1")
@@ -179,111 +184,7 @@ fn broken_fixes_backed_out() {
 
 #[cargo_test]
 fn broken_clippy_fixes_backed_out() {
-    // A wrapper around `rustc` instead of calling `clippy`
-    let clippy_driver = project()
-        .at(cargo_test_support::paths::global_root().join("clippy-driver"))
-        .file("Cargo.toml", &basic_manifest("clippy-driver", "0.0.1"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                let mut args = std::env::args_os();
-                let _me = args.next().unwrap();
-                let rustc = args.next().unwrap();
-                let status = std::process::Command::new(rustc).args(args).status().unwrap();
-                std::process::exit(status.code().unwrap_or(1));
-            }
-            "#,
-        )
-        .build();
-    clippy_driver.cargo("build").run();
-
-    // This works as follows:
-    // - Create a `rustc` shim (the "foo" project) which will pretend that the
-    //   verification step fails.
-    // - There is an empty build script so `foo` has `OUT_DIR` to track the steps.
-    // - The first "check", `foo` creates a file in OUT_DIR, and it completes
-    //   successfully with a warning diagnostic to remove unused `mut`.
-    // - rustfix removes the `mut`.
-    // - The second "check" to verify the changes, `foo` swaps out the content
-    //   with something that fails to compile. It creates a second file so it
-    //   won't do anything in the third check.
-    // - cargo fix discovers that the fix failed, and it backs out the changes.
-    // - The third "check" is done to display the original diagnostics of the
-    //   original code.
-    let p = project()
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-                [workspace]
-            "#,
-        )
-        .file(
-            "foo/src/main.rs",
-            r#"
-                use std::env;
-                use std::fs;
-                use std::io::Write;
-                use std::path::{Path, PathBuf};
-                use std::process::{self, Command};
-
-                fn main() {
-                    // Ignore calls to things like --print=file-names and compiling build.rs.
-                    // Also compatible for rustc invocations with `@path` argfile.
-                    let is_lib_rs = env::args_os()
-                        .map(PathBuf::from)
-                        .flat_map(|p| if let Some(p) = p.to_str().unwrap_or_default().strip_prefix("@") {
-                            fs::read_to_string(p).unwrap().lines().map(PathBuf::from).collect()
-                        } else {
-                            vec![p]
-                        })
-                        .any(|l| l == Path::new("src/lib.rs"));
-                    if is_lib_rs {
-                        let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-                        let first = path.join("first");
-                        let second = path.join("second");
-                        if first.exists() && !second.exists() {
-                            fs::write("src/lib.rs", b"not rust code").unwrap();
-                            fs::File::create(&second).unwrap();
-                        } else {
-                            fs::File::create(&first).unwrap();
-                        }
-                    }
-                    let status = Command::new("rustc")
-                        .args(env::args().skip(1))
-                        .status()
-                        .expect("failed to run rustc");
-                    process::exit(status.code().unwrap_or(2));
-                }
-            "#,
-        )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = 'bar'
-                version = '0.1.0'
-                [workspace]
-            "#,
-        )
-        .file("bar/build.rs", "fn main() {}")
-        .file(
-            "bar/src/lib.rs",
-            r#"
-                pub fn foo() {
-                    let mut x = 3;
-                    drop(x);
-                }
-            "#,
-        )
-        .build();
-
-    // Build our rustc shim
-    p.cargo("build").cwd("foo").run();
-
+    let p = rustc_shim_for_cargo_fix();
     // Attempt to fix code, but our shim will always fail the second compile.
     // Also, we use `clippy` as a workspace wrapper to make sure that we properly
     // generate the report bug text.
@@ -292,10 +193,7 @@ fn broken_clippy_fixes_backed_out() {
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         //  We can't use `clippy` so we use a `rustc` workspace wrapper instead
-        .env(
-            "RUSTC_WORKSPACE_WRAPPER",
-            clippy_driver.bin("clippy-driver"),
-        )
+        .env("RUSTC_WORKSPACE_WRAPPER", wrapped_clippy_driver())
         .with_stderr_contains(
             "warning: failed to automatically apply fixes suggested by rustc \
              to crate `bar`\n\
