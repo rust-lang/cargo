@@ -7,9 +7,9 @@ use serde::{de, ser};
 use url::Url;
 
 use crate::core::PackageId;
+use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::lev_distance;
 use crate::util::{validate_package_name, IntoUrl, ToSemver};
 
 /// Some or all of the data required to identify a package:
@@ -88,7 +88,7 @@ impl PackageIdSpec {
     {
         let i: Vec<_> = i.into_iter().collect();
         let spec = PackageIdSpec::parse(spec).with_context(|| {
-            let suggestion = lev_distance::closest_msg(spec, i.iter(), |id| id.name().as_str());
+            let suggestion = edit_distance::closest_msg(spec, i.iter(), |id| id.name().as_str());
             format!("invalid package ID specification: `{}`{}", spec, suggestion)
         })?;
         spec.query(i)
@@ -229,7 +229,7 @@ impl PackageIdSpec {
                     );
                 }
                 if suggestion.is_empty() {
-                    suggestion.push_str(&lev_distance::closest_msg(
+                    suggestion.push_str(&edit_distance::closest_msg(
                         &self.name,
                         all_ids.iter(),
                         |id| id.name().as_str(),
