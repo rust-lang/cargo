@@ -3183,13 +3183,14 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 ",
         )
         .run();
-    let misses = misses.lock().unwrap();
+    let mut misses = misses.lock().unwrap();
+    misses.sort();
     assert_eq!(
         &*misses,
         &[
             "/index/a-/b-/a-b-c",
-            "/index/a_/b-/a_b-c",
             "/index/a-/b_/a-b_c",
+            "/index/a_/b-/a_b-c",
             "/index/a_/b_/a_b_c"
         ]
     );
