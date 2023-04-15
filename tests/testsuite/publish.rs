@@ -1030,7 +1030,7 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 note: Waiting [..]
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.0.1 [..]
-",
+note: Your crate was successfully published to crates.io! You can visit it at https://crates.io/crates/foo .",
         )
         .run();
 }

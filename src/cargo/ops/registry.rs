@@ -245,6 +245,20 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         }
     }
 
+    // Print success note on publish
+    if opts.registry.is_none() {
+        if let Some(ref registries) = pkg.publish() {
+            if registries[0] == CRATES_IO_REGISTRY {
+                if let Ok(packages) = opts.to_publish.get_packages(ws) {
+                    for package in packages {
+                        opts.config
+						.shell().note(format!("Your crate was successfully published to crates.io! You can visit it at https://crates.io/crates/{} .", package.name()))?
+                    }
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
