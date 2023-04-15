@@ -1,3 +1,26 @@
+[workspace]
+resolver = "2"
+members = [
+  "benches/benchsuite",
+  "benches/capture",
+  "crates/cargo-platform",
+  "crates/cargo-test-macro",
+  "crates/cargo-test-support",
+  "crates/cargo-util",
+  "crates/crates-io",
+  "crates/credential/*",
+  "crates/home",
+  "crates/mdman",
+  "crates/resolver-tests",
+]
+exclude = [
+  # For linkchecker (downloaded during CI) and semver-check
+  # TODO: Either move semver-check to crates/ folder,
+  # or make linkchecker run from a given directory.
+  "src/doc/", 
+  "target/", # exclude bench testing
+]
+
 [package]
 name = "cargo"
 version = "0.71.0"
@@ -77,11 +100,6 @@ unicode-xid = "0.2.0"
 url = "2.2.2"
 walkdir = "2.2"
 
-# A noop dependency that changes in the Rust repository, it's a bit of a hack.
-# See the `src/tools/rustc-workspace-hack/README.md` file in `rust-lang/rust`
-# for more information.
-rustc-workspace-hack = "1.0.0"
-
 [target.'cfg(windows)'.dependencies]
 fwdansi = "1.1.0"
 
@@ -116,3 +134,5 @@ doc = false
 vendored-openssl = ["openssl/vendored"]
 vendored-libgit2 = ["libgit2-sys/vendored"]
 pretty-env-logger = ["pretty_env_logger"]
+# This is primarily used by rust-lang/rust distributing cargo the executable.
+all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx']
