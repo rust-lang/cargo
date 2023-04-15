@@ -65,6 +65,7 @@ fn cargo_metadata_simple() {
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
