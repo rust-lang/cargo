@@ -23,7 +23,7 @@ pub use self::fix::{fix, fix_exec_rustc, fix_get_proxy_lock_addr, FixOptions};
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
 pub use self::registry::HttpTimeout;
 pub use self::registry::{configure_http_handle, http_handle, http_handle_and_timeout};
-pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts, SubCommand};
+pub use self::registry::{modify_owners, yank, CargoOwnerSubCommand, OwnersOptions, PublishOpts};
 pub use self::registry::{needs_custom_http_transport, registry_login, registry_logout, search};
 pub use self::registry::{publish, RegistryCredentialConfig};
 pub use self::resolve::{

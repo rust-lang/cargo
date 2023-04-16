@@ -971,13 +971,6 @@ pub fn registry_logout(config: &Config, reg: Option<&str>) -> CargoResult<()> {
     Ok(())
 }
 
-pub enum SubCommand {
-    Add,
-    Remove,
-    List,
-    None,
-}
-
 pub struct OwnersOptions {
     pub krate: Option<String>,
     pub token: Option<Secret<String>>,
@@ -985,7 +978,6 @@ pub struct OwnersOptions {
     pub to_add: Option<Vec<String>>,
     pub to_remove: Option<Vec<String>>,
     pub list: bool,
-    pub subcommand: Option<SubCommand>,
     pub registry: Option<String>,
 }
 
@@ -1010,108 +1002,47 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         Some(mutation),
     )?;
 
-    match opts.subcommand.as_ref().unwrap() {
-        SubCommand::Add => {
-            let v = opts
-                .to_add
-                .as_ref()
-                .map(|s| s.iter().collect::<Vec<_>>())
-                .and_then(|t| Some(t.iter().map(|s| s.as_str()).collect::<Vec<_>>()))
-                .unwrap();
-            let msg = registry.add_owners(&name, &v).with_context(|| {
-                format!(
-                    "failed to invite owners to crate `{}` on registry at {}",
-                    name,
-                    registry.host()
-                )
-            })?;
+    if let Some(ref v) = opts.to_add {
+        let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
+        let msg = registry.add_owners(&name, &v).with_context(|| {
+            format!(
+                "failed to invite owners to crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
 
-            config.shell().status("Owner", msg)?;
-        }
+        config.shell().status("Owner", msg)?;
+    }
 
-        SubCommand::Remove => {
-            let v = opts
-                .to_remove
-                .as_ref()
-                .map(|s| s.iter().collect::<Vec<_>>())
-                .and_then(|t| Some(t.iter().map(|s| s.as_str()).collect::<Vec<_>>()))
-                .unwrap();
-            config
-                .shell()
-                .status("Owner", format!("removing {:?} from crate {}", v, name))?;
-            registry.remove_owners(&name, &v).with_context(|| {
-                format!(
-                    "failed to remove owners from crate `{}` on registry at {}",
-                    name,
-                    registry.host()
-                )
-            })?;
-        }
+    if let Some(ref v) = opts.to_remove {
+        let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
+        config
+            .shell()
+            .status("Owner", format!("removing {:?} from crate {}", v, name))?;
+        registry.remove_owners(&name, &v).with_context(|| {
+            format!(
+                "failed to remove owners from crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
+    }
 
-        SubCommand::List => {
-            let owners = registry.list_owners(&name).with_context(|| {
-                format!(
-                    "failed to list owners of crate `{}` on registry at {}",
-                    name,
-                    registry.host()
-                )
-            })?;
-            for owner in owners.iter() {
-                drop_print!(config, "{}", owner.login);
-                match (owner.name.as_ref(), owner.email.as_ref()) {
-                    (Some(name), Some(email)) => drop_println!(config, " ({} <{}>)", name, email),
-                    (Some(s), None) | (None, Some(s)) => drop_println!(config, " ({})", s),
-                    (None, None) => drop_println!(config),
-                }
-            }
-        }
-
-        SubCommand::None => {
-            if let Some(ref v) = opts.to_add {
-                let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-                let msg = registry.add_owners(&name, &v).with_context(|| {
-                    format!(
-                        "failed to invite owners to crate `{}` on registry at {}",
-                        name,
-                        registry.host()
-                    )
-                })?;
-
-                config.shell().status("Owner", msg)?;
-            }
-
-            if let Some(ref v) = opts.to_remove {
-                let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-                config
-                    .shell()
-                    .status("Owner", format!("removing {:?} from crate {}", v, name))?;
-                registry.remove_owners(&name, &v).with_context(|| {
-                    format!(
-                        "failed to remove owners from crate `{}` on registry at {}",
-                        name,
-                        registry.host()
-                    )
-                })?;
-            }
-
-            if opts.list {
-                let owners = registry.list_owners(&name).with_context(|| {
-                    format!(
-                        "failed to list owners of crate `{}` on registry at {}",
-                        name,
-                        registry.host()
-                    )
-                })?;
-                for owner in owners.iter() {
-                    drop_print!(config, "{}", owner.login);
-                    match (owner.name.as_ref(), owner.email.as_ref()) {
-                        (Some(name), Some(email)) => {
-                            drop_println!(config, " ({} <{}>)", name, email)
-                        }
-                        (Some(s), None) | (None, Some(s)) => drop_println!(config, " ({})", s),
-                        (None, None) => drop_println!(config),
-                    }
-                }
+    if opts.list {
+        let owners = registry.list_owners(&name).with_context(|| {
+            format!(
+                "failed to list owners of crate `{}` on registry at {}",
+                name,
+                registry.host()
+            )
+        })?;
+        for owner in owners.iter() {
+            drop_print!(config, "{}", owner.login);
+            match (owner.name.as_ref(), owner.email.as_ref()) {
+                (Some(name), Some(email)) => drop_println!(config, " ({} <{}>)", name, email),
+                (Some(s), None) | (None, Some(s)) => drop_println!(config, " ({})", s),
+                (None, None) => drop_println!(config),
             }
         }
     }
