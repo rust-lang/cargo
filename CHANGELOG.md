@@ -72,7 +72,7 @@
   [#11558](https://github.com/rust-lang/cargo/pull/11558)
 - Cargo now suggests `cargo add` if you try to install a library crate.
   [#11410](https://github.com/rust-lang/cargo/pull/11410)
-- Cargo now sets `CARGO_BIN_NAME` environment variable also for binary examples.
+- Cargo now sets the `CARGO_BIN_NAME` environment variable also for binary examples.
   [#11705](https://github.com/rust-lang/cargo/pull/11705)
 
 ### Changed
@@ -82,13 +82,12 @@
   Cargo will enable default features of that dependency.
   [#11409](https://github.com/rust-lang/cargo/pull/11409)
 - ❗ Deny `CARGO_HOME` in `[env]` configuration table. Cargo itself doesn't
-  pick up this value, but recursive calls to cargo will. We consider it as a
-  wrong behavior to only pass it to recursive invocations.
+  pick up this value, but recursive calls to cargo would, which was not intended.
   [#11644](https://github.com/rust-lang/cargo/pull/11644)
-- ❗ Debuginfo for build dependencies is now off if not explicit set. This is
-  expected to boost the overall build time.
+- ❗ Debuginfo for build dependencies is now off if not explicitly set. This is
+  expected to improve the overall build time.
   [#11252](https://github.com/rust-lang/cargo/pull/11252)
-- Cargo now emits errors on invalid alphanumeric token for crates.io.
+- Cargo now emits errors on invalid alphanumeric characters in a registry token.
   [#11600](https://github.com/rust-lang/cargo/pull/11600)
 - `cargo add` now checks only the order of `[dependencies]`
   without considering `[dependencies.*]`.
