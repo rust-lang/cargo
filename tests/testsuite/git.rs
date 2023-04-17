@@ -1885,7 +1885,10 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .run();
 
-    let repo = gix::open_opts(find_remote_index(false), gix::open::Options::isolated())?;
+    let repo = gix::open_opts(
+        find_remote_index(RepoMode::Complete),
+        gix::open::Options::isolated(),
+    )?;
     assert_eq!(
         repo.rev_parse_single("origin/HEAD")?
             .ancestors()
@@ -1946,9 +1949,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_fol
         .run();
 
     let db_clone = gix::open_opts(
-        glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
-            .next()
-            .unwrap()?,
+        find_bar_db(RepoMode::Shallow),
         gix::open::Options::isolated(),
     )?;
     assert!(db_clone.is_shallow());
@@ -1963,14 +1964,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_fol
     );
 
     let dep_checkout = gix::open_opts(
-        glob::glob(
-            paths::home()
-                .join(".cargo/git/checkouts/bar-*/*/.git")
-                .to_str()
-                .unwrap(),
-        )?
-        .next()
-        .unwrap()?,
+        find_lexicographically_first_bar_checkout(),
         gix::open::Options::isolated(),
     )?;
     assert!(dep_checkout.is_shallow());
@@ -1998,9 +1992,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_fol
         .run();
 
     let db_clone = gix::open_opts(
-        glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
-            .next()
-            .unwrap()?,
+        find_bar_db(RepoMode::Complete),
         gix::open::Options::isolated(),
     )?;
     assert_eq!(
@@ -2047,8 +2039,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_fol
 }
 
 #[cargo_test]
-fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_maintains_shallowness(
-) -> anyhow::Result<()> {
+fn gitoxide_shallow_clone_followed_by_non_shallow_update() -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
@@ -2093,14 +2084,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_main
         .run();
 
     let shallow_db_clone = gix::open_opts(
-        glob::glob(
-            paths::home()
-                .join(".cargo/git/db/bar-*-shallow")
-                .to_str()
-                .unwrap(),
-        )?
-        .next()
-        .unwrap()?,
+        find_bar_db(RepoMode::Shallow),
         gix::open::Options::isolated(),
     )?;
     assert!(shallow_db_clone.is_shallow());
@@ -2115,14 +2099,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_main
     );
 
     let dep_checkout = gix::open_opts(
-        glob::glob(
-            paths::home()
-                .join(".cargo/git/checkouts/bar-*/*/.git")
-                .to_str()
-                .unwrap(),
-        )?
-        .next()
-        .unwrap()?,
+        find_lexicographically_first_bar_checkout(),
         gix::open::Options::isolated(),
     )?;
     assert!(dep_checkout.is_shallow());
@@ -2151,11 +2128,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_main
         .run();
 
     let db_clone = gix::open_opts(
-        glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
-            .map(Result::unwrap)
-            .filter(|p| !p.to_string_lossy().ends_with("-shallow"))
-            .next()
-            .unwrap(),
+        find_bar_db(RepoMode::Complete),
         gix::open::Options::isolated(),
     )?;
     assert_eq!(
@@ -2183,7 +2156,6 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_follow_up_fetch_main
     .map(|path| -> anyhow::Result<usize> {
         let path = path?;
         let dep_checkout = gix::open_opts(&path, gix::open::Options::isolated())?;
-        dbg!(dep_checkout.git_dir());
         assert_eq!(
             dep_checkout.is_shallow(),
             path.to_string_lossy().contains("-shallow"),
@@ -2267,14 +2239,19 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
             .all()?
             .count(),
         4,
-        "even if depth (at remote) is specified again, the current shallow boundary is maintained and not moved"
+        "shallow boundaries are maintained on subsequent shallow fetches (we don't accidentally unshallow it)"
     );
     assert!(repo.is_shallow());
 
     Ok(())
 }
 
-pub fn find_remote_index(shallow: bool) -> std::path::PathBuf {
+enum RepoMode {
+    Shallow,
+    Complete,
+}
+
+fn find_remote_index(mode: RepoMode) -> std::path::PathBuf {
     glob::glob(
         paths::home()
             .join(".cargo/registry/index/*")
@@ -2283,9 +2260,35 @@ pub fn find_remote_index(shallow: bool) -> std::path::PathBuf {
     )
     .unwrap()
     .map(Result::unwrap)
-    .filter(|p| p.to_string_lossy().ends_with("-shallow") == shallow)
+    .filter(|p| p.to_string_lossy().ends_with("-shallow") == matches!(mode, RepoMode::Shallow))
     .next()
     .unwrap()
+}
+
+/// Find a checkout directory for bar, `shallow` or not.
+fn find_bar_db(mode: RepoMode) -> std::path::PathBuf {
+    glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())
+        .unwrap()
+        .map(Result::unwrap)
+        .filter(|p| p.to_string_lossy().ends_with("-shallow") == matches!(mode, RepoMode::Shallow))
+        .next()
+        .unwrap()
+        .to_owned()
+}
+
+/// If there is shallow *and* non-shallow clones, non-shallow will naturally be returned due to sort order.
+fn find_lexicographically_first_bar_checkout() -> std::path::PathBuf {
+    glob::glob(
+        paths::home()
+            .join(".cargo/git/checkouts/bar-*/*/.git")
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap()
+    .next()
+    .unwrap()
+    .unwrap()
+    .to_owned()
 }
 
 #[cargo_test]
@@ -2328,7 +2331,10 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
         .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
         .run();
 
-    let shallow_repo = gix::open_opts(find_remote_index(true), gix::open::Options::isolated())?;
+    let shallow_repo = gix::open_opts(
+        find_remote_index(RepoMode::Shallow),
+        gix::open::Options::isolated(),
+    )?;
     assert_eq!(
         shallow_repo.rev_parse_single("origin/HEAD")?
             .ancestors()
@@ -2347,12 +2353,13 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
         .run();
 
     assert_eq!(
-        shallow_repo.rev_parse_single("origin/HEAD")?
+        shallow_repo
+            .rev_parse_single("origin/HEAD")?
             .ancestors()
             .all()?
             .count(),
         3,
-        "even if depth (at remote) is specified again, the current shallow boundary is maintained and not moved"
+        "shallow boundaries are maintained on subsequent shallow fetches (we don't accidentally unshallow it)"
     );
     assert!(shallow_repo.is_shallow());
 
@@ -2413,9 +2420,7 @@ fn gitoxide_unshallows_git_dependencies_that_may_not_be_shallow_anymore() -> any
         .run();
 
     let db_clone = gix::open_opts(
-        glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
-            .next()
-            .unwrap()?,
+        find_bar_db(RepoMode::Shallow),
         gix::open::Options::isolated(),
     )?;
     assert!(db_clone.is_shallow());

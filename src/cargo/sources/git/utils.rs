@@ -111,7 +111,7 @@ impl GitRemote {
                 cargo_config,
                 history,
             )
-            .context(format!("failed to fetch into: {}", into.display()))?;
+            .with_context(|| format!("failed to fetch into: {}", into.display()))?;
             match locked_rev {
                 Some(rev) => {
                     if db.contains(rev) {
@@ -142,7 +142,7 @@ impl GitRemote {
             cargo_config,
             history,
         )
-        .context(format!("failed to clone into: {}", into.display()))?;
+        .with_context(|| format!("failed to clone into: {}", into.display()))?;
         let rev = match locked_rev {
             Some(rev) => rev,
             None => reference.resolve(&repo)?,
@@ -302,6 +302,10 @@ impl<'a> GitCheckout<'a> {
                 .with_checkout(checkout)
                 .fetch_options(fopts)
                 .clone(url.as_str(), into)?;
+            // `git2` doesn't seem to handle shallow repos correctly when doing a local clone.
+            // Fortunately all that's needed is the copy of the one file that defines the
+            // shallow boundary, the commits which have their parents omitted as part of the
+            // shallow clone.
             if database.repo.is_shallow() {
                 std::fs::copy(
                     database.repo.path().join("shallow"),

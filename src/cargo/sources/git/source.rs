@@ -69,6 +69,7 @@ impl<'cfg> GitSource<'cfg> {
     }
 }
 
+/// Create an identifier from a URL, essentially turning `proto://host/path/repo` into `repo-<hash-of-url>`.
 fn ident(id: &SourceId) -> String {
     let ident = id
         .canonical_url()
@@ -82,6 +83,10 @@ fn ident(id: &SourceId) -> String {
     format!("{}-{}", ident, short_hash(id.canonical_url()))
 }
 
+/// Like `ident()`, but appends `-shallow` to it, turning `proto://host/path/repo` into `repo-<hash-of-url>-shallow`.
+///
+/// It's important to separate shallow from non-shallow clones for reasons of backwards compatibility - older
+/// cargo's aren't necessarily handling shallow clones correctly.
 fn ident_shallow(id: &SourceId, is_shallow: bool) -> String {
     let mut ident = ident(id);
     if is_shallow {
