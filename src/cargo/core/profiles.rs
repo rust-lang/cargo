@@ -704,7 +704,7 @@ impl Profile {
     /// Compares all fields except `name`, which doesn't affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
-    fn comparable(&self) -> impl Hash + Eq {
+    fn comparable(&self) -> impl Hash + Eq + '_ {
         (
             self.opt_level,
             self.lto,
@@ -715,9 +715,8 @@ impl Profile {
             self.debug_assertions,
             self.overflow_checks,
             self.rpath,
-            self.incremental,
-            self.panic,
-            self.strip,
+            (self.incremental, self.panic, self.strip),
+            &self.rustflags,
         )
     }
 }
