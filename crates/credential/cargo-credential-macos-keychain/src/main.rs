@@ -1,5 +1,6 @@
 //! Cargo registry macos keychain credential process.
 
+#[cfg(target_os = "macos")]
 mod macos {
     use cargo_credential::{Credential, Error};
     use security_framework::os::macos::keychain::SecKeychain;
@@ -47,6 +48,11 @@ mod macos {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
+use cargo_credential::UnsupportedCredential as MacKeychain;
+#[cfg(target_os = "macos")]
+use macos::MacKeychain;
+
 fn main() {
-    cargo_credential::main(macos::MacKeychain);
+    cargo_credential::main(MacKeychain);
 }
