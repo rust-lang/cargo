@@ -1,5 +1,6 @@
 //! Cargo registry windows credential process.
 
+#[cfg(windows)]
 mod win {
     use cargo_credential::{Credential, Error};
     use std::ffi::OsStr;
@@ -111,6 +112,11 @@ mod win {
     }
 }
 
+#[cfg(not(windows))]
+use cargo_credential::UnsupportedCredential as WindowsCredential;
+#[cfg(windows)]
+use win::WindowsCredential;
+
 fn main() {
-    cargo_credential::main(win::WindowsCredential);
+    cargo_credential::main(WindowsCredential);
 }
