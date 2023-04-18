@@ -34,6 +34,26 @@ pub trait Credential {
     fn erase(&self, index_url: &str) -> Result<(), Error>;
 }
 
+pub struct UnsupportedCredential;
+
+impl Credential for UnsupportedCredential {
+    fn name(&self) -> &'static str {
+        "unsupported"
+    }
+
+    fn get(&self, _index_url: &str) -> Result<String, Error> {
+        Err("unsupported".into())
+    }
+
+    fn store(&self, _index_url: &str, _token: &str, _name: Option<&str>) -> Result<(), Error> {
+        Err("unsupported".into())
+    }
+
+    fn erase(&self, _index_url: &str) -> Result<(), Error> {
+        Err("unsupported".into())
+    }
+}
+
 /// Runs the credential interaction by processing the command-line and
 /// environment variables.
 pub fn main(credential: impl Credential) {
