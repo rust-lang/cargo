@@ -1,6 +1,6 @@
 name: Feature Request
 description: Suggest an idea for enhancing Cargo
-labels: ["C-feature-request"]
+labels: ["C-feature-request", "S-triage"]
 body:
   - type: markdown
     attributes:
