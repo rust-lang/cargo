@@ -185,7 +185,8 @@ jobs:
     - run: rustup component add rust-docs
     - run: ci/validate-man.sh
     # This requires rustfmt, use stable.
-    - run: cd src/doc/semver-check && cargo +stable run
+    - name: Run semver-check
+      run: cargo +stable run -p semver-check
     - run: |
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.27/mdbook-v0.4.27-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
