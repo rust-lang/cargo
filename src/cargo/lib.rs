@@ -86,7 +86,7 @@
 //! - [`cargo-test-macro`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-macro)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_macro/index.html)):
 //!   This is the `#[cargo_test]` proc-macro used by the test suite to define tests.
-//! - [`credential`](https://github.com/rust-lang/cargo/tree/master/crates/credential)
+//! - [`credential`](https://github.com/rust-lang/cargo/tree/master/credential)
 //!   This subdirectory contains several packages for implementing the
 //!   experimental
 //!   [credential-process](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process)

@@ -8,7 +8,7 @@ Documentation about credential processes may be found at
 https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process
 
 Example implementations may be found at
-https://github.com/rust-lang/cargo/tree/master/crates/credential
+https://github.com/rust-lang/cargo/tree/master/credential
 
 ## Usage
 

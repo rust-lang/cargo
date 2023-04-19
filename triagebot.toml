@@ -165,7 +165,7 @@ trigger_files = ["src/cargo/core/compiler/fingerprint/"]
 trigger_files = ["src/cargo/sources/registry/", "src/cargo/core/registry.rs"]
 
 [autolabel."A-registry-authentication"]
-trigger_files = ["src/cargo/util/auth.rs", "crates/credential/"]
+trigger_files = ["src/cargo/util/auth.rs", "credential/"]
 
 [autolabel."A-semver"]
 trigger_files = [

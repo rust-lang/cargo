@@ -1,17 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
+  "crates/*",
+  "credential/*",
   "benches/benchsuite",
   "benches/capture",
-  "crates/cargo-platform",
-  "crates/cargo-test-macro",
-  "crates/cargo-test-support",
-  "crates/cargo-util",
-  "crates/crates-io",
-  "crates/credential/*",
-  "crates/home",
-  "crates/mdman",
-  "crates/resolver-tests",
 ]
 exclude = [
   # For linkchecker (downloaded during CI) and semver-check
