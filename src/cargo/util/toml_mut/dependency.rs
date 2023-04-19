@@ -279,7 +279,13 @@ impl Dependency {
                     let src = WorkspaceSource::new();
                     src.into()
                 } else {
-                    anyhow::bail!("Unrecognized dependency source for `{key}`");
+                    let mut msg = format!("Unrecognized dependency source for `{key}`");
+                    if table.is_empty() {
+                        msg.push_str(
+                        ", expected a table with a `version`, `git`, `path`, or `workspace` key",
+                    );
+                    }
+                    anyhow::bail!(msg);
                 };
             let registry = if let Some(value) = table.get("registry") {
                 Some(
