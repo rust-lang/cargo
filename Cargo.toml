@@ -7,10 +7,6 @@ members = [
   "benches/capture",
 ]
 exclude = [
-  # For linkchecker (downloaded during CI) and semver-check
-  # TODO: Either move semver-check to crates/ folder,
-  # or make linkchecker run from a given directory.
-  "src/doc/", 
   "target/", # exclude bench testing
 ]
 
