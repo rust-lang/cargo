@@ -196,11 +196,11 @@ jobs:
       env:
         RUSTDOCFLAGS: -D warnings
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
-    - run: |
-        cd src/doc
-        curl -sSLo linkcheck.sh \
-          https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
-        sh linkcheck.sh --all cargo
+    - name: Run linkchecker.sh
+      run: |
+        cd target
+        curl -sSLO https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
+        sh linkcheck.sh --all --path ../src/doc cargo
 
   success:
     permissions:
