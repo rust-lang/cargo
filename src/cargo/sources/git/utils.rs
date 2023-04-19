@@ -1042,12 +1042,6 @@ pub fn fetch(
             // again. If it looks like any other kind of error, or if we've already
             // blown away the repository, then we want to return the error as-is.
             let mut repo_reinitialized = false;
-            // while shallow repos aren't officially supported, don't risk fetching them.
-            // We are in this situation only when `gitoxide` is cloning but then disabled to use `git2`
-            // for fetching.
-            if repo.is_shallow() {
-                reinitialize(repo)?;
-            }
             loop {
                 debug!("initiating fetch of {:?} from {}", refspecs, orig_url);
                 let res = repo
