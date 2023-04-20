@@ -2908,8 +2908,8 @@ impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
             let msg = format!(
                 "dependency ({}) specified without \
-                 providing a local path, Git repository, or \
-                 version to use. This will be considered an \
+                 providing a local path, Git repository, version, or \
+                 workspace dependency to use. This will be considered an \
                  error in future versions",
                 name_in_toml
             );
