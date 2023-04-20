@@ -225,62 +225,72 @@ impl Dependency {
                 (key.to_owned(), None)
             };
 
-            let source: Source =
-                if let Some(git) = table.get("git") {
-                    let mut src = GitSource::new(
-                        git.as_str()
-                            .ok_or_else(|| invalid_type(key, "git", git.type_name(), "string"))?,
-                    );
-                    if let Some(value) = table.get("branch") {
-                        src = src.set_branch(value.as_str().ok_or_else(|| {
+            let source: Source = if let Some(git) = table.get("git") {
+                let mut src = GitSource::new(
+                    git.as_str()
+                        .ok_or_else(|| invalid_type(key, "git", git.type_name(), "string"))?,
+                );
+                if let Some(value) = table.get("branch") {
+                    src =
+                        src.set_branch(value.as_str().ok_or_else(|| {
                             invalid_type(key, "branch", value.type_name(), "string")
                         })?);
-                    }
-                    if let Some(value) = table.get("tag") {
-                        src = src.set_tag(value.as_str().ok_or_else(|| {
+                }
+                if let Some(value) = table.get("tag") {
+                    src =
+                        src.set_tag(value.as_str().ok_or_else(|| {
                             invalid_type(key, "tag", value.type_name(), "string")
                         })?);
-                    }
-                    if let Some(value) = table.get("rev") {
-                        src = src.set_rev(value.as_str().ok_or_else(|| {
+                }
+                if let Some(value) = table.get("rev") {
+                    src =
+                        src.set_rev(value.as_str().ok_or_else(|| {
                             invalid_type(key, "rev", value.type_name(), "string")
                         })?);
-                    }
-                    if let Some(value) = table.get("version") {
-                        src = src.set_version(value.as_str().ok_or_else(|| {
-                            invalid_type(key, "version", value.type_name(), "string")
-                        })?);
-                    }
-                    src.into()
-                } else if let Some(path) = table.get("path") {
-                    let path = crate_root
+                }
+                if let Some(value) = table.get("version") {
+                    src = src.set_version(value.as_str().ok_or_else(|| {
+                        invalid_type(key, "version", value.type_name(), "string")
+                    })?);
+                }
+                src.into()
+            } else if let Some(path) = table.get("path") {
+                let path =
+                    crate_root
                         .join(path.as_str().ok_or_else(|| {
                             invalid_type(key, "path", path.type_name(), "string")
                         })?);
-                    let mut src = PathSource::new(path);
-                    if let Some(value) = table.get("version") {
-                        src = src.set_version(value.as_str().ok_or_else(|| {
-                            invalid_type(key, "version", value.type_name(), "string")
-                        })?);
-                    }
-                    src.into()
-                } else if let Some(version) = table.get("version") {
-                    let src = RegistrySource::new(version.as_str().ok_or_else(|| {
+                let mut src = PathSource::new(path);
+                if let Some(value) = table.get("version") {
+                    src = src.set_version(value.as_str().ok_or_else(|| {
+                        invalid_type(key, "version", value.type_name(), "string")
+                    })?);
+                }
+                src.into()
+            } else if let Some(version) = table.get("version") {
+                let src =
+                    RegistrySource::new(version.as_str().ok_or_else(|| {
                         invalid_type(key, "version", version.type_name(), "string")
                     })?);
-                    src.into()
-                } else if let Some(workspace) = table.get("workspace") {
-                    let workspace_bool = workspace.as_bool().ok_or_else(|| {
-                        invalid_type(key, "workspace", workspace.type_name(), "bool")
-                    })?;
-                    if !workspace_bool {
-                        anyhow::bail!("`{key}.workspace = false` is unsupported")
-                    }
-                    let src = WorkspaceSource::new();
-                    src.into()
-                } else {
-                    anyhow::bail!("Unrecognized dependency source for `{key}`");
-                };
+                src.into()
+            } else if let Some(workspace) = table.get("workspace") {
+                let workspace_bool = workspace
+                    .as_bool()
+                    .ok_or_else(|| invalid_type(key, "workspace", workspace.type_name(), "bool"))?;
+                if !workspace_bool {
+                    anyhow::bail!("`{key}.workspace = false` is unsupported")
+                }
+                let src = WorkspaceSource::new();
+                src.into()
+            } else {
+                let mut msg = format!("unrecognized dependency source for `{key}`");
+                if table.is_empty() {
+                    msg.push_str(
+                        ", expected a local path, Git repository, version, or workspace dependency to be specified",
+                    );
+                }
+                anyhow::bail!(msg);
+            };
             let registry = if let Some(value) = table.get("registry") {
                 Some(
                     value

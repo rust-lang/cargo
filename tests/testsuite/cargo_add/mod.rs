@@ -15,6 +15,7 @@ mod dev;
 mod dev_build_conflict;
 mod dev_prefer_existing_version;
 mod dry_run;
+mod empty_dep_table;
 mod features;
 mod features_empty;
 mod features_multiple_occurrences;
