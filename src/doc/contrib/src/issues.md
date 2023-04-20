@@ -202,8 +202,7 @@ There are several things to consider when triaging an issue:
   see if there is something similar or identical to what is reported. If it is
   obviously a duplicate, write a comment that it is a duplicate of the other
   issue, and close the issue. If it isn't obvious that it is a duplicate,
-  leave a comment asking the author if it the other issue covers what they
-  reported.
+  leave a comment asking the author if the other issue covers what they reported.
 
 * For a bug, check if the report contains enough information to reproduce it.
   If you can't reproduce it, solicit more information from the author to
