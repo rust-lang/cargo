@@ -1,5 +1,45 @@
 # Changelog
 
+## Cargo 1.71 (2023-07-13)
+[84b7041f...HEAD](https://github.com/rust-lang/cargo/compare/84b7041f...HEAD)
+
+### Added
+
+### Changed
+
+- Better error message when getting an empty dependency table in Cargo.toml.
+  [#11997](https://github.com/rust-lang/cargo/pull/11997)
+- Use restricted Damerau-Levenshtein algorithm to provide typo suggestions.
+  [#11963](https://github.com/rust-lang/cargo/pull/11963)
+
+### Fixed
+
+- Corrected the bug report URL for `cargo clippy --fix`.
+  [#11882](https://github.com/rust-lang/cargo/pull/11882)
+
+### Nightly only
+
+- Recompile on profile rustflags changes.
+  [#11981](https://github.com/rust-lang/cargo/pull/11981)
+
+### Documentation
+
+### Internal
+
+- Cargo is now a Cargo workspace. We dogfood ourselves finally.
+  [#11851](https://github.com/rust-lang/cargo/pull/11851)
+  [#11994](https://github.com/rust-lang/cargo/pull/11994)
+  [#11996](https://github.com/rust-lang/cargo/pull/11996)
+- Allow win/mac credential managers to build on all platforms.
+  [#11993](https://github.com/rust-lang/cargo/pull/11993)
+- Use `openssl` only on non-Windows platforms.
+  [#11979](https://github.com/rust-lang/cargo/pull/11979)
+- A new, straightforward issue labels system for Cargo contributors.
+  [docs](https://doc.crates.io/contrib/issues.html)
+  [#11995](https://github.com/rust-lang/cargo/pull/11995)
+  [#12002](https://github.com/rust-lang/cargo/pull/12002)
+  [#12003](https://github.com/rust-lang/cargo/pull/12003)
+
 ## Cargo 1.70 (2023-06-01)
 [9880b408...rust-1.70.0](https://github.com/rust-lang/cargo/compare/9880b408...rust-1.70.0)
 
