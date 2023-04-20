@@ -1,1 +1,1 @@
-error: Unrecognized dependency source for `your-face`, expected a table with a `version`, `git`, `path`, or `workspace` key
+error: unrecognized dependency source for `your-face`, expected a local path, Git repository, version, or workspace dependency to be specified
