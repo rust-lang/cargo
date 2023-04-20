@@ -3,7 +3,7 @@
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::config::{self, Config, Definition, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
-use cargo::util::toml::{self as cargo_toml, VecStringOrBool as VSOB};
+use cargo::util::toml::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
 use cargo::CargoResult;
 use cargo_test_support::compare;
 use cargo_test_support::{panic_error, paths, project, symlink_supported, t};
@@ -1593,4 +1593,61 @@ known-hosts = [
         kh[3].definition,
         Definition::Environment("CARGO_NET_SSH_KNOWN_HOSTS".to_string())
     );
+}
+
+#[cargo_test]
+fn debuginfo_parsing() {
+    let config = ConfigBuilder::new().build();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    assert_eq!(p.debug, None);
+
+    let env_test_cases = [
+        (TomlDebugInfo::None, ["false", "0", "none"].as_slice()),
+        (TomlDebugInfo::LineDirectivesOnly, &["line-directives-only"]),
+        (TomlDebugInfo::LineTablesOnly, &["line-tables-only"]),
+        (TomlDebugInfo::Limited, &["1", "limited"]),
+        (TomlDebugInfo::Full, &["true", "2", "full"]),
+    ];
+    for (expected, config_strs) in env_test_cases {
+        for &val in config_strs {
+            let config = ConfigBuilder::new()
+                .env("CARGO_PROFILE_DEV_DEBUG", val)
+                .build();
+            let debug: TomlDebugInfo = config.get("profile.dev.debug").unwrap();
+            assert_eq!(debug, expected, "failed to parse {val}");
+        }
+    }
+
+    let toml_test_cases = [
+        (TomlDebugInfo::None, ["false", "0", "\"none\""].as_slice()),
+        (
+            TomlDebugInfo::LineDirectivesOnly,
+            &["\"line-directives-only\""],
+        ),
+        (TomlDebugInfo::LineTablesOnly, &["\"line-tables-only\""]),
+        (TomlDebugInfo::Limited, &["1", "\"limited\""]),
+        (TomlDebugInfo::Full, &["true", "2", "\"full\""]),
+    ];
+    for (expected, config_strs) in toml_test_cases {
+        for &val in config_strs {
+            let config = ConfigBuilder::new()
+                .config_arg(format!("profile.dev.debug={val}"))
+                .build();
+            let debug: TomlDebugInfo = config.get("profile.dev.debug").unwrap();
+            assert_eq!(debug, expected, "failed to parse {val}");
+        }
+    }
+
+    let toml_err_cases = ["\"\"", "\"unrecognized\"", "3"];
+    for err_val in toml_err_cases {
+        let config = ConfigBuilder::new()
+            .config_arg(format!("profile.dev.debug={err_val}"))
+            .build();
+        let err = config
+            .get::<TomlDebugInfo>("profile.dev.debug")
+            .unwrap_err();
+        assert!(err
+            .to_string()
+            .ends_with("could not load config key `profile.dev.debug`"));
+    }
 }
