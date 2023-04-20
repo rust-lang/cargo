@@ -206,7 +206,10 @@ fn execute_subcommand(config: &Config, cmd_path: Option<&PathBuf>, args: &[&OsSt
         Some(cmd_path) => ProcessBuilder::new(cmd_path),
         None => ProcessBuilder::new(&cargo_exe),
     };
-    cmd.env(cargo::CARGO_ENV, cargo_exe).args(args);
+    let cargo_config = config.cli_config().map(|s| s.join("\n"));
+    cmd.env(cargo::CARGO_ENV, cargo_exe)
+        .env("CARGO_CONFIG", cargo_config.unwrap_or_default())
+        .args(args);
     if let Some(client) = config.jobserver_from_env() {
         cmd.inherit_jobserver(client);
     }

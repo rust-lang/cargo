@@ -1276,6 +1276,11 @@ impl Config {
         Ok(includes)
     }
 
+    /// Returns the CLI config items.
+    pub fn cli_config(&self) -> Option<&Vec<String>> {
+        self.cli_config.as_ref()
+    }
+
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_as_table(&self) -> CargoResult<ConfigValue> {
         let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli(None));
