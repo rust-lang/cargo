@@ -25,7 +25,7 @@ const SEPARATOR: &str = "///////////////////////////////////////////////////////
 fn doit() -> Result<(), Box<dyn Error>> {
     let filename = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "../src/reference/semver.md".to_string());
+        .unwrap_or_else(|| "src/doc/src/reference/semver.md".to_string());
     let contents = fs::read_to_string(filename)?;
     let mut lines = contents.lines().enumerate();
 
