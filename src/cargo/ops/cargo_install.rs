@@ -4,7 +4,9 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
-use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Target, Workspace};
+use crate::core::{
+    Dependency, Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Target, Workspace,
+};
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
@@ -173,7 +175,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         // specialized compile options specific to the identified package.
         // See test `path_install_workspace_root_despite_default_members`.
         let mut opts = original_opts.clone();
-        opts.spec = Packages::Packages(vec![pkg.name().to_string()]);
+        let pkgidspec = PackageIdSpec::from_package_id(pkg.package_id());
+        opts.spec = Packages::Packages(vec![pkgidspec.to_string()]);
 
         let (ws, rustc, target) = make_ws_rustc_target(config, &opts, &source_id, pkg.clone())?;
         // If we're installing in --locked mode and there's no `Cargo.lock` published

@@ -2287,3 +2287,39 @@ fn sparse_install() {
 "#,
     );
 }
+
+#[cargo_test]
+fn self_referential() {
+    // Some packages build-dep on prior versions of themselves.
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "fn hello() {}")
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .publish();
+    Package::new("foo", "0.0.2")
+        .file("src/lib.rs", "fn hello() {}")
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .build_dep("foo", "0.0.1")
+        .publish();
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.2 (registry [..])
+[INSTALLING] foo v0.0.2
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[COMPILING] foo v0.0.1
+[COMPILING] foo v0.0.2
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.2` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
