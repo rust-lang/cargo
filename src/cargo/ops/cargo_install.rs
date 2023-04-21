@@ -170,15 +170,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             }
         };
 
-        // When we build this package, we want to build the *specified* package only,
-        // and avoid building e.g. workspace default-members instead. Do so by constructing
-        // specialized compile options specific to the identified package.
-        // See test `path_install_workspace_root_despite_default_members`.
-        let mut opts = original_opts.clone();
-        let pkgidspec = PackageIdSpec::from_package_id(pkg.package_id());
-        opts.spec = Packages::Packages(vec![pkgidspec.to_string()]);
-
-        let (ws, rustc, target) = make_ws_rustc_target(config, &opts, &source_id, pkg.clone())?;
+        let (ws, rustc, target) =
+            make_ws_rustc_target(config, &original_opts, &source_id, pkg.clone())?;
         // If we're installing in --locked mode and there's no `Cargo.lock` published
         // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
         if config.locked() && !ws.root().join("Cargo.lock").exists() {
@@ -194,6 +187,16 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         } else {
             ws.current()?.clone()
         };
+
+        // When we build this package, we want to build the *specified* package only,
+        // and avoid building e.g. workspace default-members instead. Do so by constructing
+        // specialized compile options specific to the identified package.
+        // See test `path_install_workspace_root_despite_default_members`.
+        let mut opts = original_opts.clone();
+        // Unlike install source tracking (for --git, see above), use the spec url from the
+        // build workspace (hence unconditional `ws.current()` instead of `pkg` to get `package_id()`).
+        let pkgidspec = PackageIdSpec::from_package_id(ws.current()?.package_id());
+        opts.spec = Packages::Packages(vec![pkgidspec.to_string()]);
 
         if from_cwd {
             if pkg.manifest().edition() == Edition::Edition2015 {
