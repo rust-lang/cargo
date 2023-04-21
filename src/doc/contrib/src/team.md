@@ -148,7 +148,7 @@ The team may be contacted through several channels:
 - Issues and feature requests can be submitted to [Cargo's issue tracker].
   Please see the [Issues chapter] for more detail.
 - The [`t-cargo` Zulip channel][Zulip] stream is the chat platform the Cargo Team uses to coordinate on.
-- The `cargo@rust-lang.org` email address can be used to contact the team.
+- The <cargo@rust-lang.org> email address can be used to contact the team.
   However, using one of the other channels is strongly encouraged.
 
 [Zulip]: https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo
