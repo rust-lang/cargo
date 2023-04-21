@@ -28,7 +28,7 @@ Team members are expected to regularly participate in the following membership-r
 
 - Voting on RFCs and major change proposals
 - Attending meetings
-- Reviewing contributions
+- Reviewing contributions (auto-assignment is managed in [triagebot.toml])
 - Triaging and responding to issues
 - Mentoring new contributors
 - Shepherding major changes and RFCs
@@ -54,6 +54,7 @@ Members are given privileges, such as:
 - Access to private communications related to team management and security discussions
 
 [coc]: https://www.rust-lang.org/policies/code-of-conduct
+[triagebot.toml]: https://github.com/rust-lang/cargo/blob/master/triagebot.toml
 
 ### Meetings
 
