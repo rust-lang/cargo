@@ -14,7 +14,9 @@ The team is expected to keep Cargo in an operational state, to support Rust's 6-
 
 ## Team membership
 
-The Cargo Team consists of team members, and a team leader.
+The Cargo Team consists of team members with one serving as a team leader.
+The team leader is responsible for coordinating the team and providing a contact point with other teams.
+The leader is selected by a vote of the existing members.
 
 Membership is maintained in the [Rust team database].
 
@@ -66,11 +68,6 @@ They can be added by a unanimous vote from the team.
 Contributors who wish to join the team should exhibit an interest in carrying the design principles of Cargo and participate in some of the activities listed above in [Membership Expectations](#membership-expectations).
 
 Members may leave at any time, preferably by letting the team know ahead of time.
-
-### Leadership
-
-The team leader is responsible for coordinating the team and providing a contact point with other teams.
-The leader is selected by a vote of the existing members.
 
 ## Decision process
 
