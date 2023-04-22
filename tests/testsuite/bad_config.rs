@@ -1317,10 +1317,42 @@ fn bad_debuginfo() {
         .with_status(101)
         .with_stderr(
             "\
+error: failed to parse manifest [..]
+
+Caused by:
+  invalid value: string \"a\", expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
+  in `profile.dev.debug`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_debuginfo2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+
+                [profile.dev]
+                debug = 3.6
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  expected a boolean or an integer
+  invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
   in `profile.dev.debug`
 ",
         )

@@ -92,6 +92,7 @@ use crate::core::{Feature, PackageId, Target, Verbosity};
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
+use crate::util::toml::TomlDebugInfo;
 use crate::util::{add_path_args, internal, iter_join_onto, profile};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
 use rustfix::diagnostics::Applicability;
@@ -603,9 +604,20 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
         }
 
         if json_messages {
+            let debuginfo = profile.debuginfo.to_option().map(|d| match d {
+                TomlDebugInfo::None => machine_message::ArtifactDebuginfo::Int(0),
+                TomlDebugInfo::Limited => machine_message::ArtifactDebuginfo::Int(1),
+                TomlDebugInfo::Full => machine_message::ArtifactDebuginfo::Int(2),
+                TomlDebugInfo::LineDirectivesOnly => {
+                    machine_message::ArtifactDebuginfo::Named("line-directives-only")
+                }
+                TomlDebugInfo::LineTablesOnly => {
+                    machine_message::ArtifactDebuginfo::Named("line-tables-only")
+                }
+            });
             let art_profile = machine_message::ArtifactProfile {
                 opt_level: profile.opt_level.as_str(),
-                debuginfo: profile.debuginfo.to_option(),
+                debuginfo,
                 debug_assertions: profile.debug_assertions,
                 overflow_checks: profile.overflow_checks,
                 test: unit_mode.is_any_test(),
