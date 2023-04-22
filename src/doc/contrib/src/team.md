@@ -24,9 +24,11 @@ Membership is maintained in the [Rust team database].
 
 ### Membership expectations
 
-Team members are expected to regularly participate in the following membership-related activities:
+Team members are expected to participate in voting on RFCs and major change proposals
 
-- Voting on RFCs and major change proposals
+Team members are expected to regularly participate in at least some of the following membership-related activities.
+Members are not expected to participate in all of these activities, but exhibit some interest and involvement in the project that covers some of these activities.
+
 - Attending meetings
 - Reviewing contributions (auto-assignment is managed in [triagebot.toml])
 - Triaging and responding to issues
@@ -36,8 +38,6 @@ Team members are expected to regularly participate in the following membership-r
 - Managing and updating the policies of the Cargo Team itself
 - Keeping up with maintenance of the Cargo codebase, ensuring it stays functional and that infrastructure and team processes continue to run smoothly
 
-Members are not expected to participate in all of these activities, but exhibit some interest and involvement in the project that covers some of these activities.
-Voting on RFCs and major change proposals is expected from all members.
 Breaks and vacations are welcome and encouraged.
 If a member is no longer participating after a few months, they may be asked to step down.
 
