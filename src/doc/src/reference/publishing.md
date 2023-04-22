@@ -12,10 +12,10 @@ limit to the number of versions which can be published, however.
 
 First things first, you’ll need an account on [crates.io] to acquire
 an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
-account (required for now). You will also need to verify your email address on the
-[Account Settings](https://crates.io/me) page. Once that is done create an API token,
-make sure you copy it. Once you leave the page you will not be able to see it
-again.
+account (required for now). You will also need to provide and verify your email
+address on the [Account Settings](https://crates.io/settings/profile) page. Once
+that is done [create an API token](https://crates.io/settings/tokens), make sure
+you copy it. Once you leave the page you will not be able to see it again.
 
 Then run the [`cargo login`] command.
 
