@@ -120,7 +120,8 @@ The degree of process is correlated with the degree of change being proposed:
   - Major changes or new features or options in `Cargo.toml` or the config files.
   - Changes to the registry index or API.
   - New or changed CLI options that are expected to have a significant impact on how Cargo is used.
-  - New `cargo` commands.
+  - New `cargo` commands that are not trivial.
+    In some cases, the team may decide to adopt a pre-existing external command without an RFC if the command has already been broadly adopted.
 
 - Stabilization of [Unstable] features requires an approval via the FCP process of [rfcbot].
   This provides a final opportunity to solicit feedback from the public, and for the Cargo team to agree via consensus.
