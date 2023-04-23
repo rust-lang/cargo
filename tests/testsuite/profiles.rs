@@ -742,3 +742,36 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test(nightly, reason = "debug options stabilized in 1.70")]
+fn debug_options_valid() {
+    for (option, cli) in [
+        ("line-directives-only", "line-directives-only"),
+        ("line-tables-only", "line-tables-only"),
+        ("none", "0"),
+        ("limited", "1"),
+        ("full", "2"),
+    ] {
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "foo"
+                    authors = []
+                    version = "0.0.0"
+
+                    [profile.dev]
+                    debug = "{option}"
+                "#
+                ),
+            )
+            .file("src/main.rs", "fn main() {}")
+            .build();
+
+        p.cargo("build -v")
+            .with_stderr_contains(&format!("[RUNNING] `rustc [..]-C debuginfo={cli} [..]"))
+            .run();
+    }
+}
