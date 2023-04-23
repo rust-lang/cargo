@@ -95,7 +95,7 @@ openssl = { version = "0.10.50", optional = true }
 fwdansi = "1.1.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.45"
+version = "0.48"
 features = [
   "Win32_Foundation",
   "Win32_Storage_FileSystem",
