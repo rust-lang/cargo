@@ -1703,6 +1703,7 @@ dependencies = [
 name = "home"
 version = "0.5.5"
 dependencies = [
+ "libc",
  "windows-sys 0.48.0",
 ]
 

@@ -13,9 +13,10 @@
 //! incorrect because it considers the `HOME` environment variable on
 //! Windows. This causes surprising situations where a Rust program
 //! will behave differently depending on whether it is run under a
-//! Unix emulation environment like Cygwin or MinGW. Neither Cargo nor
-//! rustup use the standard libraries definition - they use the
-//! definition here.
+//! Unix emulation environment like Cygwin or MinGW. Additionally, on Unix,
+//! if the `HOME` environment variable is set but empty, an empty path is
+//! returned. Neither Cargo nor rustup use the standard libraries definition
+//! - they use the definition here.
 //!
 //! This crate further provides two functions, `cargo_home` and
 //! `rustup_home`, which are the canonical way to determine the
@@ -30,7 +31,9 @@
 
 pub mod env;
 
-#[cfg(target_os = "windows")]
+#[cfg(unix)]
+mod unix;
+#[cfg(windows)]
 mod windows;
 
 use std::io;
@@ -65,10 +68,12 @@ pub fn home_dir() -> Option<PathBuf> {
     env::home_dir_with_env(&env::OS_ENV)
 }
 
+#[cfg(unix)]
+use unix::home_dir_inner;
 #[cfg(windows)]
 use windows::home_dir_inner;
 
-#[cfg(any(unix, target_os = "redox"))]
+#[cfg(target_os = "redox")]
 fn home_dir_inner() -> Option<PathBuf> {
     #[allow(deprecated)]
     std::env::home_dir()

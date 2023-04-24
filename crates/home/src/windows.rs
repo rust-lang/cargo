@@ -55,7 +55,7 @@ mod tests {
 
         assert_eq!(home_dir_inner(), Some(PathBuf::from(olduserprofile)));
 
-        let home = Path::new(r"C:\Users\foo tar baz");
+        let home = Path::new(r"C:\Users\foo bar baz");
 
         env::set_var("HOME", home.as_os_str());
         assert_ne!(home_dir_inner().as_ref().map(Deref::deref), Some(home));
