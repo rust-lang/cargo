@@ -127,12 +127,10 @@ jobs:
     - run: cargo test -p home
     - run: cargo test -p mdman
     - run: cargo build -p cargo-credential-1password
+    - run: cargo build -p cargo-credential-macos-keychain
+    - run: cargo build -p cargo-credential-wincred
     - run: cargo build -p cargo-credential-gnome-secret
       if: matrix.os == 'ubuntu-latest'
-    - run: cargo build -p cargo-credential-macos-keychain
-      if: matrix.os == 'macos-latest'
-    - run: cargo build -p cargo-credential-wincred
-      if: matrix.os == 'windows-latest'
     - name: Check benchmarks
       run: |
         # This only tests one benchmark since it can take over 10 minutes to
