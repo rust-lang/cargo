@@ -5,7 +5,6 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/rust-lang/cargo"
 repository = "https://github.com/rust-lang/cargo"
-documentation = "https://docs.rs/cargo-platform"
 description = "Benchmarking suite for Cargo."
 
 [dependencies]
