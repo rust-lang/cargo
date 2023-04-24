@@ -780,8 +780,8 @@ fn empty_dependencies() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-warning: dependency (bar) specified without providing a local path, Git repository, or version \
-to use. This will be considered an error in future versions
+warning: dependency (bar) specified without providing a local path, Git repository, version, \
+or workspace dependency to use. This will be considered an error in future versions
 ",
         )
         .run();

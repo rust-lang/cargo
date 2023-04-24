@@ -1269,7 +1269,9 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .with_stderr(
             "\
 [WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.dependencies.dep.workspace
-[WARNING] [CWD]/Cargo.toml: dependency (dep) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
+[WARNING] [CWD]/Cargo.toml: dependency (dep) specified without providing a local path, Git repository, version, \
+or workspace dependency to use. \
+This will be considered an error in future versions
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `dep` found
 location searched: registry `crates-io`
@@ -1589,7 +1591,9 @@ fn cannot_inherit_in_patch() {
         .with_stderr(
             "\
 [WARNING] [CWD]/Cargo.toml: unused manifest key: patch.crates-io.bar.workspace
-[WARNING] [CWD]/Cargo.toml: dependency (bar) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
+[WARNING] [CWD]/Cargo.toml: dependency (bar) specified without providing a local path, Git repository, version, \
+or workspace dependency to use. \
+This will be considered an error in future versions
 [UPDATING] `dummy-registry` index
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
 
