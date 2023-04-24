@@ -206,7 +206,14 @@ jobs:
     permissions:
       contents: none
     name: bors build finished
-    needs: [docs, rustfmt, test, resolver, build_std, test_gitoxide]
+    needs:
+    - build_std
+    - docs
+    - lockfile
+    - resolver
+    - rustfmt
+    - test
+    - test_gitoxide
     runs-on: ubuntu-latest
     if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
     steps:
@@ -215,7 +222,14 @@ jobs:
     permissions:
       contents: none
     name: bors build finished
-    needs: [docs, rustfmt, test, resolver, build_std]
+    needs:
+    - build_std
+    - docs
+    - lockfile
+    - resolver
+    - rustfmt
+    - test
+    - test_gitoxide
     runs-on: ubuntu-latest
     if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
     steps:
