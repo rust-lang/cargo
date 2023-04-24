@@ -262,7 +262,7 @@ dependencies = [
  "glob",
  "hex",
  "hmac",
- "home 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "home 0.5.4",
  "http-auth",
  "humantime 2.1.0",
  "ignore",
@@ -305,7 +305,7 @@ dependencies = [
  "unicode-xid",
  "url",
  "walkdir",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -342,7 +342,7 @@ name = "cargo-credential-wincred"
 version = "0.2.0"
 dependencies = [
  "cargo-credential",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -388,7 +388,7 @@ dependencies = [
  "time",
  "toml",
  "url",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -408,7 +408,7 @@ dependencies = [
  "shell-escape",
  "tempfile",
  "walkdir",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -1546,7 +1546,7 @@ dependencies = [
  "bstr",
  "gix-features",
  "gix-path",
- "home 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "home 0.5.4",
  "thiserror",
  "url",
 ]
@@ -1693,17 +1693,17 @@ dependencies = [
 [[package]]
 name = "home"
 version = "0.5.4"
-dependencies = [
- "windows-sys 0.45.0",
-]
-
-[[package]]
-name = "home"
-version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "747309b4b440c06d57b0b25f2aee03ee9b5e5397d288c60e21fc709bb98a7408"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "home"
+version = "0.5.5"
+dependencies = [
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
