@@ -224,11 +224,8 @@ fn env_applied_to_target_info_discovery_rustc() {
 
     p.cargo("run")
         .env("RUSTC_WORKSPACE_WRAPPER", wrapper)
-        .with_stderr_contains("error: failed to run `rustc` to learn about target-specific information")
-        .with_stderr_contains("[..]thread '[..]' panicked at [..]unwrap[..]") // env::var().unwrap()
-        .with_stderr_does_not_contain("WRAPPER ENV_TEST:from-config")
-        .with_stderr_does_not_contain("MAIN ENV_TEST:from-config")
-        .with_status(101)
+        .with_stderr_contains("WRAPPER ENV_TEST:from-config")
+        .with_stderr_contains("MAIN ENV_TEST:from-config")
         .run();
 
     // Ensure wrapper also maintains the same overridden priority for envs.

@@ -7,6 +7,7 @@
 //! * [`RustcTargetData::info`] to get a [`TargetInfo`] for an in-depth query.
 //! * [`TargetInfo::rustc_outputs`] to get a list of supported file types.
 
+use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{
     BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
 };
@@ -175,6 +176,7 @@ impl TargetInfo {
             //
             // Search `--print` to see what we query so far.
             let mut process = rustc.workspace_process();
+            apply_env_config(config, &mut process)?;
             process
                 .arg("-")
                 .arg("--crate-name")
