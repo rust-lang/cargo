@@ -18,14 +18,14 @@ OPTIONS="--url https://doc.rust-lang.org/cargo/commands/ \
     --man rustc:1=https://doc.rust-lang.org/rustc/index.html \
     --man rustdoc:1=https://doc.rust-lang.org/rustdoc/index.html"
 
-cargo run --manifest-path=../../crates/mdman/Cargo.toml -- \
+cargo run -p mdman -- \
     -t md -o src/commands man/cargo*.md \
     $OPTIONS
 
-cargo run --manifest-path=../../crates/mdman/Cargo.toml -- \
+cargo run -p mdman -- \
     -t txt -o man/generated_txt man/cargo*.md \
     $OPTIONS
 
-cargo run --manifest-path=../../crates/mdman/Cargo.toml -- \
+cargo run -p mdman -- \
     -t man -o ../etc/man man/cargo*.md \
     $OPTIONS

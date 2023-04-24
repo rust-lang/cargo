@@ -24,7 +24,6 @@ jobs:
     - run: rustup update stable && rustup default stable
     - run: rustup component add rustfmt
     - run: cargo fmt --all --check
-    - run: cargo fmt --all --check --manifest-path crates/resolver-tests/Cargo.toml
 
   # Ensure there are no clippy warnings
   clippy:
@@ -152,7 +151,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: rustup update stable && rustup default stable
-    - run: cargo test --manifest-path crates/resolver-tests/Cargo.toml
+    - run: cargo test -p resolver-tests
 
   test_gitoxide:
     runs-on: ubuntu-latest
