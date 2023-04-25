@@ -145,10 +145,16 @@ available)
 .sp
 The default behavior can be changed by setting the \fBbench\fR flag for the target
 in the manifest settings. Setting examples to \fBbench = true\fR will build and
-run the example as a benchmark. Setting targets to \fBbench = false\fR will stop
-them from being benchmarked by default. Target selection options that take a
-target by name ignore the \fBbench\fR flag and will always benchmark the given
+run the example as a benchmark, replacing the example\[cq]s \fBmain\fR function with
+the libtest harness.
+.sp
+Setting targets to \fBbench = false\fR will stop them from being bencharmked by
+default. Target selection options that take a target by name (such as
+\fB\-\-example foo\fR) ignore the \fBbench\fR flag and will always benchmark the given
 target.
+.sp
+See \fIConfiguring a target\fR <https://doc.rust\-lang.org/cargo/reference/cargo\-targets.html#configuring\-a\-target>
+for more information on per\-target settings.
 .sp
 Binary targets are automatically built if there is an integration test or
 benchmark being selected to benchmark. This allows an integration
