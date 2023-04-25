@@ -262,7 +262,7 @@ dependencies = [
  "glob",
  "hex",
  "hmac",
- "home 0.5.4",
+ "home 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "http-auth",
  "humantime 2.1.0",
  "ignore",
@@ -1546,7 +1546,7 @@ dependencies = [
  "bstr",
  "gix-features",
  "gix-path",
- "home 0.5.4",
+ "home 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
  "url",
 ]
@@ -1692,16 +1692,16 @@ dependencies = [
 
 [[package]]
 name = "home"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "747309b4b440c06d57b0b25f2aee03ee9b5e5397d288c60e21fc709bb98a7408"
+version = "0.5.5"
 dependencies = [
- "winapi",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
 name = "home"
 version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5444c27eef6923071f7ebcc33e3444508466a76f7a2b93da00ed6e19f30c1ddb"
 dependencies = [
  "windows-sys 0.48.0",
 ]
