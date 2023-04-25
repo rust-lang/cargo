@@ -1756,6 +1756,9 @@ fn publish_with_missing_readme() {
         .with_stderr(&format!(
             "\
 [UPDATING] [..]
+[WARNING] readme `foo.md` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.1.0 [..]
