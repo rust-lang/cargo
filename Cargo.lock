@@ -3697,6 +3697,12 @@ dependencies = [
 [[package]]
 name = "xtask"
 version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "cargo",
+ "clap 4.2.1",
+ "env_logger 0.10.0",
+]
 
 [[package]]
 name = "yansi"

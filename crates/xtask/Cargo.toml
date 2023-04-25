@@ -5,3 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
+anyhow = "1.0.47"
+cargo = { version = "0.71.0", path = "../.." }
+clap = "4.2.0"
+env_logger = "0.10.0"
