@@ -281,7 +281,7 @@ fn build_ar_list(
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
         let abs_file_path = paths::normalize_path(&pkg.root().join(license_path));
-        if abs_file_path.exists() {
+        if abs_file_path.is_file() {
             check_for_file_and_add(
                 "license-file",
                 license_path,
@@ -291,26 +291,16 @@ fn build_ar_list(
                 ws,
             )?;
         } else {
-            let rel_msg = if license_path.is_absolute() {
-                "".to_string()
-            } else {
-                format!(" (relative to `{}`)", pkg.root().display())
-            };
-            ws.config().shell().warn(&format!(
-                "license-file `{}` does not appear to exist{}.\n\
-                Please update the license-file setting in the manifest at `{}`\n\
-                This may become a hard error in the future.",
-                license_path.display(),
-                rel_msg,
-                pkg.manifest_path().display()
-            ))?;
+            warn_on_nonexistent_file(&pkg, &license_path, "license-file", &ws)?;
         }
     }
     if let Some(readme) = &pkg.manifest().metadata().readme {
         let readme_path = Path::new(readme);
         let abs_file_path = paths::normalize_path(&pkg.root().join(readme_path));
-        if abs_file_path.exists() {
+        if abs_file_path.is_file() {
             check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
+        } else {
+            warn_on_nonexistent_file(&pkg, &readme_path, "readme", &ws)?;
         }
     }
     result.sort_unstable_by(|a, b| a.rel_path.cmp(&b.rel_path));
@@ -367,6 +357,27 @@ fn check_for_file_and_add(
         }
     }
     Ok(())
+}
+
+fn warn_on_nonexistent_file(
+    pkg: &Package,
+    path: &Path,
+    manifest_key_name: &'static str,
+    ws: &Workspace<'_>,
+) -> CargoResult<()> {
+    let rel_msg = if path.is_absolute() {
+        "".to_string()
+    } else {
+        format!(" (relative to `{}`)", pkg.root().display())
+    };
+    ws.config().shell().warn(&format!(
+        "{manifest_key_name} `{}` does not appear to exist{}.\n\
+                Please update the {manifest_key_name} setting in the manifest at `{}`\n\
+                This may become a hard error in the future.",
+        path.display(),
+        rel_msg,
+        pkg.manifest_path().display()
+    ))
 }
 
 /// Construct `Cargo.lock` for the package to be published.
