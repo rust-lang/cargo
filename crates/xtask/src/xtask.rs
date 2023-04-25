@@ -2,6 +2,8 @@ use cargo::util::command_prelude::*;
 
 pub fn cli() -> clap::Command {
     clap::Command::new("xtask")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .arg(
             opt(
                 "verbose",
@@ -29,10 +31,17 @@ pub fn cli() -> clap::Command {
                 .action(ArgAction::Append)
                 .global(true),
         )
+        .subcommands([crate::unpublished::cli()])
 }
 
 pub fn exec(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> cargo::CliResult {
     config_configure(config, args)?;
+
+    match args.subcommand() {
+        Some(("unpublished", args)) => crate::unpublished::exec(args, config)?,
+        Some((name, _)) => unreachable!("clap enforces {name} to not exist"),
+        None => unreachable!("clap enforces a subcommand is present"),
+    }
 
     Ok(())
 }
@@ -66,4 +75,9 @@ fn config_configure(config: &mut Config, args: &ArgMatches) -> CliResult {
         &config_args,
     )?;
     Ok(())
+}
+
+#[test]
+fn verify_cli() {
+    cli().debug_assert();
 }

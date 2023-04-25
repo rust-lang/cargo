@@ -1,3 +1,4 @@
+mod unpublished;
 mod xtask;
 
 fn main() {
