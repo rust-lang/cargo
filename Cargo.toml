@@ -47,7 +47,7 @@ gix-features-for-configuration-only = { version = "0.28.0", package = "gix-featu
 glob = "0.3.0"
 hex = "0.4"
 hmac = "0.12.1"
-home = "0.5"
+home = "0.5.5"
 http-auth = { version = "0.1.6", default-features = false }
 humantime = "2.0.0"
 ignore = "0.4.7"
