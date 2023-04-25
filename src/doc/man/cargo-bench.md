@@ -86,10 +86,16 @@ following targets of the selected packages:
 
 The default behavior can be changed by setting the `bench` flag for the target
 in the manifest settings. Setting examples to `bench = true` will build and
-run the example as a benchmark. Setting targets to `bench = false` will stop
-them from being benchmarked by default. Target selection options that take a
-target by name ignore the `bench` flag and will always benchmark the given
+run the example as a benchmark, replacing the example's `main` function with
+the libtest harness.
+
+Setting targets to `bench = false` will stop them from being bencharmked by
+default. Target selection options that take a target by name (such as
+`--example foo`) ignore the `bench` flag and will always benchmark the given
 target.
+
+See [Configuring a target](../reference/cargo-targets.html#configuring-a-target)
+for more information on per-target settings.
 
 {{> options-targets-bin-auto-built }}
 
