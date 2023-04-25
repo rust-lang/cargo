@@ -1805,3 +1805,18 @@ fn descriptive_pkg_name(name: &str, target: &Target, mode: &CompileMode) -> Stri
     };
     format!("`{name}` ({desc_name}{mode})")
 }
+
+/// Applies environment variables from config `[env]` to [`ProcessBuilder`].
+fn apply_env_config(config: &crate::Config, cmd: &mut ProcessBuilder) -> CargoResult<()> {
+    for (key, value) in config.env_config()?.iter() {
+        // never override a value that has already been set by cargo
+        if cmd.get_envs().contains_key(key) {
+            continue;
+        }
+
+        if value.is_force() || config.get_env_os(key).is_none() {
+            cmd.env(key, value.resolve(config));
+        }
+    }
+    Ok(())
+}

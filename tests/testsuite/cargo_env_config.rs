@@ -1,5 +1,6 @@
 //! Tests for `[env]` config.
 
+use cargo_test_support::basic_manifest;
 use cargo_test_support::{basic_bin_manifest, project};
 
 #[cargo_test]
@@ -177,5 +178,62 @@ fn env_no_override() {
 
     p.cargo("run")
         .with_stdout_contains("CARGO_PKG_NAME:unchanged")
+        .run();
+}
+
+#[cargo_test]
+fn env_applied_to_target_info_discovery_rustc() {
+    let wrapper = project()
+        .at("wrapper")
+        .file("Cargo.toml", &basic_manifest("wrapper", "1.0.0"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                let mut args = std::env::args().skip(1);
+                let env_test = std::env::var("ENV_TEST").unwrap();
+                eprintln!("WRAPPER ENV_TEST:{env_test}");
+                let status = std::process::Command::new(&args.next().unwrap())
+                    .args(args).status().unwrap();
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            "#,
+        )
+        .build();
+    wrapper.cargo("build").run();
+    let wrapper = &wrapper.bin("wrapper");
+
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                eprintln!( "MAIN ENV_TEST:{}", std::env!("ENV_TEST") );
+            }
+            "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+                [env]
+                ENV_TEST = "from-config"
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .env("RUSTC_WORKSPACE_WRAPPER", wrapper)
+        .with_stderr_contains("WRAPPER ENV_TEST:from-config")
+        .with_stderr_contains("MAIN ENV_TEST:from-config")
+        .run();
+
+    // Ensure wrapper also maintains the same overridden priority for envs.
+    p.cargo("clean").run();
+    p.cargo("run")
+        .env("ENV_TEST", "from-env")
+        .env("RUSTC_WORKSPACE_WRAPPER", wrapper)
+        .with_stderr_contains("WRAPPER ENV_TEST:from-env")
+        .with_stderr_contains("MAIN ENV_TEST:from-env")
         .run();
 }
