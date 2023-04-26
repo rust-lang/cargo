@@ -69,6 +69,7 @@ Each new feature described below should explain how to use it.
     * [minimal-versions](#minimal-versions) --- Forces the resolver to use the lowest compatible version instead of the highest.
     * [direct-minimal-versions](#direct-minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
     * [public-dependency](#public-dependency) --- Allows dependencies to be classified as either public or private.
+    * [msrv-policy](#msrv-policy) --- MSRV-aware resolver and version selection
 * Output behavior
     * [out-dir](#out-dir) --- Adds a directory where artifacts are copied to.
     * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
@@ -299,6 +300,14 @@ cargo-features = ["public-dependency"]
 my_dep = { version = "1.2.3", public = true }
 private_dep = "2.0.0" # Will be 'private' by default
 ```
+
+### msrv-policy
+- [#9930](https://github.com/rust-lang/cargo/issues/9930) (MSRV-aware resolver)
+- [#10653](https://github.com/rust-lang/cargo/issues/10653) (MSRV-aware cargo-add)
+- [#10903](https://github.com/rust-lang/cargo/issues/10903) (MSRV-aware cargo-install)
+
+The `msrv-policy` feature enables experiments in MSRV-aware policy for cargo in
+preparation for an upcoming RFC.
 
 ### build-std
 * Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>

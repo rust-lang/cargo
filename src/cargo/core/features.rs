@@ -733,6 +733,7 @@ unstable_cli_options!(
     unstable_options: bool = ("Allow the usage of unstable options"),
     skip_rustdoc_fingerprint: bool = (HIDDEN),
     rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
+    msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -1095,6 +1096,7 @@ impl CliUnstable {
             "timings" => stabilized_warn(k, "1.60", STABILIZED_TIMINGS),
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
+            "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
