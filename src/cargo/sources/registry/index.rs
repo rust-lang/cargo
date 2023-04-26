@@ -814,6 +814,7 @@ impl IndexSummary {
             features2,
             yanked,
             links,
+            rust_version: _,
             v,
         } = serde_json::from_slice(line)?;
         let v = v.unwrap_or(1);
