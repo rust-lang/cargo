@@ -224,9 +224,8 @@ The JSON objects should not be modified after they are added except for the
 > * The publish API includes several other fields, such as `description` and `readme`, which don't appear in the index.
 >   These are intended to make it easier for a registry to obtain the metadata about the crate to display on a website without needing to extract and parse the `.crate` file.
 >   This additional information is typically added to a database on the registry server.
-> * `rust_version` is not included.  If a registry chooses to support this
->   field, they must read it from the `Cargo.toml` contained in the `.crate`
->   file.
+> * Although `rust_version` is included here, [crates.io] will ignore this field
+>   and instead read it from the `Cargo.toml` contained in the `.crate` file.
 >
 > For [`cargo metadata`], the differences are:
 >

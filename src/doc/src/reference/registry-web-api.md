@@ -161,7 +161,10 @@ considered as an exhaustive list of restrictions [crates.io] imposes.
     },
     // The `links` string value from the package's manifest, or null if not
     // specified. This field is optional and defaults to null.
-    "links": null
+    "links": null,
+    // The minimal supported Rust version (optional)
+    // This must be a valid version requirement without an operator (e.g. no `=`)
+    "rust_version": null
 }
 ```
 
