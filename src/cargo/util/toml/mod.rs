@@ -2367,6 +2367,7 @@ impl TomlManifest {
             deps,
             me.features.as_ref().unwrap_or(&empty_features),
             package.links.as_deref(),
+            rust_version.as_deref().map(InternedString::new),
         )?;
 
         let metadata = ManifestMetadata {

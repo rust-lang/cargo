@@ -293,7 +293,6 @@ pub struct RegistryPackage<'a> {
     ///
     /// Added in 2023 (see <https://github.com/rust-lang/crates.io/pull/6267>),
     /// can be `None` if published before then or if not set in the manifest.
-    #[allow(dead_code)]
     rust_version: Option<InternedString>,
     /// The schema version for this entry.
     ///
