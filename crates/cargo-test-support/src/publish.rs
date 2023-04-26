@@ -165,6 +165,7 @@ pub(crate) fn create_index_line(
     features: crate::registry::FeatureMap,
     yanked: bool,
     links: Option<String>,
+    rust_version: Option<&str>,
     v: Option<u32>,
 ) -> String {
     // This emulates what crates.io does to retain backwards compatibility.
@@ -184,6 +185,9 @@ pub(crate) fn create_index_line(
     }
     if let Some(v) = v {
         json["v"] = serde_json::json!(v);
+    }
+    if let Some(rust_version) = rust_version {
+        json["rust_version"] = serde_json::json!(rust_version);
     }
 
     json.to_string()
