@@ -199,6 +199,9 @@ explaining the format of the entry.
     "features2": {
         "serde": ["dep:serde", "chrono?/serde"]
     }
+    // The minimal supported Rust version (optional)
+    // This must be a valid version requirement without an operator (e.g. no `=`)
+    "rust_version": "1.60"
 }
 ```
 
@@ -221,6 +224,9 @@ The JSON objects should not be modified after they are added except for the
 > * The publish API includes several other fields, such as `description` and `readme`, which don't appear in the index.
 >   These are intended to make it easier for a registry to obtain the metadata about the crate to display on a website without needing to extract and parse the `.crate` file.
 >   This additional information is typically added to a database on the registry server.
+> * `rust_version` is not included.  If a registry chooses to support this
+>   field, they must read it from the `Cargo.toml` contained in the `.crate`
+>   file.
 >
 > For [`cargo metadata`], the differences are:
 >
