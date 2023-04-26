@@ -1,0 +1,2 @@
+[alias]
+unpublished = "run --package xtask-unpublished --"
