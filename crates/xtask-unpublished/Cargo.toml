@@ -1,5 +1,5 @@
 [package]
-name = "xtask"
+name = "xtask-unpublished"
 version = "0.0.0"
 edition = "2021"
 publish = false

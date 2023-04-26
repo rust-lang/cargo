@@ -1,2 +1,2 @@
 [alias]
-xtask = "run --package xtask --"
+unpublished = "run --package xtask-unpublished --"
