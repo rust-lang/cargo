@@ -3,7 +3,7 @@
 //!         stale-label
 //!
 //! SYNOPSIS
-//!         stale-label [<FILE>]
+//!         stale-label
 //!
 //! DESCRIPTION
 //!         Detect stale paths in autolabel definitions in triagebot.toml.
@@ -11,7 +11,6 @@
 //! ```
 
 use std::fmt::Write as _;
-use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 use toml_edit::Document;
@@ -19,9 +18,10 @@ use toml_edit::Document;
 fn main() {
     let pkg_root = std::env!("CARGO_MANIFEST_DIR");
     let ws_root = PathBuf::from(format!("{pkg_root}/../.."));
-    let triagebot_toml = format!("{pkg_root}/../../triagebot.toml");
-    let path = std::env::args_os().nth(1).unwrap_or(triagebot_toml.into());
-    let path = Path::new(&path).canonicalize().unwrap_or(path.into());
+    let path = {
+        let path = ws_root.join("triagebot.toml");
+        path.canonicalize().unwrap_or(path)
+    };
 
     eprintln!("Checking file {path:?}\n");
 
@@ -85,5 +85,7 @@ fn main() {
     let result = if failed == 0 { "ok" } else { "FAILED" };
     eprintln!("test result: {result}. {passed} passed; {failed} failed;");
 
-    process::exit(failed as i32);
+    if failed > 0 {
+        process::exit(1);
+    }
 }

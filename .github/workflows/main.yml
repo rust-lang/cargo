@@ -36,6 +36,13 @@ jobs:
       # TODO: check every members
       - run: cargo clippy -p cargo --lib --no-deps -- -D warnings
 
+  stale-label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustup update stable && rustup default stable
+      - run: cargo stale-label
+
   # Ensure Cargo.lock is up-to-date
   lockfile:
     runs-on: ubuntu-latest
