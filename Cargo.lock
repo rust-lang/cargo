@@ -3713,6 +3713,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "xtask-stale-label"
+version = "0.0.0"
+dependencies = [
+ "toml_edit",
+]
+
+[[package]]
 name = "xtask-unpublished"
 version = "0.0.0"
 dependencies = [
