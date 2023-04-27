@@ -2,7 +2,7 @@
 //! authentication/cloning.
 
 use crate::core::{GitReference, Verbosity};
-use crate::sources::git::fetch::{History, RemoteKind};
+use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::oxide;
 use crate::sources::git::oxide::cargo_config_to_gitoxide_overrides;
 use crate::util::errors::CargoResult;
@@ -97,32 +97,25 @@ impl GitRemote {
         // if we can. If that can successfully load our revision then we've
         // populated the database with the latest version of `reference`, so
         // return that database and the rev we resolve to.
-        let remote_kind = if locked_rev.is_some() || matches!(reference, GitReference::Rev(_)) {
-            RemoteKind::GitDependencyForbidShallow
-        } else {
-            RemoteKind::GitDependency
-        };
         if let Some(mut db) = db {
-            let history = remote_kind.to_history(db.repo.is_shallow(), cargo_config);
+            let shallow =
+                RemoteKind::GitDependency.to_shallow_setting(db.repo.is_shallow(), cargo_config);
             fetch(
                 &mut db.repo,
                 self.url.as_str(),
                 reference,
                 cargo_config,
-                history,
+                shallow,
+                locked_rev,
             )
             .with_context(|| format!("failed to fetch into: {}", into.display()))?;
-            match locked_rev {
-                Some(rev) => {
-                    if db.contains(rev) {
-                        return Ok((db, rev));
-                    }
-                }
-                None => {
-                    if let Ok(rev) = reference.resolve(&db.repo) {
-                        return Ok((db, rev));
-                    }
-                }
+
+            let resolved_commit_hash = match locked_rev {
+                Some(rev) => db.contains(rev).then_some(rev),
+                None => reference.resolve(&db.repo).ok(),
+            };
+            if let Some(rev) = resolved_commit_hash {
+                return Ok((db, rev));
             }
         }
 
@@ -134,13 +127,14 @@ impl GitRemote {
         }
         paths::create_dir_all(into)?;
         let mut repo = init(into, true)?;
-        let history = remote_kind.to_history(repo.is_shallow(), cargo_config);
+        let shallow = RemoteKind::GitDependency.to_shallow_setting(repo.is_shallow(), cargo_config);
         fetch(
             &mut repo,
             self.url.as_str(),
             reference,
             cargo_config,
-            history,
+            shallow,
+            locked_rev,
         )
         .with_context(|| format!("failed to clone into: {}", into.display()))?;
         let rev = match locked_rev {
@@ -462,8 +456,9 @@ impl<'a> GitCheckout<'a> {
             cargo_config
                 .shell()
                 .status("Updating", format!("git submodule `{}`", url))?;
-            let history = RemoteKind::GitDependency.to_history(repo.is_shallow(), cargo_config);
-            fetch(&mut repo, &url, &reference, cargo_config, history).with_context(|| {
+            let shallow =
+                RemoteKind::GitDependency.to_shallow_setting(repo.is_shallow(), cargo_config);
+            fetch(&mut repo, &url, &reference, cargo_config, shallow, None).with_context(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
@@ -842,7 +837,8 @@ pub fn fetch(
     orig_url: &str,
     reference: &GitReference,
     config: &Config,
-    history: History,
+    shallow: gix::remote::fetch::Shallow,
+    locked_rev: Option<git2::Oid>,
 ) -> CargoResult<()> {
     if config.frozen() {
         anyhow::bail!(
@@ -855,14 +851,20 @@ pub fn fetch(
     }
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
-    // testing if we've already got an up-to-date copy of the repository
-    let oid_to_fetch = match github_fast_path(repo, orig_url, reference, config) {
-        Ok(FastPathRev::UpToDate) => return Ok(()),
-        Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
-        Ok(FastPathRev::Indeterminate) => None,
-        Err(e) => {
-            debug!("failed to check github {:?}", e);
-            None
+    // testing if we've already got an up-to-date copy of the repository.
+    // With shallow histories this is a bit fuzzy, and we opt-out for now.
+    let is_shallow = repo.is_shallow() || !matches!(shallow, gix::remote::fetch::Shallow::NoChange);
+    let oid_to_fetch = if is_shallow {
+        None
+    } else {
+        match github_fast_path(repo, orig_url, reference, config) {
+            Ok(FastPathRev::UpToDate) => return Ok(()),
+            Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
+            Ok(FastPathRev::Indeterminate) => None,
+            Err(e) => {
+                debug!("failed to check github {:?}", e);
+                None
+            }
         }
     };
 
@@ -881,32 +883,44 @@ pub fn fetch(
     // The `+` symbol on the refspec means to allow a forced (fast-forward)
     // update which is needed if there is ever a force push that requires a
     // fast-forward.
-    match reference {
-        // For branches and tags we can fetch simply one reference and copy it
-        // locally, no need to fetch other branches/tags.
-        GitReference::Branch(b) => {
-            refspecs.push(format!("+refs/heads/{0}:refs/remotes/origin/{0}", b));
-        }
-        GitReference::Tag(t) => {
-            refspecs.push(format!("+refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
-        }
+    if let Some(rev) =
+        locked_rev.filter(|_| !matches!(shallow, gix::remote::fetch::Shallow::NoChange))
+    {
+        // If we want a specific revision and know about, obtain that specifically.
+        refspecs.push(format!("+{0}:refs/remotes/origin/HEAD", rev));
+    } else {
+        match reference {
+            // For branches and tags we can fetch simply one reference and copy it
+            // locally, no need to fetch other branches/tags.
+            GitReference::Branch(b) => {
+                refspecs.push(format!("+refs/heads/{0}:refs/remotes/origin/{0}", b));
+            }
+            GitReference::Tag(t) => {
+                refspecs.push(format!("+refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
+            }
 
-        GitReference::DefaultBranch => {
-            refspecs.push(String::from("+HEAD:refs/remotes/origin/HEAD"));
-        }
-
-        GitReference::Rev(rev) => {
-            if rev.starts_with("refs/") {
-                refspecs.push(format!("+{0}:{0}", rev));
-            } else if let Some(oid_to_fetch) = oid_to_fetch {
-                refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
-            } else {
-                // We don't know what the rev will point to. To handle this
-                // situation we fetch all branches and tags, and then we pray
-                // it's somewhere in there.
-                refspecs.push(String::from("+refs/heads/*:refs/remotes/origin/*"));
+            GitReference::DefaultBranch => {
                 refspecs.push(String::from("+HEAD:refs/remotes/origin/HEAD"));
-                tags = true;
+            }
+
+            GitReference::Rev(rev) => {
+                if rev.starts_with("refs/") {
+                    refspecs.push(format!("+{0}:{0}", rev));
+                } else if let Some(oid_to_fetch) = oid_to_fetch {
+                    refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
+                } else if is_shallow && git2::Oid::from_str(&rev).is_ok() {
+                    // There is a specific commit to fetch and we will just do so in shallow-mode only
+                    // to not disturb the previous logic. Note that with typical settings for shallowing,
+                    // we will just fetch a specific slice of the history.
+                    refspecs.push(format!("+{0}:refs/remotes/origin/HEAD", rev));
+                } else {
+                    // We don't know what the rev will point to. To handle this
+                    // situation we fetch all branches and tags, and then we pray
+                    // it's somewhere in there.
+                    refspecs.push(String::from("+refs/heads/*:refs/remotes/origin/*"));
+                    refspecs.push(String::from("+HEAD:refs/remotes/origin/HEAD"));
+                    tags = true;
+                }
             }
         }
     }
@@ -986,7 +1000,7 @@ pub fn fetch(
                         );
                         let outcome = connection
                             .prepare_fetch(&mut progress, gix::remote::ref_map::Options::default())?
-                            .with_shallow(history.clone().into())
+                            .with_shallow(shallow.clone().into())
                             .receive(&mut progress, should_interrupt)?;
                         Ok(outcome)
                     });

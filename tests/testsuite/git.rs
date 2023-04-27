@@ -2221,8 +2221,8 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
             .ancestors()
             .all()?
             .count(),
-        2,
-        "follow-up fetches maintain shallow-ness, whether it's specified or not, keeping shallow boundary where it is"
+        1,
+        "subsequent shallow fetches wont' fetch what's inbetween, only the single commit that we need while leveraging existing commits"
     );
     assert!(repo.is_shallow());
 
@@ -2238,8 +2238,8 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
             .ancestors()
             .all()?
             .count(),
-        4,
-        "shallow boundaries are maintained on subsequent shallow fetches (we don't accidentally unshallow it)"
+        1,
+        "shallow boundaries are moved with each fetch to maintain only a single commit of history"
     );
     assert!(repo.is_shallow());
 
@@ -2358,8 +2358,8 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
             .ancestors()
             .all()?
             .count(),
-        3,
-        "shallow boundaries are maintained on subsequent shallow fetches (we don't accidentally unshallow it)"
+        1,
+        "subsequent shallow fetches wont' fetch what's inbetween, only the single commit that we need while leveraging existing commits"
     );
     assert!(shallow_repo.is_shallow());
 
@@ -2450,15 +2450,15 @@ fn gitoxide_unshallows_git_dependencies_that_may_not_be_shallow_anymore() -> any
         .run();
 
     assert!(
-        !db_clone.is_shallow(),
-        "the clone was unshallowed as we need the entire history for revision based checkouts"
+        db_clone.is_shallow(),
+        "we maintain shallowness and never unshallow"
     );
 
     Ok(())
 }
 
 #[cargo_test]
-fn gitoxide_uses_shallow_deps_only_when_no_revision_is_specified() -> anyhow::Result<()> {
+fn shallow_deps_work_with_revisions_and_branches_mixed_on_same_dependency() -> anyhow::Result<()> {
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
             .file("src/lib.rs", "")
@@ -2507,8 +2507,8 @@ fn gitoxide_uses_shallow_deps_only_when_no_revision_is_specified() -> anyhow::Re
     );
     let db_clone = gix::open_opts(&db_paths[0], gix::open::Options::isolated())?;
     assert!(
-        !db_clone.is_shallow(),
-        "despite there being two checkouts, it manages to see that the db must not be shallow"
+        db_clone.is_shallow(),
+        "the repo is shallow while having all data it needs"
     );
 
     Ok(())

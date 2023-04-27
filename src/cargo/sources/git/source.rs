@@ -29,6 +29,14 @@ impl<'cfg> GitSource<'cfg> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
+        let manifest_reference = source_id.git_reference().unwrap().clone();
+        let locked_rev =
+            match source_id.precise() {
+                Some(s) => Some(git2::Oid::from_str(s).with_context(|| {
+                    format!("precise value for git is not a git revision: {}", s)
+                })?),
+                None => None,
+            };
         let ident = ident_shallow(
             &source_id,
             config
@@ -39,13 +47,8 @@ impl<'cfg> GitSource<'cfg> {
 
         let source = GitSource {
             remote,
-            manifest_reference: source_id.git_reference().unwrap().clone(),
-            locked_rev: match source_id.precise() {
-                Some(s) => Some(git2::Oid::from_str(s).with_context(|| {
-                    format!("precise value for git is not a git revision: {}", s)
-                })?),
-                None => None,
-            },
+            manifest_reference,
+            locked_rev,
             source_id,
             path_source: None,
             ident,
