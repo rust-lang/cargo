@@ -13,6 +13,8 @@ pub mod registry;
 mod sha256;
 
 /// Whether or not this running in a Continuous Integration environment.
+// ALLOWED: testing is exempt
+#[allow(clippy::disallowed_methods)]
 pub fn is_ci() -> bool {
     std::env::var("CI").is_ok() || std::env::var("TF_BUILD").is_ok()
 }

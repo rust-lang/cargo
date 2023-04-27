@@ -176,7 +176,7 @@ fn split_rules(t: TokenStream) -> Vec<String> {
     .filter(|parts| !parts.is_empty())
     .map(|parts| {
         parts
-            .into_iter()
+            .iter()
             .map(|part| part.to_string())
             .collect::<String>()
     })
@@ -197,10 +197,10 @@ fn version() -> &'static (u32, bool) {
             .output()
             .expect("rustc should run");
         let stdout = std::str::from_utf8(&output.stdout).expect("utf8");
-        let vers = stdout.split_whitespace().skip(1).next().unwrap();
+        let vers = stdout.split_whitespace().nth(1).unwrap();
         let is_nightly = option_env!("CARGO_TEST_DISABLE_NIGHTLY").is_none()
             && (vers.contains("-nightly") || vers.contains("-dev"));
-        let minor = vers.split('.').skip(1).next().unwrap().parse().unwrap();
+        let minor = vers.split('.').nth(1).unwrap().parse().unwrap();
         unsafe { VERSION = (minor, is_nightly) }
     });
     unsafe { &VERSION }

@@ -14,7 +14,7 @@ impl Sha256 {
     }
 
     pub fn update(&mut self, bytes: &[u8]) -> &mut Sha256 {
-        let _ = self.0.update(bytes);
+        self.0.update(bytes);
         self
     }
 

@@ -163,7 +163,13 @@ impl ProcessBuilder {
         self.env
             .get(var)
             .cloned()
-            .or_else(|| Some(env::var_os(var)))
+            .or_else(|| {
+                Some(
+                    // ALLOWED: No `Config` available.
+                    #[allow(clippy::disallowed_methods)]
+                    env::var_os(var),
+                )
+            })
             .and_then(|s| s)
     }
 
@@ -471,7 +477,7 @@ impl ProcessBuilder {
             }
             writeln!(buf, "{arg}")?;
         }
-        tmp.write_all(&mut buf)?;
+        tmp.write_all(&buf)?;
         Ok((cmd, tmp))
     }
 
@@ -541,6 +547,8 @@ impl ProcessBuilder {
 /// Forces the command to use `@path` argfile.
 ///
 /// You should set `__CARGO_TEST_FORCE_ARGFILE` to enable this.
+// ALLOWED: testing is exempt
+#[allow(clippy::disallowed_methods)]
 fn debug_force_argfile(retry_enabled: bool) -> bool {
     cfg!(debug_assertions) && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok() && retry_enabled
 }

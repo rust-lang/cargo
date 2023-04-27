@@ -65,6 +65,8 @@ pub fn dylib_path_envvar() -> &'static str {
 /// Note that some operating systems will have defaults if this is empty that
 /// will need to be dealt with.
 pub fn dylib_path() -> Vec<PathBuf> {
+    // ALLOWED: no `Config` available here
+    #[allow(clippy::disallowed_methods)]
     match env::var_os(dylib_path_envvar()) {
         Some(var) => env::split_paths(&var).collect(),
         None => Vec::new(),
@@ -112,9 +114,11 @@ pub fn normalize_path(path: &Path) -> PathBuf {
 /// Returns an error if it cannot be found.
 pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
     if exec.components().count() == 1 {
+        // ALLOWED: no `Config` available here
+        #[allow(clippy::disallowed_methods)]
         let paths = env::var_os("PATH").ok_or_else(|| anyhow::format_err!("no PATH"))?;
         let candidates = env::split_paths(&paths).flat_map(|path| {
-            let candidate = path.join(&exec);
+            let candidate = path.join(exec);
             let with_exe = if env::consts::EXE_EXTENSION.is_empty() {
                 None
             } else {
@@ -368,6 +372,8 @@ pub struct PathAncestors<'a> {
 
 impl<'a> PathAncestors<'a> {
     fn new(path: &'a Path, stop_root_at: Option<&Path>) -> PathAncestors<'a> {
+        // ALLOWED: tests are exempt.
+        #[allow(clippy::disallowed_methods)]
         let stop_at = env::var("__CARGO_TEST_ROOT")
             .ok()
             .map(PathBuf::from)
@@ -437,7 +443,7 @@ fn _remove_dir_all(p: &Path) -> Result<()> {
             remove_file(&path)?;
         }
     }
-    remove_dir(&p)
+    remove_dir(p)
 }
 
 /// Equivalent to [`std::fs::remove_dir`] with better error messages.
@@ -480,6 +486,8 @@ fn set_not_readonly(p: &Path) -> io::Result<bool> {
     if !perms.readonly() {
         return Ok(false);
     }
+    // ALLOWED: world-writable permissions are acceptable here.
+    #[allow(clippy::permissions_set_readonly_false)]
     perms.set_readonly(false);
     fs::set_permissions(p, perms)?;
     Ok(true)
@@ -505,9 +513,11 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
     // unlink dst in this case. symlink_metadata(dst).is_ok() will tell us
     // whether dst exists *without* following symlinks, which is what we want.
     if fs::symlink_metadata(dst).is_ok() {
-        remove_file(&dst)?;
+        remove_file(dst)?;
     }
 
+    // ALLOWED: testing is exempt
+    #[allow(clippy::disallowed_methods)]
     let link_result = if src.is_dir() {
         #[cfg(target_os = "redox")]
         use std::os::redox::fs::symlink;
@@ -538,19 +548,17 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
         // See https://github.com/rust-lang/cargo/issues/7821 for the
         // gory details.
         fs::copy(src, dst).map(|_| ())
+    } else if cfg!(target_os = "macos") {
+        // This is a work-around for a bug on macos. There seems to be a race condition
+        // with APFS when hard-linking binaries. Gatekeeper does not have signing or
+        // hash information stored in kernel when running the process. Therefore killing it.
+        // This problem does not appear when copying files as kernel has time to process it.
+        // Note that: fs::copy on macos is using CopyOnWrite (syscall fclonefileat) which should be
+        // as fast as hardlinking.
+        // See https://github.com/rust-lang/cargo/issues/10060 for the details
+        fs::copy(src, dst).map(|_| ())
     } else {
-        if cfg!(target_os = "macos") {
-            // This is a work-around for a bug on macos. There seems to be a race condition
-            // with APFS when hard-linking binaries. Gatekeeper does not have signing or
-            // hash information stored in kernel when running the process. Therefore killing it.
-            // This problem does not appear when copying files as kernel has time to process it.
-            // Note that: fs::copy on macos is using CopyOnWrite (syscall fclonefileat) which should be
-            // as fast as hardlinking.
-            // See https://github.com/rust-lang/cargo/issues/10060 for the details
-            fs::copy(src, dst).map(|_| ())
-        } else {
-            fs::hard_link(src, dst)
-        }
+        fs::hard_link(src, dst)
     };
     link_result
         .or_else(|err| {

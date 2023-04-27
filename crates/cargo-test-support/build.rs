@@ -1,3 +1,5 @@
+// ALLOWED: testing is exempt (`std::env::var()`)
+#[allow(clippy::disallowed_methods)]
 fn main() {
     println!(
         "cargo:rustc-env=NATIVE_ARCH={}",
