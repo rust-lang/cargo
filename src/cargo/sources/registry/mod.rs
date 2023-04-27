@@ -241,7 +241,7 @@ pub struct RegistryConfig {
     /// crate's sha256 checksum.
     ///
     /// For backwards compatibility, if the string does not contain any
-    /// markers (`{crate}`, `{version}`, `{prefix}`, or ``{lowerprefix}`), it
+    /// markers (`{crate}`, `{version}`, `{prefix}`, or `{lowerprefix}`), it
     /// will be extended with `/{crate}/{version}/download` to
     /// support registries like crates.io which were created before the
     /// templating setup was created.
@@ -945,7 +945,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 }
 
 /// Get the maximum upack size that Cargo permits
-/// based on a given `size of your compressed file.
+/// based on a given `size` of your compressed file.
 ///
 /// Returns the larger one between `size * max compression ratio`
 /// and a fixed max unpacked size.
