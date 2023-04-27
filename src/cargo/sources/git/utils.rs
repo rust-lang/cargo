@@ -971,8 +971,7 @@ pub fn fetch(
                             .url(gix::remote::Direction::Fetch)
                             .expect("set at init")
                             .to_owned();
-                        let connection =
-                            remote.connect(gix::remote::Direction::Fetch, &mut progress)?;
+                        let connection = remote.connect(gix::remote::Direction::Fetch)?;
                         let mut authenticate = connection.configured_credentials(url)?;
                         let connection = connection.with_credentials(
                             move |action: gix::protocol::credentials::helper::Action| {
@@ -986,9 +985,9 @@ pub fn fetch(
                             },
                         );
                         let outcome = connection
-                            .prepare_fetch(gix::remote::ref_map::Options::default())?
+                            .prepare_fetch(&mut progress, gix::remote::ref_map::Options::default())?
                             .with_shallow(history.clone().into())
-                            .receive(should_interrupt)?;
+                            .receive(&mut progress, should_interrupt)?;
                         Ok(outcome)
                     });
                     let err = match res {

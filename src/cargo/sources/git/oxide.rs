@@ -263,7 +263,7 @@ pub fn open_repo(
 ) -> Result<gix::Repository, gix::open::Error> {
     gix::open_opts(repo_path, {
         let mut opts = gix::open::Options::default();
-        opts.permissions.config = gix::permissions::Config::all();
+        opts.permissions.config = gix::open::permissions::Config::all();
         opts.permissions.config.git_binary = purpose.needs_git_binary_config();
         opts.with(gix::sec::Trust::Full)
             .config_overrides(config_overrides)
