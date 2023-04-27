@@ -345,6 +345,7 @@ fn transmit(
         ref categories,
         ref badges,
         ref links,
+        ref rust_version,
     } = *manifest.metadata();
     let readme_content = readme
         .as_ref()
@@ -398,6 +399,7 @@ fn transmit(
                 license_file: license_file.clone(),
                 badges: badges.clone(),
                 links: links.clone(),
+                rust_version: rust_version.clone(),
             },
             tarball,
         )

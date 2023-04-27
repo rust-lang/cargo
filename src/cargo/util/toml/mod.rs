@@ -2433,6 +2433,11 @@ impl TomlManifest {
                 .transpose()?
                 .unwrap_or_default(),
             links: package.links.clone(),
+            rust_version: package
+                .rust_version
+                .clone()
+                .map(|mw| mw.resolve("rust-version", || inherit()?.rust_version()))
+                .transpose()?,
         };
         package.description = metadata
             .description

@@ -366,6 +366,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -515,6 +516,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -607,6 +609,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",

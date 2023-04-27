@@ -110,6 +110,7 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>, // URL
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
+    pub rust_version: Option<String>,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]

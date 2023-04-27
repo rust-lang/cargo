@@ -201,6 +201,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": "https://github.com/example/example",
+          "rust_version": "1.60",
           "vers": "1.2.3"
           }
         "#,
@@ -376,6 +377,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.2.0"
           }
         "#,
@@ -503,6 +505,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.2.0"
           }
         "#,
@@ -734,6 +737,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": "README.md",
           "readme_file": "../README.md",
           "repository": "https://github.com/example/example",
+          "rust_version": "1.60",
           "vers": "1.2.3"
           }
         "#,
@@ -917,6 +921,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.2.0"
           }
         "#,
