@@ -3713,6 +3713,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "xtask-build-man"
+version = "0.0.0"
+
+[[package]]
 name = "xtask-stale-label"
 version = "0.0.0"
 dependencies = [
