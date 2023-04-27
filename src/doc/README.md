@@ -50,11 +50,7 @@ directory) to three different formats:
 3. Plain text (needed for embedded man pages on platforms without man such as
    Windows), saved in [`src/doc/man/generated_txt/`](man/generated_txt).
 
-To rebuild the man pages, run the script `build-man.sh` in the `src/doc` directory.
-
-```console
-$ ./build-man.sh
-```
+To rebuild the man pages, run `cargo build-man` inside the workspace.
 
 ### SemVer chapter tests
 
