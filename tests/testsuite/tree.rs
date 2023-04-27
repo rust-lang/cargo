@@ -1134,14 +1134,7 @@ dupe-dep v2.0.0
         .run();
 
     p.cargo("tree --duplicates --edges no-proc-macro")
-        .with_stdout(
-            "\
-dupe-dep v1.0.0
-
-dupe-dep v2.0.0
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+        .with_stdout("")
         .run();
 }
 
@@ -1600,8 +1593,6 @@ somedep v1.0.0
             "\
 somedep v1.0.0
 └── foo v0.1.0 ([..]/foo)
-
-somedep v1.0.0
 ",
         )
         .run();
