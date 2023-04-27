@@ -124,7 +124,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "benchsuite"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "cargo",
  "criterion",
@@ -1990,7 +1990,7 @@ dependencies = [
 
 [[package]]
 name = "mdman"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "handlebars",
@@ -2639,7 +2639,7 @@ dependencies = [
 
 [[package]]
 name = "resolver-tests"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "cargo",
  "cargo-util",
@@ -2781,7 +2781,7 @@ dependencies = [
 
 [[package]]
 name = "semver-check"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "tempfile",
 ]

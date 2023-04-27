@@ -1,9 +1,10 @@
 [package]
 name = "mdman"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Creates a man page page from markdown."
+publish = false
 
 [dependencies]
 anyhow = "1.0.31"
