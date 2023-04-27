@@ -39,7 +39,7 @@ pub struct TargetInfo {
     ///
     /// The key is the crate type name (like `cdylib`) and the value is
     /// `Some((prefix, suffix))`, for example `libcargo.so` would be
-    /// `Some(("lib", ".so")). The value is `None` if the crate type is not
+    /// `Some(("lib", ".so"))`. The value is `None` if the crate type is not
     /// supported.
     crate_types: RefCell<HashMap<CrateType, Option<(String, String)>>>,
     /// `cfg` information extracted from `rustc --print=cfg`.
