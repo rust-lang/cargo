@@ -814,6 +814,7 @@ impl IndexSummary {
             features2,
             yanked,
             links,
+            rust_version,
             v,
         } = serde_json::from_slice(line)?;
         let v = v.unwrap_or(1);
@@ -828,7 +829,7 @@ impl IndexSummary {
                 features.entry(name).or_default().extend(values);
             }
         }
-        let mut summary = Summary::new(config, pkgid, deps, &features, links)?;
+        let mut summary = Summary::new(config, pkgid, deps, &features, links, rust_version)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,

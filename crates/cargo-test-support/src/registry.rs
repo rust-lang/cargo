@@ -1144,6 +1144,7 @@ fn save_new_crate(
         false,
         new_crate.links,
         None,
+        None,
     );
 
     write_to_index(registry_path, &new_crate.name, line, false);
@@ -1400,6 +1401,7 @@ impl Package {
             self.features.clone(),
             self.yanked,
             self.links.clone(),
+            self.rust_version.as_deref(),
             self.v,
         );
 

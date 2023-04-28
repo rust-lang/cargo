@@ -25,6 +25,7 @@ struct Inner {
     features: Rc<FeatureMap>,
     checksum: Option<String>,
     links: Option<InternedString>,
+    rust_version: Option<InternedString>,
 }
 
 impl Summary {
@@ -34,6 +35,7 @@ impl Summary {
         dependencies: Vec<Dependency>,
         features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
+        rust_version: Option<impl Into<InternedString>>,
     ) -> CargoResult<Summary> {
         // ****CAUTION**** If you change anything here that may raise a new
         // error, be sure to coordinate that change with either the index
@@ -55,6 +57,7 @@ impl Summary {
                 features: Rc::new(feature_map),
                 checksum: None,
                 links: links.map(|l| l.into()),
+                rust_version: rust_version.map(|l| l.into()),
             }),
         })
     }
@@ -83,6 +86,10 @@ impl Summary {
     }
     pub fn links(&self) -> Option<InternedString> {
         self.inner.links
+    }
+
+    pub fn rust_version(&self) -> Option<InternedString> {
+        self.inner.rust_version
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
