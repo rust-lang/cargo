@@ -1,3 +1,4 @@
 [alias]
-unpublished = "run --package xtask-unpublished --"
+build-man = "run --package xtask-build-man --"
 stale-label = "run --package xtask-stale-label --"
+unpublished = "run --package xtask-unpublished --"
