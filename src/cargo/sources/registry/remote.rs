@@ -311,7 +311,6 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             &self.index_git_ref,
             self.config,
             RemoteKind::Registry,
-            None,
         )
         .with_context(|| format!("failed to fetch `{}`", url))?;
 
