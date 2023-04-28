@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 description = "Tool for capturing a real-world workspace for benchmarking."
 
 [dependencies]
-cargo_metadata = "0.14.0"
-flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
-tar = { version = "0.4.38", default-features = false }
-toml = "0.7.0"
+cargo_metadata.workspace = true
+flate2.workspace = true
+tar.workspace = true
+toml.workspace = true
