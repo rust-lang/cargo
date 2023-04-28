@@ -1,2 +1,3 @@
 [alias]
 unpublished = "run --package xtask-unpublished --"
+stale-label = "run --package xtask-stale-label --"
