@@ -305,13 +305,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // checkout.
         let url = self.source_id.url();
         let repo = self.repo.borrow_mut().unwrap();
-        let shallow = RemoteKind::Registry.to_shallow_setting(repo.is_shallow(), self.config);
         git::fetch(
             repo,
             url.as_str(),
             &self.index_git_ref,
             self.config,
-            shallow,
+            RemoteKind::Registry,
             None,
         )
         .with_context(|| format!("failed to fetch `{}`", url))?;

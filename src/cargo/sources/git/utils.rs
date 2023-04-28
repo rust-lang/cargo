@@ -98,14 +98,12 @@ impl GitRemote {
         // populated the database with the latest version of `reference`, so
         // return that database and the rev we resolve to.
         if let Some(mut db) = db {
-            let shallow =
-                RemoteKind::GitDependency.to_shallow_setting(db.repo.is_shallow(), cargo_config);
             fetch(
                 &mut db.repo,
                 self.url.as_str(),
                 reference,
                 cargo_config,
-                shallow,
+                RemoteKind::GitDependency,
                 locked_rev,
             )
             .with_context(|| format!("failed to fetch into: {}", into.display()))?;
@@ -127,13 +125,12 @@ impl GitRemote {
         }
         paths::create_dir_all(into)?;
         let mut repo = init(into, true)?;
-        let shallow = RemoteKind::GitDependency.to_shallow_setting(repo.is_shallow(), cargo_config);
         fetch(
             &mut repo,
             self.url.as_str(),
             reference,
             cargo_config,
-            shallow,
+            RemoteKind::GitDependency,
             locked_rev,
         )
         .with_context(|| format!("failed to clone into: {}", into.display()))?;
@@ -456,9 +453,15 @@ impl<'a> GitCheckout<'a> {
             cargo_config
                 .shell()
                 .status("Updating", format!("git submodule `{}`", url))?;
-            let shallow =
-                RemoteKind::GitDependency.to_shallow_setting(repo.is_shallow(), cargo_config);
-            fetch(&mut repo, &url, &reference, cargo_config, shallow, None).with_context(|| {
+            fetch(
+                &mut repo,
+                &url,
+                &reference,
+                cargo_config,
+                RemoteKind::GitDependency,
+                None,
+            )
+            .with_context(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
@@ -837,7 +840,7 @@ pub fn fetch(
     orig_url: &str,
     reference: &GitReference,
     config: &Config,
-    shallow: gix::remote::fetch::Shallow,
+    remote_kind: RemoteKind,
     locked_rev: Option<git2::Oid>,
 ) -> CargoResult<()> {
     if config.frozen() {
@@ -849,6 +852,9 @@ pub fn fetch(
     if !config.network_allowed() {
         anyhow::bail!("can't update a git repository in the offline mode")
     }
+
+    let shallow = remote_kind.to_shallow_setting(repo.is_shallow(), config);
+    let is_shallow = !matches!(shallow, gix::remote::fetch::Shallow::NoChange);
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository.
@@ -878,9 +884,7 @@ pub fn fetch(
     // The `+` symbol on the refspec means to allow a forced (fast-forward)
     // update which is needed if there is ever a force push that requires a
     // fast-forward.
-    if let Some(rev) =
-        locked_rev.filter(|_| !matches!(shallow, gix::remote::fetch::Shallow::NoChange))
-    {
+    if let Some(rev) = locked_rev.filter(|_| is_shallow) {
         // If we want a specific revision and know about, obtain that specifically.
         refspecs.push(format!("+{0}:refs/remotes/origin/HEAD", rev));
     } else {
