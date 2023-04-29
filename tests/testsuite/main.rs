@@ -59,6 +59,7 @@ mod generate_lockfile;
 mod git;
 mod git_auth;
 mod git_gc;
+mod git_shallow;
 mod glob_targets;
 mod help;
 mod https;
