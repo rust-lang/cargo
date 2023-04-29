@@ -852,19 +852,14 @@ pub fn fetch(
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository.
-    // With shallow histories this is a bit fuzzy, and we opt-out for now.
-    let is_shallow = repo.is_shallow() || !matches!(shallow, gix::remote::fetch::Shallow::NoChange);
-    let oid_to_fetch = if is_shallow {
-        None
-    } else {
-        match github_fast_path(repo, orig_url, reference, config) {
-            Ok(FastPathRev::UpToDate) => return Ok(()),
-            Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
-            Ok(FastPathRev::Indeterminate) => None,
-            Err(e) => {
-                debug!("failed to check github {:?}", e);
-                None
-            }
+    let is_shallow = !matches!(shallow, gix::remote::fetch::Shallow::NoChange);
+    let oid_to_fetch = match github_fast_path(repo, orig_url, reference, config) {
+        Ok(FastPathRev::UpToDate) => return Ok(()),
+        Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
+        Ok(FastPathRev::Indeterminate) => None,
+        Err(e) => {
+            debug!("failed to check github {:?}", e);
+            None
         }
     };
 
