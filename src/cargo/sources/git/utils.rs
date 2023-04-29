@@ -855,7 +855,6 @@ pub fn fetch(
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository.
-    let is_shallow = !matches!(shallow, gix::remote::fetch::Shallow::NoChange);
     let oid_to_fetch = match github_fast_path(repo, orig_url, reference, config) {
         Ok(FastPathRev::UpToDate) => return Ok(()),
         Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
@@ -901,10 +900,10 @@ pub fn fetch(
                 refspecs.push(format!("+{0}:{0}", rev));
             } else if let Some(oid_to_fetch) = oid_to_fetch {
                 refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
-            } else if is_shallow && rev.parse::<Oid>().is_ok() {
+            } else if rev.parse::<Oid>().is_ok() {
                 // There is a specific commit to fetch and we will just do so in shallow-mode only
                 // to not disturb the previous logic. Note that with typical settings for shallowing,
-                // With shallow histories this is a bit fuzzy, and we opt-out for now.
+                // we will just fetch a single `rev` as single commit.
                 refspecs.push(format!("+{0}:refs/remotes/origin/HEAD", rev));
             } else {
                 // We don't know what the rev will point to. To handle this
