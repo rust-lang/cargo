@@ -948,13 +948,6 @@ fn dep_with_bad_submodule() {
             None,
         )
         .unwrap();
-    std::fs::remove_file(
-        repo.path()
-            .join("objects")
-            .join(&commit.id().to_string()[..2])
-            .join(&commit.id().to_string()[2..]),
-    )
-    .unwrap();
 
     let p = project
         .file(
@@ -979,9 +972,9 @@ fn dep_with_bad_submodule() {
             "extern crate dep1; pub fn foo() { dep1::dep() }",
         )
         .build();
-    let expected = if cargo_uses_gitoxide() {
-        format!(
-            "\
+
+    let expected = format!(
+        "\
 [UPDATING] git repository [..]
 [UPDATING] git submodule `file://[..]/dep2`
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 [..]`
@@ -996,41 +989,10 @@ Caused by:
   failed to update submodule `src`
 
 Caused by:
-  failed to fetch submodule `src` from [..]
-
-Caused by:
-  Could not decode server reply
-
-Caused by:
-  upload-pack: not our ref [..]
+  object not found - no match for id [..]
 ",
-            path2url(git_project.root())
-        )
-    } else {
-        format!(
-            "\
-[UPDATING] git repository [..]
-[UPDATING] git submodule `file://[..]/dep2`
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 [..]`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  Unable to update {}
-
-Caused by:
-  failed to update submodule `src`
-
-Caused by:
-  failed to fetch submodule `src` from [..]
-
-Caused by:
-  target OID for the reference doesn't exist on the repository; class=Reference (4)
-",
-            path2url(git_project.root())
-        )
-    };
+        path2url(git_project.root())
+    );
 
     p.cargo("check")
         .with_stderr(expected)

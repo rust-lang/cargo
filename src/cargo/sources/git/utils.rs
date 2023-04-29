@@ -900,10 +900,15 @@ pub fn fetch(
                 refspecs.push(format!("+{0}:{0}", rev));
             } else if let Some(oid_to_fetch) = oid_to_fetch {
                 refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
-            } else if rev.parse::<Oid>().is_ok() {
-                // There is a specific commit to fetch and we will just do so in shallow-mode only
-                // to not disturb the previous logic. Note that with typical settings for shallowing,
-                // we will just fetch a single `rev` as single commit.
+            } else if !matches!(shallow, gix::remote::fetch::Shallow::NoChange)
+                && rev.parse::<Oid>().is_ok()
+            {
+                // There is a specific commit to fetch and we will do so in shallow-mode only
+                // to not disturb the previous logic.
+                // Note that with typical settings for shallowing, we will just fetch a single `rev`
+                // as single commit.
+                // The reason we write to `refs/remotes/origin/HEAD` is that it's of special significance
+                // when during `GitReference::resolve()`, but otherwise it shouldn't matter.
                 refspecs.push(format!("+{0}:refs/remotes/origin/HEAD", rev));
             } else {
                 // We don't know what the rev will point to. To handle this
