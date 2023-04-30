@@ -505,6 +505,7 @@ impl<'cfg> PackageSet<'cfg> {
             requested_kinds: &[CompileKind],
             target_data: &RustcTargetData<'_>,
             force_all_targets: ForceAllTargets,
+            additional_kinds: Vec<CompileKind>,
         ) -> CargoResult<()> {
             if !used.insert(pkg_id) {
                 return Ok(());
@@ -516,8 +517,9 @@ impl<'cfg> PackageSet<'cfg> {
                 requested_kinds,
                 target_data,
                 force_all_targets,
+                &additional_kinds,
             );
-            for (pkg_id, _dep) in filtered_deps {
+            for (pkg_id, _dep, additional_kinds) in filtered_deps {
                 collect_used_deps(
                     used,
                     resolve,
@@ -526,6 +528,7 @@ impl<'cfg> PackageSet<'cfg> {
                     requested_kinds,
                     target_data,
                     force_all_targets,
+                    additional_kinds,
                 )?;
             }
             Ok(())
@@ -545,6 +548,7 @@ impl<'cfg> PackageSet<'cfg> {
                 requested_kinds,
                 target_data,
                 force_all_targets,
+                Vec::new(),
             )?;
         }
         self.get_many(to_download.into_iter())?;
@@ -573,13 +577,14 @@ impl<'cfg> PackageSet<'cfg> {
                     requested_kinds,
                     target_data,
                     force_all_targets,
+                    &[],
                 )
                 .collect();
 
                 let dep_pkgs_and_deps = dep_pkgs_to_deps
                     .into_iter()
-                    .filter(|(_id, deps)| deps.iter().any(|dep| dep.maybe_lib()))
-                    .filter_map(|(dep_package_id, deps)| {
+                    .filter(|(_id, deps, _additional_kinds)| deps.iter().any(|dep| dep.maybe_lib()))
+                    .filter_map(|(dep_package_id, deps, _additional_kinds)| {
                         self.get_one(dep_package_id).ok().and_then(|dep_pkg| {
                             (!dep_pkg.targets().iter().any(|t| t.is_lib())).then(|| (dep_pkg, deps))
                         })
@@ -607,6 +612,9 @@ impl<'cfg> PackageSet<'cfg> {
         Ok(())
     }
 
+    /// Returns an iterator over the dependencies of `pkg_id`, while filtering out target-specific
+    /// dependencies that are not enabled. Additionally returns a list of additional targets
+    /// specified through an artifact dependency.
     fn filter_deps<'a>(
         pkg_id: PackageId,
         resolve: &'a Resolve,
@@ -614,25 +622,43 @@ impl<'cfg> PackageSet<'cfg> {
         requested_kinds: &'a [CompileKind],
         target_data: &'a RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
-    ) -> impl Iterator<Item = (PackageId, &'a HashSet<Dependency>)> + 'a {
+        additional_kinds: &'a [CompileKind],
+    ) -> impl Iterator<Item = (PackageId, &'a HashSet<Dependency>, Vec<CompileKind>)> + 'a {
         resolve
             .deps(pkg_id)
-            .filter(move |&(_id, deps)| {
-                deps.iter().any(|dep| {
-                    if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
-                        return false;
-                    }
-                    if force_all_targets == ForceAllTargets::No {
-                        let activated = requested_kinds
-                            .iter()
-                            .chain(Some(&CompileKind::Host))
-                            .any(|kind| target_data.dep_platform_activated(dep, *kind));
-                        if !activated {
+            .filter_map(move |(id, deps)| {
+                let mut deps_iter = deps
+                    .iter()
+                    .filter(|dep| {
+                        if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
                             return false;
                         }
-                    }
-                    true
-                })
+                        if force_all_targets == ForceAllTargets::No {
+                            let activated = requested_kinds
+                                .iter()
+                                .chain(Some(&CompileKind::Host))
+                                .chain(additional_kinds)
+                                .any(|kind| target_data.dep_platform_activated(dep, *kind));
+                            if !activated {
+                                return false;
+                            }
+                        }
+                        true
+                    })
+                    .peekable();
+
+                if deps_iter.peek().is_some() {
+                    Some((
+                        id,
+                        deps,
+                        deps_iter.filter_map(|dep| dep.artifact())
+                            .filter_map(|artifact| artifact.target())
+                            .filter_map(|target| target.to_compile_kind())
+                            .collect(),
+                    ))
+                } else {
+                    None
+                }
             })
             .into_iter()
     }
