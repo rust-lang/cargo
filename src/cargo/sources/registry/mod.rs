@@ -174,7 +174,7 @@ use semver::Version;
 use serde::Deserialize;
 use tar::Archive;
 
-use crate::core::dependency::{DepKind, Dependency};
+use crate::core::dependency::{Artifact, DepKind, Dependency};
 use crate::core::source::MaybePackage;
 use crate::core::{Package, PackageId, QueryKind, Source, SourceId, Summary};
 use crate::sources::PathSource;
@@ -363,6 +363,9 @@ struct RegistryDependency<'a> {
     registry: Option<Cow<'a, str>>,
     package: Option<InternedString>,
     public: Option<bool>,
+    artifact: Option<Vec<Cow<'a, str>>>,
+    bindep_target: Option<Cow<'a, str>>,
+    lib: bool,
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -379,6 +382,9 @@ impl<'a> RegistryDependency<'a> {
             registry,
             package,
             public,
+            artifact,
+            bindep_target,
+            lib,
         } = self;
 
         let id = if let Some(registry) = &registry {
@@ -416,6 +422,11 @@ impl<'a> RegistryDependency<'a> {
         // In Cargo.toml, "registry" is None if it is from the default
         if !id.is_crates_io() {
             dep.set_registry_id(id);
+        }
+
+        if let Some(artifacts) = artifact {
+            let artifact = Artifact::parse(&artifacts, lib, bindep_target.as_deref())?;
+            dep.set_artifact(artifact);
         }
 
         dep.set_optional(optional)

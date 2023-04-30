@@ -12,7 +12,6 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::{PackageId, SourceId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::toml::StringOrVec;
 use crate::util::OptVersionReq;
 
 /// Information about a dependency requested by a Cargo manifest.
@@ -468,10 +467,7 @@ impl ser::Serialize for Artifact {
         SerializedArtifact {
             kinds: self.kinds(),
             lib: self.is_lib,
-            target: self.target.as_ref().map(|t| match t {
-                ArtifactTarget::BuildDependencyAssumeTarget => "target",
-                ArtifactTarget::Force(target) => target.rustc_target().as_str(),
-            }),
+            target: self.target.as_ref().map(ArtifactTarget::as_str),
         }
         .serialize(s)
     }
@@ -479,14 +475,14 @@ impl ser::Serialize for Artifact {
 
 impl Artifact {
     pub(crate) fn parse(
-        artifacts: &StringOrVec,
+        artifacts: &[impl AsRef<str>],
         is_lib: bool,
         target: Option<&str>,
     ) -> CargoResult<Self> {
         let kinds = ArtifactKind::validate(
             artifacts
                 .iter()
-                .map(|s| ArtifactKind::parse(s))
+                .map(|s| ArtifactKind::parse(s.as_ref()))
                 .collect::<Result<Vec<_>, _>>()?,
         )?;
         Ok(Artifact {
@@ -529,6 +525,13 @@ impl ArtifactTarget {
         })
     }
 
+    pub fn as_str(&self) -> &str {
+        match self {
+            ArtifactTarget::BuildDependencyAssumeTarget => "target",
+            ArtifactTarget::Force(target) => target.rustc_target().as_str(),
+        }
+    }
+
     pub fn to_compile_kind(&self) -> Option<CompileKind> {
         self.to_compile_target().map(CompileKind::Target)
     }
@@ -539,6 +542,7 @@ impl ArtifactTarget {
             ArtifactTarget::Force(target) => Some(*target),
         }
     }
+
     pub(crate) fn to_resolved_compile_kind(
         &self,
         root_unit_compile_kind: CompileKind,
@@ -575,20 +579,13 @@ impl ser::Serialize for ArtifactKind {
     where
         S: ser::Serializer,
     {
-        let out: Cow<'_, str> = match *self {
-            ArtifactKind::SelectedBinary(name) => format!("bin:{}", name.as_str()).into(),
-            _ => self.crate_type().into(),
-        };
-        out.serialize(s)
+        self.as_str().serialize(s)
     }
 }
 
 impl fmt::Display for ArtifactKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            ArtifactKind::SelectedBinary(bin_name) => return write!(f, "bin:{bin_name}"),
-            _ => self.crate_type(),
-        })
+        f.write_str(&self.as_str())
     }
 }
 
@@ -604,7 +601,14 @@ impl ArtifactKind {
         }
     }
 
-    fn parse(kind: &str) -> CargoResult<Self> {
+    pub fn as_str(&self) -> Cow<'static, str> {
+        match *self {
+            ArtifactKind::SelectedBinary(name) => format!("bin:{}", name.as_str()).into(),
+            _ => self.crate_type().into(),
+        }
+    }
+
+    pub fn parse(kind: &str) -> CargoResult<Self> {
         Ok(match kind {
             "bin" => ArtifactKind::AllBinaries,
             "cdylib" => ArtifactKind::Cdylib,
