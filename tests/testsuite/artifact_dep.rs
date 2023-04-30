@@ -1926,15 +1926,25 @@ You may press ctrl-c [..]
           "badges": {},
           "categories": [],
           "deps": [{
+              "artifact": [
+                "bin"
+              ],
               "default_features": true,
               "features": [],
               "kind": "normal",
+              "lib": true,
               "name": "bar",
               "optional": false,
               "target": null,
               "version_req": "^1.0"
             },
             {
+              "artifact": [
+                "bin:a",
+                "cdylib",
+                "staticlib"
+              ],
+              "bindep_target": "target",
               "default_features": true,
               "features": [],
               "kind": "build",

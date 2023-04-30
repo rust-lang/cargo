@@ -365,6 +365,7 @@ struct RegistryDependency<'a> {
     public: Option<bool>,
     artifact: Option<Vec<Cow<'a, str>>>,
     bindep_target: Option<Cow<'a, str>>,
+    #[serde(default)]
     lib: bool,
 }
 
