@@ -651,7 +651,8 @@ impl<'cfg> PackageSet<'cfg> {
                     Some((
                         id,
                         deps,
-                        deps_iter.filter_map(|dep| dep.artifact())
+                        deps_iter
+                            .filter_map(|dep| dep.artifact())
                             .filter_map(|artifact| artifact.target())
                             .filter_map(|target| target.to_compile_kind())
                             .collect(),

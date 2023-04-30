@@ -237,7 +237,7 @@ pub fn create_bcx<'a, 'cfg>(
     }
     config.validate_term_config()?;
 
-    let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
+    let mut target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
     let specs = spec.to_package_id_specs(ws)?;
     let has_dev_units = {
@@ -263,7 +263,7 @@ pub fn create_bcx<'a, 'cfg>(
     };
     let resolve = ops::resolve_ws_with_opts(
         ws,
-        &target_data,
+        &mut target_data,
         &build_config.requested_kinds,
         cli_features,
         &specs,
@@ -279,7 +279,7 @@ pub fn create_bcx<'a, 'cfg>(
 
     let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
         let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, &build_config, crates)?;
+            standard_lib::resolve_std(ws, &mut target_data, &build_config, crates)?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {

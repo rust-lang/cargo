@@ -64,7 +64,7 @@ use crate::core::resolver::{
     self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionPreferences,
 };
 use crate::core::summary::Summary;
-use crate::core::Feature;
+use crate::core::{Feature, Package};
 use crate::core::{GitReference, PackageId, PackageIdSpec, PackageSet, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;
@@ -124,7 +124,7 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// members. In this case, `opts.all_features` must be `true`.
 pub fn resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData<'cfg>,
+    target_data: &mut RustcTargetData<'cfg>,
     requested_targets: &[CompileKind],
     cli_features: &CliFeatures,
     specs: &[PackageIdSpec],
@@ -198,9 +198,31 @@ pub fn resolve_ws_with_opts<'cfg>(
         &member_ids,
         has_dev_units,
         requested_targets,
-        target_data,
+        &*target_data,
         force_all_targets,
     )?;
+
+    // After we download all the packages we need, we need to change target_data such that any
+    // additionally enabled targets are registered, since they could have per-pkg-target or
+    // artifact dependencies.
+    for pkg in pkg_set.packages() {
+        fn artifact_targets(package: &Package) -> impl Iterator<Item = CompileKind> + '_ {
+            package
+                .manifest()
+                .dependencies()
+                .iter()
+                .filter_map(|d| d.artifact()?.target()?.to_compile_kind())
+        }
+        let kinds = pkg
+            .manifest()
+            .default_kind()
+            .into_iter()
+            .chain(pkg.manifest().forced_kind())
+            .chain(artifact_targets(pkg));
+        for kind in kinds {
+            target_data.merge_compile_kind(kind)?;
+        }
+    }
 
     let feature_opts = FeatureOpts::new(ws, has_dev_units, force_all_targets)?;
     let resolved_features = FeatureResolver::resolve(

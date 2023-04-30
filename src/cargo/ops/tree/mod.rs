@@ -135,7 +135,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     // TODO: Target::All is broken with -Zfeatures=itarget. To handle that properly,
     // `FeatureResolver` will need to be taught what "all" means.
     let requested_kinds = CompileKind::from_requested_targets(ws.config(), &requested_targets)?;
-    let target_data = RustcTargetData::new(ws, &requested_kinds)?;
+    let mut target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let specs = opts.packages.to_package_id_specs(ws)?;
     let has_dev = if opts
         .edge_kinds
@@ -152,7 +152,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     };
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
-        &target_data,
+        &mut target_data,
         &requested_kinds,
         &opts.cli_features,
         &specs,

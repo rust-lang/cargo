@@ -25,7 +25,7 @@ struct ResolveInfo<'cfg> {
 fn do_resolve<'cfg>(config: &'cfg Config, ws_root: &Path) -> ResolveInfo<'cfg> {
     let requested_kinds = [CompileKind::Host];
     let ws = Workspace::new(&ws_root.join("Cargo.toml"), config).unwrap();
-    let target_data = RustcTargetData::new(&ws, &requested_kinds).unwrap();
+    let mut target_data = RustcTargetData::new(&ws, &requested_kinds).unwrap();
     let cli_features = CliFeatures::from_command_line(&[], false, true).unwrap();
     let pkgs = cargo::ops::Packages::Default;
     let specs = pkgs.to_package_id_specs(&ws).unwrap();
@@ -35,7 +35,7 @@ fn do_resolve<'cfg>(config: &'cfg Config, ws_root: &Path) -> ResolveInfo<'cfg> {
     // not confuse criterion's warmup.
     let ws_resolve = cargo::ops::resolve_ws_with_opts(
         &ws,
-        &target_data,
+        &mut target_data,
         &requested_kinds,
         &cli_features,
         &specs,

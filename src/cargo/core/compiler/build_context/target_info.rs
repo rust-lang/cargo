@@ -11,7 +11,7 @@ use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{
     BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
 };
-use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
+use crate::core::{Dependency, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
@@ -910,31 +910,7 @@ impl<'cfg> RustcTargetData<'cfg> {
             target_info,
         };
 
-        // Get all kinds we currently know about.
-        //
-        // For now, targets can only ever come from the root workspace
-        // units and artifact dependencies, so this
-        // correctly represents all the kinds that can happen. When we have
-        // other ways for targets to appear at places that are not the root units,
-        // we may have to revisit this.
-        fn artifact_targets(package: &Package) -> impl Iterator<Item = CompileKind> + '_ {
-            package
-                .manifest()
-                .dependencies()
-                .iter()
-                .filter_map(|d| d.artifact()?.target()?.to_compile_kind())
-        }
-        let all_kinds = requested_kinds
-            .iter()
-            .copied()
-            .chain(ws.members().flat_map(|p| {
-                p.manifest()
-                    .default_kind()
-                    .into_iter()
-                    .chain(p.manifest().forced_kind())
-                    .chain(artifact_targets(p))
-            }));
-        for kind in all_kinds {
+        for &kind in requested_kinds {
             res.merge_compile_kind(kind)?;
         }
 
@@ -942,7 +918,7 @@ impl<'cfg> RustcTargetData<'cfg> {
     }
 
     /// Insert `kind` into our `target_info` and `target_config` members if it isn't present yet.
-    fn merge_compile_kind(&mut self, kind: CompileKind) -> CargoResult<()> {
+    pub(crate) fn merge_compile_kind(&mut self, kind: CompileKind) -> CargoResult<()> {
         if let CompileKind::Target(target) = kind {
             if !self.target_config.contains_key(&target) {
                 self.target_config
