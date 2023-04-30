@@ -206,6 +206,8 @@ impl<'cfg> RegistryIndex<'cfg> {
     where
         'a: 'b,
     {
+        let bindeps = self.config.cli_unstable().bindeps;
+
         let source_id = self.source_id;
         let config = self.config;
 
@@ -237,6 +239,9 @@ impl<'cfg> RegistryIndex<'cfg> {
                 },
             )
             .filter(move |is| {
+                if is.v == 3 && bindeps {
+                    return true;
+                }
                 if is.v > INDEX_V_MAX {
                     debug!(
                         "unsupported schema version {} ({} {})",
@@ -629,7 +634,7 @@ impl<'a> SummariesCache<'a> {
             .get(..4)
             .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index version"))?;
         let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
-        if index_v != INDEX_V_MAX {
+        if index_v != INDEX_V_MAX && index_v != 3 {
             bail!(
                 "index format version {} doesn't match the version I know ({})",
                 index_v,
