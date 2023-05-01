@@ -207,8 +207,8 @@ OPTIONS
            workspace of the local crate unless --target-dir is specified.
 
        --debug
-           Build with the dev profile instead the release profile. See also the
-           --profile option for choosing a specific profile by name.
+           Build with the dev profile instead of the release profile. See also
+           the --profile option for choosing a specific profile by name.
 
        --profile name
            Install with the given profile. See the the reference
