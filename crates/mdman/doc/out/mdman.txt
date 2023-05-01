@@ -25,7 +25,7 @@ DESCRIPTION
           the options start and end.
 
        o  Each option must be expressed with a {{#option}} block. The
-          parameters to the the block are a sequence of strings indicating the
+          parameters to the  block are a sequence of strings indicating the
           option. For example, {{#option "`-p` _spec_..." "`--package`
           _spec_..."}} is an option that has two different forms. The text
           within the string is processed as markdown. It is recommended to use

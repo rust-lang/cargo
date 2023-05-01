@@ -870,7 +870,7 @@ fn main() {
 It is safe to change a generic type to a more generic one. For example, the
 following adds a generic parameter that defaults to the original type, which
 is safe because all existing users will be using the same type for both
-fields, the the defaulted parameter does not need to be specified.
+fields, the  defaulted parameter does not need to be specified.
 
 ```rust,ignore
 // MINOR CHANGE
