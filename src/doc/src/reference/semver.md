@@ -90,6 +90,7 @@ considered incompatible.
         * [Major: generalizing a function to use generics with type mismatch](#fn-generalize-mismatch)
     * Attributes
         * [Major: switching from `no_std` support to requiring `std`](#attr-no-std-to-std)
+        * [Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields](#attr-adding-non-exhaustive)
 * Tooling and environment compatibility
     * [Possibly-breaking: changing the minimum version of Rust required](#env-new-rust)
     * [Possibly-breaking: changing the platform and environment requirements](#env-change-requirements)
@@ -1115,6 +1116,89 @@ Mitigation strategies:
   optionally enables `std` support, and when the feature is off, the library
   can be used in a `no_std` environment.
 
+<a id="attr-adding-non-exhaustive"></a>
+### Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields
+
+Making items [`#[non_exhaustive]`][non_exhaustive] changes how they may
+be used outside the crate where they are defined:
+
+- Non-exhaustive structs and enum variants cannot be constructed
+  using [struct literal] syntax, including [functional update syntax].
+- Pattern matching on non-exhaustive structs requires `..` and
+  matching on enums does not count towards exhaustiveness.
+- Casting enum variants to their discriminant with `as` is not allowed.
+
+Structs with private fields cannot be constructed using [struct literal] syntax
+regardless of whether [`#[non_exhaustive]`][non_exhaustive] is used.
+Adding [`#[non_exhaustive]`][non_exhaustive] to such a struct is not
+a breaking change.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Foo {
+    pub bar: usize,
+}
+
+pub enum Bar {
+    X,
+    Y(usize),
+    Z { a: usize },
+}
+
+pub enum Quux {
+    Var,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[non_exhaustive]
+pub struct Foo {
+    pub bar: usize,
+}
+
+pub enum Bar {
+    #[non_exhaustive]
+    X,
+
+    #[non_exhaustive]
+    Y(usize),
+
+    #[non_exhaustive]
+    Z { a: usize },
+}
+
+#[non_exhaustive]
+pub enum Quux {
+    Var,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::{Bar, Foo, Quux};
+
+fn main() {
+    let foo = Foo { bar: 0 }; // Error: cannot create non-exhaustive struct using struct expression
+
+    let bar_x = Bar::X; // Error: unit variant `X` is private
+    let bar_y = Bar::Y(0); // Error: tuple variant `Y` is private
+    let bar_z = Bar::Z { a: 0 }; // Error: cannot create non-exhaustive variant using struct expression
+
+    let q = Quux::Var;
+    match q {
+        Quux::Var => 0,
+        // Error: non-exhaustive patterns: `_` not covered
+    };
+}
+```
+
+Mitigation strategies:
+* Mark structs, enums, and enum variants as
+  [`#[non_exhaustive]`][non_exhaustive] when first introducing them,
+  rather than adding [`#[non_exhaustive]`][non_exhaustive] later on.
+
 ## Tooling and environment compatibility
 
 <a id="env-new-rust"></a>
@@ -1393,6 +1477,7 @@ document what your commitments are.
 [Default]: ../../std/default/trait.Default.html
 [deprecated]: ../../reference/attributes/diagnostics.html#the-deprecated-attribute
 [disambiguation syntax]: ../../reference/expressions/call-expr.html#disambiguating-function-calls
+[functional update syntax]: ../../reference/expressions/struct-expr.html#functional-update-syntax
 [inherent implementations]: ../../reference/items/implementations.html#inherent-implementations
 [items]: ../../reference/items.html
 [non_exhaustive]: ../../reference/attributes/type_system.html#the-non_exhaustive-attribute
