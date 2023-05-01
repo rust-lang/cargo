@@ -1121,10 +1121,12 @@ Mitigation strategies:
 
 Making items [`#[non_exhaustive]`][non_exhaustive] changes how they may
 be used outside the crate where they are defined:
+
 - Non-exhaustive structs and enum variants cannot be constructed
   using [struct literal] syntax, including [functional update syntax].
-- Pattern matching on non-exhaustive enums always requires
-  a wildcard (`_`) arm.
+- Pattern matching on non-exhaustive structs requires `..` and
+  matching on enums does not count towards exhaustiveness.
+- Casting enum variants to their discriminant with `as` is not allowed.
 
 Structs with private fields cannot be constructed using [struct literal] syntax
 regardless of whether [`#[non_exhaustive]`][non_exhaustive] is used.
