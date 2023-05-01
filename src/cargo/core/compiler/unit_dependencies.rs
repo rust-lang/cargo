@@ -149,7 +149,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 
 /// Compute all the dependencies for the standard library.
 fn calc_deps_of_std(
-    mut state: &mut State<'_, '_>,
+    state: &mut State<'_, '_>,
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
 ) -> CargoResult<Option<UnitGraph>> {
     if std_roots.is_empty() {
