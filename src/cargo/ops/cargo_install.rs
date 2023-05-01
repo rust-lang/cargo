@@ -193,8 +193,9 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         // specialized compile options specific to the identified package.
         // See test `path_install_workspace_root_despite_default_members`.
         let mut opts = original_opts.clone();
-        // Unlike install source tracking (for --git, see above), use the spec url from the
-        // build workspace (hence unconditional `ws.current()` instead of `pkg` to get `package_id()`).
+        // For cargo install tracking, we retain the source git url in `pkg`, but for the build spec
+        // we need to unconditionally use `ws.current()` to correctly address the path where we
+        // locally cloned that repo.
         let pkgidspec = PackageIdSpec::from_package_id(ws.current()?.package_id());
         opts.spec = Packages::Packages(vec![pkgidspec.to_string()]);
 

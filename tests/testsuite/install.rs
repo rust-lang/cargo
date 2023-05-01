@@ -1416,6 +1416,46 @@ fn path_install_workspace_root_despite_default_members() {
 }
 
 #[cargo_test]
+fn git_install_workspace_root_despite_default_members() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "ws-root"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["ws-member"]
+                default-members = ["ws-member"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "ws-member/Cargo.toml",
+            r#"
+                [package]
+                name = "ws-member"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file("ws-member/src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .arg("ws-root")
+        .with_stderr_contains(
+            "[INSTALLED] package `ws-root v0.1.0 ([..])` (executable `ws-root[EXE]`)",
+        )
+        // Particularly avoid "Installed package `ws-root v0.1.0 ([..]])` (executable `ws-member`)":
+        .with_stderr_does_not_contain("ws-member")
+        .run();
+}
+
+#[cargo_test]
 fn dev_dependencies_no_check() {
     Package::new("foo", "1.0.0").publish();
     let p = project()
@@ -2317,6 +2357,51 @@ fn self_referential() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.2` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn ambiguous_registry_vs_local_workspace_package() {
+    // Correctly install 'foo' from a workspace, even if that workspace
+    // (somewhere) also depends on a registry package named 'foo'.
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+        authors = []
+        edition = "2021"
+
+        [dependencies]
+        foo = "0.0.1"
+    "#,
+        )
+        .build();
+
+    cargo_process("install --path")
+        .arg(p.root())
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.1.0 ([..])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[COMPILING] foo v0.0.1
+[COMPILING] foo v0.1.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.1.0 ([..])` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
