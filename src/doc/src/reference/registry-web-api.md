@@ -308,6 +308,8 @@ A successful response includes the JSON object:
 {
     // Indicates the remove succeeded, always true.
     "ok": true
+    // A string to be displayed to the user. Currently ignored by cargo.
+    "msg": "owners successfully removed",
 }
 ```
 
