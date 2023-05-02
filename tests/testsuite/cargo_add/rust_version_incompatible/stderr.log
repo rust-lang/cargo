@@ -1,0 +1,4 @@
+    Updating `dummy-registry` index
+error: could not find version of crate `rust-version-user` that satisfies this package's rust-version of 1.56
+help: use `--ignore-rust-version` to override this behavior
+note: the lowest rust-version available for `rust-version-user` is 1.66, used in version 0.1.1
