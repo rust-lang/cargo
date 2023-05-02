@@ -508,45 +508,6 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
     Ok(())
 }
 
-fn find_lexicographically_first_bar_checkout() -> std::path::PathBuf {
-    glob::glob(
-        paths::home()
-            .join(".cargo/git/checkouts/bar-*/*/.git")
-            .to_str()
-            .unwrap(),
-    )
-    .unwrap()
-    .next()
-    .unwrap()
-    .unwrap()
-    .to_owned()
-}
-
-fn find_remote_index(mode: RepoMode) -> std::path::PathBuf {
-    glob::glob(
-        paths::home()
-            .join(".cargo/registry/index/*")
-            .to_str()
-            .unwrap(),
-    )
-    .unwrap()
-    .map(Result::unwrap)
-    .filter(|p| p.to_string_lossy().ends_with("-shallow") == matches!(mode, RepoMode::Shallow))
-    .next()
-    .unwrap()
-}
-
-/// Find a checkout directory for bar, `shallow` or not.
-fn find_bar_db(mode: RepoMode) -> std::path::PathBuf {
-    glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())
-        .unwrap()
-        .map(Result::unwrap)
-        .filter(|p| p.to_string_lossy().ends_with("-shallow") == matches!(mode, RepoMode::Shallow))
-        .next()
-        .unwrap()
-        .to_owned()
-}
-
 /// If there is shallow *and* non-shallow clones, non-shallow will naturally be returned due to sort order.
 #[cargo_test]
 fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_shallowness(
@@ -638,7 +599,7 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
 }
 
 #[cargo_test]
-fn gitoxide_unshallows_git_dependencies_that_may_not_be_shallow_anymore() -> anyhow::Result<()> {
+fn gitoxide_git_dependencies_switch_from_branch_to_rev() -> anyhow::Result<()> {
     // db exists from previous build, then dependency changes to refer to revision that isn't
     // available in the shallow clone.
 
@@ -828,4 +789,43 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_aborts_and_updates_again(
     );
 
     Ok(())
+}
+
+fn find_lexicographically_first_bar_checkout() -> std::path::PathBuf {
+    glob::glob(
+        paths::home()
+            .join(".cargo/git/checkouts/bar-*/*/.git")
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap()
+    .next()
+    .unwrap()
+    .unwrap()
+    .to_owned()
+}
+
+fn find_remote_index(mode: RepoMode) -> std::path::PathBuf {
+    glob::glob(
+        paths::home()
+            .join(".cargo/registry/index/*")
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap()
+    .map(Result::unwrap)
+    .filter(|p| p.to_string_lossy().ends_with("-shallow") == matches!(mode, RepoMode::Shallow))
+    .next()
+    .unwrap()
+}
+
+/// Find a checkout directory for bar, `shallow` or not.
+fn find_bar_db(mode: RepoMode) -> std::path::PathBuf {
+    glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())
+        .unwrap()
+        .map(Result::unwrap)
+        .filter(|p| p.to_string_lossy().ends_with("-shallow") == matches!(mode, RepoMode::Shallow))
+        .next()
+        .unwrap()
+        .to_owned()
 }
