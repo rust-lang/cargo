@@ -165,6 +165,7 @@ crate-type = ["lib", "staticlib"]
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -258,6 +259,7 @@ optional_feat = []
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -588,6 +590,9 @@ fn cargo_metadata_with_deps_and_version() {
         "workspace_members": [
             "foo 0.5.0 (path+file:[..]foo)"
         ],
+        "workspace_default_members": [
+            "foo 0.5.0 (path+file:[..]foo)"
+        ],
         "workspace_root": "[..]/foo",
         "metadata": null
     }"#,
@@ -667,6 +672,9 @@ name = "ex"
             }
         ],
         "workspace_members": [
+            "foo 0.1.0 (path+file:[..]foo)"
+        ],
+        "workspace_default_members": [
             "foo 0.1.0 (path+file:[..]foo)"
         ],
         "resolve": {
@@ -762,6 +770,9 @@ crate-type = ["rlib", "dylib"]
             }
         ],
         "workspace_members": [
+            "foo 0.1.0 (path+file:[..]foo)"
+        ],
+         "workspace_default_members": [
             "foo 0.1.0 (path+file:[..]foo)"
         ],
         "resolve": {
@@ -893,6 +904,7 @@ fn workspace_metadata() {
             }
         ],
         "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
+        "workspace_default_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
         "resolve": {
             "nodes": [
                 {
@@ -1120,6 +1132,11 @@ fn workspace_metadata_with_dependencies_no_deps() {
             }
         ],
         "workspace_members": [
+            "bar 0.5.0 (path+file:[..]bar)",
+            "artifact 0.5.0 (path+file:[..]/foo/artifact)",
+            "baz 0.5.0 (path+file:[..]baz)"
+        ],
+        "workspace_default_members": [
             "bar 0.5.0 (path+file:[..]bar)",
             "artifact 0.5.0 (path+file:[..]/foo/artifact)",
             "baz 0.5.0 (path+file:[..]baz)"
@@ -1756,6 +1773,12 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
                 "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
               ],
+              "workspace_default_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+              ],
               "workspace_root": "[..]/foo"
             }
     "#,
@@ -2149,6 +2172,7 @@ fn package_metadata() {
             }
         ],
         "workspace_members": ["foo[..]"],
+        "workspace_default_members": ["foo[..]"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -2224,6 +2248,7 @@ fn package_publish() {
             }
         ],
         "workspace_members": ["foo[..]"],
+        "workspace_default_members": ["foo[..]"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -2319,7 +2344,9 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "workspace_members": [
                     "bar 0.5.0 (path+file:[..])"
                 ],
-                "workspace_default_members": [],
+                "workspace_default_members": [
+                    "bar 0.5.0 (path+file:[..])"
+                ],
                 "workspace_root": "[..]",
                 "metadata": null
             }
@@ -2406,6 +2433,9 @@ fn package_edition_2018() {
                 "target_directory": "[..]",
                 "version": 1,
                 "workspace_members": [
+                    "foo 0.1.0 (path+file:[..])"
+                ],
+                "workspace_default_members": [
                     "foo 0.1.0 (path+file:[..])"
                 ],
                 "workspace_root": "[..]",
@@ -2554,6 +2584,9 @@ fn target_edition_2018() {
                 "target_directory": "[..]",
                 "version": 1,
                 "workspace_members": [
+                    "foo 0.1.0 (path+file:[..])"
+                ],
+                "workspace_default_members": [
                     "foo 0.1.0 (path+file:[..])"
                 ],
                 "workspace_root": "[..]",
@@ -2792,6 +2825,9 @@ fn rename_dependency() {
     "workspace_members": [
         "foo 0.0.1[..]"
     ],
+    "workspace_default_members": [
+        "foo 0.0.1[..]"
+    ],
     "workspace_root": "[..]",
     "metadata": null
 }"#,
@@ -2892,6 +2928,9 @@ fn metadata_links() {
               "workspace_members": [
                 "foo 0.5.0 [..]"
               ],
+              "workspace_default_members": [
+                "foo 0.5.0 [..]"
+              ],
               "workspace_root": "[..]/foo",
               "metadata": null
             }
@@ -2980,6 +3019,9 @@ fn deps_with_bin_only() {
                 }
               ],
               "workspace_members": [
+                "foo 0.1.0 ([..])"
+              ],
+              "workspace_default_members": [
                 "foo 0.1.0 ([..])"
               ],
               "resolve": {
@@ -3361,6 +3403,9 @@ fn filter_platform() {
   "workspace_members": [
     "foo 0.1.0 (path+file:[..]foo)"
   ],
+  "workspace_default_members": [
+    "foo 0.1.0 (path+file:[..]foo)"
+  ],
   "resolve": {
     "nodes": [
       {
@@ -3480,6 +3525,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -3561,6 +3607,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -3645,6 +3692,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -3759,6 +3807,7 @@ fn dep_kinds() {
             {
               "packages": "{...}",
               "workspace_members": "{...}",
+              "workspace_default_members": "{...}",
               "target_directory": "{...}",
               "version": 1,
               "workspace_root": "{...}",
@@ -3874,6 +3923,7 @@ fn dep_kinds_workspace() {
             {
               "packages": "{...}",
               "workspace_members": "{...}",
+              "workspace_default_members": "{...}",
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_root": "[..]/foo",
@@ -4183,6 +4233,11 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "baz 0.5.0 (path+file://[..]/foo/baz)"
+              ],
+              "workspace_default_members": [
                 "bar 0.5.0 (path+file://[..]/foo/bar)",
                 "artifact 0.5.0 (path+file://[..]/foo/artifact)",
                 "baz 0.5.0 (path+file://[..]/foo/baz)"

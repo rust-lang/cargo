@@ -609,6 +609,7 @@ fn json_exposed() {
                     }
                   ],
                   "workspace_members": "{...}",
+                  "workspace_default_members": "{...}",
                   "resolve": null,
                   "target_directory": "[..]foo/target",
                   "version": 1,
