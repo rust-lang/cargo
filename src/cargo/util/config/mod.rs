@@ -1694,11 +1694,7 @@ impl Config {
                     .join(&toolchain)
                     .join("bin")
                     .join(&tool_exe);
-                if toolchain_exe.exists() {
-                    Some(toolchain_exe)
-                } else {
-                    None
-                }
+                toolchain_exe.exists().then_some(toolchain_exe)
             })
             .unwrap_or_else(|| PathBuf::from(tool_str))
     }
