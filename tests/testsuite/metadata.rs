@@ -1954,6 +1954,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "documentation": null
     }],
     "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
+    "workspace_default_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
     "resolve": null,
     "target_directory": "[..]foo/target",
     "version": 1,
@@ -2318,6 +2319,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "workspace_members": [
                     "bar 0.5.0 (path+file:[..])"
                 ],
+                "workspace_default_members": [],
                 "workspace_root": "[..]",
                 "metadata": null
             }
