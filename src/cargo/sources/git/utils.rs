@@ -2,6 +2,7 @@
 //! authentication/cloning.
 
 use crate::core::{GitReference, Verbosity};
+use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::oxide;
 use crate::sources::git::oxide::cargo_config_to_gitoxide_overrides;
 use crate::util::errors::CargoResult;
@@ -96,20 +97,24 @@ impl GitRemote {
         // if we can. If that can successfully load our revision then we've
         // populated the database with the latest version of `reference`, so
         // return that database and the rev we resolve to.
+        let locked_ref = locked_rev.map(|oid| GitReference::Rev(oid.to_string()));
+        let reference = locked_ref.as_ref().unwrap_or(reference);
         if let Some(mut db) = db {
-            fetch(&mut db.repo, self.url.as_str(), reference, cargo_config)
-                .context(format!("failed to fetch into: {}", into.display()))?;
-            match locked_rev {
-                Some(rev) => {
-                    if db.contains(rev) {
-                        return Ok((db, rev));
-                    }
-                }
-                None => {
-                    if let Ok(rev) = reference.resolve(&db.repo) {
-                        return Ok((db, rev));
-                    }
-                }
+            fetch(
+                &mut db.repo,
+                self.url.as_str(),
+                reference,
+                cargo_config,
+                RemoteKind::GitDependency,
+            )
+            .with_context(|| format!("failed to fetch into: {}", into.display()))?;
+
+            let resolved_commit_hash = match locked_rev {
+                Some(rev) => db.contains(rev).then_some(rev),
+                None => reference.resolve(&db.repo).ok(),
+            };
+            if let Some(rev) = resolved_commit_hash {
+                return Ok((db, rev));
             }
         }
 
@@ -121,8 +126,14 @@ impl GitRemote {
         }
         paths::create_dir_all(into)?;
         let mut repo = init(into, true)?;
-        fetch(&mut repo, self.url.as_str(), reference, cargo_config)
-            .context(format!("failed to clone into: {}", into.display()))?;
+        fetch(
+            &mut repo,
+            self.url.as_str(),
+            reference,
+            cargo_config,
+            RemoteKind::GitDependency,
+        )
+        .with_context(|| format!("failed to clone into: {}", into.display()))?;
         let rev = match locked_rev {
             Some(rev) => rev,
             None => reference.resolve(&repo)?,
@@ -282,6 +293,16 @@ impl<'a> GitCheckout<'a> {
                 .with_checkout(checkout)
                 .fetch_options(fopts)
                 .clone(url.as_str(), into)?;
+            // `git2` doesn't seem to handle shallow repos correctly when doing a local clone.
+            // Fortunately all that's needed is the copy of the one file that defines the
+            // shallow boundary, the commits which have their parents omitted as part of the
+            // shallow clone.
+            if database.repo.is_shallow() {
+                std::fs::copy(
+                    database.repo.path().join("shallow"),
+                    r.path().join("shallow"),
+                )?;
+            }
             repo = Some(r);
             Ok(())
         })?;
@@ -432,7 +453,14 @@ impl<'a> GitCheckout<'a> {
             cargo_config
                 .shell()
                 .status("Updating", format!("git submodule `{}`", url))?;
-            fetch(&mut repo, &url, &reference, cargo_config).with_context(|| {
+            fetch(
+                &mut repo,
+                &url,
+                &reference,
+                cargo_config,
+                RemoteKind::GitDependency,
+            )
+            .with_context(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
@@ -803,11 +831,15 @@ pub fn with_fetch_options(
     })
 }
 
+/// Note that `history` is a complex computed value to determine whether it's acceptable to perform shallow clones
+/// at all. It's needed to allow the caller to determine the correct position of the destination repository or move it
+/// into place should its position change.
 pub fn fetch(
     repo: &mut git2::Repository,
     orig_url: &str,
     reference: &GitReference,
     config: &Config,
+    remote_kind: RemoteKind,
 ) -> CargoResult<()> {
     if config.frozen() {
         anyhow::bail!(
@@ -819,8 +851,10 @@ pub fn fetch(
         anyhow::bail!("can't update a git repository in the offline mode")
     }
 
+    let shallow = remote_kind.to_shallow_setting(repo.is_shallow(), config);
+
     // If we're fetching from GitHub, attempt GitHub's special fast path for
-    // testing if we've already got an up-to-date copy of the repository
+    // testing if we've already got an up-to-date copy of the repository.
     let oid_to_fetch = match github_fast_path(repo, orig_url, reference, config) {
         Ok(FastPathRev::UpToDate) => return Ok(()),
         Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
@@ -852,6 +886,7 @@ pub fn fetch(
         GitReference::Branch(b) => {
             refspecs.push(format!("+refs/heads/{0}:refs/remotes/origin/{0}", b));
         }
+
         GitReference::Tag(t) => {
             refspecs.push(format!("+refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
         }
@@ -865,6 +900,16 @@ pub fn fetch(
                 refspecs.push(format!("+{0}:{0}", rev));
             } else if let Some(oid_to_fetch) = oid_to_fetch {
                 refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
+            } else if !matches!(shallow, gix::remote::fetch::Shallow::NoChange)
+                && rev.parse::<Oid>().is_ok()
+            {
+                // There is a specific commit to fetch and we will do so in shallow-mode only
+                // to not disturb the previous logic.
+                // Note that with typical settings for shallowing, we will just fetch a single `rev`
+                // as single commit.
+                // The reason we write to `refs/remotes/origin/HEAD` is that it's of special significance
+                // when during `GitReference::resolve()`, but otherwise it shouldn't matter.
+                refspecs.push(format!("+{0}:refs/remotes/origin/HEAD", rev));
             } else {
                 // We don't know what the rev will point to. To handle this
                 // situation we fetch all branches and tags, and then we pray
@@ -936,8 +981,7 @@ pub fn fetch(
                             .url(gix::remote::Direction::Fetch)
                             .expect("set at init")
                             .to_owned();
-                        let connection =
-                            remote.connect(gix::remote::Direction::Fetch, &mut progress)?;
+                        let connection = remote.connect(gix::remote::Direction::Fetch)?;
                         let mut authenticate = connection.configured_credentials(url)?;
                         let connection = connection.with_credentials(
                             move |action: gix::protocol::credentials::helper::Action| {
@@ -951,8 +995,9 @@ pub fn fetch(
                             },
                         );
                         let outcome = connection
-                            .prepare_fetch(gix::remote::ref_map::Options::default())?
-                            .receive(should_interrupt)?;
+                            .prepare_fetch(&mut progress, gix::remote::ref_map::Options::default())?
+                            .with_shallow(shallow.clone().into())
+                            .receive(&mut progress, should_interrupt)?;
                         Ok(outcome)
                     });
                     let err = match res {
@@ -967,6 +1012,7 @@ pub fn fetch(
                         // folder before writing files into it, or else not even open a directory as git repository (which is
                         // also handled here).
                         && err.is_corrupted()
+                        || has_shallow_lock_file(&err)
                     {
                         repo_reinitialized.store(true, Ordering::Relaxed);
                         debug!(
@@ -1034,6 +1080,17 @@ pub fn fetch(
             Ok(())
         })
     }
+}
+
+/// `gitoxide` uses shallow locks to assure consistency when fetching to and to avoid races, and to write
+/// files atomically.
+/// Cargo has its own lock files and doesn't need that mechanism for race protection, so a stray lock means
+/// a signal interrupted a previous shallow fetch and doesn't mean a race is happening.
+fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
+    matches!(
+        err,
+        gix::env::collate::fetch::Error::Fetch(gix::remote::fetch::Error::LockShallowFile(_))
+    )
 }
 
 fn fetch_with_cli(

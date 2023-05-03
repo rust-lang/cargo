@@ -29,17 +29,26 @@ impl<'cfg> GitSource<'cfg> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
-        let ident = ident(&source_id);
-
-        let source = GitSource {
-            remote,
-            manifest_reference: source_id.git_reference().unwrap().clone(),
-            locked_rev: match source_id.precise() {
+        let manifest_reference = source_id.git_reference().unwrap().clone();
+        let locked_rev =
+            match source_id.precise() {
                 Some(s) => Some(git2::Oid::from_str(s).with_context(|| {
                     format!("precise value for git is not a git revision: {}", s)
                 })?),
                 None => None,
-            },
+            };
+        let ident = ident_shallow(
+            &source_id,
+            config
+                .cli_unstable()
+                .gitoxide
+                .map_or(false, |gix| gix.fetch && gix.shallow_deps),
+        );
+
+        let source = GitSource {
+            remote,
+            manifest_reference,
+            locked_rev,
             source_id,
             path_source: None,
             ident,
@@ -63,6 +72,7 @@ impl<'cfg> GitSource<'cfg> {
     }
 }
 
+/// Create an identifier from a URL, essentially turning `proto://host/path/repo` into `repo-<hash-of-url>`.
 fn ident(id: &SourceId) -> String {
     let ident = id
         .canonical_url()
@@ -74,6 +84,18 @@ fn ident(id: &SourceId) -> String {
     let ident = if ident.is_empty() { "_empty" } else { ident };
 
     format!("{}-{}", ident, short_hash(id.canonical_url()))
+}
+
+/// Like `ident()`, but appends `-shallow` to it, turning `proto://host/path/repo` into `repo-<hash-of-url>-shallow`.
+///
+/// It's important to separate shallow from non-shallow clones for reasons of backwards compatibility - older
+/// cargo's aren't necessarily handling shallow clones correctly.
+fn ident_shallow(id: &SourceId, is_shallow: bool) -> String {
+    let mut ident = ident(id);
+    if is_shallow {
+        ident.push_str("-shallow");
+    }
+    ident
 }
 
 impl<'cfg> Debug for GitSource<'cfg> {

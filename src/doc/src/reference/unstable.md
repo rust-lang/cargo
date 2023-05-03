@@ -1269,9 +1269,19 @@ to run with `gitoxide` with the `-Zgitoxide=operation[,operationN]` syntax.
 Valid operations are the following:
 
 * `fetch` - All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
-* `shallow-index` *(planned)* - perform a shallow clone of the index.
-* `shallow-deps` *(planned)* - perform a shallow clone of git dependencies.
+* `shallow-index` - perform a shallow clone of the index.
+* `shallow-deps` - perform a shallow clone of git dependencies.
 * `checkout` *(planned)* - checkout the worktree, with support for filters and submodules.
+
+**Details on shallow clones**
+
+* To enable shallow clones, add `-Zgitoxide=fetch,shallow_deps` for fetching git dependencies or `-Zgitoxide=fetch,shallow_index` for fetching registry index.
+* Shallow-cloned and shallow-checked-out git repositories reside at their own `-shallow` suffixed directories, i.e,
+  - `~/.cargo/registry/index/*-shallow`
+  - `~/.cargo/git/db/*-shallow`
+  - `~/.cargo/git/checkouts/*-shallow`
+* When the unstable feature is on, fetching/cloning a git repository is always a shallow fetch. This roughly equals to `git fetch --depth 1` everywhere.
+* Even with the presence of `Cargo.lock` or specifying a commit `{ rev = "…" }`, gitoxide is still smart enough to shallow fetch without unshallowing the existing repository.
 
 ## Stabilized and removed features
 

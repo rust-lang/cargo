@@ -2466,7 +2466,11 @@ fn can_update_with_alt_reg() {
 }
 
 #[cargo_test]
-fn old_git_patch() {
+fn gitoxide_clones_shallow_old_git_patch() {
+    perform_old_git_patch(true)
+}
+
+fn perform_old_git_patch(shallow: bool) {
     // Example where an old lockfile with an explicit branch="master" in Cargo.toml.
     Package::new("bar", "1.0.0").publish();
     let (bar, bar_repo) = git::new_repo("bar", |p| {
@@ -2524,7 +2528,13 @@ dependencies = [
     git::commit(&bar_repo);
 
     // This *should* keep the old lock.
-    p.cargo("tree")
+    let mut cargo = p.cargo("tree");
+    if shallow {
+        cargo
+            .arg("-Zgitoxide=fetch,shallow-deps")
+            .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"]);
+    }
+    cargo
         // .env("CARGO_LOG", "trace")
         .with_stderr(
             "\
@@ -2540,6 +2550,11 @@ foo v0.1.0 [..]
             &bar_oid.to_string()[..8]
         ))
         .run();
+}
+
+#[cargo_test]
+fn old_git_patch() {
+    perform_old_git_patch(false)
 }
 
 // From https://github.com/rust-lang/cargo/issues/7463

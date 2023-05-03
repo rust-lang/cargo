@@ -1,5 +1,6 @@
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
+use crate::sources::git::fetch::RemoteKind;
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
@@ -304,8 +305,14 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // checkout.
         let url = self.source_id.url();
         let repo = self.repo.borrow_mut().unwrap();
-        git::fetch(repo, url.as_str(), &self.index_git_ref, self.config)
-            .with_context(|| format!("failed to fetch `{}`", url))?;
+        git::fetch(
+            repo,
+            url.as_str(),
+            &self.index_git_ref,
+            self.config,
+            RemoteKind::Registry,
+        )
+        .with_context(|| format!("failed to fetch `{}`", url))?;
 
         // Create a dummy file to record the mtime for when we updated the
         // index.
