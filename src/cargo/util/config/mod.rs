@@ -388,7 +388,7 @@ impl Config {
     /// Gets the path to the `rustdoc` executable.
     pub fn rustdoc(&self) -> CargoResult<&Path> {
         self.rustdoc
-            .try_borrow_with(|| Ok(self.get_tool("rustdoc", &self.build_config()?.rustdoc)))
+            .try_borrow_with(|| Ok(self.get_tool(Tool::Rustdoc, &self.build_config()?.rustdoc)))
             .map(AsRef::as_ref)
     }
 
@@ -406,7 +406,7 @@ impl Config {
         );
 
         Rustc::new(
-            self.get_tool("rustc", &self.build_config()?.rustc),
+            self.get_tool(Tool::Rustc, &self.build_config()?.rustc),
             wrapper,
             rustc_workspace_wrapper,
             &self
@@ -1640,15 +1640,19 @@ impl Config {
         }
     }
 
-    /// Looks for a path for `tool` in an environment variable or config path, defaulting to `tool`
-    /// as a path.
-    fn get_tool(&self, tool: &str, from_config: &Option<ConfigRelativePath>) -> PathBuf {
-        // This function is designed to only work with rustup proxies. This
-        // assert is to ensure that if it is ever used for something else in
-        // the future that you must ensure that it is a proxy-able tool, or if
-        // not then you need to use `maybe_get_tool` instead.
-        assert!(matches!(tool, "rustc" | "rustdoc"));
-        self.maybe_get_tool(tool, from_config)
+    /// Returns the path for the given tool.
+    ///
+    /// This will look for the tool in the following order:
+    ///
+    /// 1. From an environment variable matching the tool name (such as `RUSTC`).
+    /// 2. From the given config value (which is usually something like `build.rustc`).
+    /// 3. Finds the tool in the PATH environment variable.
+    ///
+    /// This is intended for tools that are rustup proxies. If you need to get
+    /// a tool that is not a rustup proxy, use `maybe_get_tool` instead.
+    fn get_tool(&self, tool: Tool, from_config: &Option<ConfigRelativePath>) -> PathBuf {
+        let tool_str = tool.as_str();
+        self.maybe_get_tool(tool_str, from_config)
             .or_else(|| {
                 // This is an optimization to circumvent the rustup proxies
                 // which can have a significant performance hit. The goal here
@@ -1671,7 +1675,7 @@ impl Config {
                 }
                 // If the tool on PATH is the same as `rustup` on path, then
                 // there is pretty good evidence that it will be a proxy.
-                let tool_resolved = paths::resolve_executable(Path::new(tool)).ok()?;
+                let tool_resolved = paths::resolve_executable(Path::new(tool_str)).ok()?;
                 let rustup_resolved = paths::resolve_executable(Path::new("rustup")).ok()?;
                 let tool_meta = tool_resolved.metadata().ok()?;
                 let rustup_meta = rustup_resolved.metadata().ok()?;
@@ -1683,7 +1687,7 @@ impl Config {
                     return None;
                 }
                 // Try to find the tool in rustup's toolchain directory.
-                let tool_exe = Path::new(tool).with_extension(env::consts::EXE_EXTENSION);
+                let tool_exe = Path::new(tool_str).with_extension(env::consts::EXE_EXTENSION);
                 let toolchain_exe = home::rustup_home()
                     .ok()?
                     .join("toolchains")
@@ -1696,7 +1700,7 @@ impl Config {
                     None
                 }
             })
-            .unwrap_or_else(|| PathBuf::from(tool))
+            .unwrap_or_else(|| PathBuf::from(tool_str))
     }
 
     pub fn jobserver_from_env(&self) -> Option<&jobserver::Client> {
@@ -2696,4 +2700,18 @@ macro_rules! drop_eprint {
     ($config:expr, $($arg:tt)*) => (
         $crate::__shell_print!($config, err, false, $($arg)*)
     );
+}
+
+enum Tool {
+    Rustc,
+    Rustdoc,
+}
+
+impl Tool {
+    fn as_str(&self) -> &str {
+        match self {
+            Tool::Rustc => "rustc",
+            Tool::Rustdoc => "rustdoc",
+        }
+    }
 }
