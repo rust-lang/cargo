@@ -2365,9 +2365,9 @@ fn self_referential() {
 }
 
 #[cargo_test]
-fn ambiguous_registry_vs_local_workspace_package() {
-    // Correctly install 'foo' from a workspace, even if that workspace
-    // (somewhere) also depends on a registry package named 'foo'.
+fn ambiguous_registry_vs_local_package() {
+    // Correctly install 'foo' from a local package, even if that package also
+    // depends on a registry dependency named 'foo'.
     Package::new("foo", "0.0.1")
         .file("src/lib.rs", "fn hello() {}")
         .publish();
