@@ -4,7 +4,9 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
-use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Target, Workspace};
+use crate::core::{
+    Dependency, Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Target, Workspace,
+};
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
@@ -168,14 +170,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             }
         };
 
-        // When we build this package, we want to build the *specified* package only,
-        // and avoid building e.g. workspace default-members instead. Do so by constructing
-        // specialized compile options specific to the identified package.
-        // See test `path_install_workspace_root_despite_default_members`.
-        let mut opts = original_opts.clone();
-        opts.spec = Packages::Packages(vec![pkg.name().to_string()]);
-
-        let (ws, rustc, target) = make_ws_rustc_target(config, &opts, &source_id, pkg.clone())?;
+        let (ws, rustc, target) =
+            make_ws_rustc_target(config, &original_opts, &source_id, pkg.clone())?;
         // If we're installing in --locked mode and there's no `Cargo.lock` published
         // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
         if config.locked() && !ws.root().join("Cargo.lock").exists() {
@@ -191,6 +187,17 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         } else {
             ws.current()?.clone()
         };
+
+        // When we build this package, we want to build the *specified* package only,
+        // and avoid building e.g. workspace default-members instead. Do so by constructing
+        // specialized compile options specific to the identified package.
+        // See test `path_install_workspace_root_despite_default_members`.
+        let mut opts = original_opts.clone();
+        // For cargo install tracking, we retain the source git url in `pkg`, but for the build spec
+        // we need to unconditionally use `ws.current()` to correctly address the path where we
+        // locally cloned that repo.
+        let pkgidspec = PackageIdSpec::from_package_id(ws.current()?.package_id());
+        opts.spec = Packages::Packages(vec![pkgidspec.to_string()]);
 
         if from_cwd {
             if pkg.manifest().edition() == Edition::Edition2015 {
