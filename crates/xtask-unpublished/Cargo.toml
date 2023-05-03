@@ -5,8 +5,8 @@ edition = "2021"
 publish = false
 
 [dependencies]
-anyhow = "1.0.47"
-cargo = { path = "../.." }
-clap = "4.2.0"
-env_logger = "0.10.0"
-log = "0.4.17"
+anyhow.workspace = true
+cargo.workspace = true
+clap.workspace = true
+env_logger.workspace = true
+log.workspace = true
