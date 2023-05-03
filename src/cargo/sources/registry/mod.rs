@@ -850,9 +850,15 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 // names to the original name. The resolver will later
                 // reject any candidates that have the wrong name, and with this it'll
                 // along the way produce helpful "did you mean?" suggestions.
-                for name_permutation in
-                    index::UncanonicalizedIter::new(&dep.package_name()).take(1024)
-                {
+                // For now we only try the canonical lysing `-` to `_` and vice versa.
+                // More advanced fuzzy searching become in the future.
+                for name_permutation in [
+                    dep.package_name().replace('-', "_"),
+                    dep.package_name().replace('_', "-"),
+                ] {
+                    if name_permutation.as_str() == dep.package_name().as_str() {
+                        continue;
+                    }
                     any_pending |= self
                         .index
                         .query_inner(
