@@ -212,6 +212,12 @@ The output has the following format:
     "workspace_members": [
         "my-package 0.1.0 (path+file:///path/to/my-package)",
     ],
+    /* Array of default members of the workspace.
+       Each entry is the Package ID for the package.
+    */
+    "workspace_default_members": [
+        "my-package 0.1.0 (path+file:///path/to/my-package)",
+    ],
     // The resolved dependency graph for the entire workspace. The enabled
     // features are based on the enabled features for the "current" package.
     // Inactivated optional dependencies are not listed.
