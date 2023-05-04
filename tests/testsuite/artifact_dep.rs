@@ -2904,8 +2904,10 @@ fn check_transitive_artifact_dependency_with_different_target() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_contains(
-            "error: could not find specification for target `custom-target`.\n  \
-            Dependency `baz v0.0.0 [..]` requires to build for target `custom-target`.",
+            "error: failed to run `rustc` to learn about target-specific information",
+        ).with_stderr_contains(
+            "[..] error: Error loading target specification: Could not find specification for \
+            target \"custom-target\". [..]"
         )
         .with_status(101)
         .run();
