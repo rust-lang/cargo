@@ -450,7 +450,10 @@ impl RegistryBuilder {
 /// `VendorPackage` which implements directory sources.
 ///
 /// # Example
-/// ```
+/// ```no_run
+/// use cargo_test_support::registry::Package;
+/// use cargo_test_support::project;
+///
 /// // Publish package "a" depending on "b".
 /// Package::new("a", "1.0.0")
 ///     .dep("b", "1.0.0")
@@ -1241,7 +1244,7 @@ impl Package {
     }
 
     /// Adds a normal dependency. Example:
-    /// ```
+    /// ```toml
     /// [dependencies]
     /// foo = {version = "1.0"}
     /// ```
@@ -1250,7 +1253,7 @@ impl Package {
     }
 
     /// Adds a dependency with the given feature. Example:
-    /// ```
+    /// ```toml
     /// [dependencies]
     /// foo = {version = "1.0", "features": ["feat1", "feat2"]}
     /// ```
@@ -1273,7 +1276,7 @@ impl Package {
     }
 
     /// Adds a dev-dependency. Example:
-    /// ```
+    /// ```toml
     /// [dev-dependencies]
     /// foo = {version = "1.0"}
     /// ```
@@ -1282,7 +1285,7 @@ impl Package {
     }
 
     /// Adds a build-dependency. Example:
-    /// ```
+    /// ```toml
     /// [build-dependencies]
     /// foo = {version = "1.0"}
     /// ```

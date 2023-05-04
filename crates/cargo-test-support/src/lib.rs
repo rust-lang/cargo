@@ -700,13 +700,15 @@ impl Execs {
     /// The substrings are matched as `contains`. Example:
     ///
     /// ```no_run
-    /// execs.with_stderr_line_without(
+    /// use cargo_test_support::execs;
+    ///
+    /// execs().with_stderr_line_without(
     ///     &[
     ///         "[RUNNING] `rustc --crate-name build_script_build",
     ///         "-C opt-level=3",
     ///     ],
     ///     &["-C debuginfo", "-C incremental"],
-    /// )
+    /// );
     /// ```
     ///
     /// This will check that a build line includes `-C opt-level=3` but does

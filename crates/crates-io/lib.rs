@@ -200,7 +200,7 @@ impl Registry {
     /// let mut handle = Easy::new();
     /// // If connecting to crates.io, a user-agent is required.
     /// handle.useragent("my_crawler (example.com/info)");
-    /// let mut reg = Registry::new_handle(String::from("https://crates.io"), None, handle);
+    /// let mut reg = Registry::new_handle(String::from("https://crates.io"), None, handle, true);
     /// ```
     pub fn new_handle(
         host: String,
