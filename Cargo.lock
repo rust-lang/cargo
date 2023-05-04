@@ -1403,7 +1403,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fc78f47095a0c15aea0e66103838f0748f4494bf7a9555dfe0f00425400396c"
 dependencies = [
  "bstr",
- "home 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "home 0.5.5",
  "once_cell",
  "thiserror",
 ]
