@@ -633,6 +633,9 @@ fn update_precise_first_run() {
   "workspace_members": [
     "bar 0.0.1 (path+file://[..]/foo)"
   ],
+  "workspace_default_members": [
+    "bar 0.0.1 (path+file://[..]/foo)"
+  ],
   "workspace_root": "[..]/foo",
   "metadata": null
 }"#,

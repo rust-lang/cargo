@@ -43,6 +43,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
     Ok(ExportInfo {
         packages,
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
+        workspace_default_members: ws.default_members().map(|pkg| pkg.package_id()).collect(),
         resolve,
         target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
@@ -58,6 +59,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
 pub struct ExportInfo {
     packages: Vec<SerializedPackage>,
     workspace_members: Vec<PackageId>,
+    workspace_default_members: Vec<PackageId>,
     resolve: Option<MetadataResolve>,
     target_directory: PathBuf,
     version: u32,

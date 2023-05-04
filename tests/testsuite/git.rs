@@ -3337,6 +3337,9 @@ fn metadata_master_consistency() {
               "workspace_members": [
                 "foo 0.1.0 [..]"
               ],
+              "workspace_default_members": [
+                "foo 0.1.0 [..]"
+              ],
               "resolve": {
                 "nodes": [
                   {

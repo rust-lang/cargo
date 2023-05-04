@@ -902,6 +902,9 @@ fn alt_reg_metadata() {
                 "workspace_members": [
                     "foo 0.0.1 (path+file:[..]/foo)"
                 ],
+                "workspace_default_members": [
+                    "foo 0.0.1 (path+file:[..]/foo)"
+                ],
                 "resolve": null,
                 "target_directory": "[..]/foo/target",
                 "version": 1,
@@ -1102,6 +1105,9 @@ fn alt_reg_metadata() {
                 "workspace_members": [
                     "foo 0.0.1 (path+file:[..]/foo)"
                 ],
+                "workspace_default_members": [
+                    "foo 0.0.1 (path+file:[..]/foo)"
+                ],
                 "resolve": "{...}",
                 "target_directory": "[..]/foo/target",
                 "version": 1,
@@ -1263,6 +1269,9 @@ fn unknown_registry() {
                 }
               ],
               "workspace_members": [
+                "foo 0.0.1 (path+file://[..]/foo)"
+              ],
+              "workspace_default_members": [
                 "foo 0.0.1 (path+file://[..]/foo)"
               ],
               "resolve": "{...}",
