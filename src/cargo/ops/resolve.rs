@@ -198,7 +198,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         &member_ids,
         has_dev_units,
         requested_targets,
-        &*target_data,
+        &mut *target_data,
         force_all_targets,
     )?;
 

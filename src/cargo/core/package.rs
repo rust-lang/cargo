@@ -494,7 +494,7 @@ impl<'cfg> PackageSet<'cfg> {
         root_ids: &[PackageId],
         has_dev_units: HasDevUnits,
         requested_kinds: &[CompileKind],
-        target_data: &RustcTargetData<'cfg>,
+        target_data: &mut RustcTargetData<'cfg>,
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
         fn collect_used_deps(
@@ -503,7 +503,7 @@ impl<'cfg> PackageSet<'cfg> {
             pkg_id: PackageId,
             has_dev_units: HasDevUnits,
             requested_kinds: &[CompileKind],
-            target_data: &RustcTargetData<'_>,
+            target_data: &mut RustcTargetData<'_>,
             force_all_targets: ForceAllTargets,
             additional_kinds: Vec<CompileKind>,
         ) -> CargoResult<()> {
@@ -515,11 +515,23 @@ impl<'cfg> PackageSet<'cfg> {
                 resolve,
                 has_dev_units,
                 requested_kinds,
-                target_data,
+                &*target_data,
                 force_all_targets,
                 &additional_kinds,
             );
-            for (pkg_id, _dep, additional_kinds) in filtered_deps {
+
+            let deps = filtered_deps
+                .map(|(pkg_id, _dep, additional_kinds)| (pkg_id, additional_kinds))
+                .collect::<Vec<_>>();
+
+            for (pkg_id, additional_kinds) in deps {
+                // The dependency can specify additional targets through artifact dependencies.
+                // We need to run `rustc` to query the target specific configuration before we look
+                // at this dependency's dependencies.
+                for kind in &additional_kinds {
+                    target_data.merge_compile_kind(*kind)?;
+                }
+
                 collect_used_deps(
                     used,
                     resolve,
