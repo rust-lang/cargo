@@ -451,39 +451,44 @@ impl RegistryBuilder {
 ///
 /// # Example
 /// ```
-/// // Publish package "a" depending on "b".
-/// Package::new("a", "1.0.0")
-///     .dep("b", "1.0.0")
-///     .file("src/lib.rs", r#"
-///         extern crate b;
-///         pub fn f() -> i32 { b::f() * 2 }
-///     "#)
-///     .publish();
+/// use cargo_test_support::registry::Package;
+/// use cargo_test_support::project;
 ///
-/// // Publish package "b".
-/// Package::new("b", "1.0.0")
-///     .file("src/lib.rs", r#"
-///         pub fn f() -> i32 { 12 }
-///     "#)
-///     .publish();
+/// fn crate_package_test() {
+///     // Publish package "a" depending on "b".
+///     Package::new("a", "1.0.0")
+///         .dep("b", "1.0.0")
+///         .file("src/lib.rs", r#"
+///             extern crate b;
+///             pub fn f() -> i32 { b::f() * 2 }
+///         "#)
+///         .publish();
 ///
-/// // Create a project that uses package "a".
-/// let p = project()
-///     .file("Cargo.toml", r#"
-///         [package]
-///         name = "foo"
-///         version = "0.0.1"
+///     // Publish package "b".
+///     Package::new("b", "1.0.0")
+///         .file("src/lib.rs", r#"
+///             pub fn f() -> i32 { 12 }
+///         "#)
+///         .publish();
 ///
-///         [dependencies]
-///         a = "1.0"
-///     "#)
-///     .file("src/main.rs", r#"
-///         extern crate a;
-///         fn main() { println!("{}", a::f()); }
-///     "#)
-///     .build();
+///     // Create a project that uses package "a".
+///     let p = project()
+///         .file("Cargo.toml", r#"
+///             [package]
+///             name = "foo"
+///             version = "0.0.1"
 ///
-/// p.cargo("run").with_stdout("24").run();
+///             [dependencies]
+///             a = "1.0"
+///         "#)
+///         .file("src/main.rs", r#"
+///             extern crate a;
+///             fn main() { println!("{}", a::f()); }
+///         "#)
+///         .build();
+///
+///     p.cargo("run").with_stdout("24").run();
+/// }
 /// ```
 #[must_use]
 pub struct Package {
@@ -1240,7 +1245,7 @@ impl Package {
     }
 
     /// Adds a normal dependency. Example:
-    /// ```
+    /// ```toml
     /// [dependencies]
     /// foo = {version = "1.0"}
     /// ```
@@ -1249,7 +1254,7 @@ impl Package {
     }
 
     /// Adds a dependency with the given feature. Example:
-    /// ```
+    /// ```toml
     /// [dependencies]
     /// foo = {version = "1.0", "features": ["feat1", "feat2"]}
     /// ```
@@ -1272,7 +1277,7 @@ impl Package {
     }
 
     /// Adds a dev-dependency. Example:
-    /// ```
+    /// ```toml
     /// [dev-dependencies]
     /// foo = {version = "1.0"}
     /// ```
@@ -1281,7 +1286,7 @@ impl Package {
     }
 
     /// Adds a build-dependency. Example:
-    /// ```
+    /// ```toml
     /// [build-dependencies]
     /// foo = {version = "1.0"}
     /// ```
