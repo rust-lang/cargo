@@ -450,45 +450,43 @@ impl RegistryBuilder {
 /// `VendorPackage` which implements directory sources.
 ///
 /// # Example
-/// ```
+/// ```no_run
 /// use cargo_test_support::registry::Package;
 /// use cargo_test_support::project;
 ///
-/// fn crate_package_test() {
-///     // Publish package "a" depending on "b".
-///     Package::new("a", "1.0.0")
-///         .dep("b", "1.0.0")
-///         .file("src/lib.rs", r#"
-///             extern crate b;
-///             pub fn f() -> i32 { b::f() * 2 }
-///         "#)
-///         .publish();
+/// // Publish package "a" depending on "b".
+/// Package::new("a", "1.0.0")
+///     .dep("b", "1.0.0")
+///     .file("src/lib.rs", r#"
+///         extern crate b;
+///         pub fn f() -> i32 { b::f() * 2 }
+///     "#)
+///     .publish();
 ///
-///     // Publish package "b".
-///     Package::new("b", "1.0.0")
-///         .file("src/lib.rs", r#"
-///             pub fn f() -> i32 { 12 }
-///         "#)
-///         .publish();
+/// // Publish package "b".
+/// Package::new("b", "1.0.0")
+///     .file("src/lib.rs", r#"
+///         pub fn f() -> i32 { 12 }
+///     "#)
+///     .publish();
 ///
-///     // Create a project that uses package "a".
-///     let p = project()
-///         .file("Cargo.toml", r#"
-///             [package]
-///             name = "foo"
-///             version = "0.0.1"
+/// // Create a project that uses package "a".
+/// let p = project()
+///     .file("Cargo.toml", r#"
+///         [package]
+///         name = "foo"
+///         version = "0.0.1"
 ///
-///             [dependencies]
-///             a = "1.0"
-///         "#)
-///         .file("src/main.rs", r#"
-///             extern crate a;
-///             fn main() { println!("{}", a::f()); }
-///         "#)
-///         .build();
+///         [dependencies]
+///         a = "1.0"
+///     "#)
+///     .file("src/main.rs", r#"
+///         extern crate a;
+///         fn main() { println!("{}", a::f()); }
+///     "#)
+///     .build();
 ///
-///     p.cargo("run").with_stdout("24").run();
-/// }
+/// p.cargo("run").with_stdout("24").run();
 /// ```
 #[must_use]
 pub struct Package {
