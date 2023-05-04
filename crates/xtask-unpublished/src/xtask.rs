@@ -1,11 +1,14 @@
+use std::collections::HashSet;
 use cargo::core::registry::PackageRegistry;
 use cargo::core::QueryKind;
 use cargo::core::Registry;
 use cargo::core::SourceId;
+use cargo::ops::Packages;
 use cargo::util::command_prelude::*;
 
 pub fn cli() -> clap::Command {
     clap::Command::new("xtask-unpublished")
+        .arg_package_spec_simple("Package to inspect the published status")
         .arg(
             opt(
                 "verbose",
@@ -76,6 +79,16 @@ fn config_configure(config: &mut Config, args: &ArgMatches) -> CliResult {
 
 fn unpublished(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> cargo::CliResult {
     let ws = args.workspace(config)?;
+
+    let members_to_inspect: HashSet<_> = {
+        let pkgs = args.packages_from_flags()?;
+        if let Packages::Packages(_) = pkgs {
+            HashSet::from_iter(pkgs.get_packages(&ws)?)
+        } else {
+            HashSet::from_iter(ws.members())
+        }
+    };
+
     let mut results = Vec::new();
     {
         let mut registry = PackageRegistry::new(config)?;
@@ -83,7 +96,7 @@ fn unpublished(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> car
         registry.lock_patches();
         let source_id = SourceId::crates_io(config)?;
 
-        for member in ws.members() {
+        for member in members_to_inspect {
             let name = member.name();
             let current = member.version();
             if member.publish() == &Some(vec![]) {
@@ -92,11 +105,8 @@ fn unpublished(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> car
             }
 
             let version_req = format!("<={current}");
-            let query = cargo::core::dependency::Dependency::parse(
-                name,
-                Some(&version_req),
-                source_id.clone(),
-            )?;
+            let query =
+                cargo::core::dependency::Dependency::parse(name, Some(&version_req), source_id)?;
             let possibilities = loop {
                 // Exact to avoid returning all for path/git
                 match registry.query_vec(&query, QueryKind::Exact) {
