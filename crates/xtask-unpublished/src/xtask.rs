@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+
 use cargo::core::registry::PackageRegistry;
 use cargo::core::QueryKind;
 use cargo::core::Registry;
@@ -116,49 +117,75 @@ fn unpublished(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> car
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
             };
-            if let Some(last) = possibilities.iter().map(|s| s.version()).max() {
-                if last != current {
-                    results.push((
-                        name.to_string(),
-                        Some(last.to_string()),
-                        current.to_string(),
-                    ));
-                } else {
-                    log::trace!("{name} {current} is published");
-                }
-            } else {
-                results.push((name.to_string(), None, current.to_string()));
-            }
+            let (last, published) = possibilities
+                .iter()
+                .map(|s| s.version())
+                .max()
+                .map(|last| (last.to_string(), last == current))
+                .unwrap_or(("-".to_string(), false));
+
+            results.push(vec![
+                name.to_string(),
+                last,
+                current.to_string(),
+                if published { "yes" } else { "no" }.to_string(),
+            ]);
         }
+    }
+    results.sort();
+
+    if results.is_empty() {
+        return Ok(());
     }
 
-    if !results.is_empty() {
-        results.insert(
-            0,
-            (
-                "name".to_owned(),
-                Some("published".to_owned()),
-                "current".to_owned(),
-            ),
-        );
-        results.insert(
-            1,
-            (
-                "====".to_owned(),
-                Some("=========".to_owned()),
-                "=======".to_owned(),
-            ),
-        );
-    }
-    for (name, last, current) in results {
-        if let Some(last) = last {
-            println!("{name} {last} {current}");
-        } else {
-            println!("{name} - {current}");
-        }
-    }
+    results.insert(
+        0,
+        vec![
+            "name".to_owned(),
+            "crates.io".to_owned(),
+            "local".to_owned(),
+            "published?".to_owned(),
+        ],
+    );
+
+    output_table(results);
 
     Ok(())
+}
+
+/// Outputs a markdown table like this.
+///
+/// ```text
+/// | name             | crates.io | local  | published? |
+/// |------------------|-----------|--------|------------|
+/// | cargo            | 0.70.1    | 0.72.0 | no         |
+/// | cargo-platform   | 0.1.2     | 0.1.2  | yes        |
+/// | cargo-util       | -         | 0.2.4  | no         |
+/// | crates-io        | 0.36.0    | 0.36.0 | yes        |
+/// | home             | -         | 0.5.6  | no         |
+/// ```
+fn output_table(table: Vec<Vec<String>>) {
+    let header = table.first().unwrap();
+    let paddings = table.iter().fold(vec![0; header.len()], |mut widths, row| {
+        for (width, field) in widths.iter_mut().zip(row) {
+            *width = usize::max(*width, field.len());
+        }
+        widths
+    });
+
+    let print = |row: &[_]| {
+        for (field, pad) in row.iter().zip(&paddings) {
+            print!("| {field:pad$} ");
+        }
+        println!("|");
+    };
+
+    print(header);
+
+    paddings.iter().for_each(|fill| print!("|-{:-<fill$}-", ""));
+    println!("|");
+
+    table.iter().skip(1).for_each(|r| print(r));
 }
 
 #[test]
