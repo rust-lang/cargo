@@ -72,6 +72,10 @@ The package will be removed from your features.")
 Example uses:
 - Depending on multiple versions of a crate
 - Depend on crates with the same name from different registries"),
+            flag(
+                "ignore-rust-version",
+                "Ignore `rust-version` specification in packages (unstable)"
+            ),
         ])
         .arg_manifest_path()
         .arg_package("Package to modify")
@@ -188,12 +192,24 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let dependencies = parse_dependencies(config, args)?;
 
+    let ignore_rust_version = args.flag("ignore-rust-version");
+    if ignore_rust_version && !config.cli_unstable().msrv_policy {
+        return Err(CliError::new(
+            anyhow::format_err!(
+                "`--ignore-rust-version` is unstable; pass `-Zmsrv-policy` to enable support for it"
+            ),
+            101,
+        ));
+    }
+    let honor_rust_version = !ignore_rust_version;
+
     let options = AddOptions {
         config,
         spec,
         dependencies,
         section,
         dry_run,
+        honor_rust_version,
     };
     add(&ws, &options)?;
 

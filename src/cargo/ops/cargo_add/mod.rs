@@ -51,6 +51,8 @@ pub struct AddOptions<'a> {
     pub section: DepTable,
     /// Act as if dependencies will be added
     pub dry_run: bool,
+    /// Whether the minimum supported Rust version should be considered during resolution
+    pub honor_rust_version: bool,
 }
 
 /// Add dependencies to a manifest
@@ -88,6 +90,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                     workspace,
                     &options.spec,
                     &options.section,
+                    options.honor_rust_version,
                     options.config,
                     &mut registry,
                 )
@@ -259,6 +262,7 @@ fn resolve_dependency(
     ws: &Workspace<'_>,
     spec: &Package,
     section: &DepTable,
+    honor_rust_version: bool,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<DependencyUI> {
@@ -370,7 +374,14 @@ fn resolve_dependency(
             }
             dependency = dependency.set_source(src);
         } else {
-            let latest = get_latest_dependency(spec, &dependency, false, config, registry)?;
+            let latest = get_latest_dependency(
+                spec,
+                &dependency,
+                false,
+                honor_rust_version,
+                config,
+                registry,
+            )?;
 
             if dependency.name != latest.name {
                 config.shell().warn(format!(
@@ -523,6 +534,7 @@ fn get_latest_dependency(
     spec: &Package,
     dependency: &Dependency,
     _flag_allow_prerelease: bool,
+    honor_rust_version: bool,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<Dependency> {
@@ -554,7 +566,7 @@ fn get_latest_dependency(
                 )
             })?;
 
-            if config.cli_unstable().msrv_policy {
+            if config.cli_unstable().msrv_policy && honor_rust_version {
                 fn parse_msrv(rust_version: impl AsRef<str>) -> (u64, u64, u64) {
                     // HACK: `rust-version` is a subset of the `VersionReq` syntax that only ever
                     // has one comparator with a required minor and optional patch, and uses no
@@ -602,7 +614,7 @@ fn get_latest_dependency(
                         config.shell().warn(format_args!(
                             "ignoring `{dependency}@{latest_version}` (which has a rust-version of \
                              {latest_rust_version}) to satisfy this package's rust-version of \
-                             {rust_version}",
+                             {rust_version} (use `--ignore-rust-version` to override)",
                             latest_version = latest.version(),
                             latest_rust_version = latest.rust_version().unwrap(),
                             rust_version = spec.rust_version().unwrap(),
@@ -629,7 +641,8 @@ fn rust_version_incompat_error(
 ) -> anyhow::Error {
     let mut error_msg = format!(
         "could not find version of crate `{dep}` that satisfies this package's rust-version of \
-         {rust_version}"
+         {rust_version}\n\
+         help: use `--ignore-rust-version` to override this behavior"
     );
 
     if let Some(lowest) = lowest_rust_version {
