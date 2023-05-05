@@ -98,6 +98,11 @@
 - `cargo new` generates the correct `.hgignore` aligning semantics with other
   VCS ignore files.
   [#11855](https://github.com/rust-lang/cargo/pull/11855)
+- Stopped doing unnecessary fuzzy registry index queries This significantly
+  reduces the amount of HTTP requests to remote registries for crates
+  containing `-` or `_` in their names.
+  [#11936](https://github.com/rust-lang/cargo/pull/11936)
+  [#11937](https://github.com/rust-lang/cargo/pull/11937)
 
 ### Nightly only
 
@@ -139,12 +144,6 @@
   [#11927](https://github.com/rust-lang/cargo/pull/11927)
 - Consistently use `@` when mentioning pkgid format.
   [#11956](https://github.com/rust-lang/cargo/pull/11956)
-- Stopped using `UncanonicalizedIter` for `QueryKind::Exact`.
-  [#11937](https://github.com/rust-lang/cargo/pull/11937)
-- Don't query permutations of the path prefix of a dependency in the registry index.
-  [#11936](https://github.com/rust-lang/cargo/pull/11936)
-- Enabled clippy warning on `disallowed_methods` for `std::env::var` and friends.
-  [#11828](https://github.com/rust-lang/cargo/pull/11828)
 - Enhanced Cargo Contributor Guide.
   [#11825](https://github.com/rust-lang/cargo/pull/11825)
   [#11842](https://github.com/rust-lang/cargo/pull/11842)
@@ -185,6 +184,8 @@
   [#11915](https://github.com/rust-lang/cargo/pull/11915)
 - Replaced `std::fs::canonicalize` with a more robust `try_canonicalize`.
   [#11866](https://github.com/rust-lang/cargo/pull/11866)
+- Enabled clippy warning on `disallowed_methods` for `std::env::var` and friends.
+  [#11828](https://github.com/rust-lang/cargo/pull/11828)
 
 ## Cargo 1.69 (2023-04-20)
 [985d561f...rust-1.69.0](https://github.com/rust-lang/cargo/compare/985d561f...rust-1.69.0)
