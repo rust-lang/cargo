@@ -899,3 +899,81 @@ fn deferred_v4() {
         "feat_dep not found\n{lockfile}",
     );
 }
+
+#[cargo_test]
+fn weak_namespaced_v4() {
+    // Behavior with a dep: dependency.
+    Package::new("maybe_enabled", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    Package::new("bar", "1.0.0")
+        .add_dep(Dependency::new("maybe_enabled", "1.0").optional(true))
+        .feature("f1", &["maybe_enabled?/feat"])
+        .feature("f2", &["dep:maybe_enabled"])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { version = "1.0", features = ["f2", "f1"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] maybe_enabled v1.0.0 [..]
+[DOWNLOADED] bar v1.0.0 [..]
+[CHECKING] maybe_enabled v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+
+    assert!(
+        lockfile.contains(r#"version = 3"#),
+        "lockfile version is not 3!\n{lockfile}",
+    );
+    // Previous behavior: maybe_enabled is inside lockfile.
+    assert!(
+        lockfile.contains(r#"name = "maybe_enabled""#),
+        "maybe_enabled not found\n{lockfile}",
+    );
+    // Update to new lockfile version
+    let new_lockfile = lockfile.replace("version = 3", "version = 4");
+    p.change_file("Cargo.lock", &new_lockfile);
+
+    // We should still compile maybe_enabled
+    p.cargo("check")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // New behavior: maybe_enabled is still there.
+    assert!(
+        lockfile.contains(r#"name = "maybe_enabled""#),
+        "maybe_enabled not found\n{lockfile}",
+    );
+}

@@ -490,7 +490,7 @@ impl Requirements<'_> {
     }
 
     fn require_dependency(&mut self, pkg: InternedString) {
-        self.deps.entry(pkg).or_default();
+        self.deps.entry(pkg).or_default().0 = false;
     }
 
     fn require_feature(&mut self, feat: InternedString) -> Result<(), RequirementError> {
