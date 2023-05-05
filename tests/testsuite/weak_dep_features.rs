@@ -807,3 +807,95 @@ fn disabled_weak_optional_deps() {
         "bar inside lockfile!\n{lockfile}",
     );
 }
+
+#[cargo_test]
+fn deferred_v4() {
+    // A modified version of the deferred test from above to enable
+    // an entire dependency in a deferred way.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &["feat_dep"])
+        .add_dep(Dependency::new("feat_dep", "1.0").optional(true))
+        .file("src/lib.rs", "extern crate feat_dep;")
+        .publish();
+    Package::new("dep", "1.0.0")
+        .add_dep(Dependency::new("bar", "1.0").optional(true))
+        .feature("feat", &["bar?/feat"])
+        .publish();
+    Package::new("bar_activator", "1.0.0")
+        .feature_dep("dep", "1.0", &["bar"])
+        .publish();
+    Package::new("feat_dep", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                dep = { version = "1.0", features = ["feat"] }
+                bar_activator = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_dep v1.0.0 [..]
+[DOWNLOADED] dep v1.0.0 [..]
+[DOWNLOADED] bar_activator v1.0.0 [..]
+[DOWNLOADED] bar v1.0.0 [..]
+[CHECKING] feat_dep v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] dep v1.0.0
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    let lockfile = p.read_lockfile();
+
+    assert!(
+        lockfile.contains(r#"version = 3"#),
+        "lockfile version is not 3!\n{lockfile}",
+    );
+    // Previous behavior: feat_dep is inside lockfile.
+    assert!(
+        lockfile.contains(r#"name = "feat_dep""#),
+        "feat_dep not found\n{lockfile}",
+    );
+    // Update to new lockfile version
+    let new_lockfile = lockfile.replace("version = 3", "version = 4");
+    p.change_file("Cargo.lock", &new_lockfile);
+
+    // We should still compile feat_dep
+    p.cargo("check")
+        .with_stderr(
+            "\
+[CHECKING] feat_dep v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] dep v1.0.0
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // New behavior: feat_dep is still there.
+    assert!(
+        lockfile.contains(r#"name = "feat_dep""#),
+        "feat_dep not found\n{lockfile}",
+    );
+}
