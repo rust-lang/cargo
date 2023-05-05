@@ -7,6 +7,7 @@ homepage = "https://github.com/rust-lang/cargo"
 repository = "https://github.com/rust-lang/cargo"
 documentation = "https://github.com/rust-lang/cargo"
 description = "Helper proc-macro for Cargo's testsuite."
+publish = false
 
 [lib]
 proc-macro = true

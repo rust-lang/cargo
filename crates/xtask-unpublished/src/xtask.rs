@@ -1,11 +1,15 @@
+use std::collections::HashSet;
+
 use cargo::core::registry::PackageRegistry;
 use cargo::core::QueryKind;
 use cargo::core::Registry;
 use cargo::core::SourceId;
+use cargo::ops::Packages;
 use cargo::util::command_prelude::*;
 
 pub fn cli() -> clap::Command {
     clap::Command::new("xtask-unpublished")
+        .arg_package_spec_simple("Package to inspect the published status")
         .arg(
             opt(
                 "verbose",
@@ -76,6 +80,16 @@ fn config_configure(config: &mut Config, args: &ArgMatches) -> CliResult {
 
 fn unpublished(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> cargo::CliResult {
     let ws = args.workspace(config)?;
+
+    let members_to_inspect: HashSet<_> = {
+        let pkgs = args.packages_from_flags()?;
+        if let Packages::Packages(_) = pkgs {
+            HashSet::from_iter(pkgs.get_packages(&ws)?)
+        } else {
+            HashSet::from_iter(ws.members())
+        }
+    };
+
     let mut results = Vec::new();
     {
         let mut registry = PackageRegistry::new(config)?;
@@ -83,7 +97,7 @@ fn unpublished(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> car
         registry.lock_patches();
         let source_id = SourceId::crates_io(config)?;
 
-        for member in ws.members() {
+        for member in members_to_inspect {
             let name = member.name();
             let current = member.version();
             if member.publish() == &Some(vec![]) {
@@ -92,11 +106,8 @@ fn unpublished(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> car
             }
 
             let version_req = format!("<={current}");
-            let query = cargo::core::dependency::Dependency::parse(
-                name,
-                Some(&version_req),
-                source_id.clone(),
-            )?;
+            let query =
+                cargo::core::dependency::Dependency::parse(name, Some(&version_req), source_id)?;
             let possibilities = loop {
                 // Exact to avoid returning all for path/git
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -106,49 +117,75 @@ fn unpublished(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> car
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
             };
-            if let Some(last) = possibilities.iter().map(|s| s.version()).max() {
-                if last != current {
-                    results.push((
-                        name.to_string(),
-                        Some(last.to_string()),
-                        current.to_string(),
-                    ));
-                } else {
-                    log::trace!("{name} {current} is published");
-                }
-            } else {
-                results.push((name.to_string(), None, current.to_string()));
-            }
+            let (last, published) = possibilities
+                .iter()
+                .map(|s| s.version())
+                .max()
+                .map(|last| (last.to_string(), last == current))
+                .unwrap_or(("-".to_string(), false));
+
+            results.push(vec![
+                name.to_string(),
+                last,
+                current.to_string(),
+                if published { "yes" } else { "no" }.to_string(),
+            ]);
         }
+    }
+    results.sort();
+
+    if results.is_empty() {
+        return Ok(());
     }
 
-    if !results.is_empty() {
-        results.insert(
-            0,
-            (
-                "name".to_owned(),
-                Some("published".to_owned()),
-                "current".to_owned(),
-            ),
-        );
-        results.insert(
-            1,
-            (
-                "====".to_owned(),
-                Some("=========".to_owned()),
-                "=======".to_owned(),
-            ),
-        );
-    }
-    for (name, last, current) in results {
-        if let Some(last) = last {
-            println!("{name} {last} {current}");
-        } else {
-            println!("{name} - {current}");
-        }
-    }
+    results.insert(
+        0,
+        vec![
+            "name".to_owned(),
+            "crates.io".to_owned(),
+            "local".to_owned(),
+            "published?".to_owned(),
+        ],
+    );
+
+    output_table(results);
 
     Ok(())
+}
+
+/// Outputs a markdown table like this.
+///
+/// ```text
+/// | name             | crates.io | local  | published? |
+/// |------------------|-----------|--------|------------|
+/// | cargo            | 0.70.1    | 0.72.0 | no         |
+/// | cargo-platform   | 0.1.2     | 0.1.2  | yes        |
+/// | cargo-util       | -         | 0.2.4  | no         |
+/// | crates-io        | 0.36.0    | 0.36.0 | yes        |
+/// | home             | -         | 0.5.6  | no         |
+/// ```
+fn output_table(table: Vec<Vec<String>>) {
+    let header = table.first().unwrap();
+    let paddings = table.iter().fold(vec![0; header.len()], |mut widths, row| {
+        for (width, field) in widths.iter_mut().zip(row) {
+            *width = usize::max(*width, field.len());
+        }
+        widths
+    });
+
+    let print = |row: &[_]| {
+        for (field, pad) in row.iter().zip(&paddings) {
+            print!("| {field:pad$} ");
+        }
+        println!("|");
+    };
+
+    print(header);
+
+    paddings.iter().for_each(|fill| print!("|-{:-<fill$}-", ""));
+    println!("|");
+
+    table.iter().skip(1).for_each(|r| print(r));
 }
 
 #[test]
