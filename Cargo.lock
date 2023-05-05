@@ -772,6 +772,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
+
+[[package]]
 name = "dunce"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -983,6 +989,17 @@ dependencies = [
  "libc",
  "wasi",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "git-conventional"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "232911ef08b47d0a792af61277fc3b8f089f0d5962a2cf8d4ae1cfc547355ff3"
+dependencies = [
+ "doc-comment",
+ "unicase",
+ "winnow",
 ]
 
 [[package]]
@@ -3723,6 +3740,21 @@ dependencies = [
 [[package]]
 name = "xtask-build-man"
 version = "0.0.0"
+
+[[package]]
+name = "xtask-changes"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "cargo",
+ "clap 4.2.1",
+ "env_logger 0.10.0",
+ "git-conventional",
+ "git2",
+ "log",
+ "semver",
+ "termcolor",
+]
 
 [[package]]
 name = "xtask-stale-label"

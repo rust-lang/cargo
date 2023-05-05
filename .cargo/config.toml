@@ -2,3 +2,4 @@
 build-man = "run --package xtask-build-man --"
 stale-label = "run --package xtask-stale-label --"
 unpublished = "run --package xtask-unpublished --"
+changes = "run --package xtask-changes --"
