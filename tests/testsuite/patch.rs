@@ -2583,7 +2583,8 @@ all possible versions conflict with previously selected packages.
   previously selected package `bar v0.1.0`
     ... which satisfies dependency `bar = "=0.1.0"` of package `foo v0.1.0 ([..])`
 
-failed to select a version for `bar` which could resolve this conflict
+failed to select a version for `bar` which could resolve this conflict.
+Try running `cargo generate-lockfile` to generate the correct Cargo.lock
 "#,
         )
         .run();
@@ -2639,7 +2640,8 @@ all possible versions conflict with previously selected packages.
   previously selected package `qux v0.1.0-beta.2`
     ... which satisfies dependency `qux = "^0.1.0-beta.2"` of package `foo v0.1.0 ([..])`
 
-failed to select a version for `qux` which could resolve this conflict"#,
+failed to select a version for `qux` which could resolve this conflict.
+Try running `cargo generate-lockfile` to generate the correct Cargo.lock"#,
         )
         .run();
 }

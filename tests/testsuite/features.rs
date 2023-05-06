@@ -150,7 +150,8 @@ versions that meet the requirements `*` are: 0.0.1
 the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
 
 
-failed to select a version for `bar` which could resolve this conflict",
+failed to select a version for `bar` which could resolve this conflict.
+Try running `cargo generate-lockfile` to generate the correct Cargo.lock",
         )
         .run();
 
@@ -363,7 +364,8 @@ the package `foo` depends on `bar`, with features: `baz` but `bar` does not have
  It has a required dependency with that name, but only optional dependencies can be used as features.
 
 
-failed to select a version for `bar` which could resolve this conflict
+failed to select a version for `bar` which could resolve this conflict.
+Try running `cargo generate-lockfile` to generate the correct Cargo.lock
 ").with_status(101)
         .run();
 }

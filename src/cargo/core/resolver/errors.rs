@@ -213,7 +213,7 @@ pub(super) fn activation_error(
         msg.push_str("\n\nfailed to select a version for `");
         msg.push_str(&*dep.package_name());
         msg.push_str("` which could resolve this conflict.");
-        msg.push_str("`\nTry running `cargo generate-lockfile` to generate the correct Cargo.lock");
+        msg.push_str("\nTry running `cargo generate-lockfile` to generate the correct Cargo.lock");
 
         return to_resolve_err(anyhow::format_err!("{}", msg));
     }

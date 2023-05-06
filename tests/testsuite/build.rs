@@ -1198,7 +1198,8 @@ all possible versions conflict with previously selected packages.
     ... which satisfies dependency `bad = \"=1.0.0\"` of package `baz v0.1.0`
     ... which satisfies dependency `baz = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 
-failed to select a version for `bad` which could resolve this conflict",
+failed to select a version for `bad` which could resolve this conflict.
+Try running `cargo generate-lockfile` to generate the correct Cargo.lock",
         )
         .run();
 }
@@ -1247,7 +1248,8 @@ all possible versions conflict with previously selected packages.
     ... which satisfies dependency `bad = \"=1.0.0\"` of package `bar v0.1.0`
     ... which satisfies dependency `bar = \"^0.1.0\"` of package `foo v0.0.1 ([..])`
 
-failed to select a version for `bad` which could resolve this conflict",
+failed to select a version for `bad` which could resolve this conflict.
+Try running `cargo generate-lockfile` to generate the correct Cargo.lock",
         )
         .run();
 }
