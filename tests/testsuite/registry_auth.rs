@@ -1,6 +1,7 @@
 //! Tests for registry authentication.
 
-use cargo_test_support::registry::{Package, RegistryBuilder};
+use cargo_test_support::compare::match_contains;
+use cargo_test_support::registry::{Package, RegistryBuilder, Token};
 use cargo_test_support::{project, Execs, Project};
 
 fn cargo(p: &Project, s: &str) -> Execs {
@@ -516,4 +517,74 @@ Caused by:
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn token_not_logged() {
+    // Checks that the token isn't displayed in debug output (for both HTTP
+    // index and registry API). Note that this doesn't fully verify the
+    // correct behavior since we don't have an HTTP2 server, and curl behaves
+    // significantly differently when using HTTP2.
+    let crates_io = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .auth_required()
+        .token(Token::Plaintext("a-unique_token".to_string()))
+        .build();
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    let output = cargo(&p, "publish")
+        .replace_crates_io(crates_io.index_url())
+        .env("CARGO_HTTP_DEBUG", "true")
+        .env("CARGO_LOG", "trace")
+        .exec_with_output()
+        .unwrap();
+    let log = String::from_utf8(output.stderr).unwrap();
+    let lines = "\
+[UPDATING] crates.io index
+[PACKAGING] foo v0.1.0 [..]
+[VERIFYING] foo v0.1.0 [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0
+[COMPILING] bar v1.0.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+[PACKAGED] 3 files[..]
+[UPLOADING] foo v0.1.0[..]
+[UPLOADED] foo v0.1.0 to registry `crates-io`
+note: Waiting [..]
+";
+    for line in lines.lines() {
+        match_contains(line, &log, None).unwrap();
+    }
+    let authorizations: Vec<_> = log
+        .lines()
+        .filter(|line| {
+            line.contains("http-debug:") && line.to_lowercase().contains("authorization")
+        })
+        .collect();
+    assert!(authorizations.iter().all(|line| line.contains("REDACTED")));
+    // Total authorizations:
+    // 1. Initial config.json
+    // 2. config.json again for verification
+    // 3. /index/3/b/bar
+    // 4. /dl/bar/1.0.0/download
+    // 5. /api/v1/crates/new
+    // 6. config.json for the "wait for publish"
+    // 7. /index/3/f/foo for the "wait for publish"
+    assert_eq!(authorizations.len(), 7);
+    assert!(!log.contains("a-unique_token"));
 }
