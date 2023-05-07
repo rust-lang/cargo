@@ -59,29 +59,31 @@ fn env_invalid() {
 }
 
 #[cargo_test]
-fn env_no_cargo_home() {
+fn env_no_disallowed() {
+    // Checks for keys that are not allowed in the [env] table.
     let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-        fn main() {
-        }
-        "#,
-        )
-        .file(
-            ".cargo/config",
-            r#"
-                [env]
-                CARGO_HOME = "/"
-            "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr_contains("[..]setting the `CARGO_HOME` environment variable is not supported in the `[env]` configuration table")
-        .run();
+    for disallowed in &["CARGO_HOME", "RUSTUP_HOME"] {
+        p.change_file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [env]
+                    {disallowed} = "foo"
+                "#
+            ),
+        );
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr(&format!(
+                "[ERROR] setting the `{disallowed}` environment variable \
+                is not supported in the `[env]` configuration table"
+            ))
+            .run();
+    }
 }
 
 #[cargo_test]

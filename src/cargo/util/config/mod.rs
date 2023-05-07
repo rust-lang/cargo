@@ -1745,8 +1745,13 @@ impl Config {
             .env_config
             .try_borrow_with(|| self.get::<EnvConfig>("env"))?;
 
-        if env_config.get("CARGO_HOME").is_some() {
-            bail!("setting the `CARGO_HOME` environment variable is not supported in the `[env]` configuration table")
+        for disallowed in &["CARGO_HOME", "RUSTUP_HOME"] {
+            if env_config.contains_key(*disallowed) {
+                bail!(
+                    "setting the `{disallowed}` environment variable is not supported \
+                    in the `[env]` configuration table"
+                );
+            }
         }
 
         Ok(env_config)
