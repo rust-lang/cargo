@@ -1759,6 +1759,74 @@ fn doc_json_artifacts() {
         .run();
 }
 
+#[cargo_test(nightly, reason = "rustdoc-json")]
+fn doc_json_artifacts_are_cached_correctly() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .build();
+
+    // The first run should emit the unit as dirty ("fresh": false), while showing
+    // the correct output filenames.
+    p.cargo("rustdoc --lib --message-format=json -- -Zunstable-options --output-format=json")
+        .with_json_contains_unordered(
+            r#"
+{
+    "reason": "compiler-artifact",
+    "package_id": "foo 0.0.1 [..]",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": true,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/doc/foo.json"],
+    "executable": null,
+    "fresh": false
+}
+
+{"reason":"build-finished","success":true}
+"#,
+        )
+        .run();
+
+    // We then run it again and check that the unit is now marked as fresh.
+    p.cargo("rustdoc --lib --message-format=json -- -Zunstable-options --output-format=json")
+        .with_json_contains_unordered(r#"
+{
+    "reason": "compiler-artifact",
+    "package_id": "foo 0.0.1 [..]",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": true,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/doc/foo.json"],
+    "executable": null,
+    "fresh": true
+}
+
+{"reason":"build-finished","success":true}
+        "#)
+        .run();
+}
+
 #[cargo_test]
 fn short_message_format() {
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
