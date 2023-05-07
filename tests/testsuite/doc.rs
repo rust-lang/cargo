@@ -1761,9 +1761,7 @@ fn doc_json_artifacts() {
 
 #[cargo_test(nightly, reason = "rustdoc-json")]
 fn doc_json_artifacts_are_cached_correctly() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
     // The first run should emit the unit as dirty ("fresh": false), while showing
     // the correct output filenames.
@@ -1799,7 +1797,8 @@ fn doc_json_artifacts_are_cached_correctly() {
 
     // We then run it again and check that the unit is now marked as fresh.
     p.cargo("rustdoc --lib --message-format=json -- -Zunstable-options --output-format=json")
-        .with_json_contains_unordered(r#"
+        .with_json_contains_unordered(
+            r#"
 {
     "reason": "compiler-artifact",
     "package_id": "foo 0.0.1 [..]",
@@ -1823,7 +1822,8 @@ fn doc_json_artifacts_are_cached_correctly() {
 }
 
 {"reason":"build-finished","success":true}
-        "#)
+        "#,
+        )
         .run();
 }
 
