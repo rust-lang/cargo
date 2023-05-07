@@ -436,10 +436,31 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let ret = match unit.mode {
             CompileMode::Doc { .. } => {
-                let path = self
-                    .out_dir(unit)
-                    .join(unit.target.crate_name())
-                    .join("index.html");
+                let json_output = if let Some(extra_rustdoc_args) = bcx.extra_args_for(unit) {
+                    extra_rustdoc_args
+                        .iter()
+                        .find(|arg| {
+                            *arg == "--output-format=json"
+                                || *arg == "-wjson"
+                                || *arg == "-w json"
+                                || *arg == "--output-format json"
+                        })
+                        .is_some()
+                } else {
+                    false
+                };
+                // If the output format is JSON, then rustdoc will output
+                // a <crate name>.json file rather than the usual index.html
+                // We compute its expected path here in order to track it as
+                // the correct output file.
+                let path = if json_output {
+                    self.out_dir(unit)
+                        .join(format!("{}.json", unit.target.crate_name()))
+                } else {
+                    self.out_dir(unit)
+                        .join(unit.target.crate_name())
+                        .join("index.html")
+                };
                 vec![OutputFile {
                     path,
                     hardlink: None,
