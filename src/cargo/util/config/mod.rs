@@ -1751,15 +1751,16 @@ impl Config {
         //   from the [env] table. Recursive calls to cargo would use the new
         //   value, possibly behaving differently from the outer cargo.
         //
-        // - RUSTUP_HOME: Under normal usage with rustup, this will have no
-        //   effect because the rustup proxy sets RUSTUP_HOME, and that would
-        //   override the [env] table. If the outer cargo is executed directly
+        // - RUSTUP_HOME and RUSTUP_TOOLCHAIN: Under normal usage with rustup,
+        //   this will have no effect because the rustup proxy sets
+        //   RUSTUP_HOME and RUSTUP_TOOLCHAIN, and that would override the
+        //   [env] table. If the outer cargo is executed directly
         //   circumventing the rustup proxy, then this would affect calls to
         //   rustc (assuming that is a proxy), which could potentially cause
         //   problems with cargo and rustc being from different toolchains. We
         //   consider this to be not a use case we would like to support,
         //   since it will likely cause problems or lead to confusion.
-        for disallowed in &["CARGO_HOME", "RUSTUP_HOME"] {
+        for disallowed in &["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
             if env_config.contains_key(*disallowed) {
                 bail!(
                     "setting the `{disallowed}` environment variable is not supported \
