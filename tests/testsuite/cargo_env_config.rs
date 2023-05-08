@@ -66,7 +66,7 @@ fn env_no_disallowed() {
         .file("src/lib.rs", "")
         .build();
 
-    for disallowed in &["CARGO_HOME", "RUSTUP_HOME"] {
+    for disallowed in &["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
         p.change_file(
             ".cargo/config",
             &format!(
