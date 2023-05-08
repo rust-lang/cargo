@@ -98,7 +98,7 @@
 - `cargo new` generates the correct `.hgignore` aligning semantics with other
   VCS ignore files.
   [#11855](https://github.com/rust-lang/cargo/pull/11855)
-- Stopped doing unnecessary fuzzy registry index queries This significantly
+- Stopped doing unnecessary fuzzy registry index queries. This significantly
   reduces the amount of HTTP requests to remote registries for crates
   containing `-` or `_` in their names.
   [#11936](https://github.com/rust-lang/cargo/pull/11936)
