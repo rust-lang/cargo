@@ -795,7 +795,7 @@ Artifact-dependencies adds the following keys to a dependency declaration in `Ca
   This field allows specifying which target will be built, and made available as a binary at build time:
 
   * `"bin"` --- Compiled executable binaries, corresponding to all of the `[[bin]]` sections in the dependency's manifest.
-  * `"bin:`*name*`"` --- Compiled executable binary, corresponding to a specific binary target specified by its name.
+  * `"bin:<bin-name>"` --- Compiled executable binary, corresponding to a specific binary target specified by the given `<bin-name>`.
   * `"cdylib"` --- A C-compatible dynamic library, corresponding to a `[lib]` section with `crate-type = ["cdylib"]` in the dependency's manifest.
   * `"staticlib"` --- A C-compatible static library, corresponding to a `[lib]` section with `crate-type = ["staticlib"]` in the dependency's manifest.
 
