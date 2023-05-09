@@ -23,9 +23,13 @@ fn main() {
 const SEPARATOR: &str = "///////////////////////////////////////////////////////////";
 
 fn doit() -> Result<(), Box<dyn Error>> {
-    let filename = std::env::args()
-        .nth(1)
-        .unwrap_or_else(|| "src/doc/src/reference/semver.md".to_string());
+    let filename = std::env::args().nth(1).unwrap_or_else(|| {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../src/doc/src/reference/semver.md")
+            .to_str()
+            .unwrap()
+            .to_string()
+    });
     let contents = fs::read_to_string(filename)?;
     let mut lines = contents.lines().enumerate();
 
