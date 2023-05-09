@@ -781,12 +781,120 @@ the command line) target.
 * Tracking Issue: [#9096](https://github.com/rust-lang/cargo/pull/9096)
 * Original Pull Request: [#9992](https://github.com/rust-lang/cargo/pull/9992)
 
-Allow Cargo packages to depend on `bin`, `cdylib`, and `staticlib` crates,
+Artifact dependencies allow Cargo packages to depend on `bin`, `cdylib`, and `staticlib` crates,
 and use the artifacts built by those crates at compile time.
 
 Run `cargo` with `-Z bindeps` to enable this functionality.
 
-**Example:** use _cdylib_ artifact in build script
+#### artifact-dependencies: Dependency declarations
+
+Artifact-dependencies adds the following keys to a dependency declaration in `Cargo.toml`:
+
+- `artifact` --- This specifies the [Cargo Target](cargo-targets.md) to build.
+  Normally without this field, Cargo will only build the `[lib]` target from a dependency.
+  This field allows specifying which target will be built, and made available as a binary at build time:
+
+  * `"bin"` --- Compiled executable binaries, corresponding to all of the `[[bin]]` sections in the dependency's manifest.
+  * `"bin:<bin-name>"` --- Compiled executable binary, corresponding to a specific binary target specified by the given `<bin-name>`.
+  * `"cdylib"` --- A C-compatible dynamic library, corresponding to a `[lib]` section with `crate-type = ["cdylib"]` in the dependency's manifest.
+  * `"staticlib"` --- A C-compatible static library, corresponding to a `[lib]` section with `crate-type = ["staticlib"]` in the dependency's manifest.
+
+  The `artifact` value can be a string, or it can be an array of strings to specify multiple targets.
+
+  Example:
+
+  ```toml
+  [dependencies]
+  bar = { version = "1.0", artifact = "staticlib" }
+  zoo = { version = "1.0", artifact = ["bin:cat", "bin:dog"]}
+  ```
+
+- `lib` --- This is a Boolean value which indicates whether or not to also build the dependency's library as a normal Rust `lib` dependency.
+  This field can only be specified when `artifact` is specified.
+
+  The default for this field is `false` when `artifact` is specified.
+  If this is set to `true`, then the dependency's `[lib]` target will also be built for the platform target the declaring package is being built for.
+  This allows the package to use the dependency from Rust code like a normal dependency in addition to an artifact dependency.
+
+  Example:
+
+  ```toml
+  [dependencies]
+  bar = { version = "1.0", artifact = "bin", lib = true }
+  ```
+
+- `target` --- The platform target to build the dependency for.
+  This field can only be specified when `artifact` is specified.
+
+  The default if this is not specified depends on the dependency kind.
+  For build dependencies, it will be built for the host target.
+  For all other dependencies, it will be built for the same targets the declaring package is built for.
+
+  For a build dependency, this can also take the special value of `"target"` which means to build the dependency for the same targets that the package is being built for.
+
+  ```toml
+  [build-dependencies]
+  bar = { version = "1.0", artifact = "cdylib", target = "wasm32-unknown-unknown"}
+  same-target = { version = "1.0", artifact = "bin", target = "target" }
+  ```
+
+#### artifact-dependencies: Environment variables
+
+After building an artifact dependency, Cargo provides the following environment variables that you can use to access the artifact:
+
+- `CARGO_<ARTIFACT-TYPE>_DIR_<DEP>` --- This is the directory containing all the artifacts from the dependency.
+
+  `<ARTIFACT-TYPE>` is the `artifact` specified for the dependency (uppercased as in `CDYLIB`, `STATICLIB`, or `BIN`) and `<DEP>` is the name of the dependency.
+  As with other Cargo environment variables, dependency names are converted to uppercase, with dashes replaced by underscores.
+
+  If your manifest renames the dependency, `<DEP>` corresponds to the name you specify, not the original package name.
+
+- `CARGO_<ARTIFACT-TYPE>_FILE_<DEP>_<NAME>` --- This is the full path to the artifact.
+
+  `<ARTIFACT-TYPE>` is the `artifact` specified for the dependency (uppercased as above), `<DEP>` is the name of the dependency (transformed as above), and `<NAME>` is the name of the artifact from the dependency.
+
+  Note that `<NAME>` is not modified in any way from the `name` specified in the crate supplying the artifact, or the crate name if not specified; for instance, it may be in lowercase, or contain dashes.
+
+  For convenience, if the artifact name matches the original package name, cargo additionally supplies a copy of this variable with the `_<NAME>` suffix omitted.
+  For instance, if the `cmake` crate supplies a binary named `cmake`, Cargo supplies both `CARGO_BIN_FILE_CMAKE` and `CARGO_BIN_FILE_CMAKE_cmake`.
+
+For each kind of dependency, these variables are supplied to the same part of the build process that has access to that kind of dependency:
+
+- For build-dependencies, these variables are supplied to the `build.rs` script, and can be accessed using [`std::env::var_os`](https://doc.rust-lang.org/std/env/fn.var_os.html).
+  (As with any OS file path, these may or may not be valid UTF-8.)
+- For normal dependencies, these variables are supplied during the compilation of the crate, and can be accessed using the [`env!`] macro.
+- For dev-dependencies, these variables are supplied during the compilation of examples, tests, and benchmarks, and can be accessed using the [`env!`] macro.
+
+[`env!`]: https://doc.rust-lang.org/std/macro.env.html
+
+#### artifact-dependencies: Examples
+
+##### Example: use a binary executable from a build script
+
+In the `Cargo.toml` file, you can specify a dependency on a binary to make available for a build script:
+
+```toml
+[build-dependencies]
+some-build-tool = { version = "1.0", artifact = "bin" }
+```
+
+Then inside the build script, the binary can be executed at build time:
+
+```rust
+fn main() {
+    let build_tool = std::env::var_os("CARGO_BIN_FILE_SOME_BUILD_TOOL").unwrap();
+    let status = std::process::Command::new(build_tool)
+        .arg("do-stuff")
+        .status()
+        .unwrap();
+    if !status.success() {
+        eprintln!("failed!");
+        std::process::exit(1);
+    }
+}
+```
+
+##### Example: use _cdylib_ artifact in build script
 
 The `Cargo.toml` in the consuming package, building the `bar` library as `cdylib`
 for a specific build target…
@@ -800,11 +908,11 @@ bar = { artifact = "cdylib", version = "1.0", target = "wasm32-unknown-unknown" 
 
 ```rust
 fn main() {
-  wasm::run_file(std::env::var("CARGO_CDYLIB_FILE_BAR").unwrap());
+    wasm::run_file(std::env::var("CARGO_CDYLIB_FILE_BAR").unwrap());
 }
 ```
 
-**Example:** use _binary_ artifact and its library in a binary
+##### Example: use _binary_ artifact and its library in a binary
 
 The `Cargo.toml` in the consuming package, building the `bar` binary for inclusion
 as artifact while making it available as library as well…
@@ -818,8 +926,8 @@ bar = { artifact = "bin", version = "1.0", lib = true }
 
 ```rust
 fn main() {
-  bar::init();
-  command::run(env!("CARGO_BIN_FILE_BAR"));
+    bar::init();
+    command::run(env!("CARGO_BIN_FILE_BAR"));
 }
 ```
 
