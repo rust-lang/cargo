@@ -483,6 +483,9 @@ features! {
 
     // Allow specifying rustflags directly in a profile
     (stable, workspace_inheritance, "1.64", "reference/unstable.html#workspace-inheritance"),
+
+    // Allow specifying rustflags directly in a profile
+    (unstable, lints, "", "reference/unstable.html#lints"),
 }
 
 pub struct Feature {
