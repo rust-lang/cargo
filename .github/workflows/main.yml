@@ -51,6 +51,18 @@ jobs:
       - run: rustup update stable && rustup default stable
       - run: cargo update -p cargo --locked
 
+  check-version-bump:
+    runs-on: ubuntu-latest
+    env:
+      BASE_SHA : ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # make `git diff` work
+      - run: rustup update stable && rustup default stable
+      - run: ci/validate-version-bump.sh
+
   test:
     runs-on: ${{ matrix.os }}
     env:
