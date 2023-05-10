@@ -7,6 +7,20 @@
 
 ### Changed
 
+- ❗ Optimized the usage under `rustup`. When Cargo detects it will run `rustc`
+  pointing a rustup proxy, it'll try bypassing the proxy and use the underlying
+  binary directly. There are assumptions around the interaction with rustup and
+  `RUSTUP_TOOLCHAIN`. However, it's not expected to affect normal users.
+  [#11917](https://github.com/rust-lang/cargo/pull/11917)
+- ❗ When querying a package, Cargo tries only the original name, all hyphens,
+  and all underscores to handle misspellings. Previously, Cargo tried each
+  combination of hyphens and underscores, causing excessive requests to crates.io.
+  [#12083](https://github.com/rust-lang/cargo/pull/12083)
+- ❗ Disallow `RUSTUP_HOME` and `RUSTUP_TOOLCHAIN` in the `[env]` configuration
+  table. This is considered to be not a use case Cargo would like to support,
+  since it will likely cause problems or lead to confusion.
+  [#12101](https://github.com/rust-lang/cargo/pull/12101)
+  [#12107](https://github.com/rust-lang/cargo/pull/12107)
 - Better error message when getting an empty dependency table in Cargo.toml.
   [#11997](https://github.com/rust-lang/cargo/pull/11997)
 - Use restricted Damerau-Levenshtein algorithm to provide typo suggestions.
@@ -19,6 +33,9 @@
 
 ### Nightly only
 
+- The `-Zbuild-std` breakage of missing features in `nightly-2023-05-04` has
+  been fixed in `nightly-2023-05-05`.
+  [#12088](https://github.com/rust-lang/cargo/pull/12088)
 - Recompile on profile rustflags changes.
   [#11981](https://github.com/rust-lang/cargo/pull/11981)
 
