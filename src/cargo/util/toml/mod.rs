@@ -355,6 +355,7 @@ pub struct TomlManifest {
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<MaybeWorkspaceBtreeMap>,
+    lints: Option<MaybeWorkspaceLints>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -1421,6 +1422,29 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
     }
 }
 
+type MaybeWorkspaceLints = MaybeWorkspace<TomlLints, TomlWorkspaceField>;
+
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceLints {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = serde_value::Value::deserialize(deserializer)?;
+
+        if let Ok(w) = TomlWorkspaceField::deserialize(
+            serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
+        ) {
+            return if w.workspace() {
+                Ok(MaybeWorkspace::Workspace(w))
+            } else {
+                Err(de::Error::custom("`workspace` cannot be false"))
+            };
+        }
+        BTreeMap::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+            .map(MaybeWorkspace::Defined)
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlWorkspaceField {
     #[serde(deserialize_with = "bool_no_false")]
@@ -1507,6 +1531,7 @@ pub struct TomlWorkspace {
     // Properties that can be inherited by members.
     package: Option<InheritableFields>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
+    lints: Option<TomlLints>,
 
     // Note that this field must come last due to the way toml serialization
     // works which requires tables to be emitted after all values.
@@ -1520,6 +1545,9 @@ pub struct InheritableFields {
     // and we don't want it present when serializing
     #[serde(skip)]
     dependencies: Option<BTreeMap<String, TomlDependency>>,
+    #[serde(skip)]
+    lints: Option<TomlLints>,
+
     version: Option<semver::Version>,
     authors: Option<Vec<String>>,
     description: Option<String>,
@@ -1550,6 +1578,10 @@ impl InheritableFields {
         self.dependencies = deps;
     }
 
+    pub fn update_lints(&mut self, lints: Option<TomlLints>) {
+        self.lints = lints;
+    }
+
     pub fn update_ws_path(&mut self, ws_root: PathBuf) {
         self.ws_root = ws_root;
     }
@@ -1559,6 +1591,12 @@ impl InheritableFields {
             Err(anyhow!("`workspace.dependencies` was not defined")),
             |d| Ok(d),
         )
+    }
+
+    pub fn lints(&self) -> CargoResult<TomlLints> {
+        self.lints
+            .clone()
+            .map_or(Err(anyhow!("`workspace.lints` was not defined")), |d| Ok(d))
     }
 
     pub fn get_dependency(&self, name: &str, package_root: &Path) -> CargoResult<TomlDependency> {
@@ -1878,6 +1916,7 @@ impl TomlManifest {
             workspace: None,
             badges: self.badges.clone(),
             cargo_features: self.cargo_features.clone(),
+            lints: self.lints.clone(),
         });
 
         fn map_deps(
@@ -2006,6 +2045,8 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(package_root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
+                verify_lints(toml_config.lints.as_ref(), &features)?;
+                inheritable.update_lints(toml_config.lints.clone());
                 if let Some(ws_deps) = &inheritable.dependencies {
                     for (name, dep) in ws_deps {
                         unused_dep_keys(
@@ -2268,6 +2309,13 @@ impl TomlManifest {
             &workspace_config,
             &inherit_cell,
         )?;
+
+        let lints = me
+            .lints
+            .clone()
+            .map(|mw| mw.resolve("lints", || inherit()?.lints()))
+            .transpose()?;
+        verify_lints(lints.as_ref(), &features)?;
 
         let mut target: BTreeMap<String, TomlPlatform> = BTreeMap::new();
         for (name, platform) in me.target.iter().flatten() {
@@ -2566,6 +2614,7 @@ impl TomlManifest {
                 .badges
                 .as_ref()
                 .map(|_| MaybeWorkspace::Defined(metadata.badges.clone())),
+            lints: lints.map(|lints| MaybeWorkspace::Defined(lints)),
         };
         let mut manifest = Manifest::new(
             summary,
@@ -2695,6 +2744,8 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
+                verify_lints(toml_config.lints.as_ref(), &features)?;
+                inheritable.update_lints(toml_config.lints.clone());
                 let ws_root_config = WorkspaceRootConfig::new(
                     root,
                     &toml_config.members,
@@ -2837,6 +2888,16 @@ impl TomlManifest {
     pub fn features(&self) -> Option<&BTreeMap<InternedString, Vec<InternedString>>> {
         self.features.as_ref()
     }
+}
+
+fn verify_lints(lints: Option<&TomlLints>, features: &Features) -> CargoResult<()> {
+    if lints.is_none() {
+        return Ok(());
+    };
+
+    features.require(Feature::lints())?;
+
+    Ok(())
 }
 
 fn unused_dep_keys(
@@ -3395,4 +3456,32 @@ impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
+}
+
+pub type TomlLints = BTreeMap<String, TomlToolLints>;
+
+pub type TomlToolLints = BTreeMap<String, TomlLint>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum TomlLint {
+    Level(TomlLintLevel),
+    Config(TomlLintConfig),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct TomlLintConfig {
+    level: TomlLintLevel,
+    #[serde(default)]
+    priority: i8,
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub enum TomlLintLevel {
+    Forbid,
+    Deny,
+    Warn,
+    Allow,
 }
