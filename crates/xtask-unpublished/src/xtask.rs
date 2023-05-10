@@ -1,3 +1,9 @@
+//! `xtask-unpublished` outputs a table with publish status --- a local version
+//! and a version on crates.io for comparisons.
+//!
+//! This aims to help developers check if there is any crate required a new
+//! publish, as well as detect if a version bump is needed in CI pipeline.
+
 use std::collections::HashSet;
 
 use cargo::core::registry::PackageRegistry;
