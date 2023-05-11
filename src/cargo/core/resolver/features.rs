@@ -717,7 +717,14 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         // The old behavior before weak dependencies were
                         // added is to also enables a feature of the same
                         // name.
-                        self.activate_rec(pkg_id, fk, dep_name)?;
+                        //
+                        // Don't enable if the implicit optional dependency
+                        // feature wasn't created due to `dep:` hiding.
+                        let summary = self.resolve.summary(pkg_id);
+                        let feature_map = summary.features();
+                        if feature_map.contains_key(&dep_name) {
+                            self.activate_rec(pkg_id, fk, dep_name)?;
+                        }
                     }
                 }
                 // Activate the feature on the dependency.
