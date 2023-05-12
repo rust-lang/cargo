@@ -720,6 +720,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         //
                         // Don't enable if the implicit optional dependency
                         // feature wasn't created due to `dep:` hiding.
+                        // See rust-lang/cargo#10788 and rust-lang/cargo#12130
                         let summary = self.resolve.summary(pkg_id);
                         let feature_map = summary.features();
                         if feature_map.contains_key(&dep_name) {
