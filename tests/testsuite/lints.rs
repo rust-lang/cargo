@@ -67,3 +67,139 @@ Caused by:
 ")
         .run();
 }
+
+#[cargo_test]
+fn fail_on_invalid_tool() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["lints"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [workspace.lints.super-awesome-linter]
+                unsafe_code = "forbid"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[..]
+
+Caused by:
+  unsupported `super-awesome-linter` in `[lints]`, must be one of rust, clippy, rustdoc
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn fail_on_tool_injection() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["lints"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [workspace.lints.rust]
+                "clippy::cyclomatic_complexity" = "warn"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[..]
+
+Caused by:
+  `lints.rust.clippy::cyclomatic_complexity` is not valid lint name; try `lints.clippy.cyclomatic_complexity`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn fail_on_redundant_tool() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["lints"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [workspace.lints.rust]
+                "rust::unsafe_code" = "forbid"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[..]
+
+Caused by:
+  `lints.rust.rust::unsafe_code` is not valid lint name; try `lints.rust.unsafe_code`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn fail_on_conflicting_tool() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["lints"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [workspace.lints.rust]
+                "super-awesome-tool::unsafe_code" = "forbid"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[..]
+
+Caused by:
+  `lints.rust.super-awesome-tool::unsafe_code` is not a valid lint name
+",
+        )
+        .run();
+}

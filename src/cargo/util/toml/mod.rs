@@ -2891,11 +2891,32 @@ impl TomlManifest {
 }
 
 fn verify_lints(lints: Option<&TomlLints>, features: &Features) -> CargoResult<()> {
-    if lints.is_none() {
-        return Ok(());
-    };
+    let Some(lints) = lints else { return Ok(()); };
 
     features.require(Feature::lints())?;
+
+    for (tool, lints) in lints {
+        let supported = ["rust", "clippy", "rustdoc"];
+        if !supported.contains(&tool.as_str()) {
+            let supported = supported.join(", ");
+            anyhow::bail!("unsupported `{tool}` in `[lints]`, must be one of {supported}")
+        }
+        for name in lints.keys() {
+            if let Some((prefix, suffix)) = name.split_once("::") {
+                if tool == prefix {
+                    anyhow::bail!(
+                        "`lints.{tool}.{name}` is not valid lint name; try `lints.{prefix}.{suffix}`"
+                    )
+                } else if tool == "rust" && supported.contains(&prefix) {
+                    anyhow::bail!(
+                        "`lints.{tool}.{name}` is not valid lint name; try `lints.{prefix}.{suffix}`"
+                    )
+                } else {
+                    anyhow::bail!("`lints.{tool}.{name}` is not a valid lint name")
+                }
+            }
+        }
+    }
 
     Ok(())
 }
