@@ -455,7 +455,12 @@ impl Requirements<'_> {
                 .iter()
                 .any(|dep| dep.name_in_toml() == package && dep.is_optional())
         {
-            self.require_feature(package)?;
+            // This optional dependency may not have an implicit feature of
+            // the same name if the `dep:` syntax is used to avoid creating
+            // that implicit feature.
+            if self.summary.features().contains_key(&package) {
+                self.require_feature(package)?;
+            }
         }
         self.deps.entry(package).or_default().insert(feat);
         Ok(())
