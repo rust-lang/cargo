@@ -1045,10 +1045,10 @@ impl<'cfg> DrainState<'cfg> {
                     if fixable > 1 {
                         suggestions.push_str("s")
                     }
-                    drop(write!(
+                    let _ = write!(
                         message,
                         " (run `{command} --{args}` to apply {suggestions})"
-                    ))
+                    );
                 }
             }
         }

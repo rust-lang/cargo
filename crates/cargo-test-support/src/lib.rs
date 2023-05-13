@@ -59,8 +59,8 @@ pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
     fn pe(what: &str, err: anyhow::Error) -> ! {
         let mut result = format!("{}\nerror: {}", what, err);
         for cause in err.chain().skip(1) {
-            drop(writeln!(result, "\nCaused by:"));
-            drop(write!(result, "{}", cause));
+            let _ = writeln!(result, "\nCaused by:");
+            let _ = write!(result, "{}", cause);
         }
         panic!("\n{}", result);
     }
