@@ -2,6 +2,7 @@
 
 - [Introduction](./index.md)
 - [Issue Tracker](./issues.md)
+- [Cargo Team](./team.md)
 - [Process](./process/index.md)
     - [Working on Cargo](./process/working-on-cargo.md)
     - [Release process](./process/release.md)
