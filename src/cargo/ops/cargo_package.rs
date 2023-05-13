@@ -332,10 +332,7 @@ fn check_for_file_and_add(
         Err(_) => {
             // The file exists somewhere outside of the package.
             let file_name = file_path.file_name().unwrap();
-            if result
-                .iter()
-                .any(|ar| ar.rel_path.file_name().unwrap() == file_name)
-            {
+            if result.iter().any(|ar| ar.rel_path == file_name) {
                 ws.config().shell().warn(&format!(
                     "{} `{}` appears to be a path outside of the package, \
                             but there is already a file named `{}` in the root of the package. \
