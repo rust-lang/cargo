@@ -64,7 +64,8 @@ If you are interested in participating, feel free to contact us on [Zulip].
 ### Becoming a member
 
 A contributor can become a member of the Cargo Team by requesting a review or being nominated by one of the existing members.
-They can be added by a unanimous vote from the team.
+They can be added by unanimous consent of the team.
+The team lead or another member of the team will also confirm with the moderation team that there are no concerns involving the proposed team member.
 
 Contributors who wish to join the team should exhibit an interest in carrying the design principles of Cargo and participate in some of the activities listed above in [Membership Expectations](#membership-expectations).
 
