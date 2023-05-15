@@ -2536,6 +2536,91 @@ See [..]
 }
 
 #[cargo_test]
+fn workspace_noconflict_readme() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("README.md", "workspace readme")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                repository = "https://github.com/bar/bar"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                readme = "../README.md"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/example/README.md", "# example readmdBar")
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD]/[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_conflict_readme() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("README.md", "workspace readme")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                repository = "https://github.com/bar/bar"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                readme = "../README.md"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/README.md", "# workspace member: Bar")
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+warning: readme `../README.md` appears to be a path outside of the package, but there is already a file named `README.md` in the root of the package. The archived crate will contain the copy in the root of the package. Update the readme to point to the path relative to the root of the package to remove this warning.
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD]/[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn workspace_overrides_resolver() {
     let p = project()
         .file(
