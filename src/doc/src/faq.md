@@ -98,9 +98,9 @@ Yes!
 
 All commits to Cargo are required to pass the local test suite on Windows.
 If you encounter an issue while running on Windows, we consider it a bug, so [please file an
-issue][3].
+issue][cargo-issues].
 
-[3]: https://github.com/rust-lang/cargo/issues
+[cargo-issues]: https://github.com/rust-lang/cargo/issues
 
 ### Why do binaries have `Cargo.lock` in version control, but not libraries?
 
