@@ -2316,6 +2316,34 @@ impl TomlManifest {
             .map(|mw| mw.resolve("lints", || inherit()?.lints()))
             .transpose()?;
         verify_lints(lints.as_ref(), &features)?;
+        let default = TomlLints::default();
+        let mut rustflags = lints
+            .as_ref()
+            .unwrap_or(&default)
+            .iter()
+            .flat_map(|(tool, lints)| {
+                lints.iter().map(move |(name, config)| {
+                    let flag = config.level().flag();
+                    let option = if tool == "rust" {
+                        format!("{flag}={name}")
+                    } else {
+                        format!("{flag}={tool}::{name}")
+                    };
+                    (
+                        config.priority(),
+                        // Since the most common group will be `all`, put it last so people are more
+                        // likely to notice that they need to use `priority`.
+                        std::cmp::Reverse(name),
+                        option,
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+        rustflags.sort();
+        let rustflags = rustflags
+            .into_iter()
+            .map(|(_, _, option)| option)
+            .collect::<Vec<_>>();
 
         let mut target: BTreeMap<String, TomlPlatform> = BTreeMap::new();
         for (name, platform) in me.target.iter().flatten() {
@@ -2639,6 +2667,7 @@ impl TomlManifest {
             Rc::new(resolved_toml),
             package.metabuild.clone().map(|sov| sov.0),
             resolve_behavior,
+            rustflags,
         );
         if package.license_file.is_some() && package.license.is_some() {
             manifest.warnings_mut().add_warning(
@@ -3490,6 +3519,22 @@ pub enum TomlLint {
     Config(TomlLintConfig),
 }
 
+impl TomlLint {
+    fn level(&self) -> TomlLintLevel {
+        match self {
+            Self::Level(level) => *level,
+            Self::Config(config) => config.level,
+        }
+    }
+
+    fn priority(&self) -> i8 {
+        match self {
+            Self::Level(_) => 0,
+            Self::Config(config) => config.priority,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlLintConfig {
@@ -3505,4 +3550,15 @@ pub enum TomlLintLevel {
     Deny,
     Warn,
     Allow,
+}
+
+impl TomlLintLevel {
+    fn flag(&self) -> &'static str {
+        match self {
+            Self::Forbid => "--forbid",
+            Self::Deny => "--deny",
+            Self::Warn => "--warn",
+            Self::Allow => "--allow",
+        }
+    }
 }

@@ -63,6 +63,7 @@ pub struct Manifest {
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
+    rustflags: Vec<String>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -405,6 +406,7 @@ impl Manifest {
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
+        rustflags: Vec<String>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -430,6 +432,7 @@ impl Manifest {
             default_run,
             metabuild,
             resolve_behavior,
+            rustflags,
         }
     }
 
@@ -512,6 +515,11 @@ impl Manifest {
     /// Returns `None` if it is not specified.
     pub fn resolve_behavior(&self) -> Option<ResolveBehavior> {
         self.resolve_behavior
+    }
+
+    /// Package-wide RUSTFLAGS
+    pub fn rustflags(&self) -> &[String] {
+        self.rustflags.as_slice()
     }
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {
