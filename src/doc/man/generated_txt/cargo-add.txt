@@ -111,6 +111,15 @@ OPTIONS
            be enabled with package-name/feature-name syntax. This flag may be
            specified multiple times, which enables all specified features.
 
+       --ignore-rust-version
+           Ignore rust-version specification in packages.
+
+           This option is unstable and available only on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable. See
+           <https://github.com/rust-lang/cargo/issues/5579> for more
+           information.
+
    Display Options
        -v, --verbose
            Use verbose output. May be specified twice for “very verbose”
