@@ -68,6 +68,70 @@ See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for mo
 }
 
 #[cargo_test]
+fn malformed_on_stable() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                lints = 20
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest[..]
+
+Caused by:
+  invalid type: integer `20`, expected a map
+  in `lints`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn malformed_on_nightly() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["lints"]
+                lints = 20
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest[..]
+
+Caused by:
+  invalid type: integer `20`, expected a map
+  in `lints`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn fail_on_invalid_tool() {
     let foo = project()
         .file(
