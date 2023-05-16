@@ -1251,7 +1251,8 @@ projects that are using older versions of Rust. This also includes using new
 features in a new release of Cargo, and requiring the use of a nightly-only
 feature in a crate that previously worked on stable.
 
-Some projects choose to allow this in a minor release for various reasons. It
+It is generally recommended to treat this as a minor change, rather than as
+a major change, for [various reasons][msrv-is-minor]. It
 is usually relatively easy to update to a newer version of Rust. Rust also has
 a rapid 6-week release cycle, and some projects will provide compatibility
 within a window of releases (such as the current stable release plus N
@@ -1530,3 +1531,4 @@ document what your commitments are.
 [struct literal]: ../../reference/expressions/struct-expr.html
 [wildcard patterns]: ../../reference/patterns.html#wildcard-pattern
 [unused_unsafe]: ../../rustc/lints/listing/warn-by-default.html#unused-unsafe
+[msrv-is-minor]: https://github.com/rust-lang/api-guidelines/discussions/231
