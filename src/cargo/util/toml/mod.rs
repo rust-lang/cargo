@@ -2045,8 +2045,8 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(package_root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
-                verify_lints(toml_config.lints.as_ref(), &features)?;
-                inheritable.update_lints(toml_config.lints.clone());
+                let lints = verify_lints(toml_config.lints.clone(), &features, config)?;
+                inheritable.update_lints(lints);
                 if let Some(ws_deps) = &inheritable.dependencies {
                     for (name, dep) in ws_deps {
                         unused_dep_keys(
@@ -2315,7 +2315,7 @@ impl TomlManifest {
             .clone()
             .map(|mw| mw.resolve("lints", || inherit()?.lints()))
             .transpose()?;
-        verify_lints(lints.as_ref(), &features)?;
+        let lints = verify_lints(lints.clone(), &features, config)?;
         let default = TomlLints::default();
         let mut rustflags = lints
             .as_ref()
@@ -2773,8 +2773,8 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
-                verify_lints(toml_config.lints.as_ref(), &features)?;
-                inheritable.update_lints(toml_config.lints.clone());
+                let lints = verify_lints(toml_config.lints.clone(), &features, config)?;
+                inheritable.update_lints(lints);
                 let ws_root_config = WorkspaceRootConfig::new(
                     root,
                     &toml_config.members,
@@ -2919,12 +2919,19 @@ impl TomlManifest {
     }
 }
 
-fn verify_lints(lints: Option<&TomlLints>, features: &Features) -> CargoResult<()> {
-    let Some(lints) = lints else { return Ok(()); };
+fn verify_lints(
+    lints: Option<TomlLints>,
+    features: &Features,
+    config: &Config,
+) -> CargoResult<Option<TomlLints>> {
+    let Some(lints) = lints else { return Ok(None); };
 
-    features.require(Feature::lints())?;
+    if let Err(err) = features.require(Feature::lints()) {
+        let _ = config.shell().warn(err);
+        return Ok(None);
+    }
 
-    for (tool, lints) in lints {
+    for (tool, lints) in &lints {
         let supported = ["rust", "clippy", "rustdoc"];
         if !supported.contains(&tool.as_str()) {
             let supported = supported.join(", ");
@@ -2947,7 +2954,7 @@ fn verify_lints(lints: Option<&TomlLints>, features: &Features) -> CargoResult<(
         }
     }
 
-    Ok(())
+    Ok(Some(lints))
 }
 
 fn unused_dep_keys(

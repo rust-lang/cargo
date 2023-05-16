@@ -22,16 +22,15 @@ fn package_requires_option() {
         .build();
 
     foo.cargo("check")
-        .with_status(101)
         .with_stderr("\
-[..]
+warning: feature `lints` is required
 
-Caused by:
-  feature `lints` is required
+The package requires the Cargo feature called `lints`, but that feature is not stabilized in this version of Cargo ([..]).
+Consider trying a newer version of Cargo (this may require the nightly release).
+See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for more information about the status of this feature.
 
-  The package requires the Cargo feature called `lints`, but that feature is not stabilized in this version of Cargo ([..]).
-  Consider trying a newer version of Cargo (this may require the nightly release).
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for more information about the status of this feature.
+[CHECKING] [..]
+[FINISHED] [..]
 ")
         .run();
 }
@@ -55,16 +54,15 @@ fn workspace_requires_option() {
         .build();
 
     foo.cargo("check")
-        .with_status(101)
         .with_stderr("\
-[..]
+warning: feature `lints` is required
 
-Caused by:
-  feature `lints` is required
+The package requires the Cargo feature called `lints`, but that feature is not stabilized in this version of Cargo ([..]).
+Consider trying a newer version of Cargo (this may require the nightly release).
+See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for more information about the status of this feature.
 
-  The package requires the Cargo feature called `lints`, but that feature is not stabilized in this version of Cargo ([..]).
-  Consider trying a newer version of Cargo (this may require the nightly release).
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for more information about the status of this feature.
+[CHECKING] [..]
+[FINISHED] [..]
 ")
         .run();
 }
@@ -333,7 +331,6 @@ pub fn foo(num: i32) -> u32 {
 
     foo.cargo("check")
         .masquerade_as_nightly_cargo(&["lints"])
-        .with_status(0)
         .run();
 }
 
@@ -368,7 +365,6 @@ pub fn foo(num: i32) -> u32 {
         .arg("-v")
         .env("RUSTFLAGS", "-Aunsafe_code")
         .masquerade_as_nightly_cargo(&["lints"])
-        .with_status(0)
         .run();
 }
 
@@ -457,7 +453,6 @@ pub fn foo() -> u32 {
 
     foo.cargo("check")
         .masquerade_as_nightly_cargo(&["lints"])
-        .with_status(0)
         .run();
 }
 
