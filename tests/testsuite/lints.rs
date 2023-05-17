@@ -85,14 +85,16 @@ fn malformed_on_stable() {
         .build();
 
     foo.cargo("check")
-        .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest[..]
+warning: feature `lints` is required
 
-Caused by:
-  invalid type: integer `20`, expected a map
-  in `lints`
+The package requires the Cargo feature called `lints`, but that feature is not stabilized in this version of Cargo ([..]).
+Consider trying a newer version of Cargo (this may require the nightly release).
+See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for more information about the status of this feature.
+
+[CHECKING] [..]
+[FINISHED] [..]
 ",
         )
         .run();
@@ -125,7 +127,6 @@ error: failed to parse manifest[..]
 
 Caused by:
   invalid type: integer `20`, expected a map
-  in `lints`
 ",
         )
         .run();

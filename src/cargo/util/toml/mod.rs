@@ -355,7 +355,7 @@ pub struct TomlManifest {
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<MaybeWorkspaceBtreeMap>,
-    lints: Option<MaybeWorkspaceLints>,
+    lints: Option<toml::Value>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -1440,7 +1440,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceLints {
                 Err(de::Error::custom("`workspace` cannot be false"))
             };
         }
-        BTreeMap::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+        TomlLints::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
             .map(MaybeWorkspace::Defined)
     }
 }
@@ -1531,7 +1531,7 @@ pub struct TomlWorkspace {
     // Properties that can be inherited by members.
     package: Option<InheritableFields>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
-    lints: Option<TomlLints>,
+    lints: Option<toml::Value>,
 
     // Note that this field must come last due to the way toml serialization
     // works which requires tables to be emitted after all values.
@@ -2045,7 +2045,8 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(package_root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
-                let lints = verify_lints(toml_config.lints.clone(), &features, config)?;
+                let lints = parse_unstable_lints(toml_config.lints.clone(), &features, config)?;
+                let lints = verify_lints(lints)?;
                 inheritable.update_lints(lints);
                 if let Some(ws_deps) = &inheritable.dependencies {
                     for (name, dep) in ws_deps {
@@ -2310,12 +2311,11 @@ impl TomlManifest {
             &inherit_cell,
         )?;
 
-        let lints = me
-            .lints
-            .clone()
-            .map(|mw| mw.resolve("lints", || inherit()?.lints()))
-            .transpose()?;
-        let lints = verify_lints(lints.clone(), &features, config)?;
+        let lints =
+            parse_unstable_lints::<MaybeWorkspaceLints>(me.lints.clone(), &features, config)?
+                .map(|mw| mw.resolve("lints", || inherit()?.lints()))
+                .transpose()?;
+        let lints = verify_lints(lints)?;
         let default = TomlLints::default();
         let mut rustflags = lints
             .as_ref()
@@ -2642,7 +2642,8 @@ impl TomlManifest {
                 .badges
                 .as_ref()
                 .map(|_| MaybeWorkspace::Defined(metadata.badges.clone())),
-            lints: lints.map(|lints| MaybeWorkspace::Defined(lints)),
+            lints: lints
+                .map(|lints| toml::Value::try_from(MaybeWorkspaceLints::Defined(lints)).unwrap()),
         };
         let mut manifest = Manifest::new(
             summary,
@@ -2773,7 +2774,8 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
-                let lints = verify_lints(toml_config.lints.clone(), &features, config)?;
+                let lints = parse_unstable_lints(toml_config.lints.clone(), &features, config)?;
+                let lints = verify_lints(lints)?;
                 inheritable.update_lints(lints);
                 let ws_root_config = WorkspaceRootConfig::new(
                     root,
@@ -2919,17 +2921,23 @@ impl TomlManifest {
     }
 }
 
-fn verify_lints(
-    lints: Option<TomlLints>,
+fn parse_unstable_lints<T: Deserialize<'static>>(
+    lints: Option<toml::Value>,
     features: &Features,
     config: &Config,
-) -> CargoResult<Option<TomlLints>> {
+) -> CargoResult<Option<T>> {
     let Some(lints) = lints else { return Ok(None); };
 
-    if let Err(err) = features.require(Feature::lints()) {
-        let _ = config.shell().warn(err);
+    if let Err(unstable_err) = features.require(Feature::lints()) {
+        let _ = config.shell().warn(unstable_err);
         return Ok(None);
     }
+
+    lints.try_into().map(Some).map_err(|err| err.into())
+}
+
+fn verify_lints(lints: Option<TomlLints>) -> CargoResult<Option<TomlLints>> {
+    let Some(lints) = lints else { return Ok(None); };
 
     for (tool, lints) in &lints {
         let supported = ["rust", "clippy", "rustdoc"];
