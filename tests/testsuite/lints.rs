@@ -22,16 +22,17 @@ fn package_requires_option() {
         .build();
 
     foo.cargo("check")
-        .with_stderr("\
-warning: feature `lints` is required
+        .with_stderr(
+            "\
+warning: feature `lints` is not supported on this version of Cargo and will be ignored
 
-The package requires the Cargo feature called `lints`, but that feature is not stabilized in this version of Cargo ([..]).
-Consider trying a newer version of Cargo (this may require the nightly release).
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for more information about the status of this feature.
-
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can add
+`cargo-features = [\"lints\"]` to enable this feature
 [CHECKING] [..]
 [FINISHED] [..]
-")
+",
+        )
         .run();
 }
 
@@ -54,16 +55,17 @@ fn workspace_requires_option() {
         .build();
 
     foo.cargo("check")
-        .with_stderr("\
-warning: feature `lints` is required
+        .with_stderr(
+            "\
+warning: feature `lints` is not supported on this version of Cargo and will be ignored
 
-The package requires the Cargo feature called `lints`, but that feature is not stabilized in this version of Cargo ([..]).
-Consider trying a newer version of Cargo (this may require the nightly release).
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for more information about the status of this feature.
-
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can add
+`cargo-features = [\"lints\"]` to enable this feature
 [CHECKING] [..]
 [FINISHED] [..]
-")
+",
+        )
         .run();
 }
 
@@ -87,12 +89,11 @@ fn malformed_on_stable() {
     foo.cargo("check")
         .with_stderr(
             "\
-warning: feature `lints` is required
+warning: feature `lints` is not supported on this version of Cargo and will be ignored
 
-The package requires the Cargo feature called `lints`, but that feature is not stabilized in this version of Cargo ([..]).
-Consider trying a newer version of Cargo (this may require the nightly release).
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#lints for more information about the status of this feature.
-
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can add
+`cargo-features = [\"lints\"]` to enable this feature
 [CHECKING] [..]
 [FINISHED] [..]
 ",

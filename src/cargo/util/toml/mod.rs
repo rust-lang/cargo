@@ -2928,12 +2928,41 @@ fn parse_unstable_lints<T: Deserialize<'static>>(
 ) -> CargoResult<Option<T>> {
     let Some(lints) = lints else { return Ok(None); };
 
-    if let Err(unstable_err) = features.require(Feature::lints()) {
-        let _ = config.shell().warn(unstable_err);
+    if !features.is_enabled(Feature::lints()) {
+        warn_for_feature("lints", config);
         return Ok(None);
     }
 
     lints.try_into().map(Some).map_err(|err| err.into())
+}
+
+fn warn_for_feature(name: &str, config: &Config) {
+    use std::fmt::Write as _;
+
+    let mut message = String::new();
+
+    let _ = write!(
+        message,
+        "feature `{name}` is not supported on this version of Cargo and will be ignored"
+    );
+    if config.nightly_features_allowed {
+        let _ = write!(
+            message,
+            "
+
+consider adding `cargo-features = [\"{name}\"]` to the manifest"
+        );
+    } else {
+        let _ = write!(
+            message,
+            "
+
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can add
+`cargo-features = [\"{name}\"]` to enable this feature",
+        );
+    }
+    let _ = config.shell().warn(&message);
 }
 
 fn verify_lints(lints: Option<TomlLints>) -> CargoResult<Option<TomlLints>> {
