@@ -5,13 +5,24 @@ use std::task::Poll;
 
 use anyhow::Context as _;
 
+/// A source that replaces one source with the other. This manages the [source
+/// replacement] feature.
+///
+/// The implementation is merely redirecting from the original to the replacement.
+///
+/// [source replacement]: https://doc.rust-lang.org/nightly/cargo/reference/source-replacement.html
 pub struct ReplacedSource<'cfg> {
+    /// The identifier of the original source.
     to_replace: SourceId,
+    /// The identifier of the new replacement source.
     replace_with: SourceId,
     inner: Box<dyn Source + 'cfg>,
 }
 
 impl<'cfg> ReplacedSource<'cfg> {
+    /// Creates a replaced source.
+    ///
+    /// The `src` argument is the new replacement source.
     pub fn new(
         to_replace: SourceId,
         replace_with: SourceId,

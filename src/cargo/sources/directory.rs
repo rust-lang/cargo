@@ -13,17 +13,64 @@ use anyhow::Context as _;
 use cargo_util::{paths, Sha256};
 use serde::Deserialize;
 
+/// `DirectorySource` contains a number of crates on the file system. It was
+/// designed for representing vendored dependencies for `cargo vendor`.
+///
+/// `DirectorySource` at this moment is just a root directory containing other
+/// directories, which contain the source files of packages. Assumptions would
+/// be made to determine if a directory should be included as a package of a
+/// directory source's:
+///
+/// * Ignore directories starting with dot `.` (tend to be hidden).
+/// * Only when a `Cargo.toml` exists in a directory will it be included as
+///   a package. `DirectorySource` at this time only looks at one level of
+///   directories and never went deeper.
+/// * There must be a [`Checksum`] file `.cargo-checksum.json` file at the same
+///   level of `Cargo.toml` to ensure the integrity when a directory source was
+///   created (usually by `cargo vendor`). A failure to find or parse a single
+///   checksum results in a denial of loading any package in this source.
+/// * Otherwise, there is no other restrction of the name of directories. At
+///   this moment, it is `cargo vendor` that defines the layout and the name of
+///   each directory.
+///
+/// The file tree of a directory source may look like:
+///
+/// ```text
+/// [source root]
+/// ├── a-valid-crate/
+/// │  ├── src/
+/// │  ├── .cargo-checksum.json
+/// │  └── Cargo.toml
+/// ├── .ignored-a-dot-crate/
+/// │  ├── src/
+/// │  ├── .cargo-checksum.json
+/// │  └── Cargo.toml
+/// ├── skipped-no-manifest/
+/// │  ├── src/
+/// │  └── .cargo-checksum.json
+/// └── no-checksum-so-fails-the-entire-source-reading/
+///    └── Cargo.toml
+/// ```
 pub struct DirectorySource<'cfg> {
+    /// The unique identifier of this source.
     source_id: SourceId,
+    /// The root path of this source.
     root: PathBuf,
+    /// Packages that this sources has discovered.
     packages: HashMap<PackageId, (Package, Checksum)>,
     config: &'cfg Config,
     updated: bool,
 }
 
+/// The checksum file to ensure the integrity of a package in a directory source.
+///
+/// The file name is simply `.cargo-checksum.json`. The checksum algorithm as
+/// of now is SHA256.
 #[derive(Deserialize)]
 struct Checksum {
+    /// Checksum of the package. Normally it is computed from the `.crate` file.
     package: Option<String>,
+    /// Checksums of each source file.
     files: HashMap<String, String>,
 }
 
