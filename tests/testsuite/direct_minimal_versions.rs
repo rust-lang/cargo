@@ -81,8 +81,7 @@ all possible versions conflict with previously selected packages.
   previously selected package `dep v1.0.0`
     ... which satisfies dependency `dep = "^1.0"` of package `foo v0.0.1 ([CWD])`
 
-failed to select a version for `dep` which could resolve this conflict.
-Try running `cargo generate-lockfile` to generate the correct Cargo.lock
+failed to select a version for `dep` which could resolve this conflict
 "#,
         )
         .run();
@@ -230,8 +229,7 @@ all possible versions conflict with previously selected packages.
   previously selected package `indirect v2.0.0`
     ... which satisfies dependency `indirect = "^2.0"` of package `foo v0.0.1 ([CWD])`
 
-failed to select a version for `indirect` which could resolve this conflict.
-Try running `cargo generate-lockfile` to generate the correct Cargo.lock
+failed to select a version for `indirect` which could resolve this conflict
 "#,
         )
         .run();

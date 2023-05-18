@@ -259,3 +259,40 @@ Some issues we've seen historically which can cause crates to get rebuilt are:
 If after trying to debug your issue, however, you're still running into problems
 then feel free to [open an
 issue](https://github.com/rust-lang/cargo/issues/new)!
+
+### Why does Cargo.lock conflict?
+
+`Cargo.lock` contains exact information about your dependencies. It should be 
+generated and maintained by Cargo and should not be edited manually. If there is 
+a dependency conflict caused by changing the content of `Cargo.lock` when editing 
+or merging branches, it is recommended to try to run `cargo generate-lockfile` to 
+solve it.
+
+Besides that, there are other situations that create conflicts. Unfortunately, in 
+many cases these conflicts cannot be resolved automatically and need to be resolved 
+manually:
+
+- The project and its dependencies use [links][links] to repeatedly link the local 
+library.Cargo forbids linking two packages with the same native library, so even with 
+multiple layers of dependencies it is not allowed. At this time, you need to 
+manually delete the redundant link value. however, that there are [conventions in 
+place][conventions-in-place] to alleviate this.
+
+- When depending on different crates in the project, if these crates use the same 
+dependent library, but the version used is restricted, making it impossible to 
+determine the correct version, it will also cause conflicts.
+
+- If there are multiple versions of dependencies in the project, when using 
+[`direct-minimal-versions`][direct-minimal-versions], the minimum version requirements 
+cannot be met, which will cause conflicts.
+
+- If the dependent crate does not have the features you choose, it will also cause 
+conflicts. At this time, you need to check the dependent version and its features;
+
+Conflicts occur when merging branches or PRs, and you need to manually eliminate 
+conflicts and then merge. The community has been looking to resolve merge conflicts 
+with `Cargo.lock` and `Cargo.toml` using a custom merge tool.
+
+[links]: https://doc.rust-lang.org/cargo/reference/resolver.html#links
+[conventions-in-place]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#-sys-packages
+[direct-minimal-versions]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions
