@@ -1314,7 +1314,7 @@ fn build_deps_args(
                 "The package `{}` \
                  provides no linkable target. The compiler might raise an error while compiling \
                  `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
-                 Cargo.toml. This warning might turn into a hard error in the future.",
+                 Cargo.toml if this was not intentional.",
                 dep.unit.target.crate_name(),
                 unit.target.crate_name(),
                 dep.unit.target.crate_name()
