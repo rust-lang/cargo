@@ -1,3 +1,18 @@
+//! Fundamental types and traits for sources of Cargo packages.
+//!
+//! A source is a provider that contains source files and metadata of packages.
+//! It provides a number of methods to fetch those package informations, for
+//! example, querying metadata or downloading files for a package. These
+//! informations then can be used as dependencies for other Cargo packages.
+//!
+//! Notably, this module contains
+//!
+//! * [`Source`] trait as an abstraction of different sources
+//! * [`SourceMap`] struct as a map of all available sources
+//! * [`SourceId`] struct as an unique identifier for a certain source
+//!
+//! For implementations of `Source` trait, see [`crate::sources`].
+
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::task::Poll;
@@ -10,25 +25,44 @@ mod source_id;
 
 pub use self::source_id::{GitReference, SourceId};
 
-/// Something that finds and downloads remote packages based on names and versions.
+/// An abstraction of different sources of Cargo packages.
+///
+/// The [`Source`] trait generalizes the API to interact with these providers.
+/// For example,
+///
+/// * [`Source::query`] is for querying package metadata on a given
+///   [`Dependency`] requested by a Cargo manifest.
+/// * [`Source::download`] is for fetching the full package information on
+///   given names and versions.
+/// * [`Source::source_id`] is for defining an unique identifier of a source to
+///   distinguish one source from another, keeping Cargo safe from [dependency
+///   confusion attack].
+///
+/// Normally, developers don't need to implement their own [`Source`]s. Cargo
+/// provides several kinds of sources implementations that should cover almost
+/// all use cases. See [`crate::sources`] for implementations provided by Cargo.
+///
+/// [dependency confusion attack]: https://medium.com/@alex.birsan/dependency-confusion-4a5d60fec610
 pub trait Source {
-    /// Returns the `SourceId` corresponding to this source.
+    /// Returns the [`SourceId`] corresponding to this source.
     fn source_id(&self) -> SourceId;
 
-    /// Returns the replaced `SourceId` corresponding to this source.
+    /// Returns the replaced [`SourceId`] corresponding to this source.
     fn replaced_source_id(&self) -> SourceId {
         self.source_id()
     }
 
-    /// Returns whether or not this source will return summaries with
+    /// Returns whether or not this source will return [`Summary`] items with
     /// checksums listed.
     fn supports_checksums(&self) -> bool;
 
-    /// Returns whether or not this source will return summaries with
-    /// the `precise` field in the source id listed.
+    /// Returns whether or not this source will return [`Summary`] items with
+    /// the `precise` field in the [`SourceId`] listed.
     fn requires_precise(&self) -> bool;
 
     /// Attempts to find the packages that match a dependency request.
+    ///
+    /// The `f` argument is expected to get called when any [`Summary`] becomes available.
     fn query(
         &mut self,
         dep: &Dependency,
@@ -36,6 +70,8 @@ pub trait Source {
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>>;
 
+    /// A helper function that collects and returns the result from
+    /// [`Source::query`] as a list of [`Summary`] items when available.
     fn query_vec(&mut self, dep: &Dependency, kind: QueryKind) -> Poll<CargoResult<Vec<Summary>>> {
         let mut ret = Vec::new();
         self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|_| ret)
@@ -50,6 +86,7 @@ pub trait Source {
     /// Fetches the full package for each name and version specified.
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
 
+    /// Fetches the full package **immediately** for each name and version specified.
     fn download_now(self: Box<Self>, package: PackageId, config: &Config) -> CargoResult<Package>
     where
         Self: std::marker::Sized,
@@ -61,7 +98,8 @@ pub trait Source {
         Ok(Package::clone(pkg))
     }
 
-    fn finish_download(&mut self, package: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
+    /// Finalizes the download contents of the given [`PackageId`] to a [`Package`].
+    fn finish_download(&mut self, pkg_id: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -103,30 +141,45 @@ pub trait Source {
     /// as yanked. This ignores the yanked whitelist.
     fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>>;
 
-    /// Block until all outstanding Poll::Pending requests are `Poll::Ready`.
+    /// Block until all outstanding [`Poll::Pending`] requests are [`Poll::Ready`].
     ///
     /// After calling this function, the source should return `Poll::Ready` for
     /// any queries that previously returned `Poll::Pending`.
     ///
-    /// If no queries previously returned `Poll::Pending`, and `invalidate_cache`
+    /// If no queries previously returned `Poll::Pending`, and [`Source::invalidate_cache`]
     /// was not called, this function should be a no-op.
     fn block_until_ready(&mut self) -> CargoResult<()>;
 }
 
+/// Defines how a dependency query will be performed for a [`Source`].
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum QueryKind {
+    /// A query for packages exactly matching the given dependency requirement.
+    ///
+    /// Each source gets to define what `exact` means for it.
     Exact,
+    /// A query for packages close to the given dependency requirement.
+    ///
     /// Each source gets to define what `close` means for it.
+    ///
     /// Path/Git sources may return all dependencies that are at that URI,
-    /// whereas an `Index` source may return dependencies that have the same canonicalization.
+    /// whereas an `Registry` source may return dependencies that have the same
+    /// canonicalization.
     Fuzzy,
 }
 
+/// A download status that represents if a [`Package`] has already been
+/// downloaded, or if not then a location to download.
 pub enum MaybePackage {
+    /// The [`Package`] is already downloaded.
     Ready(Package),
+    /// Not yet downloaded. Here is the URL to download the [`Package`] from.
     Download {
+        /// URL to download the content.
         url: String,
+        /// Text to display to the user of what is being downloaded.
         descriptor: String,
+        /// Authorization data that may be required to attach when downloading.
         authorization: Option<String>,
     },
 }
@@ -281,7 +334,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
     }
 }
 
-/// A `HashMap` of `SourceId` -> `Box<Source>`.
+/// A [`HashMap`] of [`SourceId`] to `Box<Source>`.
 #[derive(Default)]
 pub struct SourceMap<'src> {
     map: HashMap<SourceId, Box<dyn Source + 'src>>,
@@ -313,7 +366,7 @@ impl<'src> SourceMap<'src> {
         self.map.get_mut(&id).map(|s| s.as_mut())
     }
 
-    /// Like `HashMap::insert`, but derives the `SourceId` key from the `Source`.
+    /// Like `HashMap::insert`, but derives the [`SourceId`] key from the [`Source`].
     pub fn insert(&mut self, source: Box<dyn Source + 'src>) {
         let id = source.source_id();
         self.map.insert(id, source);
