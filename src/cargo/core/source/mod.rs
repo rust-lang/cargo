@@ -184,28 +184,24 @@ pub enum MaybePackage {
     },
 }
 
+/// A blanket implementation forwards all methods to [`Source`].
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
-    /// Forwards to `Source::source_id`.
     fn source_id(&self) -> SourceId {
         (**self).source_id()
     }
 
-    /// Forwards to `Source::replaced_source_id`.
     fn replaced_source_id(&self) -> SourceId {
         (**self).replaced_source_id()
     }
 
-    /// Forwards to `Source::supports_checksums`.
     fn supports_checksums(&self) -> bool {
         (**self).supports_checksums()
     }
 
-    /// Forwards to `Source::requires_precise`.
     fn requires_precise(&self) -> bool {
         (**self).requires_precise()
     }
 
-    /// Forwards to `Source::query`.
     fn query(
         &mut self,
         dep: &Dependency,
@@ -223,7 +219,6 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).set_quiet(quiet)
     }
 
-    /// Forwards to `Source::download`.
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
     }
@@ -232,12 +227,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).finish_download(id, data)
     }
 
-    /// Forwards to `Source::fingerprint`.
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         (**self).fingerprint(pkg)
     }
 
-    /// Forwards to `Source::verify`.
     fn verify(&self, pkg: PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
     }
@@ -263,6 +256,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 }
 
+/// A blanket implementation forwards all methods to [`Source`].
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
     fn source_id(&self) -> SourceId {
         (**self).source_id()
