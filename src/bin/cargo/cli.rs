@@ -440,6 +440,9 @@ pub fn cli() -> Command {
         "cargo [OPTIONS] [COMMAND]"
     };
     Command::new("cargo")
+        // Subcommands all count their args' display order independently (from 0),
+        // which makes their args interspersed with global args. This puts global args last.
+        .next_display_order(1000)
         .allow_external_subcommands(true)
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
