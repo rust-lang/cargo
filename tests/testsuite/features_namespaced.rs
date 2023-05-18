@@ -609,6 +609,7 @@ fn json_exposed() {
                     }
                   ],
                   "workspace_members": "{...}",
+                  "workspace_default_members": "{...}",
                   "resolve": null,
                   "target_directory": "[..]foo/target",
                   "version": 1,
@@ -942,6 +943,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.1.0"
           }
         "#,
@@ -1057,6 +1059,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.1.0"
           }
         "#,
@@ -1211,5 +1214,83 @@ Caused by:
       \"dep:bar\", \"bar/bar-feat\"
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn dep_feature_when_hidden() {
+    // Checks for behavior with dep:bar and bar/feat syntax when there is no
+    // `bar` feature.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar", optional = true }
+
+                [features]
+                f1 = ["dep:bar"]
+                f2 = ["bar/bar_feat"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [features]
+                bar_feat = []
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -f")
+        .arg("{p} features={f}")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo) features=",
+        )
+        .with_stderr("")
+        .run();
+
+    p.cargo("tree -F f1 -f")
+        .arg("{p} features={f}")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo) features=f1
+└── bar v0.1.0 ([ROOT]/foo/bar) features=
+",
+        )
+        .with_stderr("")
+        .run();
+
+    p.cargo("tree -F f2 -f")
+        .arg("{p} features={f}")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo) features=f2
+└── bar v0.1.0 ([ROOT]/foo/bar) features=bar_feat
+",
+        )
+        .with_stderr("")
+        .run();
+
+    p.cargo("tree --all-features -f")
+        .arg("{p} features={f}")
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo) features=f1,f2
+└── bar v0.1.0 ([ROOT]/foo/bar) features=bar_feat
+",
+        )
+        .with_stderr("")
         .run();
 }

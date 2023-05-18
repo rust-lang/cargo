@@ -88,8 +88,10 @@ considered incompatible.
         * [Possibly-breaking: introducing a new function type parameter](#fn-generic-new)
         * [Minor: generalizing a function to use generics (supporting original type)](#fn-generalize-compatible)
         * [Major: generalizing a function to use generics with type mismatch](#fn-generalize-mismatch)
+        * [Minor: making an `unsafe` function safe](#fn-unsafe-safe)
     * Attributes
         * [Major: switching from `no_std` support to requiring `std`](#attr-no-std-to-std)
+        * [Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields](#attr-adding-non-exhaustive)
 * Tooling and environment compatibility
     * [Possibly-breaking: changing the minimum version of Rust required](#env-new-rust)
     * [Possibly-breaking: changing the platform and environment requirements](#env-change-requirements)
@@ -870,7 +872,7 @@ fn main() {
 It is safe to change a generic type to a more generic one. For example, the
 following adds a generic parameter that defaults to the original type, which
 is safe because all existing users will be using the same type for both
-fields, the the defaulted parameter does not need to be specified.
+fields, the defaulted parameter does not need to be specified.
 
 ```rust,ignore
 // MINOR CHANGE
@@ -1079,6 +1081,47 @@ fn main() {
 }
 ```
 
+<a id="fn-unsafe-safe"></a>
+### Minor: making an `unsafe` function safe
+
+A previously `unsafe` function can be made safe without breaking code.
+
+Note however that it may cause the [`unused_unsafe`][unused_unsafe] lint to
+trigger as in the example below, which will cause local crates that have
+specified `#![deny(warnings)]` to stop compiling. Per [introducing new
+lints](#new-lints), it is allowed for updates to introduce new warnings.
+
+Going the other way (making a safe function `unsafe`) is a breaking change.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub unsafe fn foo() {}
+
+///////////////////////////////////////////////////////////
+// After
+pub fn foo() {}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will trigger a lint.
+use updated_crate::foo;
+
+unsafe fn bar(f: unsafe fn()) {
+    f()
+}
+
+fn main() {
+    unsafe { foo() }; // The `unused_unsafe` lint will trigger here
+    unsafe { bar(foo) };
+}
+```
+
+Making a previously `unsafe` associated function or method on structs / enums
+safe is also a minor change, while the same is not true for associated
+function on traits (see [any change to trait item signatures](#trait-item-signature)).
+
 <a id="attr-no-std-to-std"></a>
 ### Major: switching from `no_std` support to requiring `std`
 
@@ -1114,6 +1157,89 @@ Mitigation strategies:
 * A common idiom to avoid this is to include a `std` [Cargo feature] that
   optionally enables `std` support, and when the feature is off, the library
   can be used in a `no_std` environment.
+
+<a id="attr-adding-non-exhaustive"></a>
+### Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields
+
+Making items [`#[non_exhaustive]`][non_exhaustive] changes how they may
+be used outside the crate where they are defined:
+
+- Non-exhaustive structs and enum variants cannot be constructed
+  using [struct literal] syntax, including [functional update syntax].
+- Pattern matching on non-exhaustive structs requires `..` and
+  matching on enums does not count towards exhaustiveness.
+- Casting enum variants to their discriminant with `as` is not allowed.
+
+Structs with private fields cannot be constructed using [struct literal] syntax
+regardless of whether [`#[non_exhaustive]`][non_exhaustive] is used.
+Adding [`#[non_exhaustive]`][non_exhaustive] to such a struct is not
+a breaking change.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Foo {
+    pub bar: usize,
+}
+
+pub enum Bar {
+    X,
+    Y(usize),
+    Z { a: usize },
+}
+
+pub enum Quux {
+    Var,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[non_exhaustive]
+pub struct Foo {
+    pub bar: usize,
+}
+
+pub enum Bar {
+    #[non_exhaustive]
+    X,
+
+    #[non_exhaustive]
+    Y(usize),
+
+    #[non_exhaustive]
+    Z { a: usize },
+}
+
+#[non_exhaustive]
+pub enum Quux {
+    Var,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::{Bar, Foo, Quux};
+
+fn main() {
+    let foo = Foo { bar: 0 }; // Error: cannot create non-exhaustive struct using struct expression
+
+    let bar_x = Bar::X; // Error: unit variant `X` is private
+    let bar_y = Bar::Y(0); // Error: tuple variant `Y` is private
+    let bar_z = Bar::Z { a: 0 }; // Error: cannot create non-exhaustive variant using struct expression
+
+    let q = Quux::Var;
+    match q {
+        Quux::Var => 0,
+        // Error: non-exhaustive patterns: `_` not covered
+    };
+}
+```
+
+Mitigation strategies:
+* Mark structs, enums, and enum variants as
+  [`#[non_exhaustive]`][non_exhaustive] when first introducing them,
+  rather than adding [`#[non_exhaustive]`][non_exhaustive] later on.
 
 ## Tooling and environment compatibility
 
@@ -1393,6 +1519,7 @@ document what your commitments are.
 [Default]: ../../std/default/trait.Default.html
 [deprecated]: ../../reference/attributes/diagnostics.html#the-deprecated-attribute
 [disambiguation syntax]: ../../reference/expressions/call-expr.html#disambiguating-function-calls
+[functional update syntax]: ../../reference/expressions/struct-expr.html#functional-update-syntax
 [inherent implementations]: ../../reference/items/implementations.html#inherent-implementations
 [items]: ../../reference/items.html
 [non_exhaustive]: ../../reference/attributes/type_system.html#the-non_exhaustive-attribute
@@ -1402,3 +1529,4 @@ document what your commitments are.
 [SemVer]: https://semver.org/
 [struct literal]: ../../reference/expressions/struct-expr.html
 [wildcard patterns]: ../../reference/patterns.html#wildcard-pattern
+[unused_unsafe]: ../../rustc/lints/listing/warn-by-default.html#unused-unsafe

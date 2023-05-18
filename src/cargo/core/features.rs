@@ -585,19 +585,19 @@ impl Features {
                     feature_name, feature.version
                 );
                 if self.is_local {
-                    drop(writeln!(
+                    let _ = writeln!(
                         msg,
                         "Remove the feature from Cargo.toml to remove this error."
-                    ));
+                    );
                 } else {
-                    drop(writeln!(
+                    let _ = writeln!(
                         msg,
                         "This package cannot be used with this version of Cargo, \
                          as the unstable feature `{}` is no longer supported.",
                         feature_name
-                    ));
+                    );
                 }
-                drop(writeln!(msg, "{}", see_docs()));
+                let _ = writeln!(msg, "{}", see_docs());
                 bail!(msg);
             }
         }
@@ -629,32 +629,29 @@ impl Features {
 
         if self.nightly_features_allowed {
             if self.is_local {
-                drop(writeln!(
+                let _ = writeln!(
                     msg,
                     "Consider adding `cargo-features = [\"{}\"]` \
                      to the top of Cargo.toml (above the [package] table) \
                      to tell Cargo you are opting in to use this unstable feature.",
                     feature_name
-                ));
+                );
             } else {
-                drop(writeln!(
-                    msg,
-                    "Consider trying a more recent nightly release."
-                ));
+                let _ = writeln!(msg, "Consider trying a more recent nightly release.");
             }
         } else {
-            drop(writeln!(
+            let _ = writeln!(
                 msg,
                 "Consider trying a newer version of Cargo \
                  (this may require the nightly release)."
-            ));
+            );
         }
-        drop(writeln!(
+        let _ = writeln!(
             msg,
             "See https://doc.rust-lang.org/nightly/cargo/{} for more information \
              about the status of this feature.",
             feature.docs
-        ));
+        );
 
         bail!("{}", msg);
     }
@@ -733,6 +730,7 @@ unstable_cli_options!(
     unstable_options: bool = ("Allow the usage of unstable options"),
     skip_rustdoc_fingerprint: bool = (HIDDEN),
     rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
+    msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -1095,6 +1093,7 @@ impl CliUnstable {
             "timings" => stabilized_warn(k, "1.60", STABILIZED_TIMINGS),
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
+            "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

@@ -1,20 +1,19 @@
 [package]
 name = "benchsuite"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/rust-lang/cargo"
 repository = "https://github.com/rust-lang/cargo"
-documentation = "https://docs.rs/cargo-platform"
 description = "Benchmarking suite for Cargo."
+publish = false
 
 [dependencies]
-cargo = { path = "../.." }
-# Consider removing html_reports in 0.4 and switching to `cargo criterion`.
-criterion = { version = "0.3.5", features = ["html_reports"] }
-flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
-tar = { version = "0.4.38", default-features = false }
-url = "2.2.2"
+cargo.workspace = true
+criterion.workspace = true
+flate2.workspace = true
+tar.workspace = true
+url.workspace = true
 
 [lib]
 bench = false

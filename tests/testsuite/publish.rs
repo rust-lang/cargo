@@ -25,6 +25,7 @@ const CLEAN_FOO_JSON: &str = r#"
         "readme": null,
         "readme_file": null,
         "repository": "foo",
+        "rust_version": null,
         "vers": "0.0.1"
     }
 "#;
@@ -49,6 +50,7 @@ fn validate_upload_foo() {
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.0.1"
           }
         "#,
@@ -77,6 +79,7 @@ fn validate_upload_li() {
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": "1.69",
           "vers": "0.0.1"
           }
         "#,
@@ -1270,6 +1273,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.0.1"
           }
         "#,
@@ -1469,6 +1473,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.1.0"
           }
         "#,
@@ -1581,6 +1586,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": "foo",
+          "rust_version": null,
           "vers": "0.1.0"
         }
         "#,
@@ -1756,6 +1762,9 @@ fn publish_with_missing_readme() {
         .with_stderr(&format!(
             "\
 [UPDATING] [..]
+[WARNING] readme `foo.md` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.1.0 [..]
@@ -2046,6 +2055,7 @@ fn in_package_workspace() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                rust-version = "1.69"
                 description = "li"
                 license = "MIT"
             "#,
@@ -2148,6 +2158,7 @@ fn in_package_workspace_with_members_with_features_old() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                rust-version = "1.69"
                 description = "li"
                 license = "MIT"
             "#,
@@ -2243,6 +2254,7 @@ fn in_virtual_workspace_with_p() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                rust-version = "1.69"
                 description = "li"
                 license = "MIT"
             "#,

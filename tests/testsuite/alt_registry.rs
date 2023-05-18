@@ -366,6 +366,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -515,6 +516,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -607,6 +609,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -899,6 +902,9 @@ fn alt_reg_metadata() {
                 "workspace_members": [
                     "foo 0.0.1 (path+file:[..]/foo)"
                 ],
+                "workspace_default_members": [
+                    "foo 0.0.1 (path+file:[..]/foo)"
+                ],
                 "resolve": null,
                 "target_directory": "[..]/foo/target",
                 "version": 1,
@@ -1099,6 +1105,9 @@ fn alt_reg_metadata() {
                 "workspace_members": [
                     "foo 0.0.1 (path+file:[..]/foo)"
                 ],
+                "workspace_default_members": [
+                    "foo 0.0.1 (path+file:[..]/foo)"
+                ],
                 "resolve": "{...}",
                 "target_directory": "[..]/foo/target",
                 "version": 1,
@@ -1260,6 +1269,9 @@ fn unknown_registry() {
                 }
               ],
               "workspace_members": [
+                "foo 0.0.1 (path+file://[..]/foo)"
+              ],
+              "workspace_default_members": [
                 "foo 0.0.1 (path+file://[..]/foo)"
               ],
               "resolve": "{...}",

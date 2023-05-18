@@ -27,7 +27,7 @@ man page:
   and `{{/options}}` tags. This tells the processor where the options start
   and end.
 - Each option must be expressed with a `{{#option}}` block. The parameters to
-  the the block are a sequence of strings indicating the option. For example,
+  the block are a sequence of strings indicating the option. For example,
   ```{{#option "`-p` _spec_..." "`--package` _spec_..."}}``` is an option that
   has two different forms. The text within the string is processed as markdown.
   It is recommended to use formatting similar to this example.
@@ -61,7 +61,7 @@ man page:
 <code>.1</code>) matching the man page section.</li>
 <li><code>md</code> — A markdown file, after all handlebars processing has been finished.
 Outputs with the <code>.md</code> extension.</li>
-<li><code>txt</code> — A text file, rendered for situations where a man page viewer isn't
+<li><code>txt</code> — A text file, rendered for situations where a man page viewer isn’t
 available. Outputs with the <code>.txt</code> extension.</li>
 </ul></dd>
 
@@ -82,7 +82,7 @@ matching <code>--man</code> entry, then a relative link to a file named <em>name
 be used.</dd>
 
 
-<dt class="option-term" id="option-mdman-sources..."><a class="option-anchor" href="#option-mdman-sources..."></a><em>sources...</em></dt>
+<dt class="option-term" id="option-mdman-sources…"><a class="option-anchor" href="#option-mdman-sources…"></a><em>sources…</em></dt>
 <dd class="option-desc">The source input filename, may be specified multiple times.</dd>
 
 

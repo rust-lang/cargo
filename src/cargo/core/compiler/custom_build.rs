@@ -1,3 +1,36 @@
+//! How to execute a build script and parse its output.
+//!
+//! ## Preparing a build script run
+//!
+//! A [build script] is an optional Rust script Cargo will run before building
+//! your package. As of this writing, two kinds of special [`Unit`]s will be
+//! constructed when there is a build script in a package.
+//!
+//! * Build script compilation --- This unit is generally the same as units
+//!   that would compile other Cargo targets. It will recursively creates units
+//!   of its dependencies. One biggest difference is that the [`Unit`] of
+//!   compiling a build script is flagged as [`TargetKind::CustomBuild`].
+//! * Build script executaion --- During the construction of the [`UnitGraph`],
+//!   Cargo inserts a [`Unit`] with [`CompileMode::RunCustomBuild`]. This unit
+//!   depends on the unit of compiling the associated build script, to ensure
+//!   the executable is available before running. The [`Work`] of running the
+//!   build script is prepared in the function [`prepare`].
+//!
+//! ## Running a build script
+//!
+//! When running a build script, Cargo is aware of the progress and the result
+//! of a build script. Standard output is the chosen interprocess communication
+//! between Cargo and build script processes. A set of strings is defined for
+//! that purpose. These strings, a.k.a. instructions, are interpreted by
+//! [`BuildOutput::parse`] and stored in [`Context::build_script_outputs`].
+//! The entire execution work is constructed by [`build_work`].
+//!
+//! [build script]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html
+//! [`TargetKind::CustomBuild`]: crate::core::manifest::TargetKind::CustomBuild
+//! [`UnitGraph`]: super::unit_graph::UnitGraph
+//! [`CompileMode::RunCustomBuild`]: super::CompileMode
+//! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
+
 use super::{fingerprint, Context, Job, LinkType, Unit, Work};
 use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
@@ -15,6 +48,10 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
+/// A build script instruction that tells Cargo to display a warning after the
+/// build script has finished running. Read [the doc] for more.
+///
+/// [the doc]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargo-warning
 const CARGO_WARNING: &str = "cargo:warning=";
 
 /// Contains the parsed output of a custom build script.
@@ -63,7 +100,7 @@ pub struct BuildScriptOutputs {
 
 /// Linking information for a `Unit`.
 ///
-/// See `build_map` for more details.
+/// See [`build_map`] for more details.
 #[derive(Default)]
 pub struct BuildScripts {
     /// List of build script outputs this Unit needs to include for linking. Each
@@ -96,7 +133,8 @@ pub struct BuildScripts {
     pub plugins: BTreeSet<(PackageId, Metadata)>,
 }
 
-/// Dependency information as declared by a build script.
+/// Dependency information as declared by a build script that might trigger
+/// a recompile of itself.
 #[derive(Debug)]
 pub struct BuildDeps {
     /// Absolute path to the file in the target directory that stores the
@@ -130,6 +168,8 @@ pub fn prepare(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     }
 }
 
+/// Emits the output of a build script as a [`machine_message::BuildScript`]
+/// JSON string to standard output.
 fn emit_build_output(
     state: &JobState<'_, '_>,
     output: &BuildOutput,
@@ -155,6 +195,14 @@ fn emit_build_output(
     Ok(())
 }
 
+/// Constructs the unit of work of running a build script.
+///
+/// The construction includes:
+///
+/// * Set environment varibles for the build script run.
+/// * Create the output dir (`OUT_DIR`) for the build script output.
+/// * Determine if the build script needs a re-run.
+/// * Run the build script and store its output.
 fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     assert!(unit.mode.is_run_custom_build());
     let bcx = &cx.bcx;
@@ -517,6 +565,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     Ok(job)
 }
 
+/// When a build script run fails, store only warnings and nuke other outputs,
+/// as they are likely broken.
 fn insert_warnings_in_build_outputs(
     build_script_outputs: Arc<Mutex<BuildScriptOutputs>>,
     id: PackageId,
@@ -534,6 +584,7 @@ fn insert_warnings_in_build_outputs(
 }
 
 impl BuildOutput {
+    /// Like [`BuildOutput::parse`] but from a file path.
     pub fn parse_file(
         path: &Path,
         library_name: Option<String>,
@@ -557,9 +608,13 @@ impl BuildOutput {
         )
     }
 
-    // Parses the output of a script.
-    // The `pkg_descr` is used for error messages.
-    // The `library_name` is used for determining if RUSTC_BOOTSTRAP should be allowed.
+    /// Parses the output instructions of a build script.
+    ///
+    /// * `pkg_descr` --- for error messages
+    /// * `library_name` --- for determining if `RUSTC_BOOTSTRAP` should be allowed
+    /// * `extra_check_cfg` --- for unstable feature [`-Zcheck-cfg`]
+    ///
+    /// [`-Zcheck-cfg`]: https://doc.rust-lang.org/cargo/reference/unstable.html#check-cfg
     pub fn parse(
         input: &[u8],
         // Takes String instead of InternedString so passing `unit.pkg.name()` will give a compile error.
@@ -781,6 +836,9 @@ impl BuildOutput {
         })
     }
 
+    /// Parses [`cargo:rustc-flags`] instruction.
+    ///
+    /// [`cargo:rustc-flags`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-flagsflags
     pub fn parse_rustc_flags(
         value: &str,
         whence: &str,
@@ -826,6 +884,9 @@ impl BuildOutput {
         Ok((library_paths, library_links))
     }
 
+    /// Parses [`cargo:rustc-env`] instruction.
+    ///
+    /// [`cargo:rustc-env`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#rustc-env
     pub fn parse_rustc_env(value: &str, whence: &str) -> CargoResult<(String, String)> {
         let mut iter = value.splitn(2, '=');
         let name = iter.next();
@@ -837,6 +898,9 @@ impl BuildOutput {
     }
 }
 
+/// Prepares the Rust script for the unstable feature [metabuild].
+///
+/// [metabuild]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild
 fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> CargoResult<()> {
     let mut output = Vec::new();
     let available_deps = cx.unit_deps(unit);
@@ -866,6 +930,8 @@ fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> Carg
 }
 
 impl BuildDeps {
+    /// Creates a build script dependency information from a previous
+    /// build script output path and the content.
     pub fn new(output_file: &Path, output: Option<&BuildOutput>) -> BuildDeps {
         BuildDeps {
             build_script_output: output_file.to_path_buf(),
@@ -881,22 +947,27 @@ impl BuildDeps {
     }
 }
 
-/// Computes several maps in `Context`:
-/// - `build_scripts`: A map that tracks which build scripts each package
+/// Computes several maps in [`Context`].
+///
+/// - [`build_scripts`]: A map that tracks which build scripts each package
 ///   depends on.
-/// - `build_explicit_deps`: Dependency statements emitted by build scripts
+/// - [`build_explicit_deps`]: Dependency statements emitted by build scripts
 ///   from a previous run.
-/// - `build_script_outputs`: Pre-populates this with any overridden build
+/// - [`build_script_outputs`]: Pre-populates this with any overridden build
 ///   scripts.
 ///
-/// The important one here is `build_scripts`, which for each `(package,
-/// metadata)` stores a `BuildScripts` object which contains a list of
-/// dependencies with build scripts that the unit should consider when
-/// linking. For example this lists all dependencies' `-L` flags which need to
-/// be propagated transitively.
+/// The important one here is [`build_scripts`], which for each `(package,
+/// metadata)` stores a [`BuildScripts`] object which contains a list of
+/// dependencies with build scripts that the unit should consider when linking.
+/// For example this lists all dependencies' `-L` flags which need to be
+/// propagated transitively.
 ///
 /// The given set of units to this function is the initial set of
 /// targets/profiles which are being built.
+///
+/// [`build_scripts`]: Context::build_scripts
+/// [`build_explicit_deps`]: Context::build_explicit_deps
+/// [`build_script_outputs`]: Context::build_script_outputs
 pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
     let mut ret = HashMap::new();
     for unit in &cx.bcx.roots {
@@ -943,7 +1014,6 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
             add_to_link(&mut ret, unit.pkg.package_id(), script_meta);
         }
 
-        // Load any dependency declarations from a previous run.
         if unit.mode.is_run_custom_build() {
             parse_previous_explicit_deps(cx, unit);
         }
@@ -982,6 +1052,7 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
         }
     }
 
+    /// Load any dependency declarations from a previous build script run.
     fn parse_previous_explicit_deps(cx: &mut Context<'_, '_>, unit: &Unit) {
         let script_run_dir = cx.files().build_script_run_dir(unit);
         let output_file = script_run_dir.join("output");

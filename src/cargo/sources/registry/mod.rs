@@ -241,7 +241,7 @@ pub struct RegistryConfig {
     /// crate's sha256 checksum.
     ///
     /// For backwards compatibility, if the string does not contain any
-    /// markers (`{crate}`, `{version}`, `{prefix}`, or ``{lowerprefix}`), it
+    /// markers (`{crate}`, `{version}`, `{prefix}`, or `{lowerprefix}`), it
     /// will be extended with `/{crate}/{version}/download` to
     /// support registries like crates.io which were created before the
     /// templating setup was created.
@@ -287,6 +287,13 @@ pub struct RegistryPackage<'a> {
     /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
     /// can be `None` if published before then.
     links: Option<InternedString>,
+    /// Required version of rust
+    ///
+    /// Corresponds to `package.rust-version`.
+    ///
+    /// Added in 2023 (see <https://github.com/rust-lang/crates.io/pull/6267>),
+    /// can be `None` if published before then or if not set in the manifest.
+    rust_version: Option<InternedString>,
     /// The schema version for this entry.
     ///
     /// If this is None, it defaults to version 1. Entries with unknown
@@ -549,10 +556,14 @@ mod index;
 mod local;
 mod remote;
 
-fn short_name(id: SourceId) -> String {
+fn short_name(id: SourceId, is_shallow: bool) -> String {
     let hash = hex::short_hash(&id);
     let ident = id.url().host_str().unwrap_or("").to_string();
-    format!("{}-{}", ident, hash)
+    let mut name = format!("{}-{}", ident, hash);
+    if is_shallow {
+        name.push_str("-shallow");
+    }
+    name
 }
 
 impl<'cfg> RegistrySource<'cfg> {
@@ -562,7 +573,14 @@ impl<'cfg> RegistrySource<'cfg> {
         config: &'cfg Config,
     ) -> CargoResult<RegistrySource<'cfg>> {
         assert!(source_id.is_remote_registry());
-        let name = short_name(source_id);
+        let name = short_name(
+            source_id,
+            config
+                .cli_unstable()
+                .gitoxide
+                .map_or(false, |gix| gix.fetch && gix.shallow_index)
+                && !source_id.is_sparse(),
+        );
         let ops = if source_id.is_sparse() {
             Box::new(http_remote::HttpRegistry::new(source_id, config, &name)?) as Box<_>
         } else {
@@ -584,7 +602,7 @@ impl<'cfg> RegistrySource<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
     ) -> RegistrySource<'cfg> {
-        let name = short_name(source_id);
+        let name = short_name(source_id, false);
         let ops = local::LocalRegistry::new(path, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
     }
@@ -832,9 +850,15 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 // names to the original name. The resolver will later
                 // reject any candidates that have the wrong name, and with this it'll
                 // along the way produce helpful "did you mean?" suggestions.
-                for name_permutation in
-                    index::UncanonicalizedIter::new(&dep.package_name()).take(1024)
-                {
+                // For now we only try the canonical lysing `-` to `_` and vice versa.
+                // More advanced fuzzy searching become in the future.
+                for name_permutation in [
+                    dep.package_name().replace('-', "_"),
+                    dep.package_name().replace('_', "-"),
+                ] {
+                    if name_permutation.as_str() == dep.package_name().as_str() {
+                        continue;
+                    }
                     any_pending |= self
                         .index
                         .query_inner(
@@ -945,7 +969,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 }
 
 /// Get the maximum upack size that Cargo permits
-/// based on a given `size of your compressed file.
+/// based on a given `size` of your compressed file.
 ///
 /// Returns the larger one between `size * max compression ratio`
 /// and a fixed max unpacked size.

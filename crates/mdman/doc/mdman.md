@@ -28,7 +28,7 @@ man page:
   and `{{/options}}` tags. This tells the processor where the options start
   and end.
 - Each option must be expressed with a `{{#option}}` block. The parameters to
-  the the block are a sequence of strings indicating the option. For example,
+  the block are a sequence of strings indicating the option. For example,
   ```{{#option "`-p` _spec_..." "`--package` _spec_..."}}``` is an option that
   has two different forms. The text within the string is processed as markdown.
   It is recommended to use formatting similar to this example.

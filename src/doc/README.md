@@ -50,17 +50,17 @@ directory) to three different formats:
 3. Plain text (needed for embedded man pages on platforms without man such as
    Windows), saved in [`src/doc/man/generated_txt/`](man/generated_txt).
 
-To rebuild the man pages, run the script `build-man.sh` in the `src/doc` directory.
-
-```console
-$ ./build-man.sh
-```
+To rebuild the man pages, run `cargo build-man` inside the workspace.
 
 ### SemVer chapter tests
 
 There is a script to verify that the examples in the SemVer chapter work as
-intended. To run the tests, go into the `semver-check` directory and run
-`cargo run`.
+intended. To run the tests, run `cargo +stable run -p semver-check`.
+
+Note that these tests run on the most recent stable release because they
+validate the output of the compiler diagnostics. The output can change between
+releases, so we pin to a specific release to avoid frequent and unexpected
+breakage.
 
 ## Contributing
 

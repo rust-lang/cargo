@@ -1,0 +1,12 @@
+[package]
+name = "xtask-unpublished"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+cargo.workspace = true
+clap.workspace = true
+env_logger.workspace = true
+log.workspace = true

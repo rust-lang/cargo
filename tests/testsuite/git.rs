@@ -548,90 +548,6 @@ Caused by:
 }
 
 #[cargo_test]
-fn two_revs_same_deps() {
-    let bar = git::new("meta-dep", |project| {
-        project
-            .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
-            .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
-    });
-
-    let repo = git2::Repository::open(&bar.root()).unwrap();
-    let rev1 = repo.revparse_single("HEAD").unwrap().id();
-
-    // Commit the changes and make sure we trigger a recompile
-    bar.change_file("src/lib.rs", "pub fn bar() -> i32 { 2 }");
-    git::add(&repo);
-    let rev2 = git::commit(&repo);
-
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.0.0"
-                    authors = []
-
-                    [dependencies.bar]
-                    git = '{}'
-                    rev = "{}"
-
-                    [dependencies.baz]
-                    path = "../baz"
-                "#,
-                bar.url(),
-                rev1
-            ),
-        )
-        .file(
-            "src/main.rs",
-            r#"
-                extern crate bar;
-                extern crate baz;
-
-                fn main() {
-                    assert_eq!(bar::bar(), 1);
-                    assert_eq!(baz::baz(), 2);
-                }
-            "#,
-        )
-        .build();
-
-    let _baz = project()
-        .at("baz")
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "baz"
-                    version = "0.0.0"
-                    authors = []
-
-                    [dependencies.bar]
-                    git = '{}'
-                    rev = "{}"
-                "#,
-                bar.url(),
-                rev2
-            ),
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                extern crate bar;
-                pub fn baz() -> i32 { bar::bar() }
-            "#,
-        )
-        .build();
-
-    foo.cargo("build -v").run();
-    assert!(foo.bin("foo").is_file());
-    foo.process(&foo.bin("foo")).run();
-}
-
-#[cargo_test]
 fn recompilation() {
     let git_project = git::new("bar", |project| {
         project
@@ -3419,6 +3335,9 @@ fn metadata_master_consistency() {
                 }
               ],
               "workspace_members": [
+                "foo 0.1.0 [..]"
+              ],
+              "workspace_default_members": [
                 "foo 0.1.0 [..]"
               ],
               "resolve": {

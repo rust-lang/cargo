@@ -15,16 +15,12 @@ reviewed.**
 
 [Working on Cargo]: working-on-cargo.md
 
-## Cargo team
+## Mentorship
 
-Cargo is managed by a [team] of volunteers. The Cargo Team reviews all
-changes, and sets the direction for the project.
+Some Cargo team members are available to directly mentor contributions to Cargo.
+See the [office hours] page for more information.
 
-The team meets on a weekly basis on a video chat. If you are interested in
-participating, feel free to contact us on [Zulip].
-
-If you would like more direct mentorship, you can join our
-[office hours](https://github.com/rust-lang/cargo/wiki/Office-Hours).
+[office hours]: https://github.com/rust-lang/cargo/wiki/Office-Hours
 
 ## Roadmap
 

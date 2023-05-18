@@ -7,6 +7,7 @@
 //! * [`RustcTargetData::info`] to get a [`TargetInfo`] for an in-depth query.
 //! * [`TargetInfo::rustc_outputs`] to get a list of supported file types.
 
+use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{
     BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
 };
@@ -38,7 +39,7 @@ pub struct TargetInfo {
     ///
     /// The key is the crate type name (like `cdylib`) and the value is
     /// `Some((prefix, suffix))`, for example `libcargo.so` would be
-    /// `Some(("lib", ".so")). The value is `None` if the crate type is not
+    /// `Some(("lib", ".so"))`. The value is `None` if the crate type is not
     /// supported.
     crate_types: RefCell<HashMap<CrateType, Option<(String, String)>>>,
     /// `cfg` information extracted from `rustc --print=cfg`.
@@ -175,6 +176,7 @@ impl TargetInfo {
             //
             // Search `--print` to see what we query so far.
             let mut process = rustc.workspace_process();
+            apply_env_config(config, &mut process)?;
             process
                 .arg("-")
                 .arg("--crate-name")

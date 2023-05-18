@@ -184,6 +184,7 @@ pub fn resolve_with_config_raw(
         deps,
         &BTreeMap::new(),
         None::<&String>,
+        None::<&String>,
     )
     .unwrap();
     let opts = ResolveOpts::everything();
@@ -585,6 +586,7 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
         dep,
         &BTreeMap::new(),
         link,
+        None::<&String>,
     )
     .unwrap()
 }
@@ -613,6 +615,7 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
         Vec::new(),
         &BTreeMap::new(),
         link,
+        None::<&String>,
     )
     .unwrap()
 }
@@ -627,6 +630,7 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
         deps,
         &BTreeMap::new(),
         sum.links().map(|a| a.as_str()),
+        None::<&String>,
     )
     .unwrap()
 }

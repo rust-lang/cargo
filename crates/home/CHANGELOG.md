@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- ## [Unreleased] -->
+## 0.5.6
+- Fixed & enhanced documentation.
+  [#12047](https://github.com/rust-lang/cargo/pull/12047)
+
+## 0.5.5 - 2023-04-25
+- The `home` crate has migrated to the <https://github.com/rust-lang/cargo/> repository.
+  [#11359](https://github.com/rust-lang/cargo/pull/11359)
+- Replaced the winapi dependency with windows-sys.
+  [#11656](https://github.com/rust-lang/cargo/pull/11656)
 
 ## [0.5.4] - 2022-10-10
 - Add `_with_env` variants of functions to support in-process threaded tests for
@@ -38,7 +46,6 @@ Use Rust 1.36.0 as minimum Rust version.
 ### Removed
 - Remove support for `multirust` folder used in old version of `rustup`.
 
-[Unreleased]: https://github.com/brson/home/compare/v0.5.4...HEAD
 [0.5.4]: https://github.com/brson/home/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/brson/home/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/brson/home/compare/v0.5.1...v0.5.2

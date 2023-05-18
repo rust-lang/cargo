@@ -9,7 +9,6 @@ allow-unauthenticated = [
     "S-*",
     "Z-*",
     "beta-nominated",
-    "needs-mcve",
     "regression-*",
     "relnotes",
 ]
@@ -104,7 +103,10 @@ trigger_files = ["src/cargo/sources/directory.rs"]
 trigger_files = ["src/doc/"]
 
 [autolabel."A-environment-variables"]
-trigger_files = ["crates/home/"]
+trigger_files = [
+  "crates/home/",
+  "src/cargo/util/config/environment.rs",
+]
 
 [autolabel."A-errors"]
 trigger_files = ["src/cargo/util/diagnostic_server.rs"]
@@ -120,6 +122,19 @@ trigger_files = ["src/cargo/core/compiler/future_incompat.rs"]
 
 [autolabel."A-git"]
 trigger_files = ["src/cargo/sources/git/"]
+
+[autolabel."A-infrastructure"]
+trigger_files = [
+  ".cargo/",
+  ".github/",
+  "build.rs",
+  "ci/",
+  "clippy.toml",
+  "crates/xtask-",
+  "deny.toml",
+  "publish.py",
+  "triagebot.toml",
+]
 
 [autolabel."A-interacts-with-crates.io"]
 trigger_files = ["crates/crates-io/", "src/cargo/ops/registry.rs"]
@@ -150,7 +165,7 @@ trigger_files = [
 ]
 
 [autolabel."A-networking"]
-trigger_files = ["src/cargo/util/network.rs"]
+trigger_files = ["src/cargo/util/network/"]
 
 [autolabel."A-overrides"]
 trigger_files = ["src/cargo/sources/replaced.rs"]
@@ -169,9 +184,9 @@ trigger_files = ["src/cargo/util/auth.rs", "credential/"]
 
 [autolabel."A-semver"]
 trigger_files = [
+  "crates/semver-check",
   "src/cargo/util/semver_ext.rs",
   "src/cargo/util/to_semver.rs",
-  "src/doc/semver-check/",
 ]
 
 [autolabel."A-source-replacement"]

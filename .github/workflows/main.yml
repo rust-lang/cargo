@@ -24,7 +24,6 @@ jobs:
     - run: rustup update stable && rustup default stable
     - run: rustup component add rustfmt
     - run: cargo fmt --all --check
-    - run: cargo fmt --all --check --manifest-path crates/resolver-tests/Cargo.toml
 
   # Ensure there are no clippy warnings
   clippy:
@@ -36,6 +35,13 @@ jobs:
       # Only check cargo lib for now
       # TODO: check every members
       - run: cargo clippy -p cargo --lib --no-deps -- -D warnings
+
+  stale-label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustup update stable && rustup default stable
+      - run: cargo stale-label
 
   # Ensure Cargo.lock is up-to-date
   lockfile:
@@ -128,12 +134,10 @@ jobs:
     - run: cargo test -p home
     - run: cargo test -p mdman
     - run: cargo build -p cargo-credential-1password
+    - run: cargo build -p cargo-credential-macos-keychain
+    - run: cargo build -p cargo-credential-wincred
     - run: cargo build -p cargo-credential-gnome-secret
       if: matrix.os == 'ubuntu-latest'
-    - run: cargo build -p cargo-credential-macos-keychain
-      if: matrix.os == 'macos-latest'
-    - run: cargo build -p cargo-credential-wincred
-      if: matrix.os == 'windows-latest'
     - name: Check benchmarks
       run: |
         # This only tests one benchmark since it can take over 10 minutes to
@@ -152,7 +156,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: rustup update stable && rustup default stable
-    - run: cargo test --manifest-path crates/resolver-tests/Cargo.toml
+    - run: cargo test -p resolver-tests
 
   test_gitoxide:
     runs-on: ubuntu-latest
@@ -185,27 +189,36 @@ jobs:
     - run: rustup component add rust-docs
     - run: ci/validate-man.sh
     # This requires rustfmt, use stable.
-    - run: cd src/doc/semver-check && cargo +stable run
-    - run: |
+    - name: Run semver-check
+      run: cargo +stable run -p semver-check
+    - name: Ensure intradoc links are valid
+      run: cargo doc --workspace --document-private-items --no-deps
+      env:
+        RUSTDOCFLAGS: -D warnings
+    - name: Install mdbook
+      run: |
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.27/mdbook-v0.4.27-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
-    # TODO: should check all workspace members
-    - run: cargo doc -p cargo --document-private-items --no-deps
-      env:
-        RUSTDOCFLAGS: -D warnings
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
-    - run: |
-        cd src/doc
-        curl -sSLo linkcheck.sh \
-          https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
-        sh linkcheck.sh --all cargo
+    - name: Run linkchecker.sh
+      run: |
+        cd target
+        curl -sSLO https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
+        sh linkcheck.sh --all --path ../src/doc cargo
 
   success:
     permissions:
       contents: none
     name: bors build finished
-    needs: [docs, rustfmt, test, resolver, build_std, test_gitoxide]
+    needs:
+    - build_std
+    - docs
+    - lockfile
+    - resolver
+    - rustfmt
+    - test
+    - test_gitoxide
     runs-on: ubuntu-latest
     if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
     steps:
@@ -214,7 +227,14 @@ jobs:
     permissions:
       contents: none
     name: bors build finished
-    needs: [docs, rustfmt, test, resolver, build_std]
+    needs:
+    - build_std
+    - docs
+    - lockfile
+    - resolver
+    - rustfmt
+    - test
+    - test_gitoxide
     runs-on: ubuntu-latest
     if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
     steps:

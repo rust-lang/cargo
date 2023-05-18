@@ -345,6 +345,7 @@ fn transmit(
         ref categories,
         ref badges,
         ref links,
+        ref rust_version,
     } = *manifest.metadata();
     let readme_content = readme
         .as_ref()
@@ -398,6 +399,7 @@ fn transmit(
                 license_file: license_file.clone(),
                 badges: badges.clone(),
                 links: links.clone(),
+                rust_version: rust_version.clone(),
             },
             tarball,
         )
@@ -702,12 +704,17 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
                 InfoType::SslDataIn | InfoType::SslDataOut => return,
                 _ => return,
             };
+            let starts_with_ignore_case = |line: &str, text: &str| -> bool {
+                line[..line.len().min(text.len())].eq_ignore_ascii_case(text)
+            };
             match str::from_utf8(data) {
                 Ok(s) => {
                     for mut line in s.lines() {
-                        if line.starts_with("Authorization:") {
+                        if starts_with_ignore_case(line, "authorization:") {
                             line = "Authorization: [REDACTED]";
-                        } else if line[..line.len().min(10)].eq_ignore_ascii_case("set-cookie") {
+                        } else if starts_with_ignore_case(line, "h2h3 [authorization:") {
+                            line = "h2h3 [Authorization: [REDACTED]]";
+                        } else if starts_with_ignore_case(line, "set-cookie") {
                             line = "set-cookie: [REDACTED]";
                         }
                         log!(level, "http-debug: {} {}", prefix, line);

@@ -7,7 +7,8 @@ use std::path::PathBuf;
 use cargo_platform::CfgExpr;
 use cargo_util::{paths, ProcessBuilder};
 
-use super::BuildContext;
+use crate::core::compiler::apply_env_config;
+use crate::core::compiler::BuildContext;
 use crate::core::compiler::{CompileKind, Metadata, Unit};
 use crate::core::Package;
 use crate::util::{config, CargoResult, Config};
@@ -349,17 +350,7 @@ impl<'cfg> Compilation<'cfg> {
             )
             .cwd(pkg.root());
 
-        // Apply any environment variables from the config
-        for (key, value) in self.config.env_config()?.iter() {
-            // never override a value that has already been set by cargo
-            if cmd.get_envs().contains_key(key) {
-                continue;
-            }
-
-            if value.is_force() || self.config.get_env_os(key).is_none() {
-                cmd.env(key, value.resolve(self.config));
-            }
-        }
+        apply_env_config(self.config, &mut cmd)?;
 
         Ok(cmd)
     }

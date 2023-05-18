@@ -3166,7 +3166,7 @@ fn not_found_permutations() {
                 authors = []
 
                 [dependencies]
-                a-b-c = "1.0"
+                a-b_c = "1.0"
             "#,
         )
         .file("src/lib.rs", "")
@@ -3177,7 +3177,7 @@ fn not_found_permutations() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-error: no matching package named `a-b-c` found
+error: no matching package named `a-b_c` found
 location searched: registry `crates-io`
 required by package `foo v0.0.1 ([ROOT]/foo)`
 ",
@@ -3190,7 +3190,6 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
         &[
             "/index/a-/b-/a-b-c",
             "/index/a-/b_/a-b_c",
-            "/index/a_/b-/a_b-c",
             "/index/a_/b_/a_b_c"
         ]
     );

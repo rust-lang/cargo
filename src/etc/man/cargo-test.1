@@ -149,12 +149,19 @@ available)
 .sp
 The default behavior can be changed by setting the \fBtest\fR flag for the target
 in the manifest settings. Setting examples to \fBtest = true\fR will build and run
-the example as a test. Setting targets to \fBtest = false\fR will stop them from
-being tested by default. Target selection options that take a target by name
+the example as a test, replacing the example\[cq]s \fBmain\fR function with the
+libtest harness. If you don\[cq]t want the \fBmain\fR function replaced, also include
+\fBharness = false\fR, in which case the example will be built and executed as\-is.
+.sp
+Setting targets to \fBtest = false\fR will stop them from being tested by default.
+Target selection options that take a target by name (such as \fB\-\-example foo\fR)
 ignore the \fBtest\fR flag and will always test the given target.
 .sp
 Doc tests for libraries may be disabled by setting \fBdoctest = false\fR for the
 library in the manifest.
+.sp
+See \fIConfiguring a target\fR <https://doc.rust\-lang.org/cargo/reference/cargo\-targets.html#configuring\-a\-target>
+for more information on per\-target settings.
 .sp
 Binary targets are automatically built if there is an integration test or
 benchmark being selected to test. This allows an integration

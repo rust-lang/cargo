@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::fmt;
+use std::fmt::{self, Display, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -12,8 +12,8 @@ use itertools::Itertools;
 use lazycell::LazyCell;
 use log::{debug, trace};
 use semver::{self, VersionReq};
-use serde::de;
 use serde::de::IntoDeserializer as _;
+use serde::de::{self, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -442,11 +442,100 @@ impl ser::Serialize for TomlOptLevel {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(untagged, expecting = "expected a boolean or an integer")]
-pub enum U32OrBool {
-    U32(u32),
-    Bool(bool),
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub enum TomlDebugInfo {
+    None,
+    LineDirectivesOnly,
+    LineTablesOnly,
+    Limited,
+    Full,
+}
+
+impl ser::Serialize for TomlDebugInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        match self {
+            Self::None => 0.serialize(serializer),
+            Self::LineDirectivesOnly => "line-directives-only".serialize(serializer),
+            Self::LineTablesOnly => "line-tables-only".serialize(serializer),
+            Self::Limited => 1.serialize(serializer),
+            Self::Full => 2.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for TomlDebugInfo {
+    fn deserialize<D>(d: D) -> Result<TomlDebugInfo, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = TomlDebugInfo;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str(
+                    "a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"",
+                )
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<TomlDebugInfo, E>
+            where
+                E: de::Error,
+            {
+                let debuginfo = match value {
+                    0 => TomlDebugInfo::None,
+                    1 => TomlDebugInfo::Limited,
+                    2 => TomlDebugInfo::Full,
+                    _ => return Err(de::Error::invalid_value(Unexpected::Signed(value), &self)),
+                };
+                Ok(debuginfo)
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(if v {
+                    TomlDebugInfo::Full
+                } else {
+                    TomlDebugInfo::None
+                })
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<TomlDebugInfo, E>
+            where
+                E: de::Error,
+            {
+                let debuginfo = match value {
+                    "none" => TomlDebugInfo::None,
+                    "limited" => TomlDebugInfo::Limited,
+                    "full" => TomlDebugInfo::Full,
+                    "line-directives-only" => TomlDebugInfo::LineDirectivesOnly,
+                    "line-tables-only" => TomlDebugInfo::LineTablesOnly,
+                    _ => return Err(de::Error::invalid_value(Unexpected::Str(value), &self)),
+                };
+                Ok(debuginfo)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+impl Display for TomlDebugInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TomlDebugInfo::None => f.write_char('0'),
+            TomlDebugInfo::Limited => f.write_char('1'),
+            TomlDebugInfo::Full => f.write_char('2'),
+            TomlDebugInfo::LineDirectivesOnly => f.write_str("line-directives-only"),
+            TomlDebugInfo::LineTablesOnly => f.write_str("line-tables-only"),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
@@ -456,7 +545,7 @@ pub struct TomlProfile {
     pub lto: Option<StringOrBool>,
     pub codegen_backend: Option<InternedString>,
     pub codegen_units: Option<u32>,
-    pub debug: Option<U32OrBool>,
+    pub debug: Option<TomlDebugInfo>,
     pub split_debuginfo: Option<String>,
     pub debug_assertions: Option<bool>,
     pub rpath: Option<bool>,
@@ -2278,6 +2367,7 @@ impl TomlManifest {
             deps,
             me.features.as_ref().unwrap_or(&empty_features),
             package.links.as_deref(),
+            rust_version.as_deref().map(InternedString::new),
         )?;
 
         let metadata = ManifestMetadata {
@@ -2344,6 +2434,11 @@ impl TomlManifest {
                 .transpose()?
                 .unwrap_or_default(),
             links: package.links.clone(),
+            rust_version: package
+                .rust_version
+                .clone()
+                .map(|mw| mw.resolve("rust-version", || inherit()?.rust_version()))
+                .transpose()?,
         };
         package.description = metadata
             .description
@@ -2908,8 +3003,8 @@ impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
             let msg = format!(
                 "dependency ({}) specified without \
-                 providing a local path, Git repository, or \
-                 version to use. This will be considered an \
+                 providing a local path, Git repository, version, or \
+                 workspace dependency to use. This will be considered an \
                  error in future versions",
                 name_in_toml
             );
