@@ -1,4 +1,4 @@
-//! Implementation of configuration for various sources
+//! Implementation of configuration for various sources.
 //!
 //! This module will parse the various `source.*` TOML configuration keys into a
 //! structure usable by Cargo itself. Currently this is primarily used to map
@@ -14,11 +14,12 @@ use log::debug;
 use std::collections::{HashMap, HashSet};
 use url::Url;
 
+/// Represents the entire `[source]` table in Cargo configuration.
 #[derive(Clone)]
 pub struct SourceConfigMap<'cfg> {
     /// Mapping of source name to the toml configuration.
     cfgs: HashMap<String, SourceConfig>,
-    /// Mapping of `SourceId` to the source name.
+    /// Mapping of [`SourceId`] to the source name.
     id2name: HashMap<SourceId, String>,
     config: &'cfg Config,
 }
@@ -67,6 +68,8 @@ struct SourceConfig {
 }
 
 impl<'cfg> SourceConfigMap<'cfg> {
+    /// Like [`SourceConfigMap::empty`] but includes sources from source
+    /// replacement configurations.
     pub fn new(config: &'cfg Config) -> CargoResult<SourceConfigMap<'cfg>> {
         let mut base = SourceConfigMap::empty(config)?;
         let sources: Option<HashMap<String, SourceConfigDef>> = config.get("source")?;
@@ -78,6 +81,8 @@ impl<'cfg> SourceConfigMap<'cfg> {
         Ok(base)
     }
 
+    /// Creates the default set of sources that doesn't take `[source]`
+    /// replacement into account.
     pub fn empty(config: &'cfg Config) -> CargoResult<SourceConfigMap<'cfg>> {
         let mut base = SourceConfigMap {
             cfgs: HashMap::new(),
@@ -112,11 +117,14 @@ impl<'cfg> SourceConfigMap<'cfg> {
         Ok(base)
     }
 
+    /// Returns the `Config` this source config map is associated with.
     pub fn config(&self) -> &'cfg Config {
         self.config
     }
 
-    /// Get the `Source` for a given `SourceId`.
+    /// Gets the [`Source`] for a given [`SourceId`].
+    ///
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn load(
         &self,
         id: SourceId,
@@ -208,6 +216,7 @@ restore the source replacement configuration to continue the build
         Ok(Box::new(ReplacedSource::new(id, new_id, new_src)))
     }
 
+    /// Adds a source config with an associated name.
     fn add(&mut self, name: &str, cfg: SourceConfig) -> CargoResult<()> {
         if let Some(old_name) = self.id2name.insert(cfg.id, name.to_string()) {
             // The user is allowed to redefine the built-in crates-io
@@ -226,6 +235,7 @@ restore the source replacement configuration to continue the build
         Ok(())
     }
 
+    /// Adds a source config from TOML definition.
     fn add_config(&mut self, name: String, def: SourceConfigDef) -> CargoResult<()> {
         let mut srcs = Vec::new();
         if let Some(registry) = def.registry {
