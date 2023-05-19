@@ -435,6 +435,42 @@ pub fn foo(num: i32) -> u32 {
 }
 
 #[cargo_test]
+fn profile_rustflags_doesnt_have_precedence() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["lints", "profile-rustflags"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [lints.rust]
+                "unsafe_code" = "allow"
+
+                [profile.dev]
+                rustflags = ["-D", "unsafe_code"]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+pub fn foo(num: i32) -> u32 {
+    unsafe { std::mem::transmute(num) }
+}
+",
+        )
+        .build();
+
+    foo.cargo("check")
+        .arg("-v")
+        .masquerade_as_nightly_cargo(&["lints", "profile-rustflags"])
+        .with_status(0)
+        .run();
+}
+
+#[cargo_test]
 fn without_priority() {
     Package::new("reg-dep", "1.0.0").publish();
 
