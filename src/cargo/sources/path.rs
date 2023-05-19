@@ -14,13 +14,28 @@ use ignore::gitignore::GitignoreBuilder;
 use log::{trace, warn};
 use walkdir::WalkDir;
 
+/// A source represents one or multiple packages gathering from a given root
+/// path on the filesystem.
+///
+/// It's the cornerstone of every other source --- other implementations
+/// eventually need to call `PathSource` to read local packages somewhere on
+/// the filesystem.
+///
+/// It also provides convenient methods like [`PathSource::list_files`] to
+/// list all files in a package, given its ability to walk the filesystem.
 pub struct PathSource<'cfg> {
+    /// The unique identifier of this source.
     source_id: SourceId,
+    /// The root path of this source.
     path: PathBuf,
+    /// Whether this source has updated all package informations it may contain.
     updated: bool,
+    /// Packages that this sources has discovered.
     packages: Vec<Package>,
-    config: &'cfg Config,
+    /// Whether this source should discover nested packages recursively.
+    /// See [`PathSource::new_recursive`] for more.
     recursive: bool,
+    config: &'cfg Config,
 }
 
 impl<'cfg> PathSource<'cfg> {
@@ -41,9 +56,9 @@ impl<'cfg> PathSource<'cfg> {
 
     /// Creates a new source which is walked recursively to discover packages.
     ///
-    /// This is similar to the `new` method except that instead of requiring a
-    /// valid package to be present at `root` the folder is walked entirely to
-    /// crawl for packages.
+    /// This is similar to the [`PathSource::new`] method except that instead
+    /// of requiring a valid package to be present at `root` the folder is
+    /// walked entirely to crawl for packages.
     ///
     /// Note that this should be used with care and likely shouldn't be chosen
     /// by default!
@@ -54,6 +69,8 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
+    /// Preloads a package for this source. The source is assumed that it has
+    /// yet loaded any other packages.
     pub fn preload_with(&mut self, pkg: Package) {
         assert!(!self.updated);
         assert!(!self.recursive);
@@ -62,6 +79,7 @@ impl<'cfg> PathSource<'cfg> {
         self.packages.push(pkg);
     }
 
+    /// Gets the package on the root path.
     pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
@@ -76,6 +94,8 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
+    /// Returns the packages discovered by this source. It may walk the
+    /// the filesystem if package informations haven't yet updated.
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
@@ -96,7 +116,8 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// The basic assumption of this method is that all files in the directory
     /// are relevant for building this package, but it also contains logic to
-    /// use other methods like .gitignore to filter the list of files.
+    /// use other methods like `.gitignore`, `package.include`, or
+    /// `package.exclude` to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         self._list_files(pkg).with_context(|| {
             format!(
@@ -106,6 +127,7 @@ impl<'cfg> PathSource<'cfg> {
         })
     }
 
+    /// See [`PathSource::list_files`].
     fn _list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         let root = pkg.root();
         let no_include_option = pkg.manifest().include().is_empty();
@@ -218,6 +240,11 @@ impl<'cfg> PathSource<'cfg> {
         Ok(None)
     }
 
+    /// Lists files relevant to building this package inside this source by
+    /// consulting both Git index (tracked) or status (untracked) under
+    /// a given Git repository.
+    ///
+    /// This looks into Git submodules as well.
     fn list_files_git(
         &self,
         pkg: &Package,
@@ -373,6 +400,11 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
+    /// Lists files relevant to building this package inside this source by
+    /// walking the filesystem from the package root path.
+    ///
+    /// This is a fallback for [`PathSource::list_files_git`] when the package
+    /// is not tracked under a Git repository.
     fn list_files_walk(
         &self,
         pkg: &Package,
@@ -383,6 +415,7 @@ impl<'cfg> PathSource<'cfg> {
         Ok(ret)
     }
 
+    /// Helper recursive function for [`PathSource::list_files_walk`].
     fn walk(
         &self,
         path: &Path,
@@ -448,6 +481,7 @@ impl<'cfg> PathSource<'cfg> {
         Ok(())
     }
 
+    /// Gets the last modified file in a package.
     pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
         if !self.updated {
             return Err(internal(format!(
@@ -479,10 +513,12 @@ impl<'cfg> PathSource<'cfg> {
         Ok((max, max_path))
     }
 
+    /// Returns the root path of this source.
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    /// Discovers packages inside this source if it hasn't yet done.
     pub fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
             let packages = self.read_packages()?;
