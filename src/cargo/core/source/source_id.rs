@@ -20,16 +20,31 @@ lazy_static::lazy_static! {
 }
 
 /// Unique identifier for a source of packages.
+///
+/// Cargo uniquely identifies packages using [`PackageId`], a combination of the
+/// package name, version, and the code source. `SourceId` exactly represents
+/// the "code source" in `PackageId`. See [`SourceId::hash`] to learn what are
+/// taken into account for the uniqueness of a source.
+///
+/// `SourceId` is usually associated with an instance of [`Source`], which is
+/// supposed to provide a `SourceId` via [`Source::source_id`] method.
+///
+/// [`Source`]: super::Source
+/// [`Source::source_id`]: super::Source::source_id
+/// [`PackageId`]: super::super::PackageId
 #[derive(Clone, Copy, Eq, Debug)]
 pub struct SourceId {
     inner: &'static SourceIdInner,
 }
 
+/// The interned version of [`SourceId`] to avoid excessive clones and borrows.
+/// Values are cached in `SOURCE_ID_CACHE` once created.
 #[derive(Eq, Clone, Debug)]
 struct SourceIdInner {
     /// The source URL.
     url: Url,
-    /// The canonical version of the above url
+    /// The canonical version of the above url. See [`CanonicalUrl`] to learn
+    /// why it is needed and how it normalizes a URL.
     canonical_url: CanonicalUrl,
     /// The source kind.
     kind: SourceKind,
@@ -45,8 +60,8 @@ struct SourceIdInner {
     alt_registry_key: Option<String>,
 }
 
-/// The possible kinds of code source. Along with `SourceIdInner`, this fully defines the
-/// source.
+/// The possible kinds of code source.
+/// Along with [`SourceIdInner`], this fully defines the source.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum SourceKind {
     /// A git repository.
@@ -70,7 +85,8 @@ pub enum GitReference {
     Tag(String),
     /// From a branch.
     Branch(String),
-    /// From a specific revision.
+    /// From a specific revision. Can be a commit hash (either short or full),
+    /// or a named reference like `refs/pull/493/head`.
     Rev(String),
     /// The default branch of the repository, the reference named `HEAD`.
     DefaultBranch,
@@ -100,6 +116,7 @@ impl SourceId {
         Ok(source_id)
     }
 
+    /// Interns the value and returns the wrapped type.
     fn wrap(inner: SourceIdInner) -> SourceId {
         let mut cache = SOURCE_ID_CACHE.lock().unwrap();
         let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
@@ -172,7 +189,7 @@ impl SourceId {
         }
     }
 
-    /// A view of the `SourceId` that can be `Display`ed as a URL.
+    /// A view of the [`SourceId`] that can be `Display`ed as a URL.
     pub fn as_url(&self) -> SourceIdAsUrl<'_> {
         SourceIdAsUrl {
             inner: &*self.inner,
@@ -208,7 +225,7 @@ impl SourceId {
         SourceId::new(kind, url.to_owned(), Some(name))
     }
 
-    /// Creates a SourceId from a local registry path.
+    /// Creates a `SourceId` from a local registry path.
     pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
         SourceId::new(SourceKind::LocalRegistry, url, None)
@@ -287,6 +304,7 @@ impl SourceId {
         &self.inner.canonical_url
     }
 
+    /// Displays the text "crates.io index" for Cargo shell status output.
     pub fn display_index(self) -> String {
         if self.is_crates_io() {
             format!("{} index", CRATES_IO_DOMAIN)
@@ -295,6 +313,7 @@ impl SourceId {
         }
     }
 
+    /// Displays the name of a registry if it has one. Otherwise just the URL.
     pub fn display_registry_name(self) -> String {
         if self.is_crates_io() {
             CRATES_IO_REGISTRY.to_string()
@@ -360,6 +379,8 @@ impl SourceId {
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
+    ///
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn load<'a>(
         self,
         config: &'a Config,
@@ -434,7 +455,7 @@ impl SourceId {
     /// Hashes `self`.
     ///
     /// For paths, remove the workspace prefix so the same source will give the
-    /// same hash in different locations.
+    /// same hash in different locations, helping reproducible builds.
     pub fn stable_hash<S: hash::Hasher>(self, workspace: &Path, into: &mut S) {
         if self.is_path() {
             if let Ok(p) = self
@@ -563,9 +584,9 @@ impl fmt::Display for SourceId {
     }
 }
 
-// The hash of SourceId is used in the name of some Cargo folders, so shouldn't
-// vary. `as_str` gives the serialisation of a url (which has a spec) and so
-// insulates against possible changes in how the url crate does hashing.
+/// The hash of SourceId is used in the name of some Cargo folders, so shouldn't
+/// vary. `as_str` gives the serialisation of a url (which has a spec) and so
+/// insulates against possible changes in how the url crate does hashing.
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
@@ -576,13 +597,14 @@ impl Hash for SourceId {
     }
 }
 
+/// The hash of `SourceIdInner` is used to retrieve its interned value from
+/// `SOURCE_ID_CACHE`. We only care about fields that make `SourceIdInner`
+/// unique. Optional fields not affecting the uniqueness must be excluded,
+/// such as [`name`] and [`alt_registry_key`]. That's why this is not derived.
+///
+/// [`name`]: SourceIdInner::name
+/// [`alt_registry_key`]: SourceIdInner::alt_registry_key
 impl Hash for SourceIdInner {
-    /// The hash of `SourceIdInner` is used to retrieve its interned value. We
-    /// only care about fields that make `SourceIdInner` unique, which are:
-    ///
-    /// - `kind`
-    /// - `precise`
-    /// - `canonical_url`
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.kind.hash(into);
         self.precise.hash(into);
@@ -590,8 +612,8 @@ impl Hash for SourceIdInner {
     }
 }
 
+/// This implementation must be synced with [`SourceIdInner::hash`].
 impl PartialEq for SourceIdInner {
-    /// This implementation must be synced with [`SourceIdInner::hash`].
     fn eq(&self, other: &Self) -> bool {
         self.kind == other.kind
             && self.precise == other.precise
@@ -599,66 +621,66 @@ impl PartialEq for SourceIdInner {
     }
 }
 
-// forward to `Ord`
+/// Forwards to `Ord`
 impl PartialOrd for SourceKind {
     fn partial_cmp(&self, other: &SourceKind) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-// Note that this is specifically not derived on `SourceKind` although the
-// implementation here is very similar to what it might look like if it were
-// otherwise derived.
-//
-// The reason for this is somewhat obtuse. First of all the hash value of
-// `SourceKind` makes its way into `~/.cargo/registry/index/github.com-XXXX`
-// which means that changes to the hash means that all Rust users need to
-// redownload the crates.io index and all their crates. If possible we strive to
-// not change this to make this redownloading behavior happen as little as
-// possible. How is this connected to `Ord` you might ask? That's a good
-// question!
-//
-// Since the beginning of time `SourceKind` has had `#[derive(Hash)]`. It for
-// the longest time *also* derived the `Ord` and `PartialOrd` traits. In #8522,
-// however, the implementation of `Ord` changed. This handwritten implementation
-// forgot to sync itself with the originally derived implementation, namely
-// placing git dependencies as sorted after all other dependencies instead of
-// first as before.
-//
-// This regression in #8522 (Rust 1.47) went unnoticed. When we switched back
-// to a derived implementation in #9133 (Rust 1.52 beta) we only then ironically
-// saw an issue (#9334). In #9334 it was observed that stable Rust at the time
-// (1.51) was sorting git dependencies last, whereas Rust 1.52 beta would sort
-// git dependencies first. This is because the `PartialOrd` implementation in
-// 1.51 used #8522, the buggy implementation, which put git deps last. In 1.52
-// it was (unknowingly) restored to the pre-1.47 behavior with git dependencies
-// first.
-//
-// Because the breakage was only witnessed after the original breakage, this
-// trait implementation is preserving the "broken" behavior. Put a different way:
-//
-// * Rust pre-1.47 sorted git deps first.
-// * Rust 1.47 to Rust 1.51 sorted git deps last, a breaking change (#8522) that
-//   was never noticed.
-// * Rust 1.52 restored the pre-1.47 behavior (#9133, without knowing it did
-//   so), and breakage was witnessed by actual users due to difference with
-//   1.51.
-// * Rust 1.52 (the source as it lives now) was fixed to match the 1.47-1.51
-//   behavior (#9383), which is now considered intentionally breaking from the
-//   pre-1.47 behavior.
-//
-// Note that this was all discovered when Rust 1.53 was in nightly and 1.52 was
-// in beta. #9133 was in both beta and nightly at the time of discovery. For
-// 1.52 #9383 reverted #9133, meaning 1.52 is the same as 1.51. On nightly
-// (1.53) #9397 was created to fix the regression introduced by #9133 relative
-// to the current stable (1.51).
-//
-// That's all a long winded way of saying "it's weird that git deps hash first
-// and are sorted last, but it's the way it is right now". The author of this
-// comment chose to handwrite the `Ord` implementation instead of the `Hash`
-// implementation, but it's only required that at most one of them is
-// hand-written because the other can be derived. Perhaps one day in
-// the future someone can figure out how to remove this behavior.
+/// Note that this is specifically not derived on `SourceKind` although the
+/// implementation here is very similar to what it might look like if it were
+/// otherwise derived.
+///
+/// The reason for this is somewhat obtuse. First of all the hash value of
+/// `SourceKind` makes its way into `~/.cargo/registry/index/github.com-XXXX`
+/// which means that changes to the hash means that all Rust users need to
+/// redownload the crates.io index and all their crates. If possible we strive
+/// to not change this to make this redownloading behavior happen as little as
+/// possible. How is this connected to `Ord` you might ask? That's a good
+/// question!
+///
+/// Since the beginning of time `SourceKind` has had `#[derive(Hash)]`. It for
+/// the longest time *also* derived the `Ord` and `PartialOrd` traits. In #8522,
+/// however, the implementation of `Ord` changed. This handwritten implementation
+/// forgot to sync itself with the originally derived implementation, namely
+/// placing git dependencies as sorted after all other dependencies instead of
+/// first as before.
+///
+/// This regression in #8522 (Rust 1.47) went unnoticed. When we switched back
+/// to a derived implementation in #9133 (Rust 1.52 beta) we only then ironically
+/// saw an issue (#9334). In #9334 it was observed that stable Rust at the time
+/// (1.51) was sorting git dependencies last, whereas Rust 1.52 beta would sort
+/// git dependencies first. This is because the `PartialOrd` implementation in
+/// 1.51 used #8522, the buggy implementation, which put git deps last. In 1.52
+/// it was (unknowingly) restored to the pre-1.47 behavior with git dependencies
+/// first.
+///
+/// Because the breakage was only witnessed after the original breakage, this
+/// trait implementation is preserving the "broken" behavior. Put a different way:
+///
+/// * Rust pre-1.47 sorted git deps first.
+/// * Rust 1.47 to Rust 1.51 sorted git deps last, a breaking change (#8522) that
+///   was never noticed.
+/// * Rust 1.52 restored the pre-1.47 behavior (#9133, without knowing it did
+///   so), and breakage was witnessed by actual users due to difference with
+///   1.51.
+/// * Rust 1.52 (the source as it lives now) was fixed to match the 1.47-1.51
+///   behavior (#9383), which is now considered intentionally breaking from the
+///   pre-1.47 behavior.
+///
+/// Note that this was all discovered when Rust 1.53 was in nightly and 1.52 was
+/// in beta. #9133 was in both beta and nightly at the time of discovery. For
+/// 1.52 #9383 reverted #9133, meaning 1.52 is the same as 1.51. On nightly
+/// (1.53) #9397 was created to fix the regression introduced by #9133 relative
+/// to the current stable (1.51).
+///
+/// That's all a long winded way of saying "it's weird that git deps hash first
+/// and are sorted last, but it's the way it is right now". The author of this
+/// comment chose to handwrite the `Ord` implementation instead of the `Hash`
+/// implementation, but it's only required that at most one of them is
+/// hand-written because the other can be derived. Perhaps one day in
+/// the future someone can figure out how to remove this behavior.
 impl Ord for SourceKind {
     fn cmp(&self, other: &SourceKind) -> Ordering {
         match (self, other) {
