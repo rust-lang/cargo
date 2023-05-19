@@ -2045,7 +2045,12 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(package_root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
-                let lints = parse_unstable_lints(toml_config.lints.clone(), &features, config)?;
+                let lints = parse_unstable_lints(
+                    toml_config.lints.clone(),
+                    &features,
+                    config,
+                    &mut warnings,
+                )?;
                 let lints = verify_lints(lints)?;
                 inheritable.update_lints(lints);
                 if let Some(ws_deps) = &inheritable.dependencies {
@@ -2311,10 +2316,14 @@ impl TomlManifest {
             &inherit_cell,
         )?;
 
-        let lints =
-            parse_unstable_lints::<MaybeWorkspaceLints>(me.lints.clone(), &features, config)?
-                .map(|mw| mw.resolve("lints", || inherit()?.lints()))
-                .transpose()?;
+        let lints = parse_unstable_lints::<MaybeWorkspaceLints>(
+            me.lints.clone(),
+            &features,
+            config,
+            cx.warnings,
+        )?
+        .map(|mw| mw.resolve("lints", || inherit()?.lints()))
+        .transpose()?;
         let lints = verify_lints(lints)?;
         let default = TomlLints::default();
         let mut rustflags = lints
@@ -2774,7 +2783,12 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
-                let lints = parse_unstable_lints(toml_config.lints.clone(), &features, config)?;
+                let lints = parse_unstable_lints(
+                    toml_config.lints.clone(),
+                    &features,
+                    config,
+                    &mut warnings,
+                )?;
                 let lints = verify_lints(lints)?;
                 inheritable.update_lints(lints);
                 let ws_root_config = WorkspaceRootConfig::new(
@@ -2925,18 +2939,19 @@ fn parse_unstable_lints<T: Deserialize<'static>>(
     lints: Option<toml::Value>,
     features: &Features,
     config: &Config,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<Option<T>> {
     let Some(lints) = lints else { return Ok(None); };
 
     if !features.is_enabled(Feature::lints()) {
-        warn_for_feature("lints", config);
+        warn_for_feature("lints", config, warnings);
         return Ok(None);
     }
 
     lints.try_into().map(Some).map_err(|err| err.into())
 }
 
-fn warn_for_feature(name: &str, config: &Config) {
+fn warn_for_feature(name: &str, config: &Config, warnings: &mut Vec<String>) {
     use std::fmt::Write as _;
 
     let mut message = String::new();
@@ -2962,7 +2977,7 @@ switch to nightly channel you can add
 `cargo-features = [\"{name}\"]` to enable this feature",
         );
     }
-    let _ = config.shell().warn(&message);
+    warnings.push(message);
 }
 
 fn verify_lints(lints: Option<TomlLints>) -> CargoResult<Option<TomlLints>> {

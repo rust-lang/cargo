@@ -57,7 +57,7 @@ fn workspace_requires_option() {
     foo.cargo("check")
         .with_stderr(
             "\
-warning: feature `lints` is not supported on this version of Cargo and will be ignored
+warning: [CWD]/Cargo.toml: feature `lints` is not supported on this version of Cargo and will be ignored
 
 this Cargo does not support nightly features, but if you
 switch to nightly channel you can add
