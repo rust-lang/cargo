@@ -812,7 +812,7 @@ impl<'cfg> DrainState<'cfg> {
             );
             if !cx.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
-                drop(cx.bcx.config.shell().status("Finished", message));
+                let _ = cx.bcx.config.shell().status("Finished", message);
                 future_incompat::save_and_display_report(
                     cx.bcx,
                     &self.per_package_future_incompat_reports,
@@ -836,7 +836,7 @@ impl<'cfg> DrainState<'cfg> {
         if new_err.print_always || err_state.count == 0 {
             crate::display_error(&new_err.error, shell);
             if err_state.count == 0 && !self.active.is_empty() {
-                drop(shell.warn("build failed, waiting for other jobs to finish..."));
+                let _ = shell.warn("build failed, waiting for other jobs to finish...");
             }
             err_state.count += 1;
         } else {
@@ -863,11 +863,11 @@ impl<'cfg> DrainState<'cfg> {
             .values()
             .map(|u| self.name_for_progress(u))
             .collect::<Vec<_>>();
-        drop(self.progress.tick_now(
+        let _ = self.progress.tick_now(
             self.finished,
             self.total_units,
             &format!(": {}", active_names.join(", ")),
-        ));
+        );
     }
 
     fn name_for_progress(&self, unit: &Unit) -> String {
@@ -1005,12 +1005,16 @@ impl<'cfg> DrainState<'cfg> {
         message.push_str(" generated ");
         match count.total {
             1 => message.push_str("1 warning"),
-            n => drop(write!(message, "{} warnings", n)),
+            n => {
+                let _ = write!(message, "{} warnings", n);
+            }
         };
         match count.duplicates {
             0 => {}
             1 => message.push_str(" (1 duplicate)"),
-            n => drop(write!(message, " ({} duplicates)", n)),
+            n => {
+                let _ = write!(message, " ({} duplicates)", n);
+            }
         }
         // Only show the `cargo fix` message if its a local `Unit`
         if unit.is_local() {
@@ -1054,7 +1058,7 @@ impl<'cfg> DrainState<'cfg> {
         }
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.
-        drop(config.shell().warn(message));
+        let _ = config.shell().warn(message);
     }
 
     fn finish(
