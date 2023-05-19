@@ -1041,10 +1041,6 @@ fn build_base_args(
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
     }
 
-    if !rustflags.is_empty() {
-        cmd.args(&rustflags);
-    }
-
     if *panic != PanicStrategy::Unwind {
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
@@ -1080,6 +1076,9 @@ fn build_base_args(
     }
 
     cmd.args(unit.pkg.manifest().rustflags());
+    if !rustflags.is_empty() {
+        cmd.args(&rustflags);
+    }
     if let Some(args) = cx.bcx.extra_args_for(unit) {
         cmd.args(args);
     }

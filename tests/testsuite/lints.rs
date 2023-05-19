@@ -435,7 +435,7 @@ pub fn foo(num: i32) -> u32 {
 }
 
 #[cargo_test]
-fn profile_rustflags_doesnt_have_precedence() {
+fn profile_rustflags_has_precedence() {
     let foo = project()
         .file(
             "Cargo.toml",
@@ -447,10 +447,10 @@ fn profile_rustflags_doesnt_have_precedence() {
                 version = "0.0.1"
 
                 [lints.rust]
-                "unsafe_code" = "allow"
+                "unsafe_code" = "deny"
 
                 [profile.dev]
-                rustflags = ["-D", "unsafe_code"]
+                rustflags = ["-A", "unsafe_code"]
             "#,
         )
         .file(
@@ -466,7 +466,6 @@ pub fn foo(num: i32) -> u32 {
     foo.cargo("check")
         .arg("-v")
         .masquerade_as_nightly_cargo(&["lints", "profile-rustflags"])
-        .with_status(0)
         .run();
 }
 
