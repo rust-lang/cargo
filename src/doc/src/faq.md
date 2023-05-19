@@ -263,10 +263,12 @@ issue](https://github.com/rust-lang/cargo/issues/new)!
 ### Why does Cargo.lock conflict?
 
 `Cargo.lock` contains exact information about your dependencies. It should be 
-generated and maintained by Cargo and should not be edited manually. If there is 
-a dependency conflict caused by changing the content of `Cargo.lock` when editing 
-or merging branches, it is recommended to try to run `cargo generate-lockfile` to 
-solve it.
+generated and maintained by Cargo and should not be edited manually. If there 
+are non-trivial conflicts, you can reset all "yours" changes, fix all other 
+conflicts in the branch, and then run some cargo command (like `cargo tree` or 
+`cargo check`), which should re-update the lockfile with your own local changes. 
+If you previously ran some `cargo update` commands in your branch, you can re-run 
+them that this time.
 
 Besides that, there are other situations that create conflicts. Unfortunately, in 
 many cases these conflicts cannot be resolved automatically and need to be resolved 
@@ -291,8 +293,9 @@ conflicts. At this time, you need to check the dependent version and its feature
 
 Conflicts occur when merging branches or PRs, and you need to manually eliminate 
 conflicts and then merge. The community has been looking to resolve merge conflicts 
-with `Cargo.lock` and `Cargo.toml` using a custom merge tool.
+with `Cargo.lock` and `Cargo.toml` using a [custom merge tool][custom-merge-tool].
 
 [links]: https://doc.rust-lang.org/cargo/reference/resolver.html#links
 [conventions-in-place]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#-sys-packages
 [direct-minimal-versions]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions
+[custom-merge-tool]: https://github.com/rust-lang/cargo/issues/1818
