@@ -62,6 +62,10 @@ pub trait Source {
 
     /// Attempts to find the packages that match a dependency request.
     ///
+    /// Usually you should call [`Source::block_until_ready`] somewhere and
+    /// wait until package informations become available. Otherwise any query
+    /// may return a [`Poll::Pending`].
+    ///
     /// The `f` argument is expected to get called when any [`Summary`] becomes available.
     fn query(
         &mut self,
@@ -70,8 +74,8 @@ pub trait Source {
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>>;
 
-    /// A helper function that collects and returns the result from
-    /// [`Source::query`] as a list of [`Summary`] items when available.
+    /// Gathers the result from [`Source::query`] as a list of [`Summary`] items
+    /// when they become available.
     fn query_vec(&mut self, dep: &Dependency, kind: QueryKind) -> Poll<CargoResult<Vec<Summary>>> {
         let mut ret = Vec::new();
         self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|_| ret)
