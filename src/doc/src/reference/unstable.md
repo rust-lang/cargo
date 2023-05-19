@@ -1398,18 +1398,14 @@ Valid operations are the following:
 
 A new `lints` table would be added to configure lints:
 ```toml
-cargo-features = ["lints"]
-
 [lints.rust]
 unsafe = "forbid"
 ```
-and `cargo` would pass these along as flags to `rustc`, `clippy`, or other lint tools.
+and `cargo` would pass these along as flags to `rustc`, `clippy`, or other lint tools when `-Zlints` is used.
 
 This would work with
 [RFC 2906 `workspace-deduplicate`](https://rust-lang.github.io/rfcs/2906-cargo-workspace-deduplicate.html):
 ```toml
-cargo-features = ["lints"]
-
 [lints]
 workspace = true
 

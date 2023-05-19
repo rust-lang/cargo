@@ -24,11 +24,11 @@ fn package_requires_option() {
     foo.cargo("check")
         .with_stderr(
             "\
-warning: feature `lints` is not supported on this version of Cargo and will be ignored
+warning: unused manifest key `lints` (may be supported in a future version)
 
 this Cargo does not support nightly features, but if you
-switch to nightly channel you can add
-`cargo-features = [\"lints\"]` to enable this feature
+switch to nightly channel you can pass
+`-Zlints` to enable this feature.
 [CHECKING] [..]
 [FINISHED] [..]
 ",
@@ -57,11 +57,11 @@ fn workspace_requires_option() {
     foo.cargo("check")
         .with_stderr(
             "\
-warning: [CWD]/Cargo.toml: feature `lints` is not supported on this version of Cargo and will be ignored
+warning: [CWD]/Cargo.toml: unused manifest key `lints` (may be supported in a future version)
 
 this Cargo does not support nightly features, but if you
-switch to nightly channel you can add
-`cargo-features = [\"lints\"]` to enable this feature
+switch to nightly channel you can pass
+`-Zlints` to enable this feature.
 [CHECKING] [..]
 [FINISHED] [..]
 ",
@@ -135,11 +135,11 @@ fn malformed_on_stable() {
     foo.cargo("check")
         .with_stderr(
             "\
-warning: feature `lints` is not supported on this version of Cargo and will be ignored
+warning: unused manifest key `lints` (may be supported in a future version)
 
 this Cargo does not support nightly features, but if you
-switch to nightly channel you can add
-`cargo-features = [\"lints\"]` to enable this feature
+switch to nightly channel you can pass
+`-Zlints` to enable this feature.
 [CHECKING] [..]
 [FINISHED] [..]
 ",
@@ -153,7 +153,6 @@ fn malformed_on_nightly() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
                 lints = 20
                 [package]
                 name = "foo"
@@ -165,7 +164,7 @@ fn malformed_on_nightly() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr(
@@ -185,8 +184,6 @@ fn fail_on_invalid_tool() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -199,7 +196,7 @@ fn fail_on_invalid_tool() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr(
@@ -219,8 +216,6 @@ fn fail_on_tool_injection() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -233,7 +228,7 @@ fn fail_on_tool_injection() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr(
@@ -253,8 +248,6 @@ fn fail_on_redundant_tool() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -267,7 +260,7 @@ fn fail_on_redundant_tool() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr(
@@ -287,8 +280,6 @@ fn fail_on_conflicting_tool() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -301,7 +292,7 @@ fn fail_on_conflicting_tool() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr(
@@ -321,8 +312,6 @@ fn package_lint_deny() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -342,7 +331,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr_contains(
@@ -359,8 +348,6 @@ fn workspace_lint_deny() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -383,7 +370,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr_contains(
@@ -400,8 +387,6 @@ fn attribute_has_precedence() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -423,7 +408,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .arg("-v") // Show order of rustflags on failure
         .masquerade_as_nightly_cargo(&["lints"])
         .run();
@@ -435,8 +420,6 @@ fn rustflags_has_precedence() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -456,7 +439,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .arg("-v") // Show order of rustflags on failure
         .env("RUSTFLAGS", "-Aunsafe_code")
         .masquerade_as_nightly_cargo(&["lints"])
@@ -469,7 +452,7 @@ fn profile_rustflags_has_precedence() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints", "profile-rustflags"]
+                cargo-features = ["profile-rustflags"]
 
                 [package]
                 name = "foo"
@@ -492,7 +475,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .arg("-v") // Show order of rustflags on failure
         .masquerade_as_nightly_cargo(&["lints", "profile-rustflags"])
         .run();
@@ -504,8 +487,6 @@ fn build_rustflags_has_precedence() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -531,7 +512,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .arg("-v") // Show order of rustflags on failure
         .masquerade_as_nightly_cargo(&["lints"])
         .run();
@@ -545,8 +526,6 @@ fn without_priority() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -573,7 +552,7 @@ pub fn foo() -> u32 {
         )
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr_contains(
@@ -592,8 +571,6 @@ fn with_priority() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -620,7 +597,7 @@ pub fn foo() -> u32 {
         )
         .build();
 
-    foo.cargo("check")
+    foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .run();
 }
@@ -631,8 +608,6 @@ fn rustdoc_lint() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -652,7 +627,7 @@ pub fn foo() -> u32 {
         )
         .build();
 
-    foo.cargo("doc")
+    foo.cargo("doc -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr_contains(
