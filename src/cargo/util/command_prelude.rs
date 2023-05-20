@@ -91,10 +91,10 @@ pub trait CommandExt: Sized {
         all: &'static str,
     ) -> Self {
         self.arg_targets_lib_bin_example(lib, bin, bins, example, examples)
-            ._arg(optional_multi_opt("test", "NAME", test))
             ._arg(flag("tests", tests))
-            ._arg(optional_multi_opt("bench", "NAME", bench))
+            ._arg(optional_multi_opt("test", "NAME", test))
             ._arg(flag("benches", benches))
+            ._arg(optional_multi_opt("bench", "NAME", bench))
             ._arg(flag("all-targets", all))
     }
 
@@ -107,10 +107,10 @@ pub trait CommandExt: Sized {
         examples: &'static str,
     ) -> Self {
         self._arg(flag("lib", lib))
-            ._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(flag("bins", bins))
-            ._arg(optional_multi_opt("example", "NAME", example))
+            ._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(flag("examples", examples))
+            ._arg(optional_multi_opt("example", "NAME", example))
     }
 
     fn arg_targets_bins_examples(
