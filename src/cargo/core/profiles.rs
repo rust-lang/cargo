@@ -780,8 +780,12 @@ impl DebugInfo {
     }
 
     /// Reset to the lowest level: no debuginfo.
+    /// If it is explicitly set, keep it explicit.
     pub(crate) fn weaken(self) -> Self {
-        DebugInfo::None
+        match self {
+            DebugInfo::None => DebugInfo::None,
+            _ => DebugInfo::Explicit(TomlDebugInfo::None),
+        }
     }
 }
 
