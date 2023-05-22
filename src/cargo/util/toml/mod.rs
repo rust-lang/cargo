@@ -2326,33 +2326,7 @@ impl TomlManifest {
         .transpose()?;
         let lints = verify_lints(lints)?;
         let default = TomlLints::default();
-        let mut rustflags = lints
-            .as_ref()
-            .unwrap_or(&default)
-            .iter()
-            .flat_map(|(tool, lints)| {
-                lints.iter().map(move |(name, config)| {
-                    let flag = config.level().flag();
-                    let option = if tool == "rust" {
-                        format!("{flag}={name}")
-                    } else {
-                        format!("{flag}={tool}::{name}")
-                    };
-                    (
-                        config.priority(),
-                        // Since the most common group will be `all`, put it last so people are more
-                        // likely to notice that they need to use `priority`.
-                        std::cmp::Reverse(name),
-                        option,
-                    )
-                })
-            })
-            .collect::<Vec<_>>();
-        rustflags.sort();
-        let rustflags = rustflags
-            .into_iter()
-            .map(|(_, _, option)| option)
-            .collect::<Vec<_>>();
+        let rustflags = lints_to_rustflags(lints.as_ref().unwrap_or(&default));
 
         let mut target: BTreeMap<String, TomlPlatform> = BTreeMap::new();
         for (name, platform) in me.target.iter().flatten() {
@@ -3007,6 +2981,31 @@ fn verify_lints(lints: Option<TomlLints>) -> CargoResult<Option<TomlLints>> {
     }
 
     Ok(Some(lints))
+}
+
+fn lints_to_rustflags(lints: &TomlLints) -> Vec<String> {
+    let mut rustflags = lints
+        .iter()
+        .flat_map(|(tool, lints)| {
+            lints.iter().map(move |(name, config)| {
+                let flag = config.level().flag();
+                let option = if tool == "rust" {
+                    format!("{flag}={name}")
+                } else {
+                    format!("{flag}={tool}::{name}")
+                };
+                (
+                    config.priority(),
+                    // Since the most common group will be `all`, put it last so people are more
+                    // likely to notice that they need to use `priority`.
+                    std::cmp::Reverse(name),
+                    option,
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+    rustflags.sort();
+    rustflags.into_iter().map(|(_, _, option)| option).collect()
 }
 
 fn unused_dep_keys(
