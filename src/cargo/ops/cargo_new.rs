@@ -759,69 +759,54 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let mut cargotoml_path_specifier = String::new();
+    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
+    let mut manifest = toml_edit::Document::new();
+    manifest["package"] = toml_edit::Item::Table(toml_edit::Table::new());
+    manifest["package"]["name"] = toml_edit::value(name);
+    manifest["package"]["version"] = toml_edit::value("0.1.0");
+    let edition = match opts.edition {
+        Some(edition) => edition.to_string(),
+        None => Edition::LATEST_STABLE.to_string(),
+    };
+    manifest["package"]["edition"] = toml_edit::value(edition);
+    if let Some(registry) = opts.registry {
+        let mut array = toml_edit::Array::default();
+        array.push(registry);
+        manifest["package"]["publish"] = toml_edit::value(array);
+    }
+    let mut dep_table = toml_edit::Table::default();
+    dep_table.decor_mut().set_prefix("\n# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html\n\n");
+    manifest["dependencies"] = toml_edit::Item::Table(dep_table);
 
     // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
-
     for i in &opts.source_files {
         if i.bin {
             if i.relative_path != "src/main.rs" {
-                cargotoml_path_specifier.push_str(&format!(
-                    r#"
-[[bin]]
-name = "{}"
-path = {}
-"#,
-                    i.target_name,
-                    toml::Value::String(i.relative_path.clone())
-                ));
+                let mut bin = toml_edit::Table::new();
+                bin["name"] = toml_edit::value(i.target_name.clone());
+                bin["path"] = toml_edit::value(i.relative_path.clone());
+                manifest["bin"]
+                    .or_insert(toml_edit::Item::ArrayOfTables(
+                        toml_edit::ArrayOfTables::new(),
+                    ))
+                    .as_array_of_tables_mut()
+                    .expect("bin is an array of tables")
+                    .push(bin);
             }
         } else if i.relative_path != "src/lib.rs" {
-            cargotoml_path_specifier.push_str(&format!(
-                r#"
-[lib]
-name = "{}"
-path = {}
-"#,
-                i.target_name,
-                toml::Value::String(i.relative_path.clone())
-            ));
+            let mut lib = toml_edit::Table::new();
+            lib["name"] = toml_edit::value(i.target_name.clone());
+            lib["path"] = toml_edit::value(i.relative_path.clone());
+            manifest["lib"] = toml_edit::Item::Table(lib);
         }
     }
 
-    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
-
     paths::write(
         &path.join("Cargo.toml"),
-        format!(
-            r#"[package]
-name = "{}"
-version = "0.1.0"
-edition = {}
-{}
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-{}"#,
-            name,
-            match opts.edition {
-                Some(edition) => toml::Value::String(edition.to_string()),
-                None => toml::Value::String(Edition::LATEST_STABLE.to_string()),
-            },
-            match opts.registry {
-                Some(registry) => format!(
-                    "publish = {}\n",
-                    toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
-                ),
-                None => "".to_string(),
-            },
-            cargotoml_path_specifier
-        )
-        .as_bytes(),
+        format!("{}", manifest.to_string()),
     )?;
 
     // Create all specified source files (with respective parent directories) if they don't exist.
-
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());
 
