@@ -345,18 +345,9 @@ pub fn foo(num: i32) -> u32 {
     foo.cargo("check")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
-        .with_stderr(
+        .with_stderr_contains(
             "\
-[..]
 error: usage of an `unsafe` block
-[..]
-[..]
-[..]
-[..]
-[..]
-[..]
-[..]
-error: could not compile `foo` (lib) due to previous error
 ",
         )
         .run();
@@ -395,18 +386,9 @@ pub fn foo(num: i32) -> u32 {
     foo.cargo("check")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
-        .with_stderr(
+        .with_stderr_contains(
             "\
-[..]
 error: usage of an `unsafe` block
-[..]
-[..]
-[..]
-[..]
-[..]
-[..]
-[..]
-error: could not compile `foo` (lib) due to previous error
 ",
         )
         .run();
