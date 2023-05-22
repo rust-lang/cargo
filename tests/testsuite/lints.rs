@@ -70,6 +70,52 @@ switch to nightly channel you can add
 }
 
 #[cargo_test]
+fn dependency_warning_ignored() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar.path = "../bar"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let _bar = project()
+        .at("bar")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [lints.rust]
+                unsafe_code = "forbid"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .with_stderr(
+            "\
+[CHECKING] [..]
+[CHECKING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn malformed_on_stable() {
     let foo = project()
         .file(
