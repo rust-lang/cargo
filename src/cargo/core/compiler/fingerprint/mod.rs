@@ -75,6 +75,7 @@
 //! [`Lto`] flags                              | ✓           | ✓
 //! config settings[^5]                        | ✓           |
 //! is_std                                     |             | ✓
+//! `[lints]` table[^6]                        | ✓           |
 //!
 //! [^1]: Build script and bin dependencies are not included.
 //!
@@ -85,6 +86,8 @@
 //!
 //! [^5]: Config settings that are not otherwise captured anywhere else.
 //!       Currently, this is only `doc.extern-map`.
+//!
+//! [^6]: Via [`Manifest::lint_rustflags`][crate::core::Manifest::lint_rustflags]
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,
@@ -1414,6 +1417,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         unit.mode,
         cx.bcx.extra_args_for(unit),
         cx.lto[unit],
+        unit.pkg.manifest().lint_rustflags(),
     ));
     // Include metadata since it is exposed as environment variables.
     let m = unit.pkg.manifest().metadata();

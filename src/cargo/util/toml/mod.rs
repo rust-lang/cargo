@@ -355,6 +355,7 @@ pub struct TomlManifest {
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<MaybeWorkspaceBtreeMap>,
+    lints: Option<toml::Value>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -1421,6 +1422,29 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
     }
 }
 
+type MaybeWorkspaceLints = MaybeWorkspace<TomlLints, TomlWorkspaceField>;
+
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceLints {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = serde_value::Value::deserialize(deserializer)?;
+
+        if let Ok(w) = TomlWorkspaceField::deserialize(
+            serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
+        ) {
+            return if w.workspace() {
+                Ok(MaybeWorkspace::Workspace(w))
+            } else {
+                Err(de::Error::custom("`workspace` cannot be false"))
+            };
+        }
+        TomlLints::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+            .map(MaybeWorkspace::Defined)
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlWorkspaceField {
     #[serde(deserialize_with = "bool_no_false")]
@@ -1507,6 +1531,7 @@ pub struct TomlWorkspace {
     // Properties that can be inherited by members.
     package: Option<InheritableFields>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
+    lints: Option<toml::Value>,
 
     // Note that this field must come last due to the way toml serialization
     // works which requires tables to be emitted after all values.
@@ -1520,6 +1545,9 @@ pub struct InheritableFields {
     // and we don't want it present when serializing
     #[serde(skip)]
     dependencies: Option<BTreeMap<String, TomlDependency>>,
+    #[serde(skip)]
+    lints: Option<TomlLints>,
+
     version: Option<semver::Version>,
     authors: Option<Vec<String>>,
     description: Option<String>,
@@ -1550,6 +1578,10 @@ impl InheritableFields {
         self.dependencies = deps;
     }
 
+    pub fn update_lints(&mut self, lints: Option<TomlLints>) {
+        self.lints = lints;
+    }
+
     pub fn update_ws_path(&mut self, ws_root: PathBuf) {
         self.ws_root = ws_root;
     }
@@ -1559,6 +1591,12 @@ impl InheritableFields {
             Err(anyhow!("`workspace.dependencies` was not defined")),
             |d| Ok(d),
         )
+    }
+
+    pub fn lints(&self) -> CargoResult<TomlLints> {
+        self.lints
+            .clone()
+            .map_or(Err(anyhow!("`workspace.lints` was not defined")), |d| Ok(d))
     }
 
     pub fn get_dependency(&self, name: &str, package_root: &Path) -> CargoResult<TomlDependency> {
@@ -1878,6 +1916,7 @@ impl TomlManifest {
             workspace: None,
             badges: self.badges.clone(),
             cargo_features: self.cargo_features.clone(),
+            lints: self.lints.clone(),
         });
 
         fn map_deps(
@@ -2006,6 +2045,14 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(package_root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
+                let lints = parse_unstable_lints(
+                    toml_config.lints.clone(),
+                    &features,
+                    config,
+                    &mut warnings,
+                )?;
+                let lints = verify_lints(lints)?;
+                inheritable.update_lints(lints);
                 if let Some(ws_deps) = &inheritable.dependencies {
                     for (name, dep) in ws_deps {
                         unused_dep_keys(
@@ -2268,6 +2315,18 @@ impl TomlManifest {
             &workspace_config,
             &inherit_cell,
         )?;
+
+        let lints = parse_unstable_lints::<MaybeWorkspaceLints>(
+            me.lints.clone(),
+            &features,
+            config,
+            cx.warnings,
+        )?
+        .map(|mw| mw.resolve("lints", || inherit()?.lints()))
+        .transpose()?;
+        let lints = verify_lints(lints)?;
+        let default = TomlLints::default();
+        let rustflags = lints_to_rustflags(lints.as_ref().unwrap_or(&default));
 
         let mut target: BTreeMap<String, TomlPlatform> = BTreeMap::new();
         for (name, platform) in me.target.iter().flatten() {
@@ -2566,6 +2625,8 @@ impl TomlManifest {
                 .badges
                 .as_ref()
                 .map(|_| MaybeWorkspace::Defined(metadata.badges.clone())),
+            lints: lints
+                .map(|lints| toml::Value::try_from(MaybeWorkspaceLints::Defined(lints)).unwrap()),
         };
         let mut manifest = Manifest::new(
             summary,
@@ -2590,6 +2651,7 @@ impl TomlManifest {
             Rc::new(resolved_toml),
             package.metabuild.clone().map(|sov| sov.0),
             resolve_behavior,
+            rustflags,
         );
         if package.license_file.is_some() && package.license.is_some() {
             manifest.warnings_mut().add_warning(
@@ -2695,6 +2757,14 @@ impl TomlManifest {
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
+                let lints = parse_unstable_lints(
+                    toml_config.lints.clone(),
+                    &features,
+                    config,
+                    &mut warnings,
+                )?;
+                let lints = verify_lints(lints)?;
+                inheritable.update_lints(lints);
                 let ws_root_config = WorkspaceRootConfig::new(
                     root,
                     &toml_config.members,
@@ -2837,6 +2907,105 @@ impl TomlManifest {
     pub fn features(&self) -> Option<&BTreeMap<InternedString, Vec<InternedString>>> {
         self.features.as_ref()
     }
+}
+
+fn parse_unstable_lints<T: Deserialize<'static>>(
+    lints: Option<toml::Value>,
+    features: &Features,
+    config: &Config,
+    warnings: &mut Vec<String>,
+) -> CargoResult<Option<T>> {
+    let Some(lints) = lints else { return Ok(None); };
+
+    if !features.is_enabled(Feature::lints()) {
+        warn_for_feature("lints", config, warnings);
+        return Ok(None);
+    }
+
+    lints.try_into().map(Some).map_err(|err| err.into())
+}
+
+fn warn_for_feature(name: &str, config: &Config, warnings: &mut Vec<String>) {
+    use std::fmt::Write as _;
+
+    let mut message = String::new();
+
+    let _ = write!(
+        message,
+        "feature `{name}` is not supported on this version of Cargo and will be ignored"
+    );
+    if config.nightly_features_allowed {
+        let _ = write!(
+            message,
+            "
+
+consider adding `cargo-features = [\"{name}\"]` to the manifest"
+        );
+    } else {
+        let _ = write!(
+            message,
+            "
+
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can add
+`cargo-features = [\"{name}\"]` to enable this feature",
+        );
+    }
+    warnings.push(message);
+}
+
+fn verify_lints(lints: Option<TomlLints>) -> CargoResult<Option<TomlLints>> {
+    let Some(lints) = lints else { return Ok(None); };
+
+    for (tool, lints) in &lints {
+        let supported = ["rust", "clippy", "rustdoc"];
+        if !supported.contains(&tool.as_str()) {
+            let supported = supported.join(", ");
+            anyhow::bail!("unsupported `{tool}` in `[lints]`, must be one of {supported}")
+        }
+        for name in lints.keys() {
+            if let Some((prefix, suffix)) = name.split_once("::") {
+                if tool == prefix {
+                    anyhow::bail!(
+                        "`lints.{tool}.{name}` is not valid lint name; try `lints.{prefix}.{suffix}`"
+                    )
+                } else if tool == "rust" && supported.contains(&prefix) {
+                    anyhow::bail!(
+                        "`lints.{tool}.{name}` is not valid lint name; try `lints.{prefix}.{suffix}`"
+                    )
+                } else {
+                    anyhow::bail!("`lints.{tool}.{name}` is not a valid lint name")
+                }
+            }
+        }
+    }
+
+    Ok(Some(lints))
+}
+
+fn lints_to_rustflags(lints: &TomlLints) -> Vec<String> {
+    let mut rustflags = lints
+        .iter()
+        .flat_map(|(tool, lints)| {
+            lints.iter().map(move |(name, config)| {
+                let flag = config.level().flag();
+                let option = if tool == "rust" {
+                    format!("{flag}={name}")
+                } else {
+                    format!("{flag}={tool}::{name}")
+                };
+                (
+                    config.priority(),
+                    // Since the most common group will be `all`, put it last so people are more
+                    // likely to notice that they need to use `priority`.
+                    std::cmp::Reverse(name),
+                    option,
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+    rustflags.sort();
+    rustflags.into_iter().map(|(_, _, option)| option).collect()
 }
 
 fn unused_dep_keys(
@@ -3394,5 +3563,60 @@ impl TomlTarget {
 impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+pub type TomlLints = BTreeMap<String, TomlToolLints>;
+
+pub type TomlToolLints = BTreeMap<String, TomlLint>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum TomlLint {
+    Level(TomlLintLevel),
+    Config(TomlLintConfig),
+}
+
+impl TomlLint {
+    fn level(&self) -> TomlLintLevel {
+        match self {
+            Self::Level(level) => *level,
+            Self::Config(config) => config.level,
+        }
+    }
+
+    fn priority(&self) -> i8 {
+        match self {
+            Self::Level(_) => 0,
+            Self::Config(config) => config.priority,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct TomlLintConfig {
+    level: TomlLintLevel,
+    #[serde(default)]
+    priority: i8,
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub enum TomlLintLevel {
+    Forbid,
+    Deny,
+    Warn,
+    Allow,
+}
+
+impl TomlLintLevel {
+    fn flag(&self) -> &'static str {
+        match self {
+            Self::Forbid => "--forbid",
+            Self::Deny => "--deny",
+            Self::Warn => "--warn",
+            Self::Allow => "--allow",
+        }
     }
 }

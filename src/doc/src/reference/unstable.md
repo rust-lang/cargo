@@ -93,6 +93,7 @@ Each new feature described below should explain how to use it.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
     * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
+    * [`[lints]`](#lints) --- Configure lint levels for various linter tools.
 * Information and metadata
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -1390,6 +1391,104 @@ Valid operations are the following:
   - `~/.cargo/git/checkouts/*-shallow`
 * When the unstable feature is on, fetching/cloning a git repository is always a shallow fetch. This roughly equals to `git fetch --depth 1` everywhere.
 * Even with the presence of `Cargo.lock` or specifying a commit `{ rev = "…" }`, gitoxide is still smart enough to shallow fetch without unshallowing the existing repository.
+
+### `[lints]`
+
+* Tracking Issue: [#12115](https://github.com/rust-lang/cargo/issues/12115)
+
+A new `lints` table would be added to configure lints:
+```toml
+cargo-features = ["lints"]
+
+[lints.rust]
+unsafe = "forbid"
+```
+and `cargo` would pass these along as flags to `rustc`, `clippy`, or other lint tools.
+
+This would work with
+[RFC 2906 `workspace-deduplicate`](https://rust-lang.github.io/rfcs/2906-cargo-workspace-deduplicate.html):
+```toml
+cargo-features = ["lints"]
+
+[lints]
+workspace = true
+
+[workspace.lints.rust]
+unsafe = "forbid"
+```
+
+#### Documentation Updates
+
+##### The `lints` section
+
+*as a new ["Manifest Format" entry](./manifest.html#the-manifest-format)*
+
+Override the default level of lints from different tools by assigning them to a new level in a
+table, for example:
+```toml
+[lints.rust]
+unsafe = "forbid"
+```
+
+This is short-hand for:
+```toml
+[lints.rust]
+unsafe = { level = "forbid", priority = 0 }
+```
+
+`level` corresponds to the lint levels in `rustc`:
+- `forbid`
+- `deny`
+- `warn`
+- `allow`
+
+`priority` is a signed integer that controls which lints or lint groups override other lint groups:
+- lower (particularly negative) numbers have lower priority, being overridden
+  by higher numbers, and show up first on the command-line to tools like
+  `rustc`
+
+To know which table under `[lints]` a particular lint belongs under, it is the part before `::` in the lint
+name.  If there isn't a `::`, then the tool is `rust`.  For example a warning
+about `unsafe` would be `lints.rust.unsafe` but a lint about
+`clippy::enum_glob_use` would be `lints.clippy.enum_glob_use`.
+
+For example:
+```toml
+[lints.rust]
+unsafe = "forbid"
+
+[lints.clippy]
+enum_glob_use = "deny"
+```
+
+##### The `lints` table
+
+*as a new [`[workspace]` entry](./workspaces.html#the-workspace-section)*
+
+The `workspace.lints` table is where you define lint configuration to be inherited by members of a workspace.
+
+Specifying a workspace lint configuration is similar to package lints.
+
+Example:
+
+```toml
+# [PROJECT_DIR]/Cargo.toml
+[workspace]
+members = ["crates/*"]
+
+[workspace.lints.rust]
+unsafe = "forbid"
+```
+
+```toml
+# [PROJECT_DIR]/crates/bar/Cargo.toml
+[package]
+name = "bar"
+version = "0.1.0"
+
+[lints]
+workspace = true
+```
 
 ## Stabilized and removed features
 
