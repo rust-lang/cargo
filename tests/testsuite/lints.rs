@@ -396,6 +396,7 @@ pub fn foo(num: i32) -> u32 {
         .build();
 
     foo.cargo("check")
+        .arg("-v") // Show order of rustflags on failure
         .masquerade_as_nightly_cargo(&["lints"])
         .run();
 }
@@ -428,7 +429,7 @@ pub fn foo(num: i32) -> u32 {
         .build();
 
     foo.cargo("check")
-        .arg("-v")
+        .arg("-v") // Show order of rustflags on failure
         .env("RUSTFLAGS", "-Aunsafe_code")
         .masquerade_as_nightly_cargo(&["lints"])
         .run();
@@ -464,7 +465,7 @@ pub fn foo(num: i32) -> u32 {
         .build();
 
     foo.cargo("check")
-        .arg("-v")
+        .arg("-v") // Show order of rustflags on failure
         .masquerade_as_nightly_cargo(&["lints", "profile-rustflags"])
         .run();
 }
