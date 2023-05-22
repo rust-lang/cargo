@@ -504,7 +504,7 @@ fn build_rustflags_has_precedence() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["lints", "profile-rustflags"]
+                cargo-features = ["lints"]
 
                 [package]
                 name = "foo"
@@ -533,7 +533,7 @@ pub fn foo(num: i32) -> u32 {
 
     foo.cargo("check")
         .arg("-v") // Show order of rustflags on failure
-        .masquerade_as_nightly_cargo(&["lints", "profile-rustflags"])
+        .masquerade_as_nightly_cargo(&["lints"])
         .run();
 }
 
