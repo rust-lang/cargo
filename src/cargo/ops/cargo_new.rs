@@ -1,5 +1,6 @@
 use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::CargoResult;
+use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
 use anyhow::{anyhow, Context as _};
@@ -801,10 +802,28 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    paths::write(
-        &path.join("Cargo.toml"),
-        format!("{}", manifest.to_string()),
-    )?;
+    let manifest_path = path.join("Cargo.toml");
+    if let Ok(root_manifest_path) = find_root_manifest_for_wd(&manifest_path) {
+        let root_manifest = paths::read(&root_manifest_path)?;
+        // Sometimes the root manifest is not a valid manifest, so we only try to parse it if it is.
+        // This should not block the creation of the new project. It is only a best effort to
+        // inherit the workspace package keys.
+        if let Ok(workspace_document) = root_manifest.parse::<toml_edit::Document>() {
+            if let Some(workspace_package_keys) = workspace_document
+                .get("workspace")
+                .and_then(|workspace| workspace.get("package"))
+                .and_then(|package| package.as_table())
+            {
+                update_manifest_with_inherited_workspace_package_keys(
+                    opts,
+                    &mut manifest,
+                    workspace_package_keys,
+                )
+            }
+        }
+    }
+
+    paths::write(&manifest_path, manifest.to_string())?;
 
     // Create all specified source files (with respective parent directories) if they don't exist.
     for i in &opts.source_files {
@@ -862,4 +881,41 @@ mod tests {
     }
 
     Ok(())
+}
+
+// Update the manifest with the inherited workspace package keys.
+// If the option is not set, the key is removed from the manifest.
+// If the option is set, keep the value from the manifest.
+fn update_manifest_with_inherited_workspace_package_keys(
+    opts: &MkOptions<'_>,
+    manifest: &mut toml_edit::Document,
+    workspace_package_keys: &toml_edit::Table,
+) {
+    if workspace_package_keys.is_empty() {
+        return;
+    }
+
+    let try_remove_and_inherit_package_key = |key: &str, manifest: &mut toml_edit::Document| {
+        let package = manifest["package"]
+            .as_table_mut()
+            .expect("package is a table");
+        package.remove(key);
+        let mut table = toml_edit::Table::new();
+        table.set_dotted(true);
+        table["workspace"] = toml_edit::value(true);
+        package.insert(key, toml_edit::Item::Table(table));
+    };
+
+    // Inherit keys from the workspace.
+    // Only keep the value from the manifest if the option is set.
+    for (key, _) in workspace_package_keys {
+        if key == "edition" && opts.edition.is_some() {
+            continue;
+        }
+        if key == "publish" && opts.registry.is_some() {
+            continue;
+        }
+
+        try_remove_and_inherit_package_key(key, manifest);
+    }
 }
