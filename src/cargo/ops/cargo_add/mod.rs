@@ -51,6 +51,8 @@ pub struct AddOptions<'a> {
     pub section: DepTable,
     /// Act as if dependencies will be added
     pub dry_run: bool,
+    /// Whether the minimum supported Rust version should be considered during resolution
+    pub honor_rust_version: bool,
 }
 
 /// Add dependencies to a manifest
@@ -86,7 +88,9 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                     &manifest,
                     raw,
                     workspace,
+                    &options.spec,
                     &options.section,
+                    options.honor_rust_version,
                     options.config,
                     &mut registry,
                 )
@@ -256,7 +260,9 @@ fn resolve_dependency(
     manifest: &LocalManifest,
     arg: &DepOp,
     ws: &Workspace<'_>,
+    spec: &Package,
     section: &DepTable,
+    honor_rust_version: bool,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<DependencyUI> {
@@ -368,7 +374,14 @@ fn resolve_dependency(
             }
             dependency = dependency.set_source(src);
         } else {
-            let latest = get_latest_dependency(&dependency, false, config, registry)?;
+            let latest = get_latest_dependency(
+                spec,
+                &dependency,
+                false,
+                honor_rust_version,
+                config,
+                registry,
+            )?;
 
             if dependency.name != latest.name {
                 config.shell().warn(format!(
@@ -518,8 +531,10 @@ fn get_existing_dependency(
 }
 
 fn get_latest_dependency(
+    spec: &Package,
     dependency: &Dependency,
     _flag_allow_prerelease: bool,
+    honor_rust_version: bool,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<Dependency> {
@@ -529,7 +544,7 @@ fn get_latest_dependency(
             unreachable!("registry dependencies required, found a workspace dependency");
         }
         MaybeWorkspace::Other(query) => {
-            let possibilities = loop {
+            let mut possibilities = loop {
                 match registry.query_vec(&query, QueryKind::Fuzzy) {
                     std::task::Poll::Ready(res) => {
                         break res?;
@@ -537,19 +552,79 @@ fn get_latest_dependency(
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
             };
-            let latest = possibilities
-                .iter()
-                .max_by_key(|s| {
-                    // Fallback to a pre-release if no official release is available by sorting them as
-                    // less.
-                    let stable = s.version().pre.is_empty();
-                    (stable, s.version())
-                })
-                .ok_or_else(|| {
-                    anyhow::format_err!(
-                        "the crate `{dependency}` could not be found in registry index."
-                    )
-                })?;
+
+            possibilities.sort_by_key(|s| {
+                // Fallback to a pre-release if no official release is available by sorting them as
+                // less.
+                let stable = s.version().pre.is_empty();
+                (stable, s.version().clone())
+            });
+
+            let mut latest = possibilities.last().ok_or_else(|| {
+                anyhow::format_err!(
+                    "the crate `{dependency}` could not be found in registry index."
+                )
+            })?;
+
+            if config.cli_unstable().msrv_policy && honor_rust_version {
+                fn parse_msrv(rust_version: impl AsRef<str>) -> (u64, u64, u64) {
+                    // HACK: `rust-version` is a subset of the `VersionReq` syntax that only ever
+                    // has one comparator with a required minor and optional patch, and uses no
+                    // other features. If in the future this syntax is expanded, this code will need
+                    // to be updated.
+                    let version_req = semver::VersionReq::parse(rust_version.as_ref()).unwrap();
+                    assert!(version_req.comparators.len() == 1);
+                    let comp = &version_req.comparators[0];
+                    assert_eq!(comp.op, semver::Op::Caret);
+                    assert_eq!(comp.pre, semver::Prerelease::EMPTY);
+                    (comp.major, comp.minor.unwrap_or(0), comp.patch.unwrap_or(0))
+                }
+
+                if let Some(req_msrv) = spec.rust_version().map(parse_msrv) {
+                    let msrvs = possibilities
+                        .iter()
+                        .map(|s| (s, s.rust_version().map(parse_msrv)))
+                        .collect::<Vec<_>>();
+
+                    // Find the latest version of the dep which has a compatible rust-version. To
+                    // determine whether or not one rust-version is compatible with another, we
+                    // compare the lowest possible versions they could represent, and treat
+                    // candidates without a rust-version as compatible by default.
+                    let (latest_msrv, _) = msrvs
+                        .iter()
+                        .filter(|(_, v)| v.map(|msrv| req_msrv >= msrv).unwrap_or(true))
+                        .last()
+                        .ok_or_else(|| {
+                            // Failing that, try to find the highest version with the lowest
+                            // rust-version to report to the user.
+                            let lowest_candidate = msrvs
+                                .iter()
+                                .min_set_by_key(|(_, v)| v)
+                                .iter()
+                                .map(|(s, _)| s)
+                                .max_by_key(|s| s.version());
+                            rust_version_incompat_error(
+                                &dependency.name,
+                                spec.rust_version().unwrap(),
+                                lowest_candidate.copied(),
+                            )
+                        })?;
+
+                    if latest_msrv.version() < latest.version() {
+                        config.shell().warn(format_args!(
+                            "ignoring `{dependency}@{latest_version}` (which has a rust-version of \
+                             {latest_rust_version}) to satisfy this package's rust-version of \
+                             {rust_version} (use `--ignore-rust-version` to override)",
+                            latest_version = latest.version(),
+                            latest_rust_version = latest.rust_version().unwrap(),
+                            rust_version = spec.rust_version().unwrap(),
+                        ))?;
+
+                        latest = latest_msrv;
+                    }
+                }
+            }
+
             let mut dep = Dependency::from(latest);
             if let Some(reg_name) = dependency.registry.as_deref() {
                 dep = dep.set_registry(reg_name);
@@ -557,6 +632,31 @@ fn get_latest_dependency(
             Ok(dep)
         }
     }
+}
+
+fn rust_version_incompat_error(
+    dep: &str,
+    rust_version: &str,
+    lowest_rust_version: Option<&Summary>,
+) -> anyhow::Error {
+    let mut error_msg = format!(
+        "could not find version of crate `{dep}` that satisfies this package's rust-version of \
+         {rust_version}\n\
+         help: use `--ignore-rust-version` to override this behavior"
+    );
+
+    if let Some(lowest) = lowest_rust_version {
+        // rust-version must be present for this candidate since it would have been selected as
+        // compatible previously if it weren't.
+        let version = lowest.version();
+        let rust_version = lowest.rust_version().unwrap();
+        error_msg.push_str(&format!(
+            "\nnote: the lowest rust-version available for `{dep}` is {rust_version}, used in \
+             version {version}"
+        ));
+    }
+
+    anyhow::format_err!(error_msg)
 }
 
 fn select_package(
