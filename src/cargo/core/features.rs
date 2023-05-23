@@ -483,9 +483,6 @@ features! {
 
     // Allow specifying rustflags directly in a profile
     (stable, workspace_inheritance, "1.64", "reference/unstable.html#workspace-inheritance"),
-
-    // Allow specifying rustflags directly in a profile
-    (unstable, lints, "", "reference/unstable.html#lints"),
 }
 
 pub struct Feature {
@@ -734,6 +731,7 @@ unstable_cli_options!(
     skip_rustdoc_fingerprint: bool = (HIDDEN),
     rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
+    lints: bool = ("Pass `[lints]` to the linting tools"),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -1097,6 +1095,7 @@ impl CliUnstable {
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
             "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
+            "lints" => self.lints = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
