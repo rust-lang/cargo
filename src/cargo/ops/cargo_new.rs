@@ -1,5 +1,6 @@
 use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::CargoResult;
+use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
 use anyhow::{anyhow, Context as _};
@@ -759,69 +760,72 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let mut cargotoml_path_specifier = String::new();
+    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
+    let mut manifest = toml_edit::Document::new();
+    manifest["package"] = toml_edit::Item::Table(toml_edit::Table::new());
+    manifest["package"]["name"] = toml_edit::value(name);
+    manifest["package"]["version"] = toml_edit::value("0.1.0");
+    let edition = match opts.edition {
+        Some(edition) => edition.to_string(),
+        None => Edition::LATEST_STABLE.to_string(),
+    };
+    manifest["package"]["edition"] = toml_edit::value(edition);
+    if let Some(registry) = opts.registry {
+        let mut array = toml_edit::Array::default();
+        array.push(registry);
+        manifest["package"]["publish"] = toml_edit::value(array);
+    }
+    let mut dep_table = toml_edit::Table::default();
+    dep_table.decor_mut().set_prefix("\n# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html\n\n");
+    manifest["dependencies"] = toml_edit::Item::Table(dep_table);
 
     // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
-
     for i in &opts.source_files {
         if i.bin {
             if i.relative_path != "src/main.rs" {
-                cargotoml_path_specifier.push_str(&format!(
-                    r#"
-[[bin]]
-name = "{}"
-path = {}
-"#,
-                    i.target_name,
-                    toml::Value::String(i.relative_path.clone())
-                ));
+                let mut bin = toml_edit::Table::new();
+                bin["name"] = toml_edit::value(i.target_name.clone());
+                bin["path"] = toml_edit::value(i.relative_path.clone());
+                manifest["bin"]
+                    .or_insert(toml_edit::Item::ArrayOfTables(
+                        toml_edit::ArrayOfTables::new(),
+                    ))
+                    .as_array_of_tables_mut()
+                    .expect("bin is an array of tables")
+                    .push(bin);
             }
         } else if i.relative_path != "src/lib.rs" {
-            cargotoml_path_specifier.push_str(&format!(
-                r#"
-[lib]
-name = "{}"
-path = {}
-"#,
-                i.target_name,
-                toml::Value::String(i.relative_path.clone())
-            ));
+            let mut lib = toml_edit::Table::new();
+            lib["name"] = toml_edit::value(i.target_name.clone());
+            lib["path"] = toml_edit::value(i.relative_path.clone());
+            manifest["lib"] = toml_edit::Item::Table(lib);
         }
     }
 
-    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
+    let manifest_path = path.join("Cargo.toml");
+    if let Ok(root_manifest_path) = find_root_manifest_for_wd(&manifest_path) {
+        let root_manifest = paths::read(&root_manifest_path)?;
+        // Sometimes the root manifest is not a valid manifest, so we only try to parse it if it is.
+        // This should not block the creation of the new project. It is only a best effort to
+        // inherit the workspace package keys.
+        if let Ok(workspace_document) = root_manifest.parse::<toml_edit::Document>() {
+            if let Some(workspace_package_keys) = workspace_document
+                .get("workspace")
+                .and_then(|workspace| workspace.get("package"))
+                .and_then(|package| package.as_table())
+            {
+                update_manifest_with_inherited_workspace_package_keys(
+                    opts,
+                    &mut manifest,
+                    workspace_package_keys,
+                )
+            }
+        }
+    }
 
-    paths::write(
-        &path.join("Cargo.toml"),
-        format!(
-            r#"[package]
-name = "{}"
-version = "0.1.0"
-edition = {}
-{}
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-{}"#,
-            name,
-            match opts.edition {
-                Some(edition) => toml::Value::String(edition.to_string()),
-                None => toml::Value::String(Edition::LATEST_STABLE.to_string()),
-            },
-            match opts.registry {
-                Some(registry) => format!(
-                    "publish = {}\n",
-                    toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
-                ),
-                None => "".to_string(),
-            },
-            cargotoml_path_specifier
-        )
-        .as_bytes(),
-    )?;
+    paths::write(&manifest_path, manifest.to_string())?;
 
     // Create all specified source files (with respective parent directories) if they don't exist.
-
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());
 
@@ -877,4 +881,41 @@ mod tests {
     }
 
     Ok(())
+}
+
+// Update the manifest with the inherited workspace package keys.
+// If the option is not set, the key is removed from the manifest.
+// If the option is set, keep the value from the manifest.
+fn update_manifest_with_inherited_workspace_package_keys(
+    opts: &MkOptions<'_>,
+    manifest: &mut toml_edit::Document,
+    workspace_package_keys: &toml_edit::Table,
+) {
+    if workspace_package_keys.is_empty() {
+        return;
+    }
+
+    let try_remove_and_inherit_package_key = |key: &str, manifest: &mut toml_edit::Document| {
+        let package = manifest["package"]
+            .as_table_mut()
+            .expect("package is a table");
+        package.remove(key);
+        let mut table = toml_edit::Table::new();
+        table.set_dotted(true);
+        table["workspace"] = toml_edit::value(true);
+        package.insert(key, toml_edit::Item::Table(table));
+    };
+
+    // Inherit keys from the workspace.
+    // Only keep the value from the manifest if the option is set.
+    for (key, _) in workspace_package_keys {
+        if key == "edition" && opts.edition.is_some() {
+            continue;
+        }
+        if key == "publish" && opts.registry.is_some() {
+            continue;
+        }
+
+        try_remove_and_inherit_package_key(key, manifest);
+    }
 }
