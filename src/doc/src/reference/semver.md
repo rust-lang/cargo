@@ -59,6 +59,8 @@ considered incompatible.
     * Items
         * [Major: renaming/moving/removing any public items](#item-remove)
         * [Minor: adding new public items](#item-new)
+    * Types
+        * [Major: Changing the alignment, layout, or size of a well-defined type](#type-layout)
     * Structs
         * [Major: adding a private struct field when all current fields are public](#struct-add-private-field-when-public)
         * [Major: adding a public field when no private field exists](#struct-add-public-field-when-no-private)
@@ -203,6 +205,110 @@ fn main() {
 This is not considered a major change because conventionally glob imports are
 a known forwards-compatibility hazard. Glob imports of items from external
 crates should be avoided.
+
+### Major: Changing the alignment, layout, or size of a well-defined type {#type-layout}
+
+It is a breaking change to change the alignment, layout, or size of a type that was previously well-defined.
+
+In general, nominal types that use the [the default representation] do not have a well-defined alignment, layout, or size.
+The compiler is free to alter the alignment or layout, so code should not make any assumptions about it.
+
+> **Note**: It may be possible for external crates to break if they make assumptions about the alignment, layout, or size of a type even if it is not well-defined.
+> This is not considered a SemVer breaking change since those assumptions should not be made.
+
+Some examples of changes that are not a breaking change are (assuming no other rules in this guide are violated):
+
+* Adding, removing, or changing fields of a default representation struct, union, or enum.
+* Adding variants to a default representation enum.
+  This may change the alignment or size of the enumeration, but those are not well-defined.
+* Adding, removing, or changing private fields of a `repr(C)` struct, union, or enum.
+  Note that this may be a breaking change since it may change the size and alignment of the type.
+  Care should be taken in this case.
+  Public fields may be added if there are private fields, or it is `non_exhaustive`, and the addition does not alter the layout of the other fields.
+* Adding variants to a `repr(C)` enum.
+  Note that this may be a breaking change since it may change the size and alignment of the type.
+  Care should be taken in this case.
+* Adding `repr(C)` to a default representation struct, union, or enum.
+* Adding `repr(<int>)` [primitive representation] to an enum.
+* Adding `repr(transparent)` to a default representation struct or enum.
+
+Nominal types that use the [`repr` attribute] can be said to have an alignment and layout that is defined in some way that code may make some assumptions about that may break as a result of changing that type.
+
+Some examples of changes that are a breaking change are:
+
+* Adding `repr(packed)` to a struct or union.
+
+  Making a type `repr(packed)` makes changes that can break code, such as being invalid to take a reference to a field, or causing truncation of disjoint closure captures.
+
+  <!-- TODO: If all fields are private, should this be safe to do? -->
+
+* Adding `repr(align)` to a struct, union, or enum.
+
+  Making a type `repr(align)` would break any use of that type in a `repr(packed)` type because that combination is not allowed.
+
+  <!-- TODO: This seems like it should be extraordinarily rare. Should there be any exceptions carved out for this? -->
+
+* Removing `repr(packed)` from a struct or union.
+
+  This may change the alignment or layout that extern crates are relying on.
+
+  If any fields are public, then removing `repr(packed)` may change the way disjoint closure captures work.
+  In some cases, this can cause code to break, similar to those outlined in the [edition guide][edition-closures].
+
+* Changing the value N of `repr(packed(N))` if that changes the alignment or layout.
+
+  This may change the alignment or layout that external crates are relying on.
+
+  If the value N is lowered below the alignment of a public field, then that would break any code that attempts to take a reference of that field.
+
+* Changing the value N of `repr(align(N))` if that changes the alignment.
+
+  This may change the alignment that external crates are relying on.
+
+  This change should be safe to make if the type is not well-defined as discussed below (such as having any private fields and having an undocumented alignment or layout).
+
+* Removing `repr(align)` from a struct, union, or enum.
+
+  This may change the alignment or layout that external crates are relying on.
+
+  This change should be safe to make if the type is not well-defined as discussed below (such as having any private fields and having an undocumented alignment).
+
+* Changing the order of public fields of a `repr(C)` type.
+
+  External crates may be relying on the specific ordering of the fields.
+
+* Removing `repr(C)` from a struct, union, or enum.
+
+  External crates may be relying on the specific layout of the type.
+
+* Removing `repr(<int>)` from an enum.
+
+  External crates may be assuming that the discriminant is a specific size.
+
+  For example, [`std::mem::transmute`] of an enum may fail.
+
+* Changing the primitive representation of a `repr(<int>)` enum.
+
+  External crates may be assuming that the discriminant is a specific size.
+
+  For example, [`std::mem::transmute`] of an enum may fail.
+
+* Removing `repr(transparent)` from a struct or enum.
+
+  External crates may be relying on the type having the alignment, layout, or size of the transparent field.
+
+In some cases, types with a `repr` attribute may not have an alignment, layout, or size that is well-defined.
+In these cases, it may be safe to make changes to the types, though care should be exercised.
+For example, types with private fields that do not otherwise document their alignment, layout, or size guarantees cannot be relied upon by external crates since the public API does not fully define the alignment, layout, or size of the type.
+
+A common example where a type with *private* fields is well-defined is a type with a single private field with a generic type, using `repr(transparent)`, and which is documented as being transparent to the generic type.
+
+
+[the default representation]: ../../reference/type-layout.html#the-default-representation
+[primitive representation]: ../../reference/type-layout.html#primitive-representations
+[`repr` attribute]: ../../reference/type-layout.html#representations
+[edition-closures]: ../../edition-guide/rust-2021/disjoint-capture-in-closures.html
+[`std::mem::transmute`]: ../../std/mem/fn.transmute.html
 
 ### Major: adding a private struct field when all current fields are public {#struct-add-private-field-when-public}
 
