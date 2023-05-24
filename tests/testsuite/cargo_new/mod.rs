@@ -1,3 +1,4 @@
+mod inherit_workspace_lints;
 mod inherit_workspace_package_table;
 mod inherit_workspace_package_table_with_edition;
 mod inherit_workspace_package_table_with_registry;
