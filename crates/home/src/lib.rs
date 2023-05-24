@@ -18,8 +18,6 @@
 //!
 //! [discussion]: https://github.com/rust-lang/rust/pull/46799#issuecomment-361156935
 
-#![deny(rust_2018_idioms)]
-
 pub mod env;
 
 #[cfg(target_os = "windows")]

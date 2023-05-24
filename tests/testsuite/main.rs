@@ -1,7 +1,3 @@
-// See src/cargo/lib.rs for notes on these lint settings.
-#![warn(rust_2018_idioms)]
-#![allow(clippy::all)]
-
 #[macro_use]
 extern crate cargo_test_macro;
 

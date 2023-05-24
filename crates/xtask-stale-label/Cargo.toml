@@ -7,3 +7,6 @@ publish = false
 
 [dependencies]
 toml_edit.workspace = true
+
+[lints]
+workspace = true

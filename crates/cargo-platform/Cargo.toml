@@ -11,3 +11,6 @@ description = "Cargo's representation of a target platform."
 
 [dependencies]
 serde.workspace = true
+
+[lints]
+workspace = true

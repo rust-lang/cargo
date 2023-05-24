@@ -28,3 +28,6 @@ core-foundation.workspace = true
 [target.'cfg(windows)'.dependencies]
 miow.workspace = true
 windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Console"] }
+
+[lints]
+workspace = true

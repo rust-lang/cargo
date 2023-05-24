@@ -1,5 +1,3 @@
-#![allow(clippy::all)]
-
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;

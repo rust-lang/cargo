@@ -1,7 +1,3 @@
-#![warn(rust_2018_idioms)] // while we're getting used to 2018
-#![allow(clippy::all)]
-#![warn(clippy::disallowed_methods)]
-
 use cargo::util::network::http::http_handle;
 use cargo::util::network::http::needs_custom_http_transport;
 use cargo::util::toml::schema::StringOrVec;

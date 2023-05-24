@@ -10,3 +10,6 @@ cargo.workspace = true
 cargo-util.workspace = true
 proptest.workspace = true
 varisat.workspace = true
+
+[lints]
+workspace = true

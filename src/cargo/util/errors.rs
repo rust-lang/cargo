@@ -1,5 +1,3 @@
-#![allow(unknown_lints)]
-
 use anyhow::Error;
 use curl::easy::Easy;
 use std::fmt::{self, Write};
