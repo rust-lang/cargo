@@ -5,11 +5,9 @@ use cargo_test_support::git;
 use cargo_test_support::project;
 use cargo_test_support::CargoCommand;
 
-use crate::cargo_remove::init_registry;
-
 #[cargo_test]
 fn case() {
-    init_registry();
+    cargo_test_support::registry::init();
 
     let git_project1 = git::new("bar1", |project| {
         project
