@@ -1,16 +1,3 @@
-// For various reasons, some idioms are still allow'ed, but we would like to
-// test and enforce them.
-#![warn(rust_2018_idioms)]
-// Due to some of the default clippy lints being somewhat subjective and not
-// necessarily an improvement, we prefer to not use them at this time.
-#![allow(clippy::all)]
-#![warn(clippy::disallowed_methods)]
-#![warn(clippy::self_named_module_files)]
-#![warn(clippy::print_stdout)]
-#![warn(clippy::print_stderr)]
-#![warn(clippy::dbg_macro)]
-#![allow(rustdoc::private_intra_doc_links)]
-
 //! # Cargo as a library
 //!
 //! There are two places you can find API documentation of cargo-the-library,
@@ -143,6 +130,20 @@
 //! [`A-documenting-cargo-itself`]: https://github.com/rust-lang/cargo/labels/A-documenting-cargo-itself
 //! [The Cargo Book]: https://doc.rust-lang.org/cargo/
 //! [Cargo Contributor Guide]: https://doc.crates.io/contrib/
+
+// TODO: consider removing these lint attributes when `-Zlints` hits stable.
+// For various reasons, some idioms are still allow'ed, but we would like to
+// test and enforce them.
+#![warn(rust_2018_idioms)]
+// Due to some of the default clippy lints being somewhat subjective and not
+// necessarily an improvement, we prefer to not use them at this time.
+#![allow(clippy::all)]
+#![warn(clippy::disallowed_methods)]
+#![warn(clippy::self_named_module_files)]
+#![warn(clippy::print_stdout)]
+#![warn(clippy::print_stderr)]
+#![warn(clippy::dbg_macro)]
+#![allow(rustdoc::private_intra_doc_links)]
 
 use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
