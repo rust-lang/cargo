@@ -696,7 +696,7 @@ unstable_cli_options!(
     print_im_a_teapot: bool = (HIDDEN),
 
     // All other unstable features.
-    // Please keep this list lexiographically ordered.
+    // Please keep this list lexicographically ordered.
     advanced_env: bool = (HIDDEN),
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
@@ -704,34 +704,34 @@ unstable_cli_options!(
     #[serde(deserialize_with = "deserialize_build_std")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
+    #[serde(deserialize_with = "deserialize_check_cfg")]
+    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
-    #[serde(deserialize_with = "deserialize_check_cfg")]
-    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
+    direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     features: Option<Vec<String>>  = (HIDDEN),
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
+    host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     jobserver_per_rustc: bool = (HIDDEN),
+    lints: bool = ("Pass `[lints]` to the linting tools"),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
-    direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
+    msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
-    host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
-    registry_auth: bool = ("Authentication for alternative registries, and generate registry authentication tokens using asymmetric cryptography"),
-    target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
-    rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
-    separate_nightlies: bool = (HIDDEN),
     publish_timeout: bool = ("Enable the `publish.timeout` key in .cargo/config.toml file"),
-    unstable_options: bool = ("Allow the usage of unstable options"),
-    skip_rustdoc_fingerprint: bool = (HIDDEN),
+    registry_auth: bool = ("Authentication for alternative registries, and generate registry authentication tokens using asymmetric cryptography"),
+    rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
-    msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
-    lints: bool = ("Pass `[lints]` to the linting tools"),
+    separate_nightlies: bool = (HIDDEN),
+    skip_rustdoc_fingerprint: bool = (HIDDEN),
+    target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
+    unstable_options: bool = ("Allow the usage of unstable options"),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
