@@ -16,6 +16,20 @@ env:
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
 jobs:
+  # Determine which channel will be merged into.
+  channel:
+    runs-on: ubuntu-latest
+    outputs:
+      CHANNEL: ${{ steps.channel.outputs.CHANNEL }}
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # fetch all branches
+    - id: channel
+      run: ci/which-channel.sh
+
   # Check Code style quickly by running `rustfmt` over all code
   rustfmt:
     runs-on: ubuntu-latest
@@ -63,8 +77,42 @@ jobs:
       - run: rustup update stable && rustup default stable
       - run: ci/validate-version-bump.sh
 
+  # Generate strategy matrix for different platforms and channels
+  # (see ci/matrix.json)
+  matrix:
+    runs-on: ubuntu-latest
+    needs:
+    - channel
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Generate strategy matrix
+      id: matrix
+      run: |
+        CHANNEL=${{ needs.channel.outputs.CHANNEL }}
+
+        # This reads ci/matrix.json and then filters the environment we want to
+        # build on, based on the channel this PR want to merge into.
+        #
+        # * For stable, we build only on stable toolchain.
+        # * For beta, we build on stable and beta.
+        # * For nightly, we build on stable, beta, and nightly.
+        MATRIX=$(
+          jq --arg C "$CHANNEL" 'map (. | 
+            if ($C == "beta") then select(.rust | startswith("nightly") | not)
+            elif ($C == "stable") then select(.rust | startswith("stable"))
+            else . end)' ci/matrix.json
+        )
+        echo "$MATRIX"
+
+        # Outputs as Job's outputs for other jobs to reuse.
+        echo "MATRIX={\"include\":$(echo $MATRIX)}" >> "$GITHUB_OUTPUT"
+
   test:
     runs-on: ${{ matrix.os }}
+    needs:
+    - matrix
     env:
       CARGO_PROFILE_DEV_DEBUG: 1
       CARGO_PROFILE_TEST_DEBUG: 1
@@ -73,36 +121,7 @@ jobs:
       # Deny warnings on CI to avoid warnings getting into the codebase.
       RUSTFLAGS: -D warnings
     strategy:
-      matrix:
-        include:
-        - name: Linux x86_64 stable
-          os: ubuntu-latest
-          rust: stable
-          other: i686-unknown-linux-gnu
-        - name: Linux x86_64 beta
-          os: ubuntu-latest
-          rust: beta
-          other: i686-unknown-linux-gnu
-        - name: Linux x86_64 nightly
-          os: ubuntu-latest
-          rust: nightly
-          other: i686-unknown-linux-gnu
-        - name: macOS x86_64 stable
-          os: macos-latest
-          rust: stable
-          other: x86_64-apple-ios
-        - name: macOS x86_64 nightly
-          os: macos-latest
-          rust: nightly
-          other: x86_64-apple-ios
-        - name: Windows x86_64 MSVC stable
-          os: windows-latest
-          rust: stable-msvc
-          other: i686-pc-windows-msvc
-        - name: Windows x86_64 gnu nightly # runs out of space while trying to link the test suite
-          os: windows-latest
-          rust: nightly-gnu
-          other: i686-pc-windows-gnu
+      matrix: ${{ fromJSON(needs.matrix.outputs.MATRIX) }}
     name: Tests ${{ matrix.name }}
     steps:
     - uses: actions/checkout@v3
@@ -184,6 +203,9 @@ jobs:
 
   build_std:
     runs-on: ubuntu-latest
+    needs:
+    - channel
+    if: needs.channel.outputs.CHANNEL == 'master'
     steps:
     - uses: actions/checkout@v3
     - run: rustup update nightly && rustup default nightly
@@ -194,6 +216,8 @@ jobs:
         CARGO_RUN_BUILD_STD_TESTS: 1
   docs:
     runs-on: ubuntu-latest
+    needs:
+    - channel
     steps:
     - uses: actions/checkout@v3
     - run: rustup update nightly && rustup default nightly
@@ -215,22 +239,36 @@ jobs:
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
     - name: Run linkchecker.sh
       run: |
+        BRANCH=${{ needs.channel.outputs.CHANNEL }}
         cd target
-        curl -sSLO https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
+        curl -sSLO "https://raw.githubusercontent.com/rust-lang/rust/$BRANCH/src/tools/linkchecker/linkcheck.sh"
         sh linkcheck.sh --all --path ../src/doc cargo
+
+  # Jobs that may be skipped if they aren't going to merge into master (nightly).
+  #
+  # This is needed because GitHub Actions treats success() as false if a job is
+  # skipped, and the bors success/failure jobs below need to ignore skipped jobs.
+  z-nightly-jobs:
+    needs:
+    - channel
+    - build_std
+    if: "(needs.channel.outputs.CHANNEL != 'master' && !failure()) || success()"
+    runs-on: ubuntu-latest
+    steps:
+    - run: exit 0
 
   success:
     permissions:
       contents: none
     name: bors build finished
     needs:
-    - build_std
     - docs
     - lockfile
     - resolver
     - rustfmt
     - test
     - test_gitoxide
+    - z-nightly-jobs
     runs-on: ubuntu-latest
     if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
     steps:
@@ -240,13 +278,13 @@ jobs:
       contents: none
     name: bors build finished
     needs:
-    - build_std
     - docs
     - lockfile
     - resolver
     - rustfmt
     - test
     - test_gitoxide
+    - z-nightly-jobs
     runs-on: ubuntu-latest
     if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
     steps:
