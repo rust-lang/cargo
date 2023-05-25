@@ -274,6 +274,7 @@ on the platform:
 * Windows: `PATH`
 * macOS: `DYLD_FALLBACK_LIBRARY_PATH`
 * Unix: `LD_LIBRARY_PATH`
+* AIX: `LIBPATH`
 
 The value is extended from the existing value when Cargo starts. macOS has
 special consideration where if `DYLD_FALLBACK_LIBRARY_PATH` is not already
