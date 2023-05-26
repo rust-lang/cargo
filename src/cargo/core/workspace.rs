@@ -995,18 +995,21 @@ impl<'cfg> Workspace<'cfg> {
             }
             if let MaybePackage::Virtual(vm) = self.root_maybe() {
                 if vm.resolve_behavior().is_none() {
-                    if self
+                    if let Some(edition) = self
                         .members()
                         .filter(|p| p.manifest_path() != root_manifest)
-                        .any(|p| p.manifest().edition() >= Edition::Edition2021)
+                        .map(|p| p.manifest().edition())
+                        .filter(|&e| e >= Edition::Edition2021)
+                        .max()
                     {
+                        let resolver = edition.default_resolve_behavior().to_manifest();
                         self.config.shell().warn(
-                            "\
-                        some crates are on edition 2021 which defaults to `resolver = \"2\"`,\n\
+                            format_args!("\
+                        some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`,\n\
                      \x20   but a virtual workspace defaults to `resolver = \"1\"`\n\
                      \x20   specify the desired resolver version explicitly at the workspace root\
                             ",
-                        )?;
+                        ))?;
                     }
                 }
             }
