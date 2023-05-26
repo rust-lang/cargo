@@ -14,7 +14,8 @@ default = [
   "b",
   "c",
 ]
-a = ["your-face/nose",  # but not the mouth and nose
+a = [
+  "your-face/nose",  # but not the mouth and nose
 ]
 b = []
 c = []

@@ -516,7 +516,9 @@ fn fix_feature_activations(
             } = parsed_value
             {
                 if dep_name == dep_key && weak {
-                    *value = format!("{dep_name}/{dep_feature}").into();
+                    let mut new_value = toml_edit::Value::from(format!("{dep_name}/{dep_feature}"));
+                    *new_value.decor_mut() = value.decor().clone();
+                    *value = new_value;
                 }
             }
         }
