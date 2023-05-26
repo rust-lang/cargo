@@ -1003,17 +1003,11 @@ impl<'cfg> Workspace<'cfg> {
                         .max()
                     {
                         let resolver = edition.default_resolve_behavior().to_manifest();
-                        self.config.shell().warn(
-                            format_args!("\
-                        some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`,\n\
-                     \x20   but virtual workspaces default to `resolver = \"1\"`\n\
-                     \x20   specify the desired resolver version explicitly in the workspace root's manifest\
-                            ",
-                        ))?;
+                        self.config.shell().warn(format_args!("some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`, but virtual workspaces default to `resolver = \"1\"`"))?;
                         self.config.shell().note(
-                            "to keep the current resolver, specify `workspace.resolver = \"1\"`",
+                            "to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest",
                         )?;
-                        self.config.shell().note(format_args!("to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"`"))?;
+                        self.config.shell().note(format_args!("to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"` in the workspace root's manifest"))?;
                     }
                 }
             }
