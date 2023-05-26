@@ -31,52 +31,61 @@ where
     s.collect_str(t)
 }
 
+/// A short abbreviated OID.
+///
+/// Exists for avoiding extra allocations in [`GitDatabase::to_short_id`].
 pub struct GitShortID(git2::Buf);
 
 impl GitShortID {
+    /// Views the short ID as a `str`.
     pub fn as_str(&self) -> &str {
         self.0.as_str().unwrap()
     }
 }
 
-/// `GitRemote` represents a remote repository. It gets cloned into a local
-/// `GitDatabase`.
+/// A remote repository. It gets cloned into a local [`GitDatabase`].
 #[derive(PartialEq, Clone, Debug, Serialize)]
 pub struct GitRemote {
+    /// URL to a remote repository.
     #[serde(serialize_with = "serialize_str")]
     url: Url,
 }
 
-/// `GitDatabase` is a local clone of a remote repository's database. Multiple
-/// `GitCheckouts` can be cloned from this `GitDatabase`.
+/// A local clone of a remote repository's database. Multiple [`GitCheckout`]s
+/// can be cloned from a single [`GitDatabase`].
 #[derive(Serialize)]
 pub struct GitDatabase {
+    /// The remote repository where this database is fetched from.
     remote: GitRemote,
+    /// Path to the root of the underlying Git repository on the local filesystem.
     path: PathBuf,
+    /// Underlying Git repository instance for this database.
     #[serde(skip_serializing)]
     repo: git2::Repository,
 }
 
-/// `GitCheckout` is a local checkout of a particular revision. Calling
-/// `clone_into` with a reference will resolve the reference into a revision,
-/// and return an `anyhow::Error` if no revision for that reference was found.
+/// A local checkout of a particular revision from a [`GitDatabase`].
 #[derive(Serialize)]
 pub struct GitCheckout<'a> {
+    /// The git database where this checkout is cloned from.
     database: &'a GitDatabase,
+    /// Path to the root of the underlying Git repository on the local filesystem.
     location: PathBuf,
+    /// The git revision this checkout is for.
     #[serde(serialize_with = "serialize_str")]
     revision: git2::Oid,
+    /// Underlying Git repository instance for this checkout.
     #[serde(skip_serializing)]
     repo: git2::Repository,
 }
 
-// Implementations
-
 impl GitRemote {
+    /// Creates an instance for a remote repository URL.
     pub fn new(url: &Url) -> GitRemote {
         GitRemote { url: url.clone() }
     }
 
+    /// Gets the remote repository URL.
     pub fn url(&self) -> &Url {
         &self.url
     }
@@ -85,6 +94,18 @@ impl GitRemote {
         reference.resolve(&self.db_at(path)?.repo)
     }
 
+    /// Fetches and checkouts to a reference or a revision from this remote
+    /// into a local path.
+    ///
+    /// This ensures that it gets the up-to-date commit when a named reference
+    /// is given (tag, branch, refs/*). Thus, network connection is involved.
+    ///
+    /// When `locked_rev` is provided, it takes precedence over `reference`.
+    ///
+    /// If we have a previous instance of [`GitDatabase`] then fetch into that
+    /// if we can. If that can successfully load our revision then we've
+    /// populated the database with the latest version of `reference`, so
+    /// return that database and the rev we resolve to.
     pub fn checkout(
         &self,
         into: &Path,
@@ -93,10 +114,6 @@ impl GitRemote {
         locked_rev: Option<git2::Oid>,
         cargo_config: &Config,
     ) -> CargoResult<(GitDatabase, git2::Oid)> {
-        // If we have a previous instance of `GitDatabase` then fetch into that
-        // if we can. If that can successfully load our revision then we've
-        // populated the database with the latest version of `reference`, so
-        // return that database and the rev we resolve to.
         let locked_ref = locked_rev.map(|oid| GitReference::Rev(oid.to_string()));
         let reference = locked_ref.as_ref().unwrap_or(reference);
         if let Some(mut db) = db {
@@ -149,6 +166,7 @@ impl GitRemote {
         ))
     }
 
+    /// Creates a [`GitDatabase`] of this remote at `db_path`.
     pub fn db_at(&self, db_path: &Path) -> CargoResult<GitDatabase> {
         let repo = git2::Repository::open(db_path)?;
         Ok(GitDatabase {
@@ -160,6 +178,7 @@ impl GitRemote {
 }
 
 impl GitDatabase {
+    /// Checkouts to a revision at `dest`ination from this database.
     pub fn copy_to(
         &self,
         rev: git2::Oid,
@@ -183,21 +202,25 @@ impl GitDatabase {
         Ok(checkout)
     }
 
+    /// Get a short OID for a `revision`, usually 7 chars or more if ambiguous.
     pub fn to_short_id(&self, revision: git2::Oid) -> CargoResult<GitShortID> {
         let obj = self.repo.find_object(revision, None)?;
         Ok(GitShortID(obj.short_id()?))
     }
 
+    /// Checks if the database contains the object of this `oid`..
     pub fn contains(&self, oid: git2::Oid) -> bool {
         self.repo.revparse_single(&oid.to_string()).is_ok()
     }
 
+    /// [`GitReference::resolve`]s this reference with this database.
     pub fn resolve(&self, r: &GitReference) -> CargoResult<git2::Oid> {
         r.resolve(&self.repo)
     }
 }
 
 impl GitReference {
+    /// Resolves self to an object ID with objects the `repo` currently has.
     pub fn resolve(&self, repo: &git2::Repository) -> CargoResult<git2::Oid> {
         let id = match self {
             // Note that we resolve the named tag here in sync with where it's
@@ -243,6 +266,11 @@ impl GitReference {
 }
 
 impl<'a> GitCheckout<'a> {
+    /// Creates an instance of [`GitCheckout`]. This doesn't imply the checkout
+    /// is done. Use [`GitCheckout::is_fresh`] to check.
+    ///
+    /// * The `database` is where this checkout is from.
+    /// * The `repo` will be the checked out Git repoistory at `path`.
     fn new(
         path: &Path,
         database: &'a GitDatabase,
@@ -257,6 +285,8 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
+    /// Clone a repo for a `revision` into a local path from a `datatabase`.
+    /// This is a filesystem-to-filesystem clone.
     fn clone_into(
         into: &Path,
         database: &'a GitDatabase,
@@ -293,10 +323,12 @@ impl<'a> GitCheckout<'a> {
                 .with_checkout(checkout)
                 .fetch_options(fopts)
                 .clone(url.as_str(), into)?;
-            // `git2` doesn't seem to handle shallow repos correctly when doing a local clone.
-            // Fortunately all that's needed is the copy of the one file that defines the
-            // shallow boundary, the commits which have their parents omitted as part of the
-            // shallow clone.
+            // `git2` doesn't seem to handle shallow repos correctly when doing
+            // a local clone. Fortunately all that's needed is the copy of the
+            // one file that defines the shallow boundary, the commits which
+            // have their parents omitted as part of the shallow clone.
+            //
+            // TODO(git2): remove this when git2 supports shallow clone correctly
             if database.repo.is_shallow() {
                 std::fs::copy(
                     database.repo.path().join("shallow"),
@@ -313,6 +345,7 @@ impl<'a> GitCheckout<'a> {
         Ok(checkout)
     }
 
+    /// Checks if the `HEAD` of this checkout points to the expected revision.
     fn is_fresh(&self) -> bool {
         match self.repo.revparse_single("HEAD") {
             Ok(ref head) if head.id() == self.revision => {
@@ -323,6 +356,8 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
+    /// `git reset --hard` to the revision of this checkout, with additional
+    /// interrupt protection by a dummy `.cargo-ok` file.
     fn reset(&self, config: &Config) -> CargoResult<()> {
         // If we're interrupted while performing this reset (e.g., we die because
         // of a signal) Cargo needs to be sure to try to check out this repo
@@ -347,9 +382,16 @@ impl<'a> GitCheckout<'a> {
         Ok(())
     }
 
+    /// Like `git submodule update --recursive` but for this git checkout.
+    ///
+    /// This function respects `submodule.<name>.update = none`[^1] git config.
+    /// Submodules set to `none` won't be fetched.
+    ///
+    /// [^1]: <https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-none>
     fn update_submodules(&self, cargo_config: &Config, parent_remote_url: &Url) -> CargoResult<()> {
         return update_submodules(&self.repo, cargo_config, parent_remote_url);
 
+        /// Recusive helper for [`GitCheckout::update_submodules`].
         fn update_submodules(
             repo: &git2::Repository,
             cargo_config: &Config,
@@ -370,6 +412,7 @@ impl<'a> GitCheckout<'a> {
             Ok(())
         }
 
+        /// Update a single Git submodule, and recurse into its submodules.
         fn update_submodule(
             parent: &git2::Repository,
             child: &mut git2::Submodule<'_>,
@@ -745,6 +788,9 @@ where
     Err(err)
 }
 
+/// `git reset --hard` to the given `obj` for the `repo`.
+///
+/// The `obj` is a commit-ish to which the head should be moved.
 fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> CargoResult<()> {
     let mut pb = Progress::new("Checkout", config);
     let mut opts = git2::build::CheckoutBuilder::new();
@@ -757,6 +803,14 @@ fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> Ca
     Ok(())
 }
 
+/// Prepares the callbacks for fetching a git repository.
+///
+/// The main purpose of this function is to construct everything before a fetch.
+/// This will attempt to setup a progress bar, the authentication for git,
+/// ssh known hosts check, and the network retry mechanism.
+///
+/// The callback is provided a fetch options, which can be used by the actual
+/// git fetch.
 pub fn with_fetch_options(
     git_config: &git2::Config,
     url: &str,
@@ -831,9 +885,17 @@ pub fn with_fetch_options(
     })
 }
 
-/// Note that `history` is a complex computed value to determine whether it's acceptable to perform shallow clones
-/// at all. It's needed to allow the caller to determine the correct position of the destination repository or move it
-/// into place should its position change.
+/// Attempts to fetch the given git `reference` for a Git repository.
+///
+/// This is the main entry for git clone/fetch. It does the followings:
+///
+/// * Turns [`GitReference`] into refspecs accordingly.
+/// * Dispatches `git fetch` using libgit2, gitoxide, or git CLI.
+///
+/// `remote_kind` is a thing for [`-Zgitoxide`] shallow clones at this time.
+/// It could be extended when libgit2 supports shallow clones.
+///
+/// [`-Zgitoxide`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#gitoxide
 pub fn fetch(
     repo: &mut git2::Repository,
     orig_url: &str,
@@ -853,8 +915,6 @@ pub fn fetch(
 
     let shallow = remote_kind.to_shallow_setting(repo.is_shallow(), config);
 
-    // If we're fetching from GitHub, attempt GitHub's special fast path for
-    // testing if we've already got an up-to-date copy of the repository.
     let oid_to_fetch = match github_fast_path(repo, orig_url, reference, config) {
         Ok(FastPathRev::UpToDate) => return Ok(()),
         Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
@@ -865,10 +925,6 @@ pub fn fetch(
         }
     };
 
-    // We reuse repositories quite a lot, so before we go through and update the
-    // repo check to see if it's a little too old and could benefit from a gc.
-    // In theory this shouldn't be too expensive compared to the network
-    // request we're about to issue.
     maybe_gc_repo(repo, config)?;
 
     clean_repo_temp_files(repo);
@@ -921,15 +977,10 @@ pub fn fetch(
         }
     }
 
-    // Unfortunately `libgit2` is notably lacking in the realm of authentication
-    // when compared to the `git` command line. As a result, allow an escape
-    // hatch for users that would prefer to use `git`-the-CLI for fetching
-    // repositories instead of `libgit2`-the-library. This should make more
-    // flavors of authentication possible while also still giving us all the
-    // speed and portability of using `libgit2`.
     if let Some(true) = config.net_config()?.git_fetch_with_cli {
         return fetch_with_cli(repo, orig_url, &refspecs, tags, config);
     }
+
     if config
         .cli_unstable()
         .gitoxide
@@ -1093,6 +1144,17 @@ fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
     )
 }
 
+/// Attempts to use `git` CLI installed on the system to fetch a repository,
+/// when the config value [`net.git-fetch-with-cli`][1] is set.
+///
+/// Unfortunately `libgit2` is notably lacking in the realm of authentication
+/// when compared to the `git` command line. As a result, allow an escape
+/// hatch for users that would prefer to use `git`-the-CLI for fetching
+/// repositories instead of `libgit2`-the-library. This should make more
+/// flavors of authentication possible while also still giving us all the
+/// speed and portability of using `libgit2`.
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/config.html#netgit-fetch-with-cli
 fn fetch_with_cli(
     repo: &mut git2::Repository,
     url: &str,
@@ -1137,6 +1199,8 @@ fn fetch_with_cli(
     Ok(())
 }
 
+/// Attempts to `git gc` a repository.
+///
 /// Cargo has a bunch of long-lived git repositories in its global cache and
 /// some, like the index, are updated very frequently. Right now each update
 /// creates a new "pack file" inside the git database, and over time this can
@@ -1144,12 +1208,17 @@ fn fetch_with_cli(
 ///
 /// One pathological use case today is where libgit2 opens hundreds of file
 /// descriptors, getting us dangerously close to blowing out the OS limits of
-/// how many fds we can have open. This is detailed in #4403.
+/// how many fds we can have open. This is detailed in [#4403].
 ///
 /// To try to combat this problem we attempt a `git gc` here. Note, though, that
 /// we may not even have `git` installed on the system! As a result we
 /// opportunistically try a `git gc` when the pack directory looks too big, and
 /// failing that we just blow away the repository and start over.
+///
+/// In theory this shouldn't be too expensive compared to the network request
+/// we're about to issue.
+///
+/// [#4403]: https://github.com/rust-lang/cargo/issues/4403
 fn maybe_gc_repo(repo: &mut git2::Repository, config: &Config) -> CargoResult<()> {
     // Here we arbitrarily declare that if you have more than 100 files in your
     // `pack` folder that we need to do a gc.
@@ -1236,6 +1305,8 @@ fn clean_repo_temp_files(repo: &git2::Repository) {
     }
 }
 
+/// Reinitializes a given Git repository. This is useful when a Git repoistory
+/// seems corrupted and we want to start over.
 fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
     // Here we want to drop the current repository object pointed to by `repo`,
     // so we initialize temporary repository in a sub-folder, blow away the
@@ -1259,6 +1330,7 @@ fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
     Ok(())
 }
 
+/// Initializes a Git repository at `path`.
 fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
     let mut opts = git2::RepositoryInitOptions::new();
     // Skip anything related to templates, they just call all sorts of issues as
@@ -1269,6 +1341,7 @@ fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
     Ok(git2::Repository::init_opts(&path, &opts)?)
 }
 
+/// The result of GitHub fast path check. See [`github_fast_path`] for more.
 enum FastPathRev {
     /// The local rev (determined by `reference.resolve(repo)`) is already up to
     /// date with what this rev resolves to on GitHub's server.
@@ -1281,20 +1354,19 @@ enum FastPathRev {
     Indeterminate,
 }
 
+/// Attempts GitHub's special fast path for testing if we've already got an
+/// up-to-date copy of the repository.
+///
 /// Updating the index is done pretty regularly so we want it to be as fast as
 /// possible. For registries hosted on GitHub (like the crates.io index) there's
-/// a fast path available to use [1] to tell us that there's no updates to be
+/// a fast path available to use[^1] to tell us that there's no updates to be
 /// made.
 ///
-/// This function will attempt to hit that fast path and verify that the `oid`
-/// is actually the current branch of the repository.
-///
-/// [1]: https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference
-///
 /// Note that this function should never cause an actual failure because it's
-/// just a fast path. As a result all errors are ignored in this function and we
-/// just return a `bool`. Any real errors will be reported through the normal
-/// update path above.
+/// just a fast path. As a result, a caller should ignore `Err` returned from
+/// this function and move forward on the normal path.
+///
+/// [^1]: <https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference>
 fn github_fast_path(
     repo: &mut git2::Repository,
     url: &str,
@@ -1406,14 +1478,17 @@ fn github_fast_path(
     }
 }
 
+/// Whether a `url` is one from GitHub.
 fn is_github(url: &Url) -> bool {
     url.host_str() == Some("github.com")
 }
 
+/// Whether a `rev` looks like a commit hash (ASCII hex digits).
 fn looks_like_commit_hash(rev: &str) -> bool {
     rev.len() >= 7 && rev.chars().all(|ch| ch.is_ascii_hexdigit())
 }
 
+/// Whether `rev` is a shorter hash of `oid`.
 fn is_short_hash_of(rev: &str, oid: Oid) -> bool {
     let long_hash = oid.to_string();
     match long_hash.get(..rev.len()) {
