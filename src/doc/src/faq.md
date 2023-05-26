@@ -259,3 +259,49 @@ Some issues we've seen historically which can cause crates to get rebuilt are:
 If after trying to debug your issue, however, you're still running into problems
 then feel free to [open an
 issue](https://github.com/rust-lang/cargo/issues/new)!
+
+### What does "version conflict" mean and how to resolve it?
+
+> failed to select a version for `x` which could resolve this conflict
+Have you seen the error message above?
+
+This is one of the most annoying error message for Cargo users. There are several 
+situations may lead us to a version conflict. Below we'll walk through possible 
+causes and provide diagnostic techniques to help you out there:
+
+- The project and its dependencies use [links] to repeatedly link the local 
+  library. Cargo forbids linking two packages with the same native library, so 
+  even with multiple layers of dependencies it is not allowed. In this case, the 
+  error message will prompt: `Only one package in the dependency graph may specify 
+  the same links value`, you may need to manually check and delete duplicate link 
+  values. The community also have [conventions in place] to alleviate this.
+
+- When depending on different crates in the project, if these crates use the same 
+  dependent library, but the version used is restricted, making it impossible to 
+  determine the correct version, it will also cause conflicts. The error message 
+  will prompt: `all possible versions conflict with previously selected packages`. 
+  You may need to modify the version requirements to make them consistent.
+
+- If there are multiple versions of dependencies in the project, when using 
+  [`direct-minimal-versions`], the minimum version requirements cannot be met, 
+  which will cause conflicts. Please check in the dependency graph of the project, 
+  the version requirements for dependencies are inconsistent. Please modify the 
+  version requirements to make them consistent.
+
+- If the dependent crate does not have the features you choose, it will also 
+  cause conflicts. At this time, you need to check the dependent version and its 
+  features.
+
+- Conflicts may occur when merging branches or PRs, if there are non-trivial 
+  conflicts, you can reset all "yours" changes, fix all other conflicts in the 
+  branch, and then run some cargo command (like `cargo tree` or `cargo check`), 
+  which should re-update the lockfile with your own local changes. If you previously 
+  ran some `cargo update` commands in your branch, you can re-run them that this 
+  time. The community has been looking to resolve merge conflicts with `Cargo.lock` 
+  and `Cargo.toml` using a [custom merge tool].
+
+
+[links]: https://doc.rust-lang.org/cargo/reference/resolver.html#links
+[conventions in place]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#-sys-packages
+[`direct-minimal-versions`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions
+[custom merge tool]: https://github.com/rust-lang/cargo/issues/1818
