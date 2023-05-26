@@ -95,7 +95,7 @@ impl<'cfg> PathSource<'cfg> {
     }
 
     /// Returns the packages discovered by this source. It may walk the
-    /// the filesystem if package informations haven't yet updated.
+    /// filesystem if package informations haven't yet updated.
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
