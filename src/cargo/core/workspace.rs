@@ -1006,7 +1006,7 @@ impl<'cfg> Workspace<'cfg> {
                         self.config.shell().warn(
                             format_args!("\
                         some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`,\n\
-                     \x20   but a virtual workspace defaults to `resolver = \"1\"`\n\
+                     \x20   but virtual workspaces default to `resolver = \"1\"`\n\
                      \x20   specify the desired resolver version explicitly in the workspace root's manifest\
                             ",
                         ))?;
