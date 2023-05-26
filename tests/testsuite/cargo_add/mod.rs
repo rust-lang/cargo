@@ -36,7 +36,6 @@ mod git_rev;
 mod git_tag;
 mod infer_prerelease;
 mod invalid_arg;
-mod invalid_git_external;
 mod invalid_git_name;
 mod invalid_key_inherit_dependency;
 mod invalid_key_overwrite_inherit_dependency;
