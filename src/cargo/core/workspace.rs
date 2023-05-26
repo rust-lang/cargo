@@ -1010,6 +1010,10 @@ impl<'cfg> Workspace<'cfg> {
                      \x20   specify the desired resolver version explicitly in the workspace root's manifest\
                             ",
                         ))?;
+                        self.config.shell().note(
+                            "to keep the current resolver, specify `workspace.resolver = \"1\"`",
+                        )?;
+                        self.config.shell().note(format_args!("to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"`"))?;
                     }
                 }
             }
