@@ -15,7 +15,7 @@ use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::CliFeatures;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec};
+use crate::core::{Dependency, Edition, FeatureValue, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -990,6 +990,24 @@ impl<'cfg> Workspace<'cfg> {
                     if behavior != self.resolve_behavior {
                         // Only warn if they don't match.
                         emit_warning("resolver")?;
+                    }
+                }
+            }
+            if let MaybePackage::Virtual(vm) = self.root_maybe() {
+                if vm.resolve_behavior().is_none() {
+                    if let Some(edition) = self
+                        .members()
+                        .filter(|p| p.manifest_path() != root_manifest)
+                        .map(|p| p.manifest().edition())
+                        .filter(|&e| e >= Edition::Edition2021)
+                        .max()
+                    {
+                        let resolver = edition.default_resolve_behavior().to_manifest();
+                        self.config.shell().warn(format_args!("some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`, but virtual workspaces default to `resolver = \"1\"`"))?;
+                        self.config.shell().note(
+                            "to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest",
+                        )?;
+                        self.config.shell().note(format_args!("to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"` in the workspace root's manifest"))?;
                     }
                 }
             }

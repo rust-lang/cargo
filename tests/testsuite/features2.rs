@@ -1407,6 +1407,41 @@ workspace: [..]/foo/Cargo.toml
 }
 
 #[cargo_test]
+fn edition_2021_workspace_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2021"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+warning: some crates are on edition 2021 which defaults to `resolver = \"2\"`, but virtual workspaces default to `resolver = \"1\"`
+note: to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest
+note: to use the edition 2021 resolver, specify `workspace.resolver = \"2\"` in the workspace root's manifest
+[CHECKING] a v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn resolver_ws_root_and_member() {
     // Check when specified in both ws root and member.
     let p = project()
