@@ -496,6 +496,11 @@ fn fix_feature_activations(
     for idx in remove_list.iter().rev() {
         feature_values.remove(*idx);
     }
+    if !remove_list.is_empty() {
+        // HACK: Instead of cleaning up the users formatting from having removed a feature, we just
+        // re-format the whole feature list
+        feature_values.fmt();
+    }
 
     if status == DependencyStatus::Required {
         for value in feature_values.iter_mut() {
@@ -516,8 +521,6 @@ fn fix_feature_activations(
             }
         }
     }
-
-    feature_values.fmt();
 }
 
 pub fn str_or_1_len_table(item: &toml_edit::Item) -> bool {
