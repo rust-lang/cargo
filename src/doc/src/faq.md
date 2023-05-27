@@ -263,6 +263,7 @@ issue](https://github.com/rust-lang/cargo/issues/new)!
 ### What does "version conflict" mean and how to resolve it?
 
 > failed to select a version for `x` which could resolve this conflict
+
 Have you seen the error message above?
 
 This is one of the most annoying error message for Cargo users. There are several 
@@ -284,9 +285,8 @@ causes and provide diagnostic techniques to help you out there:
 
 - If there are multiple versions of dependencies in the project, when using 
   [`direct-minimal-versions`], the minimum version requirements cannot be met, 
-  which will cause conflicts. Please check in the dependency graph of the project, 
-  the version requirements for dependencies are inconsistent. Please modify the 
-  version requirements to make them consistent.
+  which will cause conflicts. You may need to modify version requirements of your
+  direct dependencies to meet the minimum SemVer version accordingly.
 
 - If the dependent crate does not have the features you choose, it will also 
   cause conflicts. At this time, you need to check the dependent version and its 
