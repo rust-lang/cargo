@@ -1259,6 +1259,8 @@ pub trait TestEnv: Sized {
             .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
             // Keeps cargo within its sandbox.
             .env("__CARGO_TEST_DISABLE_GLOBAL_KNOWN_HOST", "1")
+            // Set retry sleep to 1 millisecond.
+            .env("__CARGO_TEST_FIXED_RETRY_SLEEP_MS", "1")
             // Incremental generates a huge amount of data per test, which we
             // don't particularly need. Tests that specifically need to check
             // the incremental behavior should turn this back on.

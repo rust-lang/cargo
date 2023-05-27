@@ -56,19 +56,27 @@ impl<'a> Retry<'a> {
                     return RetryResult::Err(e);
                 }
                 self.retries += 1;
-                let sleep = if self.retries == 1 {
-                    let mut rng = rand::thread_rng();
-                    INITIAL_RETRY_SLEEP_BASE_MS + rng.gen_range(0..INITIAL_RETRY_JITTER_MS)
-                } else {
-                    min(
-                        ((self.retries - 1) * 3) * 1000 + INITIAL_RETRY_SLEEP_BASE_MS,
-                        MAX_RETRY_SLEEP_MS,
-                    )
-                };
-                RetryResult::Retry(sleep)
+                RetryResult::Retry(self.next_sleep_ms())
             }
             Err(e) => RetryResult::Err(e),
             Ok(r) => RetryResult::Success(r),
+        }
+    }
+
+    /// Gets the next sleep duration in milliseconds.
+    fn next_sleep_ms(&self) -> u64 {
+        if let Ok(sleep) = self.config.get_env("__CARGO_TEST_FIXED_RETRY_SLEEP_MS") {
+            return sleep.parse().expect("a u64");
+        }
+
+        if self.retries == 1 {
+            let mut rng = rand::thread_rng();
+            INITIAL_RETRY_SLEEP_BASE_MS + rng.gen_range(0..INITIAL_RETRY_JITTER_MS)
+        } else {
+            min(
+                ((self.retries - 1) * 3) * 1000 + INITIAL_RETRY_SLEEP_BASE_MS,
+                MAX_RETRY_SLEEP_MS,
+            )
         }
     }
 }
