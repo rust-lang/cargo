@@ -496,6 +496,11 @@ fn fix_feature_activations(
     for idx in remove_list.iter().rev() {
         feature_values.remove(*idx);
     }
+    if !remove_list.is_empty() {
+        // HACK: Instead of cleaning up the users formatting from having removed a feature, we just
+        // re-format the whole feature list
+        feature_values.fmt();
+    }
 
     if status == DependencyStatus::Required {
         for value in feature_values.iter_mut() {
@@ -511,13 +516,13 @@ fn fix_feature_activations(
             } = parsed_value
             {
                 if dep_name == dep_key && weak {
-                    *value = format!("{dep_name}/{dep_feature}").into();
+                    let mut new_value = toml_edit::Value::from(format!("{dep_name}/{dep_feature}"));
+                    *new_value.decor_mut() = value.decor().clone();
+                    *value = new_value;
                 }
             }
         }
     }
-
-    feature_values.fmt();
 }
 
 pub fn str_or_1_len_table(item: &toml_edit::Item) -> bool {
