@@ -23,6 +23,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use url::Url;
 
+/// A file indicates that if present, `git reset` has been done and a repo
+/// checkout is ready to go. See [`GitCheckout::reset`] for why we need this.
+const CHECKOUT_READY_LOCK: &str = ".cargo-ok";
+
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
 where
     T: fmt::Display,
@@ -350,24 +354,28 @@ impl<'a> GitCheckout<'a> {
         match self.repo.revparse_single("HEAD") {
             Ok(ref head) if head.id() == self.revision => {
                 // See comments in reset() for why we check this
-                self.path.join(".cargo-ok").exists()
+                self.path.join(CHECKOUT_READY_LOCK).exists()
             }
             _ => false,
         }
     }
 
-    /// `git reset --hard` to the revision of this checkout, with additional
-    /// interrupt protection by a dummy `.cargo-ok` file.
+    /// Similar to [`reset()`]. This roughly performs `git reset --hard` to the
+    /// revision of this checkout, with additional interrupt protection by a
+    /// dummy file [`CHECKOUT_READY_LOCK`].
+    ///
+    /// If we're interrupted while performing a `git reset` (e.g., we die
+    /// because of a signal) Cargo needs to be sure to try to check out this
+    /// repo again on the next go-round.
+    ///
+    /// To enable this we have a dummy file in our checkout, [`.cargo-ok`],
+    /// which if present means that the repo has been successfully reset and is
+    /// ready to go. Hence if we start to do a reset, we make sure this file
+    /// *doesn't* exist, and then once we're done we create the file.
+    ///
+    /// [`.cargo-ok`]: CHECKOUT_READY_LOCK
     fn reset(&self, config: &Config) -> CargoResult<()> {
-        // If we're interrupted while performing this reset (e.g., we die because
-        // of a signal) Cargo needs to be sure to try to check out this repo
-        // again on the next go-round.
-        //
-        // To enable this we have a dummy file in our checkout, .cargo-ok, which
-        // if present means that the repo has been successfully reset and is
-        // ready to go. Hence if we start to do a reset, we make sure this file
-        // *doesn't* exist, and then once we're done we create the file.
-        let ok_file = self.path.join(".cargo-ok");
+        let ok_file = self.path.join(CHECKOUT_READY_LOCK);
         let _ = paths::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
 
