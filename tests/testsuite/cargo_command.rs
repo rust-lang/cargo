@@ -24,13 +24,16 @@ fn path() -> Vec<PathBuf> {
 fn list_commands_with_descriptions() {
     let p = project().build();
     p.cargo("--list")
-        .with_stdout_contains(
-            "    build                Compile a local package and all of its dependencies",
-        )
         // Assert that `read-manifest` prints the right one-line description followed by another
         // command, indented.
         .with_stdout_contains(
             "    read-manifest        Print a JSON representation of a Cargo.toml manifest.",
+        )
+        .with_stdout_contains("====================\n  External commands:")
+        .with_stdout_contains("====================\n  Aliases:")
+        .with_stdout_contains("====================\n  Builtin commands:")
+        .with_stdout_contains(
+            "    build, b             Compile a local package and all of its dependencies",
         )
         .run();
 }
@@ -39,10 +42,10 @@ fn list_commands_with_descriptions() {
 fn list_builtin_aliases_with_descriptions() {
     let p = project().build();
     p.cargo("--list")
-        .with_stdout_contains("    b                    alias: build")
-        .with_stdout_contains("    c                    alias: check")
-        .with_stdout_contains("    r                    alias: run")
-        .with_stdout_contains("    t                    alias: test")
+        .with_stdout_contains("    b                    build")
+        .with_stdout_contains("    c                    check")
+        .with_stdout_contains("    r                    run")
+        .with_stdout_contains("    t                    test")
         .run();
 }
 
@@ -60,8 +63,8 @@ fn list_custom_aliases_with_descriptions() {
         .build();
 
     p.cargo("--list")
-        .with_stdout_contains("    myaliasstr           alias: foo --bar")
-        .with_stdout_contains("    myaliasvec           alias: foo --bar")
+        .with_stdout_contains("    myaliasstr           foo --bar")
+        .with_stdout_contains("    myaliasvec           foo --bar")
         .run();
 }
 
@@ -236,7 +239,7 @@ error: no such command: `biuld`
         .run();
     cargo_process("--list")
         .with_stdout_contains(
-            "    build                Compile a local package and all of its dependencies\n",
+            "    build, b             Compile a local package and all of its dependencies",
         )
         .with_stdout_contains("    biuld\n")
         .run();

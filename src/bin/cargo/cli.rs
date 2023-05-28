@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fmt::Write;
+use std::path::PathBuf;
 
 use super::commands;
 use super::list_commands;
@@ -128,39 +129,71 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
     }
 
     if expanded_args.flag("list") {
+        let mut builtins: Vec<(String, Option<String>)> = Vec::new();
+        let mut external: Vec<(String, PathBuf)> = Vec::new();
+        // (alias, source)
+        let mut aliases: Vec<(String, String)> = Vec::new();
         drop_println!(config, "Installed Commands:");
         for (name, command) in list_commands(config) {
-            let known_external_desc = KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS.get(name.as_str());
             match command {
                 CommandInfo::BuiltIn { about } => {
                     assert!(
-                        known_external_desc.is_none(),
+                        KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS
+                            .get(name.as_str())
+                            .is_none(),
                         "KNOWN_EXTERNAL_COMMANDS shouldn't contain builtin \"{}\"",
                         name
                     );
-                    let summary = about.unwrap_or_default();
-                    let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
-                    drop_println!(config, "    {:<20} {}", name, summary);
+                    builtins.push((name, about));
+                    // let summary = about.unwrap_or_default();
+                    // let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
+                    // drop_println!(config, "    {:<20} {}", name, summary);
+                }
+                CommandInfo::BuiltinAlias { to } => {
+                    aliases.push((name, to));
                 }
                 CommandInfo::External { path } => {
-                    if let Some(desc) = known_external_desc {
-                        drop_println!(config, "    {:<20} {}", name, desc);
-                    } else if is_verbose {
-                        drop_println!(config, "    {:<20} {}", name, path.display());
-                    } else {
-                        drop_println!(config, "    {}", name);
-                    }
+                    external.push((name, path));
                 }
                 CommandInfo::Alias { target } => {
-                    drop_println!(
-                        config,
-                        "    {:<20} alias: {}",
-                        name,
-                        target.iter().join(" ")
-                    );
+                    aliases.push((name, target.iter().join(" ")));
                 }
             }
         }
+
+        // If alias is a simple one (like b = build), display it along the original command
+
+        drop_println!(config, "====================\n  Builtin commands:");
+        for (mut name, about) in builtins {
+            let summary = about.unwrap_or_default();
+            let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
+                                                                      // If has an alias
+            if let Some(tuple) = aliases.iter().find(|x| x.1 == name) {
+                name.push_str(", ");
+                name.push_str(&tuple.0);
+                drop_println!(config, "    {:<20} {}", name, summary);
+            } else {
+                drop_println!(config, "    {:<20} {}", name, summary);
+            }
+        }
+
+        drop_println!(config, "====================\n  External commands:");
+        for (name, path) in external {
+            let known_external_desc = KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS.get(name.as_str());
+            if let Some(desc) = known_external_desc {
+                drop_println!(config, "    {:<20} {}", name, desc);
+            } else if is_verbose {
+                drop_println!(config, "    {:<20} {}", name, path.display());
+            } else {
+                drop_println!(config, "    {}", name);
+            }
+        }
+
+        drop_println!(config, "====================\n  Aliases:");
+        for (name, target) in aliases {
+            drop_println!(config, "    {:<20} {}", name, target);
+        }
+
         return Ok(());
     }
 

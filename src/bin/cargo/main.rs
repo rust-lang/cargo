@@ -40,18 +40,18 @@ fn main() {
 
 /// Table for defining the aliases which come builtin in `Cargo`.
 /// The contents are structured as: `(alias, aliased_command, description)`.
-const BUILTIN_ALIASES: [(&str, &str, &str); 6] = [
-    ("b", "build", "alias: build"),
-    ("c", "check", "alias: check"),
-    ("d", "doc", "alias: doc"),
-    ("r", "run", "alias: run"),
-    ("t", "test", "alias: test"),
-    ("rm", "remove", "alias: remove"),
+const BUILTIN_ALIASES: [(&str, &str); 6] = [
+    ("b", "build"),
+    ("c", "check"),
+    ("d", "doc"),
+    ("r", "run"),
+    ("t", "test"),
+    ("rm", "remove"),
 ];
 
 /// Function which contains the list of all of the builtin aliases and it's
 /// corresponding execs represented as &str.
-fn builtin_aliases_execs(cmd: &str) -> Option<&(&str, &str, &str)> {
+fn builtin_aliases_execs(cmd: &str) -> Option<&(&str, &str)> {
     BUILTIN_ALIASES.iter().find(|alias| alias.0 == cmd)
 }
 
@@ -126,8 +126,8 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
     for command in &BUILTIN_ALIASES {
         commands.insert(
             command.0.to_string(),
-            CommandInfo::BuiltIn {
-                about: Some(command.2.to_string()),
+            CommandInfo::BuiltinAlias {
+                to: command.1.to_owned(),
             },
         );
     }

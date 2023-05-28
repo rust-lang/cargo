@@ -796,6 +796,7 @@ pub fn ignore_unknown<T: Default>(r: Result<T, clap::parser::MatchesError>) -> T
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum CommandInfo {
     BuiltIn { about: Option<String> },
+    BuiltinAlias { to: String },
     External { path: PathBuf },
     Alias { target: StringOrVec },
 }
