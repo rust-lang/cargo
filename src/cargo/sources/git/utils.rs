@@ -892,13 +892,15 @@ pub fn with_fetch_options(
 /// * Turns [`GitReference`] into refspecs accordingly.
 /// * Dispatches `git fetch` using libgit2, gitoxide, or git CLI.
 ///
-/// `remote_kind` is a thing for [`-Zgitoxide`] shallow clones at this time.
-/// It could be extended when libgit2 supports shallow clones.
+/// The `remote_url` argument is the git remote URL where we want to fetch from.
+///
+/// The `remote_kind` argument is a thing for [`-Zgitoxide`] shallow clones
+/// at this time. It could be extended when libgit2 supports shallow clones.
 ///
 /// [`-Zgitoxide`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#gitoxide
 pub fn fetch(
     repo: &mut git2::Repository,
-    orig_url: &str,
+    remote_url: &str,
     reference: &GitReference,
     config: &Config,
     remote_kind: RemoteKind,
@@ -915,7 +917,7 @@ pub fn fetch(
 
     let shallow = remote_kind.to_shallow_setting(repo.is_shallow(), config);
 
-    let oid_to_fetch = match github_fast_path(repo, orig_url, reference, config) {
+    let oid_to_fetch = match github_fast_path(repo, remote_url, reference, config) {
         Ok(FastPathRev::UpToDate) => return Ok(()),
         Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
         Ok(FastPathRev::Indeterminate) => None,
@@ -978,7 +980,7 @@ pub fn fetch(
     }
 
     if let Some(true) = config.net_config()?.git_fetch_with_cli {
-        return fetch_with_cli(repo, orig_url, &refspecs, tags, config);
+        return fetch_with_cli(repo, remote_url, &refspecs, tags, config);
     }
 
     if config
@@ -1014,10 +1016,10 @@ pub fn fetch(
                     )
                     .map_err(crate::sources::git::fetch::Error::from)
                     .and_then(|repo| {
-                        debug!("initiating fetch of {:?} from {}", refspecs, orig_url);
+                        debug!("initiating fetch of {refspecs:?} from {remote_url}");
                         let url_for_authentication = &mut *url_for_authentication;
                         let remote = repo
-                            .remote_at(orig_url)?
+                            .remote_at(remote_url)?
                             .with_fetch_tags(if tags {
                                 gix::remote::fetch::Tags::All
                             } else {
@@ -1036,10 +1038,9 @@ pub fn fetch(
                         let mut authenticate = connection.configured_credentials(url)?;
                         let connection = connection.with_credentials(
                             move |action: gix::protocol::credentials::helper::Action| {
-                                if let Some(url) = action
-                                    .context()
-                                    .and_then(|ctx| ctx.url.as_ref().filter(|url| *url != orig_url))
-                                {
+                                if let Some(url) = action.context().and_then(|ctx| {
+                                    ctx.url.as_ref().filter(|url| *url != remote_url)
+                                }) {
                                     url_for_authentication(url.as_ref());
                                 }
                                 authenticate(action)
@@ -1085,9 +1086,9 @@ pub fn fetch(
         }
         res
     } else {
-        debug!("doing a fetch for {}", orig_url);
+        debug!("doing a fetch for {remote_url}");
         let git_config = git2::Config::open_default()?;
-        with_fetch_options(&git_config, orig_url, config, &mut |mut opts| {
+        with_fetch_options(&git_config, remote_url, config, &mut |mut opts| {
             if tags {
                 opts.download_tags(git2::AutotagOption::All);
             }
@@ -1103,10 +1104,10 @@ pub fn fetch(
             // blown away the repository, then we want to return the error as-is.
             let mut repo_reinitialized = false;
             loop {
-                debug!("initiating fetch of {:?} from {}", refspecs, orig_url);
-                let res = repo
-                    .remote_anonymous(orig_url)?
-                    .fetch(&refspecs, Some(&mut opts), None);
+                debug!("initiating fetch of {refspecs:?} from {remote_url}");
+                let res =
+                    repo.remote_anonymous(remote_url)?
+                        .fetch(&refspecs, Some(&mut opts), None);
                 let err = match res {
                     Ok(()) => break,
                     Err(e) => e,
