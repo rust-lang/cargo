@@ -94,10 +94,6 @@ impl GitRemote {
         &self.url
     }
 
-    pub fn rev_for(&self, path: &Path, reference: &GitReference) -> CargoResult<git2::Oid> {
-        reference.resolve(&self.db_at(path)?.repo)
-    }
-
     /// Fetches and checkouts to a reference or a revision from this remote
     /// into a local path.
     ///
