@@ -1,3 +1,5 @@
+//! See [GitSource].
+
 use crate::core::source::{MaybePackage, QueryKind, Source, SourceId};
 use crate::core::GitReference;
 use crate::core::{Dependency, Package, PackageId, Summary};
@@ -13,18 +15,71 @@ use std::fmt::{self, Debug, Formatter};
 use std::task::Poll;
 use url::Url;
 
+/// `GitSource` contains one or more packages gathering from a Git repository.
+/// Under the hood it uses [`PathSource`] to discover packages inside the
+/// repository.
+///
+/// ## Filesystem layout
+///
+/// During a successful `GitSource` download, at least two Git repositories are
+/// created: one is the shared Git database of this remote, and the other is the
+/// Git checkout to a specific revision, which contains the actual files to be
+/// compiled. Multiple checkouts can be cloned from a single Git database.
+///
+/// Those repositories are located at Cargo's Git cache directory
+/// `$CARGO_HOME/git`. The file tree of the cache directory roughly looks like:
+///
+/// ```text
+/// $CARGO_HOME/git/
+/// ├── checkouts/
+/// │  ├── gimli-a0d193bd15a5ed96/
+/// │  │  ├── 8e73ef0/     # Git short ID for a certain revision
+/// │  │  ├── a2a4b78/
+/// │  │  └── e33d1ac/
+/// │  ├── log-c58e1db3de7c154d-shallow/
+/// │  │  └── 11eda98/
+/// └── db/
+///    ├── gimli-a0d193bd15a5ed96/
+///    └── log-c58e1db3de7c154d-shallow/
+/// ```
+///
+/// For more on Git cache directory, see ["Cargo Home"] in The Cargo Book.
+///
+/// For more on the directory format `<pkg>-<hash>[-shallow]`, see [`ident`]
+/// and [`ident_shallow`].
+///
+/// ## Locked to a revision
+///
+/// Once a `GitSource` is fetched, it will resolve to a specific commit revision.
+/// This is often mentioned as "locked revision" (`locked_rev`) throughout the
+/// codebase. The revision is written into `Cargo.lock`. This is essential since
+/// we want to ensure a package can compiles with the same set of files when
+/// a `Cargo.lock` is present. With the `locked_rev` provided, `GitSource` can
+/// precisely fetch the same revision from the Git repository.
+///
+/// ["Cargo Home"]: https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#directories
 pub struct GitSource<'cfg> {
+    /// The git remote which we're going to fetch from.
     remote: GitRemote,
+    /// The Git reference from the manifest file.
     manifest_reference: GitReference,
+    /// The revision which a git source is locked to.
+    /// This is expected to be set after the Git repository is fetched.
     locked_rev: Option<git2::Oid>,
+    /// The unique identifier of this source.
     source_id: SourceId,
+    /// The underlying path source to discover packages inside the Git repository.
     path_source: Option<PathSource<'cfg>>,
+    /// The identifer of this source for Cargo's Git cache directory.
+    /// See [`ident`] for more.
     ident: String,
     config: &'cfg Config,
+    /// Disables status messages.
     quiet: bool,
 }
 
 impl<'cfg> GitSource<'cfg> {
+    /// Creates a git source for the given [`SourceId`].
     pub fn new(source_id: SourceId, config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
@@ -59,10 +114,14 @@ impl<'cfg> GitSource<'cfg> {
         Ok(source)
     }
 
+    /// Gets the remote repository URL.
     pub fn url(&self) -> &Url {
         self.remote.url()
     }
 
+    /// Returns the packages discovered by this source. It may fetch the Git
+    /// repository as well as walk the filesystem if package informations
+    /// haven't yet updated.
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {
             self.invalidate_cache();
@@ -72,7 +131,8 @@ impl<'cfg> GitSource<'cfg> {
     }
 }
 
-/// Create an identifier from a URL, essentially turning `proto://host/path/repo` into `repo-<hash-of-url>`.
+/// Create an identifier from a URL,
+/// essentially turning `proto://host/path/repo` into `repo-<hash-of-url>`.
 fn ident(id: &SourceId) -> String {
     let ident = id
         .canonical_url()
@@ -86,10 +146,12 @@ fn ident(id: &SourceId) -> String {
     format!("{}-{}", ident, short_hash(id.canonical_url()))
 }
 
-/// Like `ident()`, but appends `-shallow` to it, turning `proto://host/path/repo` into `repo-<hash-of-url>-shallow`.
+/// Like [`ident()`], but appends `-shallow` to it, turning
+/// `proto://host/path/repo` into `repo-<hash-of-url>-shallow`.
 ///
-/// It's important to separate shallow from non-shallow clones for reasons of backwards compatibility - older
-/// cargo's aren't necessarily handling shallow clones correctly.
+/// It's important to separate shallow from non-shallow clones for reasons of
+/// backwards compatibility --- older cargo's aren't necessarily handling
+/// shallow clones correctly.
 fn ident_shallow(id: &SourceId, is_shallow: bool) -> String {
     let mut ident = ident(id);
     if is_shallow {

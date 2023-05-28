@@ -1,5 +1,8 @@
 //! SSH host key validation support.
 //!
+//! The only public item in this module is [`certificate_check`],
+//! which provides a callback to [`git2::RemoteCallbacks::certificate_check`].
+//!
 //! A primary goal with this implementation is to provide user-friendly error
 //! messages, guiding them to understand the issue and how to resolve it.
 //!
