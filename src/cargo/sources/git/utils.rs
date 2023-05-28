@@ -187,7 +187,7 @@ impl GitDatabase {
         // clone is created.
         let checkout = match git2::Repository::open(dest)
             .ok()
-            .map(|repo| GitCheckout::new(dest, self, rev, repo))
+            .map(|repo| GitCheckout::new(self, rev, repo))
             .filter(|co| co.is_fresh())
         {
             Some(co) => co,
@@ -265,13 +265,13 @@ impl<'a> GitCheckout<'a> {
     /// is done. Use [`GitCheckout::is_fresh`] to check.
     ///
     /// * The `database` is where this checkout is from.
-    /// * The `repo` will be the checked out Git repoistory at `path`.
+    /// * The `repo` will be the checked out Git repoistory.
     fn new(
-        path: &Path,
         database: &'a GitDatabase,
         revision: git2::Oid,
         repo: git2::Repository,
     ) -> GitCheckout<'a> {
+        let path = repo.workdir().unwrap_or_else(|| repo.path());
         GitCheckout {
             path: path.to_path_buf(),
             database,
@@ -335,7 +335,7 @@ impl<'a> GitCheckout<'a> {
         })?;
         let repo = repo.unwrap();
 
-        let checkout = GitCheckout::new(into, database, revision, repo);
+        let checkout = GitCheckout::new(database, revision, repo);
         checkout.reset(config)?;
         Ok(checkout)
     }
