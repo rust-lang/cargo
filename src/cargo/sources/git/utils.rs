@@ -70,7 +70,7 @@ pub struct GitCheckout<'a> {
     /// The git database where this checkout is cloned from.
     database: &'a GitDatabase,
     /// Path to the root of the underlying Git repository on the local filesystem.
-    location: PathBuf,
+    path: PathBuf,
     /// The git revision this checkout is for.
     #[serde(serialize_with = "serialize_str")]
     revision: git2::Oid,
@@ -278,7 +278,7 @@ impl<'a> GitCheckout<'a> {
         repo: git2::Repository,
     ) -> GitCheckout<'a> {
         GitCheckout {
-            location: path.to_path_buf(),
+            path: path.to_path_buf(),
             database,
             revision,
             repo,
@@ -350,7 +350,7 @@ impl<'a> GitCheckout<'a> {
         match self.repo.revparse_single("HEAD") {
             Ok(ref head) if head.id() == self.revision => {
                 // See comments in reset() for why we check this
-                self.location.join(".cargo-ok").exists()
+                self.path.join(".cargo-ok").exists()
             }
             _ => false,
         }
@@ -367,7 +367,7 @@ impl<'a> GitCheckout<'a> {
         // if present means that the repo has been successfully reset and is
         // ready to go. Hence if we start to do a reset, we make sure this file
         // *doesn't* exist, and then once we're done we create the file.
-        let ok_file = self.location.join(".cargo-ok");
+        let ok_file = self.path.join(".cargo-ok");
         let _ = paths::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
 
