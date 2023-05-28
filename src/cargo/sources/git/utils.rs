@@ -57,29 +57,24 @@ pub struct GitRemote {
 
 /// A local clone of a remote repository's database. Multiple [`GitCheckout`]s
 /// can be cloned from a single [`GitDatabase`].
-#[derive(Serialize)]
 pub struct GitDatabase {
     /// The remote repository where this database is fetched from.
     remote: GitRemote,
     /// Path to the root of the underlying Git repository on the local filesystem.
     path: PathBuf,
     /// Underlying Git repository instance for this database.
-    #[serde(skip_serializing)]
     repo: git2::Repository,
 }
 
 /// A local checkout of a particular revision from a [`GitDatabase`].
-#[derive(Serialize)]
 pub struct GitCheckout<'a> {
     /// The git database where this checkout is cloned from.
     database: &'a GitDatabase,
     /// Path to the root of the underlying Git repository on the local filesystem.
     path: PathBuf,
     /// The git revision this checkout is for.
-    #[serde(serialize_with = "serialize_str")]
     revision: git2::Oid,
     /// Underlying Git repository instance for this checkout.
-    #[serde(skip_serializing)]
     repo: git2::Repository,
 }
 
