@@ -417,7 +417,10 @@ fn _create_dir_all(p: &Path) -> Result<()> {
 ///
 /// This does *not* follow symlinks.
 pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> Result<()> {
-    _remove_dir_all(p.as_ref())
+    _remove_dir_all(p.as_ref()).or_else(|_| {
+        fs::remove_dir_all(p.as_ref())
+            .with_context(|| format!("failed to remove directory `{}`", p.as_ref().display()))
+    })
 }
 
 fn _remove_dir_all(p: &Path) -> Result<()> {
