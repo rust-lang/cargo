@@ -1926,7 +1926,6 @@ fn output_separate_lines_new() {
         .run();
 }
 
-#[cfg(not(windows))] // FIXME(#867)
 #[cargo_test]
 fn code_generation() {
     let p = project()
@@ -1976,7 +1975,7 @@ fn code_generation() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo`",
+[RUNNING] `target/debug/foo[EXE]`",
         )
         .with_stdout("Hello, World!")
         .run();
