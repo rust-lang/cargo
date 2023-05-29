@@ -179,7 +179,6 @@ impl GitDatabase {
         rev: git2::Oid,
         dest: &Path,
         cargo_config: &Config,
-        parent_remote_url: &Url,
     ) -> CargoResult<GitCheckout<'_>> {
         // If the existing checkout exists, and it is fresh, use it.
         // A non-fresh checkout can happen if the checkout operation was
@@ -193,7 +192,7 @@ impl GitDatabase {
             Some(co) => co,
             None => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
-        checkout.update_submodules(cargo_config, parent_remote_url)?;
+        checkout.update_submodules(cargo_config)?;
         Ok(checkout)
     }
 
@@ -278,6 +277,11 @@ impl<'a> GitCheckout<'a> {
             revision,
             repo,
         }
+    }
+
+    /// Gets the remote repository URL.
+    fn remote_url(&self) -> &Url {
+        &self.database.remote.url()
     }
 
     /// Clone a repo for a `revision` into a local path from a `datatabase`.
@@ -387,8 +391,8 @@ impl<'a> GitCheckout<'a> {
     /// Submodules set to `none` won't be fetched.
     ///
     /// [^1]: <https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-none>
-    fn update_submodules(&self, cargo_config: &Config, parent_remote_url: &Url) -> CargoResult<()> {
-        return update_submodules(&self.repo, cargo_config, parent_remote_url);
+    fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
+        return update_submodules(&self.repo, cargo_config, self.remote_url());
 
         /// Recusive helper for [`GitCheckout::update_submodules`].
         fn update_submodules(
