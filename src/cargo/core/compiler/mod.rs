@@ -680,6 +680,16 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
         let tmp = cx.files().layout(unit.kind).prepare_tmp()?;
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
+    if cx.bcx.config.nightly_features_allowed {
+        // This must come after `build_base_args` (which calls `add_path_args`) so that the `cwd`
+        // is set correctly.
+        base.env(
+            "CARGO_RUSTC_CURRENT_DIR",
+            base.get_cwd()
+                .map(|c| c.display().to_string())
+                .unwrap_or(String::new()),
+        );
+    }
 
     Ok(base)
 }
