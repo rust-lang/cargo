@@ -467,10 +467,11 @@ fn debug_0_report() {
         .with_stderr(
             "\
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C debuginfo=0 [..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]
 [FINISHED] dev [unoptimized] target(s) in [..]
 ",
         )
+        .with_stderr_does_not_contain("-C debuginfo")
         .run();
 }
 
@@ -745,13 +746,7 @@ Caused by:
 
 #[cargo_test(nightly, reason = "debug options stabilized in 1.70")]
 fn debug_options_valid() {
-    for (option, cli) in [
-        ("line-directives-only", "line-directives-only"),
-        ("line-tables-only", "line-tables-only"),
-        ("none", "0"),
-        ("limited", "1"),
-        ("full", "2"),
-    ] {
+    let build = |option| {
         let p = project()
             .file(
                 "Cargo.toml",
@@ -771,7 +766,19 @@ fn debug_options_valid() {
             .build();
 
         p.cargo("build -v")
+    };
+
+    for (option, cli) in [
+        ("line-directives-only", "line-directives-only"),
+        ("line-tables-only", "line-tables-only"),
+        ("limited", "1"),
+        ("full", "2"),
+    ] {
+        build(option)
             .with_stderr_contains(&format!("[RUNNING] `rustc [..]-C debuginfo={cli} [..]"))
             .run();
     }
+    build("none")
+        .with_stderr_does_not_contain("[..]-C debuginfo[..]")
+        .run();
 }
