@@ -423,9 +423,9 @@ pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> Result<()> {
         // order to report more detailed errors.
         fs::remove_dir_all(p.as_ref()).with_context(|| {
             format!(
-                "failed to remove directory `{}` \n\n---\nPrevious error: {:?}\n---",
+                "{:?}\n\nError: failed to remove directory `{}`",
+                prev_err,
                 p.as_ref().display(),
-                prev_err
             )
         })
     })
