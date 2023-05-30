@@ -952,7 +952,7 @@ impl BuildOutput {
                 }
                 _ => bail!(
                     "invalid output in {whence}: `{line}`\n\
-                    Unknown key: `{key}`\n\
+                    Unknown key: `{key}`.\n\
                     {DOCS_LINK_SUGGESTION}",
                 ),
             }
