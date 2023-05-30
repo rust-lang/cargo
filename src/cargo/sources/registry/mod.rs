@@ -1013,26 +1013,8 @@ fn max_unpack_size(config: &Config, size: u64) -> u64 {
     u64::max(max_unpack_size, size * max_compression_ratio as u64)
 }
 
+/// Constructs a path to a dependency in the registry index on filesystem.
+/// See [`cargo_util::registry::make_dep_path`] for more.
 fn make_dep_prefix(name: &str) -> String {
-    match name.len() {
-        1 => String::from("1"),
-        2 => String::from("2"),
-        3 => format!("3/{}", &name[..1]),
-        _ => format!("{}/{}", &name[0..2], &name[2..4]),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::make_dep_prefix;
-
-    #[test]
-    fn dep_prefix() {
-        assert_eq!(make_dep_prefix("a"), "1");
-        assert_eq!(make_dep_prefix("ab"), "2");
-        assert_eq!(make_dep_prefix("abc"), "3/a");
-        assert_eq!(make_dep_prefix("Abc"), "3/A");
-        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
-        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
-    }
+    cargo_util::registry::make_dep_path(name, true)
 }
