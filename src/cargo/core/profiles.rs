@@ -449,9 +449,7 @@ impl ProfileMaker {
             // a unit is shared. If that's the case, we'll use the deferred value
             // below so the unit can be reused, otherwise we can avoid emitting
             // the unit's debuginfo.
-            if let Some(debuginfo) = profile.debuginfo.to_option() {
-                profile.debuginfo = DebugInfo::Deferred(debuginfo);
-            }
+            profile.debuginfo = DebugInfo::Deferred(profile.debuginfo.into_inner());
         }
         // ... and next comes any other sorts of overrides specified in
         // profiles, such as `[profile.release.build-override]` or
@@ -529,7 +527,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.codegen_units = toml.codegen_units;
     }
     if let Some(debuginfo) = toml.debug {
-        profile.debuginfo = DebugInfo::Explicit(debuginfo);
+        profile.debuginfo = DebugInfo::Resolved(debuginfo);
     }
     if let Some(debug_assertions) = toml.debug_assertions {
         profile.debug_assertions = debug_assertions;
@@ -611,7 +609,7 @@ impl Default for Profile {
             lto: Lto::Bool(false),
             codegen_backend: None,
             codegen_units: None,
-            debuginfo: DebugInfo::None,
+            debuginfo: DebugInfo::Resolved(TomlDebugInfo::None),
             debug_assertions: false,
             split_debuginfo: None,
             overflow_checks: false,
@@ -680,7 +678,7 @@ impl Profile {
         Profile {
             name: InternedString::new("dev"),
             root: ProfileRoot::Debug,
-            debuginfo: DebugInfo::Explicit(TomlDebugInfo::Full),
+            debuginfo: DebugInfo::Resolved(TomlDebugInfo::Full),
             debug_assertions: true,
             overflow_checks: true,
             incremental: true,
@@ -720,11 +718,8 @@ impl Profile {
 
 /// The debuginfo level setting.
 ///
-/// This is semantically an `Option<u32>`, and should be used as so via the
-/// [DebugInfo::to_option] method for all intents and purposes:
-/// - `DebugInfo::None` corresponds to `None`
-/// - `DebugInfo::Explicit(u32)` and `DebugInfo::Deferred` correspond to
-///   `Option<u32>::Some`
+/// This is semantically a [`TomlDebugInfo`], and should be used as so via the
+/// [`DebugInfo::into_inner`] method for all intents and purposes.
 ///
 /// Internally, it's used to model a debuginfo level whose value can be deferred
 /// for optimization purposes: host dependencies usually don't need the same
@@ -736,35 +731,34 @@ impl Profile {
 #[derive(Debug, Copy, Clone, serde::Serialize)]
 #[serde(untagged)]
 pub enum DebugInfo {
-    /// No debuginfo level was set.
-    None,
-    /// A debuginfo level that is explicitly set, by a profile or a user.
-    Explicit(TomlDebugInfo),
+    /// A debuginfo level that is fixed and will not change.
+    ///
+    /// This can be set by a profile, user, or default value.
+    Resolved(TomlDebugInfo),
     /// For internal purposes: a deferred debuginfo level that can be optimized
     /// away, but has this value otherwise.
     ///
-    /// Behaves like `Explicit` in all situations except for the default build
+    /// Behaves like `Resolved` in all situations except for the default build
     /// dependencies profile: whenever a build dependency is not shared with
     /// runtime dependencies, this level is weakened to a lower level that is
-    /// faster to build (see [DebugInfo::weaken]).
+    /// faster to build (see [`DebugInfo::weaken`]).
     ///
     /// In all other situations, this level value will be the one to use.
     Deferred(TomlDebugInfo),
 }
 
 impl DebugInfo {
-    /// The main way to interact with this debuginfo level, turning it into an Option.
-    pub fn to_option(self) -> Option<TomlDebugInfo> {
+    /// The main way to interact with this debuginfo level, turning it into a [`TomlDebugInfo`].
+    pub fn into_inner(self) -> TomlDebugInfo {
         match self {
-            DebugInfo::None => None,
-            DebugInfo::Explicit(v) | DebugInfo::Deferred(v) => Some(v),
+            DebugInfo::Resolved(v) | DebugInfo::Deferred(v) => v,
         }
     }
 
     /// Returns true if any debuginfo will be generated. Helper
     /// for a common operation on the usual `Option` representation.
     pub(crate) fn is_turned_on(&self) -> bool {
-        !matches!(self.to_option(), None | Some(TomlDebugInfo::None))
+        !matches!(self.into_inner(), TomlDebugInfo::None)
     }
 
     pub(crate) fn is_deferred(&self) -> bool {
@@ -774,24 +768,20 @@ impl DebugInfo {
     /// Force the deferred, preferred, debuginfo level to a finalized explicit value.
     pub(crate) fn finalize(self) -> Self {
         match self {
-            DebugInfo::Deferred(v) => DebugInfo::Explicit(v),
+            DebugInfo::Deferred(v) => DebugInfo::Resolved(v),
             _ => self,
         }
     }
 
     /// Reset to the lowest level: no debuginfo.
-    /// If it is explicitly set, keep it explicit.
     pub(crate) fn weaken(self) -> Self {
-        match self {
-            DebugInfo::None => DebugInfo::None,
-            _ => DebugInfo::Explicit(TomlDebugInfo::None),
-        }
+        DebugInfo::Resolved(TomlDebugInfo::None)
     }
 }
 
 impl PartialEq for DebugInfo {
     fn eq(&self, other: &DebugInfo) -> bool {
-        self.to_option().eq(&other.to_option())
+        self.into_inner().eq(&other.into_inner())
     }
 }
 
@@ -799,19 +789,19 @@ impl Eq for DebugInfo {}
 
 impl Hash for DebugInfo {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.to_option().hash(state);
+        self.into_inner().hash(state);
     }
 }
 
 impl PartialOrd for DebugInfo {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.to_option().partial_cmp(&other.to_option())
+        self.into_inner().partial_cmp(&other.into_inner())
     }
 }
 
 impl Ord for DebugInfo {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.to_option().cmp(&other.to_option())
+        self.into_inner().cmp(&other.into_inner())
     }
 }
 

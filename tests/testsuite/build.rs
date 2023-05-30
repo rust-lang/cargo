@@ -4074,7 +4074,7 @@ fn message_format_json_forward_stderr() {
                     },
                     "profile":{
                         "debug_assertions":false,
-                        "debuginfo":null,
+                        "debuginfo":0,
                         "opt_level":"3",
                         "overflow_checks": false,
                         "test":false
