@@ -719,7 +719,7 @@ impl Profile {
 /// The debuginfo level setting.
 ///
 /// This is semantically a [`TomlDebugInfo`], and should be used as so via the
-/// [DebugInfo::into_inner] method for all intents and purposes.
+/// [`DebugInfo::into_inner`] method for all intents and purposes.
 ///
 /// Internally, it's used to model a debuginfo level whose value can be deferred
 /// for optimization purposes: host dependencies usually don't need the same
