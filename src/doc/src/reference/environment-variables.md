@@ -265,6 +265,11 @@ corresponding environment variable is set to the empty string, `""`.
   where integration tests or benchmarks are free to put any data needed by
   the tests/benches. Cargo initially creates this directory but doesn't
   manage its content in any way, this is the responsibility of the test code.
+* `CARGO_WORKSPACE_DIR` --- Only set when building [integration test] or benchmark code.
+  This is a path to the workspace directory of the package being built. When there is
+  no associated workspace, which includes all registry packages, this will be a path to
+  the directory that contains the manifest of the package.
+  Currently, it is implemented as a relative path.
 
 [Cargo target]: cargo-targets.md
 [binaries]: cargo-targets.md#binaries

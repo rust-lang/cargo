@@ -670,6 +670,22 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
     if unit.target.is_test() || unit.target.is_bench() {
         let tmp = cx.files().layout(unit.kind).prepare_tmp()?;
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
+
+        if cx.bcx.config.nightly_features_allowed {
+            // Use a relative path and limit to integration tests and benchmarks in hopes
+            // that it conveys to the user that the meaning of this value is a bit fuzzy
+            // (very different meaning in the original repo vs once published).
+            let cargo_workspace_dir = if is_primary && is_workspace {
+                pathdiff::diff_paths(cx.bcx.ws.root(), unit.pkg.root())
+                    .expect("both paths are absolute")
+                    .display()
+                    .to_string()
+            } else {
+                // path from unit.pkg.root() to unit.pkg.root()
+                ".".to_string()
+            };
+            base.env("CARGO_WORKSPACE_DIR", cargo_workspace_dir);
+        }
     }
 
     base.inherit_jobserver(&cx.jobserver);
