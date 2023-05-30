@@ -14,7 +14,9 @@ use log::debug;
 use std::collections::{HashMap, HashSet};
 use url::Url;
 
-/// Represents the entire `[source]` table in Cargo configuration.
+/// Represents the entire [`[source]` replacement table][1] in Cargo configuration.
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/config.html#source
 #[derive(Clone)]
 pub struct SourceConfigMap<'cfg> {
     /// Mapping of source name to the toml configuration.
