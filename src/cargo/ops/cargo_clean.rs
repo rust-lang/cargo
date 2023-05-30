@@ -297,6 +297,7 @@ fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -
         let entry = entry?;
         progress.on_clean()?;
         if entry.file_type().is_dir() {
+            // `remove_dir_all` is used here due to https://github.com/rust-lang/cargo/issues/11441
             paths::remove_dir_all(entry.path())
                 .with_context(|| "could not remove build directory")?;
         } else {
