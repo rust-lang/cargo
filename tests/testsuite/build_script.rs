@@ -5202,3 +5202,119 @@ fn custom_build_closes_stdin() {
         .build();
     p.cargo("build").run();
 }
+
+#[cargo_test]
+fn test_old_syntax() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                const FOO: &'static str = env!("FOO");
+                fn main() {
+                    println!("{}", FOO);
+                }
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"fn main() {
+                println!("cargo:rustc-env=FOO=foo");
+                println!("cargo:foo=foo");
+            }"#,
+        )
+        .build();
+    p.cargo("build -v").run();
+    p.cargo("run -v").with_stdout("foo\n").run();
+}
+
+#[cargo_test]
+fn test_invalid_old_syntax() {
+    // Unexpected metadata value.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:foo");
+                }
+            "#,
+        )
+        .build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:foo`
+Expected a line with `cargo:KEY=VALUE` with an `=` character, but none was found.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn test_invalid_new_syntax() {
+    // Unexpected metadata value.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::metadata=foo");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::metadata=foo`
+Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, but none was found.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
+    // `cargo::` can not be used with the unknown key.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::foo=bar");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::foo=bar`
+Unknown key: `foo`.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
+}
