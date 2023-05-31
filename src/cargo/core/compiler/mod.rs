@@ -1047,22 +1047,6 @@ fn build_base_args(
 
     cmd.args(&lto_args(cx, unit));
 
-    // This is generally just an optimization on build time so if we don't pass
-    // it then it's ok. The values for the flag (off, packed, unpacked) may be supported
-    // or not depending on the platform, so availability is checked per-value.
-    // For example, at the time of writing this code, on Windows the only stable valid
-    // value for split-debuginfo is "packed", while on Linux "unpacked" is also stable.
-    if let Some(split) = split_debuginfo {
-        if cx
-            .bcx
-            .target_data
-            .info(unit.kind)
-            .supports_debuginfo_split(split)
-        {
-            cmd.arg("-C").arg(format!("split-debuginfo={}", split));
-        }
-    }
-
     if let Some(backend) = codegen_backend {
         cmd.arg("-Z").arg(&format!("codegen-backend={}", backend));
     }
@@ -1074,7 +1058,23 @@ fn build_base_args(
     let debuginfo = debuginfo.into_inner();
     // Shorten the number of arguments if possible.
     if debuginfo != TomlDebugInfo::None {
-        cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
+        cmd.arg("-C").arg(format!("debuginfo={debuginfo}"));
+        // This is generally just an optimization on build time so if we don't
+        // pass it then it's ok. The values for the flag (off, packed, unpacked)
+        // may be supported or not depending on the platform, so availability is
+        // checked per-value. For example, at the time of writing this code, on
+        // Windows the only stable valid value for split-debuginfo is "packed",
+        // while on Linux "unpacked" is also stable.
+        if let Some(split) = split_debuginfo {
+            if cx
+                .bcx
+                .target_data
+                .info(unit.kind)
+                .supports_debuginfo_split(split)
+            {
+                cmd.arg("-C").arg(format!("split-debuginfo={split}"));
+            }
+        }
     }
 
     cmd.args(unit.pkg.manifest().lint_rustflags());
