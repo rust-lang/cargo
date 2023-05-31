@@ -249,13 +249,11 @@ fn make_failed_scrape_diagnostic(
 
 /// Creates a unit of work invoking `rustc` for building the `unit`.
 fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> CargoResult<Work> {
-    let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
+    let mut rustc = prepare_rustc(cx, unit)?;
     let build_plan = cx.bcx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
     let buildkey = unit.buildkey();
-
-    add_cap_lints(cx.bcx, unit, &mut rustc);
 
     let outputs = cx.outputs(unit)?;
     let root = cx.files().out_dir(unit);
@@ -282,10 +280,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let rustc_dep_info_loc = root.join(dep_info_name);
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
-    rustc.args(cx.bcx.rustflags_args(unit));
-    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
-        rustc.arg("-Z").arg("binary-dep-depinfo");
-    }
     let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
     let target = Target::clone(&unit.target);
@@ -668,13 +662,13 @@ where
     search_path
 }
 
-// TODO: do we really need this as a separate function?
-// Maybe we should reorganize `rustc` fn to make it more traceable and readable.
-fn prepare_rustc(
-    cx: &Context<'_, '_>,
-    crate_types: &[CrateType],
-    unit: &Unit,
-) -> CargoResult<ProcessBuilder> {
+/// Prepares flags and environments we can compute for a `rustc` invocation
+/// before the job queue starts compiling any unit.
+///
+/// This builds a static view of the invocation. Flags depending on the
+/// completion of other units will be added later in runtime, such as flags
+/// from build scripts.
+fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
     let is_workspace = cx.bcx.ws.is_member(&unit.pkg);
 
@@ -692,8 +686,13 @@ fn prepare_rustc(
     }
 
     base.inherit_jobserver(&cx.jobserver);
-    build_base_args(cx, &mut base, unit, crate_types)?;
+    build_base_args(cx, &mut base, unit)?;
     build_deps_args(&mut base, cx, unit)?;
+    add_cap_lints(cx.bcx, unit, &mut base);
+    base.args(cx.bcx.rustflags_args(unit));
+    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
+        base.arg("-Z").arg("binary-dep-depinfo");
+    }
     Ok(base)
 }
 
@@ -940,12 +939,7 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
 }
 
 /// Adds essential rustc flags and environment variables to the command to execute.
-fn build_base_args(
-    cx: &Context<'_, '_>,
-    cmd: &mut ProcessBuilder,
-    unit: &Unit,
-    crate_types: &[CrateType],
-) -> CargoResult<()> {
+fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) -> CargoResult<()> {
     assert!(!unit.mode.is_run_custom_build());
 
     let bcx = cx.bcx;
@@ -977,7 +971,7 @@ fn build_base_args(
 
     let mut contains_dy_lib = false;
     if !test {
-        for crate_type in crate_types {
+        for crate_type in &unit.target.rustc_crate_types() {
             cmd.arg("--crate-type").arg(crate_type.as_str());
             contains_dy_lib |= crate_type == &CrateType::Dylib;
         }
