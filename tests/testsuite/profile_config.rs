@@ -267,7 +267,7 @@ fn profile_config_all_options() {
             -C panic=abort \
             -C lto[..]\
             -C codegen-units=2 \
-            -C debuginfo=2 \
+            -C debuginfo=2 [..]\
             -C debug-assertions=on \
             -C overflow-checks=off [..]\
             -C rpath [..]\
