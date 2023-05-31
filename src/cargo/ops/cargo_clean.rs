@@ -297,7 +297,12 @@ fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -
         let entry = entry?;
         progress.on_clean()?;
         if entry.file_type().is_dir() {
-            paths::remove_dir(entry.path()).with_context(|| "could not remove build directory")?;
+            // The contents should have been removed by now, but sometimes a race condition is hit
+            // where other files have been added by the OS. `paths::remove_dir_all` also falls back
+            // to `std::fs::remove_dir_all`, which may be more reliable than a simple walk in
+            // platform-specific edge cases.
+            paths::remove_dir_all(entry.path())
+                .with_context(|| "could not remove build directory")?;
         } else {
             paths::remove_file(entry.path()).with_context(|| "failed to remove build artifact")?;
         }
