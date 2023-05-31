@@ -100,7 +100,7 @@ fn profile_selection_build() {
 [FINISHED] dev [unoptimized + debuginfo] [..]
 "
         )
-        .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
+        .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")
         .run();
     p.cargo("build -vv")
         .with_stderr_unordered(
@@ -201,7 +201,7 @@ fn profile_selection_build_all_targets() {
 [FINISHED] dev [unoptimized + debuginfo] [..]
 "
         )
-        .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
+        .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")
         .run();
     p.cargo("build -vv")
         .with_stderr_unordered(
