@@ -76,6 +76,7 @@ pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::context::{Context, Metadata};
 pub use self::crate_type::CrateType;
+pub use self::custom_build::LinkArgTarget;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub(crate) use self::fingerprint::DirtyReason;
 pub use self::job_queue::Freshness;
@@ -98,44 +99,6 @@ use cargo_util::{paths, ProcessBuilder, ProcessError};
 use rustfix::diagnostics::Applicability;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
-
-// TODO: Rename this to `ExtraLinkArgFor` or else, and move to compiler/custom_build.rs?
-/// Represents one of the instruction from `cargo:rustc-link-arg-*` build script
-/// instruction family.
-///
-/// In other words, indicates targets that custom linker arguments applies to.
-#[derive(Clone, Hash, Debug, PartialEq, Eq)]
-pub enum LinkType {
-    /// Represents `cargo:rustc-link-arg=FLAG`.
-    All,
-    /// Represents `cargo:rustc-cdylib-link-arg=FLAG`.
-    Cdylib,
-    /// Represents `cargo:rustc-link-arg-bins=FLAG`.
-    Bin,
-    /// Represents `cargo:rustc-link-arg-bin=BIN=FLAG`.
-    SingleBin(String),
-    /// Represents `cargo:rustc-link-arg-tests=FLAG`.
-    Test,
-    /// Represents `cargo:rustc-link-arg-benches=FLAG`.
-    Bench,
-    /// Represents `cargo:rustc-link-arg-examples=FLAG`.
-    Example,
-}
-
-impl LinkType {
-    /// Checks if this link type applies to a given [`Target`].
-    pub fn applies_to(&self, target: &Target) -> bool {
-        match self {
-            LinkType::All => true,
-            LinkType::Cdylib => target.is_cdylib(),
-            LinkType::Bin => target.is_bin(),
-            LinkType::SingleBin(name) => target.is_bin() && target.name() == name,
-            LinkType::Test => target.is_test(),
-            LinkType::Bench => target.is_bench(),
-            LinkType::Example => target.is_exe_example(),
-        }
-    }
-}
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
 /// directly, we'll use an `Executor`, giving clients an opportunity to intercept
@@ -544,7 +507,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 // clause should have been kept in the `if` block above. For
                 // now, continue allowing it for cdylib only.
                 // See https://github.com/rust-lang/cargo/issues/9562
-                if lt.applies_to(target) && (key.0 == current_id || *lt == LinkType::Cdylib) {
+                if lt.applies_to(target) && (key.0 == current_id || *lt == LinkArgTarget::Cdylib) {
                     rustc.arg("-C").arg(format!("link-arg={}", arg));
                 }
             }

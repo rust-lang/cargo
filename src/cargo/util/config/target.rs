@@ -1,5 +1,5 @@
 use super::{Config, ConfigKey, ConfigRelativePath, OptValue, PathAndArgs, StringList, CV};
-use crate::core::compiler::{BuildOutput, LinkType};
+use crate::core::compiler::{BuildOutput, LinkArgTarget};
 use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
@@ -178,27 +178,27 @@ fn parse_links_overrides(
                         .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                 }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
-                    let args = extra_link_args(LinkType::Cdylib, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Cdylib, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-bins" => {
-                    let args = extra_link_args(LinkType::Bin, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Bin, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg" => {
-                    let args = extra_link_args(LinkType::All, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::All, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-tests" => {
-                    let args = extra_link_args(LinkType::Test, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Test, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-benches" => {
-                    let args = extra_link_args(LinkType::Bench, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Bench, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-examples" => {
-                    let args = extra_link_args(LinkType::Example, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Example, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-cfg" => {
@@ -237,10 +237,10 @@ fn parse_links_overrides(
 }
 
 fn extra_link_args<'a>(
-    link_type: LinkType,
+    link_type: LinkArgTarget,
     key: &str,
     value: &'a CV,
-) -> CargoResult<impl Iterator<Item = (LinkType, String)> + 'a> {
+) -> CargoResult<impl Iterator<Item = (LinkArgTarget, String)> + 'a> {
     let args = value.list(key)?;
     Ok(args.iter().map(move |v| (link_type.clone(), v.0.clone())))
 }
