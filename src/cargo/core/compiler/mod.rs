@@ -998,7 +998,7 @@ fn build_base_args(
         ref panic,
         incremental,
         strip,
-        rustflags,
+        rustflags: profile_rustflags,
         ..
     } = unit.profile.clone();
     let test = unit.mode.is_any_test();
@@ -1078,9 +1078,7 @@ fn build_base_args(
     }
 
     cmd.args(unit.pkg.manifest().lint_rustflags());
-    if !rustflags.is_empty() {
-        cmd.args(&rustflags);
-    }
+    cmd.args(&profile_rustflags);
     if let Some(args) = cx.bcx.extra_args_for(unit) {
         cmd.args(args);
     }
