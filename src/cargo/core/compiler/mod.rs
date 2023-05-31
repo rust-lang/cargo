@@ -671,7 +671,7 @@ where
 // TODO: do we really need this as a separate function?
 // Maybe we should reorganize `rustc` fn to make it more traceable and readable.
 fn prepare_rustc(
-    cx: &mut Context<'_, '_>,
+    cx: &Context<'_, '_>,
     crate_types: &[CrateType],
     unit: &Unit,
 ) -> CargoResult<ProcessBuilder> {
@@ -941,7 +941,7 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
 
 /// Adds essential rustc flags and environment variables to the command to execute.
 fn build_base_args(
-    cx: &mut Context<'_, '_>,
+    cx: &Context<'_, '_>,
     cmd: &mut ProcessBuilder,
     unit: &Unit,
     crate_types: &[CrateType],
@@ -1240,11 +1240,7 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
 ///
 /// [`-L`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#-l-add-a-directory-to-the-library-search-path
 /// [`--extern`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--extern-specify-where-an-external-library-is-located
-fn build_deps_args(
-    cmd: &mut ProcessBuilder,
-    cx: &mut Context<'_, '_>,
-    unit: &Unit,
-) -> CargoResult<()> {
+fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
     let bcx = cx.bcx;
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
