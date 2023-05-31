@@ -696,8 +696,13 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
     Ok(base)
 }
 
-/// Creates a unit of work invoking `rustdoc` for documenting the `unit`.
-fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
+/// Prepares flags and environments we can compute for a `rustdoc` invocation
+/// before the job queue starts compiling any unit.
+///
+/// This builds a static view of the invocation. Flags depending on the
+/// completion of other units will be added later in runtime, such as flags
+/// from build scripts.
+fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
     let bcx = cx.bcx;
     // script_metadata is not needed here, it is only for tests.
     let mut rustdoc = cx.compilation.rustdoc_process(unit, None)?;
@@ -711,12 +716,6 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         rustdoc.arg("--target").arg(target.rustc_target());
     }
     let doc_dir = cx.files().out_dir(unit);
-
-    // Create the documentation directory ahead of time as rustdoc currently has
-    // a bug where concurrent invocations will race to create this directory if
-    // it doesn't already exist.
-    paths::create_dir_all(&doc_dir)?;
-
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(unit));
     rustdoc.args(&check_cfg_args(cx, unit));
@@ -732,10 +731,6 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let metadata = cx.metadata_for_doc_units[unit];
     rustdoc.arg("-C").arg(format!("metadata={}", metadata));
 
-    let scrape_output_path = |unit: &Unit| -> CargoResult<PathBuf> {
-        cx.outputs(unit).map(|outputs| outputs[0].path.clone())
-    };
-
     if unit.mode.is_doc_scrape() {
         debug_assert!(cx.bcx.scrape_units.contains(unit));
 
@@ -747,7 +742,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
         rustdoc
             .arg("--scrape-examples-output-path")
-            .arg(scrape_output_path(unit)?);
+            .arg(scrape_output_path(cx, unit)?);
 
         // Only scrape example for items from crates in the workspace, to reduce generated file size
         for pkg in cx.bcx.ws.members() {
@@ -762,21 +757,9 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         }
     }
 
-    let should_include_scrape_units = unit.mode.is_doc()
-        && cx.bcx.scrape_units.len() > 0
-        && cx.bcx.ws.unit_needs_doc_scrape(unit);
-    let scrape_outputs = if should_include_scrape_units {
+    if should_include_scrape_units(cx.bcx, unit) {
         rustdoc.arg("-Zunstable-options");
-        Some(
-            cx.bcx
-                .scrape_units
-                .iter()
-                .map(|unit| Ok((cx.files().metadata(unit), scrape_output_path(unit)?)))
-                .collect::<CargoResult<HashMap<_, _>>>()?,
-        )
-    } else {
-        None
-    };
+    }
 
     build_deps_args(&mut rustdoc, cx, unit)?;
     rustdoc::add_root_urls(cx, unit, &mut rustdoc)?;
@@ -787,6 +770,20 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
         append_crate_version_flag(unit, &mut rustdoc);
     }
 
+    Ok(rustdoc)
+}
+
+/// Creates a unit of work invoking `rustdoc` for documenting the `unit`.
+fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
+    let mut rustdoc = prepare_rustdoc(cx, unit)?;
+
+    let crate_name = unit.target.crate_name();
+    let doc_dir = cx.files().out_dir(unit);
+    // Create the documentation directory ahead of time as rustdoc currently has
+    // a bug where concurrent invocations will race to create this directory if
+    // it doesn't already exist.
+    paths::create_dir_all(&doc_dir)?;
+
     let target_desc = unit.target.description_named();
     let name = unit.pkg.name().to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
@@ -795,6 +792,17 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
     let script_metadata = cx.find_build_script_metadata(unit);
+    let scrape_outputs = if should_include_scrape_units(cx.bcx, unit) {
+        Some(
+            cx.bcx
+                .scrape_units
+                .iter()
+                .map(|unit| Ok((cx.files().metadata(unit), scrape_output_path(cx, unit)?)))
+                .collect::<CargoResult<HashMap<_, _>>>()?,
+        )
+    } else {
+        None
+    };
 
     let failed_scrape_units = Arc::clone(&cx.failed_scrape_units);
     let hide_diagnostics_for_scrape_unit = cx.bcx.unit_can_fail_for_docscraping(unit)
@@ -1773,4 +1781,15 @@ fn apply_env_config(config: &crate::Config, cmd: &mut ProcessBuilder) -> CargoRe
         }
     }
     Ok(())
+}
+
+/// Checks if there are some scrape units waiting to be processed.
+fn should_include_scrape_units(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
+    unit.mode.is_doc() && bcx.scrape_units.len() > 0 && bcx.ws.unit_needs_doc_scrape(unit)
+}
+
+/// Gets the file path of function call information output from `rustdoc`.
+fn scrape_output_path(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<PathBuf> {
+    assert!(unit.mode.is_doc() || unit.mode.is_doc_scrape());
+    cx.outputs(unit).map(|outputs| outputs[0].path.clone())
 }
