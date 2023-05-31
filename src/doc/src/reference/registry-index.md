@@ -80,6 +80,8 @@ harder to support older versions of Cargo that lack `{prefix}`/`{lowerprefix}`.
 For example, nginx rewrite rules can easily construct `{prefix}` but can't
 perform case-conversion to construct `{lowerprefix}`.
 
+### Name restrictions
+
 Registries should consider enforcing limitations on package names added to
 their index. Cargo itself allows names with any [alphanumeric], `-`, or `_`
 characters. [crates.io] imposes its own limitations, including the following:
@@ -97,6 +99,14 @@ the security implications, such as [IDN homograph
 attacks](https://en.wikipedia.org/wiki/IDN_homograph_attack) and other
 concerns in [UTR36](https://www.unicode.org/reports/tr36/) and
 [UTS39](https://www.unicode.org/reports/tr39/).
+
+### Version uniqueness
+
+Indexes *must* ensure that each version only appears once for each package.
+This includes ignoring SemVer build metadata.
+For example, the index must *not* contain two entries with a version `1.0.7` and `1.0.7+extra`.
+
+### JSON schema
 
 Each line in a package file contains a JSON object that describes a published
 version of the package. The following is a pretty-printed example with comments
