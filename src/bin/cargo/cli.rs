@@ -14,16 +14,6 @@ use super::list_commands;
 use crate::command_prelude::*;
 use cargo::core::features::HIDDEN;
 
-lazy_static::lazy_static! {
-    // Maps from commonly known external commands (not builtin to cargo) to their
-    // description, for the help page. Reserved for external subcommands that are
-    // core within the rust ecosystem (esp ones that might become internal in the future).
-    static ref KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS: HashMap<&'static str, &'static str> = HashMap::from([
-        ("clippy", "Checks a package to catch common mistakes and improve your Rust code."),
-        ("fmt", "Formats all bin and lib files of the current crate using rustfmt."),
-    ]);
-}
-
 pub fn main(config: &mut LazyConfig) -> CliResult {
     let args = cli().try_get_matches()?;
 
@@ -128,15 +118,28 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
     }
 
     if expanded_args.flag("list") {
+        // Maps from commonly known external commands (not builtin to cargo)
+        // to their description, for the help page. Reserved for external
+        // subcommands that are core within the rust ecosystem (esp ones that
+        // might become internal in the future).
+        let known_external_command_descriptions = HashMap::from([
+            (
+                "clippy",
+                "Checks a package to catch common mistakes and improve your Rust code.",
+            ),
+            (
+                "fmt",
+                "Formats all bin and lib files of the current crate using rustfmt.",
+            ),
+        ]);
         drop_println!(config, "Installed Commands:");
         for (name, command) in list_commands(config) {
-            let known_external_desc = KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS.get(name.as_str());
+            let known_external_desc = known_external_command_descriptions.get(name.as_str());
             match command {
                 CommandInfo::BuiltIn { about } => {
                     assert!(
                         known_external_desc.is_none(),
-                        "KNOWN_EXTERNAL_COMMANDS shouldn't contain builtin \"{}\"",
-                        name
+                        "known_external_commands shouldn't contain builtin `{name}`",
                     );
                     let summary = about.unwrap_or_default();
                     let summary = summary.lines().next().unwrap_or(&summary); // display only the first line

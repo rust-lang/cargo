@@ -1,7 +1,6 @@
 use filetime::{self, FileTime};
-use lazy_static::lazy_static;
+
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{self, ErrorKind};
@@ -9,15 +8,11 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::sync::OnceLock;
 
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
-lazy_static! {
-    // TODO: Use `SyncOnceCell` when stable
-    static ref GLOBAL_ROOT: Mutex<Option<PathBuf>> = Mutex::new(None);
-
-    static ref TEST_ROOTS: Mutex<HashMap<String, PathBuf>> = Default::default();
-}
+static GLOBAL_ROOT: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
 
 /// This is used when running cargo is pre-CARGO_TARGET_TMPDIR
 /// TODO: Remove when CARGO_TARGET_TMPDIR grows old enough.
@@ -31,7 +26,10 @@ fn global_root_legacy() -> PathBuf {
 }
 
 fn set_global_root(tmp_dir: Option<&'static str>) {
-    let mut lock = GLOBAL_ROOT.lock().unwrap();
+    let mut lock = GLOBAL_ROOT
+        .get_or_init(|| Default::default())
+        .lock()
+        .unwrap();
     if lock.is_none() {
         let mut root = match tmp_dir {
             Some(tmp_dir) => PathBuf::from(tmp_dir),
@@ -44,7 +42,10 @@ fn set_global_root(tmp_dir: Option<&'static str>) {
 }
 
 pub fn global_root() -> PathBuf {
-    let lock = GLOBAL_ROOT.lock().unwrap();
+    let lock = GLOBAL_ROOT
+        .get_or_init(|| Default::default())
+        .lock()
+        .unwrap();
     match lock.as_ref() {
         Some(p) => p.clone(),
         None => unreachable!("GLOBAL_ROOT not set yet"),

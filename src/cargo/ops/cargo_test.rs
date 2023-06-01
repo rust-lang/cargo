@@ -217,8 +217,6 @@ fn run_doc_tests(
 
         if doctest_in_workspace {
             add_path_args(ws, unit, &mut p);
-            // FIXME(swatinem): remove the `unstable-options` once rustdoc stabilizes the `test-run-directory` option
-            p.arg("-Z").arg("unstable-options");
             p.arg("--test-run-directory")
                 .arg(unit.pkg.root().to_path_buf());
         } else {
