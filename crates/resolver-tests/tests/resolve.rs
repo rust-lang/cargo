@@ -1,3 +1,5 @@
+use std::io::IsTerminal;
+
 use cargo::core::dependency::DepKind;
 use cargo::core::Dependency;
 use cargo::util::Config;
@@ -21,7 +23,7 @@ use proptest::prelude::*;
 proptest! {
     #![proptest_config(ProptestConfig {
         max_shrink_iters:
-            if is_ci() || !is_terminal::IsTerminal::is_terminal(&std::io::stderr()){
+            if is_ci() || !std::io::stderr().is_terminal() {
                 // This attempts to make sure that CI will fail fast,
                 0
             } else {

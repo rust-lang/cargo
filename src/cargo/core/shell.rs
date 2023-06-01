@@ -1,7 +1,7 @@
 use std::fmt;
 use std::io::prelude::*;
+use std::io::IsTerminal;
 
-use is_terminal::IsTerminal;
 use termcolor::Color::{Cyan, Green, Red, Yellow};
 use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
 

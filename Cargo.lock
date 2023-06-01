@@ -274,7 +274,6 @@ dependencies = [
  "ignore",
  "im-rc",
  "indexmap",
- "is-terminal",
  "itertools",
  "jobserver",
  "lazy_static",
@@ -2658,7 +2657,6 @@ version = "0.0.0"
 dependencies = [
  "cargo",
  "cargo-util",
- "is-terminal",
  "lazy_static",
  "proptest",
  "varisat",
