@@ -1,5 +1,59 @@
 # Changelog
 
+## Cargo 1.72 (2023-08-24)
+[64fb38c9...HEAD](https://github.com/rust-lang/cargo/compare/64fb38c9...HEAD)
+
+### Added
+
+### Changed
+
+- Cargo now warns when an edition 2021 package is in a virtual workspace and
+  `workspace.resolver` is not set. It is recommended to set the resolver
+  version for workspaces explicitly.
+  [#10910](https://github.com/rust-lang/cargo/pull/10910)
+- Set IBM AIX shared libraries search path to `LIBPATH`.
+  [#11968](https://github.com/rust-lang/cargo/pull/11968)
+- Don't pass `-C debuginfo=0` to rustc as it is the default value.
+  [#12022](https://github.com/rust-lang/cargo/pull/12022)
+  [#12205](https://github.com/rust-lang/cargo/pull/12205)
+
+### Fixed
+
+- `cargo clean` uses `remove_dir_all` as a fallback to resolve race conditions.
+  [#11442](https://github.com/rust-lang/cargo/pull/11442)
+- Reduced the chance Cargo re-formats the user's `[features]` table.
+  [#12191](https://github.com/rust-lang/cargo/pull/12191)
+
+### Nightly only
+
+- Automatically inherit workspace lints when running `cargo new`/`cargo init`.
+  [#12174](https://github.com/rust-lang/cargo/pull/12174)
+
+### Documentation
+
+- Added a description of `Cargo.lock` conflicts in the Cargo FAQ.
+  [#12185](https://github.com/rust-lang/cargo/pull/12185)
+- Added a small note about indexes ignoring SemVer build metadata.
+  [#12206](https://github.com/rust-lang/cargo/pull/12206)
+- Added doc comments for `GitSource` types and friends.
+  [#12192](https://github.com/rust-lang/cargo/pull/12192)
+
+### Internal
+
+- Removed unused features from `windows-sys` dependency.
+  [#12176](https://github.com/rust-lang/cargo/pull/12176)
+- Refactor compiler invocations 
+  [#12211](https://github.com/rust-lang/cargo/pull/12211)
+- Reuse `make_dep_prefix` implementation 
+  [#12203](https://github.com/rust-lang/cargo/pull/12203)
+- Lexicographically order `-Z` flags 
+  [#12182](https://github.com/rust-lang/cargo/pull/12182)
+- Several Cargo's own test infra improvements and speed-ups.
+  [#12184](https://github.com/rust-lang/cargo/pull/12184)
+  [#12188](https://github.com/rust-lang/cargo/pull/12188)
+  [#12189](https://github.com/rust-lang/cargo/pull/12189)
+  [#12194](https://github.com/rust-lang/cargo/pull/12194)
+  [#12199](https://github.com/rust-lang/cargo/pull/12199)
 ## Cargo 1.71 (2023-07-13)
 [84b7041f...HEAD](https://github.com/rust-lang/cargo/compare/84b7041f...HEAD)
 
