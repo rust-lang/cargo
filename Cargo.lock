@@ -276,7 +276,6 @@ dependencies = [
  "indexmap",
  "itertools",
  "jobserver",
- "lazy_static",
  "lazycell",
  "libc",
  "libgit2-sys",

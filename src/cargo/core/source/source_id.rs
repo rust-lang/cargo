@@ -13,11 +13,10 @@ use std::hash::{self, Hash};
 use std::path::{Path, PathBuf};
 use std::ptr;
 use std::sync::Mutex;
+use std::sync::OnceLock;
 use url::Url;
 
-lazy_static::lazy_static! {
-    static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Default::default();
-}
+static SOURCE_ID_CACHE: OnceLock<Mutex<HashSet<&'static SourceIdInner>>> = OnceLock::new();
 
 /// Unique identifier for a source of packages.
 ///
@@ -118,7 +117,10 @@ impl SourceId {
 
     /// Interns the value and returns the wrapped type.
     fn wrap(inner: SourceIdInner) -> SourceId {
-        let mut cache = SOURCE_ID_CACHE.lock().unwrap();
+        let mut cache = SOURCE_ID_CACHE
+            .get_or_init(|| Default::default())
+            .lock()
+            .unwrap();
         let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
             let inner = Box::leak(Box::new(inner));
             cache.insert(inner);
