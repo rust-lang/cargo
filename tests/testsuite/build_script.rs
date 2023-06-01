@@ -1755,7 +1755,7 @@ fn build_cmd_with_a_build_cmd() {
     --extern a=[..]liba[..].rlib`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]lib.rs [..]--crate-type lib \
-    --emit=[..]link[..]-C debuginfo=2 \
+    --emit=[..]link[..]-C debuginfo=2 [..]\
     -C metadata=[..] \
     --out-dir [..] \
     -L [..]target/debug/deps`

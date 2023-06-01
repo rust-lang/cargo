@@ -411,7 +411,7 @@ fn check_ssh_known_hosts_loaded(
     // fingerprints (see FingerprintHash ssh config option). Here we only
     // support SHA256.
     let mut remote_fingerprint = cargo_util::Sha256::new();
-    remote_fingerprint.update(remote_host_key.clone());
+    remote_fingerprint.update(remote_host_key);
     let remote_fingerprint = STANDARD_NO_PAD.encode(remote_fingerprint.finish());
     let remote_host_key_encoded = STANDARD.encode(remote_host_key);
 

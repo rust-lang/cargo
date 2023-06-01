@@ -31,7 +31,7 @@
 //! [`CompileMode::RunCustomBuild`]: super::CompileMode
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
-use super::{fingerprint, Context, Job, LinkType, Unit, Work};
+use super::{fingerprint, Context, Job, Unit, Work};
 use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
@@ -62,7 +62,7 @@ pub struct BuildOutput {
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
     /// Linker arguments suitable to be passed to `-C link-arg=<args>`
-    pub linker_args: Vec<(LinkType, String)>,
+    pub linker_args: Vec<(LinkArgTarget, String)>,
     /// Various `--cfg` flags to pass to the compiler.
     pub cfgs: Vec<String>,
     /// Various `--check-cfg` flags to pass to the compiler.
@@ -144,6 +144,47 @@ pub struct BuildDeps {
     pub rerun_if_changed: Vec<PathBuf>,
     /// Environment variables that trigger a rebuild if they change.
     pub rerun_if_env_changed: Vec<String>,
+}
+
+/// Represents one of the instructions from `cargo:rustc-link-arg-*` build
+/// script instruction family.
+///
+/// In other words, indicates targets that custom linker arguments applies to.
+///
+/// See the [build script documentation][1] for more.
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-link-argflag
+#[derive(Clone, Hash, Debug, PartialEq, Eq)]
+pub enum LinkArgTarget {
+    /// Represents `cargo:rustc-link-arg=FLAG`.
+    All,
+    /// Represents `cargo:rustc-cdylib-link-arg=FLAG`.
+    Cdylib,
+    /// Represents `cargo:rustc-link-arg-bins=FLAG`.
+    Bin,
+    /// Represents `cargo:rustc-link-arg-bin=BIN=FLAG`.
+    SingleBin(String),
+    /// Represents `cargo:rustc-link-arg-tests=FLAG`.
+    Test,
+    /// Represents `cargo:rustc-link-arg-benches=FLAG`.
+    Bench,
+    /// Represents `cargo:rustc-link-arg-examples=FLAG`.
+    Example,
+}
+
+impl LinkArgTarget {
+    /// Checks if this link type applies to a given [`Target`].
+    pub fn applies_to(&self, target: &Target) -> bool {
+        match self {
+            LinkArgTarget::All => true,
+            LinkArgTarget::Cdylib => target.is_cdylib(),
+            LinkArgTarget::Bin => target.is_bin(),
+            LinkArgTarget::SingleBin(name) => target.is_bin() && target.name() == name,
+            LinkArgTarget::Test => target.is_test(),
+            LinkArgTarget::Bench => target.is_bench(),
+            LinkArgTarget::Example => target.is_exe_example(),
+        }
+    }
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
@@ -711,10 +752,10 @@ impl BuildOutput {
                             key, pkg_descr
                         ));
                     }
-                    linker_args.push((LinkType::Cdylib, value))
+                    linker_args.push((LinkArgTarget::Cdylib, value))
                 }
                 "rustc-link-arg-bins" => {
-                    check_and_add_target!("bin", Target::is_bin, LinkType::Bin);
+                    check_and_add_target!("bin", Target::is_bin, LinkArgTarget::Bin);
                 }
                 "rustc-link-arg-bin" => {
                     let mut parts = value.splitn(2, '=');
@@ -742,19 +783,19 @@ impl BuildOutput {
                             bin_name
                         );
                     }
-                    linker_args.push((LinkType::SingleBin(bin_name), arg.to_string()));
+                    linker_args.push((LinkArgTarget::SingleBin(bin_name), arg.to_string()));
                 }
                 "rustc-link-arg-tests" => {
-                    check_and_add_target!("test", Target::is_test, LinkType::Test);
+                    check_and_add_target!("test", Target::is_test, LinkArgTarget::Test);
                 }
                 "rustc-link-arg-benches" => {
-                    check_and_add_target!("benchmark", Target::is_bench, LinkType::Bench);
+                    check_and_add_target!("benchmark", Target::is_bench, LinkArgTarget::Bench);
                 }
                 "rustc-link-arg-examples" => {
-                    check_and_add_target!("example", Target::is_example, LinkType::Example);
+                    check_and_add_target!("example", Target::is_example, LinkArgTarget::Example);
                 }
                 "rustc-link-arg" => {
-                    linker_args.push((LinkType::All, value));
+                    linker_args.push((LinkArgTarget::All, value));
                 }
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-check-cfg" => {
