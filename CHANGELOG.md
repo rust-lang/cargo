@@ -90,7 +90,7 @@
   [#11878](https://github.com/rust-lang/cargo/pull/11878)
 - Added delays to network retries in Cargo.
   [#11881](https://github.com/rust-lang/cargo/pull/11881)
-- Refined `cargo puslish` message when waiting for a publish complete.
+- Refined `cargo publish` message when waiting for a publish complete.
   [#11713](https://github.com/rust-lang/cargo/pull/11713)
 - Better error message when `cargo install` from a git repository but found
   multiple packages.
