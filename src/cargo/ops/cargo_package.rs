@@ -13,6 +13,7 @@ use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
+use crate::util::config::JobsConfig;
 use crate::util::errors::CargoResult;
 use crate::util::toml::TomlManifest;
 use crate::util::{self, human_readable_bytes, restricted_names, Config, FileLock};
@@ -31,7 +32,7 @@ pub struct PackageOpts<'cfg> {
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
-    pub jobs: Option<i32>,
+    pub jobs: Option<JobsConfig>,
     pub keep_going: bool,
     pub to_package: ops::Packages,
     pub targets: Vec<String>,
@@ -198,7 +199,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
                 check_metadata: opts.check_metadata,
                 allow_dirty: opts.allow_dirty,
                 verify: opts.verify,
-                jobs: opts.jobs,
+                jobs: opts.jobs.clone(),
                 keep_going: opts.keep_going,
                 to_package: ops::Packages::Default,
                 targets: opts.targets.clone(),
@@ -861,7 +862,7 @@ fn run_verify(
         &ops::CompileOptions {
             build_config: BuildConfig::new(
                 config,
-                opts.jobs,
+                opts.jobs.clone(),
                 opts.keep_going,
                 &opts.targets,
                 CompileMode::Build,

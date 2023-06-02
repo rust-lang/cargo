@@ -5566,6 +5566,8 @@ fn good_jobs() {
     p.cargo("build --jobs 1").run();
 
     p.cargo("build --jobs -1").run();
+
+    p.cargo("build --jobs default").run();
 }
 
 #[cargo_test]
@@ -5599,8 +5601,8 @@ fn invalid_jobs() {
         .run();
 
     p.cargo("build --jobs over9000")
-        .with_status(1)
-        .with_stderr("error: Invalid value: could not parse `over9000` as a number")
+        .with_status(101)
+        .with_stderr("error: could not parse `over9000`. Number of parallel jobs should be `default` or a number.")
         .run();
 }
 

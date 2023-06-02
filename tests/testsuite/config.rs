@@ -1,7 +1,7 @@
 //! Tests for config settings.
 
 use cargo::core::{PackageIdSpec, Shell};
-use cargo::util::config::{self, Config, Definition, SslVersionConfig, StringList};
+use cargo::util::config::{self, Config, Definition, JobsConfig, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
 use cargo::util::toml::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
 use cargo::CargoResult;
@@ -1649,5 +1649,65 @@ fn debuginfo_parsing() {
         assert!(err
             .to_string()
             .ends_with("could not load config key `profile.dev.debug`"));
+    }
+}
+
+#[cargo_test]
+fn build_jobs_missing() {
+    write_config(
+        "\
+[build]
+",
+    );
+
+    let config = new_config();
+
+    assert!(config
+        .get::<Option<JobsConfig>>("build.jobs")
+        .unwrap()
+        .is_none());
+}
+
+#[cargo_test]
+fn build_jobs_default() {
+    write_config(
+        "\
+[build]
+jobs = \"default\"
+",
+    );
+
+    let config = new_config();
+
+    let a = config
+        .get::<Option<JobsConfig>>("build.jobs")
+        .unwrap()
+        .unwrap();
+
+    match a {
+        JobsConfig::String(v) => assert_eq!(&v, "default"),
+        JobsConfig::Integer(_) => panic!("Did not except an integer."),
+    }
+}
+
+#[cargo_test]
+fn build_jobs_integer() {
+    write_config(
+        "\
+[build]
+jobs = 2
+",
+    );
+
+    let config = new_config();
+
+    let a = config
+        .get::<Option<JobsConfig>>("build.jobs")
+        .unwrap()
+        .unwrap();
+
+    match a {
+        JobsConfig::String(_) => panic!("Did not except an integer."),
+        JobsConfig::Integer(v) => assert_eq!(v, 2),
     }
 }

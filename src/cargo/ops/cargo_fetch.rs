@@ -2,6 +2,7 @@ use crate::core::compiler::standard_lib;
 use crate::core::compiler::{BuildConfig, CompileMode, RustcTargetData};
 use crate::core::{PackageSet, Resolve, Workspace};
 use crate::ops;
+use crate::util::config::JobsConfig;
 use crate::util::CargoResult;
 use crate::util::Config;
 use std::collections::HashSet;
@@ -20,7 +21,7 @@ pub fn fetch<'a>(
     ws.emit_warnings()?;
     let (mut packages, resolve) = ops::resolve_ws(ws)?;
 
-    let jobs = Some(1);
+    let jobs = Some(JobsConfig::Integer(1));
     let keep_going = false;
     let config = ws.config();
     let build_config = BuildConfig::new(

@@ -23,6 +23,8 @@ pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
 
 pub use clap::Command;
 
+use super::config::JobsConfig;
+
 pub trait CommandExt: Sized {
     fn _arg(self, arg: Arg) -> Self;
 
@@ -66,7 +68,7 @@ pub trait CommandExt: Sized {
 
     fn arg_jobs(self) -> Self {
         self._arg(
-            opt("jobs", "Number of parallel jobs, defaults to # of CPUs")
+            opt("jobs", "Number of parallel jobs, defaults to # of CPUs.")
                 .short('j')
                 .value_name("N")
                 .allow_hyphen_values(true),
@@ -364,8 +366,16 @@ pub trait ArgMatchesExt {
         Ok(ws)
     }
 
-    fn jobs(&self) -> CargoResult<Option<i32>> {
-        self.value_of_i32("jobs")
+    fn jobs(&self) -> CargoResult<Option<JobsConfig>> {
+        let arg = match self._value_of("jobs") {
+            None => None,
+            Some(arg) => match arg.parse::<i32>() {
+                Ok(j) => Some(JobsConfig::Integer(j)),
+                Err(_) => Some(JobsConfig::String(arg.to_string())),
+            },
+        };
+
+        Ok(arg)
     }
 
     fn verbose(&self) -> u32 {

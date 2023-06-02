@@ -32,7 +32,7 @@ use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_DOMAIN, CRATES_I
 use crate::util::auth::{
     paserk_public_from_paserk_secret, Secret, {self, AuthorizationError},
 };
-use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
+use crate::util::config::{Config, JobsConfig, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{truncate_with_ellipsis, IntoUrl};
@@ -101,7 +101,7 @@ pub struct PublishOpts<'cfg> {
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
-    pub jobs: Option<i32>,
+    pub jobs: Option<JobsConfig>,
     pub keep_going: bool,
     pub to_publish: ops::Packages,
     pub targets: Vec<String>,
@@ -196,7 +196,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             allow_dirty: opts.allow_dirty,
             to_package: ops::Packages::Default,
             targets: opts.targets.clone(),
-            jobs: opts.jobs,
+            jobs: opts.jobs.clone(),
             keep_going: opts.keep_going,
             cli_features: cli_features,
         },
