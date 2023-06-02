@@ -687,6 +687,26 @@ macro_rules! unstable_cli_options {
                 fields
             }
         }
+
+        #[cfg(test)]
+        mod test {
+            #[test]
+            fn ensure_sorted() {
+                // This will be printed out if the fields are not sorted.
+                let location = std::panic::Location::caller();
+                println!(
+                    "\nTo fix this test, sort the features inside the macro at {}:{}\n",
+                    location.file(),
+                    location.line()
+                );
+                let mut expected = vec![$(stringify!($element)),*];
+                expected[2..].sort();
+                snapbox::assert_eq(
+                    format!("{:#?}", expected),
+                    format!("{:#?}", vec![$(stringify!($element)),*])
+                );
+            }
+        }
     }
 }
 
