@@ -1,0 +1,2 @@
+error: invalid character `+` in dependency name: `+nightly`
+    Use `cargo +nightly add` if you meant to use the `nightly` toolchain.

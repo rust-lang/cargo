@@ -242,7 +242,20 @@ fn parse_dependencies(config: &Config, matches: &ArgMatches) -> CargoResult<Vec<
         .flatten()
         .map(|c| (Some(c.clone()), None))
         .collect::<IndexMap<_, _>>();
+
     let mut infer_crate_name = false;
+
+    for (crate_name, _) in crates.iter() {
+        let crate_name = crate_name.as_ref().unwrap();
+
+        if let Some(toolchain) = crate_name.strip_prefix("+") {
+            anyhow::bail!(
+                "invalid character `+` in dependency name: `+{toolchain}`
+    Use `cargo +{toolchain} add` if you meant to use the `{toolchain}` toolchain."
+            );
+        }
+    }
+
     if crates.is_empty() {
         if path.is_some() || git.is_some() {
             crates.insert(None, None);

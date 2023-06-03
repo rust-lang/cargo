@@ -1,5 +1,6 @@
 use crate::command_prelude::*;
 
+use anyhow::anyhow;
 use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
 use cargo::util::IntoUrl;
@@ -107,6 +108,16 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .unwrap_or_default()
         .map(|k| resolve_crate(k, version))
         .collect::<crate::CargoResult<Vec<_>>>()?;
+
+    for (crate_name, _) in krates.iter() {
+        if let Some(toolchain) = crate_name.strip_prefix("+") {
+            return Err(anyhow!(
+                "invalid character `+` in package name: `+{toolchain}`
+    Use `cargo +{toolchain} install` if you meant to use the `{toolchain}` toolchain."
+            )
+            .into());
+        }
+    }
 
     let mut from_cwd = false;
 
