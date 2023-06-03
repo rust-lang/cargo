@@ -370,13 +370,14 @@ recursive_example = "rr --example recursions"
 The `[build]` table controls build-time operations and compiler settings.
 
 ##### `build.jobs`
-* Type: integer
+* Type: integer or string
 * Default: number of logical CPUs
 * Environment: `CARGO_BUILD_JOBS`
 
 Sets the maximum number of compiler processes to run in parallel. If negative,
 it sets the maximum number of compiler processes to the number of logical CPUs
-plus provided value. Should not be 0.
+plus provided value. Should not be 0. If a string `default` is provided, it sets
+the value back to defaults.
 
 Can be overridden with the `--jobs` CLI option.
 

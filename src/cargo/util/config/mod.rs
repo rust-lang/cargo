@@ -2449,6 +2449,25 @@ pub struct CargoSshConfig {
     pub known_hosts: Option<Vec<Value<String>>>,
 }
 
+/// Configuration for `jobs` in `build` section. There are two
+/// ways to configure: An integer or a simple string expression.
+///
+/// ```toml
+/// [build]
+/// jobs = 1
+/// ```
+///
+/// ```toml
+/// [build]
+/// jobs = "default" # Currently only support "default".
+/// ```
+#[derive(Debug, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum JobsConfig {
+    Integer(i32),
+    String(String),
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoBuildConfig {
@@ -2458,7 +2477,7 @@ pub struct CargoBuildConfig {
     pub target_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
-    pub jobs: Option<i32>,
+    pub jobs: Option<JobsConfig>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
     pub rustc_wrapper: Option<ConfigRelativePath>,

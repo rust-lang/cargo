@@ -343,6 +343,7 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of logical CPUs. If negative, it sets the maximum number
            of parallel jobs to the number of logical CPUs plus provided value.
+           If a string default is provided, it sets the value back to defaults.
            Should not be 0.
 
        --keep-going
