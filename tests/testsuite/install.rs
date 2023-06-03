@@ -58,6 +58,20 @@ fn simple() {
 }
 
 #[cargo_test]
+fn toolchain() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install +nightly")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid character `+` in package name: `+nightly`
+    Use `cargo +nightly install` if you meant to use the `nightly` toolchain.",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn simple_with_message_format() {
     pkg("foo", "0.0.1");
 
