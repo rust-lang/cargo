@@ -124,7 +124,7 @@
 
 ### Nightly only
 
-- 🔥 The `-Zgitxoide` feature now supports shallow clones and fetches for
+- 🔥 The `-Zgitoxide` feature now supports shallow clones and fetches for
   dependencies and registry indexes.
   [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#gitoxide)
   [#11840](https://github.com/rust-lang/cargo/pull/11840)
