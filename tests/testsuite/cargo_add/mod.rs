@@ -1,6 +1,7 @@
 mod add_basic;
 mod add_multiple;
 mod add_normalized_name_external;
+mod add_toolchain;
 mod build;
 mod build_prefer_existing_version;
 mod change_rename_target;
