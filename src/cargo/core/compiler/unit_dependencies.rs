@@ -1,4 +1,4 @@
-//! # Constructs the dependency graph for compilation
+//! Constructs the dependency graph for compilation.
 //!
 //! Rust code is typically organized as a set of Cargo packages. The
 //! dependencies between the packages themselves are stored in the

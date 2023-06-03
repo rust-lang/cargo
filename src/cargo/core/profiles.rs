@@ -1,4 +1,4 @@
-//! # Profiles: built-in and customizable compiler flag presets
+//! Handles built-in and customizable compiler flag presets.
 //!
 //! [`Profiles`] is a collections of built-in profiles, and profiles defined
 //! in the root manifest and configurations.

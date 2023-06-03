@@ -1,7 +1,5 @@
-//! # The Cargo "compile" operation
-//!
-//! This module contains the entry point for starting the compilation process
-//! for commands like `build`, `test`, `doc`, `rustc`, etc.
+//! The entry point for starting the compilation process for commands like
+//! `build`, `test`, `doc`, `rustc`, etc.
 //!
 //! The [`compile`] function will do all the work to compile a workspace. A
 //! rough outline is:

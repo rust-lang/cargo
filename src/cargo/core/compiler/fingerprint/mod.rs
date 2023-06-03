@@ -1,8 +1,11 @@
-//! # Fingerprints
+//! Tracks changes to determine if something needs to be recompiled.
 //!
 //! This module implements change-tracking so that Cargo can know whether or
 //! not something needs to be recompiled. A Cargo [`Unit`] can be either "dirty"
 //! (needs to be recompiled) or "fresh" (it does not need to be recompiled).
+//!
+//! ## Mechanisms affecting freshness
+//!
 //! There are several mechanisms that influence a Unit's freshness:
 //!
 //! - The [`Fingerprint`] is a hash, saved to the filesystem in the
