@@ -1614,6 +1614,127 @@ repository = "foo"
     );
 }
 
+// This test case have a feature `foo_feature = [byte-unit/alloc]` which is owned by `dev-dependencies`,
+// `cargo publish` should strip it to `foo_feature = []`.
+#[cargo_test]
+fn publish_strip_feature_which_is_owned_by_dev_deps() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+
+            [dependencies]
+
+            [dev-dependencies]
+            byte-unit = {version = "4.0.19", features = ["alloc"]}
+
+           [features]
+           foo_feature = ["byte-unit/alloc"]
+
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+[UPLOADING] foo v0.1.0 [..]
+[UPLOADED] foo v0.1.0 [..]
+note: Waiting [..]
+You may press ctrl-c [..]
+[PUBLISHED] foo v0.1.0 [..]
+",
+        )
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [
+                "alloc"
+              ],
+              "kind": "dev",
+              "name": "byte-unit",
+              "optional": false,
+              "target": null,
+              "version_req": "^4.0.19"
+            }
+          ],
+          "description": "foo",
+          "documentation": "foo",
+          "features": {
+            "foo_feature": [
+              "byte-unit/alloc"
+            ]
+          },
+          "homepage": "foo",
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": "foo",
+          "rust_version": null,
+          "vers": "0.1.0"
+        }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+[package]
+name = "foo"
+version = "0.1.0"
+authors = []
+description = "foo"
+homepage = "foo"
+documentation = "foo"
+license = "MIT"
+repository = "foo"
+
+[dependencies]
+
+[dev-dependencies.byte-unit]
+version = "4.0.19"
+features = ["alloc"]
+
+[features]
+foo_feature = []
+"#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
+        )],
+    );
+}
+
 #[cargo_test]
 fn credentials_ambiguous_filename() {
     // `publish` generally requires a remote registry
