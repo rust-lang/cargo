@@ -1,4 +1,4 @@
-//! # Feature resolver
+//! Resolves conditional compilation for [`features` section] in the manifest.
 //!
 //! This is a [new feature resolver] that runs independently of the main
 //! dependency resolver. It has several options which can enable new feature
@@ -34,6 +34,7 @@
 //!
 //! There are probably other assumptions that I am forgetting.
 //!
+//! [`features` section]: https://doc.rust-lang.org/nightly/cargo/reference/features.html
 //! [new feature resolver]: https://doc.rust-lang.org/nightly/cargo/reference/resolver.html#feature-resolver-version-2
 //! [`resolve_ws_with_opts`]: crate::ops::resolve_ws_with_opts
 

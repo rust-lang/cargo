@@ -1,4 +1,4 @@
-//! # An internal profiler for Cargo itself
+//! An internal performance profiler for Cargo itself.
 //!
 //! > **Note**: This might not be the module you are looking for.
 //! > For information about how Cargo handles compiler flags with profiles,
