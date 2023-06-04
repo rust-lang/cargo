@@ -1851,6 +1851,14 @@ impl TomlManifest {
             }
         }
         let all = |_d: &TomlDependency| true;
+        let dependencies = map_deps(config, self.dependencies.as_ref(), all)?;
+        let dev_dependencies = map_deps(
+            config,
+            self.dev_dependencies
+                .as_ref()
+                .or_else(|| self.dev_dependencies2.as_ref()),
+            TomlDependency::is_version_specified,
+        )?;
         return Ok(TomlManifest {
             package: Some(package),
             project: None,
@@ -1860,14 +1868,8 @@ impl TomlManifest {
             example: self.example.clone(),
             test: self.test.clone(),
             bench: self.bench.clone(),
-            dependencies: map_deps(config, self.dependencies.as_ref(), all)?,
-            dev_dependencies: map_deps(
-                config,
-                self.dev_dependencies
-                    .as_ref()
-                    .or_else(|| self.dev_dependencies2.as_ref()),
-                TomlDependency::is_version_specified,
-            )?,
+            dependencies: dependencies.clone(),
+            dev_dependencies: dev_dependencies.clone(),
             dev_dependencies2: None,
             build_dependencies: map_deps(
                 config,
@@ -1877,7 +1879,7 @@ impl TomlManifest {
                 all,
             )?,
             build_dependencies2: None,
-            features: self.features.clone(),
+            features: map_features(dependencies, dev_dependencies, self.features.clone()),
             target: match self.target.as_ref().map(|target_map| {
                 target_map
                     .iter()
@@ -1918,6 +1920,60 @@ impl TomlManifest {
             cargo_features: self.cargo_features.clone(),
             lints: self.lints.clone(),
         });
+
+        fn map_features(
+            deps: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+            dev_deps: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+            features: Option<BTreeMap<InternedString, Vec<InternedString>>>,
+        ) -> Option<BTreeMap<InternedString, Vec<InternedString>>> {
+            if deps.is_none() && dev_deps.is_none() {
+                return None;
+            }
+            let all_deps = {
+                if deps.is_none() {
+                    dev_deps?
+                } else {
+                    let mut all_deps = deps?;
+                    if let Some(dev_deps) = dev_deps {
+                        all_deps.extend(dev_deps);
+                    }
+                    all_deps
+                }
+            };
+
+            let mut features = features.clone()?;
+            features.iter_mut().for_each(|(_name, features)| {
+                features.retain(|feature| {
+                    if !feature.contains('/') {
+                        return true;
+                    }
+                    let mut iter = feature.split('/');
+                    let dep_name = iter.next().unwrap();
+                    let feature_name = iter.next().unwrap();
+                    for (i_dep_name, i_dep_detail) in all_deps.iter() {
+                        if i_dep_name == dep_name {
+                            return match i_dep_detail {
+                                MaybeWorkspace::Defined(defined) => match defined {
+                                    TomlDependency::Simple(_) => false,
+                                    TomlDependency::Detailed(detail) => detail
+                                        .features
+                                        .as_ref()
+                                        .map(|v| v.contains(&feature_name.to_string()))
+                                        .is_some_and(|v| v),
+                                },
+                                MaybeWorkspace::Workspace(workspace) => workspace
+                                    .features
+                                    .as_ref()
+                                    .map(|v| v.contains(&feature_name.to_string()))
+                                    .is_some_and(|v| v),
+                            };
+                        }
+                    }
+                    false
+                })
+            });
+            Some(features)
+        }
 
         fn map_deps(
             config: &Config,
