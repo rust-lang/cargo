@@ -366,13 +366,34 @@ fn transmit(
         return Ok(());
     }
 
+    fn is_deps_feature(deps: &Vec<NewCrateDependency>, feature: &str) -> bool {
+        if !feature.contains('/') {
+            return true;
+        }
+        let mut iter = feature.split('/');
+        let dep_name = iter.next().unwrap();
+        let feature_name = iter.next().unwrap();
+        for dep in deps.iter() {
+            if dep.name == dep_name {
+                if dep.features.contains(&feature_name.to_string()) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     let string_features = match manifest.original().features() {
         Some(features) => features
             .iter()
             .map(|(feat, values)| {
                 (
                     feat.to_string(),
-                    values.iter().map(|fv| fv.to_string()).collect(),
+                    values
+                        .iter()
+                        .map(|fv| fv.to_string())
+                        .filter(|feat| is_deps_feature(&deps, feat))
+                        .collect(),
                 )
             })
             .collect::<BTreeMap<String, Vec<String>>>(),
