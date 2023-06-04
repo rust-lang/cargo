@@ -188,7 +188,9 @@ fn simple_install_fail() {
         .with_status(101)
         .with_stderr(
             "  Installing bar v0.1.0
-error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`
+error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`, \
+to reuse those artifacts with a future compilation, set the environment variable \
+`CARGO_TARGET_DIR` to that path.
 
 Caused by:
   no matching package found

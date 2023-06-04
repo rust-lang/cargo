@@ -658,7 +658,8 @@ Consider enabling some of the needed features by passing, e.g., `--features=\"a\
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
-    `[..]target`
+    `[..]target`, to reuse those artifacts with a future compilation, set the environment \
+    variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
@@ -678,7 +679,8 @@ Caused by:
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
-    `[..]target`
+    `[..]target`, to reuse those artifacts with a future compilation, set the environment \
+    variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
