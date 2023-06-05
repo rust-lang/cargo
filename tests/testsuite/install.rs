@@ -978,7 +978,8 @@ fn compile_failure() {
             "\
 [ERROR] could not compile `foo` (bin \"foo\") due to previous error
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be \
-    found at `[..]target`
+    found at `[..]target`.\nTo reuse those artifacts with a future compilation, \
+    set the environment variable `CARGO_TARGET_DIR` to that path.
 ",
         )
         .run();
@@ -2264,7 +2265,9 @@ fn failed_install_retains_temp_directory() {
     )
     .unwrap();
     compare::match_contains(
-        "error: failed to compile `foo v0.0.1`, intermediate artifacts can be found at `[..]`",
+        "error: failed to compile `foo v0.0.1`, intermediate artifacts can be found at \
+        `[..]`.\nTo reuse those artifacts with a future compilation, set the environment \
+        variable `CARGO_TARGET_DIR` to that path.",
         &stderr,
         None,
     )
@@ -2272,7 +2275,7 @@ fn failed_install_retains_temp_directory() {
 
     // Find the path in the output.
     let start = stderr.find("found at `").unwrap() + 10;
-    let end = stderr[start..].find('\n').unwrap() - 1;
+    let end = stderr[start..].find('.').unwrap() - 1;
     let path = Path::new(&stderr[start..(end + start)]);
     assert!(path.exists());
     assert!(path.join("release/deps").exists());

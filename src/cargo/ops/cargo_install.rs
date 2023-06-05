@@ -320,7 +320,9 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
 
             format!(
                 "failed to compile `{}`, intermediate artifacts can be \
-                 found at `{}`",
+                 found at `{}`.\nTo reuse those artifacts with a future \
+                 compilation, set the environment variable \
+                 `CARGO_TARGET_DIR` to that path.",
                 self.pkg,
                 self.ws.target_dir().display()
             )
