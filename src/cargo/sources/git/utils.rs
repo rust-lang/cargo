@@ -23,6 +23,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use url::Url;
 
+/// A file indicates that if present, `git reset` has been done and a repo
+/// checkout is ready to go. See [`GitCheckout::reset`] for why we need this.
+const CHECKOUT_READY_LOCK: &str = ".cargo-ok";
+
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
 where
     T: fmt::Display,
@@ -53,29 +57,24 @@ pub struct GitRemote {
 
 /// A local clone of a remote repository's database. Multiple [`GitCheckout`]s
 /// can be cloned from a single [`GitDatabase`].
-#[derive(Serialize)]
 pub struct GitDatabase {
     /// The remote repository where this database is fetched from.
     remote: GitRemote,
     /// Path to the root of the underlying Git repository on the local filesystem.
     path: PathBuf,
     /// Underlying Git repository instance for this database.
-    #[serde(skip_serializing)]
     repo: git2::Repository,
 }
 
 /// A local checkout of a particular revision from a [`GitDatabase`].
-#[derive(Serialize)]
 pub struct GitCheckout<'a> {
     /// The git database where this checkout is cloned from.
     database: &'a GitDatabase,
     /// Path to the root of the underlying Git repository on the local filesystem.
-    location: PathBuf,
+    path: PathBuf,
     /// The git revision this checkout is for.
-    #[serde(serialize_with = "serialize_str")]
     revision: git2::Oid,
     /// Underlying Git repository instance for this checkout.
-    #[serde(skip_serializing)]
     repo: git2::Repository,
 }
 
@@ -88,10 +87,6 @@ impl GitRemote {
     /// Gets the remote repository URL.
     pub fn url(&self) -> &Url {
         &self.url
-    }
-
-    pub fn rev_for(&self, path: &Path, reference: &GitReference) -> CargoResult<git2::Oid> {
-        reference.resolve(&self.db_at(path)?.repo)
     }
 
     /// Fetches and checkouts to a reference or a revision from this remote
@@ -184,7 +179,6 @@ impl GitDatabase {
         rev: git2::Oid,
         dest: &Path,
         cargo_config: &Config,
-        parent_remote_url: &Url,
     ) -> CargoResult<GitCheckout<'_>> {
         // If the existing checkout exists, and it is fresh, use it.
         // A non-fresh checkout can happen if the checkout operation was
@@ -192,13 +186,13 @@ impl GitDatabase {
         // clone is created.
         let checkout = match git2::Repository::open(dest)
             .ok()
-            .map(|repo| GitCheckout::new(dest, self, rev, repo))
+            .map(|repo| GitCheckout::new(self, rev, repo))
             .filter(|co| co.is_fresh())
         {
             Some(co) => co,
             None => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
-        checkout.update_submodules(cargo_config, parent_remote_url)?;
+        checkout.update_submodules(cargo_config)?;
         Ok(checkout)
     }
 
@@ -270,19 +264,24 @@ impl<'a> GitCheckout<'a> {
     /// is done. Use [`GitCheckout::is_fresh`] to check.
     ///
     /// * The `database` is where this checkout is from.
-    /// * The `repo` will be the checked out Git repoistory at `path`.
+    /// * The `repo` will be the checked out Git repoistory.
     fn new(
-        path: &Path,
         database: &'a GitDatabase,
         revision: git2::Oid,
         repo: git2::Repository,
     ) -> GitCheckout<'a> {
+        let path = repo.workdir().unwrap_or_else(|| repo.path());
         GitCheckout {
-            location: path.to_path_buf(),
+            path: path.to_path_buf(),
             database,
             revision,
             repo,
         }
+    }
+
+    /// Gets the remote repository URL.
+    fn remote_url(&self) -> &Url {
+        &self.database.remote.url()
     }
 
     /// Clone a repo for a `revision` into a local path from a `datatabase`.
@@ -340,7 +339,7 @@ impl<'a> GitCheckout<'a> {
         })?;
         let repo = repo.unwrap();
 
-        let checkout = GitCheckout::new(into, database, revision, repo);
+        let checkout = GitCheckout::new(database, revision, repo);
         checkout.reset(config)?;
         Ok(checkout)
     }
@@ -350,24 +349,28 @@ impl<'a> GitCheckout<'a> {
         match self.repo.revparse_single("HEAD") {
             Ok(ref head) if head.id() == self.revision => {
                 // See comments in reset() for why we check this
-                self.location.join(".cargo-ok").exists()
+                self.path.join(CHECKOUT_READY_LOCK).exists()
             }
             _ => false,
         }
     }
 
-    /// `git reset --hard` to the revision of this checkout, with additional
-    /// interrupt protection by a dummy `.cargo-ok` file.
+    /// Similar to [`reset()`]. This roughly performs `git reset --hard` to the
+    /// revision of this checkout, with additional interrupt protection by a
+    /// dummy file [`CHECKOUT_READY_LOCK`].
+    ///
+    /// If we're interrupted while performing a `git reset` (e.g., we die
+    /// because of a signal) Cargo needs to be sure to try to check out this
+    /// repo again on the next go-round.
+    ///
+    /// To enable this we have a dummy file in our checkout, [`.cargo-ok`],
+    /// which if present means that the repo has been successfully reset and is
+    /// ready to go. Hence if we start to do a reset, we make sure this file
+    /// *doesn't* exist, and then once we're done we create the file.
+    ///
+    /// [`.cargo-ok`]: CHECKOUT_READY_LOCK
     fn reset(&self, config: &Config) -> CargoResult<()> {
-        // If we're interrupted while performing this reset (e.g., we die because
-        // of a signal) Cargo needs to be sure to try to check out this repo
-        // again on the next go-round.
-        //
-        // To enable this we have a dummy file in our checkout, .cargo-ok, which
-        // if present means that the repo has been successfully reset and is
-        // ready to go. Hence if we start to do a reset, we make sure this file
-        // *doesn't* exist, and then once we're done we create the file.
-        let ok_file = self.location.join(".cargo-ok");
+        let ok_file = self.path.join(CHECKOUT_READY_LOCK);
         let _ = paths::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
 
@@ -388,8 +391,8 @@ impl<'a> GitCheckout<'a> {
     /// Submodules set to `none` won't be fetched.
     ///
     /// [^1]: <https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-none>
-    fn update_submodules(&self, cargo_config: &Config, parent_remote_url: &Url) -> CargoResult<()> {
-        return update_submodules(&self.repo, cargo_config, parent_remote_url);
+    fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
+        return update_submodules(&self.repo, cargo_config, self.remote_url());
 
         /// Recusive helper for [`GitCheckout::update_submodules`].
         fn update_submodules(
@@ -892,13 +895,15 @@ pub fn with_fetch_options(
 /// * Turns [`GitReference`] into refspecs accordingly.
 /// * Dispatches `git fetch` using libgit2, gitoxide, or git CLI.
 ///
-/// `remote_kind` is a thing for [`-Zgitoxide`] shallow clones at this time.
-/// It could be extended when libgit2 supports shallow clones.
+/// The `remote_url` argument is the git remote URL where we want to fetch from.
+///
+/// The `remote_kind` argument is a thing for [`-Zgitoxide`] shallow clones
+/// at this time. It could be extended when libgit2 supports shallow clones.
 ///
 /// [`-Zgitoxide`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#gitoxide
 pub fn fetch(
     repo: &mut git2::Repository,
-    orig_url: &str,
+    remote_url: &str,
     reference: &GitReference,
     config: &Config,
     remote_kind: RemoteKind,
@@ -915,7 +920,7 @@ pub fn fetch(
 
     let shallow = remote_kind.to_shallow_setting(repo.is_shallow(), config);
 
-    let oid_to_fetch = match github_fast_path(repo, orig_url, reference, config) {
+    let oid_to_fetch = match github_fast_path(repo, remote_url, reference, config) {
         Ok(FastPathRev::UpToDate) => return Ok(()),
         Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
         Ok(FastPathRev::Indeterminate) => None,
@@ -978,7 +983,7 @@ pub fn fetch(
     }
 
     if let Some(true) = config.net_config()?.git_fetch_with_cli {
-        return fetch_with_cli(repo, orig_url, &refspecs, tags, config);
+        return fetch_with_cli(repo, remote_url, &refspecs, tags, config);
     }
 
     if config
@@ -1014,10 +1019,10 @@ pub fn fetch(
                     )
                     .map_err(crate::sources::git::fetch::Error::from)
                     .and_then(|repo| {
-                        debug!("initiating fetch of {:?} from {}", refspecs, orig_url);
+                        debug!("initiating fetch of {refspecs:?} from {remote_url}");
                         let url_for_authentication = &mut *url_for_authentication;
                         let remote = repo
-                            .remote_at(orig_url)?
+                            .remote_at(remote_url)?
                             .with_fetch_tags(if tags {
                                 gix::remote::fetch::Tags::All
                             } else {
@@ -1036,10 +1041,9 @@ pub fn fetch(
                         let mut authenticate = connection.configured_credentials(url)?;
                         let connection = connection.with_credentials(
                             move |action: gix::protocol::credentials::helper::Action| {
-                                if let Some(url) = action
-                                    .context()
-                                    .and_then(|ctx| ctx.url.as_ref().filter(|url| *url != orig_url))
-                                {
+                                if let Some(url) = action.context().and_then(|ctx| {
+                                    ctx.url.as_ref().filter(|url| *url != remote_url)
+                                }) {
                                     url_for_authentication(url.as_ref());
                                 }
                                 authenticate(action)
@@ -1085,9 +1089,9 @@ pub fn fetch(
         }
         res
     } else {
-        debug!("doing a fetch for {}", orig_url);
+        debug!("doing a fetch for {remote_url}");
         let git_config = git2::Config::open_default()?;
-        with_fetch_options(&git_config, orig_url, config, &mut |mut opts| {
+        with_fetch_options(&git_config, remote_url, config, &mut |mut opts| {
             if tags {
                 opts.download_tags(git2::AutotagOption::All);
             }
@@ -1103,10 +1107,10 @@ pub fn fetch(
             // blown away the repository, then we want to return the error as-is.
             let mut repo_reinitialized = false;
             loop {
-                debug!("initiating fetch of {:?} from {}", refspecs, orig_url);
-                let res = repo
-                    .remote_anonymous(orig_url)?
-                    .fetch(&refspecs, Some(&mut opts), None);
+                debug!("initiating fetch of {refspecs:?} from {remote_url}");
+                let res =
+                    repo.remote_anonymous(remote_url)?
+                        .fetch(&refspecs, Some(&mut opts), None);
                 let err = match res {
                     Ok(()) => break,
                     Err(e) => e,
