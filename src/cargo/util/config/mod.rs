@@ -1717,8 +1717,12 @@ impl Config {
     }
 
     pub fn http_config(&self) -> CargoResult<&CargoHttpConfig> {
-        self.http_config
-            .try_borrow_with(|| self.get::<CargoHttpConfig>("http"))
+        self.http_config.try_borrow_with(|| {
+            let mut http = self.get::<CargoHttpConfig>("http")?;
+            let curl_v = curl::Version::get();
+            disables_multiplexing_for_bad_curl(curl_v.version(), &mut http, self);
+            Ok(http)
+        })
     }
 
     pub fn future_incompat_config(&self) -> CargoResult<&CargoFutureIncompatConfig> {
@@ -2747,6 +2751,79 @@ impl Tool {
         match self {
             Tool::Rustc => "rustc",
             Tool::Rustdoc => "rustdoc",
+        }
+    }
+}
+
+/// Disable HTTP/2 multiplexing for some broken versions of libcurl.
+///
+/// In certain versions of libcurl when proxy is in use with HTTP/2
+/// multiplexing, connections will continue stacking up. This was
+/// fixed in libcurl 8.0.0 in curl/curl@821f6e2a89de8aec1c7da3c0f381b92b2b801efc
+///
+/// However, Cargo can still link against old system libcurl if it is from a
+/// custom built one or on macOS. For those cases, multiplexing needs to be
+/// disabled when those versions are detected.
+fn disables_multiplexing_for_bad_curl(
+    curl_version: &str,
+    http: &mut CargoHttpConfig,
+    config: &Config,
+) {
+    use crate::util::network;
+
+    if network::proxy::http_proxy_exists(http, config) && http.multiplexing.is_none() {
+        let bad_curl_versions = ["7.87.0", "7.88.0", "7.88.1"];
+        if bad_curl_versions
+            .iter()
+            .any(|v| curl_version.starts_with(v))
+        {
+            log::info!("disabling multiplexing with proxy, curl version is {curl_version}");
+            http.multiplexing = Some(false);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::disables_multiplexing_for_bad_curl;
+    use super::CargoHttpConfig;
+    use super::Config;
+    use super::Shell;
+
+    #[test]
+    fn disables_multiplexing() {
+        let mut config = Config::new(Shell::new(), "".into(), "".into());
+        config.set_search_stop_path(std::path::PathBuf::new());
+        config.set_env(Default::default());
+
+        let mut http = CargoHttpConfig::default();
+        http.proxy = Some("127.0.0.1:3128".into());
+        disables_multiplexing_for_bad_curl("7.88.1", &mut http, &config);
+        assert_eq!(http.multiplexing, Some(false));
+
+        let cases = [
+            (None, None, "7.87.0", None),
+            (None, None, "7.88.0", None),
+            (None, None, "7.88.1", None),
+            (None, None, "8.0.0", None),
+            (Some("".into()), None, "7.87.0", Some(false)),
+            (Some("".into()), None, "7.88.0", Some(false)),
+            (Some("".into()), None, "7.88.1", Some(false)),
+            (Some("".into()), None, "8.0.0", None),
+            (Some("".into()), Some(false), "7.87.0", Some(false)),
+            (Some("".into()), Some(false), "7.88.0", Some(false)),
+            (Some("".into()), Some(false), "7.88.1", Some(false)),
+            (Some("".into()), Some(false), "8.0.0", Some(false)),
+        ];
+
+        for (proxy, multiplexing, curl_v, result) in cases {
+            let mut http = CargoHttpConfig {
+                multiplexing,
+                proxy,
+                ..Default::default()
+            };
+            disables_multiplexing_for_bad_curl(curl_v, &mut http, &config);
+            assert_eq!(http.multiplexing, result);
         }
     }
 }
