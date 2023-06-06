@@ -55,7 +55,8 @@
 //! [source implementations]: crate::sources
 //! [`Downloads`]: crate::core::package::Downloads
 
-use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::core::compiler::build_context::RustcTargetDataBuilder;
+use crate::core::compiler::CompileKind;
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
 use crate::core::resolver::features::{
     CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
@@ -124,7 +125,7 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// members. In this case, `opts.all_features` must be `true`.
 pub fn resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &mut RustcTargetData<'cfg>,
+    target_data: &mut RustcTargetDataBuilder<'cfg>,
     requested_targets: &[CompileKind],
     cli_features: &CliFeatures,
     specs: &[PackageIdSpec],
@@ -198,7 +199,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         &member_ids,
         has_dev_units,
         requested_targets,
-        &mut *target_data,
+        target_data,
         force_all_targets,
     )?;
 

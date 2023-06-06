@@ -1,5 +1,5 @@
 use benchsuite::fixtures;
-use cargo::core::compiler::{CompileKind, RustcTargetData};
+use cargo::core::compiler::{CompileKind, RustcTargetData, RustcTargetDataBuilder};
 use cargo::core::resolver::features::{FeatureOpts, FeatureResolver};
 use cargo::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits, ResolveBehavior};
 use cargo::core::{PackageIdSpec, Workspace};
@@ -11,7 +11,7 @@ use std::path::Path;
 struct ResolveInfo<'cfg> {
     ws: Workspace<'cfg>,
     requested_kinds: [CompileKind; 1],
-    target_data: RustcTargetData<'cfg>,
+    target_data: RustcTargetDataBuilder<'cfg>,
     cli_features: CliFeatures,
     specs: Vec<PackageIdSpec>,
     has_dev_units: HasDevUnits,

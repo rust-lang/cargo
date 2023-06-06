@@ -2,7 +2,7 @@
 
 use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::UnitInterner;
-use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
+use crate::core::compiler::{CompileKind, CompileMode, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::HasDevUnits;
@@ -14,6 +14,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use super::BuildConfig;
+use super::build_context::RustcTargetDataBuilder;
 
 /// Parse the `-Zbuild-std` flag.
 pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
@@ -62,7 +63,7 @@ pub(crate) fn std_crates(config: &Config, units: Option<&[Unit]>) -> Option<Vec<
 /// Resolve the standard library dependencies.
 pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &mut RustcTargetData<'cfg>,
+    target_data: &mut RustcTargetDataBuilder<'cfg>,
     build_config: &BuildConfig,
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
@@ -220,7 +221,7 @@ pub fn generate_std_roots(
     Ok(ret)
 }
 
-fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
+fn detect_sysroot_src_path(target_data: &RustcTargetDataBuilder<'_>) -> CargoResult<PathBuf> {
     if let Some(s) = target_data.config.get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }

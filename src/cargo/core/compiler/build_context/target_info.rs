@@ -21,6 +21,7 @@ use cargo_util::{paths, ProcessBuilder};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
@@ -850,6 +851,40 @@ fn rustflags_from_build(config: &Config, flag: Flags) -> CargoResult<Option<Vec<
     Ok(list.as_ref().map(|l| l.as_slice().to_vec()))
 }
 
+pub struct RustcTargetDataBuilder<'cfg> {
+    data: RustcTargetData<'cfg>,
+}
+
+impl<'cfg> RustcTargetDataBuilder<'cfg> {
+    /// Insert `kind` into our `target_info` and `target_config` members if it isn't present yet.
+    pub fn merge_compile_kind(&mut self, kind: CompileKind) -> CargoResult<()> {
+        if let CompileKind::Target(target) = kind {
+            if !self.data.target_config.contains_key(&target) {
+                self.data.target_config
+                    .insert(target, self.data.config.target_cfg_triple(target.short_name())?);
+            }
+            if !self.data.target_info.contains_key(&target) {
+                self.data.target_info.insert(
+                    target,
+                    TargetInfo::new(self.data.config, &self.data.requested_kinds, &self.data.rustc, kind)?,
+                );
+            }
+        }
+        Ok(())
+    }
+
+    pub fn build(self) -> RustcTargetData<'cfg> {
+        self.data
+    }
+}
+
+impl<'cfg> Deref for RustcTargetDataBuilder<'cfg> {
+    type Target = RustcTargetData<'cfg>;
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
 /// Collection of information about `rustc` and the host and target.
 pub struct RustcTargetData<'cfg> {
     /// Information about `rustc` itself.
@@ -876,7 +911,7 @@ impl<'cfg> RustcTargetData<'cfg> {
     pub fn new(
         ws: &Workspace<'cfg>,
         requested_kinds: &[CompileKind],
-    ) -> CargoResult<RustcTargetData<'cfg>> {
+    ) -> CargoResult<RustcTargetDataBuilder<'cfg>> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
         let mut target_config = HashMap::new();
@@ -900,7 +935,7 @@ impl<'cfg> RustcTargetData<'cfg> {
             target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
         };
 
-        let mut res = RustcTargetData {
+        let data = RustcTargetData {
             rustc,
             config,
             requested_kinds: requested_kinds.into(),
@@ -910,28 +945,15 @@ impl<'cfg> RustcTargetData<'cfg> {
             target_info,
         };
 
+        let mut res = RustcTargetDataBuilder {
+            data
+        };
+
         for &kind in requested_kinds {
             res.merge_compile_kind(kind)?;
         }
 
         Ok(res)
-    }
-
-    /// Insert `kind` into our `target_info` and `target_config` members if it isn't present yet.
-    pub(crate) fn merge_compile_kind(&mut self, kind: CompileKind) -> CargoResult<()> {
-        if let CompileKind::Target(target) = kind {
-            if !self.target_config.contains_key(&target) {
-                self.target_config
-                    .insert(target, self.config.target_cfg_triple(target.short_name())?);
-            }
-            if !self.target_info.contains_key(&target) {
-                self.target_info.insert(
-                    target,
-                    TargetInfo::new(self.config, &self.requested_kinds, &self.rustc, kind)?,
-                );
-            }
-        }
-        Ok(())
     }
 
     /// Returns a "short" name for the given kind, suitable for keying off

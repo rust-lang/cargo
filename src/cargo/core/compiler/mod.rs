@@ -69,7 +69,7 @@ use log::{debug, trace};
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, TimingOutput};
 pub use self::build_context::{
-    BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
+    BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, RustcTargetDataBuilder, TargetInfo,
 };
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest, UnitOutput};

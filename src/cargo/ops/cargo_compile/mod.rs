@@ -535,7 +535,7 @@ pub fn create_bcx<'a, 'cfg>(
         build_config,
         profiles,
         extra_compiler_args,
-        target_data,
+        target_data.build(),
         units,
         unit_graph,
         scrape_units,

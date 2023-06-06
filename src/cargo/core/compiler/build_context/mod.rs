@@ -14,7 +14,7 @@ use std::path::PathBuf;
 
 mod target_info;
 pub use self::target_info::{
-    FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
+    FileFlavor, FileType, RustDocFingerprint, RustcTargetData, RustcTargetDataBuilder, TargetInfo,
 };
 
 /// The build context, containing complete information needed for a build task
