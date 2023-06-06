@@ -56,8 +56,7 @@ using special operators, though it shouldn't be necessary most of the time.
 ### Caret requirements
 
 **Caret requirements** are an alternative syntax for the default strategy,
-For instance, `log = "^1.2.3"` means the same thing as `log = "1.2.3"`,
-which allows [SemVer] compatible updates.
+For instance, `log = "^1.2.3"` means the same thing as `log = "1.2.3"`, which allows [SemVer] compatible updates.
 
 ### Tilde requirements
 
