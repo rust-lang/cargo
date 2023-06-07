@@ -107,6 +107,7 @@ Each new feature described below should explain how to use it.
     * [registry-auth](#registry-auth) --- Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
 * Other
     * [gitoxide](#gitoxide) --- Use `gitoxide` instead of `git2` for a set of operations.
+    * [script](#script) --- Enable support for single-file `.rs` packages.
 
 ### allow-features
 
@@ -1391,6 +1392,10 @@ Valid operations are the following:
   - `~/.cargo/git/checkouts/*-shallow`
 * When the unstable feature is on, fetching/cloning a git repository is always a shallow fetch. This roughly equals to `git fetch --depth 1` everywhere.
 * Even with the presence of `Cargo.lock` or specifying a commit `{ rev = "…" }`, gitoxide is still smart enough to shallow fetch without unshallowing the existing repository.
+
+### script
+
+* Tracking Issue: [#12207](https://github.com/rust-lang/cargo/issues/12207)
 
 ### `[lints]`
 
