@@ -305,6 +305,9 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     ))?;
                     }
                 }
+                if commands::run::is_manifest_command(cmd) {
+                    return Ok((args, GlobalArgs::default()));
+                }
 
                 let mut alias = alias
                     .into_iter()
@@ -387,6 +390,14 @@ fn config_configure(
     Ok(())
 }
 
+/// Precedence isn't the most obvious from this function because
+/// - Some is determined by `expand_aliases`
+/// - Some is enforced by `avoid_ambiguity_between_builtins_and_manifest_commands`
+///
+/// In actuality, it is:
+/// 1. built-ins xor manifest-command
+/// 2. aliases
+/// 3. external subcommands
 fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatches) -> CliResult {
     if let Some(exec) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
@@ -578,4 +589,15 @@ impl LazyConfig {
 #[test]
 fn verify_cli() {
     cli().debug_assert();
+}
+
+#[test]
+fn avoid_ambiguity_between_builtins_and_manifest_commands() {
+    for cmd in commands::builtin() {
+        let name = cmd.get_name();
+        assert!(
+            !commands::run::is_manifest_command(&name),
+            "built-in command {name} is ambiguous with manifest-commands"
+        )
+    }
 }
