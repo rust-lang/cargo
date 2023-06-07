@@ -399,7 +399,11 @@ fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatch
             .unwrap_or_default()
             .map(OsString::as_os_str),
     );
-    super::execute_external_subcommand(config, cmd, &ext_args)
+    if commands::run::is_manifest_command(cmd) {
+        commands::run::exec_manifest_command(config, cmd, &ext_args)
+    } else {
+        super::execute_external_subcommand(config, cmd, &ext_args)
+    }
 }
 
 #[derive(Default)]

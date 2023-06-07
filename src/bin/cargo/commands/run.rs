@@ -1,3 +1,7 @@
+use std::ffi::OsStr;
+use std::ffi::OsString;
+use std::path::Path;
+
 use crate::command_prelude::*;
 use crate::util::restricted_names::is_glob_pattern;
 use cargo::core::Verbosity;
@@ -13,7 +17,7 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("args")
                 .help("Arguments for the binary or example to run")
-                .value_parser(value_parser!(std::ffi::OsString))
+                .value_parser(value_parser!(OsString))
                 .num_args(0..)
                 .trailing_var_arg(true),
         )
@@ -100,4 +104,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             CliError::new(err, exit_code)
         }
     })
+}
+
+pub fn is_manifest_command(arg: &str) -> bool {
+    let path = Path::new(arg);
+    1 < path.components().count() || path.extension() == Some(OsStr::new("rs"))
+}
+
+pub fn exec_manifest_command(config: &Config, cmd: &str, _args: &[&OsStr]) -> CliResult {
+    if !config.cli_unstable().script {
+        return Err(anyhow::anyhow!("running `{cmd}` requires `-Zscript`").into());
+    }
+
+    todo!("support for running manifest-commands is not yet implemented")
 }
