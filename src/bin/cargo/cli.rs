@@ -306,7 +306,16 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     }
                 }
                 if commands::run::is_manifest_command(cmd) {
-                    return Ok((args, GlobalArgs::default()));
+                    if config.cli_unstable().script {
+                        return Ok((args, GlobalArgs::default()));
+                    } else {
+                        config.shell().warn(format_args!(
+                            "\
+user-defined alias `{cmd}` has the appearance of a manfiest-command
+This was previously accepted but will be phased out when `-Zscript` is stabilized.
+For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>."
+                        ))?;
+                    }
                 }
 
                 let mut alias = alias
@@ -411,7 +420,18 @@ fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatch
             .map(OsString::as_os_str),
     );
     if commands::run::is_manifest_command(cmd) {
-        commands::run::exec_manifest_command(config, cmd, &ext_args)
+        let ext_path = super::find_external_subcommand(config, cmd);
+        if !config.cli_unstable().script && ext_path.is_some() {
+            config.shell().warn(format_args!(
+                "\
+external subcommand `{cmd}` has the appearance of a manfiest-command
+This was previously accepted but will be phased out when `-Zscript` is stabilized.
+For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.",
+            ))?;
+            super::execute_external_subcommand(config, cmd, &ext_args)
+        } else {
+            commands::run::exec_manifest_command(config, cmd, &ext_args)
+        }
     } else {
         super::execute_external_subcommand(config, cmd, &ext_args)
     }

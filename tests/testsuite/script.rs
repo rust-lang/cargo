@@ -100,7 +100,7 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 #[cargo_test]
 #[cfg(unix)]
-fn manifest_precedence_over_plugins_stable() {
+fn warn_when_plugin_masks_manifest_on_stable() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
         .executable(std::path::Path::new("path-test").join("cargo-echo.rs"), "")
@@ -113,11 +113,12 @@ fn manifest_precedence_over_plugins_stable() {
     p.cargo("echo.rs")
         .arg("--help") // An arg that, if processed by cargo, will cause problems
         .env("PATH", &path)
-        .with_status(101)
         .with_stdout("")
         .with_stderr(
             "\
-error: running `echo.rs` requires `-Zscript`
+warning: external subcommand `echo.rs` has the appearance of a manfiest-command
+This was previously accepted but will be phased out when `-Zscript` is stabilized.
+For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.
 ",
         )
         .run();
