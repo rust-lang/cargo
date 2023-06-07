@@ -220,15 +220,6 @@ pub const CRATES_IO_HTTP_INDEX: &str = "sparse+https://index.crates.io/";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
 pub const CRATES_IO_DOMAIN: &str = "crates.io";
 
-const CRATE_TEMPLATE: &str = "{crate}";
-const VERSION_TEMPLATE: &str = "{version}";
-const PREFIX_TEMPLATE: &str = "{prefix}";
-const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
-const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
-
-const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024;
-const MAX_COMPRESSION_RATIO: usize = 20; // 20:1
-
 /// A [`Source`] implementation for a local or a remote registry.
 ///
 /// This contains common functionality that is shared between each registry
@@ -302,10 +293,6 @@ pub struct RegistryConfig {
     #[serde(default)]
     pub auth_required: bool,
 }
-
-/// The maximum schema version of the `v` field in the index this version of
-/// cargo understands. See [`RegistryPackage::v`] for the detail.
-pub(crate) const INDEX_V_MAX: u32 = 2;
 
 /// A single line in the index representing a single version of a package.
 #[derive(Deserialize)]
@@ -1076,6 +1063,9 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 fn max_unpack_size(config: &Config, size: u64) -> u64 {
     const SIZE_VAR: &str = "__CARGO_TEST_MAX_UNPACK_SIZE";
     const RATIO_VAR: &str = "__CARGO_TEST_MAX_UNPACK_RATIO";
+    const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024; // 512 MiB
+    const MAX_COMPRESSION_RATIO: usize = 20; // 20:1
+
     let max_unpack_size = if cfg!(debug_assertions) && config.get_env(SIZE_VAR).is_ok() {
         // For integration test only.
         config

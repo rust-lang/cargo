@@ -86,7 +86,7 @@
 //! [`Dependency`]: crate::core::Dependency
 
 use crate::core::{PackageId, SourceId, Summary};
-use crate::sources::registry::{LoadResponse, RegistryData, RegistryPackage, INDEX_V_MAX};
+use crate::sources::registry::{LoadResponse, RegistryData, RegistryPackage};
 use crate::util::interning::InternedString;
 use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
 use anyhow::bail;
@@ -99,6 +99,13 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
+
+/// The current version of [`SummariesCache`].
+const CURRENT_CACHE_VERSION: u8 = 3;
+
+/// The maximum schema version of the `v` field in the index this version of
+/// cargo understands. See [`RegistryPackage::v`] for the detail.
+const INDEX_V_MAX: u32 = 2;
 
 /// Manager for handling the on-disk index.
 ///
@@ -696,9 +703,6 @@ impl Summaries {
         }
     }
 }
-
-/// The current version of [`SummariesCache`].
-const CURRENT_CACHE_VERSION: u8 = 3;
 
 impl<'a> SummariesCache<'a> {
     /// Deserializes an on-disk cache.
