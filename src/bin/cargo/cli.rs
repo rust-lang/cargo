@@ -258,7 +258,7 @@ fn expand_aliases(
     args: ArgMatches,
     mut already_expanded: Vec<String>,
 ) -> Result<(ArgMatches, GlobalArgs), CliError> {
-    if let Some((cmd, args)) = args.subcommand() {
+    if let Some((cmd, sub_args)) = args.subcommand() {
         let exec = commands::builtin_exec(cmd);
         let aliased_cmd = super::aliased_command(config, cmd);
 
@@ -274,7 +274,7 @@ fn expand_aliases(
                 // Here we ignore errors from aliasing as we already favor built-in command,
                 // and alias doesn't involve in this context.
 
-                if let Some(values) = args.get_many::<OsString>("") {
+                if let Some(values) = sub_args.get_many::<OsString>("") {
                     // Command is built-in and is not conflicting with alias, but contains ignored values.
                     return Err(anyhow::format_err!(
                         "\
@@ -310,12 +310,17 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     .into_iter()
                     .map(|s| OsString::from(s))
                     .collect::<Vec<_>>();
-                alias.extend(args.get_many::<OsString>("").unwrap_or_default().cloned());
+                alias.extend(
+                    sub_args
+                        .get_many::<OsString>("")
+                        .unwrap_or_default()
+                        .cloned(),
+                );
                 // new_args strips out everything before the subcommand, so
                 // capture those global options now.
                 // Note that an alias to an external command will not receive
                 // these arguments. That may be confusing, but such is life.
-                let global_args = GlobalArgs::new(args);
+                let global_args = GlobalArgs::new(sub_args);
                 let new_args = cli().no_binary_name(true).try_get_matches_from(alias)?;
 
                 let new_cmd = new_args.subcommand_name().expect("subcommand is required");
