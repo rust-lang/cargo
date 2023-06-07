@@ -35,6 +35,7 @@ use crate::util::auth::{
 use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::network;
 use crate::util::{truncate_with_ellipsis, IntoUrl};
 use crate::util::{Progress, ProgressStyle};
 use crate::{drop_print, drop_println, version};
@@ -611,16 +612,22 @@ pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeou
     Ok((handle, timeout))
 }
 
+// Only use a custom transport if any HTTP options are specified,
+// such as proxies or custom certificate authorities.
+//
+// The custom transport, however, is not as well battle-tested.
 pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
-    Ok(http_proxy_exists(config)?
-        || *config.http_config()? != Default::default()
-        || config.get_env_os("HTTP_TIMEOUT").is_some())
+    Ok(
+        network::proxy::http_proxy_exists(config.http_config()?, config)
+            || *config.http_config()? != Default::default()
+            || config.get_env_os("HTTP_TIMEOUT").is_some(),
+    )
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
 pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<HttpTimeout> {
     let http = config.http_config()?;
-    if let Some(proxy) = http_proxy(config)? {
+    if let Some(proxy) = network::proxy::http_proxy(http) {
         handle.proxy(&proxy)?;
     }
     if let Some(cainfo) = &http.cainfo {
@@ -770,43 +777,6 @@ impl HttpTimeout {
         handle.low_speed_time(self.dur)?;
         handle.low_speed_limit(self.low_speed_limit)?;
         Ok(())
-    }
-}
-
-/// Finds an explicit HTTP proxy if one is available.
-///
-/// Favor cargo's `http.proxy`, then git's `http.proxy`. Proxies specified
-/// via environment variables are picked up by libcurl.
-fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
-    let http = config.http_config()?;
-    if let Some(s) = &http.proxy {
-        return Ok(Some(s.clone()));
-    }
-    if let Ok(cfg) = git2::Config::open_default() {
-        if let Ok(s) = cfg.get_string("http.proxy") {
-            return Ok(Some(s));
-        }
-    }
-    Ok(None)
-}
-
-/// Determine if an http proxy exists.
-///
-/// Checks the following for existence, in order:
-///
-/// * cargo's `http.proxy`
-/// * git's `http.proxy`
-/// * `http_proxy` env var
-/// * `HTTP_PROXY` env var
-/// * `https_proxy` env var
-/// * `HTTPS_PROXY` env var
-fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
-    if http_proxy(config)?.is_some() {
-        Ok(true)
-    } else {
-        Ok(["http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"]
-            .iter()
-            .any(|v| config.get_env(v).is_ok()))
     }
 }
 
