@@ -484,12 +484,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
         // See module comment in `registry/mod.rs` for why this is structured
         // the way it is.
-        let fs_name = name
-            .chars()
-            .flat_map(|c| c.to_lowercase())
-            .collect::<String>();
-
-        let path = make_dep_path(&fs_name, false);
+        let path = make_dep_path(&name.to_lowercase(), false);
         let summaries = ready!(Summaries::parse(
             root,
             &cache_root,
