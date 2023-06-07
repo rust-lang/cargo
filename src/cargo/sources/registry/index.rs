@@ -1,11 +1,26 @@
-//! Management of the index of a registry source
+//! Management of the index of a registry source.
 //!
 //! This module contains management of the index and various operations, such as
 //! actually parsing the index, looking for crates, etc. This is intended to be
-//! abstract over remote indices (downloaded via git) and local registry indices
-//! (which are all just present on the filesystem).
+//! abstract over remote indices (downloaded via Git or HTTP) and local registry
+//! indices (which are all just present on the filesystem).
 //!
-//! ## Index Performance
+//! ## How the index works
+//!
+//! Here is a simple flow when loading a [`Summary`] (metadata) from the index:
+//!
+//! 1. A query is fired via [`RegistryIndex::query_inner`].
+//! 2. Tries loading all summaries via [`RegistryIndex::load_summaries`], and
+//!    under the hood calling [`Summaries::parse`] to parse an index file.
+//!     1. If an on-disk index cache is present, loads it via
+//!        [`Summaries::parse_cache`].
+//!     2. Otherwise goes to the slower path [`RegistryData::load`] to get the
+//!        specific index file.
+//! 3. A [`Summary`] is now ready in callback `f` in [`RegistryIndex::query_inner`].
+//!
+//! This is just an overview. To know the rationale behind, continue reading.
+//!
+//! ## A layer of on-disk index cache for performance
 //!
 //! One important aspect of the index is that we want to optimize the "happy
 //! path" as much as possible. Whenever you type `cargo build` Cargo will
@@ -20,19 +35,20 @@
 //! don't need them. Most secondary optimizations are centered around removing
 //! allocations and such, but avoiding parsing JSON is the #1 optimization.
 //!
-//! When we get queries from the resolver we're given a `Dependency`. This
+//! When we get queries from the resolver we're given a [`Dependency`]. This
 //! dependency in turn has a version requirement, and with lock files that
 //! already exist these version requirements are exact version requirements
 //! `=a.b.c`. This means that we in theory only need to parse one line of JSON
 //! per query in the registry, the one that matches version `a.b.c`.
 //!
 //! The crates.io index, however, is not amenable to this form of query. Instead
-//! the crates.io index simply is a file where each line is a JSON blob. To
-//! learn about the versions in each JSON blob we would need to parse the JSON,
-//! defeating the purpose of trying to parse as little as possible.
+//! the crates.io index simply is a file where each line is a JSON blob, aka
+//! [`RegistryPackage`]. To learn about the versions in each JSON blob we
+//! would need to parse the JSON via [`IndexSummary::parse`], defeating the
+//! purpose of trying to parse as little as possible.
 //!
 //! > Note that as a small aside even *loading* the JSON from the registry is
-//! > actually pretty slow. For crates.io and remote registries we don't
+//! > actually pretty slow. For crates.io and [`RemoteRegistry`] we don't
 //! > actually check out the git index on disk because that takes quite some
 //! > time and is quite large. Instead we use `libgit2` to read the JSON from
 //! > the raw git objects. This in turn can be slow (aka show up high in
@@ -43,14 +59,14 @@
 //! (first time being for an entire computer) Cargo will load the contents
 //! (slowly via libgit2) from the registry. It will then (slowly) parse every
 //! single line to learn about its versions. Afterwards, however, Cargo will
-//! emit a new file (a cache) which is amenable for speedily parsing in future
-//! invocations.
+//! emit a new file (a cache, representing as [`SummariesCache`]) which is
+//! amenable for speedily parsing in future invocations.
 //!
 //! This cache file is currently organized by basically having the semver
-//! version extracted from each JSON blob. That way Cargo can quickly and easily
-//! parse all versions contained and which JSON blob they're associated with.
-//! The JSON blob then doesn't actually need to get parsed unless the version is
-//! parsed.
+//! version extracted from each JSON blob. That way Cargo can quickly and
+//! easily parse all versions contained and which JSON blob they're associated
+//! with. The JSON blob then doesn't actually need to get parsed unless the
+//! version is parsed.
 //!
 //! Altogether the initial measurements of this shows a massive improvement for
 //! Cargo null build performance. It's expected that the improvements earned
@@ -65,6 +81,9 @@
 //! Note that this is just a high-level overview, there's of course lots of
 //! details like invalidating caches and whatnot which are handled below, but
 //! hopefully those are more obvious inline in the code itself.
+//!
+//! [`RemoteRegistry`]: super::remote::RemoteRegistry
+//! [`Dependency`]: crate::core::Dependency
 
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData, RegistryPackage, INDEX_V_MAX};
@@ -83,17 +102,24 @@ use std::task::{ready, Poll};
 
 /// Manager for handling the on-disk index.
 ///
-/// Note that local and remote registries store the index differently. Local
-/// is a simple on-disk tree of files of the raw index. Remote registries are
-/// stored as a raw git repository. The different means of access are handled
-/// via the [`RegistryData`] trait abstraction.
+/// Different kinds of registries store the index differently:
 ///
+/// * [`LocalRegistry`]` is a simple on-disk tree of files of the raw index.
+/// * [`RemoteRegistry`] is stored as a raw git repository.
+/// * [`HttpRegistry`] fills the on-disk index cache directly without keeping
+///   any raw index.
+///
+/// These means of access are handled via the [`RegistryData`] trait abstraction.
 /// This transparently handles caching of the index in a more efficient format.
+///
+/// [`LocalRegistry`]: super::local::LocalRegistry
+/// [`RemoteRegistry`]: super::remote::RemoteRegistry
+/// [`HttpRegistry`]: super::http_remote::HttpRegistry
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
     /// Root directory of the index for the registry.
     path: Filesystem,
-    /// Cache of summary data.
+    /// In-memory cache of summary data.
     ///
     /// This is keyed off the package name. The [`Summaries`] value handles
     /// loading the summary data. It keeps an optimized on-disk representation
@@ -110,14 +136,16 @@ pub struct RegistryIndex<'cfg> {
 ///
 /// A list of summaries are loaded from disk via one of two methods:
 ///
-/// 1. Primarily Cargo will parse the corresponding file for a crate in the
-///    upstream crates.io registry. That's just a JSON blob per line which we
-///    can parse, extract the version, and then store here.
+/// 1. From raw registry index --- Primarily Cargo will parse the corresponding
+///    file for a crate in the upstream crates.io registry. That's just a JSON
+///    blob per line which we can parse, extract the version, and then store here.
+///    See [`RegistryPackage`] and [`IndexSummary::parse`].
 ///
-/// 2. Alternatively, if Cargo has previously run, we'll have a cached index of
-///    dependencies for the upstream index. This is a file that Cargo maintains
-///    lazily on the local filesystem and is much faster to parse since it
-///    doesn't involve parsing all of the JSON.
+/// 2. From on-disk index cache --- If Cargo has previously run, we'll have a
+///    cached index of dependencies for the upstream index. This is a file that
+///    Cargo maintains lazily on the local filesystem and is much faster to
+///    parse since it doesn't involve parsing all of the JSON.
+///    See [`SummariesCache`].
 ///
 /// The outward-facing interface of this doesn't matter too much where it's
 /// loaded from, but it's important when reading the implementation to note that
@@ -134,37 +162,100 @@ struct Summaries {
     versions: HashMap<Version, MaybeIndexSummary>,
 }
 
-/// A lazily parsed `IndexSummary`.
+/// A lazily parsed [`IndexSummary`].
 enum MaybeIndexSummary {
     /// A summary which has not been parsed, The `start` and `end` are pointers
-    /// into `Summaries::raw_data` which this is an entry of.
+    /// into [`Summaries::raw_data`] which this is an entry of.
     Unparsed { start: usize, end: usize },
 
     /// An actually parsed summary.
     Parsed(IndexSummary),
 }
 
-/// A parsed representation of a summary from the index.
+/// A parsed representation of a summary from the index. This is usually parsed
+/// from a line from a raw index file, or a JSON blob from on-disk index cache.
 ///
-/// In addition to a full `Summary` we have information on whether it is `yanked`.
+/// In addition to a full [`Summary`], we have information on whether it is `yanked`.
 pub struct IndexSummary {
     pub summary: Summary,
     pub yanked: bool,
-    /// Schema version, see [`RegistryPackage`].
+    /// Schema version, see [`RegistryPackage::v`].
     v: u32,
 }
 
 /// A representation of the cache on disk that Cargo maintains of summaries.
+///
 /// Cargo will initially parse all summaries in the registry and will then
 /// serialize that into this form and place it in a new location on disk,
 /// ensuring that access in the future is much speedier.
+///
+/// For serialization and deserialization of this on-disk index cache of
+/// summaries, see [`SummariesCache::serialize`]  and [`SummariesCache::parse`].
+///
+/// # The format of the index cache
+///
+/// The idea of this format is that it's a very easy file for Cargo to parse in
+/// future invocations. The read from disk should be fast and then afterwards
+/// all we need to know is what versions correspond to which JSON blob.
+///
+/// Currently the format looks like:
+///
+/// ```text
+/// +---------------+----------------------+--------------------+---+
+/// | cache version | index format version | index file version | 0 |
+/// +---------------+----------------------+--------------------+---+
+/// ```
+///
+/// followed by one or more (version + JSON blob) pairs...
+///
+/// ```text
+/// +----------------+---+-----------+---+
+/// | semver version | 0 | JSON blob | 0 | ...
+/// +----------------+---+-----------+---+
+/// ```
+///
+/// Each field represents:
+///
+/// * _cache version_ --- Intended to ensure that there's some level of
+///   future compatibility against changes to this cache format so if different
+///   versions of Cargo share the same cache they don't get too confused.
+/// * _index format version_ --- The version of the raw index file.
+///   See [`RegistryPackage::v`] for the detail.
+/// * _index file version_ --- Tracks when a cache needs to be regenerated.
+///   A cache regeneration is required whenever the index file itself updates.
+/// * _semver version_ --- The version for each JSON blob. Extracted from the
+///   blob for fast queries without parsing the entire blob.
+/// * _JSON blob_ --- The actual metadata for each version of the package. It
+///   has the same representation as [`RegistryPackage`].
+///
+/// # Changes between each cache version
+///
+/// * `1`: The original version.
+/// * `2`: Added the "index format version" field so that if the index format
+///   changes, different versions of cargo won't get confused reading each
+///   other's caches.
+/// * `3`: Bumped the version to work around an issue where multiple versions of
+///   a package were published that differ only by semver metadata. For
+///   example, openssl-src 110.0.0 and 110.0.0+1.1.0f. Previously, the cache
+///   would be incorrectly populated with two entries, both 110.0.0. After
+///   this, the metadata will be correctly included. This isn't really a format
+///   change, just a version bump to clear the incorrect cache entries. Note:
+///   the index shouldn't allow these, but unfortunately crates.io doesn't
+///   check it.
+///
+/// See [`CURRENT_CACHE_VERSION`] for the current cache version.
 #[derive(Default)]
 struct SummariesCache<'a> {
+    /// JSON blobs of the summaries. Each JSON blob has a [`Version`] beside,
+    /// so that Cargo can query a version without full JSON parsing.
     versions: Vec<(Version, &'a [u8])>,
+    /// For cache invalidation, we tracks the index file version to determine
+    /// when to regenerate the cache itself.
     index_version: &'a str,
 }
 
 impl<'cfg> RegistryIndex<'cfg> {
+    /// Creates an empty registry index at `path`.
     pub fn new(
         source_id: SourceId,
         path: &Filesystem,
@@ -178,7 +269,9 @@ impl<'cfg> RegistryIndex<'cfg> {
         }
     }
 
-    /// Returns the hash listed for a specified `PackageId`.
+    /// Returns the hash listed for a specified `PackageId`. Primarily for
+    /// checking the integrity of a downloaded package matching the checksum in
+    /// the index file, aka [`IndexSummary`].
     pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
         let req = OptVersionReq::exact(pkg.version());
         let summary = self.summaries(&pkg.name(), &req, load)?;
@@ -191,10 +284,14 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Load a list of summaries for `name` package in this registry which
-    /// match `req`
+    /// match `req`.
     ///
-    /// This function will semantically parse the on-disk index, match all
-    /// versions, and then return an iterator over all summaries which matched.
+    /// This function will semantically
+    ///
+    /// 1. parse the index file (either raw or cache),
+    /// 2. match all versions,
+    /// 3. and then return an iterator over all summaries which matched.
+    ///
     /// Internally there's quite a few layer of caching to amortize this cost
     /// though since this method is called quite a lot on null builds in Cargo.
     pub fn summaries<'a, 'b>(
@@ -209,10 +306,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         let source_id = self.source_id;
         let config = self.config;
 
-        // First up actually parse what summaries we have available. If Cargo
-        // has run previously this will parse a Cargo-specific cache file rather
-        // than the registry itself. In effect this is intended to be a quite
-        // cheap operation.
+        // First up parse what summaries we have available.
         let name = InternedString::new(name);
         let summaries = ready!(self.load_summaries(name, load)?);
 
@@ -251,13 +345,28 @@ impl<'cfg> RegistryIndex<'cfg> {
             })))
     }
 
+    /// Actually parses what summaries we have available.
+    ///
+    /// If Cargo has run previously, this tries in this order:
+    ///
+    /// 1. Returns from in-memory cache, aka [`RegistryIndex::summaries_cache`].
+    /// 2. If missing, hands over to [`Summaries::parse`] to parse an index file.
+    ///
+    ///    The actual kind index file being parsed depends on which kind of
+    ///    [`RegistryData`] the `load` argument is given. For example, a
+    ///    Git-based [`RemoteRegistry`] will first try a on-disk index cache
+    ///    file, and then try parsing registry raw index fomr Git repository.
+    ///
+    /// In effect, this is intended to be a quite cheap operation.
+    ///
+    /// [`RemoteRegistry`]: super::remote::RemoteRegistry
     fn load_summaries(
         &mut self,
         name: InternedString,
         load: &mut dyn RegistryData,
     ) -> Poll<CargoResult<&mut Summaries>> {
         // If we've previously loaded what versions are present for `name`, just
-        // return that since our cache should still be valid.
+        // return that since our in-memory cache should still be valid.
         if self.summaries_cache.contains_key(&name) {
             return Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()));
         }
@@ -295,6 +404,9 @@ impl<'cfg> RegistryIndex<'cfg> {
         self.summaries_cache.clear();
     }
 
+    /// Attempts to find the packages that match a `name` and a version `req`.
+    ///
+    /// This is primarily used by [`Source::query`](super::Source).
     pub fn query_inner(
         &mut self,
         name: &str,
@@ -324,6 +436,10 @@ impl<'cfg> RegistryIndex<'cfg> {
             .map_ok(|_| ())
     }
 
+    /// Inner implementation of [`Self::query_inner`]. Returns the number of
+    /// summaries we've got.
+    ///
+    /// The `online` controls whether Cargo can access the network when needed.
     fn query_inner_with_online(
         &mut self,
         name: &str,
@@ -404,6 +520,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         Poll::Ready(Ok(count))
     }
 
+    /// Looks into the summaries to check if a package has been yanked.
     pub fn is_yanked(
         &mut self,
         pkg: PackageId,
@@ -418,23 +535,26 @@ impl<'cfg> RegistryIndex<'cfg> {
 }
 
 impl Summaries {
-    /// Parse out a `Summaries` instances from on-disk state.
+    /// Parse out a [`Summaries`] instances from on-disk state.
     ///
-    /// This will attempt to prefer parsing a previous cache file that already
-    /// exists from a previous invocation of Cargo (aka you're typing `cargo
-    /// build` again after typing it previously). If parsing fails or the cache
-    /// isn't found, then we take a slower path which loads the full descriptor
-    /// for `relative` from the underlying index (aka typically libgit2 with
-    /// crates.io) and then parse everything in there.
+    /// This will do the followings in order:
     ///
-    /// * `root` - this is the root argument passed to `load`
-    /// * `cache_root` - this is the root on the filesystem itself of where to
-    ///   store cache files.
-    /// * `relative` - this is the file we're loading from cache or the index
+    /// 1. Attempt to prefer parsing a previous index cache file that already
+    ///    exists from a previous invocation of Cargo (aka you're typing `cargo
+    ///    build` again after typing it previously).
+    /// 2. If parsing fails, or the cache isn't found or is invalid, we then
+    ///    take a slower path which loads the full descriptor for `relative`
+    ///    from the underlying index (aka libgit2 with crates.io, or from a
+    ///    remote HTTP index) and then parse everything in there.
+    ///
+    /// * `root` --- this is the root argument passed to `load`
+    /// * `cache_root` --- this is the root on the filesystem itself of where
+    ///   to store cache files.
+    /// * `relative` --- this is the file we're loading from cache or the index
     ///   data
-    /// * `source_id` - the registry's SourceId used when parsing JSON blobs to
-    ///   create summaries.
-    /// * `load` - the actual index implementation which may be very slow to
+    /// * `source_id` --- the registry's SourceId used when parsing JSON blobs
+    ///   to create summaries.
+    /// * `load` --- the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.
     pub fn parse(
         root: &Path,
@@ -549,8 +669,8 @@ impl Summaries {
         }
     }
 
-    /// Parses an open `File` which represents information previously cached by
-    /// Cargo.
+    /// Parses the contents of an on-disk cache, aka [`SummariesCache`], which
+    /// represents information previously cached by Cargo.
     pub fn parse_cache(contents: Vec<u8>) -> CargoResult<(Summaries, InternedString)> {
         let cache = SummariesCache::parse(&contents)?;
         let index_version = InternedString::new(cache.index_version);
@@ -577,46 +697,11 @@ impl Summaries {
     }
 }
 
-// Implementation of serializing/deserializing the cache of summaries on disk.
-// Currently the format looks like:
-//
-// +--------------------+----------------------+-------------+---+
-// | cache version byte | index format version | git sha rev | 0 |
-// +--------------------+----------------------+-------------+---+
-//
-// followed by...
-//
-// +----------------+---+------------+---+
-// | semver version | 0 |  JSON blob | 0 | ...
-// +----------------+---+------------+---+
-//
-// The idea is that this is a very easy file for Cargo to parse in future
-// invocations. The read from disk should be quite fast and then afterwards all
-// we need to know is what versions correspond to which JSON blob.
-//
-// The leading version byte is intended to ensure that there's some level of
-// future compatibility against changes to this cache format so if different
-// versions of Cargo share the same cache they don't get too confused. The git
-// sha lets us know when the file needs to be regenerated (it needs regeneration
-// whenever the index itself updates).
-//
-// Cache versions:
-// * `1`: The original version.
-// * `2`: Added the "index format version" field so that if the index format
-//   changes, different versions of cargo won't get confused reading each
-//   other's caches.
-// * `3`: Bumped the version to work around an issue where multiple versions of
-//   a package were published that differ only by semver metadata. For
-//   example, openssl-src 110.0.0 and 110.0.0+1.1.0f. Previously, the cache
-//   would be incorrectly populated with two entries, both 110.0.0. After
-//   this, the metadata will be correctly included. This isn't really a format
-//   change, just a version bump to clear the incorrect cache entries. Note:
-//   the index shouldn't allow these, but unfortunately crates.io doesn't
-//   check it.
-
+/// The current version of [`SummariesCache`].
 const CURRENT_CACHE_VERSION: u8 = 3;
 
 impl<'a> SummariesCache<'a> {
+    /// Deserializes an on-disk cache.
     fn parse(data: &'a [u8]) -> CargoResult<SummariesCache<'a>> {
         // NB: keep this method in sync with `serialize` below
         let (first_byte, rest) = data
@@ -655,6 +740,7 @@ impl<'a> SummariesCache<'a> {
         Ok(ret)
     }
 
+    /// Serializes itself with a given `index_version`.
     fn serialize(&self, index_version: &str) -> Vec<u8> {
         // NB: keep this method in sync with `parse` above
         let size = self
@@ -709,10 +795,11 @@ impl From<IndexSummary> for MaybeIndexSummary {
 }
 
 impl IndexSummary {
-    /// Parses a line from the registry's index file into an `IndexSummary` for
-    /// a package.
+    /// Parses a line from the registry's index file into an [`IndexSummary`]
+    /// for a package.
     ///
-    /// The `line` provided is expected to be valid JSON.
+    /// The `line` provided is expected to be valid JSON. It is supposed to be
+    /// a [`RegistryPackage`].
     fn parse(config: &Config, line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
         // ****CAUTION**** Please be extremely careful with returning errors
         // from this function. Entries that error are not included in the
@@ -754,6 +841,7 @@ impl IndexSummary {
     }
 }
 
+/// Like [`slice::split`] but is optimized by [`memchr`].
 fn split(haystack: &[u8], needle: u8) -> impl Iterator<Item = &[u8]> {
     struct Split<'a> {
         haystack: &'a [u8],
