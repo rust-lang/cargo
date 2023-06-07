@@ -43,9 +43,9 @@
 //!
 //! The crates.io index, however, is not amenable to this form of query. Instead
 //! the crates.io index simply is a file where each line is a JSON blob, aka
-//! [`RegistryPackage`]. To learn about the versions in each JSON blob we
-//! would need to parse the JSON via [`IndexSummary::parse`], defeating the
-//! purpose of trying to parse as little as possible.
+//! [`IndexPackage`]. To learn about the versions in each JSON blob we would
+//! need to parse the JSON via [`IndexSummary::parse`], defeating the purpose
+//! of trying to parse as little as possible.
 //!
 //! > Note that as a small aside even *loading* the JSON from the registry is
 //! > actually pretty slow. For crates.io and [`RemoteRegistry`] we don't
@@ -110,7 +110,7 @@ use std::task::{ready, Poll};
 const CURRENT_CACHE_VERSION: u8 = 3;
 
 /// The maximum schema version of the `v` field in the index this version of
-/// cargo understands. See [`RegistryPackage::v`] for the detail.
+/// cargo understands. See [`IndexPackage::v`] for the detail.
 const INDEX_V_MAX: u32 = 2;
 
 /// Manager for handling the on-disk index.
@@ -152,7 +152,7 @@ pub struct RegistryIndex<'cfg> {
 /// 1. From raw registry index --- Primarily Cargo will parse the corresponding
 ///    file for a crate in the upstream crates.io registry. That's just a JSON
 ///    blob per line which we can parse, extract the version, and then store here.
-///    See [`RegistryPackage`] and [`IndexSummary::parse`].
+///    See [`IndexPackage`] and [`IndexSummary::parse`].
 ///
 /// 2. From on-disk index cache --- If Cargo has previously run, we'll have a
 ///    cached index of dependencies for the upstream index. This is a file that
@@ -192,7 +192,7 @@ enum MaybeIndexSummary {
 pub struct IndexSummary {
     pub summary: Summary,
     pub yanked: bool,
-    /// Schema version, see [`RegistryPackage::v`].
+    /// Schema version, see [`IndexPackage::v`].
     v: u32,
 }
 
@@ -233,13 +233,13 @@ pub struct IndexSummary {
 ///   future compatibility against changes to this cache format so if different
 ///   versions of Cargo share the same cache they don't get too confused.
 /// * _index schema version_ --- The schema version of the raw index file.
-///   See [`RegistryPackage::v`] for the detail.
+///   See [`IndexPackage::v`] for the detail.
 /// * _index file version_ --- Tracks when a cache needs to be regenerated.
 ///   A cache regeneration is required whenever the index file itself updates.
 /// * _semver version_ --- The version for each JSON blob. Extracted from the
 ///   blob for fast queries without parsing the entire blob.
 /// * _JSON blob_ --- The actual metadata for each version of the package. It
-///   has the same representation as [`RegistryPackage`].
+///   has the same representation as [`IndexPackage`].
 ///
 /// # Changes between each cache version
 ///
@@ -269,7 +269,7 @@ struct SummariesCache<'a> {
 
 /// A single line in the index representing a single version of a package.
 #[derive(Deserialize)]
-pub struct RegistryPackage<'a> {
+pub struct IndexPackage<'a> {
     /// Name of the pacakge.
     name: InternedString,
     /// The version of this dependency.
@@ -328,7 +328,7 @@ pub struct RegistryPackage<'a> {
     v: Option<u32>,
 }
 
-/// A dependency as encoded in the [`RegistryPackage`] index JSON.
+/// A dependency as encoded in the [`IndexPackage`] index JSON.
 #[derive(Deserialize)]
 struct RegistryDependency<'a> {
     /// Name of the dependency. If the dependency is renamed, the original
@@ -893,7 +893,7 @@ impl IndexSummary {
     /// for a package.
     ///
     /// The `line` provided is expected to be valid JSON. It is supposed to be
-    /// a [`RegistryPackage`].
+    /// a [`IndexPackage`].
     fn parse(config: &Config, line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
         // ****CAUTION**** Please be extremely careful with returning errors
         // from this function. Entries that error are not included in the
@@ -901,7 +901,7 @@ impl IndexSummary {
         // between different versions that understand the index differently.
         // Make sure to consider the INDEX_V_MAX and CURRENT_CACHE_VERSION
         // values carefully when making changes here.
-        let RegistryPackage {
+        let IndexPackage {
             name,
             vers,
             cksum,
@@ -1027,17 +1027,17 @@ fn split(haystack: &[u8], needle: u8) -> impl Iterator<Item = &[u8]> {
 
 #[test]
 fn escaped_char_in_index_json_blob() {
-    let _: RegistryPackage<'_> = serde_json::from_str(
+    let _: IndexPackage<'_> = serde_json::from_str(
         r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#,
     )
     .unwrap();
-    let _: RegistryPackage<'_> = serde_json::from_str(
+    let _: IndexPackage<'_> = serde_json::from_str(
         r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{"test":["k","q"]},"links":"a-sys"}"#
     ).unwrap();
 
     // Now we add escaped cher all the places they can go
     // these are not valid, but it should error later than json parsing
-    let _: RegistryPackage<'_> = serde_json::from_str(
+    let _: IndexPackage<'_> = serde_json::from_str(
         r#"{
         "name":"This name has a escaped cher in it \n\t\" ",
         "vers":"0.0.1",
