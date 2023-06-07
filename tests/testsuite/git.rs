@@ -2711,7 +2711,7 @@ fn use_the_cli() {
 [UPDATING] git repository `[..]`
 [RUNNING] `git fetch [..]`
 From [..]
- * [new ref]                    -> origin/HEAD
+ * [new ref] [..] -> origin/HEAD[..]
 [CHECKING] dep1 [..]
 [RUNNING] `rustc [..]`
 [CHECKING] foo [..]
