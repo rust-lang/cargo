@@ -335,10 +335,10 @@ pub struct RegistryPackage<'a> {
     rust_version: Option<InternedString>,
     /// The schema version for this entry.
     ///
-    /// If this is None, it defaults to version 1. Entries with unknown
+    /// If this is None, it defaults to version `1`. Entries with unknown
     /// versions are ignored.
     ///
-    /// Version `2` format adds the `features2` field.
+    /// Version `2` schema adds the `features2` field.
     ///
     /// This provides a method to safely introduce changes to index entries
     /// and allow older versions of cargo to ignore newer entries it doesn't
@@ -349,7 +349,7 @@ pub struct RegistryPackage<'a> {
     /// The intent is that versions older than 1.51 will work with a
     /// pre-existing `Cargo.lock`, but they may not correctly process `cargo
     /// update` or build a lock from scratch. In that case, cargo may
-    /// incorrectly select a new package that uses a new index format. A
+    /// incorrectly select a new package that uses a new index schema. A
     /// workaround is to downgrade any packages that are incompatible with the
     /// `--precise` flag of `cargo update`.
     v: Option<u32>,

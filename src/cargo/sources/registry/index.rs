@@ -209,7 +209,7 @@ pub struct IndexSummary {
 ///
 /// ```text
 /// +---------------+----------------------+--------------------+---+
-/// | cache version | index format version | index file version | 0 |
+/// | cache version | index schema version | index file version | 0 |
 /// +---------------+----------------------+--------------------+---+
 /// ```
 ///
@@ -226,7 +226,7 @@ pub struct IndexSummary {
 /// * _cache version_ --- Intended to ensure that there's some level of
 ///   future compatibility against changes to this cache format so if different
 ///   versions of Cargo share the same cache they don't get too confused.
-/// * _index format version_ --- The version of the raw index file.
+/// * _index schema version_ --- The schema version of the raw index file.
 ///   See [`RegistryPackage::v`] for the detail.
 /// * _index file version_ --- Tracks when a cache needs to be regenerated.
 ///   A cache regeneration is required whenever the index file itself updates.
@@ -238,7 +238,7 @@ pub struct IndexSummary {
 /// # Changes between each cache version
 ///
 /// * `1`: The original version.
-/// * `2`: Added the "index format version" field so that if the index format
+/// * `2`: Added the "index schema version" field so that if the index schema
 ///   changes, different versions of cargo won't get confused reading each
 ///   other's caches.
 /// * `3`: Bumped the version to work around an issue where multiple versions of
@@ -716,13 +716,11 @@ impl<'a> SummariesCache<'a> {
         }
         let index_v_bytes = rest
             .get(..4)
-            .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index version"))?;
+            .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index schema version"))?;
         let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
         if index_v != INDEX_V_MAX {
             bail!(
-                "index format version {} doesn't match the version I know ({})",
-                index_v,
-                INDEX_V_MAX
+                "index schema version {index_v} doesn't match the version I know ({INDEX_V_MAX})",
             );
         }
         let rest = &rest[4..];
