@@ -2,6 +2,7 @@
 
 use std::task::Poll;
 
+pub mod proxy;
 pub mod retry;
 pub mod sleep;
 
