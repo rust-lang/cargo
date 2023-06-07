@@ -183,6 +183,9 @@ through the library target's public API.
 The optional `KIND` may be one of `dylib`, `static`, or `framework`. See the
 [rustc book][option-link] for more detail.
 
+Please note that if you don't specify the `KIND` when using `rustc-link-lib`, the default linkage modifiers won't be applied. 
+For instance, `bundled` won't be used in conjunction with `static` by default.
+
 [option-link]: ../../rustc/command-line-arguments.md#option-l-link-lib
 [FFI]: ../../nomicon/ffi.md
 
