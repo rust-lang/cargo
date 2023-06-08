@@ -293,10 +293,6 @@ fn init_git(config: &Config) {
 /// configured to use libcurl instead of the built-in networking support so
 /// that those configuration settings can be used.
 fn init_git_transports(config: &Config) {
-    // Only use a custom transport if any HTTP options are specified,
-    // such as proxies or custom certificate authorities. The custom
-    // transport, however, is not as well battle-tested.
-
     match cargo::ops::needs_custom_http_transport(config) {
         Ok(true) => {}
         _ => return,
