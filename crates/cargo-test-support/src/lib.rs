@@ -110,7 +110,9 @@ impl FileBuilder {
 
     fn mk(&mut self) {
         if self.executable {
-            self.path.set_extension(env::consts::EXE_EXTENSION);
+            let mut path = self.path.clone().into_os_string();
+            write!(path, "{}", env::consts::EXE_SUFFIX).unwrap();
+            self.path = path.into();
         }
 
         self.dirname().mkdir_p();
