@@ -444,7 +444,7 @@ impl<'a> GitCheckout<'a> {
             // See [`git submodule add`] documentation.
             //
             // [`git submodule add`]: https://git-scm.com/docs/git-submodule
-            let url = if child_url_str.starts_with("./") || child_url_str.starts_with("../") {
+            let child_remote_url = if child_url_str.starts_with("./") || child_url_str.starts_with("../") {
                 let mut new_parent_remote_url = parent_remote_url.clone();
 
                 let mut new_path = Cow::from(parent_remote_url.path());
@@ -498,10 +498,10 @@ impl<'a> GitCheckout<'a> {
             let reference = GitReference::Rev(head.to_string());
             cargo_config
                 .shell()
-                .status("Updating", format!("git submodule `{}`", url))?;
+                .status("Updating", format!("git submodule `{}`", child_remote_url))?;
             fetch(
                 &mut repo,
-                &url,
+                &child_remote_url,
                 &reference,
                 cargo_config,
                 RemoteKind::GitDependency,
@@ -510,7 +510,7 @@ impl<'a> GitCheckout<'a> {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
-                    url
+                    child_remote_url
                 )
             })?;
 
