@@ -43,9 +43,9 @@
 //!
 //! The crates.io index, however, is not amenable to this form of query. Instead
 //! the crates.io index simply is a file where each line is a JSON blob, aka
-//! [`RegistryPackage`]. To learn about the versions in each JSON blob we
-//! would need to parse the JSON via [`IndexSummary::parse`], defeating the
-//! purpose of trying to parse as little as possible.
+//! [`IndexPackage`]. To learn about the versions in each JSON blob we would
+//! need to parse the JSON via [`IndexSummary::parse`], defeating the purpose
+//! of trying to parse as little as possible.
 //!
 //! > Note that as a small aside even *loading* the JSON from the registry is
 //! > actually pretty slow. For crates.io and [`RemoteRegistry`] we don't
@@ -85,20 +85,33 @@
 //! [`RemoteRegistry`]: super::remote::RemoteRegistry
 //! [`Dependency`]: crate::core::Dependency
 
+use crate::core::dependency::DepKind;
+use crate::core::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::sources::registry::{LoadResponse, RegistryData, RegistryPackage, INDEX_V_MAX};
+use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::interning::InternedString;
+use crate::util::IntoUrl;
 use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
 use anyhow::bail;
 use cargo_util::{paths, registry::make_dep_path};
 use log::{debug, info};
 use semver::Version;
+use serde::Deserialize;
+use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::ErrorKind;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
+
+/// The current version of [`SummariesCache`].
+const CURRENT_CACHE_VERSION: u8 = 3;
+
+/// The maximum schema version of the `v` field in the index this version of
+/// cargo understands. See [`IndexPackage::v`] for the detail.
+const INDEX_V_MAX: u32 = 2;
 
 /// Manager for handling the on-disk index.
 ///
@@ -139,7 +152,7 @@ pub struct RegistryIndex<'cfg> {
 /// 1. From raw registry index --- Primarily Cargo will parse the corresponding
 ///    file for a crate in the upstream crates.io registry. That's just a JSON
 ///    blob per line which we can parse, extract the version, and then store here.
-///    See [`RegistryPackage`] and [`IndexSummary::parse`].
+///    See [`IndexPackage`] and [`IndexSummary::parse`].
 ///
 /// 2. From on-disk index cache --- If Cargo has previously run, we'll have a
 ///    cached index of dependencies for the upstream index. This is a file that
@@ -179,7 +192,7 @@ enum MaybeIndexSummary {
 pub struct IndexSummary {
     pub summary: Summary,
     pub yanked: bool,
-    /// Schema version, see [`RegistryPackage::v`].
+    /// Schema version, see [`IndexPackage::v`].
     v: u32,
 }
 
@@ -202,7 +215,7 @@ pub struct IndexSummary {
 ///
 /// ```text
 /// +---------------+----------------------+--------------------+---+
-/// | cache version | index format version | index file version | 0 |
+/// | cache version | index schema version | index file version | 0 |
 /// +---------------+----------------------+--------------------+---+
 /// ```
 ///
@@ -219,19 +232,19 @@ pub struct IndexSummary {
 /// * _cache version_ --- Intended to ensure that there's some level of
 ///   future compatibility against changes to this cache format so if different
 ///   versions of Cargo share the same cache they don't get too confused.
-/// * _index format version_ --- The version of the raw index file.
-///   See [`RegistryPackage::v`] for the detail.
+/// * _index schema version_ --- The schema version of the raw index file.
+///   See [`IndexPackage::v`] for the detail.
 /// * _index file version_ --- Tracks when a cache needs to be regenerated.
 ///   A cache regeneration is required whenever the index file itself updates.
 /// * _semver version_ --- The version for each JSON blob. Extracted from the
 ///   blob for fast queries without parsing the entire blob.
 /// * _JSON blob_ --- The actual metadata for each version of the package. It
-///   has the same representation as [`RegistryPackage`].
+///   has the same representation as [`IndexPackage`].
 ///
 /// # Changes between each cache version
 ///
 /// * `1`: The original version.
-/// * `2`: Added the "index format version" field so that if the index format
+/// * `2`: Added the "index schema version" field so that if the index schema
 ///   changes, different versions of cargo won't get confused reading each
 ///   other's caches.
 /// * `3`: Bumped the version to work around an issue where multiple versions of
@@ -252,6 +265,97 @@ struct SummariesCache<'a> {
     /// For cache invalidation, we tracks the index file version to determine
     /// when to regenerate the cache itself.
     index_version: &'a str,
+}
+
+/// A single line in the index representing a single version of a package.
+#[derive(Deserialize)]
+pub struct IndexPackage<'a> {
+    /// Name of the pacakge.
+    name: InternedString,
+    /// The version of this dependency.
+    vers: Version,
+    /// All kinds of direct dependencies of the package, including dev and
+    /// build dependencies.
+    #[serde(borrow)]
+    deps: Vec<RegistryDependency<'a>>,
+    /// Set of features defined for the package, i.e., `[features]` table.
+    features: BTreeMap<InternedString, Vec<InternedString>>,
+    /// This field contains features with new, extended syntax. Specifically,
+    /// namespaced features (`dep:`) and weak dependencies (`pkg?/feat`).
+    ///
+    /// This is separated from `features` because versions older than 1.19
+    /// will fail to load due to not being able to parse the new syntax, even
+    /// with a `Cargo.lock` file.
+    features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
+    /// Checksum for verifying the integrity of the corresponding downloaded package.
+    cksum: String,
+    /// If `true`, Cargo will skip this version when resolving.
+    ///
+    /// This was added in 2014. Everything in the crates.io index has this set
+    /// now, so this probably doesn't need to be an option anymore.
+    yanked: Option<bool>,
+    /// Native library name this package links to.
+    ///
+    /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
+    /// can be `None` if published before then.
+    links: Option<InternedString>,
+    /// Required version of rust
+    ///
+    /// Corresponds to `package.rust-version`.
+    ///
+    /// Added in 2023 (see <https://github.com/rust-lang/crates.io/pull/6267>),
+    /// can be `None` if published before then or if not set in the manifest.
+    rust_version: Option<InternedString>,
+    /// The schema version for this entry.
+    ///
+    /// If this is None, it defaults to version `1`. Entries with unknown
+    /// versions are ignored.
+    ///
+    /// Version `2` schema adds the `features2` field.
+    ///
+    /// This provides a method to safely introduce changes to index entries
+    /// and allow older versions of cargo to ignore newer entries it doesn't
+    /// understand. This is honored as of 1.51, so unfortunately older
+    /// versions will ignore it, and potentially misinterpret version 2 and
+    /// newer entries.
+    ///
+    /// The intent is that versions older than 1.51 will work with a
+    /// pre-existing `Cargo.lock`, but they may not correctly process `cargo
+    /// update` or build a lock from scratch. In that case, cargo may
+    /// incorrectly select a new package that uses a new index schema. A
+    /// workaround is to downgrade any packages that are incompatible with the
+    /// `--precise` flag of `cargo update`.
+    v: Option<u32>,
+}
+
+/// A dependency as encoded in the [`IndexPackage`] index JSON.
+#[derive(Deserialize)]
+struct RegistryDependency<'a> {
+    /// Name of the dependency. If the dependency is renamed, the original
+    /// would be stored in [`RegistryDependency::package`].
+    name: InternedString,
+    /// The SemVer requirement for this dependency.
+    #[serde(borrow)]
+    req: Cow<'a, str>,
+    /// Set of features enabled for this dependency.
+    features: Vec<InternedString>,
+    /// Whether or not this is an optional dependency.
+    optional: bool,
+    /// Whether or not default features are enabled.
+    default_features: bool,
+    /// The target platform for this dependency.
+    target: Option<Cow<'a, str>>,
+    /// The dependency kind. "dev", "build", and "normal".
+    kind: Option<Cow<'a, str>>,
+    // The URL of the index of the registry where this dependency is from.
+    // `None` if it is from the same index.
+    registry: Option<Cow<'a, str>>,
+    /// The original name if the dependency is renamed.
+    package: Option<InternedString>,
+    /// Whether or not this is a public dependency. Unstable. See [RFC 1977].
+    ///
+    /// [RFC 1977]: https://rust-lang.github.io/rfcs/1977-public-private-dependencies.html
+    public: Option<bool>,
 }
 
 impl<'cfg> RegistryIndex<'cfg> {
@@ -380,12 +484,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
         // See module comment in `registry/mod.rs` for why this is structured
         // the way it is.
-        let fs_name = name
-            .chars()
-            .flat_map(|c| c.to_lowercase())
-            .collect::<String>();
-
-        let path = make_dep_path(&fs_name, false);
+        let path = make_dep_path(&name.to_lowercase(), false);
         let summaries = ready!(Summaries::parse(
             root,
             &cache_root,
@@ -697,9 +796,6 @@ impl Summaries {
     }
 }
 
-/// The current version of [`SummariesCache`].
-const CURRENT_CACHE_VERSION: u8 = 3;
-
 impl<'a> SummariesCache<'a> {
     /// Deserializes an on-disk cache.
     fn parse(data: &'a [u8]) -> CargoResult<SummariesCache<'a>> {
@@ -712,13 +808,11 @@ impl<'a> SummariesCache<'a> {
         }
         let index_v_bytes = rest
             .get(..4)
-            .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index version"))?;
+            .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index schema version"))?;
         let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
         if index_v != INDEX_V_MAX {
             bail!(
-                "index format version {} doesn't match the version I know ({})",
-                index_v,
-                INDEX_V_MAX
+                "index schema version {index_v} doesn't match the version I know ({INDEX_V_MAX})",
             );
         }
         let rest = &rest[4..];
@@ -799,7 +893,7 @@ impl IndexSummary {
     /// for a package.
     ///
     /// The `line` provided is expected to be valid JSON. It is supposed to be
-    /// a [`RegistryPackage`].
+    /// a [`IndexPackage`].
     fn parse(config: &Config, line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
         // ****CAUTION**** Please be extremely careful with returning errors
         // from this function. Entries that error are not included in the
@@ -807,7 +901,7 @@ impl IndexSummary {
         // between different versions that understand the index differently.
         // Make sure to consider the INDEX_V_MAX and CURRENT_CACHE_VERSION
         // values carefully when making changes here.
-        let RegistryPackage {
+        let IndexPackage {
             name,
             vers,
             cksum,
@@ -841,6 +935,70 @@ impl IndexSummary {
     }
 }
 
+impl<'a> RegistryDependency<'a> {
+    /// Converts an encoded dependency in the registry to a cargo dependency
+    pub fn into_dep(self, default: SourceId) -> CargoResult<Dependency> {
+        let RegistryDependency {
+            name,
+            req,
+            mut features,
+            optional,
+            default_features,
+            target,
+            kind,
+            registry,
+            package,
+            public,
+        } = self;
+
+        let id = if let Some(registry) = &registry {
+            SourceId::for_registry(&registry.into_url()?)?
+        } else {
+            default
+        };
+
+        let mut dep = Dependency::parse(package.unwrap_or(name), Some(&req), id)?;
+        if package.is_some() {
+            dep.set_explicit_name_in_toml(name);
+        }
+        let kind = match kind.as_deref().unwrap_or("") {
+            "dev" => DepKind::Development,
+            "build" => DepKind::Build,
+            _ => DepKind::Normal,
+        };
+
+        let platform = match target {
+            Some(target) => Some(target.parse()?),
+            None => None,
+        };
+
+        // All dependencies are private by default
+        let public = public.unwrap_or(false);
+
+        // Unfortunately older versions of cargo and/or the registry ended up
+        // publishing lots of entries where the features array contained the
+        // empty feature, "", inside. This confuses the resolution process much
+        // later on and these features aren't actually valid, so filter them all
+        // out here.
+        features.retain(|s| !s.is_empty());
+
+        // In index, "registry" is null if it is from the same index.
+        // In Cargo.toml, "registry" is None if it is from the default
+        if !id.is_crates_io() {
+            dep.set_registry_id(id);
+        }
+
+        dep.set_optional(optional)
+            .set_default_features(default_features)
+            .set_features(features)
+            .set_platform(platform)
+            .set_kind(kind)
+            .set_public(public);
+
+        Ok(dep)
+    }
+}
+
 /// Like [`slice::split`] but is optimized by [`memchr`].
 fn split(haystack: &[u8], needle: u8) -> impl Iterator<Item = &[u8]> {
     struct Split<'a> {
@@ -865,4 +1023,37 @@ fn split(haystack: &[u8], needle: u8) -> impl Iterator<Item = &[u8]> {
     }
 
     Split { haystack, needle }
+}
+
+#[test]
+fn escaped_char_in_index_json_blob() {
+    let _: IndexPackage<'_> = serde_json::from_str(
+        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#,
+    )
+    .unwrap();
+    let _: IndexPackage<'_> = serde_json::from_str(
+        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{"test":["k","q"]},"links":"a-sys"}"#
+    ).unwrap();
+
+    // Now we add escaped cher all the places they can go
+    // these are not valid, but it should error later than json parsing
+    let _: IndexPackage<'_> = serde_json::from_str(
+        r#"{
+        "name":"This name has a escaped cher in it \n\t\" ",
+        "vers":"0.0.1",
+        "deps":[{
+            "name": " \n\t\" ",
+            "req": " \n\t\" ",
+            "features": [" \n\t\" "],
+            "optional": true,
+            "default_features": true,
+            "target": " \n\t\" ",
+            "kind": " \n\t\" ",
+            "registry": " \n\t\" "
+        }],
+        "cksum":"bae3",
+        "features":{"test \n\t\" ":["k \n\t\" ","q \n\t\" "]},
+        "links":" \n\t\" "}"#,
+    )
+    .unwrap();
 }

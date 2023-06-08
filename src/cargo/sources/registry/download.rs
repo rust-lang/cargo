@@ -4,10 +4,7 @@ use cargo_util::Sha256;
 use crate::core::PackageId;
 use crate::sources::registry::make_dep_prefix;
 use crate::sources::registry::MaybeLock;
-use crate::sources::registry::{
-    RegistryConfig, CHECKSUM_TEMPLATE, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
-    VERSION_TEMPLATE,
-};
+use crate::sources::registry::RegistryConfig;
 use crate::util::auth;
 use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem};
@@ -16,6 +13,12 @@ use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::str;
+
+const CRATE_TEMPLATE: &str = "{crate}";
+const VERSION_TEMPLATE: &str = "{version}";
+const PREFIX_TEMPLATE: &str = "{prefix}";
+const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
+const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 
 pub(super) fn filename(pkg: PackageId) -> String {
     format!("{}-{}.crate", pkg.name(), pkg.version())
