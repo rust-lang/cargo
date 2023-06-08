@@ -444,7 +444,9 @@ impl<'a> GitCheckout<'a> {
             // See [`git submodule add`] documentation.
             //
             // [`git submodule add`]: https://git-scm.com/docs/git-submodule
-            let url = if child_url_str.starts_with("./") || child_url_str.starts_with("../") {
+            let child_remote_url = if child_url_str.starts_with("./")
+                || child_url_str.starts_with("../")
+            {
                 let mut new_parent_remote_url = parent_remote_url.clone();
 
                 let mut new_path = Cow::from(parent_remote_url.path());
@@ -453,17 +455,19 @@ impl<'a> GitCheckout<'a> {
                 }
                 new_parent_remote_url.set_path(&new_path);
 
-                match new_parent_remote_url.join(child_url_str) {
-                    Ok(x) => x.to_string(),
-                    Err(err) => Err(err).with_context(|| {
-                        format!(
-                            "failed to parse relative child submodule url `{}` using parent base url `{}`",
-                            child_url_str, new_parent_remote_url
-                        )
-                    })?,
-                }
+                new_parent_remote_url.join(child_url_str).with_context(|| {
+                    format!(
+                        "failed to parse relative child submodule url `{child_url_str}` \
+                        using parent base url `{new_parent_remote_url}`"
+                    )
+                })?
             } else {
-                child_url_str.to_string()
+                Url::parse(child_url_str).with_context(|| {
+                        let child_module_name = child.name().unwrap_or("");
+                        format!(
+                            "failed to parse url for submodule `{child_module_name}`: `{child_url_str}`"
+                        )
+                    })?
             };
 
             // A submodule which is listed in .gitmodules but not actually
@@ -484,7 +488,7 @@ impl<'a> GitCheckout<'a> {
             let mut repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
-                        return update_submodules(&repo, cargo_config, parent_remote_url);
+                        return update_submodules(&repo, cargo_config, &child_remote_url);
                     }
                     repo
                 }
@@ -498,10 +502,10 @@ impl<'a> GitCheckout<'a> {
             let reference = GitReference::Rev(head.to_string());
             cargo_config
                 .shell()
-                .status("Updating", format!("git submodule `{}`", url))?;
+                .status("Updating", format!("git submodule `{}`", child_remote_url))?;
             fetch(
                 &mut repo,
-                &url,
+                child_remote_url.as_str(),
                 &reference,
                 cargo_config,
                 RemoteKind::GitDependency,
@@ -510,13 +514,13 @@ impl<'a> GitCheckout<'a> {
                 format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
-                    url
+                    child_remote_url
                 )
             })?;
 
             let obj = repo.find_object(head, None)?;
             reset(&repo, &obj, cargo_config)?;
-            update_submodules(&repo, cargo_config, parent_remote_url)
+            update_submodules(&repo, cargo_config, &child_remote_url)
         }
     }
 }
