@@ -81,29 +81,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     };
 
-    ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| {
-        let proc_err = match err.downcast_ref::<ProcessError>() {
-            Some(e) => e,
-            None => return CliError::new(err, 101),
-        };
-
-        // If we never actually spawned the process then that sounds pretty
-        // bad and we always want to forward that up.
-        let exit_code = match proc_err.code {
-            Some(exit) => exit,
-            None => return CliError::new(err, 101),
-        };
-
-        // If `-q` was passed then we suppress extra error information about
-        // a failed process, we assume the process itself printed out enough
-        // information about why it failed so we don't do so as well
-        let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
-        if is_quiet {
-            CliError::code(exit_code)
-        } else {
-            CliError::new(err, exit_code)
-        }
-    })
+    ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| to_run_error(config, err))
 }
 
 pub fn is_manifest_command(arg: &str) -> bool {
@@ -117,4 +95,28 @@ pub fn exec_manifest_command(config: &Config, cmd: &str, _args: &[&OsStr]) -> Cl
     }
 
     todo!("support for running manifest-commands is not yet implemented")
+}
+
+fn to_run_error(config: &cargo::util::Config, err: anyhow::Error) -> CliError {
+    let proc_err = match err.downcast_ref::<ProcessError>() {
+        Some(e) => e,
+        None => return CliError::new(err, 101),
+    };
+
+    // If we never actually spawned the process then that sounds pretty
+    // bad and we always want to forward that up.
+    let exit_code = match proc_err.code {
+        Some(exit) => exit,
+        None => return CliError::new(err, 101),
+    };
+
+    // If `-q` was passed then we suppress extra error information about
+    // a failed process, we assume the process itself printed out enough
+    // information about why it failed so we don't do so as well
+    let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
+    if is_quiet {
+        CliError::code(exit_code)
+    } else {
+        CliError::new(err, exit_code)
+    }
 }
