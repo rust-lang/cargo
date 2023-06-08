@@ -3670,12 +3670,14 @@ fn different_user_relative_submodules() {
     project
         .cargo("build")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n\
-             [UPDATING] git submodule `{}`\n\
-             [UPDATING] git submodule `{}`\n\
-             [COMPILING] dep1 v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+            "\
+[UPDATING] git repository `{}`
+[UPDATING] git submodule `{}`
+[UPDATING] git submodule `{}`
+[COMPILING] dep1 v0.5.0 ({}#[..])
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
             path2url(&user1_git_project.root()),
             path2url(&user2_git_project.root()),
             path2url(&user2_git_project2.root()),
