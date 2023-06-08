@@ -89,12 +89,26 @@ pub fn is_manifest_command(arg: &str) -> bool {
     1 < path.components().count() || path.extension() == Some(OsStr::new("rs"))
 }
 
-pub fn exec_manifest_command(config: &Config, cmd: &str, _args: &[OsString]) -> CliResult {
+pub fn exec_manifest_command(config: &Config, cmd: &str, args: &[OsString]) -> CliResult {
     if !config.cli_unstable().script {
         return Err(anyhow::anyhow!("running `{cmd}` requires `-Zscript`").into());
     }
 
-    todo!("support for running manifest-commands is not yet implemented")
+    let manifest_path = Path::new(cmd);
+    if !manifest_path.exists() {
+        return Err(
+            anyhow::anyhow!("manifest `{}` does not exist", manifest_path.display()).into(),
+        );
+    }
+    let manifest_path = crate::util::try_canonicalize(manifest_path)?;
+    let script = cargo::util::toml::embedded::RawScript::parse_from(&manifest_path)?;
+    let ws = script.to_workspace(config)?;
+
+    let mut compile_opts =
+        cargo::ops::CompileOptions::new(config, cargo::core::compiler::CompileMode::Build)?;
+    compile_opts.spec = cargo::ops::Packages::Default;
+
+    cargo::ops::run(&ws, &compile_opts, args).map_err(|err| to_run_error(config, err))
 }
 
 fn to_run_error(config: &cargo::util::Config, err: anyhow::Error) -> CliError {
