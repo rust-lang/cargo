@@ -89,7 +89,7 @@ pub fn is_manifest_command(arg: &str) -> bool {
     1 < path.components().count() || path.extension() == Some(OsStr::new("rs"))
 }
 
-pub fn exec_manifest_command(config: &Config, cmd: &str, _args: &[&OsStr]) -> CliResult {
+pub fn exec_manifest_command(config: &Config, cmd: &str, _args: &[OsString]) -> CliResult {
     if !config.cli_unstable().script {
         return Err(anyhow::anyhow!("running `{cmd}` requires `-Zscript`").into());
     }

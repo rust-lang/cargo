@@ -412,13 +412,6 @@ fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatch
         return exec(config, subcommand_args);
     }
 
-    let mut ext_args: Vec<&OsStr> = vec![OsStr::new(cmd)];
-    ext_args.extend(
-        subcommand_args
-            .get_many::<OsString>("")
-            .unwrap_or_default()
-            .map(OsString::as_os_str),
-    );
     if commands::run::is_manifest_command(cmd) {
         let ext_path = super::find_external_subcommand(config, cmd);
         if !config.cli_unstable().script && ext_path.is_some() {
@@ -428,11 +421,30 @@ external subcommand `{cmd}` has the appearance of a manfiest-command
 This was previously accepted but will be phased out when `-Zscript` is stabilized.
 For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.",
             ))?;
+            let mut ext_args = vec![OsStr::new(cmd)];
+            ext_args.extend(
+                subcommand_args
+                    .get_many::<OsString>("")
+                    .unwrap_or_default()
+                    .map(OsString::as_os_str),
+            );
             super::execute_external_subcommand(config, cmd, &ext_args)
         } else {
+            let ext_args: Vec<OsString> = subcommand_args
+                .get_many::<OsString>("")
+                .unwrap_or_default()
+                .cloned()
+                .collect();
             commands::run::exec_manifest_command(config, cmd, &ext_args)
         }
     } else {
+        let mut ext_args = vec![OsStr::new(cmd)];
+        ext_args.extend(
+            subcommand_args
+                .get_many::<OsString>("")
+                .unwrap_or_default()
+                .map(OsString::as_os_str),
+        );
         super::execute_external_subcommand(config, cmd, &ext_args)
     }
 }
