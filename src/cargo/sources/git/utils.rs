@@ -444,7 +444,9 @@ impl<'a> GitCheckout<'a> {
             // See [`git submodule add`] documentation.
             //
             // [`git submodule add`]: https://git-scm.com/docs/git-submodule
-            let child_remote_url = if child_url_str.starts_with("./") || child_url_str.starts_with("../") {
+            let child_remote_url = if child_url_str.starts_with("./")
+                || child_url_str.starts_with("../")
+            {
                 let mut new_parent_remote_url = parent_remote_url.clone();
 
                 let mut new_path = Cow::from(parent_remote_url.path());
@@ -453,15 +455,12 @@ impl<'a> GitCheckout<'a> {
                 }
                 new_parent_remote_url.set_path(&new_path);
 
-                match new_parent_remote_url.join(child_url_str) {
-                    Ok(x) => x,
-                    Err(err) => Err(err).with_context(|| {
-                        format!(
-                            "failed to parse relative child submodule url `{}` using parent base url `{}`",
-                            child_url_str, new_parent_remote_url
-                        )
-                    })?,
-                }
+                new_parent_remote_url.join(child_url_str).with_context(|| {
+                    format!(
+                        "failed to parse relative child submodule url `{}` using parent base url `{}`",
+                        child_url_str, new_parent_remote_url
+                    )
+                })?
             } else {
                 Url::parse(child_url_str)?
             };
