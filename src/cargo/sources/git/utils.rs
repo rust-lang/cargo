@@ -454,7 +454,7 @@ impl<'a> GitCheckout<'a> {
                 new_parent_remote_url.set_path(&new_path);
 
                 match new_parent_remote_url.join(child_url_str) {
-                    Ok(x) => x.to_string(),
+                    Ok(x) => x,
                     Err(err) => Err(err).with_context(|| {
                         format!(
                             "failed to parse relative child submodule url `{}` using parent base url `{}`",
@@ -463,7 +463,7 @@ impl<'a> GitCheckout<'a> {
                     })?,
                 }
             } else {
-                child_url_str.to_string()
+                Url::parse(child_url_str)?
             };
 
             // A submodule which is listed in .gitmodules but not actually
@@ -484,7 +484,7 @@ impl<'a> GitCheckout<'a> {
             let mut repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
-                        return update_submodules(&repo, cargo_config, parent_remote_url);
+                        return update_submodules(&repo, cargo_config, &child_remote_url);
                     }
                     repo
                 }
@@ -501,7 +501,7 @@ impl<'a> GitCheckout<'a> {
                 .status("Updating", format!("git submodule `{}`", child_remote_url))?;
             fetch(
                 &mut repo,
-                &child_remote_url,
+                child_remote_url.as_str(),
                 &reference,
                 cargo_config,
                 RemoteKind::GitDependency,
@@ -516,7 +516,7 @@ impl<'a> GitCheckout<'a> {
 
             let obj = repo.find_object(head, None)?;
             reset(&repo, &obj, cargo_config)?;
-            update_submodules(&repo, cargo_config, parent_remote_url)
+            update_submodules(&repo, cargo_config, &child_remote_url)
         }
     }
 }
