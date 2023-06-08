@@ -485,8 +485,10 @@ impl<'cfg> RegistrySource<'cfg> {
 
     /// Creates a source of a registry. This is a inner helper function.
     ///
-    /// * `name` --- Unique name for this source to store source files (`.crate` tarballs) are stored.
+    /// * `name` --- Name of a path segment which may affect where `.crate`
+    ///   tarballs, the registry index and cache are stored. Expect to be unique.
     /// * `ops` --- The underlying [`RegistryData`] type.
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     fn new(
         source_id: SourceId,
         config: &'cfg Config,
