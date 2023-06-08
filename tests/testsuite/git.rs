@@ -3619,3 +3619,69 @@ fn cleans_temp_pack_files() {
     p.cargo("generate-lockfile").run();
     assert!(!tmp_path.exists());
 }
+
+#[cargo_test]
+fn different_user_relative_submodules() {
+    let user1_git_project = git::new("user1/dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+
+    let user2_git_project = git::new("user2/dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+    let user2_git_project2 = git::new("user2/dep2", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+
+    let user2_repo = git2::Repository::open(&user2_git_project.root()).unwrap();
+    let url = "../dep2";
+    git::add_submodule(&user2_repo, url, Path::new("dep2"));
+    git::commit(&user2_repo);
+
+    let user1_repo = git2::Repository::open(&user1_git_project.root()).unwrap();
+    let url = user2_git_project.url();
+    git::add_submodule(&user1_repo, url.as_str(), Path::new("user2/dep1"));
+    git::commit(&user1_repo);
+
+    let project = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo" 
+                    version = "0.5.0"
+
+                    [dependencies.dep1]
+                    git = '{}'
+                "#,
+                user1_git_project.url()
+            ),
+        )
+        .file("src/main.rs", &main_file(r#""hello""#, &[]))
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(&format!(
+            "[UPDATING] git repository `{}`\n\
+             [UPDATING] git submodule `{}`\n\
+             [UPDATING] git submodule `{}`\n\
+             [COMPILING] dep1 v0.5.0 ({}#[..])\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
+             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+            path2url(&user1_git_project.root()),
+            path2url(&user2_git_project.root()),
+            path2url(&user2_git_project2.root()),
+            path2url(&user1_git_project.root()),
+        ))
+        .run();
+
+    assert!(project.bin("foo").is_file());
+}
