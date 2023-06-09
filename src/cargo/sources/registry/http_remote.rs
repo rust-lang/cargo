@@ -1,6 +1,4 @@
-//! Access to a HTTP-based crate registry.
-//!
-//! See [`HttpRegistry`] for details.
+//! Access to a HTTP-based crate registry. See [`HttpRegistry`] for details.
 
 use crate::core::{PackageId, SourceId};
 use crate::ops::{self};
@@ -52,8 +50,15 @@ const UNKNOWN: &'static str = "Unknown";
 ///
 /// [RFC 2789]: https://github.com/rust-lang/rfcs/pull/2789
 pub struct HttpRegistry<'cfg> {
+    /// Path to the registry index (`$CARGO_HOME/registry/index/$REG-HASH`).
+    ///
+    /// To be fair, `HttpRegistry` doesn't store the registry index it
+    /// downloads on the file system, but other cached data like registry
+    /// configuration could be stored here.
     index_path: Filesystem,
+    /// Path to the cache of `.crate` files (`$CARGO_HOME/registry/cache/$REG-HASH`).
     cache_path: Filesystem,
+    /// The unique identifier of this registry source.
     source_id: SourceId,
     config: &'cfg Config,
 
@@ -95,20 +100,20 @@ pub struct HttpRegistry<'cfg> {
     quiet: bool,
 }
 
-/// Helper for downloading crates.
+/// State for currently pending index file downloads.
 struct Downloads<'cfg> {
     /// When a download is started, it is added to this map. The key is a
-    /// "token" (see `Download::token`). It is removed once the download is
+    /// "token" (see [`Download::token`]). It is removed once the download is
     /// finished.
     pending: HashMap<usize, (Download<'cfg>, EasyHandle)>,
     /// Set of paths currently being downloaded.
-    /// This should stay in sync with `pending`.
+    /// This should stay in sync with the `pending` field.
     pending_paths: HashSet<PathBuf>,
     /// Downloads that have failed and are waiting to retry again later.
     sleeping: SleepTracker<(Download<'cfg>, Easy)>,
     /// The final result of each download.
     results: HashMap<PathBuf, CargoResult<CompletedDownload>>,
-    /// The next ID to use for creating a token (see `Download::token`).
+    /// The next ID to use for creating a token (see [`Download::token`]).
     next: usize,
     /// Progress bar.
     progress: RefCell<Option<Progress<'cfg>>>,
@@ -119,9 +124,10 @@ struct Downloads<'cfg> {
     blocking_calls: usize,
 }
 
+/// Represents a single index file download, including its progress and retry.
 struct Download<'cfg> {
-    /// The token for this download, used as the key of the `Downloads::pending` map
-    /// and stored in `EasyHandle` as well.
+    /// The token for this download, used as the key of the
+    /// [`Downloads::pending`] map and stored in [`EasyHandle`] as well.
     token: usize,
 
     /// The path of the package that we're downloading.
@@ -137,14 +143,17 @@ struct Download<'cfg> {
     retry: Retry<'cfg>,
 }
 
+/// HTTPS headers [`HttpRegistry`] cares about.
 #[derive(Default)]
 struct Headers {
     last_modified: Option<String>,
     etag: Option<String>,
     www_authenticate: Vec<String>,
+    /// We don't care about these headers. Put them here for debugging purpose.
     others: Vec<String>,
 }
 
+/// HTTP status code [`HttpRegistry`] cares about.
 enum StatusCode {
     Success,
     NotModified,
@@ -152,6 +161,10 @@ enum StatusCode {
     Unauthorized,
 }
 
+/// Represents a complete [`Download`] from an HTTP request.
+///
+/// Usually it is constructed in [`HttpRegistry::handle_completed_downloads`],
+/// and then returns to the caller of [`HttpRegistry::load()`].
 struct CompletedDownload {
     response_code: StatusCode,
     data: Vec<u8>,
@@ -159,6 +172,10 @@ struct CompletedDownload {
 }
 
 impl<'cfg> HttpRegistry<'cfg> {
+    /// Creates a HTTP-rebased remote registry for `source_id`.
+    ///
+    /// * `name` --- Name of a path segment where `.crate` tarballs and the
+    ///   registry index are stored. Expect to be unique.
     pub fn new(
         source_id: SourceId,
         config: &'cfg Config,
@@ -208,6 +225,7 @@ impl<'cfg> HttpRegistry<'cfg> {
         })
     }
 
+    /// Splits HTTP `HEADER: VALUE` to a tuple.
     fn handle_http_header(buf: &[u8]) -> Option<(&str, &str)> {
         if buf.is_empty() {
             return None;
@@ -222,6 +240,9 @@ impl<'cfg> HttpRegistry<'cfg> {
         Some((tag, value))
     }
 
+    /// Setup the necessary works before the first fetch gets started.
+    ///
+    /// This is a no-op if called more than one time.
     fn start_fetch(&mut self) -> CargoResult<()> {
         if self.fetch_started {
             // We only need to run the setup code once.
@@ -249,6 +270,8 @@ impl<'cfg> HttpRegistry<'cfg> {
         Ok(())
     }
 
+    /// Checks the results inside the [`HttpRegistry::multi`] handle, and
+    /// updates relevant state in [`HttpRegistry::downloads`] accordingly.
     fn handle_completed_downloads(&mut self) -> CargoResult<()> {
         assert_eq!(
             self.downloads.pending.len(),
@@ -322,11 +345,15 @@ impl<'cfg> HttpRegistry<'cfg> {
         Ok(())
     }
 
+    /// Constructs the full URL to download a index file.
     fn full_url(&self, path: &Path) -> String {
         // self.url always ends with a slash.
         format!("{}{}", self.url, path.display())
     }
 
+    /// Check if an index file of `path` is up-to-date.
+    ///
+    /// The `path` argument is the same as in [`RegistryData::load`].
     fn is_fresh(&self, path: &Path) -> bool {
         if !self.requested_update {
             trace!(
@@ -373,7 +400,7 @@ impl<'cfg> HttpRegistry<'cfg> {
         Ok(self.registry_config.as_ref())
     }
 
-    /// Get the registry configuration.
+    /// Get the registry configuration from either cache or remote.
     fn config(&mut self) -> Poll<CargoResult<&RegistryConfig>> {
         debug!("loading config");
         let index_path = self.assert_index_locked(&self.index_path);
@@ -405,6 +432,7 @@ impl<'cfg> HttpRegistry<'cfg> {
         }
     }
 
+    /// Moves failed [`Download`]s that are ready to retry to the pending queue.
     fn add_sleepers(&mut self) -> CargoResult<()> {
         for (dl, handle) in self.downloads.sleeping.to_retry() {
             let mut handle = self.multi.add(handle)?;
@@ -790,6 +818,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 }
 
 impl<'cfg> Downloads<'cfg> {
+    /// Updates the state of the progress bar for downloads.
     fn tick(&self) -> CargoResult<()> {
         let mut progress = self.progress.borrow_mut();
         let Some(progress) = progress.as_mut() else { return Ok(()); };
