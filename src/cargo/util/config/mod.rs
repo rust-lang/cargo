@@ -363,7 +363,7 @@ impl Config {
         self.registry_base_path().join("index")
     }
 
-    /// Gets the Cargo registry cache directory (`<cargo_home>/registry/path`).
+    /// Gets the Cargo registry cache directory (`<cargo_home>/registry/cache`).
     pub fn registry_cache_path(&self) -> Filesystem {
         self.registry_base_path().join("cache")
     }

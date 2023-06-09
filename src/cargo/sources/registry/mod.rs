@@ -277,6 +277,9 @@ pub struct RegistryConfig {
     /// will be extended with `/{crate}/{version}/download` to
     /// support registries like crates.io which were created before the
     /// templating setup was created.
+    ///
+    /// For more on the template of the download URL, see [Index Configuration](
+    /// https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration).
     pub dl: String,
 
     /// API endpoint for the registry. This is what's actually hit to perform
@@ -485,8 +488,10 @@ impl<'cfg> RegistrySource<'cfg> {
 
     /// Creates a source of a registry. This is a inner helper function.
     ///
-    /// * `name` --- Unique name for this source to store source files (`.crate` tarballs) are stored.
+    /// * `name` --- Name of a path segment which may affect where `.crate`
+    ///   tarballs, the registry index and cache are stored. Expect to be unique.
     /// * `ops` --- The underlying [`RegistryData`] type.
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     fn new(
         source_id: SourceId,
         config: &'cfg Config,
