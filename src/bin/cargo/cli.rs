@@ -490,9 +490,9 @@ pub fn cli() -> Command {
     #[allow(clippy::disallowed_methods)]
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
-        "cargo [+toolchain] [OPTIONS] [COMMAND]"
+        "cargo [+toolchain] [OPTIONS] [COMMAND]\n       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
     } else {
-        "cargo [OPTIONS] [COMMAND]"
+        "cargo [OPTIONS] [COMMAND]\n       cargo [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
     };
     Command::new("cargo")
         // Subcommands all count their args' display order independently (from 0),
