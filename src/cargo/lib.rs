@@ -6,6 +6,9 @@
 #![allow(clippy::all)]
 #![warn(clippy::disallowed_methods)]
 #![warn(clippy::self_named_module_files)]
+#![warn(clippy::print_stdout)]
+#![warn(clippy::print_stderr)]
+#![warn(clippy::dbg_macro)]
 #![allow(rustdoc::private_intra_doc_links)]
 
 //! # Cargo as a library
