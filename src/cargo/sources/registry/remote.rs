@@ -103,14 +103,9 @@ impl<'cfg> RemoteRegistry<'cfg> {
     /// Creates intermediate dirs and initialize the repository.
     fn repo(&self) -> CargoResult<&git2::Repository> {
         self.repo.try_borrow_with(|| {
+            trace!("acquiring registry index lock");
             let path = self.config.assert_package_cache_locked(&self.index_path);
 
-            if let Ok(repo) = git2::Repository::open(&path) {
-                trace!("opened a repo without a lock");
-                return Ok(repo);
-            }
-
-            trace!("acquiring registry index lock");
             match git2::Repository::open(&path) {
                 Ok(repo) => Ok(repo),
                 Err(_) => {
@@ -209,8 +204,6 @@ impl<'cfg> RemoteRegistry<'cfg> {
         self.config.updated_sources().insert(self.source_id);
     }
 }
-
-const LAST_UPDATED_FILE: &str = ".last-updated";
 
 impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     fn prepare(&self) -> CargoResult<()> {
@@ -357,7 +350,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.head.set(None);
         *self.tree.borrow_mut() = None;
         self.current_sha.set(None);
-        let path = self.config.assert_package_cache_locked(&self.index_path);
+        let _path = self.config.assert_package_cache_locked(&self.index_path);
         if !self.quiet {
             self.config
                 .shell()
@@ -376,10 +369,6 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             RemoteKind::Registry,
         )
         .with_context(|| format!("failed to fetch `{}`", url))?;
-
-        // Create a dummy file to record the mtime for when we updated the
-        // index.
-        paths::create(&path.join(LAST_UPDATED_FILE))?;
 
         Ok(())
     }
