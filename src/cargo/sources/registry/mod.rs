@@ -277,6 +277,9 @@ pub struct RegistryConfig {
     /// will be extended with `/{crate}/{version}/download` to
     /// support registries like crates.io which were created before the
     /// templating setup was created.
+    ///
+    /// For more on the template of the download URL, see [Index Configuration](
+    /// https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration).
     pub dl: String,
 
     /// API endpoint for the registry. This is what's actually hit to perform
