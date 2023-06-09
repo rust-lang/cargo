@@ -856,6 +856,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 }
 
+impl RegistryConfig {
+    /// File name of [`RegistryConfig`].
+    const NAME: &str = "config.json";
+}
+
 /// Get the maximum upack size that Cargo permits
 /// based on a given `size` of your compressed file.
 ///

@@ -383,7 +383,7 @@ impl<'cfg> HttpRegistry<'cfg> {
         }
         let config_json_path = self
             .assert_index_locked(&self.index_path)
-            .join("config.json");
+            .join(RegistryConfig::NAME);
         match fs::read(&config_json_path) {
             Ok(raw_data) => match serde_json::from_slice(&raw_data) {
                 Ok(json) => {
@@ -404,12 +404,12 @@ impl<'cfg> HttpRegistry<'cfg> {
     fn config(&mut self) -> Poll<CargoResult<&RegistryConfig>> {
         debug!("loading config");
         let index_path = self.assert_index_locked(&self.index_path);
-        let config_json_path = index_path.join("config.json");
-        if self.is_fresh(Path::new("config.json")) && self.config_cached()?.is_some() {
+        let config_json_path = index_path.join(RegistryConfig::NAME);
+        if self.is_fresh(Path::new(RegistryConfig::NAME)) && self.config_cached()?.is_some() {
             return Poll::Ready(Ok(self.registry_config.as_ref().unwrap()));
         }
 
-        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
+        match ready!(self.load(Path::new(""), Path::new(RegistryConfig::NAME), None)?) {
             LoadResponse::Data {
                 raw_data,
                 index_version: _,
@@ -543,7 +543,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 }
                 StatusCode::Unauthorized
                     if !self.auth_required
-                        && path == Path::new("config.json")
+                        && path == Path::new(RegistryConfig::NAME)
                         && self.config.cli_unstable().registry_auth =>
                 {
                     debug!("re-attempting request for config.json with authorization included.");
@@ -593,7 +593,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
 
-        if path != Path::new("config.json") {
+        if path != Path::new(RegistryConfig::NAME) {
             self.auth_required = ready!(self.config()?).auth_required;
         } else if !self.auth_required {
             // Check if there's a cached config that says auth is required.

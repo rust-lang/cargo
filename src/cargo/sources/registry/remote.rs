@@ -304,7 +304,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         debug!("loading config");
         self.prepare()?;
         self.config.assert_package_cache_locked(&self.index_path);
-        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
+        match ready!(self.load(Path::new(""), Path::new(RegistryConfig::NAME), None)?) {
             LoadResponse::Data { raw_data, .. } => {
                 trace!("config loaded");
                 let mut cfg: RegistryConfig = serde_json::from_slice(&raw_data)?;
