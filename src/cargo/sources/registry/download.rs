@@ -1,3 +1,8 @@
+//! Shared download logic between [`HttpRegistry`] and [`RemoteRegistry`].
+//!
+//! [`HttpRegistry`]: super::http_remote::HttpRegistry
+//! [`RemoteRegistry`]: super::remote::RemoteRegistry
+
 use anyhow::Context;
 use cargo_util::Sha256;
 
@@ -20,10 +25,15 @@ const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 
+/// Filename of the `.crate` tarball, e.g., `once_cell-1.18.0.crate`.
 pub(super) fn filename(pkg: PackageId) -> String {
     format!("{}-{}.crate", pkg.name(), pkg.version())
 }
 
+/// Checks if `pkg` is downloaded and ready under the directory at `cache_path`.
+/// If not, returns a URL to download it from.
+///
+/// This is primarily called by [`RegistryData::download`](super::RegistryData::download).
 pub(super) fn download(
     cache_path: &Filesystem,
     config: &Config,
@@ -86,6 +96,10 @@ pub(super) fn download(
     })
 }
 
+/// Verifies the integrity of `data` with `checksum` and persists it under the
+/// directory at `cache_path`.
+///
+/// This is primarily called by [`RegistryData::finish_download`](super::RegistryData::finish_download).
 pub(super) fn finish_download(
     cache_path: &Filesystem,
     config: &Config,
@@ -119,6 +133,10 @@ pub(super) fn finish_download(
     Ok(dst)
 }
 
+/// Checks if a tarball of `pkg` has been already downloaded under the
+/// directory at `cache_path`.
+///
+/// This is primarily called by [`RegistryData::is_crate_downloaded`](super::RegistryData::is_crate_downloaded).
 pub(super) fn is_crate_downloaded(
     cache_path: &Filesystem,
     config: &Config,
