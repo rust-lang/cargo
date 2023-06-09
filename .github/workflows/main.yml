@@ -218,6 +218,7 @@ jobs:
     name: bors build finished
     needs:
     - build_std
+    - clippy
     - docs
     - lockfile
     - resolver
@@ -234,6 +235,7 @@ jobs:
     name: bors build finished
     needs:
     - build_std
+    - clippy
     - docs
     - lockfile
     - resolver
