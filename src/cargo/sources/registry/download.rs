@@ -4,10 +4,10 @@
 //! [`RemoteRegistry`]: super::remote::RemoteRegistry
 
 use anyhow::Context;
+use cargo_util::registry::make_dep_path;
 use cargo_util::Sha256;
 
 use crate::core::PackageId;
-use crate::sources::registry::make_dep_prefix;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::RegistryConfig;
 use crate::util::auth;
@@ -68,7 +68,7 @@ pub(super) fn download(
         )
         .unwrap();
     } else {
-        let prefix = make_dep_prefix(&*pkg.name());
+        let prefix = make_dep_path(&pkg.name(), true);
         url = url
             .replace(CRATE_TEMPLATE, &*pkg.name())
             .replace(VERSION_TEMPLATE, &pkg.version().to_string())
