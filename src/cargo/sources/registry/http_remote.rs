@@ -1,7 +1,7 @@
 //! Access to a HTTP-based crate registry. See [`HttpRegistry`] for details.
 
 use crate::core::{PackageId, SourceId};
-use crate::ops::{self};
+use crate::ops;
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
@@ -11,9 +11,9 @@ use crate::util::network::sleep::SleepTracker;
 use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use anyhow::Context;
 use cargo_util::paths;
-use curl::easy::{Easy, HttpVersion, List};
+use curl::easy::{Easy, List};
 use curl::multi::{EasyHandle, Multi};
-use log::{debug, trace, warn};
+use log::{debug, trace};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -618,20 +618,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         handle.follow_location(true)?;
 
         // Enable HTTP/2 if possible.
-        if self.multiplexing {
-            crate::try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
-        } else {
-            handle.http_version(HttpVersion::V11)?;
-        }
-
-        // This is an option to `libcurl` which indicates that if there's a
-        // bunch of parallel requests to the same host they all wait until the
-        // pipelining status of the host is known. This means that we won't
-        // initiate dozens of connections to crates.io, but rather only one.
-        // Once the main one is opened we realized that pipelining is possible
-        // and multiplexing is possible with static.crates.io. All in all this
-        // reduces the number of connections done to a more manageable state.
-        crate::try_old_curl!(handle.pipewait(true), "pipewait");
+        crate::try_old_curl_http2_pipewait!(self.multiplexing, handle);
 
         let mut headers = List::new();
         // Include a header to identify the protocol. This allows the server to
