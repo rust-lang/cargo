@@ -4,10 +4,10 @@
 //! [`RemoteRegistry`]: super::remote::RemoteRegistry
 
 use anyhow::Context;
+use cargo_util::registry::make_dep_path;
 use cargo_util::Sha256;
 
 use crate::core::PackageId;
-use crate::sources::registry::make_dep_prefix;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::RegistryConfig;
 use crate::util::auth;
@@ -25,11 +25,6 @@ const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 
-/// Filename of the `.crate` tarball, e.g., `once_cell-1.18.0.crate`.
-pub(super) fn filename(pkg: PackageId) -> String {
-    format!("{}-{}.crate", pkg.name(), pkg.version())
-}
-
 /// Checks if `pkg` is downloaded and ready under the directory at `cache_path`.
 /// If not, returns a URL to download it from.
 ///
@@ -41,8 +36,7 @@ pub(super) fn download(
     checksum: &str,
     registry_config: RegistryConfig,
 ) -> CargoResult<MaybeLock> {
-    let filename = filename(pkg);
-    let path = cache_path.join(&filename);
+    let path = cache_path.join(&pkg.tarball_name());
     let path = config.assert_package_cache_locked(&path);
 
     // Attempt to open a read-only copy first to avoid an exclusive write
@@ -74,7 +68,7 @@ pub(super) fn download(
         )
         .unwrap();
     } else {
-        let prefix = make_dep_prefix(&*pkg.name());
+        let prefix = make_dep_path(&pkg.name(), true);
         url = url
             .replace(CRATE_TEMPLATE, &*pkg.name())
             .replace(VERSION_TEMPLATE, &pkg.version().to_string())
@@ -113,9 +107,8 @@ pub(super) fn finish_download(
         anyhow::bail!("failed to verify the checksum of `{}`", pkg)
     }
 
-    let filename = filename(pkg);
     cache_path.create_dir()?;
-    let path = cache_path.join(&filename);
+    let path = cache_path.join(&pkg.tarball_name());
     let path = config.assert_package_cache_locked(&path);
     let mut dst = OpenOptions::new()
         .create(true)
@@ -142,7 +135,7 @@ pub(super) fn is_crate_downloaded(
     config: &Config,
     pkg: PackageId,
 ) -> bool {
-    let path = cache_path.join(filename(pkg));
+    let path = cache_path.join(pkg.tarball_name());
     let path = config.assert_package_cache_locked(&path);
     if let Ok(meta) = fs::metadata(path) {
         return meta.len() > 0;

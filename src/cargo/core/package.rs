@@ -10,10 +10,10 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use bytesize::ByteSize;
-use curl::easy::{Easy, HttpVersion};
+use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
 use lazycell::LazyCell;
-use log::{debug, warn};
+use log::debug;
 use semver::Version;
 use serde::Serialize;
 
@@ -725,32 +725,8 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             handle.http_headers(headers)?;
         }
 
-        // Enable HTTP/2 to be used as it'll allow true multiplexing which makes
-        // downloads much faster.
-        //
-        // Currently Cargo requests the `http2` feature of the `curl` crate
-        // which means it should always be built in. On OSX, however, we ship
-        // cargo still linked against the system libcurl. Building curl with
-        // ALPN support for HTTP/2 requires newer versions of OSX (the
-        // SecureTransport API) than we want to ship Cargo for. By linking Cargo
-        // against the system libcurl then older curl installations won't use
-        // HTTP/2 but newer ones will. All that to basically say we ignore
-        // errors here on OSX, but consider this a fatal error to not activate
-        // HTTP/2 on all other platforms.
-        if self.set.multiplexing {
-            crate::try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
-        } else {
-            handle.http_version(HttpVersion::V11)?;
-        }
-
-        // This is an option to `libcurl` which indicates that if there's a
-        // bunch of parallel requests to the same host they all wait until the
-        // pipelining status of the host is known. This means that we won't
-        // initiate dozens of connections to crates.io, but rather only one.
-        // Once the main one is opened we realized that pipelining is possible
-        // and multiplexing is possible with static.crates.io. All in all this
-        // reduces the number of connections down to a more manageable state.
-        crate::try_old_curl!(handle.pipewait(true), "pipewait");
+        // Enable HTTP/2 if possible.
+        crate::try_old_curl_http2_pipewait!(self.set.multiplexing, handle);
 
         handle.write_function(move |buf| {
             debug!("{} - {} bytes of data", token, buf.len());

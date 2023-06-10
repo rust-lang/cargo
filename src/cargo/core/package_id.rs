@@ -196,6 +196,11 @@ impl PackageId {
     pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {
         PackageIdStableHash(self, workspace)
     }
+
+    /// Filename of the `.crate` tarball, e.g., `once_cell-1.18.0.crate`.
+    pub fn tarball_name(&self) -> String {
+        format!("{}-{}.crate", self.name(), self.version())
+    }
 }
 
 pub struct PackageIdStableHash<'a>(PackageId, &'a Path);

@@ -1,7 +1,7 @@
 //! Access to a HTTP-based crate registry. See [`HttpRegistry`] for details.
 
 use crate::core::{PackageId, SourceId};
-use crate::ops::{self};
+use crate::ops;
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
@@ -11,9 +11,9 @@ use crate::util::network::sleep::SleepTracker;
 use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use anyhow::Context;
 use cargo_util::paths;
-use curl::easy::{Easy, HttpVersion, List};
+use curl::easy::{Easy, List};
 use curl::multi::{EasyHandle, Multi};
-use log::{debug, trace, warn};
+use log::{debug, trace};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -383,7 +383,7 @@ impl<'cfg> HttpRegistry<'cfg> {
         }
         let config_json_path = self
             .assert_index_locked(&self.index_path)
-            .join("config.json");
+            .join(RegistryConfig::NAME);
         match fs::read(&config_json_path) {
             Ok(raw_data) => match serde_json::from_slice(&raw_data) {
                 Ok(json) => {
@@ -404,12 +404,12 @@ impl<'cfg> HttpRegistry<'cfg> {
     fn config(&mut self) -> Poll<CargoResult<&RegistryConfig>> {
         debug!("loading config");
         let index_path = self.assert_index_locked(&self.index_path);
-        let config_json_path = index_path.join("config.json");
-        if self.is_fresh(Path::new("config.json")) && self.config_cached()?.is_some() {
+        let config_json_path = index_path.join(RegistryConfig::NAME);
+        if self.is_fresh(Path::new(RegistryConfig::NAME)) && self.config_cached()?.is_some() {
             return Poll::Ready(Ok(self.registry_config.as_ref().unwrap()));
         }
 
-        match ready!(self.load(Path::new(""), Path::new("config.json"), None)?) {
+        match ready!(self.load(Path::new(""), Path::new(RegistryConfig::NAME), None)?) {
             LoadResponse::Data {
                 raw_data,
                 index_version: _,
@@ -543,7 +543,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 }
                 StatusCode::Unauthorized
                     if !self.auth_required
-                        && path == Path::new("config.json")
+                        && path == Path::new(RegistryConfig::NAME)
                         && self.config.cli_unstable().registry_auth =>
                 {
                     debug!("re-attempting request for config.json with authorization included.");
@@ -593,7 +593,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
 
-        if path != Path::new("config.json") {
+        if path != Path::new(RegistryConfig::NAME) {
             self.auth_required = ready!(self.config()?).auth_required;
         } else if !self.auth_required {
             // Check if there's a cached config that says auth is required.
@@ -618,20 +618,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         handle.follow_location(true)?;
 
         // Enable HTTP/2 if possible.
-        if self.multiplexing {
-            crate::try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
-        } else {
-            handle.http_version(HttpVersion::V11)?;
-        }
-
-        // This is an option to `libcurl` which indicates that if there's a
-        // bunch of parallel requests to the same host they all wait until the
-        // pipelining status of the host is known. This means that we won't
-        // initiate dozens of connections to crates.io, but rather only one.
-        // Once the main one is opened we realized that pipelining is possible
-        // and multiplexing is possible with static.crates.io. All in all this
-        // reduces the number of connections done to a more manageable state.
-        crate::try_old_curl!(handle.pipewait(true), "pipewait");
+        crate::try_old_curl_http2_pipewait!(self.multiplexing, handle);
 
         let mut headers = List::new();
         // Include a header to identify the protocol. This allows the server to

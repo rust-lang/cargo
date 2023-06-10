@@ -127,7 +127,7 @@ pub fn package_one(
         super::check_dep_has_version(dep, false)?;
     }
 
-    let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
+    let filename = pkg.package_id().tarball_name();
     let dir = ws.target_dir().join("package");
     let mut dst = {
         let tmp = format!(".{}", filename);
