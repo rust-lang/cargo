@@ -627,7 +627,7 @@ fn compute_deps_doc(
         )?;
         ret.push(lib_unit_dep);
         if dep_lib.documented() {
-            if let CompileMode::Doc { deps: true } = unit.mode {
+            if let CompileMode::Doc { deps: true, .. } = unit.mode {
                 // Document this lib as well.
                 let doc_unit_dep = new_unit_dep(
                     state,

@@ -371,6 +371,15 @@ one that succeeds (depending on which one of the two builds Cargo picked to run
 first), whereas <code>cargo rustdoc -j1 --keep-going</code> would definitely run both
 builds, even if the one run first fails.</dd>
 
+<dt class="option-term" id="option-cargo-rustdoc---output-format"><a class="option-anchor" href="#option-cargo-rustdoc---output-format"></a><code>--output-format</code></dt>
+<dd class="option-desc">The output type for the documentation emitted. Valid values:</p>
+<ul>
+<li><code>html</code> (default): Emit the documentation in HTML format.</li>
+<li><code>json</code>: Emit the documentation in the <a href="https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types">experimental JSON format</a>.</li>
+</ul>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
+and requires the <code>-Z unstable-options</code> flag to enable.</dd>
+
 </dl>
 
 ## ENVIRONMENT

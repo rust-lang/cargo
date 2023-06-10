@@ -395,6 +395,22 @@ one that succeeds (depending on which one of the two builds Cargo picked to run
 first), whereas \fBcargo rustdoc \-j1 \-\-keep\-going\fR would definitely run both
 builds, even if the one run first fails.
 .RE
+.sp
+\fB\-\-output\-format\fR
+.RS 4
+The output type for the documentation emitted. Valid values:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBhtml\fR (default): Emit the documentation in HTML format.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\fR: Emit the documentation in the \fIexperimental JSON format\fR <https://doc.rust\-lang.org/nightly/nightly\-rustc/rustdoc_json_types>\&.
+.RE
+.sp
+This option is only available on the \fInightly channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html>
+and requires the \fB\-Z unstable\-options\fR flag to enable.
+.RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.

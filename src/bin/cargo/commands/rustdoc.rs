@@ -1,4 +1,4 @@
-use cargo::ops::{self, DocOptions};
+use cargo::ops::{self, DocOptions, OutputFormat};
 
 use crate::command_prelude::*;
 
@@ -38,6 +38,11 @@ pub fn cli() -> Command {
         .arg_profile("Build artifacts with the specified profile")
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
+        .arg(
+            opt("output-format", "The output type to write (unstable)")
+                .value_name("FMT")
+                .value_parser(OutputFormat::POSSIBLE_VALUES),
+        )
         .arg_unit_graph()
         .arg_timings()
         .arg_manifest_path()
@@ -48,20 +53,35 @@ pub fn cli() -> Command {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
+    let output_format = if let Some(output_format) = args._value_of("output-format") {
+        config
+            .cli_unstable()
+            .fail_if_stable_opt("--output-format", 12103)?;
+        output_format.parse()?
+    } else {
+        OutputFormat::Html
+    };
+
     let mut compile_opts = args.compile_options_for_single_package(
         config,
-        CompileMode::Doc { deps: false },
+        CompileMode::Doc {
+            deps: false,
+            json: matches!(output_format, OutputFormat::Json),
+        },
         Some(&ws),
         ProfileChecking::Custom,
     )?;
     let target_args = values(args, "args");
+
     compile_opts.target_rustdoc_args = if target_args.is_empty() {
         None
     } else {
         Some(target_args)
     };
+
     let doc_opts = DocOptions {
         open_result: args.flag("open"),
+        output_format,
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;
