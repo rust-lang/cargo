@@ -150,7 +150,7 @@ pub struct BuildDeps {
     pub rerun_if_env_changed: Vec<String>,
 }
 
-/// Represents one of the instructions from `cargo:rustc-link-arg-*` build
+/// Represents one of the instructions from `cargo::rustc-link-arg-*` build
 /// script instruction family.
 ///
 /// In other words, indicates targets that custom linker arguments applies to.
@@ -160,19 +160,19 @@ pub struct BuildDeps {
 /// [1]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-link-argflag
 #[derive(Clone, Hash, Debug, PartialEq, Eq)]
 pub enum LinkArgTarget {
-    /// Represents `cargo:rustc-link-arg=FLAG`.
+    /// Represents `cargo::rustc-link-arg=FLAG`.
     All,
-    /// Represents `cargo:rustc-cdylib-link-arg=FLAG`.
+    /// Represents `cargo::rustc-cdylib-link-arg=FLAG`.
     Cdylib,
-    /// Represents `cargo:rustc-link-arg-bins=FLAG`.
+    /// Represents `cargo::rustc-link-arg-bins=FLAG`.
     Bin,
-    /// Represents `cargo:rustc-link-arg-bin=BIN=FLAG`.
+    /// Represents `cargo::rustc-link-arg-bin=BIN=FLAG`.
     SingleBin(String),
-    /// Represents `cargo:rustc-link-arg-tests=FLAG`.
+    /// Represents `cargo::rustc-link-arg-tests=FLAG`.
     Test,
-    /// Represents `cargo:rustc-link-arg-benches=FLAG`.
+    /// Represents `cargo::rustc-link-arg-benches=FLAG`.
     Bench,
-    /// Represents `cargo:rustc-link-arg-examples=FLAG`.
+    /// Represents `cargo::rustc-link-arg-examples=FLAG`.
     Example,
 }
 

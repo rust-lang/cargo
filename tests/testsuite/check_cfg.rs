@@ -532,15 +532,15 @@ fn build_script_feature_gate() {
         .file(
             "build.rs",
             r#"fn main() {
-                println!("cargo:rustc-check-cfg=cfg(foo)");
-                println!("cargo:rustc-cfg=foo");
+                println!("cargo::rustc-check-cfg=cfg(foo)");
+                println!("cargo::rustc-cfg=foo");
             }"#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("check")
-        .with_stderr_contains("warning[..]cargo:rustc-check-cfg requires -Zcheck-cfg flag")
+        .with_stderr_contains("warning[..]cargo::rustc-check-cfg requires -Zcheck-cfg flag")
         .with_status(0)
         .run();
 }
