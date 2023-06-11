@@ -494,7 +494,7 @@ fn build_script_runtime_features() {
                 if is_set("CARGO_FEATURE_BUILD") {
                     res |= 4;
                 }
-                println!("cargo:rustc-cfg=RunCustomBuild=\"{}\"", res);
+                println!("cargo::rustc-cfg=RunCustomBuild=\"{}\"", res);
 
                 let mut res = 0;
                 if cfg!(feature = "normal") {
@@ -506,7 +506,7 @@ fn build_script_runtime_features() {
                 if cfg!(feature = "build") {
                     res |= 4;
                 }
-                println!("cargo:rustc-cfg=CustomBuild=\"{}\"", res);
+                println!("cargo::rustc-cfg=CustomBuild=\"{}\"", res);
             }
             "#,
         )
@@ -562,7 +562,7 @@ fn build_script_runtime_features() {
             r#"
             fn main() {
                 assert_eq!(common::foo(), common::build_time());
-                println!("cargo:rustc-cfg=from_build=\"{}\"", common::foo());
+                println!("cargo::rustc-cfg=from_build=\"{}\"", common::foo());
             }
             "#,
         )
@@ -1792,8 +1792,8 @@ fn shared_dep_same_but_dependencies() {
             "subdep/src/lib.rs",
             r#"
                 pub fn feat_func() {
-                    #[cfg(feature = "feat")] println!("cargo:warning=feat: enabled");
-                    #[cfg(not(feature = "feat"))] println!("cargo:warning=feat: not enabled");
+                    #[cfg(feature = "feat")] println!("cargo::warning=feat: enabled");
+                    #[cfg(not(feature = "feat"))] println!("cargo::warning=feat: not enabled");
                 }
             "#,
         )
@@ -1813,7 +1813,7 @@ warning: bin2@0.1.0: feat: enabled
         )
         .run();
     p.process(p.bin("bin1"))
-        .with_stdout("cargo:warning=feat: not enabled")
+        .with_stdout("cargo::warning=feat: not enabled")
         .run();
 
     // Make sure everything stays cached.

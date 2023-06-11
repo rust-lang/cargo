@@ -1202,8 +1202,8 @@ fn run_with_library_paths() {
             &format!(
                 r##"
                     fn main() {{
-                        println!(r#"cargo:rustc-link-search=native={}"#);
-                        println!(r#"cargo:rustc-link-search={}"#);
+                        println!(r#"cargo::rustc-link-search=native={}"#);
+                        println!(r#"cargo::rustc-link-search={}"#);
                     }}
                 "##,
                 dir1.display(),
@@ -1261,9 +1261,9 @@ fn library_paths_sorted_alphabetically() {
             &format!(
                 r##"
                     fn main() {{
-                        println!(r#"cargo:rustc-link-search=native={}"#);
-                        println!(r#"cargo:rustc-link-search=native={}"#);
-                        println!(r#"cargo:rustc-link-search=native={}"#);
+                        println!(r#"cargo::rustc-link-search=native={}"#);
+                        println!(r#"cargo::rustc-link-search=native={}"#);
+                        println!(r#"cargo::rustc-link-search=native={}"#);
                     }}
                 "##,
                 dir1.display(),
@@ -1535,8 +1535,8 @@ fn run_link_system_path_macos() {
             &format!(
                 r#"
                 fn main() {{
-                    println!("cargo:rustc-link-lib=foo");
-                    println!("cargo:rustc-link-search={}");
+                    println!("cargo::rustc-link-lib=foo");
+                    println!("cargo::rustc-link-search={}");
                 }}
                 "#,
                 p.target_debug_dir().display()
