@@ -1021,7 +1021,7 @@ fn features() {
             "bar/build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-cfg=bar");
+                    println!("cargo::rustc-cfg=bar");
                 }
             "#,
         )

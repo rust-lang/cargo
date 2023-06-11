@@ -16,7 +16,7 @@ fn build_script_extra_link_arg_bin() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg-bins=--this-is-a-bogus-flag");
+                    println!("cargo::rustc-link-arg-bins=--this-is-a-bogus-flag");
                 }
             "#,
         )
@@ -53,9 +53,9 @@ fn build_script_extra_link_arg_bin_single() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg-bins=--bogus-flag-all");
-                    println!("cargo:rustc-link-arg-bin=foo=--bogus-flag-foo");
-                    println!("cargo:rustc-link-arg-bin=bar=--bogus-flag-bar");
+                    println!("cargo::rustc-link-arg-bins=--bogus-flag-all");
+                    println!("cargo::rustc-link-arg-bin=foo=--bogus-flag-foo");
+                    println!("cargo::rustc-link-arg-bin=bar=--bogus-flag-bar");
                 }
             "#,
         )
@@ -81,7 +81,7 @@ fn build_script_extra_link_arg() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg=--this-is-a-bogus-flag");
+                    println!("cargo::rustc-link-arg=--this-is-a-bogus-flag");
                 }
             "#,
         )
@@ -102,7 +102,7 @@ fn link_arg_missing_target() {
         .file("src/lib.rs", "")
         .file(
             "build.rs",
-            r#"fn main() { println!("cargo:rustc-link-arg-cdylib=--bogus"); }"#,
+            r#"fn main() { println!("cargo::rustc-link-arg-cdylib=--bogus"); }"#,
         )
         .build();
 
@@ -112,28 +112,28 @@ fn link_arg_missing_target() {
     //         .with_status(101)
     //         .with_stderr("\
     // [COMPILING] foo [..]
-    // error: invalid instruction `cargo:rustc-link-arg-cdylib` from build script of `foo v0.0.1 ([ROOT]/foo)`
+    // error: invalid instruction `cargo::rustc-link-arg-cdylib` from build script of `foo v0.0.1 ([ROOT]/foo)`
     // The package foo v0.0.1 ([ROOT]/foo) does not have a cdylib target.
     // ")
     //         .run();
 
     p.change_file(
         "build.rs",
-        r#"fn main() { println!("cargo:rustc-link-arg-bins=--bogus"); }"#,
+        r#"fn main() { println!("cargo::rustc-link-arg-bins=--bogus"); }"#,
     );
 
     p.cargo("check")
         .with_status(101)
         .with_stderr("\
 [COMPILING] foo [..]
-error: invalid instruction `cargo:rustc-link-arg-bins` from build script of `foo v0.0.1 ([ROOT]/foo)`
+error: invalid instruction `cargo::rustc-link-arg-bins` from build script of `foo v0.0.1 ([ROOT]/foo)`
 The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
 ")
         .run();
 
     p.change_file(
         "build.rs",
-        r#"fn main() { println!("cargo:rustc-link-arg-bin=abc=--bogus"); }"#,
+        r#"fn main() { println!("cargo::rustc-link-arg-bin=abc=--bogus"); }"#,
     );
 
     p.cargo("check")
@@ -141,7 +141,7 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
         .with_stderr(
             "\
 [COMPILING] foo [..]
-error: invalid instruction `cargo:rustc-link-arg-bin` from build script of `foo v0.0.1 ([ROOT]/foo)`
+error: invalid instruction `cargo::rustc-link-arg-bin` from build script of `foo v0.0.1 ([ROOT]/foo)`
 The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `abc`.
 ",
         )
@@ -149,7 +149,7 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `ab
 
     p.change_file(
         "build.rs",
-        r#"fn main() { println!("cargo:rustc-link-arg-bin=abc"); }"#,
+        r#"fn main() { println!("cargo::rustc-link-arg-bin=abc"); }"#,
     );
 
     p.cargo("check")
@@ -157,8 +157,8 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `ab
         .with_stderr(
             "\
 [COMPILING] foo [..]
-error: invalid instruction `cargo:rustc-link-arg-bin=abc` from build script of `foo v0.0.1 ([ROOT]/foo)`
-The instruction should have the form cargo:rustc-link-arg-bin=BIN=ARG
+error: invalid instruction `cargo::rustc-link-arg-bin=abc` from build script of `foo v0.0.1 ([ROOT]/foo)`
+The instruction should have the form cargo::rustc-link-arg-bin=BIN=ARG
 ",
         )
         .run();
@@ -192,7 +192,7 @@ fn cdylib_link_arg_transitive() {
             "bar/build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg-cdylib=--bogus");
+                    println!("cargo::rustc-link-arg-cdylib=--bogus");
                 }
             "#,
         )
@@ -204,7 +204,7 @@ fn cdylib_link_arg_transitive() {
 [COMPILING] bar v1.0.0 [..]
 [RUNNING] `rustc --crate-name build_script_build bar/build.rs [..]
 [RUNNING] `[..]build-script-build[..]
-warning: bar@1.0.0: cargo:rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
+warning: bar@1.0.0: cargo::rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
 ([ROOT]/foo/bar), but that package does not contain a cdylib target
 
 Allowing this was an unintended change in the 1.50 release, and may become an error in \
@@ -230,7 +230,7 @@ fn link_arg_transitive_not_allowed() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg=--bogus");
+                    println!("cargo::rustc-link-arg=--bogus");
                 }
             "#,
         )
@@ -289,7 +289,7 @@ fn link_arg_with_doctest() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg=--this-is-a-bogus-flag");
+                    println!("cargo::rustc-link-arg=--this-is-a-bogus-flag");
                 }
             "#,
         )
@@ -313,7 +313,7 @@ fn build_script_extra_link_arg_tests() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg-tests=--this-is-a-bogus-flag");
+                    println!("cargo::rustc-link-arg-tests=--this-is-a-bogus-flag");
                 }
             "#,
         )
@@ -337,7 +337,7 @@ fn build_script_extra_link_arg_benches() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg-benches=--this-is-a-bogus-flag");
+                    println!("cargo::rustc-link-arg-benches=--this-is-a-bogus-flag");
                 }
             "#,
         )
@@ -361,7 +361,7 @@ fn build_script_extra_link_arg_examples() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-link-arg-examples=--this-is-a-bogus-flag");
+                    println!("cargo::rustc-link-arg-examples=--this-is-a-bogus-flag");
                 }
             "#,
         )
