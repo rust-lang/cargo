@@ -242,7 +242,7 @@ Cargo has no way right now of after-the-fact debugging "why was that rebuilt?"
 
 Some issues we've seen historically which can cause crates to get rebuilt are:
 
-* A build script prints `cargo:rerun-if-changed=foo` where `foo` is a file that
+* A build script prints `cargo::rerun-if-changed=foo` where `foo` is a file that
   doesn't exist and nothing generates it. In this case Cargo will keep running
   the build script thinking it will generate the file but nothing ever does. The
   fix is to avoid printing `rerun-if-changed` in this scenario.
@@ -280,38 +280,38 @@ issue](https://github.com/rust-lang/cargo/issues/new)!
 
 Have you seen the error message above?
 
-This is one of the most annoying error message for Cargo users. There are several 
-situations may lead us to a version conflict. Below we'll walk through possible 
+This is one of the most annoying error message for Cargo users. There are several
+situations may lead us to a version conflict. Below we'll walk through possible
 causes and provide diagnostic techniques to help you out there:
 
-- The project and its dependencies use [links] to repeatedly link the local 
-  library. Cargo forbids linking two packages with the same native library, so 
-  even with multiple layers of dependencies it is not allowed. In this case, the 
-  error message will prompt: `Only one package in the dependency graph may specify 
-  the same links value`, you may need to manually check and delete duplicate link 
+- The project and its dependencies use [links] to repeatedly link the local
+  library. Cargo forbids linking two packages with the same native library, so
+  even with multiple layers of dependencies it is not allowed. In this case, the
+  error message will prompt: `Only one package in the dependency graph may specify
+  the same links value`, you may need to manually check and delete duplicate link
   values. The community also have [conventions in place] to alleviate this.
 
-- When depending on different crates in the project, if these crates use the same 
-  dependent library, but the version used is restricted, making it impossible to 
-  determine the correct version, it will also cause conflicts. The error message 
-  will prompt: `all possible versions conflict with previously selected packages`. 
+- When depending on different crates in the project, if these crates use the same
+  dependent library, but the version used is restricted, making it impossible to
+  determine the correct version, it will also cause conflicts. The error message
+  will prompt: `all possible versions conflict with previously selected packages`.
   You may need to modify the version requirements to make them consistent.
 
-- If there are multiple versions of dependencies in the project, when using 
-  [`direct-minimal-versions`], the minimum version requirements cannot be met, 
+- If there are multiple versions of dependencies in the project, when using
+  [`direct-minimal-versions`], the minimum version requirements cannot be met,
   which will cause conflicts. You may need to modify version requirements of your
   direct dependencies to meet the minimum SemVer version accordingly.
 
-- If the dependent crate does not have the features you choose, it will also 
-  cause conflicts. At this time, you need to check the dependent version and its 
+- If the dependent crate does not have the features you choose, it will also
+  cause conflicts. At this time, you need to check the dependent version and its
   features.
 
-- Conflicts may occur when merging branches or PRs, if there are non-trivial 
-  conflicts, you can reset all "yours" changes, fix all other conflicts in the 
-  branch, and then run some cargo command (like `cargo tree` or `cargo check`), 
-  which should re-update the lockfile with your own local changes. If you previously 
-  ran some `cargo update` commands in your branch, you can re-run them that this 
-  time. The community has been looking to resolve merge conflicts with `Cargo.lock` 
+- Conflicts may occur when merging branches or PRs, if there are non-trivial
+  conflicts, you can reset all "yours" changes, fix all other conflicts in the
+  branch, and then run some cargo command (like `cargo tree` or `cargo check`),
+  which should re-update the lockfile with your own local changes. If you previously
+  ran some `cargo update` commands in your branch, you can re-run them that this
+  time. The community has been looking to resolve merge conflicts with `Cargo.lock`
   and `Cargo.toml` using a [custom merge tool].
 
 
