@@ -86,22 +86,22 @@ pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<
 /// Ensure a package name is [valid][validate_package_name]
 pub fn sanitize_package_name(name: &str, placeholder: char) -> String {
     let mut slug = String::new();
-    for (i, c) in name.chars().enumerate() {
-        match (i, c) {
-            (0, '0'..='9') => {
-                slug.push(placeholder);
-                slug.push(c);
-            }
-            (_, '0'..='9') | (_, 'a'..='z') | (_, '_') | (_, '-') => {
-                slug.push(c);
-            }
-            (_, 'A'..='Z') => {
-                // Convert uppercase characters to lowercase to avoid `non_snake_case` warnings.
-                slug.push(c.to_ascii_lowercase());
-            }
-            (_, _) => {
-                slug.push(placeholder);
-            }
+    let mut chars = name.chars();
+    if let Some(ch) = chars.next() {
+        if ch.is_digit(10) {
+            slug.push(placeholder);
+            slug.push(ch);
+        } else if unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' {
+            slug.push(ch);
+        } else {
+            slug.push(placeholder);
+        }
+    }
+    for ch in chars {
+        if unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' {
+            slug.push(ch);
+        } else {
+            slug.push(placeholder);
         }
     }
     slug
