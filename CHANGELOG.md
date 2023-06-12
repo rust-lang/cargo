@@ -5,6 +5,10 @@
 
 ### Added
 
+- Add support of the "default" keyword to reset previously set `build.jobs`
+  parallelism back to the default.
+  [#12222](https://github.com/rust-lang/cargo/pull/12222)
+
 ### Changed
 
 - Cargo now warns when an edition 2021 package is in a virtual workspace and
@@ -16,6 +20,10 @@
 - Don't pass `-C debuginfo=0` to rustc as it is the default value.
   [#12022](https://github.com/rust-lang/cargo/pull/12022)
   [#12205](https://github.com/rust-lang/cargo/pull/12205)
+- Added a message on reusing previous temporary path on `cargo install` failures.
+  [#12231](https://github.com/rust-lang/cargo/pull/12231)
+- Added a message when `rustup` override shorthand is put in a wrong position.
+  [#12226](https://github.com/rust-lang/cargo/pull/12226)
 
 ### Fixed
 
@@ -23,9 +31,17 @@
   [#11442](https://github.com/rust-lang/cargo/pull/11442)
 - Reduced the chance Cargo re-formats the user's `[features]` table.
   [#12191](https://github.com/rust-lang/cargo/pull/12191)
+- Fixed nested Git submodules not able to fetch.
+  [#12244](https://github.com/rust-lang/cargo/pull/12244)
 
 ### Nightly only
 
+- 🔥 The `-Zscript` is an experimental feature to add unstable support for
+  single-file packages in Cargo, so we can explore the design and resolve
+  questions with an implementation to collect feedback on.
+  ([eRFC 3424](https://github.com/rust-lang/rfcs/blob/master/text/3424-cargo-script.md))
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#script)
+  [#12245](https://github.com/rust-lang/cargo/pull/12245)
 - Automatically inherit workspace lints when running `cargo new`/`cargo init`.
   [#12174](https://github.com/rust-lang/cargo/pull/12174)
 
@@ -35,25 +51,38 @@
   [#12185](https://github.com/rust-lang/cargo/pull/12185)
 - Added a small note about indexes ignoring SemVer build metadata.
   [#12206](https://github.com/rust-lang/cargo/pull/12206)
-- Added doc comments for `GitSource` types and friends.
+- Added doc comments for types and friends in `cargo::sources` module.
   [#12192](https://github.com/rust-lang/cargo/pull/12192)
+  [#12239](https://github.com/rust-lang/cargo/pull/12239)
+  [#12247](https://github.com/rust-lang/cargo/pull/12247)
 
 ### Internal
 
+- Updated to `gix` 0.45 for multi-round pack negotiations.
+  [#12236](https://github.com/rust-lang/cargo/pull/12236)
+- Updated to `curl-sys` 0.4.63, which corresponds to curl 8.1.2.
+  [#12218](https://github.com/rust-lang/cargo/pull/12218)
 - Removed unused features from `windows-sys` dependency.
   [#12176](https://github.com/rust-lang/cargo/pull/12176)
-- Refactor compiler invocations 
+- Refactored compiler invocations 
   [#12211](https://github.com/rust-lang/cargo/pull/12211)
-- Reuse `make_dep_prefix` implementation 
+- Refactored git and registry sources, and registry data.
   [#12203](https://github.com/rust-lang/cargo/pull/12203)
-- Lexicographically order `-Z` flags 
+  [#12197](https://github.com/rust-lang/cargo/pull/12197)
+  [#12240](https://github.com/rust-lang/cargo/pull/12240)
+  [#12248](https://github.com/rust-lang/cargo/pull/12248)
+- Lexicographically order `-Z` flags.
   [#12182](https://github.com/rust-lang/cargo/pull/12182)
+  [#12223](https://github.com/rust-lang/cargo/pull/12223)
+  [#12224](https://github.com/rust-lang/cargo/pull/12224)
 - Several Cargo's own test infra improvements and speed-ups.
   [#12184](https://github.com/rust-lang/cargo/pull/12184)
   [#12188](https://github.com/rust-lang/cargo/pull/12188)
   [#12189](https://github.com/rust-lang/cargo/pull/12189)
   [#12194](https://github.com/rust-lang/cargo/pull/12194)
   [#12199](https://github.com/rust-lang/cargo/pull/12199)
+- Migrated print-ban from test to clippy
+  [#12246](https://github.com/rust-lang/cargo/pull/12246)
 
 ## Cargo 1.71 (2023-07-13)
 [84b7041f...rust-1.71.0](https://github.com/rust-lang/cargo/compare/84b7041f...rust-1.71.0)
