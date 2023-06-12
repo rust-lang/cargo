@@ -121,6 +121,11 @@
 - Warn instead of error in `cargo package` on empty `readme` or `license-file`
   in Cargo.toml.
   [#12036](https://github.com/rust-lang/cargo/pull/12036)
+- Fixed when an HTTP proxy is in use and the Cargo executable links to a
+  certain version of system libcurl, CURL connections might fail. Affected
+  libcurl versions: 7.87.0, 7.88.0, 7.88.1.
+  [#12234](https://github.com/rust-lang/cargo/pull/12234)
+  [#12242](https://github.com/rust-lang/cargo/pull/12242)
 
 ### Nightly only
 
