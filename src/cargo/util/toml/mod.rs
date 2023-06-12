@@ -33,6 +33,7 @@ use crate::util::{
     self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, VersionReqExt,
 };
 
+pub mod embedded;
 mod targets;
 use self::targets::targets;
 

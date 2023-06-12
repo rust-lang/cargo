@@ -107,6 +107,7 @@ Each new feature described below should explain how to use it.
     * [registry-auth](#registry-auth) --- Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
 * Other
     * [gitoxide](#gitoxide) --- Use `gitoxide` instead of `git2` for a set of operations.
+    * [script](#script) --- Enable support for single-file `.rs` packages.
 
 ### allow-features
 
@@ -1391,6 +1392,105 @@ Valid operations are the following:
   - `~/.cargo/git/checkouts/*-shallow`
 * When the unstable feature is on, fetching/cloning a git repository is always a shallow fetch. This roughly equals to `git fetch --depth 1` everywhere.
 * Even with the presence of `Cargo.lock` or specifying a commit `{ rev = "…" }`, gitoxide is still smart enough to shallow fetch without unshallowing the existing repository.
+
+### script
+
+* Tracking Issue: [#12207](https://github.com/rust-lang/cargo/issues/12207)
+
+Cargo can directly run `.rs` files as:
+```console
+$ cargo -Zscript file.rs
+```
+where `file.rs` can be as simple as:
+```rust
+fn main() {}
+```
+
+A user may optionally specify a manifest in a `cargo` code fence in a module-level comment, like:
+```rust
+#!/usr/bin/env cargo
+
+//! ```cargo
+//! [dependencies]
+//! clap = { version = "4.2", features = ["derive"] }
+//! ```
+
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(version)]
+struct Args {
+    #[clap(short, long, help = "Path to config")]
+    config: Option<std::path::PathBuf>,
+}
+
+fn main() {
+    let args = Args::parse();
+    println!("{:?}", args);
+}
+```
+
+#### Single-file packages
+
+In addition to today's multi-file packages (`Cargo.toml` file with other `.rs`
+files), we are adding the concept of single-file packages which may contain an
+embedded manifest.  There is no required distinguishment for a single-file
+`.rs` package from any other `.rs` file.
+
+A single-file package may contain an embedded manifest.  An embedded manifest
+is stored using `TOML` in a markdown code-fence with `cargo` at the start of the
+infostring inside a target-level doc-comment.  It is an error to have multiple
+`cargo` code fences in the target-level doc-comment.  We can relax this later,
+either merging the code fences or ignoring later code fences.
+
+Supported forms of embedded manifest are:
+``````rust
+//! ```cargo
+//! ```
+``````
+``````rust
+/*!
+ * ```cargo
+ * ```
+ */
+``````
+
+Inferred / defaulted manifest fields:
+- `package.name = <slugified file stem>`
+- `package.version = "0.0.0"` to [call attention to this crate being used in unexpected places](https://matklad.github.io/2021/08/22/large-rust-workspaces.html#Smaller-Tips)
+- `package.publish = false` to avoid accidental publishes, particularly if we
+  later add support for including them in a workspace.
+- `package.edition = <current>` to avoid always having to add an embedded
+  manifest at the cost of potentially breaking scripts on rust upgrades
+  - Warn when `edition` is unspecified.  While with single-file packages this will be
+    silenced by default, users wanting stability are also likely to be using
+    other commands, like `cargo test` and will see it.
+
+Disallowed manifest fields:
+- `[workspace]`, `[lib]`, `[[bin]]`, `[[example]]`, `[[test]]`, `[[bench]]`
+- `package.workspace`, `package.build`, `package.links`, `package.autobins`, `package.autoexamples`, `package.autotests`, `package.autobenches`
+
+As the primary role for these files is exploratory programming which has a high
+edit-to-run ratio, building should be fast.  Therefore `CARGO_TARGET_DIR` will
+be shared between single-file packages to allow reusing intermediate build
+artifacts.
+
+The lockfile for single-file packages will be placed in `CARGO_TARGET_DIR`.  In
+the future, when workspaces are supported, that will allow a user to have a
+persistent lockfile.
+
+#### Manifest-commands
+
+You may pass single-file packages directly to the `cargo` command, without subcommand.  This is mostly intended for being put in `#!` lines.
+
+The precedence for how to interpret `cargo <subcommand>` is
+1. Built-in xor single-file packages
+2. Aliases
+3. External subcommands
+
+A parameter is identified as a single-file package if it has one of:
+- Path separators
+- A `.rs` extension
 
 ### `[lints]`
 

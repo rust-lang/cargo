@@ -258,7 +258,7 @@ fn expand_aliases(
     args: ArgMatches,
     mut already_expanded: Vec<String>,
 ) -> Result<(ArgMatches, GlobalArgs), CliError> {
-    if let Some((cmd, args)) = args.subcommand() {
+    if let Some((cmd, sub_args)) = args.subcommand() {
         let exec = commands::builtin_exec(cmd);
         let aliased_cmd = super::aliased_command(config, cmd);
 
@@ -274,7 +274,7 @@ fn expand_aliases(
                 // Here we ignore errors from aliasing as we already favor built-in command,
                 // and alias doesn't involve in this context.
 
-                if let Some(values) = args.get_many::<OsString>("") {
+                if let Some(values) = sub_args.get_many::<OsString>("") {
                     // Command is built-in and is not conflicting with alias, but contains ignored values.
                     return Err(anyhow::format_err!(
                         "\
@@ -305,17 +305,34 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     ))?;
                     }
                 }
+                if commands::run::is_manifest_command(cmd) {
+                    if config.cli_unstable().script {
+                        return Ok((args, GlobalArgs::default()));
+                    } else {
+                        config.shell().warn(format_args!(
+                            "\
+user-defined alias `{cmd}` has the appearance of a manfiest-command
+This was previously accepted but will be phased out when `-Zscript` is stabilized.
+For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>."
+                        ))?;
+                    }
+                }
 
                 let mut alias = alias
                     .into_iter()
                     .map(|s| OsString::from(s))
                     .collect::<Vec<_>>();
-                alias.extend(args.get_many::<OsString>("").unwrap_or_default().cloned());
+                alias.extend(
+                    sub_args
+                        .get_many::<OsString>("")
+                        .unwrap_or_default()
+                        .cloned(),
+                );
                 // new_args strips out everything before the subcommand, so
                 // capture those global options now.
                 // Note that an alias to an external command will not receive
                 // these arguments. That may be confusing, but such is life.
-                let global_args = GlobalArgs::new(args);
+                let global_args = GlobalArgs::new(sub_args);
                 let new_args = cli().no_binary_name(true).try_get_matches_from(alias)?;
 
                 let new_cmd = new_args.subcommand_name().expect("subcommand is required");
@@ -382,19 +399,54 @@ fn config_configure(
     Ok(())
 }
 
+/// Precedence isn't the most obvious from this function because
+/// - Some is determined by `expand_aliases`
+/// - Some is enforced by `avoid_ambiguity_between_builtins_and_manifest_commands`
+///
+/// In actuality, it is:
+/// 1. built-ins xor manifest-command
+/// 2. aliases
+/// 3. external subcommands
 fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatches) -> CliResult {
     if let Some(exec) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
 
-    let mut ext_args: Vec<&OsStr> = vec![OsStr::new(cmd)];
-    ext_args.extend(
-        subcommand_args
-            .get_many::<OsString>("")
-            .unwrap_or_default()
-            .map(OsString::as_os_str),
-    );
-    super::execute_external_subcommand(config, cmd, &ext_args)
+    if commands::run::is_manifest_command(cmd) {
+        let ext_path = super::find_external_subcommand(config, cmd);
+        if !config.cli_unstable().script && ext_path.is_some() {
+            config.shell().warn(format_args!(
+                "\
+external subcommand `{cmd}` has the appearance of a manfiest-command
+This was previously accepted but will be phased out when `-Zscript` is stabilized.
+For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.",
+            ))?;
+            let mut ext_args = vec![OsStr::new(cmd)];
+            ext_args.extend(
+                subcommand_args
+                    .get_many::<OsString>("")
+                    .unwrap_or_default()
+                    .map(OsString::as_os_str),
+            );
+            super::execute_external_subcommand(config, cmd, &ext_args)
+        } else {
+            let ext_args: Vec<OsString> = subcommand_args
+                .get_many::<OsString>("")
+                .unwrap_or_default()
+                .cloned()
+                .collect();
+            commands::run::exec_manifest_command(config, cmd, &ext_args)
+        }
+    } else {
+        let mut ext_args = vec![OsStr::new(cmd)];
+        ext_args.extend(
+            subcommand_args
+                .get_many::<OsString>("")
+                .unwrap_or_default()
+                .map(OsString::as_os_str),
+        );
+        super::execute_external_subcommand(config, cmd, &ext_args)
+    }
 }
 
 #[derive(Default)]
@@ -438,9 +490,9 @@ pub fn cli() -> Command {
     #[allow(clippy::disallowed_methods)]
     let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
     let usage = if is_rustup {
-        "cargo [+toolchain] [OPTIONS] [COMMAND]"
+        "cargo [+toolchain] [OPTIONS] [COMMAND]\n       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
     } else {
-        "cargo [OPTIONS] [COMMAND]"
+        "cargo [OPTIONS] [COMMAND]\n       cargo [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
     };
     Command::new("cargo")
         // Subcommands all count their args' display order independently (from 0),
@@ -569,4 +621,15 @@ impl LazyConfig {
 #[test]
 fn verify_cli() {
     cli().debug_assert();
+}
+
+#[test]
+fn avoid_ambiguity_between_builtins_and_manifest_commands() {
+    for cmd in commands::builtin() {
+        let name = cmd.get_name();
+        assert!(
+            !commands::run::is_manifest_command(&name),
+            "built-in command {name} is ambiguous with manifest-commands"
+        )
+    }
 }

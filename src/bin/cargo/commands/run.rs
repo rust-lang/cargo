@@ -1,3 +1,7 @@
+use std::ffi::OsStr;
+use std::ffi::OsString;
+use std::path::Path;
+
 use crate::command_prelude::*;
 use crate::util::restricted_names::is_glob_pattern;
 use cargo::core::Verbosity;
@@ -13,7 +17,7 @@ pub fn cli() -> Command {
         .arg(
             Arg::new("args")
                 .help("Arguments for the binary or example to run")
-                .value_parser(value_parser!(std::ffi::OsString))
+                .value_parser(value_parser!(OsString))
                 .num_args(0..)
                 .trailing_var_arg(true),
         )
@@ -77,27 +81,56 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     };
 
-    ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| {
-        let proc_err = match err.downcast_ref::<ProcessError>() {
-            Some(e) => e,
-            None => return CliError::new(err, 101),
-        };
+    ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| to_run_error(config, err))
+}
 
-        // If we never actually spawned the process then that sounds pretty
-        // bad and we always want to forward that up.
-        let exit_code = match proc_err.code {
-            Some(exit) => exit,
-            None => return CliError::new(err, 101),
-        };
+pub fn is_manifest_command(arg: &str) -> bool {
+    let path = Path::new(arg);
+    1 < path.components().count() || path.extension() == Some(OsStr::new("rs"))
+}
 
-        // If `-q` was passed then we suppress extra error information about
-        // a failed process, we assume the process itself printed out enough
-        // information about why it failed so we don't do so as well
-        let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
-        if is_quiet {
-            CliError::code(exit_code)
-        } else {
-            CliError::new(err, exit_code)
-        }
-    })
+pub fn exec_manifest_command(config: &Config, cmd: &str, args: &[OsString]) -> CliResult {
+    if !config.cli_unstable().script {
+        return Err(anyhow::anyhow!("running `{cmd}` requires `-Zscript`").into());
+    }
+
+    let manifest_path = Path::new(cmd);
+    if !manifest_path.exists() {
+        return Err(
+            anyhow::anyhow!("manifest `{}` does not exist", manifest_path.display()).into(),
+        );
+    }
+    let manifest_path = crate::util::try_canonicalize(manifest_path)?;
+    let script = cargo::util::toml::embedded::RawScript::parse_from(&manifest_path)?;
+    let ws = script.to_workspace(config)?;
+
+    let mut compile_opts =
+        cargo::ops::CompileOptions::new(config, cargo::core::compiler::CompileMode::Build)?;
+    compile_opts.spec = cargo::ops::Packages::Default;
+
+    cargo::ops::run(&ws, &compile_opts, args).map_err(|err| to_run_error(config, err))
+}
+
+fn to_run_error(config: &cargo::util::Config, err: anyhow::Error) -> CliError {
+    let proc_err = match err.downcast_ref::<ProcessError>() {
+        Some(e) => e,
+        None => return CliError::new(err, 101),
+    };
+
+    // If we never actually spawned the process then that sounds pretty
+    // bad and we always want to forward that up.
+    let exit_code = match proc_err.code {
+        Some(exit) => exit,
+        None => return CliError::new(err, 101),
+    };
+
+    // If `-q` was passed then we suppress extra error information about
+    // a failed process, we assume the process itself printed out enough
+    // information about why it failed so we don't do so as well
+    let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
+    if is_quiet {
+        CliError::code(exit_code)
+    } else {
+        CliError::new(err, exit_code)
+    }
 }
