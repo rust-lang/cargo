@@ -70,7 +70,7 @@ pub fn read_manifest(
 /// within the manifest. For virtual manifests, these paths can only
 /// come from patched or replaced dependencies. These paths are not
 /// canonicalized.
-pub fn read_manifest_from_str(
+fn read_manifest_from_str(
     contents: &str,
     manifest_file: &Path,
     source_id: SourceId,
