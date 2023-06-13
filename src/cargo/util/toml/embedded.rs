@@ -73,12 +73,20 @@ fn write(
 ) -> CargoResult<std::path::PathBuf> {
     let hash = hash(script).to_string();
     assert_eq!(hash.len(), 64);
+
+    let file_name = script
+        .path
+        .file_stem()
+        .ok_or_else(|| anyhow::format_err!("no file name"))?
+        .to_string_lossy();
+    let name = sanitize_package_name(file_name.as_ref());
+
     let mut workspace_root = target_dir.to_owned();
     workspace_root.push("eval");
     workspace_root.push(&hash[0..2]);
     workspace_root.push(&hash[2..4]);
     workspace_root.push(&hash[4..]);
-    workspace_root.push(package_name(script)?);
+    workspace_root.push(name);
     std::fs::create_dir_all(&workspace_root).with_context(|| {
         format!(
             "failed to create temporary workspace at {}",
@@ -126,7 +134,12 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
             anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
         }
     }
-    let name = package_name(script)?;
+    let file_name = script
+        .path
+        .file_stem()
+        .ok_or_else(|| anyhow::format_err!("no file name"))?
+        .to_string_lossy();
+    let name = sanitize_package_name(file_name.as_ref());
     let hash = hash(script);
     let bin_name = format!("{name}_{hash}");
     package
@@ -179,12 +192,7 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
     Ok(manifest)
 }
 
-fn package_name(script: &RawScript) -> CargoResult<String> {
-    let name = script
-        .path
-        .file_stem()
-        .ok_or_else(|| anyhow::format_err!("no file name"))?
-        .to_string_lossy();
+fn sanitize_package_name(name: &str) -> String {
     let mut slug = String::new();
     for (i, c) in name.chars().enumerate() {
         match (i, c) {
@@ -204,7 +212,7 @@ fn package_name(script: &RawScript) -> CargoResult<String> {
             }
         }
     }
-    Ok(slug)
+    slug
 }
 
 fn hash(script: &RawScript) -> blake3::Hash {
