@@ -66,6 +66,26 @@ args: []
 }
 
 #[cargo_test]
+fn basic_cargo_toml() {
+    let p = cargo_test_support::project()
+        .file("src/main.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript Cargo.toml")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+error: no such command: `Cargo.toml`
+
+<tab>View all installed commands with `cargo --list`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn path_required() {
     let p = cargo_test_support::project()
         .file("echo", ECHO_SCRIPT)
