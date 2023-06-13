@@ -101,8 +101,8 @@ pub fn exec_manifest_command(config: &Config, cmd: &str, args: &[OsString]) -> C
         );
     }
     let manifest_path = crate::util::try_canonicalize(manifest_path)?;
-    let script = cargo::util::toml::embedded::RawScript::parse_from(&manifest_path)?;
-    let ws = script.to_workspace(config)?;
+    let script = cargo::util::toml::embedded::parse_from(&manifest_path)?;
+    let ws = cargo::util::toml::embedded::to_workspace(&script, config)?;
 
     let mut compile_opts =
         cargo::ops::CompileOptions::new(config, cargo::core::compiler::CompileMode::Build)?;
