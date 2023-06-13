@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 
 use crate::core::Workspace;
+use crate::util::restricted_names;
 use crate::CargoResult;
 use crate::Config;
 
@@ -206,26 +207,7 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
 }
 
 fn sanitize_package_name(name: &str, placeholder: char) -> String {
-    let mut slug = String::new();
-    for (i, c) in name.chars().enumerate() {
-        match (i, c) {
-            (0, '0'..='9') => {
-                slug.push(placeholder);
-                slug.push(c);
-            }
-            (_, '0'..='9') | (_, 'a'..='z') | (_, '_') | (_, '-') => {
-                slug.push(c);
-            }
-            (_, 'A'..='Z') => {
-                // Convert uppercase characters to lowercase to avoid `non_snake_case` warnings.
-                slug.push(c.to_ascii_lowercase());
-            }
-            (_, _) => {
-                slug.push(placeholder);
-            }
-        }
-    }
-    slug
+    restricted_names::sanitize_package_name(name, placeholder)
 }
 
 fn hash(script: &RawScript) -> blake3::Hash {

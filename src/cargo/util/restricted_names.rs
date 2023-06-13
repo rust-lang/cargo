@@ -83,6 +83,30 @@ pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<
     Ok(())
 }
 
+/// Ensure a package name is [valid][validate_package_name]
+pub fn sanitize_package_name(name: &str, placeholder: char) -> String {
+    let mut slug = String::new();
+    for (i, c) in name.chars().enumerate() {
+        match (i, c) {
+            (0, '0'..='9') => {
+                slug.push(placeholder);
+                slug.push(c);
+            }
+            (_, '0'..='9') | (_, 'a'..='z') | (_, '_') | (_, '-') => {
+                slug.push(c);
+            }
+            (_, 'A'..='Z') => {
+                // Convert uppercase characters to lowercase to avoid `non_snake_case` warnings.
+                slug.push(c.to_ascii_lowercase());
+            }
+            (_, _) => {
+                slug.push(placeholder);
+            }
+        }
+    }
+    slug
+}
+
 /// Check the entire path for names reserved in Windows.
 pub fn is_windows_reserved_path(path: &Path) -> bool {
     path.iter()
