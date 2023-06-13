@@ -15,199 +15,210 @@ pub struct RawScript {
     path: std::path::PathBuf,
 }
 
-impl RawScript {
-    pub fn parse_from(path: &std::path::Path) -> CargoResult<Self> {
-        let body = std::fs::read_to_string(path)
-            .with_context(|| format!("failed to script at {}", path.display()))?;
-        Self::parse(&body, path)
+pub fn parse_from(path: &std::path::Path) -> CargoResult<RawScript> {
+    let body = std::fs::read_to_string(path)
+        .with_context(|| format!("failed to script at {}", path.display()))?;
+    parse(&body, path)
+}
+
+fn parse(body: &str, path: &std::path::Path) -> CargoResult<RawScript> {
+    let comment = match extract_comment(body) {
+        Ok(manifest) => Some(manifest),
+        Err(err) => {
+            log::trace!("failed to extract doc comment: {err}");
+            None
+        }
+    }
+    .unwrap_or_default();
+    let manifest = match extract_manifest(&comment)? {
+        Some(manifest) => Some(manifest),
+        None => {
+            log::trace!("failed to extract manifest");
+            None
+        }
+    }
+    .unwrap_or_default();
+    let body = body.to_owned();
+    let path = path.to_owned();
+    Ok(RawScript {
+        manifest,
+        body,
+        path,
+    })
+}
+
+pub fn to_workspace<'cfg>(
+    script: &RawScript,
+    config: &'cfg Config,
+) -> CargoResult<Workspace<'cfg>> {
+    let target_dir = config
+        .target_dir()
+        .transpose()
+        .unwrap_or_else(|| default_target_dir().map(crate::util::Filesystem::new))?;
+    // HACK: without cargo knowing about embedded manifests, the only way to create a
+    // `Workspace` is either
+    // - Create a temporary one on disk
+    // - Create an "ephemeral" workspace **but** compilation re-loads ephemeral workspaces
+    //   from the registry rather than what we already have on memory, causing it to fail
+    //   because the registry doesn't know about embedded manifests.
+    let manifest_path = write(script, config, target_dir.as_path_unlocked())?;
+    let workspace = Workspace::new(&manifest_path, config)?;
+    Ok(workspace)
+}
+
+fn write(
+    script: &RawScript,
+    config: &Config,
+    target_dir: &std::path::Path,
+) -> CargoResult<std::path::PathBuf> {
+    let hash = hash(script).to_string();
+    assert_eq!(hash.len(), 64);
+
+    let file_name = script
+        .path
+        .file_stem()
+        .ok_or_else(|| anyhow::format_err!("no file name"))?
+        .to_string_lossy();
+    let separator = '_';
+    let name = sanitize_package_name(file_name.as_ref(), separator);
+
+    let mut workspace_root = target_dir.to_owned();
+    workspace_root.push("eval");
+    workspace_root.push(&hash[0..2]);
+    workspace_root.push(&hash[2..4]);
+    workspace_root.push(&hash[4..]);
+    workspace_root.push(name);
+    std::fs::create_dir_all(&workspace_root).with_context(|| {
+        format!(
+            "failed to create temporary workspace at {}",
+            workspace_root.display()
+        )
+    })?;
+    let manifest_path = workspace_root.join("Cargo.toml");
+    let manifest = expand_manifest(script, config)?;
+    write_if_changed(&manifest_path, &manifest)?;
+    Ok(manifest_path)
+}
+
+fn expand_manifest(script: &RawScript, config: &Config) -> CargoResult<String> {
+    let manifest = expand_manifest_(script, config)
+        .with_context(|| format!("failed to parse manifest at {}", script.path.display()))?;
+    let manifest = remap_paths(
+        manifest,
+        script.path.parent().ok_or_else(|| {
+            anyhow::format_err!("no parent directory for {}", script.path.display())
+        })?,
+    )?;
+    let manifest = toml::to_string_pretty(&manifest)?;
+    Ok(manifest)
+}
+
+fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Table> {
+    let mut manifest: toml::Table = toml::from_str(&script.manifest)?;
+
+    for key in ["workspace", "lib", "bin", "example", "test", "bench"] {
+        if manifest.contains_key(key) {
+            anyhow::bail!("`{key}` is not allowed in embedded manifests")
+        }
     }
 
-    pub fn parse(body: &str, path: &std::path::Path) -> CargoResult<Self> {
-        let comment = match extract_comment(body) {
-            Ok(manifest) => Some(manifest),
-            Err(err) => {
-                log::trace!("failed to extract doc comment: {err}");
-                None
+    // Prevent looking for a workspace by `read_manifest_from_str`
+    manifest.insert("workspace".to_owned(), toml::Table::new().into());
+
+    let package = manifest
+        .entry("package".to_owned())
+        .or_insert_with(|| toml::Table::new().into())
+        .as_table_mut()
+        .ok_or_else(|| anyhow::format_err!("`package` must be a table"))?;
+    for key in ["workspace", "build", "links"] {
+        if package.contains_key(key) {
+            anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
+        }
+    }
+    let file_name = script
+        .path
+        .file_stem()
+        .ok_or_else(|| anyhow::format_err!("no file name"))?
+        .to_string_lossy();
+    let separator = '_';
+    let name = sanitize_package_name(file_name.as_ref(), separator);
+    let hash = hash(script);
+    let bin_name = format!("{name}{separator}{hash}");
+    package
+        .entry("name".to_owned())
+        .or_insert(toml::Value::String(name));
+    package
+        .entry("version".to_owned())
+        .or_insert_with(|| toml::Value::String(DEFAULT_VERSION.to_owned()));
+    package.entry("edition".to_owned()).or_insert_with(|| {
+        let _ = config.shell().warn(format_args!(
+            "`package.edition` is unspecifiead, defaulting to `{}`",
+            DEFAULT_EDITION
+        ));
+        toml::Value::String(DEFAULT_EDITION.to_string())
+    });
+    package
+        .entry("publish".to_owned())
+        .or_insert_with(|| toml::Value::Boolean(DEFAULT_PUBLISH));
+
+    let mut bin = toml::Table::new();
+    bin.insert("name".to_owned(), toml::Value::String(bin_name));
+    bin.insert(
+        "path".to_owned(),
+        toml::Value::String(
+            script
+                .path
+                .to_str()
+                .ok_or_else(|| anyhow::format_err!("path is not valid UTF-8"))?
+                .into(),
+        ),
+    );
+    manifest.insert(
+        "bin".to_owned(),
+        toml::Value::Array(vec![toml::Value::Table(bin)]),
+    );
+
+    let release = manifest
+        .entry("profile".to_owned())
+        .or_insert_with(|| toml::Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or_else(|| anyhow::format_err!("`profile` must be a table"))?
+        .entry("release".to_owned())
+        .or_insert_with(|| toml::Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or_else(|| anyhow::format_err!("`profile.release` must be a table"))?;
+    release
+        .entry("strip".to_owned())
+        .or_insert_with(|| toml::Value::Boolean(true));
+
+    Ok(manifest)
+}
+
+fn sanitize_package_name(name: &str, placeholder: char) -> String {
+    let mut slug = String::new();
+    for (i, c) in name.chars().enumerate() {
+        match (i, c) {
+            (0, '0'..='9') => {
+                slug.push(placeholder);
+                slug.push(c);
+            }
+            (_, '0'..='9') | (_, 'a'..='z') | (_, '_') | (_, '-') => {
+                slug.push(c);
+            }
+            (_, 'A'..='Z') => {
+                // Convert uppercase characters to lowercase to avoid `non_snake_case` warnings.
+                slug.push(c.to_ascii_lowercase());
+            }
+            (_, _) => {
+                slug.push(placeholder);
             }
         }
-        .unwrap_or_default();
-        let manifest = match extract_manifest(&comment)? {
-            Some(manifest) => Some(manifest),
-            None => {
-                log::trace!("failed to extract manifest");
-                None
-            }
-        }
-        .unwrap_or_default();
-        let body = body.to_owned();
-        let path = path.to_owned();
-        Ok(Self {
-            manifest,
-            body,
-            path,
-        })
     }
+    slug
+}
 
-    pub fn to_workspace<'cfg>(&self, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
-        let target_dir = config
-            .target_dir()
-            .transpose()
-            .unwrap_or_else(|| default_target_dir().map(crate::util::Filesystem::new))?;
-        // HACK: without cargo knowing about embedded manifests, the only way to create a
-        // `Workspace` is either
-        // - Create a temporary one on disk
-        // - Create an "ephemeral" workspace **but** compilation re-loads ephemeral workspaces
-        //   from the registry rather than what we already have on memory, causing it to fail
-        //   because the registry doesn't know about embedded manifests.
-        let manifest_path = self.write(config, target_dir.as_path_unlocked())?;
-        let workspace = Workspace::new(&manifest_path, config)?;
-        Ok(workspace)
-    }
-
-    fn write(
-        &self,
-        config: &Config,
-        target_dir: &std::path::Path,
-    ) -> CargoResult<std::path::PathBuf> {
-        let hash = self.hash().to_string();
-        assert_eq!(hash.len(), 64);
-        let mut workspace_root = target_dir.to_owned();
-        workspace_root.push("eval");
-        workspace_root.push(&hash[0..2]);
-        workspace_root.push(&hash[2..4]);
-        workspace_root.push(&hash[4..]);
-        workspace_root.push(self.package_name()?);
-        std::fs::create_dir_all(&workspace_root).with_context(|| {
-            format!(
-                "failed to create temporary workspace at {}",
-                workspace_root.display()
-            )
-        })?;
-        let manifest_path = workspace_root.join("Cargo.toml");
-        let manifest = self.expand_manifest(config)?;
-        write_if_changed(&manifest_path, &manifest)?;
-        Ok(manifest_path)
-    }
-
-    pub fn expand_manifest(&self, config: &Config) -> CargoResult<String> {
-        let manifest = self
-            .expand_manifest_(config)
-            .with_context(|| format!("failed to parse manifest at {}", self.path.display()))?;
-        let manifest = remap_paths(
-            manifest,
-            self.path.parent().ok_or_else(|| {
-                anyhow::format_err!("no parent directory for {}", self.path.display())
-            })?,
-        )?;
-        let manifest = toml::to_string_pretty(&manifest)?;
-        Ok(manifest)
-    }
-
-    fn expand_manifest_(&self, config: &Config) -> CargoResult<toml::Table> {
-        let mut manifest: toml::Table = toml::from_str(&self.manifest)?;
-
-        for key in ["workspace", "lib", "bin", "example", "test", "bench"] {
-            if manifest.contains_key(key) {
-                anyhow::bail!("`{key}` is not allowed in embedded manifests")
-            }
-        }
-
-        // Prevent looking for a workspace by `read_manifest_from_str`
-        manifest.insert("workspace".to_owned(), toml::Table::new().into());
-
-        let package = manifest
-            .entry("package".to_owned())
-            .or_insert_with(|| toml::Table::new().into())
-            .as_table_mut()
-            .ok_or_else(|| anyhow::format_err!("`package` must be a table"))?;
-        for key in ["workspace", "build", "links"] {
-            if package.contains_key(key) {
-                anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
-            }
-        }
-        let name = self.package_name()?;
-        let hash = self.hash();
-        let bin_name = format!("{name}_{hash}");
-        package
-            .entry("name".to_owned())
-            .or_insert(toml::Value::String(name));
-        package
-            .entry("version".to_owned())
-            .or_insert_with(|| toml::Value::String(DEFAULT_VERSION.to_owned()));
-        package.entry("edition".to_owned()).or_insert_with(|| {
-            let _ = config.shell().warn(format_args!(
-                "`package.edition` is unspecifiead, defaulting to `{}`",
-                DEFAULT_EDITION
-            ));
-            toml::Value::String(DEFAULT_EDITION.to_string())
-        });
-        package
-            .entry("publish".to_owned())
-            .or_insert_with(|| toml::Value::Boolean(DEFAULT_PUBLISH));
-
-        let mut bin = toml::Table::new();
-        bin.insert("name".to_owned(), toml::Value::String(bin_name));
-        bin.insert(
-            "path".to_owned(),
-            toml::Value::String(
-                self.path
-                    .to_str()
-                    .ok_or_else(|| anyhow::format_err!("path is not valid UTF-8"))?
-                    .into(),
-            ),
-        );
-        manifest.insert(
-            "bin".to_owned(),
-            toml::Value::Array(vec![toml::Value::Table(bin)]),
-        );
-
-        let release = manifest
-            .entry("profile".to_owned())
-            .or_insert_with(|| toml::Value::Table(Default::default()))
-            .as_table_mut()
-            .ok_or_else(|| anyhow::format_err!("`profile` must be a table"))?
-            .entry("release".to_owned())
-            .or_insert_with(|| toml::Value::Table(Default::default()))
-            .as_table_mut()
-            .ok_or_else(|| anyhow::format_err!("`profile.release` must be a table"))?;
-        release
-            .entry("strip".to_owned())
-            .or_insert_with(|| toml::Value::Boolean(true));
-
-        Ok(manifest)
-    }
-
-    fn package_name(&self) -> CargoResult<String> {
-        let name = self
-            .path
-            .file_stem()
-            .ok_or_else(|| anyhow::format_err!("no file name"))?
-            .to_string_lossy();
-        let mut slug = String::new();
-        for (i, c) in name.chars().enumerate() {
-            match (i, c) {
-                (0, '0'..='9') => {
-                    slug.push('_');
-                    slug.push(c);
-                }
-                (_, '0'..='9') | (_, 'a'..='z') | (_, '_') | (_, '-') => {
-                    slug.push(c);
-                }
-                (_, 'A'..='Z') => {
-                    // Convert uppercase characters to lowercase to avoid `non_snake_case` warnings.
-                    slug.push(c.to_ascii_lowercase());
-                }
-                (_, _) => {
-                    slug.push('_');
-                }
-            }
-        }
-        Ok(slug)
-    }
-
-    fn hash(&self) -> blake3::Hash {
-        blake3::hash(self.body.as_bytes())
-    }
+fn hash(script: &RawScript) -> blake3::Hash {
+    blake3::hash(script.body.as_bytes())
 }
 
 fn default_target_dir() -> CargoResult<std::path::PathBuf> {
@@ -426,12 +437,12 @@ mod test_expand {
     use super::*;
 
     macro_rules! si {
-        ($i:expr) => {
-            RawScript::parse($i, std::path::Path::new("/home/me/test.rs"))
+        ($i:expr) => {{
+            let script = parse($i, std::path::Path::new("/home/me/test.rs"))
+                .unwrap_or_else(|err| panic!("{}", err));
+            expand_manifest(&script, &Config::default().unwrap())
                 .unwrap_or_else(|err| panic!("{}", err))
-                .expand_manifest(&Config::default().unwrap())
-                .unwrap_or_else(|err| panic!("{}", err))
-        };
+        }};
     }
 
     #[test]
