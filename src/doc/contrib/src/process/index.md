@@ -90,7 +90,7 @@ implemented.
 The Cargo project uses several bots:
 
 * [GitHub Actions] are used to automatically run all tests for each PR.
-* [triagebot] automatically assigns reviewers for PRs, see [Assignment] for
+* [triagebot] automatically assigns reviewers for PRs, see [PR Assignment] for
   how to configure.
 * [bors] is used to merge PRs. See [The merging process].
 * [triagebot] is used for assigning issues to non-members, see [Issue
@@ -100,20 +100,20 @@ The Cargo project uses several bots:
 [bors]: https://buildbot2.rust-lang.org/homu/
 [The merging process]: working-on-cargo.md#the-merging-process
 [GitHub Actions]: https://github.com/features/actions
-[triagebot]: https://github.com/rust-lang/triagebot/wiki
+[triagebot]: https://forge.rust-lang.org/triagebot/index.html
 [rfcbot]: https://github.com/rust-lang/rfcbot-rs
-[Assignment]: https://github.com/rust-lang/triagebot/wiki/Assignment
+[PR Assignment]: https://forge.rust-lang.org/triagebot/pr-assignment.html
 
 ## Issue assignment
 
 Normally, if you plan to work on an issue that has been marked with the
 [S-accepted] label, it is sufficient just to leave a comment that you are
 working on it. We also have a bot that allows you to formally claim an issue
-by entering the text `@rustbot claim` in a comment. See the [Assignment] docs
+by entering the text `@rustbot claim` in a comment. See the [Issue Assignment] docs
 on how this works.
 
 
-[Assignment]: https://github.com/rust-lang/triagebot/wiki/Assignment
+[Issue Assignment]: https://forge.rust-lang.org/triagebot/issue-assignment.html
 [team]: https://www.rust-lang.org/governance/teams/dev-tools#cargo
 [Zulip]: https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo
 [issue-feature-request]: https://github.com/rust-lang/cargo/labels/C-feature-request
