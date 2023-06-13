@@ -87,7 +87,7 @@ fn write(
         // more common convention for CLIs
         '-'
     };
-    let name = sanitize_package_name(file_name.as_ref(), separator);
+    let name = sanitize_name(file_name.as_ref(), separator);
 
     let mut workspace_root = target_dir.to_owned();
     workspace_root.push("eval");
@@ -154,7 +154,7 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
         // more common convention for CLIs
         '-'
     };
-    let name = sanitize_package_name(file_name.as_ref(), separator);
+    let name = sanitize_name(file_name.as_ref(), separator);
     let bin_name = name.clone();
     package
         .entry("name".to_owned())
@@ -206,8 +206,27 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
     Ok(manifest)
 }
 
-fn sanitize_package_name(name: &str, placeholder: char) -> String {
-    restricted_names::sanitize_package_name(name, placeholder)
+/// Ensure the package name matches the validation from `ops::cargo_new::check_name`
+fn sanitize_name(name: &str, placeholder: char) -> String {
+    let mut name = restricted_names::sanitize_package_name(name, placeholder);
+
+    loop {
+        if restricted_names::is_keyword(&name) {
+            name.push(placeholder);
+        } else if restricted_names::is_conflicting_artifact_name(&name) {
+            // Being an embedded manifest, we always assume it is a `[[bin]]`
+            name.push(placeholder);
+        } else if name == "test" {
+            name.push(placeholder);
+        } else if restricted_names::is_windows_reserved(&name) {
+            // Go ahead and be consistent across platforms
+            name.push(placeholder);
+        } else {
+            break;
+        }
+    }
+
+    name
 }
 
 fn hash(script: &RawScript) -> blake3::Hash {
@@ -442,12 +461,12 @@ mod test_expand {
     fn test_default() {
         snapbox::assert_eq(
             r#"[[bin]]
-name = "test"
+name = "test-"
 path = "/home/me/test.rs"
 
 [package]
 edition = "2021"
-name = "test"
+name = "test-"
 publish = false
 version = "0.0.0"
 
@@ -464,7 +483,7 @@ strip = true
     fn test_dependencies() {
         snapbox::assert_eq(
             r#"[[bin]]
-name = "test"
+name = "test-"
 path = "/home/me/test.rs"
 
 [dependencies]
@@ -472,7 +491,7 @@ time = "0.1.25"
 
 [package]
 edition = "2021"
-name = "test"
+name = "test-"
 publish = false
 version = "0.0.0"
 
