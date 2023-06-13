@@ -21,7 +21,7 @@ pub fn parse_from(path: &std::path::Path) -> CargoResult<RawScript> {
     parse(&body, path)
 }
 
-pub fn parse(body: &str, path: &std::path::Path) -> CargoResult<RawScript> {
+fn parse(body: &str, path: &std::path::Path) -> CargoResult<RawScript> {
     let comment = match extract_comment(body) {
         Ok(manifest) => Some(manifest),
         Err(err) => {
@@ -99,7 +99,7 @@ fn write(
     Ok(manifest_path)
 }
 
-pub fn expand_manifest(script: &RawScript, config: &Config) -> CargoResult<String> {
+fn expand_manifest(script: &RawScript, config: &Config) -> CargoResult<String> {
     let manifest = expand_manifest_(script, config)
         .with_context(|| format!("failed to parse manifest at {}", script.path.display()))?;
     let manifest = remap_paths(
