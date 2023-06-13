@@ -79,7 +79,8 @@ fn write(
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let name = sanitize_package_name(file_name.as_ref());
+    let separator = '_';
+    let name = sanitize_package_name(file_name.as_ref(), separator);
 
     let mut workspace_root = target_dir.to_owned();
     workspace_root.push("eval");
@@ -139,9 +140,10 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let name = sanitize_package_name(file_name.as_ref());
+    let separator = '_';
+    let name = sanitize_package_name(file_name.as_ref(), separator);
     let hash = hash(script);
-    let bin_name = format!("{name}_{hash}");
+    let bin_name = format!("{name}{separator}{hash}");
     package
         .entry("name".to_owned())
         .or_insert(toml::Value::String(name));
@@ -192,12 +194,12 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
     Ok(manifest)
 }
 
-fn sanitize_package_name(name: &str) -> String {
+fn sanitize_package_name(name: &str, placeholder: char) -> String {
     let mut slug = String::new();
     for (i, c) in name.chars().enumerate() {
         match (i, c) {
             (0, '0'..='9') => {
-                slug.push('_');
+                slug.push(placeholder);
                 slug.push(c);
             }
             (_, '0'..='9') | (_, 'a'..='z') | (_, '_') | (_, '-') => {
@@ -208,7 +210,7 @@ fn sanitize_package_name(name: &str) -> String {
                 slug.push(c.to_ascii_lowercase());
             }
             (_, _) => {
-                slug.push('_');
+                slug.push(placeholder);
             }
         }
     }
