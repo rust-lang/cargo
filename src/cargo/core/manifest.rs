@@ -64,6 +64,7 @@ pub struct Manifest {
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
     lint_rustflags: Vec<String>,
+    embedded: bool,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -407,6 +408,7 @@ impl Manifest {
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
         lint_rustflags: Vec<String>,
+        embedded: bool,
     ) -> Manifest {
         Manifest {
             summary,
@@ -433,6 +435,7 @@ impl Manifest {
             metabuild,
             resolve_behavior,
             lint_rustflags,
+            embedded,
         }
     }
 
@@ -499,6 +502,9 @@ impl Manifest {
     }
     pub fn links(&self) -> Option<&str> {
         self.links.as_deref()
+    }
+    pub fn is_embedded(&self) -> bool {
+        self.embedded
     }
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {

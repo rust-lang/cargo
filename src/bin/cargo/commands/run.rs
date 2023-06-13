@@ -5,6 +5,7 @@ use std::path::Path;
 use crate::command_prelude::*;
 use crate::util::restricted_names::is_glob_pattern;
 use cargo::core::Verbosity;
+use cargo::core::Workspace;
 use cargo::ops::{self, CompileFilter, Packages};
 use cargo_util::ProcessError;
 
@@ -101,8 +102,10 @@ pub fn exec_manifest_command(config: &Config, cmd: &str, args: &[OsString]) -> C
         );
     }
     let manifest_path = crate::util::try_canonicalize(manifest_path)?;
-    let script = cargo::util::toml::embedded::parse_from(&manifest_path)?;
-    let ws = cargo::util::toml::embedded::to_workspace(&script, config)?;
+    let mut ws = Workspace::new(&manifest_path, config)?;
+    if config.cli_unstable().avoid_dev_deps {
+        ws.set_require_optional_deps(false);
+    }
 
     let mut compile_opts =
         cargo::ops::CompileOptions::new(config, cargo::core::compiler::CompileMode::Build)?;

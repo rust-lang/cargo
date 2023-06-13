@@ -26,16 +26,16 @@ fn basic_rs() {
     p.cargo("-Zscript echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/eval/target/eval/[..]
+            r#"bin: [..]/debug/echo[EXE]
 args: []
 "#,
         )
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] echo v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/echo)
+[COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo[EXE]`
+[RUNNING] `[..]debug/echo[EXE]`
 ",
         )
         .run();
@@ -50,16 +50,16 @@ fn basic_path() {
     p.cargo("-Zscript ./echo")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/eval/target/eval/[..]
+            r#"bin: [..]/debug/echo[EXE]
 args: []
 "#,
         )
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] echo v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/echo)
+[COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo[EXE]`
+[RUNNING] `[..]/debug/echo[EXE]`
 ",
         )
         .run();
@@ -104,16 +104,16 @@ fn manifest_precedence_over_plugins() {
         .env("PATH", &path)
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/eval/target/eval/[..]
+            r#"bin: [..]/debug/echo[EXE]
 args: []
 "#,
         )
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] echo v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/echo)
+[COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo[EXE]`
+[RUNNING] `[..]/debug/echo[EXE]`
 ",
         )
         .run();
@@ -203,9 +203,9 @@ fn main() {
         )
         .with_stderr(
             "\
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
+[RUNNING] `[..]/debug/script[EXE]`
 ",
         )
         .run();
@@ -235,9 +235,9 @@ fn main() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
+[RUNNING] `[..]/debug/script[EXE]`
 ",
         )
         .run();
@@ -264,9 +264,9 @@ fn main() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
+[RUNNING] `[..]/debug/script[EXE]`
 ",
         )
         .run();
@@ -282,7 +282,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
+[RUNNING] `[..]/debug/script[EXE]`
 ",
         )
         .run();
@@ -298,9 +298,9 @@ fn main() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
+[RUNNING] `[..]/debug/script[EXE]`
 ",
         )
         .run();
@@ -327,9 +327,9 @@ fn main() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
+[RUNNING] `[..]/debug/script[EXE]`
 ",
         )
         .run();
@@ -345,16 +345,16 @@ fn test_escaped_hyphen_arg() {
     p.cargo("-Zscript -- script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/eval/target/eval/[..]
+            r#"bin: [..]/debug/script[EXE]
 args: ["-NotAnArg"]
 "#,
         )
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] -NotAnArg`
+[RUNNING] `[..]/debug/script[EXE] -NotAnArg`
 ",
         )
         .run();
@@ -370,16 +370,16 @@ fn test_unescaped_hyphen_arg() {
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/eval/target/eval/[..]
+            r#"bin: [..]/debug/script[EXE]
 args: ["-NotAnArg"]
 "#,
         )
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] -NotAnArg`
+[RUNNING] `[..]/debug/script[EXE] -NotAnArg`
 ",
         )
         .run();
@@ -395,16 +395,16 @@ fn test_same_flags() {
     p.cargo("-Zscript script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/eval/target/eval/[..]
+            r#"bin: [..]/debug/script[EXE]
 args: ["--help"]
 "#,
         )
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] --help`
+[RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
         .run();
@@ -420,15 +420,15 @@ fn test_name_has_weird_chars() {
     p.cargo("-Zscript s-h.w§c!.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/eval/target/eval/[..]
+            r#"bin: [..]/debug/s-h-w-c-[EXE]
 args: []
 "#,
         )
         .with_stderr(
             r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] s-h-w-c- v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/s-h-w-c-)
+[COMPILING] s-h-w-c- v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/s-h-w-c-/target/debug/s-h-w-c-[EXE]`
+[RUNNING] `[..]/debug/s-h-w-c-[EXE]`
 "#,
         )
         .run();
@@ -464,9 +464,9 @@ fn main() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] script v1.0.0 (registry `dummy-registry`)
 [COMPILING] script v1.0.0
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] --help`
+[RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
         .run();
@@ -501,9 +501,9 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] --help`
+[RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
         .run();
@@ -523,16 +523,12 @@ fn main() {
 
     p.cargo("-Zscript script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"Hello world!
-"#,
-        )
+        .with_status(101)
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] --help`
+[ERROR] `cargo run` could not determine which binary to run. Use the `--bin` option to specify a binary, or the `default-run` manifest key.
+available binaries: not-script, script
 ",
         )
         .run();

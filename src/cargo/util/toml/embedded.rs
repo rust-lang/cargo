@@ -1,6 +1,5 @@
 use anyhow::Context as _;
 
-use crate::core::Workspace;
 use crate::util::restricted_names;
 use crate::CargoResult;
 use crate::Config;
@@ -10,21 +9,13 @@ const DEFAULT_EDITION: crate::core::features::Edition =
 const DEFAULT_VERSION: &str = "0.0.0";
 const DEFAULT_PUBLISH: bool = false;
 
-pub struct RawScript {
-    manifest: String,
-    body: String,
-    path: std::path::PathBuf,
-}
-
-pub fn parse_from(path: &std::path::Path) -> CargoResult<RawScript> {
-    let body = std::fs::read_to_string(path)
-        .with_context(|| format!("failed to script at {}", path.display()))?;
-    parse(&body, path)
-}
-
-fn parse(body: &str, path: &std::path::Path) -> CargoResult<RawScript> {
-    let comment = match extract_comment(body) {
-        Ok(manifest) => Some(manifest),
+pub fn expand_manifest(
+    content: &str,
+    path: &std::path::Path,
+    config: &Config,
+) -> CargoResult<String> {
+    let comment = match extract_comment(content) {
+        Ok(comment) => Some(comment),
         Err(err) => {
             log::trace!("failed to extract doc comment: {err}");
             None
@@ -39,82 +30,18 @@ fn parse(body: &str, path: &std::path::Path) -> CargoResult<RawScript> {
         }
     }
     .unwrap_or_default();
-    let body = body.to_owned();
-    let path = path.to_owned();
-    Ok(RawScript {
-        manifest,
-        body,
-        path,
-    })
-}
-
-pub fn to_workspace<'cfg>(
-    script: &RawScript,
-    config: &'cfg Config,
-) -> CargoResult<Workspace<'cfg>> {
-    let target_dir = config
-        .target_dir()
-        .transpose()
-        .unwrap_or_else(|| default_target_dir().map(crate::util::Filesystem::new))?;
-    // HACK: without cargo knowing about embedded manifests, the only way to create a
-    // `Workspace` is either
-    // - Create a temporary one on disk
-    // - Create an "ephemeral" workspace **but** compilation re-loads ephemeral workspaces
-    //   from the registry rather than what we already have on memory, causing it to fail
-    //   because the registry doesn't know about embedded manifests.
-    let manifest_path = write(script, config, target_dir.as_path_unlocked())?;
-    let workspace = Workspace::new(&manifest_path, config)?;
-    Ok(workspace)
-}
-
-fn write(
-    script: &RawScript,
-    config: &Config,
-    target_dir: &std::path::Path,
-) -> CargoResult<std::path::PathBuf> {
-    let hash = hash(script).to_string();
-    assert_eq!(hash.len(), 64);
-
-    let file_stem = script
-        .path
-        .file_stem()
-        .ok_or_else(|| anyhow::format_err!("no file name"))?
-        .to_string_lossy();
-    let name = sanitize_name(file_stem.as_ref());
-
-    let mut workspace_root = target_dir.to_owned();
-    workspace_root.push("eval");
-    workspace_root.push(&hash[0..2]);
-    workspace_root.push(&hash[2..4]);
-    workspace_root.push(&hash[4..]);
-    workspace_root.push(name);
-    std::fs::create_dir_all(&workspace_root).with_context(|| {
-        format!(
-            "failed to create temporary workspace at {}",
-            workspace_root.display()
-        )
-    })?;
-    let manifest_path = workspace_root.join("Cargo.toml");
-    let manifest = expand_manifest(script, config)?;
-    write_if_changed(&manifest_path, &manifest)?;
-    Ok(manifest_path)
-}
-
-fn expand_manifest(script: &RawScript, config: &Config) -> CargoResult<String> {
-    let manifest = expand_manifest_(script, config)
-        .with_context(|| format!("failed to parse manifest at {}", script.path.display()))?;
-    let manifest = remap_paths(
-        manifest,
-        script.path.parent().ok_or_else(|| {
-            anyhow::format_err!("no parent directory for {}", script.path.display())
-        })?,
-    )?;
+    let manifest = expand_manifest_(&manifest, path, config)
+        .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
     let manifest = toml::to_string_pretty(&manifest)?;
     Ok(manifest)
 }
 
-fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Table> {
-    let mut manifest: toml::Table = toml::from_str(&script.manifest)?;
+fn expand_manifest_(
+    manifest: &str,
+    path: &std::path::Path,
+    config: &Config,
+) -> CargoResult<toml::Table> {
+    let mut manifest: toml::Table = toml::from_str(&manifest)?;
 
     for key in ["workspace", "lib", "bin", "example", "test", "bench"] {
         if manifest.contains_key(key) {
@@ -135,8 +62,11 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
             anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
         }
     }
-    let file_stem = script
-        .path
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| anyhow::format_err!("no file name"))?
+        .to_string_lossy();
+    let file_stem = path
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
@@ -163,13 +93,7 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
     bin.insert(
         "path".to_owned(),
-        toml::Value::String(
-            script
-                .path
-                .to_str()
-                .ok_or_else(|| anyhow::format_err!("path is not valid UTF-8"))?
-                .into(),
-        ),
+        toml::Value::String(file_name.into_owned()),
     );
     manifest.insert(
         "bin".to_owned(),
@@ -221,28 +145,6 @@ fn sanitize_name(name: &str) -> String {
     }
 
     name
-}
-
-fn hash(script: &RawScript) -> blake3::Hash {
-    blake3::hash(script.body.as_bytes())
-}
-
-fn default_target_dir() -> CargoResult<std::path::PathBuf> {
-    let mut cargo_home = home::cargo_home()?;
-    cargo_home.push("eval");
-    cargo_home.push("target");
-    Ok(cargo_home)
-}
-
-fn write_if_changed(path: &std::path::Path, new: &str) -> CargoResult<()> {
-    let write_needed = match std::fs::read_to_string(path) {
-        Ok(current) => current != new,
-        Err(_) => true,
-    };
-    if write_needed {
-        std::fs::write(path, new).with_context(|| format!("failed to write {}", path.display()))?;
-    }
-    Ok(())
 }
 
 /// Locates a "code block manifest" in Rust source.
@@ -444,10 +346,12 @@ mod test_expand {
 
     macro_rules! si {
         ($i:expr) => {{
-            let script = parse($i, std::path::Path::new("/home/me/test.rs"))
-                .unwrap_or_else(|err| panic!("{}", err));
-            expand_manifest(&script, &Config::default().unwrap())
-                .unwrap_or_else(|err| panic!("{}", err))
+            expand_manifest(
+                $i,
+                std::path::Path::new("/home/me/test.rs"),
+                &Config::default().unwrap(),
+            )
+            .unwrap_or_else(|err| panic!("{}", err))
         }};
     }
 
@@ -456,7 +360,7 @@ mod test_expand {
         snapbox::assert_eq(
             r#"[[bin]]
 name = "test-"
-path = "/home/me/test.rs"
+path = "test.rs"
 
 [package]
 edition = "2021"
@@ -478,7 +382,7 @@ strip = true
         snapbox::assert_eq(
             r#"[[bin]]
 name = "test-"
-path = "/home/me/test.rs"
+path = "test.rs"
 
 [dependencies]
 time = "0.1.25"
@@ -697,73 +601,6 @@ fn main() {}
 "#),
         );
     }
-}
-
-/// Given a Cargo manifest, attempts to rewrite relative file paths to absolute ones, allowing the manifest to be relocated.
-fn remap_paths(
-    mani: toml::Table,
-    package_root: &std::path::Path,
-) -> anyhow::Result<toml::value::Table> {
-    // Values that need to be rewritten:
-    let paths: &[&[&str]] = &[
-        &["build-dependencies", "*", "path"],
-        &["dependencies", "*", "path"],
-        &["dev-dependencies", "*", "path"],
-        &["package", "build"],
-        &["target", "*", "dependencies", "*", "path"],
-    ];
-
-    let mut mani = toml::Value::Table(mani);
-
-    for path in paths {
-        iterate_toml_mut_path(&mut mani, path, &mut |v| {
-            if let toml::Value::String(s) = v {
-                if std::path::Path::new(s).is_relative() {
-                    let p = package_root.join(&*s);
-                    if let Some(p) = p.to_str() {
-                        *s = p.into()
-                    }
-                }
-            }
-            Ok(())
-        })?
-    }
-
-    match mani {
-        toml::Value::Table(mani) => Ok(mani),
-        _ => unreachable!(),
-    }
-}
-
-/// Iterates over the specified TOML values via a path specification.
-fn iterate_toml_mut_path<F>(
-    base: &mut toml::Value,
-    path: &[&str],
-    on_each: &mut F,
-) -> anyhow::Result<()>
-where
-    F: FnMut(&mut toml::Value) -> anyhow::Result<()>,
-{
-    if path.is_empty() {
-        return on_each(base);
-    }
-
-    let cur = path[0];
-    let tail = &path[1..];
-
-    if cur == "*" {
-        if let toml::Value::Table(tab) = base {
-            for (_, v) in tab {
-                iterate_toml_mut_path(v, tail, on_each)?;
-            }
-        }
-    } else if let toml::Value::Table(tab) = base {
-        if let Some(v) = tab.get_mut(cur) {
-            iterate_toml_mut_path(v, tail, on_each)?;
-        }
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]
