@@ -135,7 +135,7 @@ More information about these commands can be found at the [shortcuts documentati
 [`S-waiting-on-review`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-review
 [`S-waiting-on-author`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-author
 [`@rustbot`]: https://github.com/rustbot
-[shortcuts documentation]: https://github.com/rust-lang/triagebot/wiki/Shortcuts
+[shortcuts documentation]: https://forge.rust-lang.org/triagebot/shortcuts.html
 
 ## The merging process
 

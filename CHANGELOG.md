@@ -598,7 +598,7 @@
   for each revision from the same git repository.
   [#10690](https://github.com/rust-lang/cargo/pull/1090)
 - Cargo contributors can relabel issues via triagebot.
-  [doc](https://github.com/rust-lang/triagebot/wiki/Labeling)
+  [doc](https://forge.rust-lang.org/triagebot/labeling.html)
   [#11498](https://github.com/rust-lang/cargo/pull/11498)
 - Cargo contributors can write tests in containers.
   [#11583](https://github.com/rust-lang/cargo/pull/11583)
