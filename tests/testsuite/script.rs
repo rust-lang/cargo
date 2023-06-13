@@ -426,9 +426,9 @@ args: []
         )
         .with_stderr(
             r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[COMPILING] s-h_w_c_ v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/s-h_w_c_)
+[COMPILING] s-h-w-c- v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/s-h-w-c-)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/s-h_w_c_/target/debug/s-h_w_c_[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/s-h-w-c-/target/debug/s-h-w-c-[EXE]`
 "#,
         )
         .run();

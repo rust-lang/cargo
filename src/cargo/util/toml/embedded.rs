@@ -79,7 +79,13 @@ fn write(
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let separator = '_';
+    let separator = if file_name.contains('_') {
+        '_'
+    } else {
+        // Since embedded manifests only support `[[bin]]`s, prefer arrow-case as that is the
+        // more common convention for CLIs
+        '-'
+    };
     let name = sanitize_package_name(file_name.as_ref(), separator);
 
     let mut workspace_root = target_dir.to_owned();
@@ -140,7 +146,13 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let separator = '_';
+    let separator = if file_name.contains('_') {
+        '_'
+    } else {
+        // Since embedded manifests only support `[[bin]]`s, prefer arrow-case as that is the
+        // more common convention for CLIs
+        '-'
+    };
     let name = sanitize_package_name(file_name.as_ref(), separator);
     let bin_name = name.clone();
     package
