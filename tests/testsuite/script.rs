@@ -35,7 +35,7 @@ args: []
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/echo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo[EXE]`
 ",
         )
         .run();
@@ -59,7 +59,7 @@ args: []
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/echo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo[EXE]`
 ",
         )
         .run();
@@ -113,7 +113,7 @@ args: []
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/echo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/echo/target/debug/echo[EXE]`
 ",
         )
         .run();
@@ -205,7 +205,7 @@ fn main() {
             "\
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
 ",
         )
         .run();
@@ -237,7 +237,7 @@ fn main() {
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
 ",
         )
         .run();
@@ -266,7 +266,7 @@ fn main() {
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
 ",
         )
         .run();
@@ -282,7 +282,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
 ",
         )
         .run();
@@ -300,7 +300,7 @@ fn main() {
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
 ",
         )
         .run();
@@ -329,7 +329,7 @@ fn main() {
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE]`
 ",
         )
         .run();
@@ -354,7 +354,7 @@ args: ["-NotAnArg"]
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..] -NotAnArg`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] -NotAnArg`
 ",
         )
         .run();
@@ -379,7 +379,7 @@ args: ["-NotAnArg"]
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..] -NotAnArg`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] -NotAnArg`
 ",
         )
         .run();
@@ -404,7 +404,7 @@ args: ["--help"]
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..] --help`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] --help`
 ",
         )
         .run();
@@ -427,14 +427,8 @@ args: []
         .with_stderr(
             r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] s-h_w_c_ v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/s-h_w_c_)
-[WARNING] crate `s_h_w_c__[..]` should have a snake case name
-  |
-  = help: convert the identifier to snake case: `s_h_w_c_[..]`
-  = note: `#[warn(non_snake_case)]` on by default
-
-[WARNING] `s-h_w_c_` (bin "s-h_w_c__[..]") generated 1 warning
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/s-h_w_c_/target/debug/s-h_w_c__[..]`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/s-h_w_c_/target/debug/s-h_w_c_[EXE]`
 "#,
         )
         .run();
@@ -472,7 +466,7 @@ fn main() {
 [COMPILING] script v1.0.0
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..] --help`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] --help`
 ",
         )
         .run();
@@ -509,7 +503,7 @@ fn main() {
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script_[..] --help`
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] --help`
 ",
         )
         .run();
