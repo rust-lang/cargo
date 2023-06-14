@@ -142,8 +142,7 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
         .to_string_lossy();
     let separator = '_';
     let name = sanitize_package_name(file_name.as_ref(), separator);
-    let hash = hash(script);
-    let bin_name = format!("{name}{separator}{hash}");
+    let bin_name = name.clone();
     package
         .entry("name".to_owned())
         .or_insert(toml::Value::String(name));
@@ -449,7 +448,7 @@ mod test_expand {
     fn test_default() {
         snapbox::assert_eq(
             r#"[[bin]]
-name = "test_a472c7a31645d310613df407eab80844346938a3b8fe4f392cae059cb181aa85"
+name = "test"
 path = "/home/me/test.rs"
 
 [package]
@@ -471,7 +470,7 @@ strip = true
     fn test_dependencies() {
         snapbox::assert_eq(
             r#"[[bin]]
-name = "test_3a1fa07700654ea2e893f70bb422efa7884eb1021ccacabc5466efe545da8a0b"
+name = "test"
 path = "/home/me/test.rs"
 
 [dependencies]
