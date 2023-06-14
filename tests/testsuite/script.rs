@@ -508,3 +508,32 @@ fn main() {
         )
         .run();
 }
+
+#[cargo_test]
+fn test_no_autobins() {
+    let script = r#"#!/usr/bin/env cargo
+
+fn main() {
+    println!("Hello world!");
+}"#;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .file("src/bin/not-script/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("-Zscript script.rs --help")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"Hello world!
+"#,
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/home/.cargo/eval/target/eval/[..]/script)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[ROOT]/home/.cargo/eval/target/eval/[..]/script/target/debug/script[EXE] --help`
+",
+        )
+        .run();
+}
