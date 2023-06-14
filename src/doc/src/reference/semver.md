@@ -210,7 +210,7 @@ crates should be avoided.
 
 It is a breaking change to change the alignment, layout, or size of a type that was previously well-defined.
 
-In general, nominal types that use the [the default representation] do not have a well-defined alignment, layout, or size.
+In general, types that use the [the default representation] do not have a well-defined alignment, layout, or size.
 The compiler is free to alter the alignment or layout, so code should not make any assumptions about it.
 
 > **Note**: It may be possible for external crates to break if they make assumptions about the alignment, layout, or size of a type even if it is not well-defined.
@@ -218,14 +218,15 @@ The compiler is free to alter the alignment or layout, so code should not make a
 
 Some examples of changes that are not a breaking change are (assuming no other rules in this guide are violated):
 
-* Adding, removing, or changing fields of a default representation struct, union, or enum.
-* Adding variants to a default representation enum.
+* Adding, removing, or changing fields of a default representation struct, union, or enum in such a way that the change follows the other rules in this guide (for example, using `non_exhaustive` to allow those changes, or changes to private fields that are already private).
+* Adding variants to a default representation enum, if the enum uses `non_exhaustive`.
   This may change the alignment or size of the enumeration, but those are not well-defined.
 * Adding, removing, or changing private fields of a `repr(C)` struct, union, or enum.
   Note that this may be a breaking change since it may change the size and alignment of the type.
   Care should be taken in this case.
+  Adding private fields can only be done if there are already other private fields, or it is `non_exhaustive`.
   Public fields may be added if there are private fields, or it is `non_exhaustive`, and the addition does not alter the layout of the other fields.
-* Adding variants to a `repr(C)` enum.
+* Adding variants to a `repr(C)` enum, if the enum uses `non_exhastive`.
   Note that this may be a breaking change since it may change the size and alignment of the type.
   Care should be taken in this case.
 * Adding `repr(C)` to a default representation struct, union, or enum.
@@ -234,7 +235,7 @@ Some examples of changes that are not a breaking change are (assuming no other r
 
 Nominal types that use the [`repr` attribute] can be said to have an alignment and layout that is defined in some way that code may make some assumptions about that may break as a result of changing that type.
 
-Some examples of changes that are a breaking change are:
+Some examples of a breaking change are:
 
 * Adding `repr(packed)` to a struct or union.
 
