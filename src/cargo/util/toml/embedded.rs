@@ -8,6 +8,7 @@ const DEFAULT_EDITION: crate::core::features::Edition =
     crate::core::features::Edition::LATEST_STABLE;
 const DEFAULT_VERSION: &str = "0.0.0";
 const DEFAULT_PUBLISH: bool = false;
+const AUTO_FIELDS: &[&str] = &["autobins", "autoexamples", "autotests", "autobenches"];
 
 pub fn expand_manifest(
     content: &str,
@@ -57,8 +58,11 @@ fn expand_manifest_(
         .or_insert_with(|| toml::Table::new().into())
         .as_table_mut()
         .ok_or_else(|| anyhow::format_err!("`package` must be a table"))?;
-    for key in ["workspace", "build", "links"] {
-        if package.contains_key(key) {
+    for key in ["workspace", "build", "links"]
+        .iter()
+        .chain(AUTO_FIELDS.iter())
+    {
+        if package.contains_key(*key) {
             anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
         }
     }
@@ -88,6 +92,11 @@ fn expand_manifest_(
     package
         .entry("publish".to_owned())
         .or_insert_with(|| toml::Value::Boolean(DEFAULT_PUBLISH));
+    for field in AUTO_FIELDS {
+        package
+            .entry(field.to_owned())
+            .or_insert_with(|| toml::Value::Boolean(false));
+    }
 
     let mut bin = toml::Table::new();
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
@@ -363,6 +372,10 @@ name = "test-"
 path = "test.rs"
 
 [package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
 edition = "2021"
 name = "test-"
 publish = false
@@ -388,6 +401,10 @@ path = "test.rs"
 time = "0.1.25"
 
 [package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
 edition = "2021"
 name = "test-"
 publish = false

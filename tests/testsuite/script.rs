@@ -523,12 +523,16 @@ fn main() {
 
     p.cargo("-Zscript script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            r#"Hello world!
+"#,
+        )
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[ERROR] `cargo run` could not determine which binary to run. Use the `--bin` option to specify a binary, or the `default-run` manifest key.
-available binaries: not-script, script
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
         .run();
