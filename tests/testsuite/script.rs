@@ -73,13 +73,16 @@ fn basic_cargo_toml() {
 
     p.cargo("-Zscript Cargo.toml")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
-        .with_stdout("")
+        .with_stdout(
+            r#"bin: target/debug/foo[EXE]
+args: []
+"#,
+        )
         .with_stderr(
             "\
-error: no such command: `Cargo.toml`
-
-<tab>View all installed commands with `cargo --list`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `target/debug/foo[EXE]`
 ",
         )
         .run();

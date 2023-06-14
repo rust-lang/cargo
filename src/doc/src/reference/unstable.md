@@ -1462,16 +1462,19 @@ persistent lockfile.
 
 #### Manifest-commands
 
-You may pass single-file packages directly to the `cargo` command, without subcommand.  This is mostly intended for being put in `#!` lines.
+You may pass a manifest directly to the `cargo` command, without a subcommand,
+like `foo/Cargo.toml` or a single-file package like `foo.rs`.  This is mostly
+intended for being put in `#!` lines.
 
 The precedence for how to interpret `cargo <subcommand>` is
 1. Built-in xor single-file packages
 2. Aliases
 3. External subcommands
 
-A parameter is identified as a single-file package if it has one of:
+A parameter is identified as a manifest-command if it has one of:
 - Path separators
 - A `.rs` extension
+- The file name is `Cargo.toml`
 
 ### `[lints]`
 

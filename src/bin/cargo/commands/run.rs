@@ -87,7 +87,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
 pub fn is_manifest_command(arg: &str) -> bool {
     let path = Path::new(arg);
-    1 < path.components().count() || path.extension() == Some(OsStr::new("rs"))
+    1 < path.components().count()
+        || path.extension() == Some(OsStr::new("rs"))
+        || path.file_name() == Some(OsStr::new("Cargo.toml"))
 }
 
 pub fn exec_manifest_command(config: &Config, cmd: &str, args: &[OsString]) -> CliResult {
