@@ -96,12 +96,15 @@ pub fn exec_manifest_command(config: &Config, cmd: &str, args: &[OsString]) -> C
     }
 
     let manifest_path = Path::new(cmd);
+    let manifest_path = config.cwd().join(manifest_path);
+    let manifest_path = cargo_util::paths::normalize_path(&manifest_path);
     if !manifest_path.exists() {
-        return Err(
-            anyhow::anyhow!("manifest `{}` does not exist", manifest_path.display()).into(),
-        );
+        return Err(anyhow::format_err!(
+            "manifest path `{}` does not exist",
+            manifest_path.display()
+        )
+        .into());
     }
-    let manifest_path = crate::util::try_canonicalize(manifest_path)?;
     let mut ws = Workspace::new(&manifest_path, config)?;
     if config.cli_unstable().avoid_dev_deps {
         ws.set_require_optional_deps(false);
