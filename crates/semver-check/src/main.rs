@@ -62,7 +62,13 @@ fn doit() -> Result<(), Box<dyn Error>> {
                     if line.trim() == "```" {
                         break;
                     }
-                    block.push(line);
+                    // Support rustdoc/mdbook hidden lines.
+                    let line = line.strip_prefix("# ").unwrap_or(line);
+                    if line == "#" {
+                        block.push("");
+                    } else {
+                        block.push(line);
+                    }
                 }
                 None => {
                     return Err(format!(
