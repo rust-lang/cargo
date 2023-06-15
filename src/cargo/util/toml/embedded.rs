@@ -75,12 +75,12 @@ fn write(
     let hash = hash(script).to_string();
     assert_eq!(hash.len(), 64);
 
-    let file_name = script
+    let file_stem = script
         .path
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let name = sanitize_name(file_name.as_ref());
+    let name = sanitize_name(file_stem.as_ref());
 
     let mut workspace_root = target_dir.to_owned();
     workspace_root.push("eval");
@@ -135,12 +135,12 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
             anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
         }
     }
-    let file_name = script
+    let file_stem = script
         .path
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let name = sanitize_name(file_name.as_ref());
+    let name = sanitize_name(file_stem.as_ref());
     let bin_name = name.clone();
     package
         .entry("name".to_owned())
