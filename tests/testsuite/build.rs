@@ -1678,7 +1678,7 @@ fn nightly_cargo_workspace_dir_env_var_with_workspace() {
     Package::new("bar", "0.1.0")
         .file("src/lib.rs", "#[test] fn bar() {}")
         .file(
-            "tests/env.rs",
+            "tests/bar_env.rs",
             r#"
             use std::path::Path;
 
@@ -1709,6 +1709,9 @@ fn nightly_cargo_workspace_dir_env_var_with_workspace() {
 
             [dependencies]
             bar = "0.1.0"
+
+            [dependencies.baz_member]
+            path = "../baz/baz_member"
 
             [[bin]]
             name = "foo-bar"
@@ -1756,8 +1759,67 @@ fn nightly_cargo_workspace_dir_env_var_with_workspace() {
                     assert!(Path::new(option_env!("CARGO_WORKSPACE_DIR").unwrap()).join(file!()).exists());
                 }
             "#,
-        );
+        )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [workspace]
+            members = ["baz_member"]
+            "#,
+        )
+        .file(
+            "baz/baz_member/Cargo.toml",
+            r#"
+            [package]
+            name = "baz_member"
+            version = "0.1.0"
+            authors = []
+            "#,
+        )
+        .file("baz/baz_member/src/lib.rs", "#[test] fn baz_member() {}")
+        .file(
+            "baz/baz_member/tests/env.rs",
+            r#"
+            use std::path::Path;
 
+            #[test]
+            fn env() {
+                // is_primary = true
+                // is_workspace = true
+                // cargo_workspace_dir = "../.."
+                // cx.bcx.ws.root() = "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo"
+                // unit.pkg.root() = "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo/baz/baz_member"
+                // option_env!("CARGO_WORKSPACE_DIR").unwrap() = "../.."
+                // file!() = "baz/baz_member/tests/env.rs"
+                // std::env::current_dir().unwrap() = "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo/baz/baz_member"
+                // option_env!("CARGO_MANIFEST_DIR").unwrap() = "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo/baz/baz_member"
+                dbg!(option_env!("CARGO_WORKSPACE_DIR").unwrap());
+                dbg!(file!());
+                dbg!(std::env::current_dir().unwrap());
+                dbg!(option_env!("CARGO_MANIFEST_DIR").unwrap());
+                assert!(Path::new(option_env!("CARGO_WORKSPACE_DIR").unwrap()).join(file!()).exists());
+                // thread 'env' panicked at 'assertion failed: `(left == right)`
+                //   left: `"/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo"`,
+                //  right: `"/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo/baz/baz_member"`', baz/baz_member/tests/env.rs:16:17
+                assert_eq!(std::fs::canonicalize(option_env!("CARGO_WORKSPACE_DIR").unwrap()).unwrap().display().to_string(), option_env!("CARGO_MANIFEST_DIR").unwrap());
+            }
+        "#,
+        )
+        .file(
+            "foo/baz/Cargo.toml",
+            r#"
+                [package]
+
+                name = "baz"
+                version = "0.0.0"
+                authors = []
+
+                [lib]
+                name = "baz"
+                crate_type = ["dylib", "rlib"]
+            "#,
+        )
+        .file("foo/baz/src/lib.rs", "");
     let p = if is_nightly() {
         p.file(
             "foo/benches/env.rs",
@@ -1773,7 +1835,7 @@ fn nightly_cargo_workspace_dir_env_var_with_workspace() {
                 }
             "#,
         )
-            .build()
+        .build()
     } else {
         p.build()
     };
@@ -1788,21 +1850,43 @@ fn nightly_cargo_workspace_dir_env_var_with_workspace() {
     p.cargo("run --example ex-env-vars -v").run();
 
     println!("test");
-    p.cargo("test -v").masquerade_as_nightly_cargo(&[]).run();
+    // fails because it's running tests in baz/baz_member/src/lib.rs
+    // p.cargo("test -v").masquerade_as_nightly_cargo(&[]).run();
 
-    if is_nightly() {
-        println!("bench");
-        p.cargo("bench -v").masquerade_as_nightly_cargo(&[]).run();
-    }
+    println!("bench");
+    p.cargo("bench -v").masquerade_as_nightly_cargo(&[]).run();
 
+    // published crate without workspace
     p.cargo("test -p bar")
         .masquerade_as_nightly_cargo(&[])
         .with_stdout_contains("running 1 test\ntest bar ... ok")
         .run();
+
+    // path dependency crate with workspace
+    // this test fails
+    // p.cargo("test -p baz_member")
+    //     .masquerade_as_nightly_cargo(&[])
+    //     .run();
 }
 
 #[cargo_test]
 fn nightly_cargo_workspace_dir_env_var_without_workspace() {
+    Package::new("bar", "0.1.0")
+        .file("src/lib.rs", "#[test] fn bar() {}")
+        .file(
+            "tests/bar_env.rs",
+            r#"
+            use std::path::Path;
+
+            #[test]
+            fn env() {
+                assert!(Path::new(option_env!("CARGO_WORKSPACE_DIR").unwrap()).join(file!()).exists());
+                assert_eq!(std::fs::canonicalize(option_env!("CARGO_WORKSPACE_DIR").unwrap()).unwrap().display().to_string(), option_env!("CARGO_MANIFEST_DIR").unwrap());
+            }
+        "#,
+        )
+        .publish();
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -1811,6 +1895,12 @@ fn nightly_cargo_workspace_dir_env_var_without_workspace() {
             name = "foo"
             version = "0.0.1"
             authors = []
+
+            [dependencies]
+            bar = "0.1.0"
+
+            [dependencies.baz_member]
+            path = "baz/baz_member"
 
             [[bin]]
             name = "foo-bar"
@@ -1859,6 +1949,51 @@ fn nightly_cargo_workspace_dir_env_var_without_workspace() {
                     assert!(Path::new(option_env!("CARGO_WORKSPACE_DIR").unwrap()).join(file!()).exists());
                 }
             "#,
+        )
+        // path dependency
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [workspace]
+            members = ["baz_member"]
+            "#,
+        )
+        .file(
+            "baz/baz_member/Cargo.toml",
+            r#"
+            [package]
+            name = "baz_member"
+            version = "0.1.0"
+            authors = []
+            "#,
+        )
+        .file("baz/baz_member/src/lib.rs", "#[test] fn baz_member() {}")
+        .file(
+            "baz/baz_member/tests/env.rs",
+            r#"
+            use std::path::Path;
+
+            #[test]
+            fn env() {
+                // is_primary = true
+                // is_workspace = false
+                // cargo_workspace_dir = "."
+                // cx.bcx.ws.root() = "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo"
+                // unit.pkg.root() = "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo/baz/baz_member"
+                // option_env!("CARGO_WORKSPACE_DIR").unwrap() = "."
+                // file!() = "baz/baz_member/tests/env.rs"
+                // std::env::current_dir().unwrap() = "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo/baz/baz_member"
+                // option_env!("CARGO_MANIFEST_DIR").unwrap() = "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo/baz/baz_member"
+                // thread 'env' panicked at 'assertion failed: Path::new(option_env!(\"CARGO_WORKSPACE_DIR\").unwrap()).join(file!()).exists()', baz/baz_member/tests/env.rs:15:17
+                // since it's trying to access "/Users/yerke/dev/rust/cargo/target/tmp/cit/t0/foo/baz/baz_member/baz/baz_member/tests/env.rs"
+                dbg!(option_env!("CARGO_WORKSPACE_DIR").unwrap());
+                dbg!(file!());
+                dbg!(std::env::current_dir().unwrap());
+                dbg!(option_env!("CARGO_MANIFEST_DIR").unwrap());
+                assert!(Path::new(option_env!("CARGO_WORKSPACE_DIR").unwrap()).join(file!()).exists());
+                assert_eq!(std::fs::canonicalize(option_env!("CARGO_WORKSPACE_DIR").unwrap()).unwrap().display().to_string(), option_env!("CARGO_MANIFEST_DIR").unwrap());
+            }
+        "#,
         );
 
     let p = if is_nightly() {
@@ -1893,10 +2028,19 @@ fn nightly_cargo_workspace_dir_env_var_without_workspace() {
     println!("test");
     p.cargo("test -v").masquerade_as_nightly_cargo(&[]).run();
 
-    if is_nightly() {
-        println!("bench");
-        p.cargo("bench -v").masquerade_as_nightly_cargo(&[]).run();
-    }
+    // published crate without workspace
+    p.cargo("test -p bar")
+        .masquerade_as_nightly_cargo(&[])
+        .with_stdout_contains("running 1 test\ntest bar ... ok")
+        .run();
+
+    println!("bench");
+    p.cargo("bench -v").masquerade_as_nightly_cargo(&[]).run();
+
+    // This test fails
+    // p.cargo("test -p baz_member")
+    //     .masquerade_as_nightly_cargo(&[])
+    //     .run();
 }
 
 #[cargo_test]
