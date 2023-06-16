@@ -17,7 +17,7 @@ cargo\-install \[em] Build and install a Rust binary
 This command manages Cargo\[cq]s local set of installed binary crates. Only
 packages which have executable \fB[[bin]]\fR or \fB[[example]]\fR targets can be
 installed, and all executables are installed into the installation root\[cq]s
-\fBbin\fR folder.
+\fBbin\fR folder. By default only binaries, not examples, are installed.
 .sp
 The installation root is determined, in order of precedence:
 .sp
@@ -177,7 +177,7 @@ Install only the specified binary.
 .sp
 \fB\-\-bins\fR
 .RS 4
-Install all binaries.
+Install all binaries. This is the default behavior.
 .RE
 .sp
 \fB\-\-example\fR \fIname\fR\[u2026]
