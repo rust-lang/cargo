@@ -102,7 +102,7 @@ issue][cargo-issues].
 
 [cargo-issues]: https://github.com/rust-lang/cargo/issues
 
-### Why do binaries have `Cargo.lock` in version control, but not libraries?
+### Why should I always have `Cargo.lock` in version control?
 
 The purpose of a `Cargo.lock` lockfile is to describe the state of the world at
 the time of a successful build. Cargo uses the lockfile to provide
@@ -110,25 +110,24 @@ deterministic builds on different times and different systems, by ensuring that
 the exact same dependencies and versions are used as when the `Cargo.lock` file
 was originally generated.
 
-This property is most desirable from applications and packages which are at the
-very end of the dependency chain (binaries). As a result, it is recommended that
-all binaries check in their `Cargo.lock`.
+This property is desirable for all projects, whether they are intended to be used
+as a library or from applications and packages which are at the very end of the
+dependency chain (binaries). As a result, it is recommended that all projects
+check in their `Cargo.lock`. This allows all users to clone a project and start
+working on it risking unexpected dependency issues.
 
-For libraries the situation is somewhat different. A library is not only used by
-the library developers, but also any downstream consumers of the library. Users
-dependent on the library will not inspect the library’s `Cargo.lock` (even if it
-exists). This is precisely because a library should **not** be deterministically
-recompiled for all users of the library.
+Note that a `Cargo.lock` in a library is only useful when developing it, it is
+ignored when using the library as a dependency. It is however very useful when
+developing. It ensures reproducible tests when going through the version history.
+It also allows advanced users to inspect for library's `Cargo.lock` when facing
+compatibility issues with dependencies. In particular, it allows reproducibility
+across different environments such as a Continuous Integration (CI) server or the
+workstations of all contributors.
 
-If a library ends up being used transitively by several dependencies, it’s
-likely that just a single copy of the library is desired (based on semver
-compatibility). If Cargo used all of the dependencies' `Cargo.lock` files,
-then multiple copies of the library could be used, and perhaps even a version
-conflict.
-
-In other words, libraries specify SemVer requirements for their dependencies but
-cannot see the full picture. Only end products like binaries have a full
-picture to decide what versions of dependencies should be used.
+It is recommended for all projects, and libraries in particular, to regularly
+refresh their lockfile to detect compatibility issues with dependencies as soon
+as possible. You can achieve it manually with [`cargo update`][cargo-update] or
+with tools such as _Dependabot_.
 
 ### Can libraries use `*` as a version for their dependencies?
 
@@ -301,6 +300,7 @@ causes and provide diagnostic techniques to help you out there:
   and `Cargo.toml` using a [custom merge tool].
 
 
+[cargo-update]: ./commands/cargo-update.md
 [links]: https://doc.rust-lang.org/cargo/reference/resolver.html#links
 [conventions in place]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#-sys-packages
 [`direct-minimal-versions`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions
