@@ -93,7 +93,6 @@ struct MkOptions<'a> {
     path: &'a Path,
     name: &'a str,
     source_files: Vec<SourceFileInformation>,
-    bin: bool,
     edition: Option<&'a str>,
     registry: Option<&'a str>,
 }
@@ -448,7 +447,6 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         path,
         name,
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
-        bin: is_bin,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
@@ -553,7 +551,6 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
         version_control,
         path,
         name,
-        bin: has_bin,
         source_files: src_paths_types,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
@@ -745,9 +742,6 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     // for all mutually-incompatible VCS in terms of syntax are in sync.
     let mut ignore = IgnoreList::new();
     ignore.push("/target", "^target$", "target");
-    if !opts.bin {
-        ignore.push("/Cargo.lock", "^Cargo.lock$", "Cargo.lock");
-    }
 
     let vcs = opts.version_control.unwrap_or_else(|| {
         let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());

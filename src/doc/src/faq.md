@@ -104,7 +104,8 @@ issue][cargo-issues].
 
 ### Why have `Cargo.lock` in version control?
 
-Whether you do is dependent on the needs of your package.
+While [`cargo new`] defaults to tracking `Cargo.lock` in version control,
+whether you do is dependent on the needs of your package.
 
 The purpose of a `Cargo.lock` lockfile is to describe the state of the world at
 the time of a successful build.
@@ -139,6 +140,7 @@ The lockfile can also be a source of merge conflicts.
 For strategies to verify newer versions of dependencies via CI,
 see [Verifying Latest Dependencies](guide/continuous-integration.md#verifying-latest-dependencies).
 
+[`cargo new`]: commands/cargo-new.md
 [`cargo add`]: commands/cargo-add.md
 [`cargo install`]: commands/cargo-install.md
 
