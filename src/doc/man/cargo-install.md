@@ -18,7 +18,7 @@ cargo-install --- Build and install a Rust binary
 This command manages Cargo's local set of installed binary crates. Only
 packages which have executable `[[bin]]` or `[[example]]` targets can be
 installed, and all executables are installed into the installation root's
-`bin` folder.
+`bin` folder. By default only binaries, not examples, are installed.
 
 {{> description-install-root }}
 
@@ -141,7 +141,7 @@ Install only the specified binary.
 {{/option}}
 
 {{#option "`--bins`" }}
-Install all binaries.
+Install all binaries. This is the default behavior.
 {{/option}}
 
 {{#option "`--example` _name_..." }}

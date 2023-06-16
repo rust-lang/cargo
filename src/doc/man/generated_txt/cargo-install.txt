@@ -13,7 +13,8 @@ DESCRIPTION
        This command manages Cargo’s local set of installed binary crates.
        Only packages which have executable [[bin]] or [[example]] targets can
        be installed, and all executables are installed into the installation
-       root’s bin folder.
+       root’s bin folder. By default only binaries, not examples, are
+       installed.
 
        The installation root is determined, in order of precedence:
 
@@ -137,7 +138,7 @@ OPTIONS
            Install only the specified binary.
 
        --bins
-           Install all binaries.
+           Install all binaries. This is the default behavior.
 
        --example name…
            Install only the specified example.
