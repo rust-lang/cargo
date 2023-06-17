@@ -510,6 +510,30 @@ fn main() {
 }
 
 #[cargo_test]
+fn test_no_build_rs() {
+    let script = r#"#!/usr/bin/env cargo
+
+fn main() {
+    println!("Hello world!");
+}"#;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .file("build.rs", "broken")
+        .build();
+
+    p.cargo("-Zscript script.rs --help")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout(r#""#)
+        .with_stderr_contains(
+            "\
+[ERROR] could not compile `script` (build script) due to previous error
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_no_autobins() {
     let script = r#"#!/usr/bin/env cargo
 
