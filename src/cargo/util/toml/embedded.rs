@@ -80,14 +80,7 @@ fn write(
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let separator = if file_name.contains('_') {
-        '_'
-    } else {
-        // Since embedded manifests only support `[[bin]]`s, prefer arrow-case as that is the
-        // more common convention for CLIs
-        '-'
-    };
-    let name = sanitize_name(file_name.as_ref(), separator);
+    let name = sanitize_name(file_name.as_ref());
 
     let mut workspace_root = target_dir.to_owned();
     workspace_root.push("eval");
@@ -147,14 +140,7 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let separator = if file_name.contains('_') {
-        '_'
-    } else {
-        // Since embedded manifests only support `[[bin]]`s, prefer arrow-case as that is the
-        // more common convention for CLIs
-        '-'
-    };
-    let name = sanitize_name(file_name.as_ref(), separator);
+    let name = sanitize_name(file_name.as_ref());
     let bin_name = name.clone();
     package
         .entry("name".to_owned())
@@ -207,7 +193,15 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
 }
 
 /// Ensure the package name matches the validation from `ops::cargo_new::check_name`
-fn sanitize_name(name: &str, placeholder: char) -> String {
+fn sanitize_name(name: &str) -> String {
+    let placeholder = if name.contains('_') {
+        '_'
+    } else {
+        // Since embedded manifests only support `[[bin]]`s, prefer arrow-case as that is the
+        // more common convention for CLIs
+        '-'
+    };
+
     let mut name = restricted_names::sanitize_package_name(name, placeholder);
 
     loop {
