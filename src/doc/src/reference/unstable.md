@@ -1185,24 +1185,6 @@ cargo +nightly -Zunstable-options config get build.rustflags
 If no config value is included, it will display all config values. See the
 `--help` output for more options available.
 
-### `doctest-in-workspace`
-
-* Tracking Issue: [#9427](https://github.com/rust-lang/cargo/issues/9427)
-
-The `-Z doctest-in-workspace` flag changes the behavior of the current working
-directory used when running doctests. Historically, Cargo has run `rustdoc
---test` relative to the root of the package, with paths relative from that
-root. However, this is inconsistent with how `rustc` and `rustdoc` are
-normally run in a workspace, where they are run relative to the workspace
-root. This inconsistency causes problems in various ways, such as when passing
-RUSTDOCFLAGS with relative paths, or dealing with diagnostic output.
-
-The `-Z doctest-in-workspace` flag causes cargo to switch to running `rustdoc`
-from the root of the workspace. It also passes the `--test-run-directory` to
-`rustdoc` so that when *running* the tests, they are run from the root of the
-package. This preserves backwards compatibility and is consistent with how
-normal unittests are run.
-
 ### rustc `--print`
 
 * Tracking Issue: [#9357](https://github.com/rust-lang/cargo/issues/9357)
