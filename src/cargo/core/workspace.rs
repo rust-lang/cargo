@@ -726,6 +726,10 @@ impl<'cfg> Workspace<'cfg> {
         if self.members.contains(&manifest_path) {
             return Ok(());
         }
+        if is_path_dep && self.root_maybe().is_embedded() {
+            // Embedded manifests cannot have workspace members
+            return Ok(());
+        }
         if is_path_dep
             && !manifest_path.parent().unwrap().starts_with(self.root())
             && self.find_root(&manifest_path)? != self.root_manifest
@@ -1578,6 +1582,13 @@ impl MaybePackage {
         match *self {
             MaybePackage::Package(ref p) => p.manifest().workspace_config(),
             MaybePackage::Virtual(ref vm) => vm.workspace_config(),
+        }
+    }
+
+    fn is_embedded(&self) -> bool {
+        match self {
+            MaybePackage::Package(p) => p.manifest().is_embedded(),
+            MaybePackage::Virtual(_) => false,
         }
     }
 }

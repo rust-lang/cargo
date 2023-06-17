@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::ffi::OsStr;
 use std::fmt::{self, Display, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
@@ -55,11 +56,27 @@ pub fn read_manifest(
         path.display(),
         source_id
     );
-    let contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
+    let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
+    let embedded = is_embedded(path);
+    if embedded {
+        if !config.cli_unstable().script {
+            return Err(ManifestError::new(
+                anyhow::anyhow!("parsing `{}` requires `-Zscript`", path.display()),
+                path.into(),
+            ));
+        }
+        contents = embedded::expand_manifest(&contents, path, config)
+            .map_err(|err| ManifestError::new(err, path.into()))?;
+    }
 
-    read_manifest_from_str(&contents, path, source_id, config)
+    read_manifest_from_str(&contents, path, embedded, source_id, config)
         .with_context(|| format!("failed to parse manifest at `{}`", path.display()))
         .map_err(|err| ManifestError::new(err, path.into()))
+}
+
+fn is_embedded(path: &Path) -> bool {
+    let ext = path.extension();
+    ext.is_none() || ext == Some(OsStr::new("rs"))
 }
 
 /// Parse an already-loaded `Cargo.toml` as a Cargo manifest.
@@ -70,9 +87,10 @@ pub fn read_manifest(
 /// within the manifest. For virtual manifests, these paths can only
 /// come from patched or replaced dependencies. These paths are not
 /// canonicalized.
-pub fn read_manifest_from_str(
+fn read_manifest_from_str(
     contents: &str,
     manifest_file: &Path,
+    embedded: bool,
     source_id: SourceId,
     config: &Config,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
@@ -128,7 +146,7 @@ pub fn read_manifest_from_str(
     }
     return if manifest.project.is_some() || manifest.package.is_some() {
         let (mut manifest, paths) =
-            TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
+            TomlManifest::to_real_manifest(&manifest, embedded, source_id, package_root, config)?;
         add_unused(manifest.warnings_mut());
         if manifest.targets().iter().all(|t| t.is_custom_build()) {
             bail!(
@@ -1976,6 +1994,7 @@ impl TomlManifest {
 
     pub fn to_real_manifest(
         me: &Rc<TomlManifest>,
+        embedded: bool,
         source_id: SourceId,
         package_root: &Path,
         config: &Config,
@@ -2644,6 +2663,7 @@ impl TomlManifest {
             package.metabuild.clone().map(|sov| sov.0),
             resolve_behavior,
             rustflags,
+            embedded,
         );
         if package.license_file.is_some() && package.license.is_some() {
             manifest.warnings_mut().add_warning(
