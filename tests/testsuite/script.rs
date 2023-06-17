@@ -523,11 +523,16 @@ fn main() {
 
     p.cargo("-Zscript script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
-        .with_stdout(r#""#)
-        .with_stderr_contains(
+        .with_stdout(
+            r#"Hello world!
+"#,
+        )
+        .with_stderr(
             "\
-[ERROR] could not compile `script` (build script) due to previous error
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
         .run();
