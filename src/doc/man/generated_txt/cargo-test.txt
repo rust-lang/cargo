@@ -64,7 +64,7 @@ DESCRIPTION
        uses as the compilation directory of each documentation test. The
        working directory when running each documentation test is set to the
        root directory of the package the test belongs to, and is controlled via
-       rustdocs --test-run-directory option.
+       rustdoc’s --test-run-directory option.
 
 OPTIONS
    Test Options
