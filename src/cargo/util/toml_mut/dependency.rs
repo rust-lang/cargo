@@ -881,7 +881,7 @@ impl GitSource {
 impl std::fmt::Display for GitSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let git_ref = self.git_ref();
-        if let Some(pretty_ref) = git_ref.pretty_ref() {
+        if let Some(pretty_ref) = git_ref.pretty_ref(false) {
             write!(f, "{}?{}", self.git, pretty_ref)
         } else {
             write!(f, "{}", self.git)
