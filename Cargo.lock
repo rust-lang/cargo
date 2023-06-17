@@ -334,7 +334,6 @@ dependencies = [
  "pretty_env_logger",
  "pulldown-cmark",
  "rand",
- "regex",
  "rustfix",
  "same-file",
  "semver",
