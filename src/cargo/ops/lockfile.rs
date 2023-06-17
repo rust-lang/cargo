@@ -69,6 +69,14 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     if resolve.version() < ResolveVersion::default() {
         resolve.set_version(ResolveVersion::default());
         out = serialize_resolve(resolve, orig.as_deref());
+    } else if resolve.version() > ResolveVersion::default()
+        && !ws.config().cli_unstable().next_lockfile_bump
+    {
+        // The next version hasn't yet stabilized.
+        anyhow::bail!(
+            "lock file version `{:?}` requires `-Znext-lockfile-bump`",
+            resolve.version()
+        )
     }
 
     // Ok, if that didn't work just write it out
