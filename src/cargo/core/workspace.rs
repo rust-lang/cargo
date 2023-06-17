@@ -381,7 +381,11 @@ impl<'cfg> Workspace<'cfg> {
     pub fn target_dir(&self) -> Filesystem {
         self.target_dir
             .clone()
-            .unwrap_or_else(|| Filesystem::new(self.root().join("target")))
+            .unwrap_or_else(|| self.default_target_dir())
+    }
+
+    fn default_target_dir(&self) -> Filesystem {
+        Filesystem::new(self.root().join("target"))
     }
 
     /// Returns the root `[replace]` section of this workspace.
