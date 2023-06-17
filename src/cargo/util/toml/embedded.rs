@@ -90,6 +90,9 @@ fn expand_manifest_(
         toml::Value::String(DEFAULT_EDITION.to_string())
     });
     package
+        .entry("build".to_owned())
+        .or_insert_with(|| toml::Value::Boolean(false));
+    package
         .entry("publish".to_owned())
         .or_insert_with(|| toml::Value::Boolean(DEFAULT_PUBLISH));
     for field in AUTO_FIELDS {
@@ -491,6 +494,7 @@ autobenches = false
 autobins = false
 autoexamples = false
 autotests = false
+build = false
 edition = "2021"
 name = "test-"
 publish = false
@@ -520,6 +524,7 @@ autobenches = false
 autobins = false
 autoexamples = false
 autotests = false
+build = false
 edition = "2021"
 name = "test-"
 publish = false
