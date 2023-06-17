@@ -59,9 +59,9 @@ on writing doc tests.
 
 ### Working directory of tests
 
-The working directory of every test is set to the root directory of the package 
-the test belongs to.
-Setting the working directory of tests to the package's root directory makes it 
+The working directory when running each unit and integration test is set to the
+root directory of the package the test belongs to.
+Setting the working directory of tests to the package's root directory makes it
 possible for tests to reliably access the package's files using relative paths,
 regardless from where `cargo test` was executed from.
 
