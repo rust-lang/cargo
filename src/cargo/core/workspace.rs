@@ -1599,7 +1599,8 @@ impl MaybePackage {
         }
     }
 
-    fn is_embedded(&self) -> bool {
+    /// Has an embedded manifest (single-file package)
+    pub fn is_embedded(&self) -> bool {
         match self {
             MaybePackage::Package(p) => p.manifest().is_embedded(),
             MaybePackage::Virtual(_) => false,

@@ -619,5 +619,5 @@ args: []
         )
         .run();
 
-    assert!(local_lockfile_path.exists());
+    assert!(!local_lockfile_path.exists());
 }
