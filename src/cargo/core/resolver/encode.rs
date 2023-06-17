@@ -154,10 +154,18 @@ impl EncodableResolve {
     /// primary uses is to be used with `resolve_with_previous` to guide the
     /// resolver to create a complete Resolve.
     pub fn into_resolve(self, original: &str, ws: &Workspace<'_>) -> CargoResult<Resolve> {
+        let unstable_lockfile_version_allowed = ws.config().cli_unstable().next_lockfile_bump;
         let path_deps = build_path_deps(ws)?;
         let mut checksums = HashMap::new();
 
         let mut version = match self.version {
+            Some(4) => {
+                if unstable_lockfile_version_allowed {
+                    ResolveVersion::V4
+                } else {
+                    anyhow::bail!("lock file version 4 requires `-Znext-lockfile-bump`",)
+                }
+            }
             Some(3) => ResolveVersion::V3,
             Some(n) => bail!(
                 "lock file version `{}` was found, but this version of Cargo \
@@ -612,6 +620,7 @@ impl ser::Serialize for Resolve {
             metadata,
             patch,
             version: match self.version() {
+                ResolveVersion::V4 => Some(4),
                 ResolveVersion::V3 => Some(3),
                 ResolveVersion::V2 | ResolveVersion::V1 => None,
             },

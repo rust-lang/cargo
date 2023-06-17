@@ -80,6 +80,10 @@ pub enum ResolveVersion {
     /// V3 by default staring in 1.53.
     #[default]
     V3,
+    /// Unstable. Will collect a certain amount of changes and then go.
+    ///
+    /// Changes made:
+    V4,
 }
 
 impl Resolve {
