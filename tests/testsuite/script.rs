@@ -35,7 +35,7 @@ args: []
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]debug/echo[EXE]`
+[RUNNING] `[..]/debug/echo[EXE]`
 ",
         )
         .run();
@@ -533,6 +533,31 @@ fn main() {
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn implicit_target_dir() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [ROOT]/home/.cargo/target/[..]/debug/script[EXE]
+args: []
+"#,
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[ROOT]/home/.cargo/target/[..]/debug/script[EXE]`
 ",
         )
         .run();

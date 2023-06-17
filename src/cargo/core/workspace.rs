@@ -381,7 +381,21 @@ impl<'cfg> Workspace<'cfg> {
     pub fn target_dir(&self) -> Filesystem {
         self.target_dir
             .clone()
-            .unwrap_or_else(|| Filesystem::new(self.root().join("target")))
+            .unwrap_or_else(|| self.default_target_dir())
+    }
+
+    fn default_target_dir(&self) -> Filesystem {
+        if self.root_maybe().is_embedded() {
+            let hash = crate::util::hex::short_hash(&self.root_manifest().to_string_lossy());
+            let mut rel_path = PathBuf::new();
+            rel_path.push("target");
+            rel_path.push(&hash[0..2]);
+            rel_path.push(&hash[2..]);
+
+            self.config().home().join(rel_path)
+        } else {
+            Filesystem::new(self.root().join("target"))
+        }
     }
 
     /// Returns the root `[replace]` section of this workspace.
