@@ -65,6 +65,13 @@ Setting the working directory of tests to the package's root directory makes it
 possible for tests to reliably access the package's files using relative paths,
 regardless from where `cargo test` was executed from.
 
+For documentation tests, the working directory when invoking `rustdoc` is set to
+the workspace root directory, and is also the directory `rustdoc` uses as the
+compilation directory of each documentation test.
+The working directory when running each documentation test is set to the root
+directory of the package the test belongs to, and is controlled via `rustdoc`s
+`--test-run-directory` option.
+
 ## OPTIONS
 
 ### Test Options

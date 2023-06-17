@@ -5107,7 +5107,7 @@ fn duplicate_script_with_extra_env() {
         p.cargo("test --workspace -Z doctest-xcompile --doc --target")
             .arg(&target)
             .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-            .with_stdout_contains("test src/lib.rs - (line 2) ... ok")
+            .with_stdout_contains("test foo/src/lib.rs - (line 2) ... ok")
             .run();
     }
 }

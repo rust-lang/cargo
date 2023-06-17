@@ -730,7 +730,6 @@ unstable_cli_options!(
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
-    doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     features: Option<Vec<String>>  = (HIDDEN),
@@ -800,6 +799,9 @@ const STABILIZED_PATCH_IN_CONFIG: &str = "The patch-in-config feature is now alw
 const STABILIZED_NAMED_PROFILES: &str = "The named-profiles feature is now always enabled.\n\
     See https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles \
     for more information";
+
+const STABILIZED_DOCTEST_IN_WORKSPACE: &str =
+    "The doctest-in-workspace feature is now always enabled.";
 
 const STABILIZED_FUTURE_INCOMPAT_REPORT: &str =
     "The future-incompat-report feature is now always enabled.";
@@ -1081,6 +1083,7 @@ impl CliUnstable {
             "multitarget" => stabilized_warn(k, "1.64", STABILISED_MULTITARGET),
             "sparse-registry" => stabilized_warn(k, "1.68", STABILISED_SPARSE_REGISTRY),
             "terminal-width" => stabilized_warn(k, "1.68", STABILIZED_TERMINAL_WIDTH),
+            "doctest-in-workspace" => stabilized_warn(k, "1.72", STABILIZED_DOCTEST_IN_WORKSPACE),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1099,7 +1102,6 @@ impl CliUnstable {
             "config-include" => self.config_include = parse_empty(k, v)?,
             "credential-process" => self.credential_process = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
-            "doctest-in-workspace" => self.doctest_in_workspace = parse_empty(k, v)?,
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "gitoxide" => {

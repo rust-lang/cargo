@@ -2041,7 +2041,7 @@ fn crate_versions_flag_is_overridden() {
     asserts(output_documentation());
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-in-workspace is unstable")]
+#[cargo_test]
 fn doc_test_in_workspace() {
     let p = project()
         .file(
@@ -2087,8 +2087,7 @@ fn doc_test_in_workspace() {
             ",
         )
         .build();
-    p.cargo("test -Zdoctest-in-workspace --doc -vv")
-        .masquerade_as_nightly_cargo(&["doctest-in-workspace"])
+    p.cargo("test --doc -vv")
         .with_stderr_contains("[DOCTEST] crate-a")
         .with_stdout_contains(
             "
@@ -2096,7 +2095,6 @@ running 1 test
 test crate-a/src/lib.rs - (line 1) ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
-
 ",
         )
         .with_stderr_contains("[DOCTEST] crate-b")
@@ -2106,7 +2104,98 @@ running 1 test
 test crate-b/src/lib.rs - (line 1) ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+",
+        )
+        .run();
+}
 
+/// This is a test for <https://github.com/rust-lang/rust/issues/46372>.
+/// The `file!()` macro inside of an `include!()` should output
+/// workspace-relative paths, just like it does in other cases.
+#[cargo_test]
+fn doc_test_include_file() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "child",
+                ]
+                [package]
+                name = "root"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                /// ```
+                /// assert_eq!("src/lib.rs", file!().replace("\\", "/"))
+                /// ```
+                pub mod included {
+                    include!(concat!("../", file!(), ".included.rs"));
+                }
+            "#,
+        )
+        .file(
+            "src/lib.rs.included.rs",
+            r#"
+                /// ```
+                /// assert_eq!(1, 1)
+                /// ```
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "child/Cargo.toml",
+            r#"
+                [package]
+                name = "child"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "child/src/lib.rs",
+            r#"
+                /// ```
+                /// assert_eq!("child/src/lib.rs", file!().replace("\\", "/"))
+                /// ```
+                pub mod included {
+                    include!(concat!("../../", file!(), ".included.rs"));
+                }
+            "#,
+        )
+        .file(
+            "child/src/lib.rs.included.rs",
+            r#"
+                /// ```
+                /// assert_eq!(1, 1)
+                /// ```
+                pub fn foo() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("test --workspace --doc -vv -- --test-threads=1")
+        .with_stderr_contains("[DOCTEST] child")
+        .with_stdout_contains(
+            "
+running 2 tests
+test child/src/../../child/src/lib.rs.included.rs - included::foo (line 2) ... ok
+test child/src/lib.rs - included (line 2) ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+",
+        )
+        .with_stderr_contains("[DOCTEST] root")
+        .with_stdout_contains(
+            "
+running 2 tests
+test src/../src/lib.rs.included.rs - included::foo (line 2) ... ok
+test src/lib.rs - included (line 2) ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 ",
         )
         .run();

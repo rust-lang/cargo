@@ -85,7 +85,6 @@ Each new feature described below should explain how to use it.
     * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
 * rustdoc
-    * [`doctest-in-workspace`](#doctest-in-workspace) --- Fixes workspace-relative paths when running doctests.
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
 * `Cargo.toml` extensions
@@ -1793,3 +1792,11 @@ See [Registry Protocols](registries.md#registry-protocols) for more information.
 The [`cargo logout`] command has been stabilized in the 1.70 release.
 
 [target triple]: ../appendix/glossary.md#target '"target" (glossary)'
+
+
+### `doctest-in-workspace`
+
+The `-Z doctest-in-workspace` option for `cargo test` has been stabilized and
+enabled by default in the 1.72 release. See the
+[`cargo test` documentation](../commands/cargo-test.md#working-directory-of-tests)
+for more information about the working directory for compiling and running tests.

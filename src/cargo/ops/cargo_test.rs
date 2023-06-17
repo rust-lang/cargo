@@ -172,7 +172,6 @@ fn run_doc_tests(
     let config = ws.config();
     let mut errors = Vec::new();
     let doctest_xcompile = config.cli_unstable().doctest_xcompile;
-    let doctest_in_workspace = config.cli_unstable().doctest_in_workspace;
 
     for doctest_info in &compilation.to_doc_test {
         let Doctest {
@@ -215,13 +214,9 @@ fn run_doc_tests(
         p.arg("--crate-name").arg(&unit.target.crate_name());
         p.arg("--test");
 
-        if doctest_in_workspace {
-            add_path_args(ws, unit, &mut p);
-            p.arg("--test-run-directory")
-                .arg(unit.pkg.root().to_path_buf());
-        } else {
-            p.arg(unit.target.src_path().path().unwrap());
-        }
+        add_path_args(ws, unit, &mut p);
+        p.arg("--test-run-directory")
+            .arg(unit.pkg.root().to_path_buf());
 
         if let CompileKind::Target(target) = unit.kind {
             // use `rustc_target()` to properly handle JSON target paths
