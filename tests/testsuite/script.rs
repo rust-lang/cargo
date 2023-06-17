@@ -591,3 +591,33 @@ args: []
         )
         .run();
 }
+
+#[cargo_test]
+fn no_local_lockfile() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+    let local_lockfile_path = p.root().join("Cargo.lock");
+
+    assert!(!local_lockfile_path.exists());
+
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [ROOT]/home/.cargo/target/[..]/debug/script[EXE]
+args: []
+"#,
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[ROOT]/home/.cargo/target/[..]/debug/script[EXE]`
+",
+        )
+        .run();
+
+    assert!(local_lockfile_path.exists());
+}
