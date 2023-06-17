@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 
 use crate::core::Workspace;
+use crate::util::restricted_names;
 use crate::CargoResult;
 use crate::Config;
 
@@ -79,8 +80,7 @@ fn write(
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let separator = '_';
-    let name = sanitize_package_name(file_name.as_ref(), separator);
+    let name = sanitize_name(file_name.as_ref());
 
     let mut workspace_root = target_dir.to_owned();
     workspace_root.push("eval");
@@ -140,8 +140,7 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
         .to_string_lossy();
-    let separator = '_';
-    let name = sanitize_package_name(file_name.as_ref(), separator);
+    let name = sanitize_name(file_name.as_ref());
     let bin_name = name.clone();
     package
         .entry("name".to_owned())
@@ -193,27 +192,35 @@ fn expand_manifest_(script: &RawScript, config: &Config) -> CargoResult<toml::Ta
     Ok(manifest)
 }
 
-fn sanitize_package_name(name: &str, placeholder: char) -> String {
-    let mut slug = String::new();
-    for (i, c) in name.chars().enumerate() {
-        match (i, c) {
-            (0, '0'..='9') => {
-                slug.push(placeholder);
-                slug.push(c);
-            }
-            (_, '0'..='9') | (_, 'a'..='z') | (_, '_') | (_, '-') => {
-                slug.push(c);
-            }
-            (_, 'A'..='Z') => {
-                // Convert uppercase characters to lowercase to avoid `non_snake_case` warnings.
-                slug.push(c.to_ascii_lowercase());
-            }
-            (_, _) => {
-                slug.push(placeholder);
-            }
+/// Ensure the package name matches the validation from `ops::cargo_new::check_name`
+fn sanitize_name(name: &str) -> String {
+    let placeholder = if name.contains('_') {
+        '_'
+    } else {
+        // Since embedded manifests only support `[[bin]]`s, prefer arrow-case as that is the
+        // more common convention for CLIs
+        '-'
+    };
+
+    let mut name = restricted_names::sanitize_package_name(name, placeholder);
+
+    loop {
+        if restricted_names::is_keyword(&name) {
+            name.push(placeholder);
+        } else if restricted_names::is_conflicting_artifact_name(&name) {
+            // Being an embedded manifest, we always assume it is a `[[bin]]`
+            name.push(placeholder);
+        } else if name == "test" {
+            name.push(placeholder);
+        } else if restricted_names::is_windows_reserved(&name) {
+            // Go ahead and be consistent across platforms
+            name.push(placeholder);
+        } else {
+            break;
         }
     }
-    slug
+
+    name
 }
 
 fn hash(script: &RawScript) -> blake3::Hash {
@@ -448,12 +455,12 @@ mod test_expand {
     fn test_default() {
         snapbox::assert_eq(
             r#"[[bin]]
-name = "test"
+name = "test-"
 path = "/home/me/test.rs"
 
 [package]
 edition = "2021"
-name = "test"
+name = "test-"
 publish = false
 version = "0.0.0"
 
@@ -470,7 +477,7 @@ strip = true
     fn test_dependencies() {
         snapbox::assert_eq(
             r#"[[bin]]
-name = "test"
+name = "test-"
 path = "/home/me/test.rs"
 
 [dependencies]
@@ -478,7 +485,7 @@ time = "0.1.25"
 
 [package]
 edition = "2021"
-name = "test"
+name = "test-"
 publish = false
 version = "0.0.0"
 
