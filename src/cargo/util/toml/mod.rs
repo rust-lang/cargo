@@ -2888,20 +2888,41 @@ impl TomlManifest {
         &self,
         build: &Option<StringOrBool>,
         package_root: &Path,
-    ) -> Option<PathBuf> {
+    ) -> CargoResult<Option<PathBuf>> {
         let build_rs = package_root.join("build.rs");
         match *build {
             // Explicitly no build script.
-            Some(StringOrBool::Bool(false)) => None,
-            Some(StringOrBool::Bool(true)) => Some(build_rs),
-            Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
+            Some(StringOrBool::Bool(false)) => Ok(None),
+            Some(StringOrBool::Bool(true)) => Ok(Some(build_rs)),
+            Some(StringOrBool::String(ref s)) => {
+                let custom_build = PathBuf::from(s);
+
+                // Check if custom build path escapes the package root. If so, bail.
+                // Can we assume that package_root is absolute path?
+                if custom_build.is_absolute() {
+                    bail!("custom build script path cannot be absolute");
+                }
+                if custom_build.is_relative() {
+                    let custom_build_path = package_root.join(&custom_build);
+                    let custom_build_path = custom_build_path.canonicalize();
+                    if custom_build_path.is_err() {
+                        bail!("cannot find path to custom build script");
+                    }
+                    let custom_build_path = custom_build_path.unwrap();
+                    if !custom_build_path.starts_with(package_root) {
+                        bail!("custom build script has to be inside package directory");
+                    }
+                }
+
+                Ok(Some(custom_build))
+            }
             None => {
                 // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
                 // a build script.
                 if build_rs.is_file() {
-                    Some(build_rs)
+                    Ok(Some(build_rs))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
         }

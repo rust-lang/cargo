@@ -105,7 +105,7 @@ pub fn targets(
     )?);
 
     // processing the custom build script
-    if let Some(custom_build) = manifest.maybe_custom_build(custom_build, package_root) {
+    if let Some(custom_build) = manifest.maybe_custom_build(custom_build, package_root)? {
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
