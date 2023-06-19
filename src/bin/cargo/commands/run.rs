@@ -85,6 +85,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| to_run_error(config, err))
 }
 
+/// See also `util/toml/mod.rs`s `is_embedded`
 pub fn is_manifest_command(arg: &str) -> bool {
     let path = Path::new(arg);
     1 < path.components().count() || path.extension() == Some(OsStr::new("rs"))

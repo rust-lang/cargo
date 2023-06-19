@@ -74,6 +74,7 @@ pub fn read_manifest(
         .map_err(|err| ManifestError::new(err, path.into()))
 }
 
+/// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
 fn is_embedded(path: &Path) -> bool {
     let ext = path.extension();
     ext.is_none() || ext == Some(OsStr::new("rs"))
