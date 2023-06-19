@@ -54,9 +54,9 @@ and may change in the future; beware of depending on it.
 See the \fIrustdoc book\fR <https://doc.rust\-lang.org/rustdoc/> for more information
 on writing doc tests.
 .SS "Working directory of tests"
-The working directory of every test is set to the root directory of the package 
-the test belongs to.
-Setting the working directory of tests to the package\[cq]s root directory makes it 
+The working directory when running each unit and integration test is set to the
+root directory of the package the test belongs to.
+Setting the working directory of tests to the package\[cq]s root directory makes it
 possible for tests to reliably access the package\[cq]s files using relative paths,
 regardless from where \fBcargo test\fR was executed from.
 .sp
@@ -64,7 +64,7 @@ For documentation tests, the working directory when invoking \fBrustdoc\fR is se
 the workspace root directory, and is also the directory \fBrustdoc\fR uses as the
 compilation directory of each documentation test.
 The working directory when running each documentation test is set to the root
-directory of the package the test belongs to, and is controlled via \fBrustdoc\fRs
+directory of the package the test belongs to, and is controlled via \fBrustdoc\fR\[cq]s
 \fB\-\-test\-run\-directory\fR option.
 .SH "OPTIONS"
 .SS "Test Options"
