@@ -10,6 +10,9 @@ fn main() {
     println!("bin: {bin}");
     println!("args: {args:?}");
 }
+
+#[test]
+fn test () {}
 "#;
 
 #[cfg(unix)]
@@ -620,4 +623,199 @@ args: []
         .run();
 
     assert!(!local_lockfile_path.exists());
+}
+
+#[cargo_test]
+fn cmd_check_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript check --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_build_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript build --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_test_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript test --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_clean_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    // Ensure there is something to clean
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .run();
+
+    p.cargo("-Zscript clean --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_generate_lockfile_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript generate-lockfile --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_metadata_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript metadata --manifest-path script.rs --format-version=1")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_read_manifest_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript read-manifest --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_run_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript run --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_tree_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript tree --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_update_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript update --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_verify_project_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript verify-project --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(1)
+        .with_stdout(r#"{"invalid":"the manifest-path must be a path to a Cargo.toml file"}"#)
+        .run();
 }
