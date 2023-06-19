@@ -634,10 +634,15 @@ fn cmd_check_with_embedded() {
 
     p.cargo("-Zscript check --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[CHECKING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -652,10 +657,15 @@ fn cmd_build_with_embedded() {
 
     p.cargo("-Zscript build --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -670,10 +680,21 @@ fn cmd_test_with_embedded() {
 
     p.cargo("-Zscript test --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            "
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [..]s
+
+",
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] unittests script.rs ([..])
 ",
         )
         .run();
@@ -693,10 +714,13 @@ fn cmd_clean_with_embedded() {
 
     p.cargo("-Zscript clean --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 ",
         )
         .run();
@@ -711,10 +735,13 @@ fn cmd_generate_lockfile_with_embedded() {
 
     p.cargo("-Zscript generate-lockfile --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 ",
         )
         .run();
@@ -729,10 +756,77 @@ fn cmd_metadata_with_embedded() {
 
     p.cargo("-Zscript metadata --manifest-path script.rs --format-version=1")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_json(
+            r#"
+    {
+        "packages": [
+            {
+                "authors": [
+                ],
+                "categories": [],
+                "default_run": null,
+                "name": "script",
+                "version": "0.0.0",
+                "id": "script[..]",
+                "keywords": [],
+                "source": null,
+                "dependencies": [],
+                "edition": "[..]",
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "readme": null,
+                "repository": null,
+                "rust_version": null,
+                "homepage": null,
+                "documentation": null,
+                "homepage": null,
+                "documentation": null,
+                "targets": [
+                    {
+                        "kind": [
+                            "bin"
+                        ],
+                        "crate_types": [
+                            "bin"
+                        ],
+                        "doc": true,
+                        "doctest": false,
+                        "test": true,
+                        "edition": "[..]",
+                        "name": "script",
+                        "src_path": "[..]/script.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]script.rs",
+                "metadata": null,
+                "publish": []
+            }
+        ],
+        "workspace_members": ["script 0.0.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["script 0.0.0 (path+file:[..]foo)"],
+        "resolve": {
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "script 0.0.0 (path+file:[..]foo)"
+                }
+            ],
+            "root": "script 0.0.0 (path+file:[..]foo)"
+        },
+        "target_directory": "[ROOT]/home/.cargo/target/[..]",
+        "version": 1,
+        "workspace_root": "[..]/foo",
+        "metadata": null
+    }"#,
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 ",
         )
         .run();
@@ -747,10 +841,48 @@ fn cmd_read_manifest_with_embedded() {
 
     p.cargo("-Zscript read-manifest --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_json(
+            r#"
+{
+    "authors": [
+    ],
+    "categories": [],
+    "default_run": null,
+    "name":"script",
+    "readme": null,
+    "homepage": null,
+    "documentation": null,
+    "repository": null,
+    "rust_version": null,
+    "version":"0.0.0",
+    "id":"script[..]0.0.0[..](path+file://[..]/foo)",
+    "keywords": [],
+    "license": null,
+    "license_file": null,
+    "links": null,
+    "description": null,
+    "edition": "[..]",
+    "source":null,
+    "dependencies":[],
+    "targets":[{
+        "kind":["bin"],
+        "crate_types":["bin"],
+        "doc": true,
+        "doctest": false,
+        "test": true,
+        "edition": "[..]",
+        "name":"script",
+        "src_path":"[..]/script.rs"
+    }],
+    "features":{},
+    "manifest_path":"[..]script.rs",
+    "metadata": null,
+    "publish": []
+}"#,
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 ",
         )
         .run();
@@ -764,10 +896,17 @@ fn cmd_run_with_embedded() {
 
     p.cargo("-Zscript run --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            r#"bin: [..]/debug/script[EXE]
+args: []
+"#,
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/script[EXE]`
 ",
         )
         .run();
@@ -781,10 +920,14 @@ fn cmd_tree_with_embedded() {
 
     p.cargo("-Zscript tree --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            "\
+script v0.0.0 ([ROOT]/foo)
+",
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 ",
         )
         .run();
@@ -798,10 +941,13 @@ fn cmd_update_with_embedded() {
 
     p.cargo("-Zscript update --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
         .with_stderr(
             "\
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 ",
         )
         .run();
@@ -815,7 +961,11 @@ fn cmd_verify_project_with_embedded() {
 
     p.cargo("-Zscript verify-project --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(1)
-        .with_stdout(r#"{"invalid":"the manifest-path must be a path to a Cargo.toml file"}"#)
+        .with_json(r#"{"success":"true"}"#)
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+",
+        )
         .run();
 }

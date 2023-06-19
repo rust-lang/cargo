@@ -75,9 +75,11 @@ pub fn read_manifest(
 }
 
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
-fn is_embedded(path: &Path) -> bool {
+pub fn is_embedded(path: &Path) -> bool {
     let ext = path.extension();
-    ext.is_none() || ext == Some(OsStr::new("rs"))
+    ext == Some(OsStr::new("rs")) ||
+        // Provide better errors by not considering directories to be embedded manifests
+        (ext.is_none() && path.is_file())
 }
 
 /// Parse an already-loaded `Cargo.toml` as a Cargo manifest.
