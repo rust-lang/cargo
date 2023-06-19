@@ -735,7 +735,6 @@ unstable_cli_options!(
     features: Option<Vec<String>>  = (HIDDEN),
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
-    jobserver_per_rustc: bool = (HIDDEN),
     lints: bool = ("Pass `[lints]` to the linting tools"),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
@@ -1111,7 +1110,6 @@ impl CliUnstable {
                 )?
             }
             "host-config" => self.host_config = parse_empty(k, v)?,
-            "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "lints" => self.lints = parse_empty(k, v)?,
             "next-lockfile-bump" => self.next_lockfile_bump = parse_empty(k, v)?,
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
