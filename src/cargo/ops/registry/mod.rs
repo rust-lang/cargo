@@ -6,6 +6,7 @@ mod login;
 mod logout;
 mod publish;
 mod search;
+mod yank;
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -34,6 +35,7 @@ pub use self::logout::registry_logout;
 pub use self::publish::publish;
 pub use self::publish::PublishOpts;
 pub use self::search::search;
+pub use self::yank::yank;
 
 /// Registry settings loaded from config files.
 ///
@@ -426,68 +428,6 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
                 (None, None) => drop_println!(config),
             }
         }
-    }
-
-    Ok(())
-}
-
-pub fn yank(
-    config: &Config,
-    krate: Option<String>,
-    version: Option<String>,
-    token: Option<Secret<String>>,
-    index: Option<String>,
-    undo: bool,
-    reg: Option<String>,
-) -> CargoResult<()> {
-    let name = match krate {
-        Some(name) => name,
-        None => {
-            let manifest_path = find_root_manifest_for_wd(config.cwd())?;
-            let ws = Workspace::new(&manifest_path, config)?;
-            ws.current()?.package_id().name().to_string()
-        }
-    };
-    let version = match version {
-        Some(v) => v,
-        None => bail!("a version must be specified to yank"),
-    };
-
-    let message = if undo {
-        auth::Mutation::Unyank {
-            name: &name,
-            vers: &version,
-        }
-    } else {
-        auth::Mutation::Yank {
-            name: &name,
-            vers: &version,
-        }
-    };
-
-    let (mut registry, _) = registry(
-        config,
-        token.as_ref().map(Secret::as_deref),
-        index.as_deref(),
-        reg.as_deref(),
-        true,
-        Some(message),
-    )?;
-
-    let package_spec = format!("{}@{}", name, version);
-    if undo {
-        config.shell().status("Unyank", package_spec)?;
-        registry.unyank(&name, &version).with_context(|| {
-            format!(
-                "failed to undo a yank from the registry at {}",
-                registry.host()
-            )
-        })?;
-    } else {
-        config.shell().status("Yank", package_spec)?;
-        registry
-            .yank(&name, &version)
-            .with_context(|| format!("failed to yank from the registry at {}", registry.host()))?;
     }
 
     Ok(())
