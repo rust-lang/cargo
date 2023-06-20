@@ -3,11 +3,10 @@
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html
 
 mod publish;
+mod search;
 
-use std::cmp;
 use std::collections::HashSet;
 use std::io::{self, BufRead};
-use std::iter::repeat;
 use std::path::PathBuf;
 use std::str;
 use std::task::Poll;
@@ -19,9 +18,6 @@ use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use pasetors::keys::{AsymmetricKeyPair, Generate};
 use pasetors::paserk::FormatAsPaserk;
-use termcolor::Color::Green;
-use termcolor::ColorSpec;
-use url::Url;
 
 use crate::core::source::Source;
 use crate::core::{SourceId, Workspace};
@@ -33,11 +29,12 @@ use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::network;
-use crate::util::{truncate_with_ellipsis, IntoUrl};
+use crate::util::IntoUrl;
 use crate::{drop_print, drop_println, version};
 
 pub use self::publish::publish;
 pub use self::publish::PublishOpts;
+pub use self::search::search;
 
 /// Registry settings loaded from config files.
 ///
@@ -721,83 +718,4 @@ struct RegistrySourceIds {
     ///
     /// User-defined source replacement is not applied.
     replacement: SourceId,
-}
-
-pub fn search(
-    query: &str,
-    config: &Config,
-    index: Option<String>,
-    limit: u32,
-    reg: Option<String>,
-) -> CargoResult<()> {
-    let (mut registry, source_ids) =
-        registry(config, None, index.as_deref(), reg.as_deref(), false, None)?;
-    let (crates, total_crates) = registry.search(query, limit).with_context(|| {
-        format!(
-            "failed to retrieve search results from the registry at {}",
-            registry.host()
-        )
-    })?;
-
-    let names = crates
-        .iter()
-        .map(|krate| format!("{} = \"{}\"", krate.name, krate.max_version))
-        .collect::<Vec<String>>();
-
-    let description_margin = names.iter().map(|s| s.len() + 4).max().unwrap_or_default();
-
-    let description_length = cmp::max(80, 128 - description_margin);
-
-    let descriptions = crates.iter().map(|krate| {
-        krate
-            .description
-            .as_ref()
-            .map(|desc| truncate_with_ellipsis(&desc.replace("\n", " "), description_length))
-    });
-
-    for (name, description) in names.into_iter().zip(descriptions) {
-        let line = match description {
-            Some(desc) => {
-                let space = repeat(' ')
-                    .take(description_margin - name.len())
-                    .collect::<String>();
-                name + &space + "# " + &desc
-            }
-            None => name,
-        };
-        let mut fragments = line.split(query).peekable();
-        while let Some(fragment) = fragments.next() {
-            let _ = config.shell().write_stdout(fragment, &ColorSpec::new());
-            if fragments.peek().is_some() {
-                let _ = config
-                    .shell()
-                    .write_stdout(query, &ColorSpec::new().set_bold(true).set_fg(Some(Green)));
-            }
-        }
-        let _ = config.shell().write_stdout("\n", &ColorSpec::new());
-    }
-
-    let search_max_limit = 100;
-    if total_crates > limit && limit < search_max_limit {
-        let _ = config.shell().write_stdout(
-            format_args!(
-                "... and {} crates more (use --limit N to see more)\n",
-                total_crates - limit
-            ),
-            &ColorSpec::new(),
-        );
-    } else if total_crates > limit && limit >= search_max_limit {
-        let extra = if source_ids.original.is_crates_io() {
-            let url = Url::parse_with_params("https://crates.io/search", &[("q", query)])?;
-            format!(" (go to {url} to see more)")
-        } else {
-            String::new()
-        };
-        let _ = config.shell().write_stdout(
-            format_args!("... and {} crates more{}\n", total_crates - limit, extra),
-            &ColorSpec::new(),
-        );
-    }
-
-    Ok(())
 }
