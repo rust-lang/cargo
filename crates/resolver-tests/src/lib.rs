@@ -179,7 +179,6 @@ pub fn resolve_with_config_raw(
         used: HashSet::new(),
     };
     let summary = Summary::new(
-        config,
         pkg_id("root"),
         deps,
         &BTreeMap::new(),
@@ -581,7 +580,6 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
         None
     };
     Summary::new(
-        &Config::default().unwrap(),
         name.to_pkgid(),
         dep,
         &BTreeMap::new(),
@@ -610,7 +608,6 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
         None
     };
     Summary::new(
-        &Config::default().unwrap(),
         pkg_id_loc(name, loc),
         Vec::new(),
         &BTreeMap::new(),
@@ -625,7 +622,6 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
     deps.remove(ind);
     // note: more things will need to be copied over in the future, but it works for now.
     Summary::new(
-        &Config::default().unwrap(),
         sum.package_id(),
         deps,
         &BTreeMap::new(),

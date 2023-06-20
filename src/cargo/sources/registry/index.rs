@@ -408,7 +408,6 @@ impl<'cfg> RegistryIndex<'cfg> {
         'a: 'b,
     {
         let source_id = self.source_id;
-        let config = self.config;
 
         // First up parse what summaries we have available.
         let name = InternedString::new(name);
@@ -425,15 +424,13 @@ impl<'cfg> RegistryIndex<'cfg> {
             .versions
             .iter_mut()
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
-            .filter_map(
-                move |maybe| match maybe.parse(config, raw_data, source_id) {
-                    Ok(summary) => Some(summary),
-                    Err(e) => {
-                        info!("failed to parse `{}` registry package: {}", name, e);
-                        None
-                    }
-                },
-            )
+            .filter_map(move |maybe| match maybe.parse(raw_data, source_id) {
+                Ok(summary) => Some(summary),
+                Err(e) => {
+                    info!("failed to parse `{}` registry package: {}", name, e);
+                    None
+                }
+            })
             .filter(move |is| {
                 if is.v > INDEX_V_MAX {
                     debug!(
@@ -714,7 +711,7 @@ impl Summaries {
                     // allow future cargo implementations to break the
                     // interpretation of each line here and older cargo will simply
                     // ignore the new lines.
-                    let summary = match IndexSummary::parse(config, line, source_id) {
+                    let summary = match IndexSummary::parse(line, source_id) {
                         Ok(summary) => summary,
                         Err(e) => {
                             // This should only happen when there is an index
@@ -863,17 +860,12 @@ impl MaybeIndexSummary {
     /// Does nothing if this is already `Parsed`, and otherwise the `raw_data`
     /// passed in is sliced with the bounds in `Unparsed` and then actually
     /// parsed.
-    fn parse(
-        &mut self,
-        config: &Config,
-        raw_data: &[u8],
-        source_id: SourceId,
-    ) -> CargoResult<&IndexSummary> {
+    fn parse(&mut self, raw_data: &[u8], source_id: SourceId) -> CargoResult<&IndexSummary> {
         let (start, end) = match self {
             MaybeIndexSummary::Unparsed { start, end } => (*start, *end),
             MaybeIndexSummary::Parsed(summary) => return Ok(summary),
         };
-        let summary = IndexSummary::parse(config, &raw_data[start..end], source_id)?;
+        let summary = IndexSummary::parse(&raw_data[start..end], source_id)?;
         *self = MaybeIndexSummary::Parsed(summary);
         match self {
             MaybeIndexSummary::Unparsed { .. } => unreachable!(),
@@ -894,7 +886,7 @@ impl IndexSummary {
     ///
     /// The `line` provided is expected to be valid JSON. It is supposed to be
     /// a [`IndexPackage`].
-    fn parse(config: &Config, line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
+    fn parse(line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
         // ****CAUTION**** Please be extremely careful with returning errors
         // from this function. Entries that error are not included in the
         // index cache, and can cause cargo to get confused when switching
@@ -925,7 +917,7 @@ impl IndexSummary {
                 features.entry(name).or_default().extend(values);
             }
         }
-        let mut summary = Summary::new(config, pkgid, deps, &features, links, rust_version)?;
+        let mut summary = Summary::new(pkgid, deps, &features, links, rust_version)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,

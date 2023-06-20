@@ -81,7 +81,6 @@ impl VersionPreferences {
 mod test {
     use super::*;
     use crate::core::SourceId;
-    use crate::util::Config;
     use std::collections::BTreeMap;
 
     fn pkgid(name: &str, version: &str) -> PackageId {
@@ -98,10 +97,8 @@ mod test {
 
     fn summ(name: &str, version: &str) -> Summary {
         let pkg_id = pkgid(name, version);
-        let config = Config::default().unwrap();
         let features = BTreeMap::new();
         Summary::new(
-            &config,
             pkg_id,
             Vec::new(),
             &features,
