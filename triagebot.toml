@@ -137,7 +137,7 @@ trigger_files = [
 ]
 
 [autolabel."A-interacts-with-crates.io"]
-trigger_files = ["crates/crates-io/", "src/cargo/ops/registry.rs"]
+trigger_files = ["crates/crates-io/", "src/cargo/ops/registry/"]
 
 [autolabel."A-layout"]
 trigger_files = [
@@ -180,7 +180,7 @@ trigger_files = ["src/cargo/core/compiler/fingerprint/"]
 trigger_files = ["src/cargo/sources/registry/", "src/cargo/core/registry.rs"]
 
 [autolabel."A-registry-authentication"]
-trigger_files = ["src/cargo/util/auth.rs", "credential/"]
+trigger_files = ["src/cargo/util/auth/", "credential/"]
 
 [autolabel."A-semver"]
 trigger_files = [
@@ -266,10 +266,10 @@ trigger_files = ["src/bin/cargo/commands/install.rs", "src/cargo/ops/cargo_insta
 trigger_files = ["src/bin/cargo/commands/locate_project.rs"]
 
 [autolabel."Command-login"]
-trigger_files = ["src/bin/cargo/commands/login.rs"]
+trigger_files = ["src/bin/cargo/commands/login.rs", "src/cargo/ops/registry/login.rs"]
 
 [autolabel."Command-logout"]
-trigger_files = ["src/bin/cargo/commands/logout.rs"]
+trigger_files = ["src/bin/cargo/commands/logout.rs", "src/cargo/ops/registry/logout.rs"]
 
 [autolabel."Command-metadata"]
 trigger_files = ["src/bin/cargo/commands/metadata.rs", "src/cargo/ops/cargo_output_metadata.rs"]
@@ -278,7 +278,7 @@ trigger_files = ["src/bin/cargo/commands/metadata.rs", "src/cargo/ops/cargo_outp
 trigger_files = ["src/bin/cargo/commands/new.rs", "src/cargo/ops/cargo_new.rs"]
 
 [autolabel."Command-owner"]
-trigger_files = ["src/bin/cargo/commands/owner.rs"]
+trigger_files = ["src/bin/cargo/commands/owner.rs", "src/cargo/ops/registry/owner.rs"]
 
 [autolabel."Command-package"]
 trigger_files = ["src/bin/cargo/commands/package.rs", "src/cargo/ops/cargo_package.rs"]
@@ -287,7 +287,7 @@ trigger_files = ["src/bin/cargo/commands/package.rs", "src/cargo/ops/cargo_packa
 trigger_files = ["src/bin/cargo/commands/pkgid.rs", "src/cargo/ops/cargo_pkgid.rs"]
 
 [autolabel."Command-publish"]
-trigger_files = ["src/bin/cargo/commands/publish.rs"]
+trigger_files = ["src/bin/cargo/commands/publish.rs", "src/cargo/ops/registry/publish.rs"]
 
 [autolabel."Command-read-manifest"]
 trigger_files = ["src/bin/cargo/commands/read_manifest.rs", "src/cargo/ops/cargo_read_manifest.rs"]
@@ -308,7 +308,7 @@ trigger_files = ["src/bin/cargo/commands/rustc.rs"]
 trigger_files = ["src/bin/cargo/commands/rustdoc.rs"]
 
 [autolabel."Command-search"]
-trigger_files = ["src/bin/cargo/commands/search.rs"]
+trigger_files = ["src/bin/cargo/commands/search.rs", "src/cargo/ops/registry/search.rs"]
 
 [autolabel."Command-test"]
 trigger_files = ["src/bin/cargo/commands/test.rs", "src/cargo/ops/cargo_test.rs"]
@@ -332,4 +332,4 @@ trigger_files = ["src/bin/cargo/commands/verify_project.rs"]
 trigger_files = ["src/bin/cargo/commands/version.rs"]
 
 [autolabel."Command-yank"]
-trigger_files = ["src/bin/cargo/commands/yank.rs"]
+trigger_files = ["src/bin/cargo/commands/yank.rs", "src/cargo/ops/registry/yank.rs"]
