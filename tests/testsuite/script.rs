@@ -626,6 +626,43 @@ args: []
 }
 
 #[cargo_test]
+fn cmd_check_requires_nightly() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("check --manifest-path script.rs")
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+error: embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_check_requires_z_flag() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("check --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+error: embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cmd_check_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
