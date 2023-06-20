@@ -4,6 +4,7 @@
 
 mod login;
 mod logout;
+mod owner;
 mod publish;
 mod search;
 mod yank;
@@ -20,18 +21,19 @@ use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 
 use crate::core::source::Source;
-use crate::core::{SourceId, Workspace};
+use crate::core::SourceId;
 use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::auth::{self, Secret};
 use crate::util::config::{Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::CargoResult;
-use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::network;
 use crate::util::IntoUrl;
-use crate::{drop_print, drop_println, version};
+use crate::version;
 
 pub use self::login::registry_login;
 pub use self::logout::registry_logout;
+pub use self::owner::modify_owners;
+pub use self::owner::OwnersOptions;
 pub use self::publish::publish;
 pub use self::publish::PublishOpts;
 pub use self::search::search;
@@ -352,85 +354,6 @@ impl HttpTimeout {
         handle.low_speed_limit(self.low_speed_limit)?;
         Ok(())
     }
-}
-
-pub struct OwnersOptions {
-    pub krate: Option<String>,
-    pub token: Option<Secret<String>>,
-    pub index: Option<String>,
-    pub to_add: Option<Vec<String>>,
-    pub to_remove: Option<Vec<String>>,
-    pub list: bool,
-    pub registry: Option<String>,
-}
-
-pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
-    let name = match opts.krate {
-        Some(ref name) => name.clone(),
-        None => {
-            let manifest_path = find_root_manifest_for_wd(config.cwd())?;
-            let ws = Workspace::new(&manifest_path, config)?;
-            ws.current()?.package_id().name().to_string()
-        }
-    };
-
-    let mutation = auth::Mutation::Owners { name: &name };
-
-    let (mut registry, _) = registry(
-        config,
-        opts.token.as_ref().map(Secret::as_deref),
-        opts.index.as_deref(),
-        opts.registry.as_deref(),
-        true,
-        Some(mutation),
-    )?;
-
-    if let Some(ref v) = opts.to_add {
-        let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        let msg = registry.add_owners(&name, &v).with_context(|| {
-            format!(
-                "failed to invite owners to crate `{}` on registry at {}",
-                name,
-                registry.host()
-            )
-        })?;
-
-        config.shell().status("Owner", msg)?;
-    }
-
-    if let Some(ref v) = opts.to_remove {
-        let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        config
-            .shell()
-            .status("Owner", format!("removing {:?} from crate {}", v, name))?;
-        registry.remove_owners(&name, &v).with_context(|| {
-            format!(
-                "failed to remove owners from crate `{}` on registry at {}",
-                name,
-                registry.host()
-            )
-        })?;
-    }
-
-    if opts.list {
-        let owners = registry.list_owners(&name).with_context(|| {
-            format!(
-                "failed to list owners of crate `{}` on registry at {}",
-                name,
-                registry.host()
-            )
-        })?;
-        for owner in owners.iter() {
-            drop_print!(config, "{}", owner.login);
-            match (owner.name.as_ref(), owner.email.as_ref()) {
-                (Some(name), Some(email)) => drop_println!(config, " ({} <{}>)", name, email),
-                (Some(s), None) | (None, Some(s)) => drop_println!(config, " ({})", s),
-                (None, None) => drop_println!(config),
-            }
-        }
-    }
-
-    Ok(())
 }
 
 /// Gets the SourceId for an index or registry setting.
