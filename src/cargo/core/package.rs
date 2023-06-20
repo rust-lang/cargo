@@ -24,10 +24,11 @@ use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{SourceMap, Summary, Workspace};
-use crate::ops;
 use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, HttpNotSuccessful, DEBUG_HEADERS};
 use crate::util::interning::InternedString;
+use crate::util::network::http::http_handle_and_timeout;
+use crate::util::network::http::HttpTimeout;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
@@ -348,7 +349,7 @@ pub struct Downloads<'a, 'cfg> {
     /// Note that timeout management is done manually here instead of in libcurl
     /// because we want to apply timeouts to an entire batch of operations, not
     /// any one particular single operation.
-    timeout: ops::HttpTimeout,
+    timeout: HttpTimeout,
     /// Last time bytes were received.
     updated_at: Cell<Instant>,
     /// This is a slow-speed check. It is reset to `now + timeout_duration`
@@ -441,7 +442,7 @@ impl<'cfg> PackageSet<'cfg> {
 
     pub fn enable_download<'a>(&'a self) -> CargoResult<Downloads<'a, 'cfg>> {
         assert!(!self.downloading.replace(true));
-        let timeout = ops::HttpTimeout::new(self.config)?;
+        let timeout = HttpTimeout::new(self.config)?;
         Ok(Downloads {
             start: Instant::now(),
             set: self,
@@ -713,7 +714,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         debug!("downloading {} as {}", id, token);
         assert!(self.pending_ids.insert(id));
 
-        let (mut handle, _timeout) = ops::http_handle_and_timeout(self.set.config)?;
+        let (mut handle, _timeout) = http_handle_and_timeout(self.set.config)?;
         handle.get(true)?;
         handle.url(&url)?;
         handle.follow_location(true)?; // follow redirects
