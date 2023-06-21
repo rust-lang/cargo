@@ -458,6 +458,21 @@ Caused by:
 }
 
 #[cargo_test]
+fn missing_script_rs() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] manifest path `script.rs` does not exist
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_name_same_as_dependency() {
     Package::new("script", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -700,6 +715,44 @@ fn cmd_check_with_embedded() {
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
 [CHECKING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_check_with_missing_script_rs() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-Zscript check --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[ERROR] manifest path `script.rs` does not exist
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_check_with_missing_script() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-Zscript check --manifest-path script")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
 ",
         )
         .run();
