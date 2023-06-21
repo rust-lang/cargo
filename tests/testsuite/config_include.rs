@@ -84,33 +84,57 @@ fn works_with_cli() {
 }
 
 #[cargo_test]
-fn left_to_right() {
-    // How it merges multiple includes.
+fn left_to_right_bottom_to_top() {
+    // How it merges multiple nested includes.
     write_config_at(
         ".cargo/config",
         "
-        include = ['one.toml', 'two.toml']
-        primary = 1
+        include = ['left-middle.toml', 'right-middle.toml']
+        top = 1
         ",
     );
     write_config_at(
-        ".cargo/one.toml",
+        ".cargo/right-middle.toml",
         "
-        one = 1
-        primary = 2
+        include = 'right-bottom.toml'
+        top = 0
+        right-middle = 0
         ",
     );
     write_config_at(
-        ".cargo/two.toml",
+        ".cargo/right-bottom.toml",
         "
-        two = 2
-        primary = 3
+        top = -1
+        right-middle = -1
+        right-bottom = -1
+        ",
+    );
+    write_config_at(
+        ".cargo/left-middle.toml",
+        "
+        include = 'left-bottom.toml'
+        top = -2
+        right-middle = -2
+        right-bottom = -2
+        left-middle = -2
+        ",
+    );
+    write_config_at(
+        ".cargo/left-bottom.toml",
+        "
+        top = -3
+        right-middle = -3
+        right-bottom = -3
+        left-middle = -3
+        left-bottom = -3
         ",
     );
     let config = ConfigBuilder::new().unstable_flag("config-include").build();
-    assert_eq!(config.get::<i32>("primary").unwrap(), 1);
-    assert_eq!(config.get::<i32>("one").unwrap(), 1);
-    assert_eq!(config.get::<i32>("two").unwrap(), 2);
+    assert_eq!(config.get::<i32>("top").unwrap(), 1);
+    assert_eq!(config.get::<i32>("right-middle").unwrap(), 0);
+    assert_eq!(config.get::<i32>("right-bottom").unwrap(), -1);
+    assert_eq!(config.get::<i32>("left-middle").unwrap(), -2);
+    assert_eq!(config.get::<i32>("left-bottom").unwrap(), -3);
 }
 
 #[cargo_test]
@@ -148,7 +172,7 @@ fn wrong_file_extension() {
         .build_err();
     assert_error(
         config.unwrap_err(),
-            "\
+        "\
 could not load Cargo configuration
 
 Caused by:
