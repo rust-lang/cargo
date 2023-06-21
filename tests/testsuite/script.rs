@@ -438,6 +438,26 @@ args: []
 }
 
 #[cargo_test]
+fn script_like_dir() {
+    let p = cargo_test_support::project()
+        .file("script.rs/foo", "something")
+        .build();
+
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to read `[ROOT]/foo/script.rs`
+
+Caused by:
+  Is a directory (os error 21)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_name_same_as_dependency() {
     Package::new("script", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
