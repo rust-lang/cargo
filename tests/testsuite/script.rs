@@ -10,6 +10,9 @@ fn main() {
     println!("bin: {bin}");
     println!("args: {args:?}");
 }
+
+#[test]
+fn test () {}
 "#;
 
 #[cfg(unix)]
@@ -458,6 +461,38 @@ args: []
 }
 
 #[cargo_test]
+fn script_like_dir() {
+    let p = cargo_test_support::project()
+        .file("script.rs/foo", "something")
+        .build();
+
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: manifest path `script.rs` is a directory but expected a file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn missing_script_rs() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] manifest path `script.rs` does not exist
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_name_same_as_dependency() {
     Package::new("script", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -643,4 +678,424 @@ args: []
         .run();
 
     assert!(!local_lockfile_path.exists());
+}
+
+#[cargo_test]
+fn cmd_check_requires_nightly() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("check --manifest-path script.rs")
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+error: embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_check_requires_z_flag() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("check --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+error: embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_check_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript check --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[CHECKING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_check_with_missing_script_rs() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-Zscript check --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[ERROR] manifest path `script.rs` does not exist
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_check_with_missing_script() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-Zscript check --manifest-path script")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_build_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript build --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_test_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript test --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            "
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [..]s
+
+",
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] unittests script.rs ([..])
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_clean_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    // Ensure there is something to clean
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .run();
+
+    p.cargo("-Zscript clean --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_generate_lockfile_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript generate-lockfile --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_metadata_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript metadata --manifest-path script.rs --format-version=1")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_json(
+            r#"
+    {
+        "packages": [
+            {
+                "authors": [
+                ],
+                "categories": [],
+                "default_run": null,
+                "name": "script",
+                "version": "0.0.0",
+                "id": "script[..]",
+                "keywords": [],
+                "source": null,
+                "dependencies": [],
+                "edition": "[..]",
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "readme": null,
+                "repository": null,
+                "rust_version": null,
+                "homepage": null,
+                "documentation": null,
+                "homepage": null,
+                "documentation": null,
+                "targets": [
+                    {
+                        "kind": [
+                            "bin"
+                        ],
+                        "crate_types": [
+                            "bin"
+                        ],
+                        "doc": true,
+                        "doctest": false,
+                        "test": true,
+                        "edition": "[..]",
+                        "name": "script",
+                        "src_path": "[..]/script.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]script.rs",
+                "metadata": null,
+                "publish": []
+            }
+        ],
+        "workspace_members": ["script 0.0.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["script 0.0.0 (path+file:[..]foo)"],
+        "resolve": {
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "script 0.0.0 (path+file:[..]foo)"
+                }
+            ],
+            "root": "script 0.0.0 (path+file:[..]foo)"
+        },
+        "target_directory": "[ROOT]/home/.cargo/target/[..]",
+        "version": 1,
+        "workspace_root": "[..]/foo",
+        "metadata": null
+    }"#,
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_read_manifest_with_embedded() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript read-manifest --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_json(
+            r#"
+{
+    "authors": [
+    ],
+    "categories": [],
+    "default_run": null,
+    "name":"script",
+    "readme": null,
+    "homepage": null,
+    "documentation": null,
+    "repository": null,
+    "rust_version": null,
+    "version":"0.0.0",
+    "id":"script[..]0.0.0[..](path+file://[..]/foo)",
+    "keywords": [],
+    "license": null,
+    "license_file": null,
+    "links": null,
+    "description": null,
+    "edition": "[..]",
+    "source":null,
+    "dependencies":[],
+    "targets":[{
+        "kind":["bin"],
+        "crate_types":["bin"],
+        "doc": true,
+        "doctest": false,
+        "test": true,
+        "edition": "[..]",
+        "name":"script",
+        "src_path":"[..]/script.rs"
+    }],
+    "features":{},
+    "manifest_path":"[..]script.rs",
+    "metadata": null,
+    "publish": []
+}"#,
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_run_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript run --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [..]/debug/script[EXE]
+args: []
+"#,
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/script[EXE]`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_tree_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript tree --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            "\
+script v0.0.0 ([ROOT]/foo)
+",
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_update_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript update --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            "\
+",
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_verify_project_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript verify-project --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_json(r#"{"success":"true"}"#)
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+",
+        )
+        .run();
 }
