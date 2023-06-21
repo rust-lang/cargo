@@ -450,27 +450,30 @@ cargo check --keep-going -Z unstable-options
 ### config-include
 * Tracking Issue: [#7723](https://github.com/rust-lang/cargo/issues/7723)
 
+This feature requires the `-Zconfig-include` command-line option.
+
 The `include` key in a config file can be used to load another config file. It
-takes a string for a path to another file relative to the config file, or a
-list of strings. It requires the `-Zconfig-include` command-line option.
+takes a string for a path to another file relative to the config file, or an
+array of config file paths. Only path ending with `.toml` is accepted.
 
 ```toml
-# .cargo/config
-include = '../../some-common-config.toml'
+# a path ending with `.toml`
+include = "path/to/mordor.toml"
+
+# or an array of paths
+include = ["frodo.toml", "samwise.toml"]
 ```
 
-The config values are first loaded from the include path, and then the config
-file's own values are merged on top of it.
+Unlike other config values, the merge behavior of the `include` key is
+different. When a config file contains an `include` key:
 
-This can be paired with [config-cli](#config-cli) to specify a file to load
-from the command-line. Pass a path to a config file as the argument to
-`--config`:
-
-```console
-cargo +nightly -Zunstable-options -Zconfig-include --config somefile.toml build
-```
-
-CLI paths are relative to the current working directory.
+1. The config values are first loaded from the `include` path.
+    * If the value of the `include` key is an array of paths, the config values
+      are loaded and merged from left to right for each path.
+    * Recurse this step if the config values from the `include` path also
+      contain an `include` key.
+2. Then, the config file's own values are merged on top of the config
+   from the `include` path.
 
 ### target-applies-to-host
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
