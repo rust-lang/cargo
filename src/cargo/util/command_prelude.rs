@@ -790,6 +790,12 @@ pub fn root_manifest(manifest_path: Option<&Path>, config: &Config) -> CargoResu
         if !path.exists() {
             anyhow::bail!("manifest path `{}` does not exist", manifest_path.display())
         }
+        if path.is_dir() {
+            anyhow::bail!(
+                "manifest path `{}` is a directory but expected a file",
+                manifest_path.display()
+            )
+        }
         if crate::util::toml::is_embedded(&path) && !config.cli_unstable().script {
             anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())
         }

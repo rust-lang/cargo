@@ -448,10 +448,7 @@ fn script_like_dir() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to read `[ROOT]/foo/script.rs`
-
-Caused by:
-  Is a directory (os error 21)
+error: manifest path `script.rs` is a directory but expected a file
 ",
         )
         .run();
