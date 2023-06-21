@@ -1273,6 +1273,16 @@ impl Config {
                 return Ok(Vec::new());
             }
         };
+
+        for (path, abs_path, def) in &includes {
+            if abs_path.extension() != Some(OsStr::new("toml")) {
+                bail!(
+                    "expected a config include path ending with `.toml`, \
+                     but found `{path}` from `{def}`",
+                )
+            }
+        }
+
         Ok(includes)
     }
 
