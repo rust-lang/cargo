@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context as _};
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
-use cargo::{self, drop_print, drop_println, CliResult, Config};
+use cargo::{self, drop_print, drop_println, CargoResult, CliResult, Config};
 use clap::{Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -178,7 +178,8 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
     config_configure(config, &expanded_args, subcommand_args, global_args)?;
     super::init_git(config);
 
-    execute_subcommand(config, cmd, subcommand_args)
+    let exec = Exec::infer(cmd)?;
+    exec.exec(config, subcommand_args)
 }
 
 pub fn get_version_string(is_verbose: bool) -> String {
@@ -399,53 +400,64 @@ fn config_configure(
     Ok(())
 }
 
-/// Precedence isn't the most obvious from this function because
-/// - Some is determined by `expand_aliases`
-/// - Some is enforced by `avoid_ambiguity_between_builtins_and_manifest_commands`
-///
-/// In actuality, it is:
-/// 1. built-ins xor manifest-command
-/// 2. aliases
-/// 3. external subcommands
-fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatches) -> CliResult {
-    if let Some(exec) = commands::builtin_exec(cmd) {
-        return exec(config, subcommand_args);
+enum Exec {
+    Builtin(commands::Exec),
+    Manifest(String),
+    External(String),
+}
+
+impl Exec {
+    /// Precedence isn't the most obvious from this function because
+    /// - Some is determined by `expand_aliases`
+    /// - Some is enforced by `avoid_ambiguity_between_builtins_and_manifest_commands`
+    ///
+    /// In actuality, it is:
+    /// 1. built-ins xor manifest-command
+    /// 2. aliases
+    /// 3. external subcommands
+    fn infer(cmd: &str) -> CargoResult<Self> {
+        if let Some(exec) = commands::builtin_exec(cmd) {
+            Ok(Self::Builtin(exec))
+        } else if commands::run::is_manifest_command(cmd) {
+            Ok(Self::Manifest(cmd.to_owned()))
+        } else {
+            Ok(Self::External(cmd.to_owned()))
+        }
     }
 
-    if commands::run::is_manifest_command(cmd) {
-        let ext_path = super::find_external_subcommand(config, cmd);
-        if !config.cli_unstable().script && ext_path.is_some() {
-            config.shell().warn(format_args!(
-                "\
+    fn exec(self, config: &mut Config, subcommand_args: &ArgMatches) -> CliResult {
+        match self {
+            Self::Builtin(exec) => exec(config, subcommand_args),
+            Self::Manifest(cmd) => {
+                let ext_path = super::find_external_subcommand(config, &cmd);
+                if !config.cli_unstable().script && ext_path.is_some() {
+                    config.shell().warn(format_args!(
+                        "\
 external subcommand `{cmd}` has the appearance of a manfiest-command
 This was previously accepted but will be phased out when `-Zscript` is stabilized.
 For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.",
-            ))?;
-            let mut ext_args = vec![OsStr::new(cmd)];
-            ext_args.extend(
-                subcommand_args
-                    .get_many::<OsString>("")
-                    .unwrap_or_default()
-                    .map(OsString::as_os_str),
-            );
-            super::execute_external_subcommand(config, cmd, &ext_args)
-        } else {
-            let ext_args: Vec<OsString> = subcommand_args
-                .get_many::<OsString>("")
-                .unwrap_or_default()
-                .cloned()
-                .collect();
-            commands::run::exec_manifest_command(config, cmd, &ext_args)
+                    ))?;
+                    Self::External(cmd).exec(config, subcommand_args)
+                } else {
+                    let ext_args: Vec<OsString> = subcommand_args
+                        .get_many::<OsString>("")
+                        .unwrap_or_default()
+                        .cloned()
+                        .collect();
+                    commands::run::exec_manifest_command(config, &cmd, &ext_args)
+                }
+            }
+            Self::External(cmd) => {
+                let mut ext_args = vec![OsStr::new(&cmd)];
+                ext_args.extend(
+                    subcommand_args
+                        .get_many::<OsString>("")
+                        .unwrap_or_default()
+                        .map(OsString::as_os_str),
+                );
+                super::execute_external_subcommand(config, &cmd, &ext_args)
+            }
         }
-    } else {
-        let mut ext_args = vec![OsStr::new(cmd)];
-        ext_args.extend(
-            subcommand_args
-                .get_many::<OsString>("")
-                .unwrap_or_default()
-                .map(OsString::as_os_str),
-        );
-        super::execute_external_subcommand(config, cmd, &ext_args)
     }
 }
 
