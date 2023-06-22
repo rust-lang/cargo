@@ -1481,6 +1481,9 @@ A parameter is identified as a manifest-command if it has one of:
 - A `.rs` extension
 - The file name is `Cargo.toml`
 
+Differences between `cargo run --manifest-path <path>` and `cargo <path>`
+- `cargo <path>` runs with the config for `<path>` and not the current dir, more like `cargo install --path <path>`
+
 ### `[lints]`
 
 * Tracking Issue: [#12115](https://github.com/rust-lang/cargo/issues/12115)
