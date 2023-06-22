@@ -175,10 +175,10 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
             return Ok(());
         }
     };
+    let exec = Exec::infer(cmd)?;
     config_configure(config, &expanded_args, subcommand_args, global_args)?;
     super::init_git(config);
 
-    let exec = Exec::infer(cmd)?;
     exec.exec(config, subcommand_args)
 }
 
