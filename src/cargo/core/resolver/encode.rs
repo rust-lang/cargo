@@ -159,11 +159,11 @@ impl EncodableResolve {
         let mut checksums = HashMap::new();
 
         let mut version = match self.version {
-            Some(4) => {
+            Some(4) if ws.config().nightly_features_allowed => {
                 if unstable_lockfile_version_allowed {
                     ResolveVersion::V4
                 } else {
-                    anyhow::bail!("lock file version 4 requires `-Znext-lockfile-bump`",)
+                    anyhow::bail!("lock file version 4 requires `-Znext-lockfile-bump`");
                 }
             }
             Some(3) => ResolveVersion::V3,

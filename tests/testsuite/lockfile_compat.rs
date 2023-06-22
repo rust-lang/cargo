@@ -913,6 +913,21 @@ fn v4_is_unstable() {
 error: failed to parse lock file at: [CWD]/Cargo.lock
 
 Caused by:
+  lock file version `4` was found, but this version of Cargo does not \
+  understand this lock file, perhaps Cargo needs to be updated?
+",
+        )
+        .run();
+
+    // On nightly, let the user know about the `-Z` flag.
+    p.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["-Znext-lockfile-bump"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse lock file at: [CWD]/Cargo.lock
+
+Caused by:
   lock file version 4 requires `-Znext-lockfile-bump`
 ",
         )
