@@ -980,6 +980,22 @@ impl StringOrVec {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(untagged, expecting = "expected a string or an integer")]
+pub enum StringOrI64 {
+    String(String),
+    I64(i64),
+}
+
+impl Display for StringOrI64 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StringOrI64::String(s) => f.write_str(s),
+            StringOrI64::I64(v) => write!(f, "{v}"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(untagged, expecting = "expected a boolean or a string")]
 pub enum StringOrBool {
     String(String),
@@ -1262,6 +1278,50 @@ impl TomlWorkspaceDependency {
 //. This already has a `Deserialize` impl from version_trim_whitespace
 type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
 
+type MaybeWorkspaceStringOrI64 = MaybeWorkspace<StringOrI64, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrI64 {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceStringOrI64;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                f.write_str("a string, integer or workspace")
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let int = de::value::I64Deserializer::new(value);
+                StringOrI64::deserialize(int).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let string = de::value::StringDeserializer::new(value);
+                StringOrI64::deserialize(string).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
 type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
@@ -1501,7 +1561,7 @@ impl WorkspaceInherit for TomlWorkspaceField {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlPackage {
-    edition: Option<MaybeWorkspaceString>,
+    edition: Option<MaybeWorkspaceStringOrI64>,
     rust_version: Option<MaybeWorkspaceString>,
     name: InternedString,
     #[serde(deserialize_with = "version_trim_whitespace")]
@@ -1583,7 +1643,7 @@ pub struct InheritableFields {
     license_file: Option<String>,
     repository: Option<String>,
     publish: Option<VecStringOrBool>,
-    edition: Option<String>,
+    edition: Option<StringOrI64>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
@@ -1620,7 +1680,7 @@ impl InheritableFields {
         ("package.categories",    categories    -> Vec<String>),
         ("package.description",   description   -> String),
         ("package.documentation", documentation -> String),
-        ("package.edition",       edition       -> String),
+        ("package.edition",       edition       -> StringOrI64),
         ("package.exclude",       exclude       -> Vec<String>),
         ("package.homepage",      homepage      -> String),
         ("package.include",       include       -> Vec<String>),
@@ -1728,7 +1788,7 @@ impl TomlManifest {
                     .edition
                     .as_ref()
                     .and_then(|e| e.as_defined())
-                    .map(|e| Edition::from_str(e))
+                    .map(|e| Edition::from_str(&e.to_string()))
                     .unwrap_or(Ok(Edition::Edition2015))
                     .map(|e| e.default_resolve_behavior())
             })?;
@@ -2040,9 +2100,12 @@ impl TomlManifest {
         let edition = if let Some(edition) = package.edition.clone() {
             let edition: Edition = edition
                 .resolve("edition", || inherit()?.edition())?
+                .to_string()
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?;
-            package.edition = Some(MaybeWorkspace::Defined(edition.to_string()));
+            package.edition = Some(MaybeWorkspace::Defined(StringOrI64::String(
+                edition.to_string(),
+            )));
             edition
         } else {
             Edition::Edition2015

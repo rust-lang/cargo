@@ -149,6 +149,8 @@ examples, etc.
 edition = '2021'
 ```
 
+For the value of the `edition` key, both strings and integers are supported.
+
 Most manifests have the `edition` field filled in automatically by [`cargo new`]
 with the latest stable edition. By default `cargo new` creates a manifest with
 the 2021 edition currently.

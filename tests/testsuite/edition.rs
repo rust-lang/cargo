@@ -35,6 +35,71 @@ fn edition_works_for_build_script() {
 }
 
 #[cargo_test]
+fn edition_works_as_integer() {
+    const NEEDS_2021: &str = "pub fn foo() { let hi: u8 = 0i32.try_into().unwrap(); }";
+    let p_2021 = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = 2021
+            "#,
+        )
+        .file("src/lib.rs", NEEDS_2021)
+        .build();
+    p_2021.cargo("check").run();
+
+    let p_2018 = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = 2018
+            "#,
+        )
+        .file("src/lib.rs", NEEDS_2021)
+        .build();
+    p_2018
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_contains("[..] is included in the prelude starting in Edition 2021")
+        .run();
+}
+
+#[cargo_test]
+fn edition_breaks_as_float() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = 2021.0
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  invalid type: floating point `2021`, expected a string, integer or workspace
+  in `package.edition`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn edition_unstable_gated() {
     // During the period where a new edition is coming up, but not yet stable,
     // this test will verify that it cannot be used on stable. If there is no
