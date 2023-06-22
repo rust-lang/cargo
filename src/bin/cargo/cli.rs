@@ -176,7 +176,7 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
         }
     };
     let exec = Exec::infer(cmd)?;
-    config_configure(config, &expanded_args, subcommand_args, global_args)?;
+    config_configure(config, &expanded_args, subcommand_args, global_args, &exec)?;
     super::init_git(config);
 
     exec.exec(config, subcommand_args)
@@ -364,12 +364,26 @@ fn config_configure(
     args: &ArgMatches,
     subcommand_args: &ArgMatches,
     global_args: GlobalArgs,
+    exec: &Exec,
 ) -> CliResult {
     let arg_target_dir = &subcommand_args.value_of_path("target-dir", config);
-    let verbose = global_args.verbose + args.verbose();
+    let mut verbose = global_args.verbose + args.verbose();
     // quiet is unusual because it is redefined in some subcommands in order
     // to provide custom help text.
-    let quiet = args.flag("quiet") || subcommand_args.flag("quiet") || global_args.quiet;
+    let mut quiet = args.flag("quiet") || subcommand_args.flag("quiet") || global_args.quiet;
+    if matches!(exec, Exec::Manifest(_)) && !quiet {
+        // Verbosity is shifted quieter for `Exec::Manifest` as it is can be used as if you ran
+        // `cargo install` and we especially shouldn't pollute programmatic output.
+        //
+        // For now, interactive output has the same default output as `cargo run` but that is
+        // subject to change.
+        if let Some(lower) = verbose.checked_sub(1) {
+            verbose = lower;
+        } else if !config.shell().is_err_tty() {
+            // Don't pollute potentially-scripted output
+            quiet = true;
+        }
+    }
     let global_color = global_args.color; // Extract so it can take reference.
     let color = args
         .get_one::<String>("color")
