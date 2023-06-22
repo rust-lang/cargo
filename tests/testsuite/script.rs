@@ -333,6 +333,48 @@ fn main() {
 }
 
 #[cargo_test]
+fn use_script_config() {
+    let script = ECHO_SCRIPT;
+    let _ = cargo_test_support::project()
+        .at("script")
+        .file("script.rs", script)
+        .build();
+
+    let p = cargo_test_support::project()
+        .file(
+            ".cargo/config",
+            r#"
+[build]
+rustc = "non-existent-rustc"
+"#,
+        )
+        .file("script.rs", script)
+        .build();
+
+    // Verify the config is bad
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[ERROR] could not execute process `non-existent-rustc -vV` (never executed)
+",
+        )
+        .run();
+
+    // Verify that the config is still used
+    p.cargo("-Zscript ../script/script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[ERROR] could not execute process `non-existent-rustc -vV` (never executed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_line_numbering_preserved() {
     let script = r#"#!/usr/bin/env cargo
 
