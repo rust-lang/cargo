@@ -93,13 +93,21 @@ pub fn is_manifest_command(arg: &str) -> bool {
         || path.file_name() == Some(OsStr::new("Cargo.toml"))
 }
 
-pub fn exec_manifest_command(config: &Config, cmd: &str, args: &[OsString]) -> CliResult {
+pub fn exec_manifest_command(config: &mut Config, cmd: &str, args: &[OsString]) -> CliResult {
     if !config.cli_unstable().script {
         return Err(anyhow::anyhow!("running `{cmd}` requires `-Zscript`").into());
     }
 
     let manifest_path = Path::new(cmd);
     let manifest_path = root_manifest(Some(manifest_path), config)?;
+
+    // Treat `cargo foo.rs` like `cargo install --path foo` and re-evaluate the config based on the
+    // location where the script resides, rather than the environment from where it's being run.
+    let parent_path = manifest_path
+        .parent()
+        .expect("a file should always have a parent");
+    config.reload_rooted_at(parent_path)?;
+
     let mut ws = Workspace::new(&manifest_path, config)?;
     if config.cli_unstable().avoid_dev_deps {
         ws.set_require_optional_deps(false);

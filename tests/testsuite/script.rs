@@ -352,7 +352,7 @@ rustc = "non-existent-rustc"
         .build();
 
     // Verify the config is bad
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_contains(
@@ -362,14 +362,13 @@ rustc = "non-existent-rustc"
         )
         .run();
 
-    // Verify that the config is still used
-    p.cargo("-Zscript ../script/script.rs")
+    // Verify that the config isn't used
+    p.cargo("-Zscript ../script/script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
-        .with_stderr_contains(
-            "\
-[ERROR] could not execute process `non-existent-rustc -vV` (never executed)
-",
+        .with_stdout(
+            r#"bin: [..]/debug/script[EXE]
+args: ["-NotAnArg"]
+"#,
         )
         .run();
 }
