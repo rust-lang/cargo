@@ -1385,7 +1385,7 @@ Valid operations are the following:
 
 Cargo can directly run `.rs` files as:
 ```console
-$ cargo -Zscript file.rs
+$ cargo +nightly -Zscript file.rs
 ```
 where `file.rs` can be as simple as:
 ```rust
@@ -1423,6 +1423,9 @@ files), we are adding the concept of single-file packages which may contain an
 embedded manifest.  There is no required distinguishment for a single-file
 `.rs` package from any other `.rs` file.
 
+Single-file packages may be selected via `--manifest-path`, like
+`cargo test --manifest-path foo.rs`. Unlike `Cargo.toml`, these files cannot be auto-discovered.
+
 A single-file package may contain an embedded manifest.  An embedded manifest
 is stored using `TOML` in a markdown code-fence with `cargo` at the start of the
 infostring inside a target-level doc-comment.  It is an error to have multiple
@@ -1448,18 +1451,16 @@ Inferred / defaulted manifest fields:
   later add support for including them in a workspace.
 - `package.edition = <current>` to avoid always having to add an embedded
   manifest at the cost of potentially breaking scripts on rust upgrades
-  - Warn when `edition` is unspecified.  While with single-file packages this will be
-    silenced by default, users wanting stability are also likely to be using
-    other commands, like `cargo test` and will see it.
+  - Warn when `edition` is unspecified to raise awareness of this
 
 Disallowed manifest fields:
 - `[workspace]`, `[lib]`, `[[bin]]`, `[[example]]`, `[[test]]`, `[[bench]]`
 - `package.workspace`, `package.build`, `package.links`, `package.autobins`, `package.autoexamples`, `package.autotests`, `package.autobenches`
 
-As the primary role for these files is exploratory programming which has a high
-edit-to-run ratio, building should be fast.  Therefore `CARGO_TARGET_DIR` will
-be shared between single-file packages to allow reusing intermediate build
-artifacts.
+The default `CARGO_TARGET_DIR` for single-file packages is at `$CARGO_HOME/target/<hash>`:
+- Avoid conflicts from multiple single-file packages being in the same directory
+- Avoid problems with the single-file package's parent directory being read-only
+- Avoid cluttering the user's directory
 
 The lockfile for single-file packages will be placed in `CARGO_TARGET_DIR`.  In
 the future, when workspaces are supported, that will allow a user to have a
