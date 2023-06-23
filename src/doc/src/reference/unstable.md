@@ -1484,6 +1484,7 @@ A parameter is identified as a manifest-command if it has one of:
 
 Differences between `cargo run --manifest-path <path>` and `cargo <path>`
 - `cargo <path>` runs with the config for `<path>` and not the current dir, more like `cargo install --path <path>`
+- `cargo <path>` is at a verbosity level below the normal default.  Pass `-v` to get normal output.
 
 ### `[lints]`
 

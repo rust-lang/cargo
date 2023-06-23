@@ -26,7 +26,7 @@ fn basic_rs() {
         .file("echo.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript echo.rs")
+    p.cargo("-Zscript -v echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: [..]/debug/echo[EXE]
@@ -50,7 +50,7 @@ fn basic_path() {
         .file("echo", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript ./echo")
+    p.cargo("-Zscript -v ./echo")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: [..]/debug/echo[EXE]
@@ -74,7 +74,7 @@ fn basic_cargo_toml() {
         .file("src/main.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript Cargo.toml")
+    p.cargo("-Zscript -v Cargo.toml")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: target/debug/foo[EXE]
@@ -97,7 +97,7 @@ fn path_required() {
         .file("echo", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript echo")
+    p.cargo("-Zscript -v echo")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stdout("")
@@ -126,7 +126,7 @@ fn manifest_precedence_over_plugins() {
     path.push(p.root().join("path-test"));
     let path = std::env::join_paths(path.iter()).unwrap();
 
-    p.cargo("-Zscript echo.rs")
+    p.cargo("-Zscript -v echo.rs")
         .env("PATH", &path)
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
@@ -157,7 +157,7 @@ fn warn_when_plugin_masks_manifest_on_stable() {
     path.push(p.root().join("path-test"));
     let path = std::env::join_paths(path.iter()).unwrap();
 
-    p.cargo("echo.rs")
+    p.cargo("-v echo.rs")
         .env("PATH", &path)
         .with_stdout("")
         .with_stderr(
@@ -176,7 +176,7 @@ fn requires_nightly() {
         .file("echo.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("echo.rs")
+    p.cargo("-v echo.rs")
         .with_status(101)
         .with_stdout("")
         .with_stderr(
@@ -193,7 +193,7 @@ fn requires_z_flag() {
         .file("echo.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("echo.rs")
+    p.cargo("-v echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stdout("")
@@ -221,7 +221,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"Hello world!
@@ -252,7 +252,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"Hello world!
@@ -281,7 +281,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"msg = undefined
@@ -298,7 +298,7 @@ fn main() {
         .run();
 
     // Verify we don't rebuild
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"msg = undefined
@@ -314,7 +314,7 @@ fn main() {
         .run();
 
     // Verify we do rebuild
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .env("_MESSAGE", "hello")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
@@ -374,6 +374,48 @@ args: ["-NotAnArg"]
 }
 
 #[cargo_test]
+fn default_programmatic_verbosity() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript script.rs -NotAnArg")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [..]/debug/script[EXE]
+args: ["-NotAnArg"]
+"#,
+        )
+        .with_stderr(
+            "\
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn quiet() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript -q script.rs -NotAnArg")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [..]/debug/script[EXE]
+args: ["-NotAnArg"]
+"#,
+        )
+        .with_stderr(
+            "\
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_line_numbering_preserved() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -385,7 +427,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"line: 4
@@ -409,7 +451,7 @@ fn test_escaped_hyphen_arg() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -- script.rs -NotAnArg")
+    p.cargo("-Zscript -v -- script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: [..]/debug/script[EXE]
@@ -434,7 +476,7 @@ fn test_unescaped_hyphen_arg() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs -NotAnArg")
+    p.cargo("-Zscript -v script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: [..]/debug/script[EXE]
@@ -459,7 +501,7 @@ fn test_same_flags() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs --help")
+    p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: [..]/debug/script[EXE]
@@ -484,7 +526,7 @@ fn test_name_has_weird_chars() {
         .file("s-h.w§c!.rs", script)
         .build();
 
-    p.cargo("-Zscript s-h.w§c!.rs")
+    p.cargo("-Zscript -v s-h.w§c!.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: [..]/debug/s-h-w-c-[EXE]
@@ -507,7 +549,7 @@ fn script_like_dir() {
         .file("script.rs/foo", "something")
         .build();
 
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr(
@@ -522,7 +564,7 @@ error: manifest path `script.rs` is a directory but expected a file
 fn missing_script_rs() {
     let p = cargo_test_support::project().build();
 
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr(
@@ -550,7 +592,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs --help")
+    p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"Hello world!
@@ -590,7 +632,7 @@ fn main() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("-Zscript script.rs --help")
+    p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"Hello world!
@@ -620,7 +662,7 @@ fn main() {
         .file("build.rs", "broken")
         .build();
 
-    p.cargo("-Zscript script.rs --help")
+    p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"Hello world!
@@ -649,7 +691,7 @@ fn main() {
         .file("src/bin/not-script/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("-Zscript script.rs --help")
+    p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"Hello world!
@@ -673,7 +715,7 @@ fn implicit_target_dir() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: [ROOT]/home/.cargo/target/[..]/debug/script[EXE]
@@ -701,7 +743,7 @@ fn no_local_lockfile() {
 
     assert!(!local_lockfile_path.exists());
 
-    p.cargo("-Zscript script.rs")
+    p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout(
             r#"bin: [ROOT]/home/.cargo/target/[..]/debug/script[EXE]
