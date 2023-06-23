@@ -374,6 +374,52 @@ args: ["-NotAnArg"]
 }
 
 #[cargo_test]
+fn default_verbosity() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript script.rs -NotAnArg")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [..]/debug/script[EXE]
+args: ["-NotAnArg"]
+"#,
+        )
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/script[EXE] -NotAnArg`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn quiet() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript -q script.rs -NotAnArg")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [..]/debug/script[EXE]
+args: ["-NotAnArg"]
+"#,
+        )
+        .with_stderr(
+            "\
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_line_numbering_preserved() {
     let script = r#"#!/usr/bin/env cargo
 
