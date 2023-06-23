@@ -1394,7 +1394,7 @@ fn main() {}
 
 A user may optionally specify a manifest in a `cargo` code fence in a module-level comment, like:
 ```rust
-#!/usr/bin/env cargo
+#!/usr/bin/env -S cargo +nightly -Zscript
 
 //! ```cargo
 //! [dependencies]
