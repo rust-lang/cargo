@@ -2,6 +2,8 @@
 #![allow(clippy::all)]
 #![warn(clippy::disallowed_methods)]
 
+use cargo::util::network::http::http_handle;
+use cargo::util::network::http::needs_custom_http_transport;
 use cargo::util::toml::StringOrVec;
 use cargo::util::CliError;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
@@ -293,12 +295,12 @@ fn init_git(config: &Config) {
 /// configured to use libcurl instead of the built-in networking support so
 /// that those configuration settings can be used.
 fn init_git_transports(config: &Config) {
-    match cargo::ops::needs_custom_http_transport(config) {
+    match needs_custom_http_transport(config) {
         Ok(true) => {}
         _ => return,
     }
 
-    let handle = match cargo::ops::http_handle(config) {
+    let handle = match http_handle(config) {
         Ok(handle) => handle,
         Err(..) => return,
     };

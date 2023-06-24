@@ -1,11 +1,11 @@
 //! Access to a HTTP-based crate registry. See [`HttpRegistry`] for details.
 
 use crate::core::{PackageId, SourceId};
-use crate::ops;
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, HttpNotSuccessful, DEBUG_HEADERS};
+use crate::util::network::http::http_handle;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
 use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
@@ -610,7 +610,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // Looks like we're going to have to do a network request.
         self.start_fetch()?;
 
-        let mut handle = ops::http_handle(self.config)?;
+        let mut handle = http_handle(self.config)?;
         let full_url = self.full_url(path);
         debug!("fetch {}", full_url);
         handle.get(true)?;

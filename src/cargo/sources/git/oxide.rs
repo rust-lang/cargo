@@ -1,7 +1,7 @@
 //! This module contains all code sporting `gitoxide` for operations on `git` repositories and it mirrors
 //! `utils` closely for now. One day it can be renamed into `utils` once `git2` isn't required anymore.
 
-use crate::ops::HttpTimeout;
+use crate::util::network::http::HttpTimeout;
 use crate::util::{human_readable_bytes, network, MetricsCounter, Progress};
 use crate::{CargoResult, Config};
 use cargo_util::paths;

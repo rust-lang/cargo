@@ -1,11 +1,11 @@
 //! Registry authentication support.
 
+mod asymmetric;
+
 use crate::util::{config, config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl};
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::ProcessError;
 use core::fmt;
-use pasetors::keys::{AsymmetricPublicKey, AsymmetricSecretKey};
-use pasetors::paserk::FormatAsPaserk;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
@@ -13,12 +13,12 @@ use std::io::{Read, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
 use url::Url;
 
 use crate::core::SourceId;
 use crate::ops::RegistryCredentialConfig;
+
+pub use self::asymmetric::paserk_public_from_paserk_secret;
 
 use super::config::CredentialCacheValue;
 
@@ -466,82 +466,9 @@ fn auth_token_optional(
                 run_command(config, &process, sid, Action::Get)?.unwrap();
             (independent_of_endpoint, Secret::from(token))
         }
-        RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) => {
-            let secret: Secret<AsymmetricSecretKey<pasetors::version3::V3>> =
-                secret_key.map(|key| key.as_str().try_into()).transpose()?;
-            let public: AsymmetricPublicKey<pasetors::version3::V3> = secret
-                .as_ref()
-                .map(|key| key.try_into())
-                .transpose()?
-                .expose();
-            let kip: pasetors::paserk::Id = (&public).try_into()?;
-            let iat = OffsetDateTime::now_utc();
-
-            let message = Message {
-                iat: &iat.format(&Rfc3339)?,
-                sub: secret_key_subject.as_deref(),
-                mutation: mutation.and_then(|m| {
-                    Some(match m {
-                        Mutation::PrePublish => return None,
-                        Mutation::Publish { .. } => "publish",
-                        Mutation::Yank { .. } => "yank",
-                        Mutation::Unyank { .. } => "unyank",
-                        Mutation::Owners { .. } => "owners",
-                    })
-                }),
-                name: mutation.and_then(|m| {
-                    Some(match m {
-                        Mutation::PrePublish => return None,
-                        Mutation::Publish { name, .. }
-                        | Mutation::Yank { name, .. }
-                        | Mutation::Unyank { name, .. }
-                        | Mutation::Owners { name, .. } => *name,
-                    })
-                }),
-                vers: mutation.and_then(|m| {
-                    Some(match m {
-                        Mutation::PrePublish | Mutation::Owners { .. } => return None,
-                        Mutation::Publish { vers, .. }
-                        | Mutation::Yank { vers, .. }
-                        | Mutation::Unyank { vers, .. } => *vers,
-                    })
-                }),
-                cksum: mutation.and_then(|m| {
-                    Some(match m {
-                        Mutation::PrePublish
-                        | Mutation::Yank { .. }
-                        | Mutation::Unyank { .. }
-                        | Mutation::Owners { .. } => return None,
-                        Mutation::Publish { cksum, .. } => *cksum,
-                    })
-                }),
-                challenge: None, // todo: PASETO with challenges
-                v: None,
-            };
-            let footer = Footer {
-                url: &sid.url().to_string(),
-                kip,
-            };
-
-            (
-                false,
-                secret
-                    .map(|secret| {
-                        pasetors::version3::PublicToken::sign(
-                            &secret,
-                            serde_json::to_string(&message)
-                                .expect("cannot serialize")
-                                .as_bytes(),
-                            Some(
-                                serde_json::to_string(&footer)
-                                    .expect("cannot serialize")
-                                    .as_bytes(),
-                            ),
-                            None,
-                        )
-                    })
-                    .transpose()?,
-            )
+        cred @ RegistryCredentialConfig::AsymmetricKey(..) => {
+            let token = asymmetric::public_token_from_credential(cred, sid, mutation)?;
+            (false, token)
         }
     };
 
@@ -595,33 +522,6 @@ pub enum Mutation<'a> {
     },
 }
 
-/// The main body of an asymmetric token as describe in RFC 3231.
-#[derive(serde::Serialize)]
-struct Message<'a> {
-    iat: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sub: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    mutation: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    name: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    vers: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    cksum: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    challenge: Option<&'a str>,
-    /// This field is not yet used. This field can be set to a value >1 to indicate a breaking change in the token format.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    v: Option<u8>,
-}
-/// The footer of an asymmetric token as describe in RFC 3231.
-#[derive(serde::Serialize)]
-struct Footer<'a> {
-    url: &'a str,
-    kip: pasetors::paserk::Id,
-}
-
 enum Action {
     Get,
     Store(String),
@@ -644,21 +544,6 @@ pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -
         }
     };
     Ok(())
-}
-
-/// Checks that a secret key is valid, and returns the associated public key in Paserk format.
-pub(crate) fn paserk_public_from_paserk_secret(secret_key: Secret<&str>) -> Option<String> {
-    let secret: Secret<AsymmetricSecretKey<pasetors::version3::V3>> =
-        secret_key.map(|key| key.try_into()).transpose().ok()?;
-    let public: AsymmetricPublicKey<pasetors::version3::V3> = secret
-        .as_ref()
-        .map(|key| key.try_into())
-        .transpose()
-        .ok()?
-        .expose();
-    let mut paserk_pub_key = String::new();
-    FormatAsPaserk::fmt(&public, &mut paserk_pub_key).unwrap();
-    Some(paserk_pub_key)
 }
 
 /// Removes the token for the given registry.

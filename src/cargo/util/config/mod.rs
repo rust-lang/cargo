@@ -69,9 +69,11 @@ use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
-use crate::ops::{self, RegistryCredentialConfig};
+use crate::ops::RegistryCredentialConfig;
 use crate::util::auth::Secret;
 use crate::util::errors::CargoResult;
+use crate::util::network::http::configure_http_handle;
+use crate::util::network::http::http_handle;
 use crate::util::CanonicalUrl;
 use crate::util::{internal, toml as cargo_toml};
 use crate::util::{try_canonicalize, validate_package_name};
@@ -1716,11 +1718,11 @@ impl Config {
     pub fn http(&self) -> CargoResult<&RefCell<Easy>> {
         let http = self
             .easy
-            .try_borrow_with(|| ops::http_handle(self).map(RefCell::new))?;
+            .try_borrow_with(|| http_handle(self).map(RefCell::new))?;
         {
             let mut http = http.borrow_mut();
             http.reset();
-            let timeout = ops::configure_http_handle(self, &mut http)?;
+            let timeout = configure_http_handle(self, &mut http)?;
             timeout.configure(&mut http)?;
         }
         Ok(http)
