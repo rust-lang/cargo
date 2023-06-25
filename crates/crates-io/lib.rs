@@ -1,7 +1,6 @@
 #![allow(clippy::all)]
 
 use std::collections::BTreeMap;
-use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{Cursor, SeekFrom};
@@ -127,22 +126,31 @@ struct Crates {
 }
 
 /// Error returned when interacting with a registry.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Error from libcurl.
-    Curl(curl::Error),
+    #[error(transparent)]
+    Curl(#[from] curl::Error),
 
     /// Error from seriailzing the request payload and deserialzing the
     /// response body (like response body didn't match expected structure).
-    Json(serde_json::Error),
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
 
     /// Error from IO. Mostly from reading the tarball to upload.
-    Io(std::io::Error),
+    #[error("failed to seek tarball")]
+    Io(#[from] std::io::Error),
 
     /// Response body was not valid utf8.
-    Utf8(std::string::FromUtf8Error),
+    #[error("invalid response body from server")]
+    Utf8(#[from] std::string::FromUtf8Error),
 
     /// Error from API response containing JSON field `errors.details`.
+    #[error(
+        "the remote server responded with an error{}: {}",
+        status(*code),
+        errors.join(", "),
+    )]
     Api {
         code: u32,
         headers: Vec<String>,
@@ -150,6 +158,10 @@ pub enum Error {
     },
 
     /// Error from API response which didn't have pre-programmed `errors.details`.
+    #[error(
+        "failed to get a 200 OK response, got {code}\nheaders:\n\t{}\nbody:\n{body}",
+        headers.join("\n\t"),
+    )]
     Code {
         code: u32,
         headers: Vec<String>,
@@ -157,91 +169,18 @@ pub enum Error {
     },
 
     /// Reason why the token was invalid.
+    #[error("{0}")]
     InvalidToken(&'static str),
 
     /// Server was unavailable and timeouted. Happened when uploading a way
     /// too large tarball to crates.io.
+    #[error(
+        "Request timed out after 30 seconds. If you're trying to \
+         upload a crate it may be too large. If the crate is under \
+         10MB in size, you can email help@crates.io for assistance.\n\
+         Total size was {0}."
+    )]
     Timeout(u64),
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Curl(e) => Some(e),
-            Self::Json(e) => Some(e),
-            Self::Io(e) => Some(e),
-            Self::Utf8(e) => Some(e),
-            Self::Api { .. } => None,
-            Self::Code { .. } => None,
-            Self::InvalidToken(..) => None,
-            Self::Timeout(..) => None,
-        }
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Curl(e) => write!(f, "{e}"),
-            Self::Json(e) => write!(f, "{e}"),
-            Self::Io(e) => write!(f, "{e}"),
-            Self::Utf8(e) => write!(f, "{e}"),
-            Self::Api { code, errors, .. } => {
-                f.write_str("the remote server responded with an error")?;
-                if *code != 200 {
-                    write!(f, " (status {} {})", code, reason(*code))?;
-                };
-                write!(f, ": {}", errors.join(", "))
-            }
-            Self::Code {
-                code,
-                headers,
-                body,
-            } => write!(
-                f,
-                "failed to get a 200 OK response, got {}\n\
-                 headers:\n\
-                 \t{}\n\
-                 body:\n\
-                 {}",
-                code,
-                headers.join("\n\t"),
-                body
-            ),
-            Self::InvalidToken(e) => write!(f, "{e}"),
-            Self::Timeout(tarball_size) => write!(
-                f,
-                "Request timed out after 30 seconds. If you're trying to \
-                 upload a crate it may be too large. If the crate is under \
-                 10MB in size, you can email help@crates.io for assistance.\n\
-                 Total size was {tarball_size}."
-            ),
-        }
-    }
-}
-
-impl From<curl::Error> for Error {
-    fn from(error: curl::Error) -> Self {
-        Self::Curl(error)
-    }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(error: serde_json::Error) -> Self {
-        Self::Json(error)
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(error: std::io::Error) -> Self {
-        Self::Io(error)
-    }
-}
-
-impl From<std::string::FromUtf8Error> for Error {
-    fn from(error: std::string::FromUtf8Error) -> Self {
-        Self::Utf8(error)
-    }
 }
 
 impl Registry {
@@ -497,6 +436,15 @@ impl Registry {
                 body,
             }),
         }
+    }
+}
+
+fn status(code: u32) -> String {
+    if code == 200 {
+        String::new()
+    } else {
+        let reason = reason(code);
+        format!(" (status {code} {reason})")
     }
 }
 

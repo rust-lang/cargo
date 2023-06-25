@@ -87,6 +87,7 @@ syn = { version = "2.0.14", features = ["extra-traits", "full"] }
 tar = { version = "0.4.38", default-features = false }
 tempfile = "3.1.0"
 termcolor = "1.1.2"
+thiserror = "1.0.40"
 time = { version = "0.3", features = ["parsing", "formatting"] }
 toml = "0.7.0"
 toml_edit = "0.19.0"
