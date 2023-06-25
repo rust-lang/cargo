@@ -13,7 +13,6 @@ name = "crates_io"
 path = "lib.rs"
 
 [dependencies]
-anyhow.workspace = true
 curl.workspace = true
 percent-encoding.workspace = true
 serde = { workspace = true, features = ["derive"] }

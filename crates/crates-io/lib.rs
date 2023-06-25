@@ -7,7 +7,6 @@ use std::io::prelude::*;
 use std::io::{Cursor, SeekFrom};
 use std::time::Instant;
 
-use anyhow::{format_err, Context};
 use curl::easy::{Easy, List};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
@@ -127,29 +126,55 @@ struct Crates {
     meta: TotalCrates,
 }
 
+/// Error returned when interacting with a registry.
 #[derive(Debug)]
 pub enum Error {
+    /// Error from libcurl.
     Curl(curl::Error),
+
+    /// Error from seriailzing the request payload and deserialzing the
+    /// response body (like response body didn't match expected structure).
+    Json(serde_json::Error),
+
+    /// Error from IO. Mostly from reading the tarball to upload.
+    Io(std::io::Error),
+
+    /// Response body was not valid utf8.
+    Utf8(std::string::FromUtf8Error),
+
+    /// Error from API response containing JSON field `errors.details`.
     Api {
         code: u32,
         headers: Vec<String>,
         errors: Vec<String>,
     },
+
+    /// Error from API response which didn't have pre-programmed `errors.details`.
     Code {
         code: u32,
         headers: Vec<String>,
         body: String,
     },
-    Other(anyhow::Error),
+
+    /// Reason why the token was invalid.
+    InvalidToken(&'static str),
+
+    /// Server was unavailable and timeouted. Happened when uploading a way
+    /// too large tarball to crates.io.
+    Timeout(u64),
 }
 
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Curl(..) => None,
+            Self::Curl(e) => Some(e),
+            Self::Json(e) => Some(e),
+            Self::Io(e) => Some(e),
+            Self::Utf8(e) => Some(e),
             Self::Api { .. } => None,
             Self::Code { .. } => None,
-            Self::Other(e) => Some(e.as_ref()),
+            Self::InvalidToken(..) => None,
+            Self::Timeout(..) => None,
         }
     }
 }
@@ -157,7 +182,10 @@ impl std::error::Error for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Curl(e) => write!(f, "{}", e),
+            Self::Curl(e) => write!(f, "{e}"),
+            Self::Json(e) => write!(f, "{e}"),
+            Self::Io(e) => write!(f, "{e}"),
+            Self::Utf8(e) => write!(f, "{e}"),
             Self::Api { code, errors, .. } => {
                 f.write_str("the remote server responded with an error")?;
                 if *code != 200 {
@@ -180,7 +208,14 @@ impl fmt::Display for Error {
                 headers.join("\n\t"),
                 body
             ),
-            Self::Other(..) => write!(f, "invalid response from server"),
+            Self::InvalidToken(e) => write!(f, "{e}"),
+            Self::Timeout(tarball_size) => write!(
+                f,
+                "Request timed out after 30 seconds. If you're trying to \
+                 upload a crate it may be too large. If the crate is under \
+                 10MB in size, you can email help@crates.io for assistance.\n\
+                 Total size was {tarball_size}."
+            ),
         }
     }
 }
@@ -191,21 +226,21 @@ impl From<curl::Error> for Error {
     }
 }
 
-impl From<anyhow::Error> for Error {
-    fn from(error: anyhow::Error) -> Self {
-        Self::Other(error)
-    }
-}
-
 impl From<serde_json::Error> for Error {
     fn from(error: serde_json::Error) -> Self {
-        Self::Other(error.into())
+        Self::Json(error)
     }
 }
 
-impl From<url::ParseError> for Error {
-    fn from(error: url::ParseError) -> Self {
-        Self::Other(error.into())
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(error: std::string::FromUtf8Error) -> Self {
+        Self::Utf8(error)
     }
 }
 
@@ -242,12 +277,9 @@ impl Registry {
     }
 
     fn token(&self) -> Result<&str> {
-        let token = match self.token.as_ref() {
-            Some(s) => s,
-            None => {
-                return Err(format_err!("no upload token found, please run `cargo login`").into())
-            }
-        };
+        let token = self.token.as_ref().ok_or_else(|| {
+            Error::InvalidToken("no upload token found, please run `cargo login`")
+        })?;
         check_token(token)?;
         Ok(token)
     }
@@ -293,12 +325,8 @@ impl Registry {
         // This checks the length using seeking instead of metadata, because
         // on some filesystems, getting the metadata will fail because
         // the file was renamed in ops::package.
-        let tarball_len = tarball
-            .seek(SeekFrom::End(0))
-            .with_context(|| "failed to seek tarball")?;
-        tarball
-            .seek(SeekFrom::Start(0))
-            .with_context(|| "failed to seek tarball")?;
+        let tarball_len = tarball.seek(SeekFrom::End(0))?;
+        tarball.seek(SeekFrom::Start(0))?;
         let header = {
             let mut w = Vec::new();
             w.extend(&(json.len() as u32).to_le_bytes());
@@ -328,13 +356,7 @@ impl Registry {
                         && started.elapsed().as_secs() >= 29
                         && self.host_is_crates_io() =>
                 {
-                    format_err!(
-                        "Request timed out after 30 seconds. If you're trying to \
-                         upload a crate it may be too large. If the crate is under \
-                         10MB in size, you can email help@crates.io for assistance.\n\
-                         Total size was {}.",
-                        tarball_len
-                    )
+                    Error::Timeout(tarball_len)
                 }
                 _ => e.into(),
             })?;
@@ -457,14 +479,7 @@ impl Registry {
             handle.perform()?;
         }
 
-        let body = match String::from_utf8(body) {
-            Ok(body) => body,
-            Err(..) => {
-                return Err(Error::Other(format_err!(
-                    "response body was not valid utf-8"
-                )))
-            }
-        };
+        let body = String::from_utf8(body)?;
         let errors = serde_json::from_str::<ApiErrorList>(&body)
             .ok()
             .map(|s| s.errors.into_iter().map(|s| s.detail).collect::<Vec<_>>());
@@ -548,7 +563,7 @@ pub fn is_url_crates_io(url: &str) -> bool {
 /// registries only create tokens in that format so that is as less restricted as possible.
 pub fn check_token(token: &str) -> Result<()> {
     if token.is_empty() {
-        return Err(format_err!("please provide a non-empty token").into());
+        return Err(Error::InvalidToken("please provide a non-empty token"));
     }
     if token.bytes().all(|b| {
         // This is essentially the US-ASCII limitation of
@@ -559,10 +574,9 @@ pub fn check_token(token: &str) -> Result<()> {
     }) {
         Ok(())
     } else {
-        Err(format_err!(
+        Err(Error::InvalidToken(
             "token contains invalid characters.\nOnly printable ISO-8859-1 characters \
-             are allowed as it is sent in a HTTPS header."
-        )
-        .into())
+             are allowed as it is sent in a HTTPS header.",
+        ))
     }
 }

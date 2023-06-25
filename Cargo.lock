@@ -587,7 +587,6 @@ dependencies = [
 name = "crates-io"
 version = "0.38.0"
 dependencies = [
- "anyhow",
  "curl",
  "percent-encoding",
  "serde",
