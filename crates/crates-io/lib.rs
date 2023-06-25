@@ -7,11 +7,13 @@ use std::io::prelude::*;
 use std::io::{Cursor, SeekFrom};
 use std::time::Instant;
 
-use anyhow::{bail, format_err, Context, Result};
+use anyhow::{format_err, Context};
 use curl::easy::{Easy, List};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use url::Url;
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Registry {
     /// The base URL for issuing API requests.
@@ -189,6 +191,24 @@ impl From<curl::Error> for Error {
     }
 }
 
+impl From<anyhow::Error> for Error {
+    fn from(error: anyhow::Error) -> Self {
+        Self::Other(error)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Self::Other(error.into())
+    }
+}
+
+impl From<url::ParseError> for Error {
+    fn from(error: url::ParseError) -> Self {
+        Self::Other(error.into())
+    }
+}
+
 impl Registry {
     /// Creates a new `Registry`.
     ///
@@ -224,7 +244,9 @@ impl Registry {
     fn token(&self) -> Result<&str> {
         let token = match self.token.as_ref() {
             Some(s) => s,
-            None => bail!("no upload token found, please run `cargo login`"),
+            None => {
+                return Err(format_err!("no upload token found, please run `cargo login`").into())
+            }
         };
         check_token(token)?;
         Ok(token)
@@ -411,10 +433,7 @@ impl Registry {
         }
     }
 
-    fn handle(
-        &mut self,
-        read: &mut dyn FnMut(&mut [u8]) -> usize,
-    ) -> std::result::Result<String, Error> {
+    fn handle(&mut self, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result<String> {
         let mut headers = Vec::new();
         let mut body = Vec::new();
         {
@@ -529,7 +548,7 @@ pub fn is_url_crates_io(url: &str) -> bool {
 /// registries only create tokens in that format so that is as less restricted as possible.
 pub fn check_token(token: &str) -> Result<()> {
     if token.is_empty() {
-        bail!("please provide a non-empty token");
+        return Err(format_err!("please provide a non-empty token").into());
     }
     if token.bytes().all(|b| {
         // This is essentially the US-ASCII limitation of
@@ -540,9 +559,10 @@ pub fn check_token(token: &str) -> Result<()> {
     }) {
         Ok(())
     } else {
-        Err(anyhow::anyhow!(
+        Err(format_err!(
             "token contains invalid characters.\nOnly printable ISO-8859-1 characters \
              are allowed as it is sent in a HTTPS header."
-        ))
+        )
+        .into())
     }
 }
