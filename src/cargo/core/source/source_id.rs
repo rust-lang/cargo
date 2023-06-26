@@ -575,6 +575,9 @@ impl fmt::Display for SourceId {
                 // Don't replace the URL display for git references,
                 // because those are kind of expected to be URLs.
                 write!(f, "{}", self.inner.url)?;
+                // TODO(-Znext-lockfile-bump): set it to true when stabilizing
+                // lockfile v4, because we want Source ID serialization to be
+                // consistent with lockfile.
                 if let Some(pretty) = reference.pretty_ref(false) {
                     write!(f, "?{}", pretty)?;
                 }
