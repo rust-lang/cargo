@@ -1595,7 +1595,43 @@ pub struct InheritableFields {
     ws_root: PathBuf,
 }
 
+/// Defines simple getter methods for inheritable fields.
+macro_rules! inheritable_field_getter {
+    ( $(($key:literal, $field:ident -> $ret:ty),)* ) => (
+        $(
+            #[doc = concat!("Gets the field `workspace.", $key, "`.")]
+            pub fn $field(&self) -> CargoResult<$ret> {
+                let Some(val) = &self.$field else  {
+                    bail!("`workspace.{}` was not defined", $key);
+                };
+                Ok(val.clone())
+            }
+        )*
+    )
+}
+
 impl InheritableFields {
+    inheritable_field_getter! {
+        // Please keep this list lexicographically ordered.
+        ("dependencies",          dependencies  -> BTreeMap<String, TomlDependency>),
+        ("lints",                 lints         -> TomlLints),
+        ("package.authors",       authors       -> Vec<String>),
+        ("package.badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
+        ("package.categories",    categories    -> Vec<String>),
+        ("package.description",   description   -> String),
+        ("package.documentation", documentation -> String),
+        ("package.edition",       edition       -> String),
+        ("package.exclude",       exclude       -> Vec<String>),
+        ("package.homepage",      homepage      -> String),
+        ("package.include",       include       -> Vec<String>),
+        ("package.keywords",      keywords      -> Vec<String>),
+        ("package.license",       license       -> String),
+        ("package.publish",       publish       -> VecStringOrBool),
+        ("package.repository",    repository    -> String),
+        ("package.rust-version",  rust_version  -> String),
+        ("package.version",       version       -> semver::Version),
+    }
+
     pub fn update_deps(&mut self, deps: Option<BTreeMap<String, TomlDependency>>) {
         self.dependencies = deps;
     }
@@ -1606,19 +1642,6 @@ impl InheritableFields {
 
     pub fn update_ws_path(&mut self, ws_root: PathBuf) {
         self.ws_root = ws_root;
-    }
-
-    pub fn dependencies(&self) -> CargoResult<BTreeMap<String, TomlDependency>> {
-        self.dependencies.clone().map_or(
-            Err(anyhow!("`workspace.dependencies` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn lints(&self) -> CargoResult<TomlLints> {
-        self.lints
-            .clone()
-            .map_or(Err(anyhow!("`workspace.lints` was not defined")), |d| Ok(d))
     }
 
     pub fn get_dependency(&self, name: &str, package_root: &Path) -> CargoResult<TomlDependency> {
@@ -1642,41 +1665,6 @@ impl InheritableFields {
         )
     }
 
-    pub fn version(&self) -> CargoResult<semver::Version> {
-        self.version.clone().map_or(
-            Err(anyhow!("`workspace.package.version` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn authors(&self) -> CargoResult<Vec<String>> {
-        self.authors.clone().map_or(
-            Err(anyhow!("`workspace.package.authors` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn description(&self) -> CargoResult<String> {
-        self.description.clone().map_or(
-            Err(anyhow!("`workspace.package.description` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn homepage(&self) -> CargoResult<String> {
-        self.homepage.clone().map_or(
-            Err(anyhow!("`workspace.package.homepage` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn documentation(&self) -> CargoResult<String> {
-        self.documentation.clone().map_or(
-            Err(anyhow!("`workspace.package.documentation` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
     pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
         readme_for_package(self.ws_root.as_path(), self.readme.clone()).map_or(
             Err(anyhow!("`workspace.package.readme` was not defined")),
@@ -1688,80 +1676,10 @@ impl InheritableFields {
         )
     }
 
-    pub fn keywords(&self) -> CargoResult<Vec<String>> {
-        self.keywords.clone().map_or(
-            Err(anyhow!("`workspace.package.keywords` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn categories(&self) -> CargoResult<Vec<String>> {
-        self.categories.clone().map_or(
-            Err(anyhow!("`workspace.package.categories` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn license(&self) -> CargoResult<String> {
-        self.license.clone().map_or(
-            Err(anyhow!("`workspace.package.license` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
     pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
         self.license_file.clone().map_or(
             Err(anyhow!("`workspace.package.license_file` was not defined")),
             |d| resolve_relative_path("license-file", &self.ws_root, package_root, &d),
-        )
-    }
-
-    pub fn repository(&self) -> CargoResult<String> {
-        self.repository.clone().map_or(
-            Err(anyhow!("`workspace.package.repository` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn publish(&self) -> CargoResult<VecStringOrBool> {
-        self.publish.clone().map_or(
-            Err(anyhow!("`workspace.package.publish` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn edition(&self) -> CargoResult<String> {
-        self.edition.clone().map_or(
-            Err(anyhow!("`workspace.package.edition` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn rust_version(&self) -> CargoResult<String> {
-        self.rust_version.clone().map_or(
-            Err(anyhow!("`workspace.package.rust-version` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn badges(&self) -> CargoResult<BTreeMap<String, BTreeMap<String, String>>> {
-        self.badges.clone().map_or(
-            Err(anyhow!("`workspace.package.badges` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn exclude(&self) -> CargoResult<Vec<String>> {
-        self.exclude.clone().map_or(
-            Err(anyhow!("`workspace.package.exclude` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn include(&self) -> CargoResult<Vec<String>> {
-        self.include.clone().map_or(
-            Err(anyhow!("`workspace.package.include` was not defined")),
-            |d| Ok(d),
         )
     }
 
