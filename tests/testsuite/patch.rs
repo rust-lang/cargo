@@ -1816,7 +1816,7 @@ fn multipatch_select_big() {
 
     // assert the build succeeds, which is only possible if 0.2.0 is selected
     // since 0.1.0 is missing the function we need. Afterwards assert that the
-    // build succeeds again without updating anything or building anything else.
+    // build succeeds again without updating anything or building anything else.o
     p.cargo("check").run();
     p.cargo("check")
         .with_stderr(
@@ -2655,6 +2655,45 @@ all possible versions conflict with previously selected packages.
     ... which satisfies dependency `qux = "^0.1.0-beta.2"` of package `foo v0.1.0 ([..])`
 
 failed to select a version for `qux` which could resolve this conflict"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn mismatched_version_with_prerelease() {
+    // A patch to a location that has an prerelease version
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                 [package]
+                 name = "foo"
+                 version = "0.1.0"
+
+                 [dependencies]
+                 prerelease-deps = "0.1.0"
+
+                 [patch.crates-io]
+                 prerelease-deps = { path = "./prerelease-deps" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "prerelease-deps/Cargo.toml",
+            &basic_manifest("prerelease-deps", "0.1.1-pre1"),
+        )
+        .file("prerelease-deps/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] crates.io index
+[ERROR] failed to select a version for the requirement `prerelease-deps = "^0.1.0"`
+candidate versions found which didn't match: 0.1.1-pre1
+location searched: crates.io index
+required by package `foo v0.1.0 [..]`
+perhaps a crate was updated and forgotten to be re-vendored?"#,
         )
         .run();
 }
