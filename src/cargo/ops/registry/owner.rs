@@ -3,12 +3,12 @@
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#owners
 
 use anyhow::Context as _;
+use cargo_credential::Operation;
+use cargo_credential::Secret;
 
 use crate::core::Workspace;
 use crate::drop_print;
 use crate::drop_println;
-use crate::util::auth;
-use crate::util::auth::Secret;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::CargoResult;
 use crate::Config;
@@ -33,7 +33,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         }
     };
 
-    let mutation = auth::Mutation::Owners { name: &name };
+    let operation = Operation::Owners { name: &name };
 
     let (mut registry, _) = super::registry(
         config,
@@ -41,7 +41,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         opts.index.as_deref(),
         opts.registry.as_deref(),
         true,
-        Some(mutation),
+        Some(operation),
     )?;
 
     if let Some(ref v) = opts.to_add {

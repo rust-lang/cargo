@@ -36,6 +36,7 @@ pub mod command_prelude;
 pub mod config;
 mod counter;
 pub mod cpu;
+pub mod credential;
 mod dependency_queue;
 pub mod diagnostic_server;
 pub mod edit_distance;

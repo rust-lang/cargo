@@ -76,14 +76,14 @@ fn explicit_version_with_asymmetric() {
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
     p.cargo("yank --version 0.0.1")
-        .arg("-Zregistry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .arg("-Zcredential-process")
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .replace_crates_io(registry.index_url())
         .run();
 
     p.cargo("yank --undo --version 0.0.1")
-        .arg("-Zregistry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
+        .arg("-Zcredential-process")
+        .masquerade_as_nightly_cargo(&["credential-process"])
         .replace_crates_io(registry.index_url())
         .run();
 }

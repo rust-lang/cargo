@@ -10,6 +10,7 @@ use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
 use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use anyhow::Context;
+use cargo_credential::Operation;
 use cargo_util::paths;
 use curl::easy::{Easy, List};
 use curl::multi::{EasyHandle, Multi};
@@ -95,6 +96,9 @@ pub struct HttpRegistry<'cfg> {
 
     /// Url to get a token for the registry.
     login_url: Option<Url>,
+
+    /// WWW-Authenticate header received with an HTTP 401.
+    www_authenticate: Option<Vec<String>>,
 
     /// Disables status messages.
     quiet: bool,
@@ -221,6 +225,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             registry_config: None,
             auth_required: false,
             login_url: None,
+            www_authenticate: None,
             quiet: false,
         })
     }
@@ -569,6 +574,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                             }
                         }
                     }
+                    self.www_authenticate = Some(result.header_map.www_authenticate);
                 }
                 StatusCode::Unauthorized => {
                     let err = Err(HttpNotSuccessful {
@@ -639,8 +645,13 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
         if self.auth_required {
-            let authorization =
-                auth::auth_token(self.config, &self.source_id, self.login_url.as_ref(), None)?;
+            let authorization = auth::auth_token(
+                self.config,
+                &self.source_id,
+                self.login_url.as_ref(),
+                Operation::Read,
+                self.www_authenticate.clone(),
+            )?;
             headers.append(&format!("Authorization: {}", authorization))?;
             trace!("including authorization for {}", full_url);
         }

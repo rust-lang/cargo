@@ -273,6 +273,10 @@ dependencies = [
  "anyhow",
  "base64",
  "bytesize",
+ "cargo-credential",
+ "cargo-credential-1password",
+ "cargo-credential-macos-keychain",
+ "cargo-credential-wincred",
  "cargo-platform 0.1.4",
  "cargo-test-macro",
  "cargo-test-support",
@@ -340,11 +344,16 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential"
-version = "0.2.0"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "time",
+]
 
 [[package]]
 name = "cargo-credential-1password"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cargo-credential",
  "serde",
@@ -353,7 +362,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-gnome-secret"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cargo-credential",
  "pkg-config",
@@ -361,7 +370,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-macos-keychain"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cargo-credential",
  "security-framework",
@@ -369,7 +378,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-wincred"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cargo-credential",
  "windows-sys 0.48.0",

@@ -104,6 +104,8 @@ pub struct RegistryBuilder {
     not_found_handler: RequestCallback,
     /// If nonzero, the git index update to be delayed by the given number of seconds.
     delayed_index_update: usize,
+    /// Credential provider in configuration
+    credential_provider: Option<String>,
 }
 
 pub struct TestRegistry {
@@ -172,6 +174,7 @@ impl RegistryBuilder {
             custom_responders: HashMap::new(),
             not_found_handler: Box::new(not_found),
             delayed_index_update: 0,
+            credential_provider: None,
         }
     }
 
@@ -266,6 +269,13 @@ impl RegistryBuilder {
         self
     }
 
+    /// The credential provider to configure for this registry.
+    #[must_use]
+    pub fn credential_provider(mut self, provider: &[&str]) -> Self {
+        self.credential_provider = Some(format!("['{}']", provider.join("','")));
+        self
+    }
+
     /// Initializes the registry.
     #[must_use]
     pub fn build(self) -> TestRegistry {
@@ -336,6 +346,18 @@ impl RegistryBuilder {
                     .as_bytes(),
                 )
                 .unwrap();
+                if let Some(p) = &self.credential_provider {
+                    append(
+                        &config_path,
+                        &format!(
+                            "
+                        credential-provider = {p}
+                        "
+                        )
+                        .as_bytes(),
+                    )
+                    .unwrap()
+                }
             } else {
                 append(
                     &config_path,
@@ -351,6 +373,20 @@ impl RegistryBuilder {
                     .as_bytes(),
                 )
                 .unwrap();
+
+                if let Some(p) = &self.credential_provider {
+                    append(
+                        &config_path,
+                        &format!(
+                            "
+                        [registry]
+                        credential-provider = {p}
+                        "
+                        )
+                        .as_bytes(),
+                    )
+                    .unwrap()
+                }
             }
         }
 

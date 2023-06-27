@@ -5,10 +5,10 @@
 
 use anyhow::bail;
 use anyhow::Context as _;
+use cargo_credential::Operation;
+use cargo_credential::Secret;
 
 use crate::core::Workspace;
-use crate::util::auth;
-use crate::util::auth::Secret;
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -36,12 +36,12 @@ pub fn yank(
     };
 
     let message = if undo {
-        auth::Mutation::Unyank {
+        Operation::Unyank {
             name: &name,
             vers: &version,
         }
     } else {
-        auth::Mutation::Yank {
+        Operation::Yank {
             name: &name,
             vers: &version,
         }

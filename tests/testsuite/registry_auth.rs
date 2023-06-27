@@ -6,8 +6,9 @@ use cargo_test_support::{project, Execs, Project};
 
 fn cargo(p: &Project, s: &str) -> Execs {
     let mut e = p.cargo(s);
-    e.masquerade_as_nightly_cargo(&["registry-auth"])
-        .arg("-Zregistry-auth");
+    e.masquerade_as_nightly_cargo(&["registry-auth", "credential-process"])
+        .arg("-Zregistry-auth")
+        .arg("-Zcredential-process");
     e
 }
 
@@ -145,95 +146,6 @@ fn environment_token_with_asymmetric() {
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY", registry.key())
         .with_stderr(SUCCESS_OUTPUT)
-        .run();
-}
-
-#[cargo_test]
-fn warn_both_asymmetric_and_token() {
-    let _server = RegistryBuilder::new()
-        .alternative()
-        .no_configure_token()
-        .build();
-    let p = project()
-        .file(
-            ".cargo/config",
-            r#"
-                [registries.alternative]
-                token = "sekrit"
-                secret-key = "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
-            "#,
-        )
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                description = "foo"
-                authors = []
-                license = "MIT"
-                homepage = "https://example.com/"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("publish --no-verify --registry alternative")
-        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
-        .arg("-Zregistry-auth")
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] both `token` and `secret-key` were specified in the config for registry `alternative`.
-Only one of these values may be set, remove one or the other to proceed.
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn warn_both_asymmetric_and_credential_process() {
-    let _server = RegistryBuilder::new()
-        .alternative()
-        .no_configure_token()
-        .build();
-    let p = project()
-        .file(
-            ".cargo/config",
-            r#"
-                [registries.alternative]
-                credential-process = "false"
-                secret-key = "k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36"
-            "#,
-        )
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                description = "foo"
-                authors = []
-                license = "MIT"
-                homepage = "https://example.com/"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("publish --no-verify --registry alternative")
-        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
-        .arg("-Zcredential-process")
-        .arg("-Zregistry-auth")
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] both `credential-process` and `secret-key` were specified in the config for registry `alternative`.
-Only one of these values may be set, remove one or the other to proceed.
-",
-        )
         .run();
 }
 
@@ -463,7 +375,6 @@ fn login() {
 
     let p = make_project();
     cargo(&p, "login --registry alternative")
-        .with_stdout("please paste the token found on https://test-registry-login/me below")
         .with_stdin("sekrit")
         .run();
 }
@@ -478,7 +389,6 @@ fn login_existing_token() {
 
     let p = make_project();
     cargo(&p, "login --registry alternative")
-        .with_stdout("please paste the token found on file://[..]/me below")
         .with_stdin("sekrit")
         .run();
 }

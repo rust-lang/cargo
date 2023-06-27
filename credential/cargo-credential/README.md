@@ -18,7 +18,7 @@ Create a Cargo project with this as a dependency:
 # Add this to your Cargo.toml:
 
 [dependencies]
-cargo-credential = "0.1"
+cargo-credential = "0.3"
 ```
 
 And then include a `main.rs` binary which implements the `Credential` trait, and calls

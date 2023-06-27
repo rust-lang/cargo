@@ -1,7 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops;
-use cargo::util::auth::Secret;
+use cargo_credential::Secret;
 
 pub fn cli() -> Command {
     subcommand("yank")

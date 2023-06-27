@@ -70,20 +70,21 @@ use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
 use crate::ops::RegistryCredentialConfig;
-use crate::util::auth::Secret;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
-use crate::util::CanonicalUrl;
-use crate::util::{internal, toml as cargo_toml};
+use crate::util::toml as cargo_toml;
+use crate::util::{internal, CanonicalUrl};
 use crate::util::{try_canonicalize, validate_package_name};
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
+use cargo_credential::Secret;
 use cargo_util::paths;
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::de::IntoDeserializer as _;
 use serde::Deserialize;
+use time::OffsetDateTime;
 use toml_edit::Item;
 use url::Url;
 
@@ -146,13 +147,9 @@ enum WhyLoad {
 /// A previously generated authentication token and the data needed to determine if it can be reused.
 #[derive(Debug)]
 pub struct CredentialCacheValue {
-    /// If the command line was used to override the token then it must always be reused,
-    /// even if reading the configuration files would lead to a different value.
-    pub from_commandline: bool,
-    /// If nothing depends on which endpoint is being hit, then we can reuse the token
-    /// for any future request even if some of the requests involve mutations.
-    pub independent_of_endpoint: bool,
     pub token_value: Secret<String>,
+    pub expiration: Option<OffsetDateTime>,
+    pub operation_independent: bool,
 }
 
 /// Configuration information for cargo. This is not specific to a build, it is information
@@ -810,7 +807,7 @@ impl Config {
     ///
     /// See `get` for more details.
     pub fn get_string(&self, key: &str) -> CargoResult<OptValue<String>> {
-        self.get::<Option<Value<String>>>(key)
+        self.get::<OptValue<String>>(key)
     }
 
     /// Get a config value that is expected to be a path.
@@ -819,7 +816,7 @@ impl Config {
     /// directory separators. See `ConfigRelativePath::resolve_program` for
     /// more details.
     pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
-        self.get::<Option<Value<ConfigRelativePath>>>(key).map(|v| {
+        self.get::<OptValue<ConfigRelativePath>>(key).map(|v| {
             v.map(|v| Value {
                 val: v.val.resolve_program(self),
                 definition: v.definition,

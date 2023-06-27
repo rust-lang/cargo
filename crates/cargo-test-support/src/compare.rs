@@ -192,6 +192,7 @@ fn substitute_macros(input: &str) -> String {
         ("[CHECKING]", "    Checking"),
         ("[COMPLETED]", "   Completed"),
         ("[CREATED]", "     Created"),
+        ("[CREDENTIAL]", "  Credential"),
         ("[DOWNGRADING]", " Downgrading"),
         ("[FINISHED]", "    Finished"),
         ("[ERROR]", "error:"),
