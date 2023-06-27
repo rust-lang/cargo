@@ -1644,43 +1644,36 @@ impl InheritableFields {
         self.ws_root = ws_root;
     }
 
+    /// Gets a workspace dependency with the `name`.
     pub fn get_dependency(&self, name: &str, package_root: &Path) -> CargoResult<TomlDependency> {
-        self.dependencies.clone().map_or(
-            Err(anyhow!("`workspace.dependencies` was not defined")),
-            |deps| {
-                deps.get(name).map_or(
-                    Err(anyhow!(
-                        "`dependency.{}` was not found in `workspace.dependencies`",
-                        name
-                    )),
-                    |dep| {
-                        let mut dep = dep.clone();
-                        if let TomlDependency::Detailed(detailed) = &mut dep {
-                            detailed.resolve_path(name, self.ws_root(), package_root)?
-                        }
-                        Ok(dep)
-                    },
-                )
-            },
-        )
+        let Some(deps) = &self.dependencies else {
+            bail!("`workspace.dependencies` was not defined");
+        };
+        let Some(dep) = deps.get(name) else {
+            bail!("`dependency.{name}` was not found in `workspace.dependencies`");
+        };
+        let mut dep = dep.clone();
+        if let TomlDependency::Detailed(detailed) = &mut dep {
+            detailed.resolve_path(name, self.ws_root(), package_root)?;
+        }
+        Ok(dep)
     }
 
+    /// Gets the field `workspace.package.readme`.
     pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
-        readme_for_package(self.ws_root.as_path(), self.readme.clone()).map_or(
-            Err(anyhow!("`workspace.package.readme` was not defined")),
-            |readme| {
-                let rel_path =
-                    resolve_relative_path("readme", &self.ws_root, package_root, &readme)?;
-                Ok(StringOrBool::String(rel_path))
-            },
-        )
+        let Some(readme) = readme_for_package(self.ws_root.as_path(), self.readme.as_ref()) else {
+            bail!("`workspace.package.readme` was not defined");
+        };
+        resolve_relative_path("readme", &self.ws_root, package_root, &readme)
+            .map(StringOrBool::String)
     }
 
+    /// Gets the field `workspace.package.license-file`.
     pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
-        self.license_file.clone().map_or(
-            Err(anyhow!("`workspace.package.license_file` was not defined")),
-            |d| resolve_relative_path("license-file", &self.ws_root, package_root, &d),
-        )
+        let Some(license_file) = &self.license_file else {
+            bail!("`workspace.package.license-file` was not defined");
+        };
+        resolve_relative_path("license-file", &self.ws_root, package_root, license_file)
     }
 
     pub fn ws_root(&self) -> &PathBuf {
@@ -2382,7 +2375,8 @@ impl TomlManifest {
                     .readme
                     .clone()
                     .map(|mw| mw.resolve("readme", || inherit()?.readme(package_root)))
-                    .transpose()?,
+                    .transpose()?
+                    .as_ref(),
             ),
             authors: package
                 .authors
@@ -2980,7 +2974,7 @@ fn inheritable_from_path(
 }
 
 /// Returns the name of the README file for a [`TomlPackage`].
-pub fn readme_for_package(package_root: &Path, readme: Option<StringOrBool>) -> Option<String> {
+pub fn readme_for_package(package_root: &Path, readme: Option<&StringOrBool>) -> Option<String> {
     match &readme {
         None => default_readme_from_package_root(package_root),
         Some(value) => match value {
