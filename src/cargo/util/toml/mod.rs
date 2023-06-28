@@ -1632,18 +1632,6 @@ impl InheritableFields {
         ("package.version",       version       -> semver::Version),
     }
 
-    pub fn update_deps(&mut self, deps: Option<BTreeMap<String, TomlDependency>>) {
-        self.dependencies = deps;
-    }
-
-    pub fn update_lints(&mut self, lints: Option<TomlLints>) {
-        self.lints = lints;
-    }
-
-    pub fn update_ws_path(&mut self, ws_root: PathBuf) {
-        self.ws_root = ws_root;
-    }
-
     /// Gets a workspace dependency with the `name`.
     pub fn get_dependency(&self, name: &str, package_root: &Path) -> CargoResult<TomlDependency> {
         let Some(deps) = &self.dependencies else {
@@ -1659,6 +1647,14 @@ impl InheritableFields {
         Ok(dep)
     }
 
+    /// Gets the field `workspace.package.license-file`.
+    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
+        let Some(license_file) = &self.license_file else {
+            bail!("`workspace.package.license-file` was not defined");
+        };
+        resolve_relative_path("license-file", &self.ws_root, package_root, license_file)
+    }
+
     /// Gets the field `workspace.package.readme`.
     pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
         let Some(readme) = readme_for_package(self.ws_root.as_path(), self.readme.as_ref()) else {
@@ -1668,16 +1664,20 @@ impl InheritableFields {
             .map(StringOrBool::String)
     }
 
-    /// Gets the field `workspace.package.license-file`.
-    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
-        let Some(license_file) = &self.license_file else {
-            bail!("`workspace.package.license-file` was not defined");
-        };
-        resolve_relative_path("license-file", &self.ws_root, package_root, license_file)
-    }
-
     pub fn ws_root(&self) -> &PathBuf {
         &self.ws_root
+    }
+
+    pub fn update_deps(&mut self, deps: Option<BTreeMap<String, TomlDependency>>) {
+        self.dependencies = deps;
+    }
+
+    pub fn update_lints(&mut self, lints: Option<TomlLints>) {
+        self.lints = lints;
+    }
+
+    pub fn update_ws_path(&mut self, ws_root: PathBuf) {
+        self.ws_root = ws_root;
     }
 }
 
