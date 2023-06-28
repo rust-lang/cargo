@@ -521,7 +521,7 @@ impl<'cfg> RegistrySource<'cfg> {
     ///
     /// No action is taken if the source looks like it's already unpacked.
     ///
-    /// # History of interruption detection with `.cargo-lock` file
+    /// # History of interruption detection with `.cargo-ok` file
     ///
     /// Cargo has always included a `.cargo-ok` file ([`PACKAGE_SOURCE_LOCK`])
     /// to detect if extraction was interrupted, but it was originally empty.
