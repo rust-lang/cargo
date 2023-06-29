@@ -87,10 +87,25 @@ pub trait Source {
     /// If quiet, the source should not display any progress or status messages.
     fn set_quiet(&mut self, quiet: bool);
 
-    /// Fetches the full package for each name and version specified.
+    /// Starts the process to fetch a [`Package`] for the given [`PackageId`].
+    ///
+    /// If the source already has the package available on disk, then it
+    /// should return immediately with [`MaybePackage::Ready`] with the
+    /// [`Package`]. Otherwise it should return a [`MaybePackage::Download`]
+    /// to indicate the URL to download the package (this is for remote
+    /// registry sources only).
+    ///
+    /// In the case where [`MaybePackage::Download`] is returned, then the
+    /// package downloader will call [`Source::finish_download`] after the
+    /// download has finished.
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
 
-    /// Fetches the full package **immediately** for each name and version specified.
+    /// Convenience method used to **immediately** fetch a [`Package`] for the
+    /// given [`PackageId`].
+    ///
+    /// This may trigger a download if necessary. This should only be used
+    /// when a single package is needed (as in the case for `cargo install`).
+    /// Otherwise downloads should be batched together via [`PackageSet`].
     fn download_now(self: Box<Self>, package: PackageId, config: &Config) -> CargoResult<Package>
     where
         Self: std::marker::Sized,
@@ -102,7 +117,13 @@ pub trait Source {
         Ok(Package::clone(pkg))
     }
 
-    /// Finalizes the download contents of the given [`PackageId`] to a [`Package`].
+    /// Gives the source the downloaded `.crate` file.
+    ///
+    /// When a source has returned [`MaybePackage::Download`] in the
+    /// [`Source::download`] method, then this function will be called with
+    /// the results of the download of the given URL. The source is
+    /// responsible for saving to disk, and returning the appropriate
+    /// [`Package`].
     fn finish_download(&mut self, pkg_id: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
