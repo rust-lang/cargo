@@ -89,12 +89,12 @@ pub fn sanitize_package_name(name: &str, placeholder: char) -> String {
     let mut chars = name.chars();
     if let Some(ch) = chars.next() {
         if ch.is_digit(10) {
-            slug.push(placeholder);
+            slug.push('_');
             slug.push(ch);
         } else if unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' {
             slug.push(ch);
         } else {
-            slug.push(placeholder);
+            slug.push('_');
         }
     }
     for ch in chars {
