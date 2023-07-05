@@ -107,6 +107,43 @@ Here are some examples of comparison requirements:
 As shown in the examples above, multiple version requirements can be
 separated with a comma, e.g., `>= 1.2, < 1.5`.
 
+> **Recommendation:** When in doubt, use the default version requirement operator.
+>
+> In rare circumstances, a package with a "public dependency"
+> (re-exports the dependency or interoperates with it in its public API)
+> that is compatible with multiple semver-incompatible versions
+> (e.g. only uses a simple type that hasn't changed between releases, like an `Id`)
+> may support users choosing which version of the "public dependency" to use.
+> In this case, a version requirement like `">=0.4, <2"` may be of interest.
+> *However* users of the package will likely run into errors and need to to
+> manually select a version of the "public dependency" via `cargo update` if
+> they also depend on it as Cargo might pick different versions of the "public
+> dependency" when [resolving dependency versions](resolver.md)  (see
+> [#10599]).
+>
+> Avoid constraining the upper bound of a version to be anything less than the
+> next semver incompatible version
+> (e.g. avoid `">=2.0, <2.4"`) as other packages in the dependency tree may
+> require a newer version, leading to an unresolvable error (see #6584).
+> Consider whether controlling the version in your [`Cargo.lock`] would be more
+> appropriate.
+>
+> In some instances this won't matter or the benefits might outweigh the cost, including:
+> - When no one else depends on your package e.g. it only has a `[[bin]]`
+> - When depending on a pre-release package and wishing to avoid breaking
+>   changes then a fully specified `"=1.2.3-alpha.3"` might be warranted (see
+>   [#2222])
+> - When a library re-exports a proc-macro but the proc-macro generates code that
+>   calls into the re-exporting library then a fully specified `=1.2.3` might be
+>   warranted to ensure the proc-macro isn't newer than the re-exporting library
+>   and generating code that uses parts of the API that don't exist within the
+>   current version
+
+[`Cargo.lock`]: ../guide/cargo-toml-vs-cargo-lock.md
+[#2222]: https://github.com/rust-lang/cargo/issues/2222
+[#6584]: https://github.com/rust-lang/cargo/issues/6584
+[#10599]: https://github.com/rust-lang/cargo/issues/10599
+
 ### Specifying dependencies from other registries
 
 To specify a dependency from a registry other than [crates.io], first the
