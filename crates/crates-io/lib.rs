@@ -428,6 +428,10 @@ impl Registry {
                 // Headers contain trailing \r\n, trim them to make it easier
                 // to work with.
                 let s = String::from_utf8_lossy(data).trim().to_string();
+                // Don't let server sneak extra lines anywhere.
+                if s.contains('\n') {
+                    return true;
+                }
                 headers.push(s);
                 true
             })?;
@@ -448,7 +452,11 @@ impl Registry {
 
         match (self.handle.response_code()?, errors) {
             (0, None) | (200, None) => Ok(body),
-        (code, Some(errors)) => Err(ResponseError::Api { code, headers, errors }),
+            (code, Some(errors)) => Err(ResponseError::Api {
+                code,
+                headers,
+                errors,
+            }),
             (code, None) => Err(ResponseError::Code {
                 code,
                 headers,
