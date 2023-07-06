@@ -130,6 +130,7 @@ pub enum ResponseError {
     Curl(curl::Error),
     Api {
         code: u32,
+        headers: Vec<String>,
         errors: Vec<String>,
     },
     Code {
@@ -155,7 +156,7 @@ impl fmt::Display for ResponseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ResponseError::Curl(e) => write!(f, "{}", e),
-            ResponseError::Api { code, errors } => {
+            ResponseError::Api { code, errors, .. } => {
                 f.write_str("the remote server responded with an error")?;
                 if *code != 200 {
                     write!(f, " (status {} {})", code, reason(*code))?;
@@ -447,7 +448,7 @@ impl Registry {
 
         match (self.handle.response_code()?, errors) {
             (0, None) | (200, None) => Ok(body),
-            (code, Some(errors)) => Err(ResponseError::Api { code, errors }),
+        (code, Some(errors)) => Err(ResponseError::Api { code, headers, errors }),
             (code, None) => Err(ResponseError::Code {
                 code,
                 headers,
