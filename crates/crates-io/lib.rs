@@ -126,7 +126,7 @@ struct Crates {
 }
 
 #[derive(Debug)]
-pub enum ResponseError {
+pub enum Error {
     Curl(curl::Error),
     Api {
         code: u32,
@@ -141,29 +141,29 @@ pub enum ResponseError {
     Other(anyhow::Error),
 }
 
-impl std::error::Error for ResponseError {
+impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            ResponseError::Curl(..) => None,
-            ResponseError::Api { .. } => None,
-            ResponseError::Code { .. } => None,
-            ResponseError::Other(e) => Some(e.as_ref()),
+            Self::Curl(..) => None,
+            Self::Api { .. } => None,
+            Self::Code { .. } => None,
+            Self::Other(e) => Some(e.as_ref()),
         }
     }
 }
 
-impl fmt::Display for ResponseError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ResponseError::Curl(e) => write!(f, "{}", e),
-            ResponseError::Api { code, errors, .. } => {
+            Self::Curl(e) => write!(f, "{}", e),
+            Self::Api { code, errors, .. } => {
                 f.write_str("the remote server responded with an error")?;
                 if *code != 200 {
                     write!(f, " (status {} {})", code, reason(*code))?;
                 };
                 write!(f, ": {}", errors.join(", "))
             }
-            ResponseError::Code {
+            Self::Code {
                 code,
                 headers,
                 body,
@@ -178,14 +178,14 @@ impl fmt::Display for ResponseError {
                 headers.join("\n\t"),
                 body
             ),
-            ResponseError::Other(..) => write!(f, "invalid response from server"),
+            Self::Other(..) => write!(f, "invalid response from server"),
         }
     }
 }
 
-impl From<curl::Error> for ResponseError {
+impl From<curl::Error> for Error {
     fn from(error: curl::Error) -> Self {
-        ResponseError::Curl(error)
+        Self::Curl(error)
     }
 }
 
@@ -301,7 +301,7 @@ impl Registry {
         let body = self
             .handle(&mut |buf| body.read(buf).unwrap_or(0))
             .map_err(|e| match e {
-                ResponseError::Code { code, .. }
+                Error::Code { code, .. }
                     if code == 503
                         && started.elapsed().as_secs() >= 29
                         && self.host_is_crates_io() =>
@@ -414,7 +414,7 @@ impl Registry {
     fn handle(
         &mut self,
         read: &mut dyn FnMut(&mut [u8]) -> usize,
-    ) -> std::result::Result<String, ResponseError> {
+    ) -> std::result::Result<String, Error> {
         let mut headers = Vec::new();
         let mut body = Vec::new();
         {
@@ -441,7 +441,7 @@ impl Registry {
         let body = match String::from_utf8(body) {
             Ok(body) => body,
             Err(..) => {
-                return Err(ResponseError::Other(format_err!(
+                return Err(Error::Other(format_err!(
                     "response body was not valid utf-8"
                 )))
             }
@@ -452,12 +452,12 @@ impl Registry {
 
         match (self.handle.response_code()?, errors) {
             (0, None) | (200, None) => Ok(body),
-            (code, Some(errors)) => Err(ResponseError::Api {
+            (code, Some(errors)) => Err(Error::Api {
                 code,
                 headers,
                 errors,
             }),
-            (code, None) => Err(ResponseError::Code {
+            (code, None) => Err(Error::Code {
                 code,
                 headers,
                 body,
