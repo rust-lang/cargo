@@ -3452,9 +3452,9 @@ fn set_mask_during_unpacking() {
         .unwrap()
     };
 
-    // Assuming umask is `0o022`.
+    let umask = cargo::util::get_umask();
     let metadata = fs::metadata(src_file_path("src/lib.rs")).unwrap();
-    assert_eq!(metadata.mode() & 0o777, 0o666);
+    assert_eq!(metadata.mode() & 0o777, 0o666 & !umask);
     let metadata = fs::metadata(src_file_path("example.sh")).unwrap();
-    assert_eq!(metadata.mode() & 0o777, 0o777);
+    assert_eq!(metadata.mode() & 0o777, 0o777 & !umask);
 }
