@@ -3403,3 +3403,58 @@ Caused by:
   Please slow down
 ").run();
 }
+
+#[cfg(unix)]
+#[cargo_test]
+fn set_mask_during_unpacking() {
+    use std::os::unix::fs::MetadataExt;
+
+    Package::new("bar", "1.0.0")
+        .file_with_mode("example.sh", 0o777, "#!/bin/sh")
+        .file_with_mode("src/lib.rs", 0o666, "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+",
+        )
+        .run();
+    let src_file_path = |path: &str| {
+        glob::glob(
+            paths::home()
+                .join(".cargo/registry/src/*/bar-1.0.0/")
+                .join(path)
+                .to_str()
+                .unwrap(),
+        )
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+    };
+
+    // Assuming umask is `0o022`.
+    let metadata = fs::metadata(src_file_path("src/lib.rs")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o666);
+    let metadata = fs::metadata(src_file_path("example.sh")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o777);
+}
