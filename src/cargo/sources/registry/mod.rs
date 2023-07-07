@@ -185,7 +185,9 @@
 
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Write};
+use std::io;
+use std::io::Read;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::task::{ready, Poll};
 
@@ -580,7 +582,9 @@ impl<'cfg> RegistrySource<'cfg> {
             let size_limit = max_unpack_size(self.config, tarball.metadata()?.len());
             let gz = GzDecoder::new(tarball);
             let gz = LimitErrorReader::new(gz, size_limit);
-            Archive::new(gz)
+            let mut tar = Archive::new(gz);
+            set_mask(&mut tar);
+            tar
         };
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
@@ -907,4 +911,17 @@ fn max_unpack_size(config: &Config, size: u64) -> u64 {
     };
 
     u64::max(max_unpack_size, size * max_compression_ratio as u64)
+}
+
+/// Set the current [`umask`] value for the given tarball. No-op on non-Unix
+/// platforms.
+///
+/// On Windows, tar only looks at user permissions and tries to set the "read
+/// only" attribute, so no-op as well.
+///
+/// [`umask`]: https://man7.org/linux/man-pages/man2/umask.2.html
+#[allow(unused_variables)]
+fn set_mask<R: Read>(tar: &mut Archive<R>) {
+    #[cfg(unix)]
+    tar.set_mask(crate::util::get_umask());
 }
