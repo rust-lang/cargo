@@ -161,6 +161,7 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io;
 use std::io::Read;
@@ -174,6 +175,7 @@ use flate2::read::GzDecoder;
 use log::debug;
 use semver::Version;
 use serde::Deserialize;
+use serde::Serialize;
 use tar::Archive;
 
 use crate::core::dependency::{DepKind, Dependency};
@@ -200,6 +202,14 @@ const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024;
 const MAX_COMPRESSION_RATIO: usize = 20; // 20:1
+
+/// The content inside `.cargo-ok`.
+/// See [`RegistrySource::unpack_package`] for more.
+#[derive(Deserialize, Serialize)]
+struct LockMetadata {
+    /// The version of `.cargo-ok` file
+    v: u32,
+}
 
 /// A "source" for a local (see `local::LocalRegistry`) or remote (see
 /// `remote::RemoteRegistry`) registry.
@@ -637,6 +647,50 @@ impl<'cfg> RegistrySource<'cfg> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
+    ///
+    /// # History of interruption detection with `.cargo-ok` file
+    ///
+    /// Cargo has always included a `.cargo-ok` file ([`PACKAGE_SOURCE_LOCK`])
+    /// to detect if extraction was interrupted, but it was originally empty.
+    ///
+    /// In 1.34, Cargo was changed to create the `.cargo-ok` file before it
+    /// started extraction to implement fine-grained locking. After it was
+    /// finished extracting, it wrote two bytes to indicate it was complete.
+    /// It would use the length check to detect if it was possibly interrupted.
+    ///
+    /// In 1.36, Cargo changed to not use fine-grained locking, and instead used
+    /// a global lock. The use of `.cargo-ok` was no longer needed for locking
+    /// purposes, but was kept to detect when extraction was interrupted.
+    ///
+    /// In 1.49, Cargo changed to not create the `.cargo-ok` file before it
+    /// started extraction to deal with `.crate` files that inexplicably had
+    /// a `.cargo-ok` file in them.
+    ///
+    /// In 1.64, Cargo changed to detect `.crate` files with `.cargo-ok` files
+    /// in them in response to [CVE-2022-36113], which dealt with malicious
+    /// `.crate` files making `.cargo-ok` a symlink causing cargo to write "ok"
+    /// to any arbitrary file on the filesystem it has permission to.
+    ///
+    /// In 1.71, `.cargo-ok` changed to contain a JSON `{ v: 1 }` to indicate
+    /// the version of it. A failure of parsing will result in a heavy-hammer
+    /// approach that unpacks the `.crate` file again. This is in response to a
+    /// security issue that the unpacking didn't respect umask on Unix systems.
+    ///
+    /// This is all a long-winded way of explaining the circumstances that might
+    /// cause a directory to contain a `.cargo-ok` file that is empty or
+    /// otherwise corrupted. Either this was extracted by a version of Rust
+    /// before 1.34, in which case everything should be fine. However, an empty
+    /// file created by versions 1.36 to 1.49 indicates that the extraction was
+    /// interrupted and that we need to start again.
+    ///
+    /// Another possibility is that the filesystem is simply corrupted, in
+    /// which case deleting the directory might be the safe thing to do. That
+    /// is probably unlikely, though.
+    ///
+    /// To be safe, we deletes the directory and starts over again if an empty
+    /// `.cargo-ok` file is found.
+    ///
+    /// [CVE-2022-36113]: https://blog.rust-lang.org/2022/09/14/cargo-cves.html#arbitrary-file-corruption-cve-2022-36113
     fn unpack_package(&self, pkg: PackageId, tarball: &File) -> CargoResult<PathBuf> {
         // The `.cargo-ok` file is used to track if the source is already
         // unpacked.
@@ -645,55 +699,23 @@ impl<'cfg> RegistrySource<'cfg> {
         let path = dst.join(PACKAGE_SOURCE_LOCK);
         let path = self.config.assert_package_cache_locked(&path);
         let unpack_dir = path.parent().unwrap();
-        match path.metadata() {
-            Ok(meta) if meta.len() > 0 => return Ok(unpack_dir.to_path_buf()),
-            Ok(_meta) => {
-                // The `.cargo-ok` file is not in a state we expect it to be
-                // (with two bytes containing "ok").
-                //
-                // Cargo has always included a `.cargo-ok` file to detect if
-                // extraction was interrupted, but it was originally empty.
-                //
-                // In 1.34, Cargo was changed to create the `.cargo-ok` file
-                // before it started extraction to implement fine-grained
-                // locking. After it was finished extracting, it wrote two
-                // bytes to indicate it was complete. It would use the length
-                // check to detect if it was possibly interrupted.
-                //
-                // In 1.36, Cargo changed to not use fine-grained locking, and
-                // instead used a global lock. The use of `.cargo-ok` was no
-                // longer needed for locking purposes, but was kept to detect
-                // when extraction was interrupted.
-                //
-                // In 1.49, Cargo changed to not create the `.cargo-ok` file
-                // before it started extraction to deal with `.crate` files
-                // that inexplicably had a `.cargo-ok` file in them.
-                //
-                // In 1.64, Cargo changed to detect `.crate` files with
-                // `.cargo-ok` files in them in response to CVE-2022-36113,
-                // which dealt with malicious `.crate` files making
-                // `.cargo-ok` a symlink causing cargo to write "ok" to any
-                // arbitrary file on the filesystem it has permission to.
-                //
-                // This is all a long-winded way of explaining the
-                // circumstances that might cause a directory to contain a
-                // `.cargo-ok` file that is empty or otherwise corrupted.
-                // Either this was extracted by a version of Rust before 1.34,
-                // in which case everything should be fine. However, an empty
-                // file created by versions 1.36 to 1.49 indicates that the
-                // extraction was interrupted and that we need to start again.
-                //
-                // Another possibility is that the filesystem is simply
-                // corrupted, in which case deleting the directory might be
-                // the safe thing to do. That is probably unlikely, though.
-                //
-                // To be safe, this deletes the directory and starts over
-                // again.
-                log::warn!("unexpected length of {path:?}, clearing cache");
-                paths::remove_dir_all(dst.as_path_unlocked())?;
-            }
+        match fs::read_to_string(path) {
+            Ok(ok) => match serde_json::from_str::<LockMetadata>(&ok) {
+                Ok(lock_meta) if lock_meta.v == 1 => {
+                    return Ok(unpack_dir.to_path_buf());
+                }
+                _ => {
+                    if ok == "ok" {
+                        log::debug!("old `ok` content found, clearing cache");
+                    } else {
+                        log::warn!("unrecognized .cargo-ok content, clearing cache: {ok}");
+                    }
+                    // See comment of `unpack_package` about why removing all stuff.
+                    paths::remove_dir_all(dst.as_path_unlocked())?;
+                }
+            },
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-            Err(e) => anyhow::bail!("failed to access package completion {path:?}: {e}"),
+            Err(e) => anyhow::bail!("unable to read .cargo-ok file at {path:?}: {e}"),
         }
         dst.create_dir()?;
         let mut tar = {
@@ -757,7 +779,9 @@ impl<'cfg> RegistrySource<'cfg> {
             .write(true)
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
-        write!(ok, "ok")?;
+
+        let lock_meta = LockMetadata { v: 1 };
+        write!(ok, "{}", serde_json::to_string(&lock_meta).unwrap())?;
 
         Ok(unpack_dir.to_path_buf())
     }
