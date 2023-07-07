@@ -690,7 +690,17 @@ impl BuildOutput {
                 continue;
             }
             let data = match iter.next() {
-                Some(val) => val,
+                Some(val) => {
+                    if val.starts_with(":") {
+                        // Line started with `cargo::`.
+                        bail!("unsupported output in {}: `{}`\n\
+                            Found a `cargo::key=value` build directive which is reserved for future use.\n\
+                            Either change the directive to `cargo:key=value` syntax (note the single `:`) or upgrade your version of Rust.\n\
+                            See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+                            for more information about build script outputs.", whence, line);
+                    }
+                    val
+                }
                 None => continue,
             };
 
