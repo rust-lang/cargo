@@ -182,11 +182,7 @@ release. Non-numeric components are compared lexicographically.
 SemVer has the concept of "version metadata" with a plus in the version, such
 as `1.0.0+21AF26D3`. This metadata is usually ignored, and should not be used
 in a version requirement. You should never publish multiple versions that
-differ only in the metadata tag (note, this is a [known issue] with
-[crates.io] that currently permits this).
-
-[known issue]: https://github.com/rust-lang/crates.io/issues/1059
-[crates.io]: https://crates.io/
+differ only in the metadata tag.
 
 ## Other constraints
 
@@ -486,6 +482,7 @@ are too loose, it may be possible for new versions to be published that will
 break the build.
 
 [SemVer guidelines]: semver.md
+[crates.io]: https://crates.io/
 
 ## Troubleshooting
 
