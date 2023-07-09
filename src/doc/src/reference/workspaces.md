@@ -56,7 +56,6 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
-<a id="virtual-manifest"></a>
 #### Virtual workspace
 
 Alternatively, a `Cargo.toml` file can be created with a `[workspace]` section
@@ -253,3 +252,17 @@ if that makes sense for the tool in question.
 [specifying-dependencies]: specifying-dependencies.md
 [features]: features.md
 [inheriting-a-dependency-from-a-workspace]: specifying-dependencies.md#inheriting-a-dependency-from-a-workspace
+
+<script>
+(function() {
+    var fragments = {
+        "#virtual-manifest": "workspaces.html#virtual-workspace",
+    };
+    var target = fragments[window.location.hash];
+    if (target) {
+        var url = window.location.toString();
+        var base = url.substring(0, url.lastIndexOf('/'));
+        window.location.replace(base + "/" + target);
+    }
+})();
+</script>
