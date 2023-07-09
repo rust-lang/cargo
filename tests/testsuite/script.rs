@@ -1062,7 +1062,12 @@ fn cmd_metadata_with_embedded() {
                 "features": {},
                 "manifest_path": "[..]script.rs",
                 "metadata": null,
-                "publish": []
+                "publish": [],
+                "profiles": {
+                    "release": {
+                      "strip": true
+                    }
+                }
             }
         ],
         "workspace_members": ["script 0.0.0 (path+file:[..]foo)"],
@@ -1137,7 +1142,12 @@ fn cmd_read_manifest_with_embedded() {
     "features":{},
     "manifest_path":"[..]script.rs",
     "metadata": null,
-    "publish": []
+    "publish": [],
+    "profiles": {
+        "release": {
+          "strip": true
+        }
+    }
 }"#,
         )
         .with_stderr(

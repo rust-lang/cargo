@@ -31,6 +31,7 @@ use crate::util::network::http::http_handle_and_timeout;
 use crate::util::network::http::HttpTimeout;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
+use crate::util::toml::TomlProfiles;
 use crate::util::RustVersion;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
@@ -105,6 +106,8 @@ pub struct SerializedPackage {
     metabuild: Option<Vec<String>>,
     default_run: Option<String>,
     rust_version: Option<RustVersion>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profiles: Option<TomlProfiles>,
 }
 
 impl Package {
@@ -264,6 +267,7 @@ impl Package {
             publish: self.publish().as_ref().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
             rust_version: self.rust_version().cloned(),
+            profiles: self.manifest().profiles().cloned(),
         }
     }
 }

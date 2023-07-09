@@ -4257,3 +4257,242 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
         )
         .run();
 }
+
+#[cargo_test]
+fn library_metadata_with_profiles() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.5.0"
+
+[profile.release]
+strip = "symbols"
+
+[profile.custom-lto]
+lto = "thin"
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .with_json(
+            r#"
+    {
+        "packages": [
+            {
+                "authors": [],
+                "categories": [],
+                "default_run": null,
+                "name": "foo",
+                "readme": null,
+                "repository": null,
+                "homepage": null,
+                "documentation": null,
+                "version": "0.5.0",
+                "rust_version": null,
+                "id": "foo[..]",
+                "keywords": [],
+                "source": null,
+                "dependencies": [],
+                "edition": "2015",
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "targets": [
+                    {
+                        "kind": [
+                            "lib"
+                        ],
+                        "crate_types": [
+                            "lib"
+                        ],
+                        "doc": true,
+                        "doctest": true,
+                        "test": true,
+                        "edition": "2015",
+                        "name": "foo",
+                        "src_path": "[..]/foo/src/lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null,
+                "publish": null,
+                "profiles": {
+                  "custom-lto": {
+                    "lto": "thin"
+                  },
+                  "release": {
+                    "strip": "symbols"
+                  }
+                }
+            }
+        ],
+        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "resolve": {
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                }
+            ],
+            "root": "foo 0.5.0 (path+file:[..]foo)"
+        },
+        "target_directory": "[..]foo/target",
+        "version": 1,
+        "workspace_root": "[..]/foo",
+        "metadata": null
+    }"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_metadata_with_profiles() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+
+                [profile.release]
+                strip = "symbols"
+                
+                [profile.custom-lto]
+                lto = "thin"
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata")
+        .with_json(
+            r#"
+    {
+        "packages": [
+            {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
+                "default_run": null,
+                "name": "bar",
+                "version": "0.5.0",
+                "id": "bar[..]",
+                "readme": null,
+                "repository": null,
+                "rust_version": null,
+                "homepage": null,
+                "documentation": null,
+                "keywords": [],
+                "source": null,
+                "dependencies": [],
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "edition": "2015",
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
+                        "doc": true,
+                        "doctest": true,
+                        "test": true,
+                        "edition": "2015",
+                        "name": "bar",
+                        "src_path": "[..]bar/src/lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]bar/Cargo.toml",
+                "metadata": null,
+                "publish": null
+            },
+            {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
+                "default_run": null,
+                "name": "baz",
+                "readme": null,
+                "repository": null,
+                "rust_version": null,
+                "homepage": null,
+                "documentation": null,
+                "version": "0.5.0",
+                "id": "baz[..]",
+                "keywords": [],
+                "source": null,
+                "dependencies": [],
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "edition": "2015",
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
+                        "doc": true,
+                        "doctest": true,
+                        "test": true,
+                        "edition": "2015",
+                        "name": "baz",
+                        "src_path": "[..]baz/src/lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]baz/Cargo.toml",
+                "metadata": null,
+                "publish": null
+            }
+        ],
+        "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
+        "workspace_default_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
+        "resolve": {
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "bar 0.5.0 (path+file:[..]bar)"
+                },
+                {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "baz 0.5.0 (path+file:[..]baz)"
+                }
+            ],
+            "root": null
+        },
+        "target_directory": "[..]foo/target",
+        "version": 1,
+        "workspace_root": "[..]/foo",
+        "metadata": null,
+        "workspace_profiles": {
+          "custom-lto": {
+            "lto": "thin"
+          },
+          "release": {
+            "strip": "symbols"
+          }
+        }
+    }"#,
+        )
+        .run();
+}
