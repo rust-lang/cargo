@@ -132,6 +132,7 @@ panic = 'unwind'         # The panic strategy.
 incremental = true       # Incremental compilation.
 codegen-units = 16       # Number of code generation units.
 rpath = false            # Sets the rpath linking option.
+strip = "none"           # Removes symbols or debuginfo.
 [profile.<name>.build-override]  # Overrides build-script settings.
 # Same keys for a normal profile.
 [profile.<name>.package.<name>]  # Override profile for a package.
@@ -907,6 +908,13 @@ See [panic](profiles.md#panic).
 * Environment: `CARGO_PROFILE_<name>_RPATH`
 
 See [rpath](profiles.md#rpath).
+
+##### `profile.<name>.strip`
+* Type: string
+* default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_STRIP`
+
+See [strip](profiles.md#strip).
 
 
 #### `[registries]`
