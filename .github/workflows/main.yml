@@ -154,6 +154,7 @@ jobs:
     - run: cargo test -p cargo
     - name: Clear intermediate test output
       run: ci/clean-test-output.sh
+
     - name: gitoxide tests (all git-related tests)
       run: cargo test -p cargo git
       env:
@@ -162,6 +163,7 @@ jobs:
     # running out of disk space.
     - name: Clear test output
       run: ci/clean-test-output.sh
+
     # This only tests `cargo fix` because fix-proxy-mode is one of the most
     # complicated subprocess management in Cargo.
     - name: Check operability of rustc invocation with argfile
@@ -188,6 +190,7 @@ jobs:
     # running out of disk space.
     - name: Clear benchmark output
       run: ci/clean-test-output.sh
+
     - name: Fetch smoke test
       run: ci/fetch-smoke-test.sh
 
