@@ -94,8 +94,6 @@
   [#11958](https://github.com/rust-lang/cargo/pull/11958)
 - Added `workspace_default_members` to the output of `cargo metadata`.
   [#11978](https://github.com/rust-lang/cargo/pull/11978)
-- `cargo add` now considers `rust-version` when selecting packages.
-  [#12078](https://github.com/rust-lang/cargo/pull/12078)
 - Automatically inherit workspace fields when running `cargo new`/`cargo init`.
   [#12069](https://github.com/rust-lang/cargo/pull/12069)
 
@@ -173,6 +171,8 @@
   [#11981](https://github.com/rust-lang/cargo/pull/11981)
 - Added `-Zmsrv-policy` feature flag placeholder.
   [#12043](https://github.com/rust-lang/cargo/pull/12043)
+- `cargo add` now considers `rust-version` when selecting packages with `-Zmsrv-policy`.
+  [#12078](https://github.com/rust-lang/cargo/pull/12078)
 
 ### Documentation
 
