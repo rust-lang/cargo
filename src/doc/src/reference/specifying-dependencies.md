@@ -22,7 +22,7 @@ time = "0.1.12"
 The string `"0.1.12"` is a version requirement. Although it looks like a
 specific *version* of the `time` crate, it actually specifies a *range* of
 versions and allows [SemVer] compatible updates. An update is allowed if the new
-version number does not modify the left-most non-zero digit in the major, minor,
+version number does not modify the left-most non-zero number in the major, minor,
 patch grouping. In this case, if we ran `cargo update -p time`, cargo should
 update us to version `0.1.13` if it is the latest `0.1.z` release, but would not
 update us to `0.2.0`. If instead we had specified the version string as `1.0`,
