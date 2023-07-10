@@ -13,6 +13,41 @@ permissions:
   contents: read
 
 jobs:
+  success:
+    permissions:
+      contents: none
+    name: bors build finished
+    needs:
+    - build_std
+    - clippy
+    - docs
+    - lockfile
+    - resolver
+    - rustfmt
+    - test
+    - test_gitoxide
+    runs-on: ubuntu-latest
+    if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    steps:
+    - run: echo ok
+  failure:
+    permissions:
+      contents: none
+    name: bors build finished
+    needs:
+    - build_std
+    - clippy
+    - docs
+    - lockfile
+    - resolver
+    - rustfmt
+    - test
+    - test_gitoxide
+    runs-on: ubuntu-latest
+    if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    steps:
+    - run: exit 1
+
   # Check Code style quickly by running `rustfmt` over all code
   rustfmt:
     runs-on: ubuntu-latest
@@ -211,38 +246,3 @@ jobs:
         cd target
         curl -sSLO https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
         sh linkcheck.sh --all --path ../src/doc cargo
-
-  success:
-    permissions:
-      contents: none
-    name: bors build finished
-    needs:
-    - build_std
-    - clippy
-    - docs
-    - lockfile
-    - resolver
-    - rustfmt
-    - test
-    - test_gitoxide
-    runs-on: ubuntu-latest
-    if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
-    steps:
-    - run: echo ok
-  failure:
-    permissions:
-      contents: none
-    name: bors build finished
-    needs:
-    - build_std
-    - clippy
-    - docs
-    - lockfile
-    - resolver
-    - rustfmt
-    - test
-    - test_gitoxide
-    runs-on: ubuntu-latest
-    if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
-    steps:
-    - run: exit 1
