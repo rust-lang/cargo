@@ -30,6 +30,13 @@ pub fn cli() -> Command {
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let registry = args.registry(config)?;
     let ws = args.workspace(config)?;
+    if ws.root_maybe().is_embedded() {
+        return Err(anyhow::format_err!(
+            "{} is unsupported by `cargo publish`",
+            ws.root_manifest().display()
+        )
+        .into());
+    }
     let index = args.index()?;
 
     ops::publish(

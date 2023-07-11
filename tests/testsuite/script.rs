@@ -1195,7 +1195,7 @@ fn cmd_pkgid_with_embedded() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[ERROR] a Cargo.lock must exist for this command
+[ERROR] [ROOT]/foo/script.rs is unsupported by `cargo pkgid`
 ",
         )
         .run();
@@ -1213,11 +1213,7 @@ fn cmd_package_with_embedded() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  no targets specified in the manifest
-  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+[ERROR] [ROOT]/foo/script.rs is unsupported by `cargo package`
 ",
         )
         .run();
@@ -1235,8 +1231,7 @@ fn cmd_publish_with_embedded() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[ERROR] `script` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+[ERROR] [ROOT]/foo/script.rs is unsupported by `cargo publish`
 ",
         )
         .run();
