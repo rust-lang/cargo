@@ -544,6 +544,46 @@ args: []
 }
 
 #[cargo_test]
+fn test_name_has_leading_number() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("42answer.rs", script)
+        .build();
+
+    p.cargo("-Zscript -v 42answer.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[ERROR] failed to parse manifest at `[ROOT]/foo/42answer.rs`
+
+Caused by:
+  invalid character `-` in package name: `-42answer`, the first character must be a Unicode XID start character (most letters or `_`)
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn test_name_is_number() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project().file("42.rs", script).build();
+
+    p.cargo("-Zscript -v 42.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[ERROR] failed to parse manifest at `[ROOT]/foo/42.rs`
+
+Caused by:
+  invalid character `-` in package name: `-42`, the first character must be a Unicode XID start character (most letters or `_`)
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn script_like_dir() {
     let p = cargo_test_support::project()
         .file("script.rs/foo", "something")
