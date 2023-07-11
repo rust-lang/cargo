@@ -132,15 +132,18 @@ to [crates.io] as part of the 6-week stable release process by the [Release
 team]. There is a [`publish.py` script] that is used by the Release team's
 automation scripts (see <https://github.com/rust-lang/simpleinfra/>) to handle
 determining which packages to publish. The test and build tool crates aren't
-published.
+published. This runs on the specific git commit associated with the cargo
+submodule in the `stable` branch in `rust-lang/rust` at the time of release.
 
 On very rare cases, the Cargo team may decide to manually publish a new
 release to [crates.io]. For example, this may be necessary if there is a
 problem with the current version that only affects API users, and does not
 affect the `cargo` binary shipped in the stable release. In this situation,
-the patch version should be bumped, and then someone with permissions
-(currently a subset of the Cargo team, or the Release team) should publish it
-manually.
+PRs should be merged to the associated stable release branch in the cargo repo
+(like `rust-1.70.0`) that fix the issue and bump the patch version of the
+affected package. Then someone with permissions (currently a subset of the
+Cargo team, or the Release team) should publish it manually using `cargo
+publish`.
 
 Some packages are not published automatically because they are not part of the
 Rust release train. These currently include all of the [`credential`] packages
