@@ -544,6 +544,52 @@ args: []
 }
 
 #[cargo_test]
+fn test_name_has_leading_number() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("42answer.rs", script)
+        .build();
+
+    p.cargo("-Zscript -v 42answer.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [..]/debug/answer[EXE]
+args: []
+"#,
+        )
+        .with_stderr(
+            r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] answer v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/answer[EXE]`
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn test_name_is_number() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project().file("42.rs", script).build();
+
+    p.cargo("-Zscript -v 42.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout(
+            r#"bin: [..]/debug/package[EXE]
+args: []
+"#,
+        )
+        .with_stderr(
+            r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[COMPILING] package v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/package[EXE]`
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn script_like_dir() {
     let p = cargo_test_support::project()
         .file("script.rs/foo", "something")
