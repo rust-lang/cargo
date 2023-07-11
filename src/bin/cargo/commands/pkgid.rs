@@ -15,6 +15,13 @@ pub fn cli() -> Command {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
+    if ws.root_maybe().is_embedded() {
+        return Err(anyhow::format_err!(
+            "{} is unsupported by `cargo pkgid`",
+            ws.root_manifest().display()
+        )
+        .into());
+    }
     if args.is_present_with_zero_values("package") {
         print_available_packages(&ws)?
     }
