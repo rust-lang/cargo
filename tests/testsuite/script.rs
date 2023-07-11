@@ -574,13 +574,16 @@ fn test_name_is_number() {
 
     p.cargo("-Zscript -v 42.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            r#"bin: [..]/debug/package[EXE]
+args: []
+"#,
+        )
         .with_stderr(
             r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[ERROR] failed to parse manifest at `[ROOT]/foo/42.rs`
-
-Caused by:
-  package name cannot be an empty string
+[COMPILING] package v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/package[EXE]`
 "#,
         )
         .run();

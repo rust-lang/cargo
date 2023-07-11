@@ -100,6 +100,9 @@ pub fn sanitize_package_name(name: &str, placeholder: char) -> String {
             slug.push(placeholder);
         }
     }
+    if slug.is_empty() {
+        slug.push_str("package");
+    }
     slug
 }
 
