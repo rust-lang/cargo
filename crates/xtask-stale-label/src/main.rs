@@ -34,7 +34,7 @@ fn main() {
 
     for (label, value) in autolabel.iter() {
         let Some(trigger_files) = value.get("trigger_files") else {
-            continue
+            continue;
         };
         let trigger_files = trigger_files.as_array().expect("an array");
         let missing_files: Vec<_> = trigger_files
