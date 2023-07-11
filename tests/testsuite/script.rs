@@ -1182,3 +1182,62 @@ fn cmd_verify_project_with_embedded() {
         )
         .run();
 }
+
+#[cargo_test]
+fn cmd_pkgid_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript pkgid --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[ERROR] a Cargo.lock must exist for this command
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_package_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript package --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cmd_publish_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript publish --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[ERROR] `script` cannot be published.
+`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+",
+        )
+        .run();
+}
