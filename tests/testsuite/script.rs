@@ -552,13 +552,16 @@ fn test_name_has_leading_number() {
 
     p.cargo("-Zscript -v 42answer.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout(
+            r#"bin: [..]/debug/answer[EXE]
+args: []
+"#,
+        )
         .with_stderr(
             r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
-[ERROR] failed to parse manifest at `[ROOT]/foo/42answer.rs`
-
-Caused by:
-  invalid character `-` in package name: `-42answer`, the first character must be a Unicode XID start character (most letters or `_`)
+[COMPILING] answer v0.0.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[RUNNING] `[..]/debug/answer[EXE]`
 "#,
         )
         .run();
@@ -577,7 +580,7 @@ fn test_name_is_number() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/42.rs`
 
 Caused by:
-  invalid character `-` in package name: `-42`, the first character must be a Unicode XID start character (most letters or `_`)
+  package name cannot be an empty string
 "#,
         )
         .run();
