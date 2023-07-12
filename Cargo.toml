@@ -10,6 +10,9 @@ exclude = [
   "target/", # exclude bench testing
 ]
 
+[workspace.package]
+edition = "2021"
+
 [workspace.dependencies]
 anyhow = "1.0.47"
 base64 = "0.21.0"
@@ -96,7 +99,7 @@ windows-sys = "0.48"
 [package]
 name = "cargo"
 version = "0.74.0"
-edition = "2021"
+edition.workspace = true
 license = "MIT OR Apache-2.0"
 homepage = "https://crates.io"
 repository = "https://github.com/rust-lang/cargo"
