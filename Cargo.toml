@@ -12,6 +12,7 @@ exclude = [
 
 [workspace.package]
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 anyhow = "1.0.47"
@@ -100,7 +101,7 @@ windows-sys = "0.48"
 name = "cargo"
 version = "0.74.0"
 edition.workspace = true
-license = "MIT OR Apache-2.0"
+license.workspace = true
 homepage = "https://crates.io"
 repository = "https://github.com/rust-lang/cargo"
 documentation = "https://docs.rs/cargo"

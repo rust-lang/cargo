@@ -11,7 +11,7 @@ include = [
     "/LICENSE-*",
     "/README.md",
 ]
-license = "MIT OR Apache-2.0"
+license.workspace = true
 repository = "https://github.com/rust-lang/cargo"
 description = "Shared definitions of home directories."
 
