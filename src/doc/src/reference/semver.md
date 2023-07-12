@@ -62,6 +62,7 @@ considered incompatible.
     * Structs
         * [Major: adding a private struct field when all current fields are public](#struct-add-private-field-when-public)
         * [Major: adding a public field when no private field exists](#struct-add-public-field-when-no-private)
+        * [Major: going from a unit struct to a normal struct, even if it has no fields](#struct-unit-to-normal)
         * [Minor: adding or removing private fields when at least one already exists](#struct-private-fields-with-private)
         * [Minor: going from a tuple struct with all private fields (with at least one field) to a normal struct, or vice versa](#struct-tuple-normal-with-private)
     * Enums
@@ -275,6 +276,42 @@ Mitigation strategies:
 * Mark structs as [`#[non_exhaustive]`][non_exhaustive] when first introducing
   a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
+
+<a id="#struct-unit-to-normal"></a>
+### Major: going from a unit struct to a normal struct, even if it has no fields
+
+A unit struct can be constructed using both `Unit` and `Unit {}`
+[struct literal] syntax. However, the curly braces are mandatory for
+normal structs, even ones with no fields.
+
+If the unit struct was not [`#[non_exhaustive]`][non_exhaustive],
+changing it to a normal struct will break any code that constructs
+it using a [struct literal] without the curly braces.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Foo;
+
+///////////////////////////////////////////////////////////
+// After
+pub struct Foo {}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Foo;
+
+fn main() {
+    let x = Foo; // Error: expected value, found struct `Foo`
+    //      ^^^ help: use struct literal syntax instead: `Foo {}`
+}
+```
+
+Mitigation strategies:
+* Mark the unit struct [`#[non_exhaustive]`][non_exhaustive] when first
+  adding it, to make it impossible to construct outside of its own crate.
 
 <a id="struct-private-fields-with-private"></a>
 ### Minor: adding or removing private fields when at least one already exists
