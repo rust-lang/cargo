@@ -53,7 +53,6 @@ Every manifest file consists of the following sections:
 * [`[profile]`](profiles.md) --- Compiler settings and optimizations.
 * [`[workspace]`](workspaces.md) --- The workspace definition.
 
-<a id="package-metadata"></a>
 ### The `[package]` section
 
 The first section in a `Cargo.toml` is `[package]`.
@@ -112,7 +111,6 @@ breaking change.
 [Resolver]: resolver.md
 [SemVer compatibility]: semver.md
 
-<a id="the-authors-field-optional"></a>
 #### The `authors` field
 
 The optional `authors` field lists in an array the people or organizations that are considered
@@ -135,7 +133,6 @@ user interface.
 > field cannot be changed or removed in already-published versions of a
 > package.
 
-<a id="the-edition-field-optional"></a>
 #### The `edition` field
 
 The `edition` key is an optional key that affects which [Rust Edition] your package
@@ -198,7 +195,6 @@ description = "A short description of my package"
 
 > **Note**: [crates.io] requires the `description` to be set.
 
-<a id="the-documentation-field-optional"></a>
 #### The `documentation` field
 
 The `documentation` field specifies a URL to a website hosting the crate's
@@ -326,7 +322,6 @@ categories = ["command-line-utilities", "development-tools::cargo-plugins"]
 > match one of the strings available at <https://crates.io/category_slugs>, and
 > must match exactly.
 
-<a id="the-workspace--field-optional"></a>
 #### The `workspace` field
 
 The `workspace` field can be used to configure the workspace that this package
@@ -347,8 +342,6 @@ table defined. That is, a crate cannot both be a root crate in a workspace
 
 For more information, see the [workspaces chapter](workspaces.md).
 
-<a id="package-build"></a>
-<a id="the-build-field-optional"></a>
 #### The `build` field
 
 The `build` field specifies a file in the package root which is a [build
@@ -368,7 +361,6 @@ The default is `"build.rs"`, which loads the script from a file named
 specify a path to a different file or `build = false` to disable automatic
 detection of the build script.
 
-<a id="the-links-field-optional"></a>
 #### The `links` field
 
 The `links` field specifies the name of a native library that is being linked
@@ -386,7 +378,6 @@ on Linux) may specify:
 links = "git2"
 ```
 
-<a id="the-exclude-and-include-fields-optional"></a>
 #### The `exclude` and `include` fields
 
 The `exclude` and `include` fields can be used to explicitly specify which
@@ -476,7 +467,6 @@ if any of those files change.
 
 [gitignore]: https://git-scm.com/docs/gitignore
 
-<a id="the-publish--field-optional"></a>
 #### The `publish` field
 
 The `publish` field can be used to prevent a package from being published to a
@@ -501,7 +491,6 @@ publish = ["some-registry-name"]
 If publish array contains a single registry, `cargo publish` command will use
 it when `--registry` flag is not specified.
 
-<a id="the-metadata-table-optional"></a>
 #### The `metadata` table
 
 Cargo by default will warn about unused keys in `Cargo.toml` to assist in
@@ -624,6 +613,17 @@ more detail.
         "#the-patch-section": "overriding-dependencies.html#the-patch-section",
         "#using-patch-with-multiple-versions": "overriding-dependencies.html#using-patch-with-multiple-versions",
         "#the-replace-section": "overriding-dependencies.html#the-replace-section",
+        "#package-metadata": "manifest.html#the-package-section",
+        "#the-authors-field-optional": "manifest.html#the-authors-field",
+        "#the-edition-field-optional": "manifest.html#the-edition-field",
+        "#the-documentation-field-optional": "manifest.html#the-documentation-field",
+        "#the-workspace--field-optional": "manifest.html#the-workspace-field",
+        "#package-build": "manifest.html#the-build-field",
+        "#the-build-field-optional": "manifest.html#the-build-field",
+        "#the-links-field-optional": "manifest.html#the-links-field",
+        "#the-exclude-and-include-fields-optional": "manifest.html#the-exclude-and-include-fields",
+        "#the-publish--field-optional": "manifest.html#the-publish-field",
+        "#the-metadata-table-optional": "manifest.html#the-metadata-table",
     };
     var target = fragments[window.location.hash];
     if (target) {

@@ -112,8 +112,7 @@ after it has been modified, and an example usage of the code that could appear
 in another project. In a minor change, the example usage should successfully
 build with both the before and after versions.
 
-<a id="item-remove"></a>
-### Major: renaming/moving/removing any public items
+### Major: renaming/moving/removing any public items {#item-remove}
 
 The absence of a publicly exposed [item][items] will cause any uses of that item to
 fail to compile.
@@ -145,8 +144,7 @@ Mitigating strategies:
 * Mark renamed items as [deprecated], and use a [`pub use`] item to re-export
   to the old name.
 
-<a id="item-new"></a>
-### Minor: adding new public items
+### Minor: adding new public items {#item-new}
 
 Adding new, public [items] is a minor change.
 
@@ -206,8 +204,7 @@ This is not considered a major change because conventionally glob imports are
 a known forwards-compatibility hazard. Glob imports of items from external
 crates should be avoided.
 
-<a id="struct-add-private-field-when-public"></a>
-### Major: adding a private struct field when all current fields are public
+### Major: adding a private struct field when all current fields are public {#struct-add-private-field-when-public}
 
 When a private field is added to a struct that previously had all public fields,
 this will break any code that attempts to construct it with a [struct literal].
@@ -241,8 +238,7 @@ Mitigation strategies:
   a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
-<a id="struct-add-public-field-when-no-private"></a>
-### Major: adding a public field when no private field exists
+### Major: adding a public field when no private field exists {#struct-add-public-field-when-no-private}
 
 When a public field is added to a struct that has all public fields, this will
 break any code that attempts to construct it with a [struct literal].
@@ -276,8 +272,7 @@ Mitigation strategies:
   a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
-<a id="struct-private-fields-with-private"></a>
-### Minor: adding or removing private fields when at least one already exists
+### Minor: adding or removing private fields when at least one already exists {#struct-private-fields-with-private}
 
 It is safe to add or remove private fields from a struct when the struct
 already has at least one private field.
@@ -335,8 +330,7 @@ fn main() {
 }
 ```
 
-<a id="struct-tuple-normal-with-private"></a>
-### Minor: going from a tuple struct with all private fields (with at least one field) to a normal struct, or vice versa
+### Minor: going from a tuple struct with all private fields (with at least one field) to a normal struct, or vice versa {#struct-tuple-normal-with-private}
 
 Changing a tuple struct to a normal struct (or vice-versa) is safe if all
 fields are private.
@@ -367,8 +361,7 @@ fn main() {
 This is safe because existing code cannot use a [struct literal] to construct
 it, nor match its contents.
 
-<a id="enum-variant-new"></a>
-### Major: adding new enum variants (without `non_exhaustive`)
+### Major: adding new enum variants (without `non_exhaustive`) {#enum-variant-new}
 
 It is a breaking change to add a new enum variant if the enum does not use the
 [`#[non_exhaustive]`][non_exhaustive] attribute.
@@ -404,8 +397,7 @@ Mitigation strategies:
 * When introducing the enum, mark it as [`#[non_exhaustive]`][non_exhaustive]
   to force users to use [wildcard patterns] to catch new variants.
 
-<a id="enum-fields-new"></a>
-### Major: adding new fields to an enum variant
+### Major: adding new fields to an enum variant {#enum-fields-new}
 
 It is a breaking change to add new fields to an enum variant because all
 fields are public, and constructors and matching will fail to compile.
@@ -457,8 +449,7 @@ Mitigation strategies:
   }
   ```
 
-<a id="trait-new-item-no-default"></a>
-### Major: adding a non-defaulted trait item
+### Major: adding a non-defaulted trait item {#trait-new-item-no-default}
 
 It is a breaking change to add a non-defaulted item to a trait. This will
 break any implementors of the trait.
@@ -490,8 +481,7 @@ Mitigation strategies:
 * When introducing the trait, use the [sealed trait] technique to prevent
   users outside of the crate from implementing the trait.
 
-<a id="trait-item-signature"></a>
-### Major: any change to trait item signatures
+### Major: any change to trait item signatures {#trait-item-signature}
 
 It is a breaking change to make any change to a trait item signature. This can
 break external implementors of the trait.
@@ -530,8 +520,7 @@ Mitigation strategies:
 * When introducing the trait, use the [sealed trait] technique to prevent
   users outside of the crate from implementing the trait.
 
-<a id="trait-new-default-item"></a>
-### Possibly-breaking: adding a defaulted trait item
+### Possibly-breaking: adding a defaulted trait item {#trait-new-default-item}
 
 It is usually safe to add a defaulted trait item. However, this can sometimes
 cause a compile error. For example, this can introduce an ambiguity if a
@@ -581,8 +570,7 @@ Mitigation strategies:
   to require downstream users to add [disambiguation syntax] to select the
   correct function when updating the dependency.
 
-<a id="trait-object-safety"></a>
-### Major: adding a trait item that makes the trait non-object safe
+### Major: adding a trait item that makes the trait non-object safe {#trait-object-safety}
 
 It is a breaking change to add a trait item that changes the trait to not be
 [object safe].
@@ -616,8 +604,7 @@ fn main() {
 It is safe to do the converse (making a non-object safe trait into a safe
 one).
 
-<a id="trait-new-parameter-no-default"></a>
-### Major: adding a type parameter without a default
+### Major: adding a type parameter without a default {#trait-new-parameter-no-default}
 
 It is a breaking change to add a type parameter without a default to a trait.
 
@@ -643,8 +630,7 @@ impl Trait for Foo {}  // Error: missing generics
 Mitigating strategies:
 * See [adding a defaulted trait type parameter](#trait-new-parameter-default).
 
-<a id="trait-new-parameter-default"></a>
-### Minor: adding a defaulted trait type parameter
+### Minor: adding a defaulted trait type parameter {#trait-new-parameter-default}
 
 It is safe to add a type parameter to a trait as long as it has a default.
 External implementors will use the default without needing to specify the
@@ -669,8 +655,7 @@ struct Foo;
 impl Trait for Foo {}
 ```
 
-<a id="impl-item-new"></a>
-### Possibly-breaking change: adding any inherent items
+### Possibly-breaking change: adding any inherent items {#impl-item-new}
 
 Usually adding inherent items to an implementation should be safe because
 inherent items take priority over trait items. However, in some cases the
@@ -719,8 +704,7 @@ Mitigation strategies:
   to require downstream users to add [disambiguation syntax] to select the
   correct function when updating the dependency.
 
-<a id="generic-bounds-tighten"></a>
-### Major: tightening generic bounds
+### Major: tightening generic bounds {#generic-bounds-tighten}
 
 It is a breaking change to tighten generic bounds on a type since this can
 break users expecting the looser bounds.
@@ -749,8 +733,7 @@ fn main() {
 }
 ```
 
-<a id="generic-bounds-loosen"></a>
-### Minor: loosening generic bounds
+### Minor: loosening generic bounds {#generic-bounds-loosen}
 
 It is safe to loosen the generic bounds on a type, as it only expands what is
 allowed.
@@ -779,8 +762,7 @@ fn main() {
 }
 ```
 
-<a id="generic-new-default"></a>
-### Minor: adding defaulted type parameters
+### Minor: adding defaulted type parameters {#generic-new-default}
 
 It is safe to add a type parameter to a type as long as it has a default. All
 existing references will use the default without needing to specify the
@@ -810,8 +792,7 @@ fn main() {
 }
 ```
 
-<a id="generic-generalize-identical"></a>
-### Minor: generalizing a type to use generics (with identical types)
+### Minor: generalizing a type to use generics (with identical types) {#generic-generalize-identical}
 
 A struct or enum field can change from a concrete type to a generic type
 parameter, provided that the change results in an identical type for all
@@ -840,8 +821,7 @@ fn main() {
 because existing uses of `Foo` are shorthand for `Foo<u8>` which yields the
 identical field type.
 
-<a id="generic-generalize-different"></a>
-### Major: generalizing a type to use generics (with possibly different types)
+### Major: generalizing a type to use generics (with possibly different types) {#generic-generalize-different}
 
 Changing a struct or enum field from a concrete type to a generic type
 parameter can break if the type can change.
@@ -866,8 +846,7 @@ fn main() {
 }
 ```
 
-<a id="generic-more-generic"></a>
-### Minor: changing a generic type to a more generic type
+### Minor: changing a generic type to a more generic type {#generic-more-generic}
 
 It is safe to change a generic type to a more generic one. For example, the
 following adds a generic parameter that defaults to the original type, which
@@ -894,8 +873,7 @@ fn main() {
 }
 ```
 
-<a id="fn-change-arity"></a>
-### Major: adding/removing function parameters
+### Major: adding/removing function parameters {#fn-change-arity}
 
 Changing the arity of a function is a breaking change.
 
@@ -924,8 +902,7 @@ Mitigating strategies:
   with the builder pattern. This allows new fields to be added to the struct
   in the future.
 
-<a id="fn-generic-new"></a>
-### Possibly-breaking: introducing a new function type parameter
+### Possibly-breaking: introducing a new function type parameter {#fn-generic-new}
 
 Usually, adding a non-defaulted type parameter is safe, but in some
 cases it can be a breaking change:
@@ -955,8 +932,7 @@ other ways) that this breakage is usually acceptable. One should take into
 account how likely it is that the function in question is being called with
 explicit type arguments.
 
-<a id="fn-generalize-compatible"></a>
-### Minor: generalizing a function to use generics (supporting original type)
+### Minor: generalizing a function to use generics (supporting original type) {#fn-generalize-compatible}
 
 The type of a parameter to a function, or its return value, can be
 *generalized* to use generics, including by introducing a new type parameter,
@@ -1053,8 +1029,7 @@ fn main() {
 }
 ```
 
-<a id="fn-generalize-mismatch"></a>
-### Major: generalizing a function to use generics with type mismatch
+### Major: generalizing a function to use generics with type mismatch {#fn-generalize-mismatch}
 
 It is a breaking change to change a function parameter or return type if the
 generic type constrains or changes the types previously allowed. For example,
@@ -1081,8 +1056,7 @@ fn main() {
 }
 ```
 
-<a id="fn-unsafe-safe"></a>
-### Minor: making an `unsafe` function safe
+### Minor: making an `unsafe` function safe {#fn-unsafe-safe}
 
 A previously `unsafe` function can be made safe without breaking code.
 
@@ -1122,8 +1096,7 @@ Making a previously `unsafe` associated function or method on structs / enums
 safe is also a minor change, while the same is not true for associated
 function on traits (see [any change to trait item signatures](#trait-item-signature)).
 
-<a id="attr-no-std-to-std"></a>
-### Major: switching from `no_std` support to requiring `std`
+### Major: switching from `no_std` support to requiring `std` {#attr-no-std-to-std}
 
 If your library specifically supports a [`no_std`] environment, it is a
 breaking change to make a new release that requires `std`.
@@ -1158,8 +1131,7 @@ Mitigation strategies:
   optionally enables `std` support, and when the feature is off, the library
   can be used in a `no_std` environment.
 
-<a id="attr-adding-non-exhaustive"></a>
-### Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields
+### Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields {#attr-adding-non-exhaustive}
 
 Making items [`#[non_exhaustive]`][non_exhaustive] changes how they may
 be used outside the crate where they are defined:
@@ -1243,8 +1215,7 @@ Mitigation strategies:
 
 ## Tooling and environment compatibility
 
-<a id="env-new-rust"></a>
-### Possibly-breaking: changing the minimum version of Rust required
+### Possibly-breaking: changing the minimum version of Rust required {#env-new-rust}
 
 Introducing the use of new features in a new release of Rust can break
 projects that are using older versions of Rust. This also includes using new
@@ -1271,8 +1242,7 @@ Mitigation strategies:
   mechanism for new features. These are currently unstable and only available
   in the nightly channel.
 
-<a id="env-change-requirements"></a>
-### Possibly-breaking: changing the platform and environment requirements
+### Possibly-breaking: changing the platform and environment requirements {#env-change-requirements}
 
 There is a very wide range of assumptions a library makes about the
 environment that it runs in, such as the host platform, operating system
@@ -1292,8 +1262,7 @@ Mitigation strategies:
 * Document the platforms and environments you specifically support.
 * Test your code on a wide range of environments in CI.
 
-<a id="new-lints"></a>
-### Minor: introducing new lints
+### Minor: introducing new lints {#new-lints}
 
 Some changes to a library may cause new lints to be triggered in users of that library.
 This should generally be considered a compatible change.
@@ -1348,8 +1317,7 @@ Mitigating strategies:
 
 ### Cargo
 
-<a id="cargo-feature-add"></a>
-#### Minor: adding a new Cargo feature
+#### Minor: adding a new Cargo feature {#cargo-feature-add}
 
 It is usually safe to add new [Cargo features]. If the feature introduces new
 changes that cause a breaking change, this can cause difficulties for projects
@@ -1371,8 +1339,7 @@ consequences of enabling the feature.
 std = []
 ```
 
-<a id="cargo-feature-remove"></a>
-#### Major: removing a Cargo feature
+#### Major: removing a Cargo feature {#cargo-feature-remove}
 
 It is usually a breaking change to remove [Cargo features]. This will cause
 an error for any project that enabled the feature.
@@ -1398,8 +1365,7 @@ Mitigation strategies:
   functionality. Document that the feature is deprecated, and remove it in a
   future major SemVer release.
 
-<a id="cargo-feature-remove-another"></a>
-#### Major: removing a feature from a feature list if that changes functionality or public items
+#### Major: removing a feature from a feature list if that changes functionality or public items {#cargo-feature-remove-another}
 
 If removing a feature from another feature, this can break existing users if
 they are expecting that functionality to be available through that feature.
@@ -1420,8 +1386,7 @@ default = []  # This may cause packages to fail if they are expecting std to be 
 std = []
 ```
 
-<a id="cargo-remove-opt-dep"></a>
-#### Possibly-breaking: removing an optional dependency
+#### Possibly-breaking: removing an optional dependency {#cargo-remove-opt-dep}
 
 Removing an optional dependency can break a project using your library because
 another project may be enabling that dependency via [Cargo features].
@@ -1454,8 +1419,7 @@ Mitigation strategies:
   optional dependencies necessary to implement "networking". Then document the
   "networking" feature.
 
-<a id="cargo-change-dep-feature"></a>
-#### Minor: changing dependency features
+#### Minor: changing dependency features {#cargo-change-dep-feature}
 
 It is usually safe to change the features on a dependency, as long as the
 feature does not introduce a breaking change.
@@ -1475,8 +1439,7 @@ rand = { version = "0.7.3", features = ["small_rng"] }
 rand = "0.7.3"
 ```
 
-<a id="cargo-dep-add"></a>
-#### Minor: adding dependencies
+#### Minor: adding dependencies {#cargo-dep-add}
 
 It is usually safe to add new dependencies, as long as the new dependency
 does not introduce new requirements that result in a breaking change.
