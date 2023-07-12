@@ -265,7 +265,8 @@ In some cases, types with a `repr` attribute may not have an alignment, layout, 
 In these cases, it may be safe to make changes to the types, though care should be exercised.
 For example, types with private fields that do not otherwise document their alignment, layout, or size guarantees cannot be relied upon by external crates since the public API does not fully define the alignment, layout, or size of the type.
 
-A common example where a type with *private* fields is well-defined is a type with a single private field with a generic type, using `repr(transparent)`, and which is documented as being transparent to the generic type.
+A common example where a type with *private* fields is well-defined is a type with a single private field with a generic type, using `repr(transparent)`,
+and the prose of the documentation discusses that it is transparent to the generic type.
 For example, see [`UnsafeCell`].
 
 [the default representation]: ../../reference/type-layout.html#the-default-representation
