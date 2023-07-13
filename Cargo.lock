@@ -244,7 +244,7 @@ dependencies = [
 
 [[package]]
 name = "cargo"
-version = "0.72.0"
+version = "0.72.1"
 dependencies = [
  "anyhow",
  "base64",
@@ -554,7 +554,7 @@ dependencies = [
 
 [[package]]
 name = "crates-io"
-version = "0.36.1"
+version = "0.37.0"
 dependencies = [
  "anyhow",
  "curl",
@@ -2472,9 +2472,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.56"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b63bdb0cd06f1f4dedf69b254734f9b45af66e4a031e42a7480257d9898b435"
+checksum = "78803b62cbf1f46fde80d7c0e803111524b9877184cfe7c3033659490ac7a7da"
 dependencies = [
  "unicode-ident",
 ]
