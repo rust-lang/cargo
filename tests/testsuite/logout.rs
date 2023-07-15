@@ -58,7 +58,7 @@ fn default_registry_configured() {
     // --registry is not used.
     let cargo_home = paths::home().join(".cargo");
     cargo_home.mkdir_p();
-    cargo_util::paths::write(
+    cargo_util::paths::atomic_write(
         &cargo_home.join("config.toml"),
         r#"
             [registry]
@@ -69,7 +69,7 @@ fn default_registry_configured() {
         "#,
     )
     .unwrap();
-    cargo_util::paths::write(
+    cargo_util::paths::atomic_write(
         &cargo_home.join("credentials.toml"),
         r#"
         [registry]

@@ -1047,7 +1047,7 @@ impl RustDocFingerprint {
 
         let fingerprint_path = cx.files().host_root().join(".rustdoc_fingerprint.json");
         let write_fingerprint = || -> CargoResult<()> {
-            paths::write(
+            paths::atomic_write(
                 &fingerprint_path,
                 serde_json::to_string(&actual_rustdoc_target_data)?,
             )

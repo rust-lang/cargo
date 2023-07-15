@@ -235,7 +235,7 @@ fn sync(
             "files": map,
         });
 
-        paths::write(&cksum, json.to_string())?;
+        paths::atomic_write(&cksum, json.to_string())?;
     }
 
     for path in to_remove {

@@ -836,7 +836,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    paths::write(&manifest_path, manifest.to_string())?;
+    paths::atomic_write(&manifest_path, manifest.to_string())?;
 
     // Create all specified source files (with respective parent directories) if they don't exist.
     for i in &opts.source_files {
@@ -872,7 +872,7 @@ mod tests {
         };
 
         if !path_of_source_file.is_file() {
-            paths::write(&path_of_source_file, default_file_content)?;
+            paths::atomic_write(&path_of_source_file, default_file_content)?;
 
             // Format the newly created source file
             if let Err(e) = cargo_util::ProcessBuilder::new("rustfmt")

@@ -420,7 +420,7 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
             if config.get_env_os(BROKEN_CODE_ENV_INTERNAL).is_none() {
                 for (path, file) in fixes.files.iter() {
                     debug!("reverting {:?} due to errors", path);
-                    paths::write(path, &file.original_code)?;
+                    paths::atomic_write(path, &file.original_code)?;
                 }
             }
 
@@ -703,7 +703,7 @@ fn rustfix_and_fix(
             }
         }
         let new_code = fixed.finish()?;
-        paths::write(&file, new_code)?;
+        paths::atomic_write(&file, new_code)?;
     }
 
     Ok(())

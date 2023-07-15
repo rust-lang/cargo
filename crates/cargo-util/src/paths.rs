@@ -153,18 +153,39 @@ pub fn read_bytes(path: &Path) -> Result<Vec<u8>> {
     fs::read(path).with_context(|| format!("failed to read `{}`", path.display()))
 }
 
-/// Writes a file to disk.
+/// Atomically writes a file to disk.
 ///
-/// Equivalent to [`std::fs::write`] with better error messages.
-pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
+/// This function writes to a temporary file and renames it to overwrite the previous one,
+/// this way, we prevent that interruptions (like SIGINT or SIGKILL) corrupt the file.
+///
+/// # Errors:
+///
+/// This function will return an error if:
+///
+/// 1. `fs::write` fails writing to the temporary file.
+/// 2. `fs::rename` fails when copying from temporary to destination file.
+pub fn atomic_write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     let path = path.as_ref();
-    fs::write(path, contents.as_ref())
-        .with_context(|| format!("failed to write `{}`", path.display()))
+
+    let mut temporary_file = tempfile::Builder::new().suffix(path).tempfile()?;
+    temporary_file
+        .write_all(contents.as_ref())
+        .with_context(|| format!("failed to write to `{}`", temporary_file.path().display()))?;
+
+    fs::rename(temporary_file.path(), path)
+        .with_context(|| "failed to perform atomic write")
+        .with_context(|| {
+            format!(
+                "failed to rename `{}` to `{}`",
+                temporary_file.path().display(),
+                path.display()
+            )
+        })
 }
 
-/// Equivalent to [`write()`], but does not write anything if the file contents
+/// Equivalent to [`atomic_write()`], but does not write anything if the file contents
 /// are identical to the given contents.
-pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
+pub fn atomic_write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     (|| -> Result<()> {
         let contents = contents.as_ref();
         let mut f = OpenOptions::new()
@@ -175,11 +196,10 @@ pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) ->
         let mut orig = Vec::new();
         f.read_to_end(&mut orig)?;
         if orig != contents {
-            f.set_len(0)?;
-            f.seek(io::SeekFrom::Start(0))?;
-            f.write_all(contents)?;
+            atomic_write(&path, contents)
+        } else {
+            Ok(())
         }
-        Ok(())
     })()
     .with_context(|| format!("failed to write `{}`", path.as_ref().display()))?;
     Ok(())
@@ -309,7 +329,7 @@ pub fn set_invocation_time(path: &Path) -> Result<FileTime> {
     // note that if `FileTime::from_system_time(SystemTime::now());` is determined to be sufficient,
     // then this can be removed.
     let timestamp = path.join("invoked.timestamp");
-    write(
+    atomic_write(
         &timestamp,
         "This file has an mtime of when this was started.",
     )?;

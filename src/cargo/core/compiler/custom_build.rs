@@ -536,12 +536,12 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         // This is also the location where we provide feedback into the build
         // state informing what variables were discovered via our script as
         // well.
-        paths::write(&output_file, &output.stdout)?;
+        paths::atomic_write(&output_file, &output.stdout)?;
         // This mtime shift allows Cargo to detect if a source file was
         // modified in the middle of the build.
         paths::set_file_time_no_err(output_file, timestamp);
-        paths::write(&err_file, &output.stderr)?;
-        paths::write(&root_output_file, paths::path2bytes(&script_out_dir)?)?;
+        paths::atomic_write(&err_file, &output.stderr)?;
+        paths::atomic_write(&root_output_file, paths::path2bytes(&script_out_dir)?)?;
         let parsed_output = BuildOutput::parse(
             &output.stdout,
             library_name,
@@ -966,7 +966,7 @@ fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> Carg
     let output = output.join("");
     let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
     paths::create_dir_all(path.parent().unwrap())?;
-    paths::write_if_changed(path, &output)?;
+    paths::atomic_write_if_changed(path, &output)?;
     Ok(())
 }
 

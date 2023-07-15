@@ -483,7 +483,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         // still log the reason for the fingerprint failure instead of just
         // reporting "failed to read fingerprint" during the next build if
         // this build fails.
-        paths::write(&loc, b"")?;
+        paths::atomic_write(&loc, b"")?;
     }
 
     let write_fingerprint = if unit.mode.is_run_custom_build() {
@@ -1696,14 +1696,14 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
     // as we can use the full hash.
     let hash = fingerprint.hash_u64();
     debug!("write fingerprint ({:x}) : {}", hash, loc.display());
-    paths::write(loc, util::to_hex(hash).as_bytes())?;
+    paths::atomic_write(loc, util::to_hex(hash).as_bytes())?;
 
     let json = serde_json::to_string(fingerprint).unwrap();
     if cfg!(debug_assertions) {
         let f: Fingerprint = serde_json::from_str(&json).unwrap();
         assert_eq!(f.hash_u64(), hash);
     }
-    paths::write(&loc.with_extension("json"), json.as_bytes())?;
+    paths::atomic_write(&loc.with_extension("json"), json.as_bytes())?;
     Ok(())
 }
 
@@ -2019,7 +2019,7 @@ pub fn translate_dep_info(
         };
         on_disk_info.files.push((ty, path.to_owned()));
     }
-    paths::write(cargo_dep_info, on_disk_info.serialize()?)?;
+    paths::atomic_write(cargo_dep_info, on_disk_info.serialize()?)?;
     Ok(())
 }
 

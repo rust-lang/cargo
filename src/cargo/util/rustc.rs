@@ -286,7 +286,7 @@ impl Drop for Cache {
         }
         if let Some(ref path) = self.cache_location {
             let json = serde_json::to_string(&self.data).unwrap();
-            match paths::write(path, json.as_bytes()) {
+            match paths::atomic_write(path, json.as_bytes()) {
                 Ok(()) => info!("updated rustc info cache"),
                 Err(e) => warn!("failed to update rustc info cache: {}", e),
             }
