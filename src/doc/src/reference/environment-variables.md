@@ -54,10 +54,12 @@ system:
   see `CARGO_ENCODED_RUSTDOCFLAGS`.
 * `CARGO_ENCODED_RUSTDOCFLAGS` ---  A list of custom flags separated by `0x1f`
   (ASCII Unit Separator) to pass to all `rustdoc` invocations that Cargo performs.
-* `RUSTFLAGS` --- A space-separated list of custom flags to pass to all compiler
+* `RUSTFLAGS` --- A space-separated list of custom flags to pass to *all* compiler
   invocations that Cargo performs. In contrast with [`cargo rustc`], this is
   useful for passing a flag to *all* compiler instances. See
-  [`build.rustflags`] for some more ways to set flags. This string is
+  [`build.rustflags`] for some more ways to set flags which will only apply to the "production" code.
+  Setting RUSTFLAGS incorrectly may break your build if the flags supplied result in
+  platform-specific code that can not run on the build host. This string is
   split by whitespace; for a more robust encoding of multiple arguments,
   see `CARGO_ENCODED_RUSTFLAGS`.
 * `CARGO_ENCODED_RUSTFLAGS` --- A list of custom flags separated by `0x1f`
@@ -93,7 +95,7 @@ In summary, the supported environment variables are:
 * `CARGO_BUILD_RUSTDOC` --- The `rustdoc` executable, see [`build.rustdoc`].
 * `CARGO_BUILD_TARGET` --- The default target platform, see [`build.target`].
 * `CARGO_BUILD_TARGET_DIR` --- The default output directory, see [`build.target-dir`].
-* `CARGO_BUILD_RUSTFLAGS` --- Extra `rustc` flags, see [`build.rustflags`].
+* `CARGO_BUILD_RUSTFLAGS` --- Extra `rustc` flags that are applied to the "production" code only, but not procmacros, see [`build.rustflags`].
 * `CARGO_BUILD_RUSTDOCFLAGS` --- Extra `rustdoc` flags, see [`build.rustdocflags`].
 * `CARGO_BUILD_INCREMENTAL` --- Incremental compilation, see [`build.incremental`].
 * `CARGO_BUILD_DEP_INFO_BASEDIR` --- Dep-info relative directory, see [`build.dep-info-basedir`].
