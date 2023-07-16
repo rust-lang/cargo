@@ -35,7 +35,7 @@ args: []
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/echo[EXE]`
@@ -59,7 +59,7 @@ args: []
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/echo[EXE]`
@@ -136,7 +136,7 @@ args: []
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/echo[EXE]`
@@ -260,7 +260,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
@@ -289,7 +289,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
@@ -306,7 +306,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
 ",
@@ -323,7 +323,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
@@ -435,7 +435,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
@@ -460,7 +460,7 @@ args: ["-NotAnArg"]
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] -NotAnArg`
@@ -485,7 +485,7 @@ args: ["-NotAnArg"]
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] -NotAnArg`
@@ -510,7 +510,7 @@ args: ["--help"]
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
@@ -534,7 +534,7 @@ args: []
 "#,
         )
         .with_stderr(
-            r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+            r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] s-h-w-c- v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/s-h-w-c-[EXE]`
@@ -558,7 +558,7 @@ args: []
 "#,
         )
         .with_stderr(
-            r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+            r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] answer v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/answer[EXE]`
@@ -580,7 +580,7 @@ args: []
 "#,
         )
         .with_stderr(
-            r#"[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+            r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/package[EXE]`
@@ -646,7 +646,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] script v1.0.0 (registry `dummy-registry`)
@@ -686,7 +686,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -716,7 +716,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
@@ -745,7 +745,7 @@ fn main() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
@@ -770,7 +770,7 @@ args: []
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[ROOT]/home/.cargo/target/[..]/debug/script[EXE]`
@@ -798,7 +798,7 @@ args: []
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[ROOT]/home/.cargo/target/[..]/debug/script[EXE]`
@@ -861,7 +861,7 @@ fn cmd_check_with_embedded() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [CHECKING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
@@ -922,7 +922,7 @@ fn cmd_build_with_embedded() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
@@ -950,7 +950,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] unittests script.rs ([..])
@@ -979,7 +979,7 @@ fn cmd_clean_with_embedded() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 ",
         )
         .run();
@@ -1000,7 +1000,7 @@ fn cmd_generate_lockfile_with_embedded() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 ",
         )
         .run();
@@ -1085,7 +1085,7 @@ fn cmd_metadata_with_embedded() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 ",
         )
         .run();
@@ -1141,7 +1141,7 @@ fn cmd_read_manifest_with_embedded() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 ",
         )
         .run();
@@ -1162,7 +1162,7 @@ args: []
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
@@ -1186,7 +1186,7 @@ script v0.0.0 ([ROOT]/foo)
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 ",
         )
         .run();
@@ -1206,7 +1206,7 @@ fn cmd_update_with_embedded() {
         )
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 ",
         )
         .run();
@@ -1223,7 +1223,7 @@ fn cmd_verify_project_with_embedded() {
         .with_json(r#"{"success":"true"}"#)
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 ",
         )
         .run();
@@ -1240,7 +1240,7 @@ fn cmd_pkgid_with_embedded() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo pkgid`
 ",
         )
@@ -1258,7 +1258,7 @@ fn cmd_package_with_embedded() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo package`
 ",
         )
@@ -1276,7 +1276,7 @@ fn cmd_publish_with_embedded() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] `package.edition` is unspecifiead, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo publish`
 ",
         )
