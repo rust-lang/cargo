@@ -399,7 +399,7 @@ the tracking repository, and if it's not there please file a new issue!
 This flag is a sibling to the `-Zbuild-std` feature flag. This will configure
 the features enabled for the standard library itself when building the standard
 library. The default enabled features, at this time, are `backtrace` and
-`panic_unwind`. This flag expects a comma-separated list and, if provided, will
+`panic-unwind`. This flag expects a comma-separated list and, if provided, will
 override the default list of features enabled.
 
 ### binary-dep-depinfo
