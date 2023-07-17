@@ -48,7 +48,7 @@ http-auth = { version = "0.1.6", default-features = false }
 humantime = "2.0.0"
 ignore = "0.4.7"
 im-rc = "15.0.0"
-indexmap = "1"
+indexmap = "2"
 itertools = "0.10.0"
 jobserver = "0.1.26"
 lazy_static = "1.3.0"
