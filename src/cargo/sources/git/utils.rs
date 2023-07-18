@@ -392,13 +392,13 @@ impl<'a> GitCheckout<'a> {
     ///
     /// [^1]: <https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-none>
     fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
-        return update_submodules(&self.repo, cargo_config, self.remote_url());
+        return update_submodules(&self.repo, cargo_config, self.remote_url().as_str());
 
         /// Recusive helper for [`GitCheckout::update_submodules`].
         fn update_submodules(
             repo: &git2::Repository,
             cargo_config: &Config,
-            parent_remote_url: &Url,
+            parent_remote_url: &str,
         ) -> CargoResult<()> {
             debug!("update submodules for: {:?}", repo.workdir().unwrap());
 
@@ -420,7 +420,7 @@ impl<'a> GitCheckout<'a> {
             parent: &git2::Repository,
             child: &mut git2::Submodule<'_>,
             cargo_config: &Config,
-            parent_remote_url: &Url,
+            parent_remote_url: &str,
         ) -> CargoResult<()> {
             child.init(false)?;
 
@@ -444,30 +444,15 @@ impl<'a> GitCheckout<'a> {
             // See [`git submodule add`] documentation.
             //
             // [`git submodule add`]: https://git-scm.com/docs/git-submodule
-            let child_remote_url = if child_url_str.starts_with("./")
-                || child_url_str.starts_with("../")
-            {
-                let mut new_parent_remote_url = parent_remote_url.clone();
-
-                let mut new_path = Cow::from(parent_remote_url.path());
-                if !new_path.ends_with('/') {
-                    new_path.to_mut().push('/');
+            let child_remote_url = if ["./", "../"].iter().any(|p| child_url_str.starts_with(p)) {
+                let mut new_remote_url = parent_remote_url.to_string();
+                if !new_remote_url.ends_with('/') {
+                    new_remote_url.push('/');
                 }
-                new_parent_remote_url.set_path(&new_path);
-
-                new_parent_remote_url.join(child_url_str).with_context(|| {
-                    format!(
-                        "failed to parse relative child submodule url `{child_url_str}` \
-                        using parent base url `{new_parent_remote_url}`"
-                    )
-                })?
+                new_remote_url.push_str(child_url_str);
+                Cow::from(new_remote_url)
             } else {
-                Url::parse(child_url_str).with_context(|| {
-                        let child_module_name = child.name().unwrap_or("");
-                        format!(
-                            "failed to parse url for submodule `{child_module_name}`: `{child_url_str}`"
-                        )
-                    })?
+                Cow::from(child_url_str)
             };
 
             // A submodule which is listed in .gitmodules but not actually
@@ -502,20 +487,17 @@ impl<'a> GitCheckout<'a> {
             let reference = GitReference::Rev(head.to_string());
             cargo_config
                 .shell()
-                .status("Updating", format!("git submodule `{}`", child_remote_url))?;
+                .status("Updating", format!("git submodule `{child_remote_url}`"))?;
             fetch(
                 &mut repo,
-                child_remote_url.as_str(),
+                &child_remote_url,
                 &reference,
                 cargo_config,
                 RemoteKind::GitDependency,
             )
             .with_context(|| {
-                format!(
-                    "failed to fetch submodule `{}` from {}",
-                    child.name().unwrap_or(""),
-                    child_remote_url
-                )
+                let name = child.name().unwrap_or("");
+                format!("failed to fetch submodule `{name}` from {child_remote_url}",)
             })?;
 
             let obj = repo.find_object(head, None)?;
