@@ -58,7 +58,7 @@ libgit2-sys = "0.15.1"
 log = "0.4.17"
 memchr = "2.1.3"
 miow = "0.5.0"
-opener = "0.5"
+opener = "0.6.1"
 openssl ="0.10.55"
 os_info = "3.5.0"
 pasetors = { version = "0.6.4", features = ["v3", "paserk", "std", "serde"] }
