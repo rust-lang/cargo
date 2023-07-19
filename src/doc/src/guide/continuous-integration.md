@@ -1,5 +1,9 @@
 ## Continuous Integration
 
+### Getting Started
+
+A basic CI will build and test your projects:
+
 ### GitHub Actions
 
 To test your package on GitHub Actions, here is a sample `.github/workflows/ci.yml` file:
