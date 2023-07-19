@@ -159,7 +159,8 @@ following structure:
     "profile": {
         /* The optimization level. */
         "opt_level": "0",
-        /* The debug level, an integer of 0, 1, or 2. If `null`, it implies
+        /* The debug level, an integer of 0, 1, or 2, or a string
+           "line-directives-only" or "line-tables-only". If `null`, it implies
            rustc's default of 0.
         */
         "debuginfo": 2,
