@@ -104,5 +104,3 @@ This will test and build documentation on the stable channel and nightly
 channel, but any breakage in nightly will not fail your overall build. Please
 see the [builds.sr.ht documentation](https://man.sr.ht/builds.sr.ht/) for more
 information.
-
-[def-package]:  ../appendix/glossary.md#package  '"package" (glossary entry)'
