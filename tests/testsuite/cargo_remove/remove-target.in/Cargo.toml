@@ -23,7 +23,7 @@ clippy = "0.4"
 dbus = "0.6.2"
 
 [dev-dependencies]
-regex = "0.1.1"
+regex = "1.5.5"
 serde = "1.0.90"
 
 [target.x86_64-unknown-linux-gnu.dev-dependencies]
