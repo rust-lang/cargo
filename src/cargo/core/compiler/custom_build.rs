@@ -546,7 +546,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             &output.stdout,
             library_name,
             &pkg_descr,
-            &script_out_dir,
+            &script_dir,
             &script_out_dir,
             extra_check_cfg,
             nightly_features_allowed,
