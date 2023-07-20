@@ -27,7 +27,7 @@ cargo-util = { version = "0.2.5", path = "crates/cargo-util" }
 cargo_metadata = "0.14.0"
 clap = "4.2.0"
 core-foundation = { version = "0.9.0", features = ["mac_os_10_7_support"] }
-crates-io = { version = "0.37.0", path = "crates/crates-io" }
+crates-io = { version = "0.38.0", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 curl = "0.4.44"
 curl-sys = "0.4.63"
@@ -87,6 +87,7 @@ syn = { version = "2.0.14", features = ["extra-traits", "full"] }
 tar = { version = "0.4.38", default-features = false }
 tempfile = "3.1.0"
 termcolor = "1.1.2"
+thiserror = "1.0.40"
 time = { version = "0.3", features = ["parsing", "formatting"] }
 toml = "0.7.0"
 toml_edit = "0.19.0"

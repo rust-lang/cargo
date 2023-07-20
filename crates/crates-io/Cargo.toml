@@ -1,6 +1,6 @@
 [package]
 name = "crates-io"
-version = "0.37.0"
+version = "0.38.0"
 edition.workspace = true
 license.workspace = true
 repository = "https://github.com/rust-lang/cargo"
@@ -13,9 +13,9 @@ name = "crates_io"
 path = "lib.rs"
 
 [dependencies]
-anyhow.workspace = true
 curl.workspace = true
 percent-encoding.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+thiserror.workspace = true
 url.workspace = true

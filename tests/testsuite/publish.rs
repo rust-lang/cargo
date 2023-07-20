@@ -2023,10 +2023,10 @@ fn api_other_error() {
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
 Caused by:
-  invalid response from server
+  invalid response body from server
 
 Caused by:
-  response body was not valid utf-8
+  invalid utf-8 sequence of [..]
 ",
         )
         .run();
