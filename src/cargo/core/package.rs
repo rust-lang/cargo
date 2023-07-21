@@ -25,7 +25,7 @@ use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{SourceMap, Summary, Workspace};
 use crate::util::config::PackageCacheLock;
-use crate::util::errors::{CargoResult, HttpNotSuccessful, DEBUG_HEADERS};
+use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::interning::InternedString;
 use crate::util::network::http::http_handle_and_timeout;
 use crate::util::network::http::HttpTimeout;
@@ -748,9 +748,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                     // Headers contain trailing \r\n, trim them to make it easier
                     // to work with.
                     let h = String::from_utf8_lossy(data).trim().to_string();
-                    if DEBUG_HEADERS.iter().any(|p| h.starts_with(p)) {
-                        downloads.pending[&token].0.headers.borrow_mut().push(h);
-                    }
+                    downloads.pending[&token].0.headers.borrow_mut().push(h);
                 }
             });
             true

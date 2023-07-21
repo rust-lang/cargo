@@ -160,7 +160,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             &reg_ids.original,
             None,
             operation,
-            None,
+            vec![],
         )?));
     }
 

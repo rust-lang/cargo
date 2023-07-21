@@ -144,7 +144,7 @@ fn registry(
             &source_ids.original,
             None,
             operation,
-            None,
+            vec![],
         )?)
     } else {
         None

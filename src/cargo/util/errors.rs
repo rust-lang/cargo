@@ -83,8 +83,19 @@ impl HttpNotSuccessful {
         }
         write!(result, ", got {}\n", self.code).unwrap();
         if show_headers {
-            if !self.headers.is_empty() {
-                write!(result, "debug headers:\n{}\n", self.headers.join("\n")).unwrap();
+            let headers: Vec<_> = self
+                .headers
+                .iter()
+                .filter(|header| {
+                    let Some((name, _)) = header.split_once(":") else { return false };
+                    DEBUG_HEADERS.contains(&name.to_ascii_lowercase().trim())
+                })
+                .collect();
+            if !headers.is_empty() {
+                writeln!(result, "debug headers:").unwrap();
+                for header in headers {
+                    writeln!(result, "{header}").unwrap();
+                }
             }
         }
         write!(result, "body:\n{body}").unwrap();

@@ -62,8 +62,9 @@ pub struct RegistryInfo<'a> {
     /// Name of the registry in configuration. May not be available.
     /// The crates.io registry will be `crates-io` (`CRATES_IO_REGISTRY`).
     pub name: Option<&'a str>,
-    /// www-authenticate headers from attempting to access a sparse registry.
-    pub www_authenticate: Option<Vec<String>>,
+    /// Headers from attempting to access a registry that resulted in a HTTP 401.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub headers: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

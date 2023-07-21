@@ -83,11 +83,13 @@ fn get_token_test() -> (Project, TestRegistry) {
         ))
         .alternative()
         .http_api()
+        .http_index()
+        .auth_required()
         .build();
 
     let provider = build_provider(
         "test-cred",
-        r#"{"Ok":{"kind":"get","token":"sekrit","cache":"session","operation_independent":true}}"#,
+        r#"{"Ok":{"kind":"get","token":"sekrit","cache":"session","operation_independent":false}}"#,
     );
 
     let p = project()
@@ -123,13 +125,14 @@ fn publish() {
     // Checks that credential-process is used for `cargo publish`.
     let (p, _t) = get_token_test();
 
-    p.cargo("publish --no-verify --registry alternative -Z credential-process")
+    p.cargo("publish --no-verify --registry alternative -Z credential-process -Z registry-auth")
         .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             r#"[UPDATING] [..]
-{"v":1,"registry":{"index-url":"[..]","name":"alternative","www-authenticate":null},"kind":"get","operation":"read","args":[]}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read","args":[]}
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..]
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]","args":[]}
 [UPLOADING] foo v0.1.0 [..]
 [UPLOADED] foo v0.1.0 [..]
 note: Waiting [..]
@@ -190,7 +193,7 @@ fn login() {
         .replace_crates_io(registry.index_url())
         .with_stderr(
             r#"[UPDATING] [..]
-{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io","www-authenticate":null},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}
 "#,
         )
         .run();
@@ -210,7 +213,7 @@ fn logout() {
         .masquerade_as_nightly_cargo(&["credential-process"])
         .replace_crates_io(server.index_url())
         .with_stderr(
-            r#"{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io","www-authenticate":null},"kind":"logout","args":[]}
+            r#"{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"logout","args":[]}
 "#,
         )
         .run();
@@ -220,11 +223,12 @@ fn logout() {
 fn yank() {
     let (p, _t) = get_token_test();
 
-    p.cargo("yank --version 0.1.0 --registry alternative -Z credential-process")
+    p.cargo("yank --version 0.1.0 --registry alternative -Zcredential-process -Zregistry-auth")
         .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             r#"[UPDATING] [..]
-{"v":1,"registry":{"index-url":"[..]","name":"alternative","www-authenticate":null},"kind":"get","operation":"yank","name":"foo","vers":"0.1.0","args":[]}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read","args":[]}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"yank","name":"foo","vers":"0.1.0","args":[]}
 [YANK] foo@0.1.0
 "#,
         )
@@ -235,11 +239,12 @@ fn yank() {
 fn owner() {
     let (p, _t) = get_token_test();
 
-    p.cargo("owner --add username --registry alternative -Z credential-process")
+    p.cargo("owner --add username --registry alternative -Zcredential-process -Zregistry-auth")
         .masquerade_as_nightly_cargo(&["credential-process"])
         .with_stderr(
             r#"[UPDATING] [..]
-{"v":1,"registry":{"index-url":"[..]","name":"alternative","www-authenticate":null},"kind":"get","operation":"owners","name":"foo","args":[]}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read","args":[]}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"owners","name":"foo","args":[]}
 [OWNER] completed!
 "#,
         )
@@ -345,9 +350,9 @@ fn multiple_providers() {
         .with_stderr(
             r#"[UPDATING] [..]
 [CREDENTIAL] [..]url_not_supported[..] login crates-io
-{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io","www-authenticate":null},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}
 [CREDENTIAL] [..]success_provider[..] login crates-io
-{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io","www-authenticate":null},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}
 "#,
         )
         .run();
@@ -423,6 +428,7 @@ fn token_caching() {
         ))
         .alternative()
         .http_api()
+        .http_index()
         .build();
 
     // Token should not be re-used if it is expired
@@ -464,10 +470,10 @@ fn token_caching() {
         .build();
 
     let output = r#"[UPDATING] `alternative` index
-{"v":1,"registry":{"index-url":"[..]","name":"alternative","www-authenticate":null},"kind":"get","operation":"read","args":[]}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"read","args":[]}
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..]
-{"v":1,"registry":{"index-url":"[..]","name":"alternative","www-authenticate":null},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]","args":[]}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]","args":[]}
 [UPLOADING] foo v0.1.0 [..]
 [UPLOADED] foo v0.1.0 [..]
 note: Waiting [..]

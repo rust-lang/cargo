@@ -84,7 +84,7 @@ pub(super) fn download(
             &pkg.source_id(),
             None,
             Operation::Read,
-            None,
+            vec![],
         )?)
     } else {
         None

@@ -412,7 +412,7 @@ fn credential_action(
     config: &Config,
     sid: &SourceId,
     action: Action<'_>,
-    www_authenticate: Option<Vec<String>>,
+    headers: Vec<String>,
 ) -> CargoResult<CredentialResponse> {
     let name = if sid.is_crates_io() {
         Some(CRATES_IO_REGISTRY)
@@ -422,7 +422,7 @@ fn credential_action(
     let registry = RegistryInfo {
         index_url: sid.url().as_str(),
         name,
-        www_authenticate,
+        headers,
     };
     let providers = credential_provider(config, sid)?;
     for provider in providers {
@@ -473,9 +473,9 @@ pub fn auth_token(
     sid: &SourceId,
     login_url: Option<&Url>,
     operation: Operation<'_>,
-    www_authenticate: Option<Vec<String>>,
+    headers: Vec<String>,
 ) -> CargoResult<String> {
-    match auth_token_optional(config, sid, operation, www_authenticate)? {
+    match auth_token_optional(config, sid, operation, headers)? {
         Some(token) => Ok(token.expose()),
         None => Err(AuthorizationError {
             sid: sid.clone(),
@@ -492,7 +492,7 @@ fn auth_token_optional(
     config: &Config,
     sid: &SourceId,
     operation: Operation<'_>,
-    www_authenticate: Option<Vec<String>>,
+    headers: Vec<String>,
 ) -> CargoResult<Option<Secret<String>>> {
     log::trace!("token requested for {}", sid.display_registry_name());
     let mut cache = config.credential_cache();
@@ -513,8 +513,7 @@ fn auth_token_optional(
         }
     }
 
-    let credential_response =
-        credential_action(config, sid, Action::Get(operation), www_authenticate);
+    let credential_response = credential_action(config, sid, Action::Get(operation), headers);
     if let Some(e) = credential_response.as_ref().err() {
         if let Some(e) = e.downcast_ref::<cargo_credential::Error>() {
             if matches!(e, cargo_credential::Error::NotFound) {
@@ -553,7 +552,7 @@ fn auth_token_optional(
 
 /// Log out from the given registry.
 pub fn logout(config: &Config, sid: &SourceId) -> CargoResult<()> {
-    let credential_response = credential_action(config, sid, Action::Logout, None);
+    let credential_response = credential_action(config, sid, Action::Logout, vec![]);
     if let Some(e) = credential_response.as_ref().err() {
         if let Some(e) = e.downcast_ref::<cargo_credential::Error>() {
             if matches!(e, cargo_credential::Error::NotFound) {
@@ -577,7 +576,7 @@ pub fn logout(config: &Config, sid: &SourceId) -> CargoResult<()> {
 
 /// Log in to the given registry.
 pub fn login(config: &Config, sid: &SourceId, options: LoginOptions<'_>) -> CargoResult<()> {
-    let credential_response = credential_action(config, sid, Action::Login(options), None)?;
+    let credential_response = credential_action(config, sid, Action::Login(options), vec![])?;
     let CredentialResponse::Login = credential_response else {
         bail!("credential provider produced unexpected response for `login` request: {credential_response:?}")
     };
