@@ -39,6 +39,9 @@ To create a workspace, you add the `[workspace]` table to a `Cargo.toml`:
 
 At minimum, a workspace has to have a member, either with a root package or as
 a virtual manifest.
+It's also a good practice to specify the `resolver = "2"` unless it is necessary
+to rely on the old one. It is a default resolver for all packages in the `2021` edition
+but it has to be explicitely set under the workspace.
 
 #### Root package
 
@@ -49,6 +52,7 @@ where the workspace's `Cargo.toml` is located.
 
 ```toml
 [workspace]
+resolver = "2"
 
 [package]
 name = "hello_world" # the name of the package
@@ -67,6 +71,7 @@ you want to keep all the packages organized in separate directories.
 # [PROJECT_DIR]/Cargo.toml
 [workspace]
 members = ["hello_world"]
+resolver = "2"
 ```
 
 ```toml
@@ -86,6 +91,7 @@ the workspace:
 [workspace]
 members = ["member1", "path/to/member2", "crates/*"]
 exclude = ["crates/foo", "path/to/other"]
+resolver = "2"
 ```
 
 All [`path` dependencies] residing in the workspace directory automatically
@@ -127,6 +133,7 @@ used:
 [workspace]
 members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
+resolver = "2"
 ```
 
 When specified, `default-members` must expand to a subset of `members`.
@@ -158,6 +165,7 @@ Example:
 # [PROJECT_DIR]/Cargo.toml
 [workspace]
 members = ["bar"]
+resolver = "2"
 
 [workspace.package]
 version = "1.2.3"
@@ -192,6 +200,7 @@ Example:
 # [PROJECT_DIR]/Cargo.toml
 [workspace]
 members = ["bar"]
+resolver = "2"
 
 [workspace.dependencies]
 cc = "1.0.73"
@@ -224,6 +233,7 @@ configuration in `Cargo.toml`. For example:
 ```toml
 [workspace]
 members = ["member1", "member2"]
+resolver = "2"
 
 [workspace.metadata.webcontents]
 root = "path/to/webproject"
