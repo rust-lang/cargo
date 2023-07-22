@@ -4,6 +4,7 @@
 //! [`RemoteRegistry`]: super::remote::RemoteRegistry
 
 use anyhow::Context;
+use cargo_credential::Operation;
 use cargo_util::registry::make_dep_path;
 use cargo_util::Sha256;
 
@@ -78,7 +79,13 @@ pub(super) fn download(
     }
 
     let authorization = if registry_config.auth_required {
-        Some(auth::auth_token(config, &pkg.source_id(), None, None)?)
+        Some(auth::auth_token(
+            config,
+            &pkg.source_id(),
+            None,
+            Operation::Read,
+            vec![],
+        )?)
     } else {
         None
     };

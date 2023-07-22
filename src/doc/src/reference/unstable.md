@@ -1000,7 +1000,7 @@ It is intended for the rare use cases like "cryptographic proof that the central
 
 Both fields can be set with `cargo login --registry=name --private-key --private-key-subject="subject"` which will prompt you to put in the key value.
 
-A registry can have at most one of `private-key`, `token`, or `credential-process` set.
+A registry can have at most one of `private-key` or `token` set.
 
 All PASETOs will include `iat`, the current time in ISO 8601 format. Cargo will include the following where appropriate:
 - `sub` an optional, non-secret string chosen by the registry that is expected to be claimed with every request. The value will be the `private-key-subject` from the `config.toml` file.
@@ -1026,54 +1026,78 @@ If a claim should be expected for the request but is missing in the PASETO then 
 The `credential-process` feature adds a config setting to fetch registry
 authentication tokens by calling an external process.
 
-Token authentication is used by the [`cargo login`], [`cargo publish`],
-[`cargo owner`], [`cargo yank`], and [`cargo logout`] commands.
-
 To use this feature, you must pass the `-Z credential-process` flag on the
-command-line. Additionally, you must remove any current tokens currently saved
-in the [`credentials.toml` file] (which can be done with the [`cargo logout`] command).
+command-line.
 
 #### `credential-process` Configuration
 
 To configure which process to run to fetch the token, specify the process in
-the `registry` table in a [config file]:
+the `registry` table in a [config file] with spaces separating arguments. If the
+path to the provider or its arguments contain spaces, then it mused be defined in
+the `credential-alias` table and referenced instead.
 
 ```toml
 [registry]
-credential-process = "/usr/bin/cargo-creds"
+global-credential-providers = ["/usr/bin/cargo-creds"]
 ```
 
-If you want to use a different process for a specific registry, it can be
+The provider at the end of the list will be attempted first. This ensures
+that when config files are merged, files closer to the project (and ultimatly
+environment variables) have precedence.
+
+In this example, the `my-provider` provider will be attempted first, and if
+it cannot provide credentials, then the `cargo:token` provider will be used.
+
+```toml
+[registry]
+global-credential-providers = ['cargo:token', 'my-provider']
+```
+
+If you want to use a different provider for a specific registry, it can be
 specified in the `registries` table:
 
 ```toml
 [registries.my-registry]
-credential-process = "/usr/bin/cargo-creds"
+global-credential-provider = "/usr/bin/cargo-creds"
 ```
 
 The value can be a string with spaces separating arguments or it can be a TOML
 array of strings.
 
-Command-line arguments allow special placeholders which will be replaced with
-the corresponding value:
-
-* `{name}` --- The name of the registry.
-* `{api_url}` --- The base URL of the registry API endpoints.
-* `{action}` --- The authentication action (described below).
-
-Process names with the prefix `cargo:` are loaded from the `libexec` directory
-next to cargo. Several experimental credential wrappers are included with
-Cargo, and this provides convenient access to them:
+For commonly-used providers, or providers that need to contain spaces in the arguments
+or path, the `credential-alias` table can be used. These aliases can be referenced
+in `credential-provider` or `global-credential-providers`.
 
 ```toml
+[credential-alias]
+my-alias = ["/usr/bin/cargo-creds", "--argument"]
+
 [registry]
-credential-process = "cargo:macos-keychain"
+global-credential-providers = ["cargo:token", "my-alias"]
 ```
 
-The current wrappers are:
+#### Built-in providers
 
-* `cargo:macos-keychain`: Uses the macOS Keychain to store the token.
-* `cargo:wincred`: Uses the Windows Credential Manager to store the token.
+Cargo now includes several built-in credential providers. These providers are
+executed within the Cargo process. They are identified with the `cargo:` prefix.
+
+* `cargo:token` - Uses Cargo's config and `credentials.toml` to store the token (default).
+* `cargo:wincred` - Uses the Windows Credential Manager to store the token.
+* `cargo:macos-keychain` - Uses the macOS Keychain to store the token.
+* `cargo:basic` - A basic authenticator is a process that returns a token on stdout. Newlines
+  will be trimmed. The process inherits the user's stdin and stderr. It should
+  exit 0 on success, and nonzero on error.
+  
+  With this form, [`cargo login`] and [`cargo logout`] are not supported and
+  return an error if used.
+  
+  The following environment variables will be provided to the executed command:
+  
+  * `CARGO` --- Path to the `cargo` binary executing the command.
+  * `CARGO_REGISTRY_INDEX_URL` --- The URL of the registry index.
+  * `CARGO_REGISTRY_NAME_OPT` --- Optional name of the registry. Should not be used as a storage key. Not always available.
+
+* `cargo:paseto` - implements asymmetric token support (RFC3231) as a credential provider.
 * `cargo:1password`: Uses the 1password `op` CLI to store the token. You must
   install the `op` CLI from the [1password
   website](https://1password.com/downloads/command-line/). You must run `op
@@ -1098,72 +1122,149 @@ In the config, use a path to the binary like this:
 
 ```toml
 [registry]
-credential-process = "cargo-credential-gnome-secret {action}"
+global-credential-providers = ["cargo-credential-gnome-secret"]
 ```
 
-#### `credential-process` Interface
+#### JSON Interface
+When using an external credential provider, Cargo communicates with the credential
+provider using stdin/stdout messages passed as a single line of JSON.
 
-There are two different kinds of token processes that Cargo supports. The
-simple "basic" kind will only be called by Cargo when it needs a token. This
-is intended for simple and easy integration with password managers, that can
-often use pre-existing tooling. The more advanced "Cargo" kind supports
-different actions passed as a command-line argument. This is intended for more
-pleasant integration experience, at the expense of requiring a Cargo-specific
-process to glue to the password manager. Cargo will determine which kind is
-supported by the `credential-process` definition. If it contains the
-`{action}` argument, then it uses the advanced style, otherwise it assumes it
-only supports the "basic" kind.
+Cargo will always execute the credential provider with the `--cargo-plugin` argument.
+This enables a credential provider executable to have additional functionality beyond
+how Cargo uses it.
 
-##### Basic authenticator
+The messages here have additional newlines added for readability.
+Actual messages must not contain newlines.
 
-A basic authenticator is a process that returns a token on stdout. Newlines
-will be trimmed. The process inherits the user's stdin and stderr. It should
-exit 0 on success, and nonzero on error.
+##### Credential hello
+* Sent by: credential provider
+* Purpose: used to identify the supported protocols on process startup
+```javascript
+{
+    "v":[1]
+}
+```
 
-With this form, [`cargo login`] and [`cargo logout`] are not supported and
-return an error if used.
+##### Login request
+* Sent by: Cargo
+* Purpose: collect and store credentials
+```javascript
+{
+    // Protocol version
+    "v":1,
+    // Action to perform: login
+    "kind":"login",
+    // Registry information
+    "registry":{"index-url":"sparse+https://registry-url/index/", "name": "my-registry"},
+}
+```
 
-##### Cargo authenticator
+##### Read request
+* Sent by: Cargo
+* Purpose: Get the credential for reading crate information
+```javascript
+{
+    // Protocol version
+    "v":1,
+    // Request kind: get credentials
+    "kind":"get",
+    // Action to perform: read crate information
+    "operation":"read",
+    // Registry information
+    "registry":{"index-url":"sparse+https://registry-url/index/", "name": "my-registry"},
+    // Additional command-line args
+    "args":[]
+}
+```
 
-The protocol between the Cargo and the process is very basic, intended to
-ensure the credential process is kept as simple as possible. Cargo will
-execute the process with the `{action}` argument indicating which action to
-perform:
+##### Publish request
+* Sent by: Cargo
+* Purpose: Get the credential for publishing a crate
+```javascript
+{
+    // Protocol version
+    "v":1,
+    // Request kind: get credentials
+    "kind":"get",
+    // Action to perform: publish crate
+    "operation":"publish",
+    // Crate name
+    "name":"sample",
+    // Crate version
+    "vers":"0.1.0",
+    // Crate checksum
+    "cksum":"...",
+    // Registry information
+    "registry":{"index-url":"sparse+https://registry-url/index/", "name": "my-registry"},
+    // Additional command-line args
+    "args":[]
+}
+```
 
-* `store` --- Store the given token in secure storage.
-* `get` --- Get a token from storage.
-* `erase` --- Remove a token from storage.
+##### Success response
+* Sent by: credential process
+* Purpose: Gives the credential to Cargo
+```javascript
+{"Ok":{
+    // Response kind: this was a get request kind
+    "kind":"get",
+    // Token to send to the registry
+    "token":"...",
+    // Cache control. Can be one of the following:
+    // * "never"
+    // * "session"
+    // * { "expires": UNIX timestamp }
+    "cache":{"expires":1684251794},
+    // Is the token operation independent?
+    "operation_independent":true
+}}
+```
 
-The `cargo login` command uses `store` to save a token. Commands that require
-authentication, like `cargo publish`, uses `get` to retrieve a token. `cargo
-logout` uses the `erase` command to remove a token.
+##### Failure response
+* Sent by: credential process
+* Purpose: Gives error information to Cargo
+```javascript
+{"Err":{
+    // Error: the credential provider does not support the
+    // registry
+    "kind":"url-not-supported",
+    
+    // Error: The credential could not be found in the provider.
+    // using `cargo login --registry ...`.
+    "kind":"not-found",
+    
+    // Error: something else has failed
+    "kind":"other",
+    "detail": "free form string error message"
+}}
+```
 
-The process inherits the user's stderr, so the process can display messages.
-Some values are passed in via environment variables (see below). The expected
-interactions are:
-
-* `store` --- The token is sent to the process's stdin, terminated by a newline.
-  The process should store the token keyed off the registry name. If the
-  process fails, it should exit with a nonzero exit status.
-
-* `get` --- The process should send the token to its stdout (trailing newline
-  will be trimmed). The process inherits the user's stdin, should it need to
-  receive input.
-
-  If the process is unable to fulfill the request, it should exit with a
-  nonzero exit code.
-
-* `erase` --- The process should remove the token associated with the registry
-  name. If the token is not found, the process should exit with a 0 exit
-  status.
-
-##### Environment
-
-The following environment variables will be provided to the executed command:
-
-* `CARGO` --- Path to the `cargo` binary executing the command.
-* `CARGO_REGISTRY_INDEX_URL` --- The URL of the registry index.
-* `CARGO_REGISTRY_NAME_OPT` --- Optional name of the registry. Should not be used as a storage key. Not always available.
+##### Example communication to request a token for reading:
+1. Cargo spawns the credential process, capturing stdin and stdout.
+2. Credential process sends the Hello message to Cargo
+    ```javascript
+    { "v": [1] }
+   ```
+3. Cargo sends the CredentialRequest message to the credential process (newlines added for readability).
+    ```javascript
+    {
+        "v": 1,
+        "kind": "get",
+        "operation": "read",
+        "registry":{"index-url":"sparse+https://registry-url/index/", "name":"ado2"},
+        "args":[]
+    }
+    ```
+4. Credential process sends the CredentialResponse to Cargo (newlines added for readability).
+    ```javascript
+    {
+        "token": "...",
+        "cache": "session",
+        "operation_independent": false
+    }
+    ```
+5. Credential process exits
+6. Cargo uses the token for the remainder of the session (until Cargo exits) when interacting with this registry.
 
 [`cargo login`]: ../commands/cargo-login.md
 [`cargo logout`]: ../commands/cargo-logout.md

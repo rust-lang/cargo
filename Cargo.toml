@@ -19,7 +19,10 @@ anyhow = "1.0.47"
 base64 = "0.21.0"
 bytesize = "1.0"
 cargo = { path = "" }
-cargo-credential = { version = "0.2.0", path = "credential/cargo-credential" }
+cargo-credential = { version = "0.3.0", path = "credential/cargo-credential" }
+cargo-credential-1password = { version = "0.3.0", path = "credential/cargo-credential-1password" }
+cargo-credential-wincred = { version = "0.3.0", path = "credential/cargo-credential-wincred" }
+cargo-credential-macos-keychain = { version = "0.3.0", path = "credential/cargo-credential-macos-keychain" }
 cargo-platform = { path = "crates/cargo-platform", version = "0.1.4" }
 cargo-test-macro = { path = "crates/cargo-test-macro" }
 cargo-test-support = { path = "crates/cargo-test-support" }
@@ -88,7 +91,7 @@ tar = { version = "0.4.38", default-features = false }
 tempfile = "3.1.0"
 termcolor = "1.1.2"
 thiserror = "1.0.40"
-time = { version = "0.3", features = ["parsing", "formatting"] }
+time = { version = "0.3", features = ["parsing", "formatting", "serde"] }
 toml = "0.7.0"
 toml_edit = "0.19.0"
 unicode-width = "0.1.5"
@@ -119,6 +122,10 @@ anyhow.workspace = true
 base64.workspace = true
 bytesize.workspace = true
 cargo-platform.workspace = true
+cargo-credential.workspace = true
+cargo-credential-1password.workspace = true
+cargo-credential-macos-keychain.workspace = true
+cargo-credential-wincred.workspace = true
 cargo-util.workspace = true
 clap = { workspace = true, features = ["wrap_help"] }
 crates-io.workspace = true

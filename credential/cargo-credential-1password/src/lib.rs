@@ -1,6 +1,8 @@
 //! Cargo registry 1password credential process.
 
-use cargo_credential::{Credential, Error};
+use cargo_credential::{
+    Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo, Secret,
+};
 use serde::Deserialize;
 use std::io::Read;
 use std::process::{Command, Stdio};
@@ -38,13 +40,13 @@ struct Url {
 }
 
 impl OnePasswordKeychain {
-    fn new() -> Result<OnePasswordKeychain, Error> {
-        let mut args = std::env::args().skip(1);
+    fn new(args: &[&str]) -> Result<OnePasswordKeychain, Error> {
+        let mut args = args.iter();
         let mut action = false;
         let mut account = None;
         let mut vault = None;
         while let Some(arg) = args.next() {
-            match arg.as_str() {
+            match *arg {
                 "--account" => {
                     account = Some(args.next().ok_or("--account needs an arg")?);
                 }
@@ -63,7 +65,10 @@ impl OnePasswordKeychain {
                 }
             }
         }
-        Ok(OnePasswordKeychain { account, vault })
+        Ok(OnePasswordKeychain {
+            account: account.map(|s| s.to_string()),
+            vault: vault.map(|s| s.to_string()),
+        })
     }
 
     fn signin(&self) -> Result<Option<String>, Error> {
@@ -73,9 +78,9 @@ impl OnePasswordKeychain {
             return Ok(None);
         }
         let mut cmd = Command::new("op");
-        cmd.args(&["signin", "--raw"]);
+        cmd.args(["signin", "--raw"]);
         cmd.stdout(Stdio::piped());
-        self.with_tty(&mut cmd)?;
+        cmd.stdin(cargo_credential::tty()?);
         let mut child = cmd
             .spawn()
             .map_err(|e| format!("failed to spawn `op`: {}", e))?;
@@ -119,19 +124,6 @@ impl OnePasswordKeychain {
             cmd.arg(session);
         }
         cmd
-    }
-
-    fn with_tty(&self, cmd: &mut Command) -> Result<(), Error> {
-        #[cfg(unix)]
-        const IN_DEVICE: &str = "/dev/tty";
-        #[cfg(windows)]
-        const IN_DEVICE: &str = "CONIN$";
-        let stdin = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(IN_DEVICE)?;
-        cmd.stdin(stdin);
-        Ok(())
     }
 
     fn run_cmd(&self, mut cmd: Command) -> Result<String, Error> {
@@ -196,12 +188,12 @@ impl OnePasswordKeychain {
         &self,
         session: &Option<String>,
         id: &str,
-        token: &str,
+        token: Secret<&str>,
         _name: Option<&str>,
     ) -> Result<(), Error> {
         let cmd = self.make_cmd(
             session,
-            &["item", "edit", id, &format!("password={}", token)],
+            &["item", "edit", id, &format!("password={}", token.expose())],
         );
         self.run_cmd(cmd)?;
         Ok(())
@@ -211,7 +203,7 @@ impl OnePasswordKeychain {
         &self,
         session: &Option<String>,
         index_url: &str,
-        token: &str,
+        token: Secret<&str>,
         name: Option<&str>,
     ) -> Result<(), Error> {
         let title = match name {
@@ -225,7 +217,7 @@ impl OnePasswordKeychain {
                 "create",
                 "--category",
                 "Login",
-                &format!("password={}", token),
+                &format!("password={}", token.expose()),
                 &format!("url={}", index_url),
                 "--title",
                 &title,
@@ -236,12 +228,12 @@ impl OnePasswordKeychain {
         // For unknown reasons, `op item create` seems to not be happy if
         // stdin is not a tty. Otherwise it returns with a 0 exit code without
         // doing anything.
-        self.with_tty(&mut cmd)?;
+        cmd.stdin(cargo_credential::tty()?);
         self.run_cmd(cmd)?;
         Ok(())
     }
 
-    fn get_token(&self, session: &Option<String>, id: &str) -> Result<String, Error> {
+    fn get_token(&self, session: &Option<String>, id: &str) -> Result<Secret<String>, Error> {
         let cmd = self.make_cmd(session, &["item", "get", "--format=json", id]);
         let buffer = self.run_cmd(cmd)?;
         let item: Login = serde_json::from_str(&buffer)
@@ -250,6 +242,7 @@ impl OnePasswordKeychain {
         match password {
             Some(password) => password
                 .value
+                .map(Secret::from)
                 .ok_or_else(|| format!("missing password value for entry").into()),
             None => Err("could not find password field".into()),
         }
@@ -262,53 +255,54 @@ impl OnePasswordKeychain {
     }
 }
 
-impl Credential for OnePasswordKeychain {
-    fn name(&self) -> &'static str {
-        env!("CARGO_PKG_NAME")
-    }
+pub struct OnePasswordCredential {}
 
-    fn get(&self, index_url: &str) -> Result<String, Error> {
-        let session = self.signin()?;
-        if let Some(id) = self.search(&session, index_url)? {
-            self.get_token(&session, &id)
-        } else {
-            return Err(format!(
-                "no 1password entry found for registry `{}`, try `cargo login` to add a token",
-                index_url
-            )
-            .into());
+impl Credential for OnePasswordCredential {
+    fn perform(
+        &self,
+        registry: &RegistryInfo,
+        action: &Action,
+        args: &[&str],
+    ) -> Result<CredentialResponse, Error> {
+        let op = OnePasswordKeychain::new(args)?;
+        match action {
+            Action::Get(_) => {
+                let session = op.signin()?;
+                if let Some(id) = op.search(&session, registry.index_url)? {
+                    op.get_token(&session, &id)
+                        .map(|token| CredentialResponse::Get {
+                            token,
+                            cache: CacheControl::Session,
+                            operation_independent: true,
+                        })
+                } else {
+                    Err(Error::NotFound)
+                }
+            }
+            Action::Login(options) => {
+                let session = op.signin()?;
+                // Check if an item already exists.
+                if let Some(id) = op.search(&session, registry.index_url)? {
+                    eprintln!("note: token already exists for `{}`", registry.index_url);
+                    let token = cargo_credential::read_token(options, registry)?;
+                    op.modify(&session, &id, token.as_deref(), None)?;
+                } else {
+                    let token = cargo_credential::read_token(options, registry)?;
+                    op.create(&session, registry.index_url, token.as_deref(), None)?;
+                }
+                Ok(CredentialResponse::Login)
+            }
+            Action::Logout => {
+                let session = op.signin()?;
+                // Check if an item already exists.
+                if let Some(id) = op.search(&session, registry.index_url)? {
+                    op.delete(&session, &id)?;
+                    Ok(CredentialResponse::Logout)
+                } else {
+                    Err(Error::NotFound)
+                }
+            }
+            _ => Err(Error::OperationNotSupported),
         }
     }
-
-    fn store(&self, index_url: &str, token: &str, name: Option<&str>) -> Result<(), Error> {
-        let session = self.signin()?;
-        // Check if an item already exists.
-        if let Some(id) = self.search(&session, index_url)? {
-            self.modify(&session, &id, token, name)
-        } else {
-            self.create(&session, index_url, token, name)
-        }
-    }
-
-    fn erase(&self, index_url: &str) -> Result<(), Error> {
-        let session = self.signin()?;
-        // Check if an item already exists.
-        if let Some(id) = self.search(&session, index_url)? {
-            self.delete(&session, &id)?;
-        } else {
-            eprintln!("not currently logged in to `{}`", index_url);
-        }
-        Ok(())
-    }
-}
-
-fn main() {
-    let op = match OnePasswordKeychain::new() {
-        Ok(op) => op,
-        Err(e) => {
-            eprintln!("error: {}", e);
-            std::process::exit(1);
-        }
-    };
-    cargo_credential::main(op);
 }

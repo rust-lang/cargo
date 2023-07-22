@@ -1,142 +1,213 @@
 //! Registry authentication support.
 
-mod asymmetric;
+use crate::{
+    sources::CRATES_IO_REGISTRY,
+    util::{config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl},
+};
+use anyhow::{bail, Context as _};
+use cargo_credential::{
+    Action, CacheControl, Credential, CredentialResponse, LoginOptions, Operation, RegistryInfo,
+    Secret,
+};
 
-use crate::util::{config, config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl};
-use anyhow::{bail, format_err, Context as _};
-use cargo_util::ProcessError;
 use core::fmt;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
-use std::io::{Read, Write};
-use std::ops::Deref;
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use time::{Duration, OffsetDateTime};
 use url::Url;
 
 use crate::core::SourceId;
-use crate::ops::RegistryCredentialConfig;
+use crate::util::config::Value;
+use crate::util::credential::adaptor::BasicProcessCredential;
+use crate::util::credential::paseto::PasetoCredential;
 
-pub use self::asymmetric::paserk_public_from_paserk_secret;
+use super::{
+    config::{CredentialCacheValue, OptValue, PathAndArgs},
+    credential::process::CredentialProcessCredential,
+    credential::token::TokenCredential,
+};
 
-use super::config::CredentialCacheValue;
-
-/// A wrapper for values that should not be printed.
+/// `[registries.NAME]` tables.
 ///
-/// This type does not implement `Display`, and has a `Debug` impl that hides
-/// the contained value.
+/// The values here should be kept in sync with `RegistryConfigExtended`
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct RegistryConfig {
+    pub index: Option<String>,
+    pub token: OptValue<Secret<String>>,
+    pub credential_provider: Option<PathAndArgs>,
+    pub secret_key: OptValue<Secret<String>>,
+    pub secret_key_subject: Option<String>,
+    #[serde(rename = "protocol")]
+    _protocol: Option<String>,
+}
+
+/// The `[registry]` table, which more keys than the `[registries.NAME]` tables.
 ///
-/// ```
-/// # use cargo::util::auth::Secret;
-/// let token = Secret::from("super secret string");
-/// assert_eq!(format!("{:?}", token), "Secret { inner: \"REDACTED\" }");
-/// ```
-///
-/// Currently, we write a borrowed `Secret<T>` as `Secret<&T>`.
-/// The [`as_deref`](Secret::as_deref) and [`owned`](Secret::owned) methods can
-/// be used to convert back and forth between `Secret<String>` and `Secret<&str>`.
-#[derive(Default, Clone, PartialEq, Eq)]
-pub struct Secret<T> {
-    inner: T,
+/// Note: nesting `RegistryConfig` inside this struct and using `serde(flatten)` *should* work
+/// but fails with "invalid type: sequence, expected a value" when attempting to deserialize.
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct RegistryConfigExtended {
+    pub index: Option<String>,
+    pub token: OptValue<Secret<String>>,
+    pub credential_provider: Option<PathAndArgs>,
+    pub secret_key: OptValue<Secret<String>>,
+    pub secret_key_subject: Option<String>,
+    #[serde(rename = "default")]
+    _default: Option<String>,
+    #[serde(rename = "global-credential-providers")]
+    _global_credential_providers: Option<Vec<String>>,
 }
 
-impl<T> Secret<T> {
-    /// Unwraps the contained value.
-    ///
-    /// Use of this method marks the boundary of where the contained value is
-    /// hidden.
-    pub fn expose(self) -> T {
-        self.inner
-    }
-
-    /// Converts a `Secret<T>` to a `Secret<&T::Target>`.
-    /// ```
-    /// # use cargo::util::auth::Secret;
-    /// let owned: Secret<String> = Secret::from(String::from("token"));
-    /// let borrowed: Secret<&str> = owned.as_deref();
-    /// ```
-    pub fn as_deref(&self) -> Secret<&<T as Deref>::Target>
-    where
-        T: Deref,
-    {
-        Secret::from(self.inner.deref())
-    }
-
-    /// Converts a `Secret<T>` to a `Secret<&T>`.
-    pub fn as_ref(&self) -> Secret<&T> {
-        Secret::from(&self.inner)
-    }
-
-    /// Converts a `Secret<T>` to a `Secret<U>` by applying `f` to the contained value.
-    pub fn map<U, F>(self, f: F) -> Secret<U>
-    where
-        F: FnOnce(T) -> U,
-    {
-        Secret::from(f(self.inner))
+impl RegistryConfigExtended {
+    pub fn to_registry_config(self) -> RegistryConfig {
+        RegistryConfig {
+            index: self.index,
+            token: self.token,
+            credential_provider: self.credential_provider,
+            secret_key: self.secret_key,
+            secret_key_subject: self.secret_key_subject,
+            _protocol: None,
+        }
     }
 }
 
-impl<T: ToOwned + ?Sized> Secret<&T> {
-    /// Converts a `Secret` containing a borrowed type to a `Secret` containing the
-    /// corresponding owned type.
-    /// ```
-    /// # use cargo::util::auth::Secret;
-    /// let borrowed: Secret<&str> = Secret::from("token");
-    /// let owned: Secret<String> = borrowed.owned();
-    /// ```
-    pub fn owned(&self) -> Secret<<T as ToOwned>::Owned> {
-        Secret::from(self.inner.to_owned())
-    }
-}
+/// Get the list of credential providers for a registry source.
+fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<String>>> {
+    let cfg = registry_credential_config_raw(config, sid)?;
+    let allow_cred_proc = config.cli_unstable().credential_process;
+    let default_providers = || {
+        if allow_cred_proc {
+            // Enable the PASETO provider
+            vec![
+                vec!["cargo:token".to_string()],
+                vec!["cargo:paseto".to_string()],
+            ]
+        } else {
+            vec![vec!["cargo:token".to_string()]]
+        }
+    };
+    let global_providers = config
+        .get::<Option<Vec<Value<String>>>>("registry.global-credential-providers")?
+        .filter(|p| !p.is_empty() && allow_cred_proc)
+        .map(|p| {
+            p.iter()
+                .rev()
+                .map(PathAndArgs::from_whitespace_separated_string)
+                .map(|p| resolve_credential_alias(config, p))
+                .collect()
+        })
+        .unwrap_or_else(default_providers);
 
-impl<T, E> Secret<Result<T, E>> {
-    /// Converts a `Secret<Result<T, E>>` to a `Result<Secret<T>, E>`.
-    pub fn transpose(self) -> Result<Secret<T>, E> {
-        self.inner.map(|v| Secret::from(v))
-    }
-}
+    let providers = match cfg {
+        // If there's a specific provider configured for this registry, use it.
+        Some(RegistryConfig {
+            credential_provider: Some(provider),
+            token,
+            secret_key,
+            ..
+        }) if allow_cred_proc => {
+            if let Some(token) = token {
+                config.shell().warn(format!(
+                    "{sid} has a token configured in {} that will be ignored \
+                    because a credential-provider is configured for this registry`",
+                    token.definition
+                ))?;
+            }
+            if let Some(secret_key) = secret_key {
+                config.shell().warn(format!(
+                    "{sid} has a secret-key configured in {} that will be ignored \
+                    because a credential-provider is configured for this registry`",
+                    secret_key.definition
+                ))?;
+            }
+            vec![resolve_credential_alias(config, provider)]
+        }
 
-impl<T: AsRef<str>> Secret<T> {
-    /// Checks if the contained value is empty.
-    pub fn is_empty(&self) -> bool {
-        self.inner.as_ref().is_empty()
-    }
-}
+        // Warning for both `token` and `secret-key`, stating which will be ignored
+        Some(RegistryConfig {
+            token: Some(token),
+            secret_key: Some(secret_key),
+            ..
+        }) if allow_cred_proc => {
+            let token_pos = global_providers
+                .iter()
+                .position(|p| p.first().map(String::as_str) == Some("cargo:token"));
+            let paseto_pos = global_providers
+                .iter()
+                .position(|p| p.first().map(String::as_str) == Some("cargo:paseto"));
+            match (token_pos, paseto_pos) {
+                (Some(token_pos), Some(paseto_pos)) => {
+                    if token_pos < paseto_pos {
+                        config.shell().warn(format!(
+                            "{sid} has a `secret_key` configured in {} that will be ignored \
+                        because a `token` is also configured, and the `cargo:token` provider is \
+                        configured with higher precedence",
+                            secret_key.definition
+                        ))?;
+                    } else {
+                        config.shell().warn(format!("{sid} has a `token` configured in {} that will be ignored \
+                        because a `secret_key` is also configured, and the `cargo:paseto` provider is \
+                        configured with higher precedence", token.definition))?;
+                    }
+                }
+                (_, _) => {
+                    // One or both of the below individual warnings will trigger
+                }
+            }
+            global_providers
+        }
 
-impl<T> From<T> for Secret<T> {
-    fn from(inner: T) -> Self {
-        Self { inner }
-    }
-}
+        // Check if a `token` is configured that will be ignored.
+        Some(RegistryConfig {
+            token: Some(token), ..
+        }) => {
+            if !global_providers
+                .iter()
+                .any(|p| p.first().map(String::as_str) == Some("cargo:token"))
+            {
+                config.shell().warn(format!(
+                    "{sid} has a token configured in {} that will be ignored \
+                    because the `cargo:token` credential provider is not listed in \
+                    `registry.global-credential-providers`",
+                    token.definition
+                ))?;
+            }
+            global_providers
+        }
 
-impl<T> fmt::Debug for Secret<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Secret")
-            .field("inner", &"REDACTED")
-            .finish()
-    }
+        // Check if a asymmetric token is configured that will be ignored.
+        Some(RegistryConfig {
+            secret_key: Some(token),
+            ..
+        }) if allow_cred_proc => {
+            if !global_providers
+                .iter()
+                .any(|p| p.first().map(String::as_str) == Some("cargo:paseto"))
+            {
+                config.shell().warn(format!(
+                    "{sid} has a secret-key configured in {} that will be ignored \
+                    because the `cargo:paseto` credential provider is not listed in \
+                    `registry.global-credential-providers`",
+                    token.definition
+                ))?;
+            }
+            global_providers
+        }
+
+        // If we couldn't find a registry-specific provider, use the fallback provider list.
+        None | Some(RegistryConfig { .. }) => global_providers,
+    };
+    Ok(providers)
 }
 
 /// Get the credential configuration for a `SourceId`.
-pub fn registry_credential_config(
+pub fn registry_credential_config_raw(
     config: &Config,
     sid: &SourceId,
-) -> CargoResult<RegistryCredentialConfig> {
-    #[derive(Deserialize)]
-    #[serde(rename_all = "kebab-case")]
-    struct RegistryConfig {
-        index: Option<String>,
-        token: Option<String>,
-        credential_process: Option<config::PathAndArgs>,
-        secret_key: Option<String>,
-        secret_key_subject: Option<String>,
-        #[serde(rename = "default")]
-        _default: Option<String>,
-        #[serde(rename = "protocol")]
-        _protocol: Option<String>,
-    }
-
+) -> CargoResult<Option<RegistryConfig>> {
     log::trace!("loading credential config for {}", sid);
     config.load_credentials()?;
     if !sid.is_remote_registry() {
@@ -150,22 +221,9 @@ pub fn registry_credential_config(
     // Handle crates.io specially, since it uses different configuration keys.
     if sid.is_crates_io() {
         config.check_registry_index_not_set()?;
-        let RegistryConfig {
-            token,
-            credential_process,
-            secret_key,
-            secret_key_subject,
-            ..
-        } = config.get::<RegistryConfig>("registry")?;
-        return registry_credential_config_inner(
-            true,
-            None,
-            token.map(Secret::from),
-            credential_process,
-            secret_key.map(Secret::from),
-            secret_key_subject,
-            config,
-        );
+        return Ok(config
+            .get::<Option<RegistryConfigExtended>>("registry")?
+            .map(|c| c.to_registry_config()));
     }
 
     // Find the SourceId's name by its index URL. If environment variables
@@ -232,99 +290,34 @@ pub fn registry_credential_config(
         }
     }
 
-    let (token, credential_process, secret_key, secret_key_subject) = if let Some(name) = &name {
+    if let Some(name) = &name {
         log::debug!("found alternative registry name `{name}` for {sid}");
-        let RegistryConfig {
-            token,
-            secret_key,
-            secret_key_subject,
-            credential_process,
-            ..
-        } = config.get::<RegistryConfig>(&format!("registries.{name}"))?;
-        (token, credential_process, secret_key, secret_key_subject)
+        config.get::<Option<RegistryConfig>>(&format!("registries.{name}"))
     } else {
         log::debug!("no registry name found for {sid}");
-        (None, None, None, None)
-    };
-
-    registry_credential_config_inner(
-        false,
-        name.as_deref(),
-        token.map(Secret::from),
-        credential_process,
-        secret_key.map(Secret::from),
-        secret_key_subject,
-        config,
-    )
+        Ok(None)
+    }
 }
 
-fn registry_credential_config_inner(
-    is_crates_io: bool,
-    name: Option<&str>,
-    token: Option<Secret<String>>,
-    credential_process: Option<config::PathAndArgs>,
-    secret_key: Option<Secret<String>>,
-    secret_key_subject: Option<String>,
-    config: &Config,
-) -> CargoResult<RegistryCredentialConfig> {
-    let credential_process =
-        credential_process.filter(|_| config.cli_unstable().credential_process);
-    let secret_key = secret_key.filter(|_| config.cli_unstable().registry_auth);
-    let secret_key_subject = secret_key_subject.filter(|_| config.cli_unstable().registry_auth);
-    let err_both = |token_key: &str, proc_key: &str| {
-        let registry = if is_crates_io {
-            "".to_string()
-        } else {
-            format!(" for registry `{}`", name.unwrap_or("UN-NAMED"))
-        };
-        Err(format_err!(
-            "both `{token_key}` and `{proc_key}` \
-            were specified in the config{registry}.\n\
-            Only one of these values may be set, remove one or the other to proceed.",
-        ))
-    };
-    Ok(
-        match (token, credential_process, secret_key, secret_key_subject) {
-            (Some(_), Some(_), _, _) => return err_both("token", "credential-process"),
-            (Some(_), _, Some(_), _) => return err_both("token", "secret-key"),
-            (_, Some(_), Some(_), _) => return err_both("credential-process", "secret-key"),
-            (_, _, None, Some(_)) => {
-                let registry = if is_crates_io {
-                    "".to_string()
-                } else {
-                    format!(" for registry `{}`", name.as_ref().unwrap())
-                };
-                return Err(format_err!(
-                    "`secret-key-subject` was set but `secret-key` was not in the config{}.\n\
-                    Either set the `secret-key` or remove the `secret-key-subject`.",
-                    registry
-                ));
-            }
-            (Some(token), _, _, _) => RegistryCredentialConfig::Token(token),
-            (_, Some(process), _, _) => RegistryCredentialConfig::Process((
-                process.path.resolve_program(config),
-                process.args,
-            )),
-            (None, None, Some(key), subject) => {
-                RegistryCredentialConfig::AsymmetricKey((key, subject))
-            }
-            (None, None, None, _) => {
-                if !is_crates_io {
-                    // If we couldn't find a registry-specific credential, try the global credential process.
-                    if let Some(process) = config
-                        .get::<Option<config::PathAndArgs>>("registry.credential-process")?
-                        .filter(|_| config.cli_unstable().credential_process)
-                    {
-                        return Ok(RegistryCredentialConfig::Process((
-                            process.path.resolve_program(config),
-                            process.args,
-                        )));
-                    }
-                }
-                RegistryCredentialConfig::None
-            }
-        },
-    )
+/// Use the `[credential-alias]` table to see if the provider name has been aliased.
+fn resolve_credential_alias(config: &Config, mut provider: PathAndArgs) -> Vec<String> {
+    if provider.args.is_empty() {
+        let key = format!("credential-alias.{}", provider.path.raw_value());
+        if let Ok(alias) = config.get::<PathAndArgs>(&key) {
+            log::debug!("resolving credential alias '{key}' -> '{alias:?}'");
+            provider = alias;
+        }
+    }
+    provider.args.insert(
+        0,
+        provider
+            .path
+            .resolve_program(config)
+            .to_str()
+            .unwrap()
+            .to_string(),
+    );
+    provider.args
 }
 
 #[derive(Debug, PartialEq)]
@@ -403,16 +396,73 @@ my-registry = {{ index = "{}" }}
 }
 
 // Store a token in the cache for future calls.
-pub fn cache_token(config: &Config, sid: &SourceId, token: Secret<&str>) {
+pub fn cache_token_from_commandline(config: &Config, sid: &SourceId, token: Secret<&str>) {
     let url = sid.canonical_url();
     config.credential_cache().insert(
         url.clone(),
         CredentialCacheValue {
-            from_commandline: true,
-            independent_of_endpoint: true,
-            token_value: token.owned(),
+            token_value: token.to_owned(),
+            expiration: None,
+            operation_independent: true,
         },
     );
+}
+
+fn credential_action(
+    config: &Config,
+    sid: &SourceId,
+    action: Action<'_>,
+    headers: Vec<String>,
+) -> CargoResult<CredentialResponse> {
+    let name = if sid.is_crates_io() {
+        Some(CRATES_IO_REGISTRY)
+    } else {
+        sid.alt_registry_key()
+    };
+    let registry = RegistryInfo {
+        index_url: sid.url().as_str(),
+        name,
+        headers,
+    };
+    let providers = credential_provider(config, sid)?;
+    for provider in providers {
+        let args: Vec<&str> = provider.iter().map(String::as_str).collect();
+        let process = args[0];
+        log::debug!("attempting credential provider: {args:?}");
+        let provider: Box<dyn Credential> = match process {
+            "cargo:token" => Box::new(TokenCredential::new(config)),
+            "cargo:paseto" => Box::new(PasetoCredential::new(config)),
+            "cargo:basic" => Box::new(BasicProcessCredential {}),
+            "cargo:1password" => Box::new(cargo_credential_1password::OnePasswordCredential {}),
+            "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),
+            "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
+            process => Box::new(CredentialProcessCredential::new(process)),
+        };
+        config.shell().verbose(|c| {
+            c.status(
+                "Credential",
+                format!(
+                    "{} {action} {}",
+                    args.join(" "),
+                    sid.display_registry_name()
+                ),
+            )
+        })?;
+        match provider.perform(&registry, &action, &args[1..]) {
+            Ok(response) => return Ok(response),
+            Err(cargo_credential::Error::UrlNotSupported)
+            | Err(cargo_credential::Error::NotFound) => {}
+            e => {
+                return e.with_context(|| {
+                    format!(
+                        "credential provider `{}` failed action `{action}`",
+                        args.join(" ")
+                    )
+                })
+            }
+        }
+    }
+    Err(cargo_credential::Error::NotFound.into())
 }
 
 /// Returns the token to use for the given registry.
@@ -422,9 +472,10 @@ pub fn auth_token(
     config: &Config,
     sid: &SourceId,
     login_url: Option<&Url>,
-    mutation: Option<Mutation<'_>>,
+    operation: Operation<'_>,
+    headers: Vec<String>,
 ) -> CargoResult<String> {
-    match auth_token_optional(config, sid, mutation.as_ref())? {
+    match auth_token_optional(config, sid, operation, headers)? {
         Some(token) => Ok(token.expose()),
         None => Err(AuthorizationError {
             sid: sid.clone(),
@@ -440,285 +491,94 @@ pub fn auth_token(
 fn auth_token_optional(
     config: &Config,
     sid: &SourceId,
-    mutation: Option<&'_ Mutation<'_>>,
+    operation: Operation<'_>,
+    headers: Vec<String>,
 ) -> CargoResult<Option<Secret<String>>> {
+    log::trace!("token requested for {}", sid.display_registry_name());
     let mut cache = config.credential_cache();
     let url = sid.canonical_url();
-
-    if let Some(cache_token_value) = cache.get(url) {
-        // Tokens for endpoints that do not involve a mutation can always be reused.
-        // If the value is put in the cache by the command line, then we reuse it without looking at the configuration.
-        if cache_token_value.from_commandline
-            || cache_token_value.independent_of_endpoint
-            || mutation.is_none()
+    if let Some(cached_token) = cache.get(url) {
+        if cached_token
+            .expiration
+            .map(|exp| OffsetDateTime::now_utc() + Duration::minutes(1) < exp)
+            .unwrap_or(true)
         {
-            return Ok(Some(cache_token_value.token_value.clone()));
+            if cached_token.operation_independent || matches!(operation, Operation::Read) {
+                log::trace!("using token from in-memory cache");
+                return Ok(Some(cached_token.token_value.clone()));
+            }
+        } else {
+            // Remove expired token from the cache
+            cache.remove(url);
         }
     }
 
-    let credential = registry_credential_config(config, sid)?;
-    let (independent_of_endpoint, token) = match credential {
-        RegistryCredentialConfig::None => return Ok(None),
-        RegistryCredentialConfig::Token(config_token) => (true, config_token),
-        RegistryCredentialConfig::Process(process) => {
-            // todo: PASETO with process
-            let (independent_of_endpoint, token) =
-                run_command(config, &process, sid, Action::Get)?.unwrap();
-            (independent_of_endpoint, Secret::from(token))
+    let credential_response = credential_action(config, sid, Action::Get(operation), headers);
+    if let Some(e) = credential_response.as_ref().err() {
+        if let Some(e) = e.downcast_ref::<cargo_credential::Error>() {
+            if matches!(e, cargo_credential::Error::NotFound) {
+                return Ok(None);
+            }
         }
-        cred @ RegistryCredentialConfig::AsymmetricKey(..) => {
-            let token = asymmetric::public_token_from_credential(cred, sid, mutation)?;
-            (false, token)
-        }
+    }
+    let credential_response = credential_response?;
+
+    let CredentialResponse::Get {
+        token,
+        cache: cache_control,
+        operation_independent,
+    } = credential_response
+    else {
+        bail!("credential provider produced unexpected response for `get` request: {credential_response:?}")
+    };
+    let token = Secret::from(token);
+    log::trace!("found token");
+    let expiration = match cache_control {
+        CacheControl::Expires(expiration) => Some(expiration),
+        CacheControl::Session => None,
+        CacheControl::Never | _ => return Ok(Some(token)),
     };
 
-    if independent_of_endpoint || mutation.is_none() {
-        cache.insert(
-            url.clone(),
-            CredentialCacheValue {
-                from_commandline: false,
-                independent_of_endpoint,
-                token_value: token.clone(),
-            },
-        );
-    }
+    cache.insert(
+        url.clone(),
+        CredentialCacheValue {
+            token_value: token.clone(),
+            expiration,
+            operation_independent,
+        },
+    );
     Ok(Some(token))
 }
 
-/// A record of what kind of operation is happening that we should generate a token for.
-pub enum Mutation<'a> {
-    /// Before we generate a crate file for the users attempt to publish,
-    /// we need to check if we are configured correctly to generate a token.
-    /// This variant is used to make sure that we can generate a token,
-    /// to error out early if the token is not configured correctly.
-    PrePublish,
-    /// The user is attempting to publish a crate.
-    Publish {
-        /// The name of the crate
-        name: &'a str,
-        /// The version of the crate
-        vers: &'a str,
-        /// The checksum of the crate file being uploaded
-        cksum: &'a str,
-    },
-    /// The user is attempting to yank a crate.
-    Yank {
-        /// The name of the crate
-        name: &'a str,
-        /// The version of the crate
-        vers: &'a str,
-    },
-    /// The user is attempting to unyank a crate.
-    Unyank {
-        /// The name of the crate
-        name: &'a str,
-        /// The version of the crate
-        vers: &'a str,
-    },
-    /// The user is attempting to modify the owners of a crate.
-    Owners {
-        /// The name of the crate
-        name: &'a str,
-    },
-}
-
-enum Action {
-    Get,
-    Store(String),
-    Erase,
-}
-
-/// Saves the given token.
-pub fn login(config: &Config, sid: &SourceId, token: RegistryCredentialConfig) -> CargoResult<()> {
-    match registry_credential_config(config, sid)? {
-        RegistryCredentialConfig::Process(process) => {
-            let token = token
-                .as_token()
-                .expect("credential_process cannot use login with a secret_key")
-                .expose()
-                .to_owned();
-            run_command(config, &process, sid, Action::Store(token))?;
-        }
-        _ => {
-            config::save_credentials(config, Some(token), &sid)?;
-        }
-    };
-    Ok(())
-}
-
-/// Removes the token for the given registry.
+/// Log out from the given registry.
 pub fn logout(config: &Config, sid: &SourceId) -> CargoResult<()> {
-    match registry_credential_config(config, sid)? {
-        RegistryCredentialConfig::Process(process) => {
-            run_command(config, &process, sid, Action::Erase)?;
+    let credential_response = credential_action(config, sid, Action::Logout, vec![]);
+    if let Some(e) = credential_response.as_ref().err() {
+        if let Some(e) = e.downcast_ref::<cargo_credential::Error>() {
+            if matches!(e, cargo_credential::Error::NotFound) {
+                config.shell().status(
+                    "Logout",
+                    format!(
+                        "not currently logged in to `{}`",
+                        sid.display_registry_name()
+                    ),
+                )?;
+                return Ok(());
+            }
         }
-        _ => {
-            config::save_credentials(config, None, &sid)?;
-        }
+    }
+    let credential_response = credential_response?;
+    let CredentialResponse::Logout = credential_response else {
+        bail!("credential provider produced unexpected response for `logout` request: {credential_response:?}")
     };
     Ok(())
 }
 
-fn run_command(
-    config: &Config,
-    process: &(PathBuf, Vec<String>),
-    sid: &SourceId,
-    action: Action,
-) -> CargoResult<Option<(bool, String)>> {
-    let index_url = sid.url().as_str();
-    let cred_proc;
-    let (exe, args) = if process.0.to_str().unwrap_or("").starts_with("cargo:") {
-        cred_proc = sysroot_credential(config, process)?;
-        &cred_proc
-    } else {
-        process
+/// Log in to the given registry.
+pub fn login(config: &Config, sid: &SourceId, options: LoginOptions<'_>) -> CargoResult<()> {
+    let credential_response = credential_action(config, sid, Action::Login(options), vec![])?;
+    let CredentialResponse::Login = credential_response else {
+        bail!("credential provider produced unexpected response for `login` request: {credential_response:?}")
     };
-    if !args.iter().any(|arg| arg.contains("{action}")) {
-        let msg = |which| {
-            format!(
-                "credential process `{}` cannot be used to {}, \
-                 the credential-process configuration value must pass the \
-                 `{{action}}` argument in the config to support this command",
-                exe.display(),
-                which
-            )
-        };
-        match action {
-            Action::Get => {}
-            Action::Store(_) => bail!(msg("log in")),
-            Action::Erase => bail!(msg("log out")),
-        }
-    }
-    // todo: PASETO with process
-    let independent_of_endpoint = true;
-    let action_str = match action {
-        Action::Get => "get",
-        Action::Store(_) => "store",
-        Action::Erase => "erase",
-    };
-    let args: Vec<_> = args
-        .iter()
-        .map(|arg| {
-            arg.replace("{action}", action_str)
-                .replace("{index_url}", index_url)
-        })
-        .collect();
-
-    let mut cmd = Command::new(&exe);
-    cmd.args(args)
-        .env(crate::CARGO_ENV, config.cargo_exe()?)
-        .env("CARGO_REGISTRY_INDEX_URL", index_url);
-    if sid.is_crates_io() {
-        cmd.env("CARGO_REGISTRY_NAME_OPT", "crates-io");
-    } else if let Some(name) = sid.alt_registry_key() {
-        cmd.env("CARGO_REGISTRY_NAME_OPT", name);
-    }
-    match action {
-        Action::Get => {
-            cmd.stdout(Stdio::piped());
-        }
-        Action::Store(_) => {
-            cmd.stdin(Stdio::piped());
-        }
-        Action::Erase => {}
-    }
-    let mut child = cmd.spawn().with_context(|| {
-        let verb = match action {
-            Action::Get => "fetch",
-            Action::Store(_) => "store",
-            Action::Erase => "erase",
-        };
-        format!(
-            "failed to execute `{}` to {} authentication token for registry `{}`",
-            exe.display(),
-            verb,
-            sid.display_registry_name(),
-        )
-    })?;
-    let mut token = None;
-    match &action {
-        Action::Get => {
-            let mut buffer = String::new();
-            log::debug!("reading into buffer");
-            child
-                .stdout
-                .as_mut()
-                .unwrap()
-                .read_to_string(&mut buffer)
-                .with_context(|| {
-                    format!(
-                        "failed to read token from registry credential process `{}`",
-                        exe.display()
-                    )
-                })?;
-            if let Some(end) = buffer.find('\n') {
-                if buffer.len() > end + 1 {
-                    bail!(
-                        "credential process `{}` returned more than one line of output; \
-                         expected a single token",
-                        exe.display()
-                    );
-                }
-                buffer.truncate(end);
-            }
-            token = Some((independent_of_endpoint, buffer));
-        }
-        Action::Store(token) => {
-            writeln!(child.stdin.as_ref().unwrap(), "{}", token).with_context(|| {
-                format!(
-                    "failed to send token to registry credential process `{}`",
-                    exe.display()
-                )
-            })?;
-        }
-        Action::Erase => {}
-    }
-    let status = child.wait().with_context(|| {
-        format!(
-            "registry credential process `{}` exit failure",
-            exe.display()
-        )
-    })?;
-    if !status.success() {
-        let msg = match action {
-            Action::Get => "failed to authenticate to registry",
-            Action::Store(_) => "failed to store token to registry",
-            Action::Erase => "failed to erase token from registry",
-        };
-        return Err(ProcessError::new(
-            &format!(
-                "registry credential process `{}` {} `{}`",
-                exe.display(),
-                msg,
-                sid.display_registry_name()
-            ),
-            Some(status),
-            None,
-        )
-        .into());
-    }
-    Ok(token)
-}
-
-/// Gets the path to the libexec processes in the sysroot.
-fn sysroot_credential(
-    config: &Config,
-    process: &(PathBuf, Vec<String>),
-) -> CargoResult<(PathBuf, Vec<String>)> {
-    let cred_name = process.0.to_str().unwrap().strip_prefix("cargo:").unwrap();
-    let cargo = config.cargo_exe()?;
-    let root = cargo
-        .parent()
-        .and_then(|p| p.parent())
-        .ok_or_else(|| format_err!("expected cargo path {}", cargo.display()))?;
-    let exe = root.join("libexec").join(format!(
-        "cargo-credential-{}{}",
-        cred_name,
-        std::env::consts::EXE_SUFFIX
-    ));
-    let mut args = process.1.clone();
-    if !args.iter().any(|arg| arg == "{action}") {
-        args.push("{action}".to_string());
-    }
-    Ok((exe, args))
+    Ok(())
 }

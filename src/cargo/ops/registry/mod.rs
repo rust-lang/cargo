@@ -10,18 +10,18 @@ mod search;
 mod yank;
 
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::str;
 use std::task::Poll;
 
 use anyhow::{bail, format_err, Context as _};
+use cargo_credential::{Operation, Secret};
 use crates_io::{self, Registry};
 
 use crate::core::source::Source;
 use crate::core::SourceId;
 use crate::sources::{RegistrySource, SourceConfigMap};
-use crate::util::auth::{self, Secret};
-use crate::util::config::Config;
+use crate::util::auth;
+use crate::util::config::{Config, PathAndArgs};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::http_handle;
 use crate::util::IntoUrl;
@@ -44,7 +44,7 @@ pub enum RegistryCredentialConfig {
     /// The authentication token.
     Token(Secret<String>),
     /// Process used for fetching a token.
-    Process((PathBuf, Vec<String>)),
+    Process(Vec<PathAndArgs>),
     /// Secret Key and subject for Asymmetric tokens.
     AsymmetricKey((Secret<String>, Option<String>)),
 }
@@ -75,7 +75,7 @@ impl RegistryCredentialConfig {
             None
         }
     }
-    pub fn as_process(&self) -> Option<&(PathBuf, Vec<String>)> {
+    pub fn as_process(&self) -> Option<&Vec<PathAndArgs>> {
         if let Self::Process(v) = self {
             Some(v)
         } else {
@@ -106,7 +106,7 @@ fn registry(
     index: Option<&str>,
     registry: Option<&str>,
     force_update: bool,
-    token_required: Option<auth::Mutation<'_>>,
+    token_required: Option<Operation<'_>>,
 ) -> CargoResult<(Registry, RegistrySourceIds)> {
     let source_ids = get_source_id(config, index, registry)?;
 
@@ -114,7 +114,7 @@ fn registry(
         bail!("command-line argument --index requires --token to be specified");
     }
     if let Some(token) = token_from_cmdline {
-        auth::cache_token(config, &source_ids.original, token);
+        auth::cache_token_from_commandline(config, &source_ids.original, token);
     }
 
     let cfg = {
@@ -138,11 +138,13 @@ fn registry(
         .api
         .ok_or_else(|| format_err!("{} does not support API commands", source_ids.replacement))?;
     let token = if token_required.is_some() || cfg.auth_required {
+        let operation = token_required.unwrap_or(Operation::Read);
         Some(auth::auth_token(
             config,
             &source_ids.original,
             None,
-            token_required,
+            operation,
+            vec![],
         )?)
     } else {
         None

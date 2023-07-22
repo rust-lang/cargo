@@ -4,12 +4,13 @@ use crate::core::{PackageId, SourceId};
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
-use crate::util::errors::{CargoResult, HttpNotSuccessful, DEBUG_HEADERS};
+use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::network::http::http_handle;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
 use crate::util::{auth, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use anyhow::Context;
+use cargo_credential::Operation;
 use cargo_util::paths;
 use curl::easy::{Easy, List};
 use curl::multi::{EasyHandle, Multi};
@@ -96,6 +97,9 @@ pub struct HttpRegistry<'cfg> {
     /// Url to get a token for the registry.
     login_url: Option<Url>,
 
+    /// Headers received with an HTTP 401.
+    auth_error_headers: Vec<String>,
+
     /// Disables status messages.
     quiet: bool,
 }
@@ -149,8 +153,8 @@ struct Headers {
     last_modified: Option<String>,
     etag: Option<String>,
     www_authenticate: Vec<String>,
-    /// We don't care about these headers. Put them here for debugging purpose.
-    others: Vec<String>,
+    /// All headers, including explicit headers above.
+    all: Vec<String>,
 }
 
 /// HTTP status code [`HttpRegistry`] cares about.
@@ -221,6 +225,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             registry_config: None,
             auth_required: false,
             login_url: None,
+            auth_error_headers: vec![],
             quiet: false,
         })
     }
@@ -316,7 +321,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                             &mut handle,
                             &url,
                             data,
-                            download.header_map.take().others,
+                            download.header_map.take().all,
                         )
                         .into());
                     }
@@ -569,6 +574,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                             }
                         }
                     }
+                    self.auth_error_headers = result.header_map.all;
                 }
                 StatusCode::Unauthorized => {
                     let err = Err(HttpNotSuccessful {
@@ -576,7 +582,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         body: result.data,
                         url: self.full_url(path),
                         ip: None,
-                        headers: result.header_map.others,
+                        headers: result.header_map.all,
                     }
                     .into());
                     if self.auth_required {
@@ -639,8 +645,13 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
         if self.auth_required {
-            let authorization =
-                auth::auth_token(self.config, &self.source_id, self.login_url.as_ref(), None)?;
+            let authorization = auth::auth_token(
+                self.config,
+                &self.source_id,
+                self.login_url.as_ref(),
+                Operation::Read,
+                self.auth_error_headers.clone(),
+            )?;
             headers.append(&format!("Authorization: {}", authorization))?;
             trace!("including authorization for {}", full_url);
         }
@@ -679,15 +690,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 tls::with(|downloads| {
                     if let Some(downloads) = downloads {
                         let mut header_map = downloads.pending[&token].0.header_map.borrow_mut();
+                        header_map.all.push(format!("{tag}: {value}"));
                         match tag.to_ascii_lowercase().as_str() {
                             LAST_MODIFIED => header_map.last_modified = Some(value.to_string()),
                             ETAG => header_map.etag = Some(value.to_string()),
                             WWW_AUTHENTICATE => header_map.www_authenticate.push(value.to_string()),
-                            _ => {
-                                if DEBUG_HEADERS.iter().any(|prefix| tag.starts_with(prefix)) {
-                                    header_map.others.push(format!("{tag}: {value}"));
-                                }
-                            }
+                            _ => {}
                         }
                     }
                 });

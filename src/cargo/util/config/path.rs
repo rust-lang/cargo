@@ -10,6 +10,10 @@ use std::path::PathBuf;
 pub struct ConfigRelativePath(Value<String>);
 
 impl ConfigRelativePath {
+    pub fn new(path: Value<String>) -> ConfigRelativePath {
+        ConfigRelativePath(path)
+    }
+
     /// Returns the underlying value.
     pub fn value(&self) -> &Value<String> {
         &self.0
@@ -49,7 +53,7 @@ impl ConfigRelativePath {
 ///
 /// Typically you should use `ConfigRelativePath::resolve_program` on the path
 /// to get the actual program.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PathAndArgs {
     pub path: ConfigRelativePath,
     pub args: Vec<String>,
@@ -74,5 +78,24 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
             path: ConfigRelativePath(crp),
             args: strings,
         })
+    }
+}
+
+impl PathAndArgs {
+    /// Construct a PathAndArgs from a string. The string will be split on ascii whitespace,
+    /// with the first item being treated as a `ConfigRelativePath` to the executable, and subsequent
+    /// items as arguments.
+    pub fn from_whitespace_separated_string(p: &Value<String>) -> PathAndArgs {
+        let mut iter = p.val.split_ascii_whitespace().map(str::to_string);
+        let val = iter.next().unwrap_or_default();
+        let args = iter.collect();
+        let crp = Value {
+            val,
+            definition: p.definition.clone(),
+        };
+        PathAndArgs {
+            path: ConfigRelativePath(crp),
+            args,
+        }
     }
 }

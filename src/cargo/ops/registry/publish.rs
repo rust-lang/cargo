@@ -9,6 +9,8 @@ use std::time::Duration;
 
 use anyhow::bail;
 use anyhow::Context as _;
+use cargo_credential::Operation;
+use cargo_credential::Secret;
 use cargo_util::paths;
 use crates_io::NewCrate;
 use crates_io::NewCrateDependency;
@@ -28,7 +30,6 @@ use crate::ops::Packages;
 use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
-use crate::util::auth::Secret;
 use crate::util::config::JobsConfig;
 use crate::util::Progress;
 use crate::util::ProgressStyle;
@@ -113,7 +114,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     // This is only used to confirm that we can create a token before we build the package.
     // This causes the credential provider to be called an extra time, but keeps the same order of errors.
     let ver = pkg.version().to_string();
-    let mutation = auth::Mutation::PrePublish;
+    let operation = Operation::Read;
 
     let (mut registry, reg_ids) = super::registry(
         opts.config,
@@ -121,7 +122,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.index.as_deref(),
         publish_registry.as_deref(),
         true,
-        Some(mutation).filter(|_| !opts.dry_run),
+        Some(operation).filter(|_| !opts.dry_run),
     )?;
     verify_dependencies(pkg, &registry, reg_ids.original)?;
 
@@ -149,16 +150,17 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         let hash = cargo_util::Sha256::new()
             .update_file(tarball.file())?
             .finish_hex();
-        let mutation = Some(auth::Mutation::Publish {
+        let operation = Operation::Publish {
             name: pkg.name().as_str(),
             vers: &ver,
             cksum: &hash,
-        });
+        };
         registry.set_token(Some(auth::auth_token(
             &opts.config,
             &reg_ids.original,
             None,
-            mutation,
+            operation,
+            vec![],
         )?));
     }
 
