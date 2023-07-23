@@ -195,6 +195,15 @@ impl SourceId {
     pub fn as_url(&self) -> SourceIdAsUrl<'_> {
         SourceIdAsUrl {
             inner: &*self.inner,
+            encoded: false,
+        }
+    }
+
+    /// Like [`Self::as_url`] but with URL parameters encoded.
+    pub fn as_encoded_url(&self) -> SourceIdAsUrl<'_> {
+        SourceIdAsUrl {
+            inner: &*self.inner,
+            encoded: true,
         }
     }
 
@@ -566,7 +575,10 @@ impl fmt::Display for SourceId {
                 // Don't replace the URL display for git references,
                 // because those are kind of expected to be URLs.
                 write!(f, "{}", self.inner.url)?;
-                if let Some(pretty) = reference.pretty_ref() {
+                // TODO(-Znext-lockfile-bump): set it to true when stabilizing
+                // lockfile v4, because we want Source ID serialization to be
+                // consistent with lockfile.
+                if let Some(pretty) = reference.pretty_ref(false) {
                     write!(f, "?{}", pretty)?;
                 }
 
@@ -714,6 +726,7 @@ impl Ord for SourceKind {
 /// A `Display`able view into a `SourceId` that will write it as a url
 pub struct SourceIdAsUrl<'a> {
     inner: &'a SourceIdInner,
+    encoded: bool,
 }
 
 impl<'a> fmt::Display for SourceIdAsUrl<'a> {
@@ -731,7 +744,7 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 ..
             } => {
                 write!(f, "git+{}", url)?;
-                if let Some(pretty) = reference.pretty_ref() {
+                if let Some(pretty) = reference.pretty_ref(self.encoded) {
                     write!(f, "?{}", pretty)?;
                 }
                 if let Some(precise) = precise.as_ref() {
@@ -771,10 +784,13 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
 impl GitReference {
     /// Returns a `Display`able view of this git reference, or None if using
     /// the head of the default branch
-    pub fn pretty_ref(&self) -> Option<PrettyRef<'_>> {
+    pub fn pretty_ref(&self, url_encoded: bool) -> Option<PrettyRef<'_>> {
         match self {
             GitReference::DefaultBranch => None,
-            _ => Some(PrettyRef { inner: self }),
+            _ => Some(PrettyRef {
+                inner: self,
+                url_encoded,
+            }),
         }
     }
 }
@@ -782,16 +798,35 @@ impl GitReference {
 /// A git reference that can be `Display`ed
 pub struct PrettyRef<'a> {
     inner: &'a GitReference,
+    url_encoded: bool,
 }
 
 impl<'a> fmt::Display for PrettyRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self.inner {
-            GitReference::Branch(ref b) => write!(f, "branch={}", b),
-            GitReference::Tag(ref s) => write!(f, "tag={}", s),
-            GitReference::Rev(ref s) => write!(f, "rev={}", s),
+        let value: &str;
+        match self.inner {
+            GitReference::Branch(s) => {
+                write!(f, "branch=")?;
+                value = s;
+            }
+            GitReference::Tag(s) => {
+                write!(f, "tag=")?;
+                value = s;
+            }
+            GitReference::Rev(s) => {
+                write!(f, "rev=")?;
+                value = s;
+            }
             GitReference::DefaultBranch => unreachable!(),
         }
+        if self.url_encoded {
+            for value in url::form_urlencoded::byte_serialize(value.as_bytes()) {
+                write!(f, "{value}")?;
+            }
+        } else {
+            write!(f, "{value}")?;
+        }
+        Ok(())
     }
 }
 
@@ -904,6 +939,27 @@ mod tests {
         let deserialized = SourceId::from_url(&formatted).unwrap();
         assert_eq!(formatted, "sparse+https://my-crates.io/");
         assert_eq!(source_id, deserialized);
+    }
+
+    #[test]
+    fn gitrefs_roundtrip() {
+        let base = "https://host/path".into_url().unwrap();
+        let branch = GitReference::Branch("*-._+20%30 Z/z#foo=bar&zap[]?to\\()'\"".to_string());
+        let s1 = SourceId::for_git(&base, branch).unwrap();
+        let ser1 = format!("{}", s1.as_encoded_url());
+        let s2 = SourceId::from_url(&ser1).expect("Failed to deserialize");
+        let ser2 = format!("{}", s2.as_encoded_url());
+        // Serializing twice should yield the same result
+        assert_eq!(ser1, ser2, "Serialized forms don't match");
+        // SourceId serializing the same should have the same semantics
+        // This used to not be the case (# was ambiguous)
+        assert_eq!(s1, s2, "SourceId doesn't round-trip");
+        // Freeze the format to match an x-www-form-urlencoded query string
+        // https://url.spec.whatwg.org/#application/x-www-form-urlencoded
+        assert_eq!(
+            ser1,
+            "git+https://host/path?branch=*-._%2B20%2530+Z%2Fz%23foo%3Dbar%26zap%5B%5D%3Fto%5C%28%29%27%22"
+        );
     }
 }
 

@@ -83,6 +83,8 @@ pub enum ResolveVersion {
     /// Unstable. Will collect a certain amount of changes and then go.
     ///
     /// Changes made:
+    ///
+    /// * SourceId URL serialization is aware of URL encoding.
     V4,
 }
 

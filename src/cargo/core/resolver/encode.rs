@@ -196,13 +196,13 @@ impl EncodableResolve {
                 let enc_id = EncodablePackageId {
                     name: pkg.name.clone(),
                     version: Some(pkg.version.clone()),
-                    source: pkg.source,
+                    source: pkg.source.clone(),
                 };
 
                 if !all_pkgs.insert(enc_id.clone()) {
                     anyhow::bail!("package `{}` is specified twice in the lockfile", pkg.name);
                 }
-                let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
+                let id = match pkg.source.as_deref().or_else(|| path_deps.get(&pkg.name)) {
                     // We failed to find a local package in the workspace.
                     // It must have been removed and should be ignored.
                     None => {
@@ -366,7 +366,7 @@ impl EncodableResolve {
 
         let mut unused_patches = Vec::new();
         for pkg in self.patch.unused {
-            let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
+            let id = match pkg.source.as_deref().or_else(|| path_deps.get(&pkg.name)) {
                 Some(&src) => PackageId::new(&pkg.name, &pkg.version, src)?,
                 None => continue,
             };
@@ -488,17 +488,95 @@ impl Patch {
 pub struct EncodableDependency {
     name: String,
     version: String,
-    source: Option<SourceId>,
+    source: Option<EncodableSourceId>,
     checksum: Option<String>,
     dependencies: Option<Vec<EncodablePackageId>>,
     replace: Option<EncodablePackageId>,
 }
 
+/// Pretty much equivalent to [`SourceId`] with a different serialization method.
+///
+/// The serialization for `SourceId` doesn't do URL encode for parameters.
+/// In contrast, this type is aware of that whenever [`ResolveVersion`] allows
+/// us to do so (v4 or later).
+///
+/// [`EncodableResolve`] turns into a `
+#[derive(Deserialize, Debug, PartialOrd, Ord, Clone)]
+#[serde(transparent)]
+pub struct EncodableSourceId {
+    inner: SourceId,
+    /// We don't care about the deserialization of this, as the `url` crate
+    /// will always decode as the URL was encoded. Only when a [`Resolve`]
+    /// turns into a [`EncodableResolve`] will it set the value accordingly
+    /// via [`encodable_source_id`].
+    #[serde(skip)]
+    encoded: bool,
+}
+
+impl EncodableSourceId {
+    /// Creates a `EncodableSourceId` that always encodes URL params.
+    fn new(inner: SourceId) -> Self {
+        Self {
+            inner,
+            encoded: true,
+        }
+    }
+
+    /// Creates a `EncodableSourceId` that doesn't encode URL params. This is
+    /// for backward compatibility for order lockfile version.
+    fn without_url_encoded(inner: SourceId) -> Self {
+        Self {
+            inner,
+            encoded: false,
+        }
+    }
+
+    /// Encodes the inner [`SourceId`] as a URL.
+    fn as_url(&self) -> impl fmt::Display + '_ {
+        if self.encoded {
+            self.inner.as_encoded_url()
+        } else {
+            self.inner.as_url()
+        }
+    }
+}
+
+impl std::ops::Deref for EncodableSourceId {
+    type Target = SourceId;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl ser::Serialize for EncodableSourceId {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        s.collect_str(&self.as_url())
+    }
+}
+
+impl std::hash::Hash for EncodableSourceId {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.inner.hash(state)
+    }
+}
+
+impl std::cmp::PartialEq for EncodableSourceId {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner
+    }
+}
+
+impl std::cmp::Eq for EncodableSourceId {}
+
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone)]
 pub struct EncodablePackageId {
     name: String,
     version: Option<String>,
-    source: Option<SourceId>,
+    source: Option<EncodableSourceId>,
 }
 
 impl fmt::Display for EncodablePackageId {
@@ -535,7 +613,8 @@ impl FromStr for EncodablePackageId {
         Ok(EncodablePackageId {
             name: name.to_string(),
             version: version.map(|v| v.to_string()),
-            source: source_id,
+            // Default to url encoded.
+            source: source_id.map(EncodableSourceId::new),
         })
     }
 }
@@ -603,7 +682,7 @@ impl ser::Serialize for Resolve {
                 .map(|id| EncodableDependency {
                     name: id.name().to_string(),
                     version: id.version().to_string(),
-                    source: encode_source(id.source_id()),
+                    source: encodable_source_id(id.source_id(), self.version()),
                     dependencies: None,
                     replace: None,
                     checksum: if self.version() >= ResolveVersion::V2 {
@@ -676,7 +755,7 @@ fn encodable_resolve_node(
     EncodableDependency {
         name: id.name().to_string(),
         version: id.version().to_string(),
-        source: encode_source(id.source_id()),
+        source: encodable_source_id(id.source_id(), resolve.version()),
         dependencies: deps,
         replace,
         checksum: if resolve.version() >= ResolveVersion::V2 {
@@ -702,7 +781,7 @@ pub fn encodable_package_id(
             }
         }
     }
-    let mut source = encode_source(id_to_encode).map(|s| s.with_precise(None));
+    let mut source = encodable_source_id(id_to_encode.with_precise(None), resolve_version);
     if let Some(counts) = &state.counts {
         let version_counts = &counts[&id.name()];
         if version_counts[&id.version()] == 1 {
@@ -719,10 +798,13 @@ pub fn encodable_package_id(
     }
 }
 
-fn encode_source(id: SourceId) -> Option<SourceId> {
+fn encodable_source_id(id: SourceId, version: ResolveVersion) -> Option<EncodableSourceId> {
     if id.is_path() {
         None
     } else {
-        Some(id)
+        Some(match version {
+            ResolveVersion::V4 => EncodableSourceId::new(id),
+            _ => EncodableSourceId::without_url_encoded(id),
+        })
     }
 }
