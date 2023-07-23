@@ -349,9 +349,9 @@ crate, instead `[patch]` must be used in that situation. As a result usage of a
 path override is typically isolated to quick bug fixes rather than larger
 changes.
 
-Note: using a local configuration to override paths will only work for crates
-that have been published to [crates.io]. You cannot use this feature to tell
-Cargo how to find local unpublished crates.
+> **Note**: using a local configuration to override paths will only work for
+> crates that have been published to [crates.io]. You cannot use this feature
+> to tell Cargo how to find local unpublished crates.
 
 
 [crates.io]: https://crates.io/
