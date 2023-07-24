@@ -1,0 +1,46 @@
+Check a local package and all of its dependencies for errors
+
+Usage: cargo[EXE] check [OPTIONS]
+
+Options:
+  -q, --quiet                   Do not print cargo log messages
+  -p, --package [<SPEC>]        Package(s) to check
+      --workspace               Check all packages in the workspace
+      --exclude <SPEC>          Exclude packages from the check
+      --all                     Alias for --workspace (deprecated)
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error (unstable)
+      --lib                     Check only this package's library
+      --bins                    Check all binaries
+      --bin [<NAME>]            Check only the specified binary
+      --examples                Check all examples
+      --example [<NAME>]        Check only the specified example
+      --tests                   Check all tests
+      --test [<NAME>]           Check only the specified test target
+      --benches                 Check all benches
+      --bench [<NAME>]          Check only the specified bench target
+      --all-targets             Check all targets
+  -r, --release                 Check artifacts in release mode, with optimizations
+      --profile <PROFILE-NAME>  Check artifacts with the specified profile
+  -F, --features <FEATURES>     Space or comma separated list of features to activate
+      --all-features            Activate all available features
+      --no-default-features     Do not activate the `default` feature
+      --target <TRIPLE>         Check for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+      --manifest-path <PATH>    Path to Cargo.toml
+      --ignore-rust-version     Ignore `rust-version` specification in packages
+      --message-format <FMT>    Error format
+      --unit-graph              Output build graph in JSON (unstable)
+      --future-incompat-report  Outputs a future incompatibility report at the end of the build
+      --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json
+  -h, --help                    Print help
+  -v, --verbose...              Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>            Coloring: auto, always, never
+      --frozen                  Require Cargo.lock and cache are up to date
+      --locked                  Require Cargo.lock is up to date
+      --offline                 Run without accessing the network
+      --config <KEY=VALUE>      Override a configuration value
+  -Z <FLAG>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                                details
+
+Run `cargo help check` for more detailed information.

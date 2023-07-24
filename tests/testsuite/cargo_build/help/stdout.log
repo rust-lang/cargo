@@ -1,0 +1,48 @@
+Compile a local package and all of its dependencies
+
+Usage: cargo[EXE] build [OPTIONS]
+
+Options:
+  -q, --quiet                   Do not print cargo log messages
+  -p, --package [<SPEC>]        Package to build (see `cargo help pkgid`)
+      --workspace               Build all packages in the workspace
+      --exclude <SPEC>          Exclude packages from the build
+      --all                     Alias for --workspace (deprecated)
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error (unstable)
+      --lib                     Build only this package's library
+      --bins                    Build all binaries
+      --bin [<NAME>]            Build only the specified binary
+      --examples                Build all examples
+      --example [<NAME>]        Build only the specified example
+      --tests                   Build all tests
+      --test [<NAME>]           Build only the specified test target
+      --benches                 Build all benches
+      --bench [<NAME>]          Build only the specified bench target
+      --all-targets             Build all targets
+  -r, --release                 Build artifacts in release mode, with optimizations
+      --profile <PROFILE-NAME>  Build artifacts with the specified profile
+  -F, --features <FEATURES>     Space or comma separated list of features to activate
+      --all-features            Activate all available features
+      --no-default-features     Do not activate the `default` feature
+      --target <TRIPLE>         Build for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+      --out-dir <PATH>          Copy final artifacts to this directory (unstable)
+      --manifest-path <PATH>    Path to Cargo.toml
+      --ignore-rust-version     Ignore `rust-version` specification in packages
+      --message-format <FMT>    Error format
+      --build-plan              Output the build plan in JSON (unstable)
+      --unit-graph              Output build graph in JSON (unstable)
+      --future-incompat-report  Outputs a future incompatibility report at the end of the build
+      --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json
+  -h, --help                    Print help
+  -v, --verbose...              Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>            Coloring: auto, always, never
+      --frozen                  Require Cargo.lock and cache are up to date
+      --locked                  Require Cargo.lock is up to date
+      --offline                 Run without accessing the network
+      --config <KEY=VALUE>      Override a configuration value
+  -Z <FLAG>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                                details
+
+Run `cargo help build` for more detailed information.

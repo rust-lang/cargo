@@ -5,6 +5,8 @@ use cargo_test_support::paths;
 use std::fs;
 use std::path::PathBuf;
 
+mod help;
+
 fn cargo_process(s: &str) -> cargo_test_support::Execs {
     let mut p = cargo_test_support::cargo_process(s);
     // Clear out some of the environment added by the default cargo_process so
