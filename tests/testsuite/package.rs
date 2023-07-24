@@ -3069,6 +3069,7 @@ fn no_manifest_found() {
             "\
 [WARNING] manifest has no documentation[..]
 See [..]
+[WARNING] no `Cargo.toml` file found when packaging `foo` (note the case of the file name).
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])

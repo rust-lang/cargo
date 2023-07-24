@@ -229,6 +229,8 @@ fn build_ar_list(
 ) -> CargoResult<Vec<ArchiveFile>> {
     let mut result = Vec::new();
     let root = pkg.root();
+
+    let mut manifest_found = false;
     for src_file in src_files {
         let rel_path = src_file.strip_prefix(&root)?.to_path_buf();
         check_filename(&rel_path, &mut ws.config().shell())?;
@@ -242,6 +244,7 @@ fn build_ar_list(
             "Cargo.toml" |
             // normalize for case insensitive filesystems (like on Windows)
             "cargo.toml" => {
+                manifest_found = true;
                 result.push(ArchiveFile {
                     rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
                     rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
@@ -267,6 +270,13 @@ fn build_ar_list(
             }
         }
     }
+    if !manifest_found {
+        ws.config().shell().warn(&format!(
+            "no `Cargo.toml` file found when packaging `{}` (note the case of the file name).",
+            pkg.name()
+        ))?;
+    }
+
     if pkg.include_lockfile() {
         result.push(ArchiveFile {
             rel_path: PathBuf::from("Cargo.lock"),
