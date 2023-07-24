@@ -3016,7 +3016,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 3 files, [..] ([..] compressed)
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -3025,7 +3025,8 @@ See [..]
         .with_stdout(
             "\
 Cargo.lock
-cargo.toml
+Cargo.toml
+Cargo.toml.orig
 src/main.rs
 ",
         )
@@ -3036,7 +3037,7 @@ src/main.rs
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.lock", "cargo.toml", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
         &[],
     );
 }

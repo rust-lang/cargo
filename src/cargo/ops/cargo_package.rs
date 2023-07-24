@@ -239,15 +239,17 @@ fn build_ar_list(
             })?
             .to_string();
         match rel_str.as_ref() {
-            "Cargo.toml" => {
+            "Cargo.toml" |
+            // normalize for case insensitive filesystems (like on Windows)
+            "cargo.toml" => {
                 result.push(ArchiveFile {
                     rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
                     rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
                     contents: FileContents::OnDisk(src_file),
                 });
                 result.push(ArchiveFile {
-                    rel_path,
-                    rel_str,
+                    rel_path: PathBuf::from("Cargo.toml"),
+                    rel_str: "Cargo.toml".to_string(),
                     contents: FileContents::Generated(GeneratedFile::Manifest),
                 });
             }
