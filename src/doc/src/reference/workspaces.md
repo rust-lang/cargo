@@ -39,9 +39,6 @@ To create a workspace, you add the `[workspace]` table to a `Cargo.toml`:
 
 At minimum, a workspace has to have a member, either with a root package or as
 a virtual manifest.
-It's also a good practice to specify the `resolver = "2"` unless it is necessary
-to rely on the old one. It is a default resolver for all packages in the `2021` edition
-but it has to be explicitely set under the workspace.
 
 #### Root package
 
@@ -79,8 +76,14 @@ resolver = "2"
 [package]
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
+edition = "2021"     # the edition, will have no effect on a resolver used in the workspace
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
+
+Note that in a virtual manifest the [`resolver = "2"`](resolver.md#resolver-versions)
+should be specified manually. It is usually deduced from the [`package.edition`][package-edition]
+field which is absent in virtual manifests and the edition field of a member
+won't affect the resolver used by the workspace.
 
 ### The `members` and `exclude` fields 
 
@@ -251,6 +254,7 @@ if that makes sense for the tool in question.
 [package]: manifest.md#the-package-section
 [`Cargo.lock`]: ../guide/cargo-toml-vs-cargo-lock.md
 [package-metadata]: manifest.md#the-metadata-table
+[package-edition]: manifest.md#the-edition-field
 [output directory]: ../guide/build-cache.md
 [patch]: overriding-dependencies.md#the-patch-section
 [replace]: overriding-dependencies.md#the-replace-section
