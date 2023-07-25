@@ -3788,17 +3788,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xtask-unpublished"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "cargo",
- "clap",
- "env_logger 0.10.0",
- "log",
-]
-
-[[package]]
 name = "yansi"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
