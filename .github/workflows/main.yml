@@ -56,8 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # make `git diff` work
+          fetch-depth: 0
       - run: rustup update stable && rustup default stable
+      - name: Install cargo-semver-checks
+        run: |
+          mkdir installed-bins
+          curl -Lf https://github.com/obi1kenobi/cargo-semver-checks/releases/download/v0.22.1/cargo-semver-checks-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=./installed-bins
+          echo `pwd`/installed-bins >> $GITHUB_PATH
       - run: ci/validate-version-bump.sh
 
   test:
