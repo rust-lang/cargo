@@ -3766,7 +3766,7 @@ dependencies = [
  "anyhow",
  "cargo",
  "cargo-util",
- "clap",
+ "clap 4.3.3",
  "env_logger 0.10.0",
  "git2",
  "log",
@@ -3777,17 +3777,6 @@ name = "xtask-stale-label"
 version = "0.0.0"
 dependencies = [
  "toml_edit",
-]
-
-[[package]]
-name = "xtask-unpublished"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "cargo",
- "clap 4.3.3",
- "env_logger 0.10.0",
- "log",
 ]
 
 [[package]]
