@@ -335,6 +335,7 @@ dependencies = [
  "time",
  "toml",
  "toml_edit",
+ "unicase",
  "unicode-width",
  "unicode-xid",
  "url",

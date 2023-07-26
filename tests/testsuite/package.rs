@@ -3043,64 +3043,6 @@ src/main.rs
 }
 
 #[cargo_test]
-#[cfg(windows)] // windows is the platform that is most consistently configured for case insensitive filesystems
-fn no_manifest_found() {
-    let p = project()
-        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
-        .file("src/bar.txt", "") // should be ignored when packaging
-        .build();
-    // Workaround `project()` making a `Cargo.toml` on our behalf
-    std::fs::remove_file(p.root().join("Cargo.toml")).unwrap();
-    std::fs::write(
-        p.root().join("CARGO.TOML"),
-        r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                exclude = ["*.txt"]
-                license = "MIT"
-                description = "foo"
-            "#,
-    )
-    .unwrap();
-
-    p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation[..]
-See [..]
-[WARNING] no `Cargo.toml` file found when packaging `foo` (note the case of the file name).
-[PACKAGING] foo v0.0.1 ([CWD])
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 3 files, [..] ([..] compressed)
-",
-        )
-        .run();
-    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
-    p.cargo("package -l")
-        .with_stdout(
-            "\
-CARGO.TOML
-Cargo.lock
-src/main.rs
-",
-        )
-        .run();
-    p.cargo("package").with_stdout("").run();
-
-    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    validate_crate_contents(
-        f,
-        "foo-0.0.1.crate",
-        &["CARGO.TOML", "Cargo.lock", "src/main.rs"],
-        &[],
-    );
-}
-
-#[cargo_test]
 #[cfg(target_os = "linux")] // linux is generally configured to be case sensitive
 fn mixed_case() {
     let manifest = r#"
@@ -3128,7 +3070,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 6 files, [..] ([..] compressed)
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -3138,8 +3080,6 @@ See [..]
             "\
 Cargo.lock
 Cargo.toml
-Cargo.toml
-Cargo.toml.orig
 Cargo.toml.orig
 src/main.rs
 ",
