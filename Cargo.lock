@@ -1803,7 +1803,7 @@ dependencies = [
 
 [[package]]
 name = "home"
-version = "0.5.6"
+version = "0.5.7"
 dependencies = [
  "windows-sys 0.48.0",
 ]
