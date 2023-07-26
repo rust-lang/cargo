@@ -3041,6 +3041,7 @@ src/main.rs
         &[],
     );
 }
+
 #[cargo_test]
 #[cfg(windows)] // windows is the platform that is most consistently configured for case insensitive filesystems
 fn no_manifest_found() {
@@ -3095,6 +3096,62 @@ src/main.rs
         f,
         "foo-0.0.1.crate",
         &["CARGO.TOML", "Cargo.lock", "src/main.rs"],
+        &[],
+    );
+}
+
+#[cargo_test]
+#[cfg(target_os = "linux")] // linux is generally configured to be case sensitive
+fn mixed_case() {
+    let manifest = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#;
+    let p = project()
+        .file("Cargo.toml", manifest)
+        .file("cargo.toml", manifest)
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("src/bar.txt", "") // should be ignored when packaging
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 6 files, [..] ([..] compressed)
+",
+        )
+        .run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml
+Cargo.toml.orig
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
         &[],
     );
 }
