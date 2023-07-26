@@ -49,7 +49,6 @@ where the workspace's `Cargo.toml` is located.
 
 ```toml
 [workspace]
-resolver = "2"
 
 [package]
 name = "hello_world" # the name of the package
