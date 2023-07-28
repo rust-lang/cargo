@@ -155,9 +155,10 @@ The valid options are:
 
 #### lto
 
-The `lto` setting controls the [`-C lto` flag] which controls LLVM's [link
-time optimizations]. LTO can produce better optimized code, using
-whole-program analysis, at the cost of longer linking time.
+The `lto` setting controls `rustc`'s [`-C lto`], [`-C linker-plugin-lto`], and
+[`-C embed-bitcode`] options, which control LLVM's [link time optimizations].
+LTO can produce better optimized code, using whole-program analysis, at the cost
+of longer linking time.
 
 The valid options are:
 
@@ -171,11 +172,15 @@ The valid options are:
   similar to "fat".
 * `"off"`: Disables LTO.
 
-See also the [`-C linker-plugin-lto`] `rustc` flag for cross-language LTO.
+See the [linker-plugin-lto chapter] if you are interested in cross-language LTO.
+This is not yet supported natively in Cargo, but can be performed via
+`RUSTFLAGS`.
 
-[`-C lto` flag]: ../../rustc/codegen-options/index.html#lto
+[`-C lto`]: ../../rustc/codegen-options/index.html#lto
 [link time optimizations]: https://llvm.org/docs/LinkTimeOptimization.html
 [`-C linker-plugin-lto`]: ../../rustc/codegen-options/index.html#linker-plugin-lto
+[`-C embed-bitcode`]: ../../rustc/codegen-options/index.html#embed-bitcode
+[linker-plugin-lto chapter]: ../../rustc/linker-plugin-lto.html
 ["thin" LTO]: http://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html
 
 #### panic
