@@ -25,6 +25,7 @@ use flate2::{Compression, GzBuilder};
 use log::debug;
 use serde::Serialize;
 use tar::{Archive, Builder, EntryType, Header, HeaderMode};
+use unicase::Ascii as UncasedAscii;
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -227,58 +228,84 @@ fn build_ar_list(
     src_files: Vec<PathBuf>,
     vcs_info: Option<VcsInfo>,
 ) -> CargoResult<Vec<ArchiveFile>> {
-    let mut result = Vec::new();
+    let mut result = HashMap::new();
     let root = pkg.root();
-    for src_file in src_files {
-        let rel_path = src_file.strip_prefix(&root)?.to_path_buf();
-        check_filename(&rel_path, &mut ws.config().shell())?;
-        let rel_str = rel_path
-            .to_str()
-            .ok_or_else(|| {
-                anyhow::format_err!("non-utf8 path in source directory: {}", rel_path.display())
-            })?
-            .to_string();
+
+    for src_file in &src_files {
+        let rel_path = src_file.strip_prefix(&root)?;
+        check_filename(rel_path, &mut ws.config().shell())?;
+        let rel_str = rel_path.to_str().ok_or_else(|| {
+            anyhow::format_err!("non-utf8 path in source directory: {}", rel_path.display())
+        })?;
         match rel_str.as_ref() {
-            "Cargo.toml" => {
-                result.push(ArchiveFile {
-                    rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
-                    rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
-                    contents: FileContents::OnDisk(src_file),
-                });
-                result.push(ArchiveFile {
-                    rel_path,
-                    rel_str,
-                    contents: FileContents::Generated(GeneratedFile::Manifest),
-                });
-            }
             "Cargo.lock" => continue,
             VCS_INFO_FILE | ORIGINAL_MANIFEST_FILE => anyhow::bail!(
                 "invalid inclusion of reserved file name {} in package source",
                 rel_str
             ),
             _ => {
-                result.push(ArchiveFile {
-                    rel_path,
-                    rel_str,
-                    contents: FileContents::OnDisk(src_file),
-                });
+                result
+                    .entry(UncasedAscii::new(rel_str))
+                    .or_insert_with(Vec::new)
+                    .push(ArchiveFile {
+                        rel_path: rel_path.to_owned(),
+                        rel_str: rel_str.to_owned(),
+                        contents: FileContents::OnDisk(src_file.clone()),
+                    });
             }
         }
     }
+
+    // Ensure we normalize for case insensitive filesystems (like on Windows) by removing the
+    // existing entry, regardless of case, and adding in with the correct case
+    if result.remove(&UncasedAscii::new("Cargo.toml")).is_some() {
+        result
+            .entry(UncasedAscii::new(ORIGINAL_MANIFEST_FILE))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
+                rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
+                contents: FileContents::OnDisk(pkg.manifest_path().to_owned()),
+            });
+        result
+            .entry(UncasedAscii::new("Cargo.toml"))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from("Cargo.toml"),
+                rel_str: "Cargo.toml".to_string(),
+                contents: FileContents::Generated(GeneratedFile::Manifest),
+            });
+    } else {
+        ws.config().shell().warn(&format!(
+            "no `Cargo.toml` file found when packaging `{}` (note the case of the file name).",
+            pkg.name()
+        ))?;
+    }
+
     if pkg.include_lockfile() {
-        result.push(ArchiveFile {
-            rel_path: PathBuf::from("Cargo.lock"),
-            rel_str: "Cargo.lock".to_string(),
-            contents: FileContents::Generated(GeneratedFile::Lockfile),
-        });
+        let rel_str = "Cargo.lock";
+        result
+            .entry(UncasedAscii::new(rel_str))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from(rel_str),
+                rel_str: rel_str.to_string(),
+                contents: FileContents::Generated(GeneratedFile::Lockfile),
+            });
     }
     if let Some(vcs_info) = vcs_info {
-        result.push(ArchiveFile {
-            rel_path: PathBuf::from(VCS_INFO_FILE),
-            rel_str: VCS_INFO_FILE.to_string(),
-            contents: FileContents::Generated(GeneratedFile::VcsInfo(vcs_info)),
-        });
+        let rel_str = VCS_INFO_FILE;
+        result
+            .entry(UncasedAscii::new(rel_str))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from(rel_str),
+                rel_str: rel_str.to_string(),
+                contents: FileContents::Generated(GeneratedFile::VcsInfo(vcs_info)),
+            });
     }
+
+    let mut result = result.into_values().flatten().collect();
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
         let abs_file_path = paths::normalize_path(&pkg.root().join(license_path));
