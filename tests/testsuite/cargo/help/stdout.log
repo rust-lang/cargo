@@ -1,7 +1,7 @@
 Rust's package manager
 
-Usage: cargo [+toolchain] [OPTIONS] [COMMAND]
-       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
+Usage: cargo [..][OPTIONS] [COMMAND]
+       cargo [..][OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
 
 Options:
   -h, --help                Print help
