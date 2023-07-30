@@ -440,20 +440,7 @@ impl<'a> GitCheckout<'a> {
                 return Ok(());
             }
 
-            // Git only assumes a URL is a relative path if it starts with `./` or `../`.
-            // See [`git submodule add`] documentation.
-            //
-            // [`git submodule add`]: https://git-scm.com/docs/git-submodule
-            let child_remote_url = if ["./", "../"].iter().any(|p| child_url_str.starts_with(p)) {
-                let mut new_remote_url = parent_remote_url.to_string();
-                if !new_remote_url.ends_with('/') {
-                    new_remote_url.push('/');
-                }
-                new_remote_url.push_str(child_url_str);
-                Cow::from(new_remote_url)
-            } else {
-                Cow::from(child_url_str)
-            };
+            let child_remote_url = absolute_submodule_url(parent_remote_url, child_url_str)?;
 
             // A submodule which is listed in .gitmodules but not actually
             // checked out will not have a head id, so we should ignore it.
@@ -505,6 +492,58 @@ impl<'a> GitCheckout<'a> {
             update_submodules(&repo, cargo_config, &child_remote_url)
         }
     }
+}
+
+/// Constructs an absolute URL for a child submodule URL with its parent base URL.
+///
+/// Git only assumes a submodule URL is a relative path if it starts with `./`
+/// or `../` [^1]. To fetch the correct repo, we need to construct an absolute
+/// submodule URL.
+///
+/// At this moment it comes with some limitations:
+///
+/// * GitHub doesn't accept non-normalized URLs with relative paths.
+///   (`ssh://git@github.com/rust-lang/cargo.git/relative/..` is invalid)
+/// * `url` crate cannot parse SCP-like URLs.
+///   (`git@github.com:rust-lang/cargo.git` is not a valid WHATWG URL)
+///
+/// To overcome these, this patch always tries [`Url::parse`] first to normalize
+/// the path. If it couldn't, append the relative path as the last resort and
+/// pray the remote git service supports non-normalized URLs.
+///
+/// See also rust-lang/cargo#12404 and rust-lang/cargo#12295.
+///
+/// [^1]: <https://git-scm.com/docs/git-submodule>
+fn absolute_submodule_url<'s>(base_url: &str, submodule_url: &'s str) -> CargoResult<Cow<'s, str>> {
+    let absolute_url = if ["./", "../"].iter().any(|p| submodule_url.starts_with(p)) {
+        match Url::parse(base_url) {
+            Ok(mut base_url) => {
+                let path = base_url.path();
+                if !path.ends_with('/') {
+                    base_url.set_path(&format!("{path}/"));
+                }
+                let absolute_url = base_url.join(submodule_url).with_context(|| {
+                    format!(
+                        "failed to parse relative child submodule url `{submodule_url}` \
+                        using parent base url `{base_url}`"
+                    )
+                })?;
+                Cow::from(absolute_url.to_string())
+            }
+            Err(_) => {
+                let mut absolute_url = base_url.to_string();
+                if !absolute_url.ends_with('/') {
+                    absolute_url.push('/');
+                }
+                absolute_url.push_str(submodule_url);
+                Cow::from(absolute_url)
+            }
+        }
+    } else {
+        Cow::from(submodule_url)
+    };
+
+    Ok(absolute_url)
 }
 
 /// Prepare the authentication callbacks for cloning a git repository.
@@ -1484,5 +1523,104 @@ fn is_short_hash_of(rev: &str, oid: Oid) -> bool {
     match long_hash.get(..rev.len()) {
         Some(truncated_long_hash) => truncated_long_hash.eq_ignore_ascii_case(rev),
         None => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::absolute_submodule_url;
+
+    #[test]
+    fn test_absolute_submodule_url() {
+        let cases = [
+            (
+                "ssh://git@gitub.com/rust-lang/cargo",
+                "git@github.com:rust-lang/cargo.git",
+                "git@github.com:rust-lang/cargo.git",
+            ),
+            (
+                "ssh://git@gitub.com/rust-lang/cargo",
+                "./",
+                "ssh://git@gitub.com/rust-lang/cargo/",
+            ),
+            (
+                "ssh://git@gitub.com/rust-lang/cargo",
+                "../",
+                "ssh://git@gitub.com/rust-lang/",
+            ),
+            (
+                "ssh://git@gitub.com/rust-lang/cargo",
+                "./foo",
+                "ssh://git@gitub.com/rust-lang/cargo/foo",
+            ),
+            (
+                "ssh://git@gitub.com/rust-lang/cargo/",
+                "./foo",
+                "ssh://git@gitub.com/rust-lang/cargo/foo",
+            ),
+            (
+                "ssh://git@gitub.com/rust-lang/cargo/",
+                "../foo",
+                "ssh://git@gitub.com/rust-lang/foo",
+            ),
+            (
+                "ssh://git@gitub.com/rust-lang/cargo",
+                "../foo",
+                "ssh://git@gitub.com/rust-lang/foo",
+            ),
+            (
+                "ssh://git@gitub.com/rust-lang/cargo",
+                "../foo/bar/../baz",
+                "ssh://git@gitub.com/rust-lang/foo/baz",
+            ),
+            (
+                "git@github.com:rust-lang/cargo.git",
+                "ssh://git@gitub.com/rust-lang/cargo",
+                "ssh://git@gitub.com/rust-lang/cargo",
+            ),
+            (
+                "git@github.com:rust-lang/cargo.git",
+                "./",
+                "git@github.com:rust-lang/cargo.git/./",
+            ),
+            (
+                "git@github.com:rust-lang/cargo.git",
+                "../",
+                "git@github.com:rust-lang/cargo.git/../",
+            ),
+            (
+                "git@github.com:rust-lang/cargo.git",
+                "./foo",
+                "git@github.com:rust-lang/cargo.git/./foo",
+            ),
+            (
+                "git@github.com:rust-lang/cargo.git/",
+                "./foo",
+                "git@github.com:rust-lang/cargo.git/./foo",
+            ),
+            (
+                "git@github.com:rust-lang/cargo.git",
+                "../foo",
+                "git@github.com:rust-lang/cargo.git/../foo",
+            ),
+            (
+                "git@github.com:rust-lang/cargo.git/",
+                "../foo",
+                "git@github.com:rust-lang/cargo.git/../foo",
+            ),
+            (
+                "git@github.com:rust-lang/cargo.git",
+                "../foo/bar/../baz",
+                "git@github.com:rust-lang/cargo.git/../foo/bar/../baz",
+            ),
+        ];
+
+        for (base_url, submodule_url, expected) in cases {
+            let url = absolute_submodule_url(base_url, submodule_url).unwrap();
+            assert_eq!(
+                expected, url,
+                "base `{base_url}`; submodule `{submodule_url}`"
+            );
+        }
     }
 }
