@@ -3633,7 +3633,7 @@ fn different_user_relative_submodules() {
             .file("Cargo.toml", &basic_lib_manifest("dep1"))
             .file("src/lib.rs", "")
     });
-    let _user2_git_project2 = git::new("user2/dep2", |project| {
+    let user2_git_project2 = git::new("user2/dep2", |project| {
         project
             .file("Cargo.toml", &basic_lib_manifest("dep1"))
             .file("src/lib.rs", "")
@@ -3673,14 +3673,14 @@ fn different_user_relative_submodules() {
             "\
 [UPDATING] git repository `{}`
 [UPDATING] git submodule `{}`
-[UPDATING] git submodule `{}/../dep2`
+[UPDATING] git submodule `{}`
 [COMPILING] dep1 v0.5.0 ({}#[..])
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             path2url(&user1_git_project.root()),
             path2url(&user2_git_project.root()),
-            path2url(&user2_git_project.root()),
+            path2url(&user2_git_project2.root()),
             path2url(&user1_git_project.root()),
         ))
         .run();
