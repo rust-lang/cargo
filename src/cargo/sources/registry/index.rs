@@ -85,7 +85,7 @@
 //! [`RemoteRegistry`]: super::remote::RemoteRegistry
 //! [`Dependency`]: crate::core::Dependency
 
-use crate::core::dependency::DepKind;
+use crate::core::dependency::{DepKind, Artifact};
 use crate::core::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
@@ -178,7 +178,7 @@ struct Summaries {
 /// A lazily parsed [`IndexSummary`].
 enum MaybeIndexSummary {
     /// A summary which has not been parsed, The `start` and `end` are pointers
-    /// into [`Summaries::raw_data`] which this is an entry of.
+    /// into [`Summaries::raw_data`] which this isRegistryDependency an entry of.
     Unparsed { start: usize, end: usize },
 
     /// An actually parsed summary.
@@ -356,6 +356,10 @@ struct RegistryDependency<'a> {
     ///
     /// [RFC 1977]: https://rust-lang.github.io/rfcs/1977-public-private-dependencies.html
     public: Option<bool>,
+    artifact: Option<Vec<Cow<'a, str>>>,
+    bindep_target: Option<Cow<'a, str>>,
+    #[serde(default)]
+    lib: bool,
 }
 
 impl<'cfg> RegistryIndex<'cfg> {
@@ -409,6 +413,8 @@ impl<'cfg> RegistryIndex<'cfg> {
     where
         'a: 'b,
     {
+        let bindeps = self.config.cli_unstable().bindeps;
+
         let source_id = self.source_id;
 
         // First up parse what summaries we have available.
@@ -434,7 +440,9 @@ impl<'cfg> RegistryIndex<'cfg> {
                 }
             })
             .filter(move |is| {
-                if is.v > INDEX_V_MAX {
+                if is.v == 3 && bindeps {
+                    true
+                } else if is.v > INDEX_V_MAX {
                     debug!(
                         "unsupported schema version {} ({} {})",
                         is.v,
@@ -813,7 +821,7 @@ impl<'a> SummariesCache<'a> {
             .get(..4)
             .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index schema version"))?;
         let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
-        if index_v != INDEX_V_MAX {
+        if index_v != INDEX_V_MAX && index_v != 3 {
             bail!(
                 "index schema version {index_v} doesn't match the version I know ({INDEX_V_MAX})",
             );
@@ -947,6 +955,9 @@ impl<'a> RegistryDependency<'a> {
             registry,
             package,
             public,
+            artifact,
+            bindep_target,
+            lib,
         } = self;
 
         let id = if let Some(registry) = &registry {
@@ -984,6 +995,11 @@ impl<'a> RegistryDependency<'a> {
         // In Cargo.toml, "registry" is None if it is from the default
         if !id.is_crates_io() {
             dep.set_registry_id(id);
+        }
+
+        if let Some(artifacts) = artifact {
+            let artifact = Artifact::parse(&artifacts, lib, bindep_target.as_deref())?;
+            dep.set_artifact(artifact);
         }
 
         dep.set_optional(optional)

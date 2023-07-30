@@ -3287,7 +3287,7 @@ impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
             self.target.as_deref(),
         ) {
             if cx.config.cli_unstable().bindeps {
-                let artifact = Artifact::parse(artifact, is_lib, target)?;
+                let artifact = Artifact::parse(&artifact.0, is_lib, target)?;
                 if dep.kind() != DepKind::Build
                     && artifact.target() == Some(ArtifactTarget::BuildDependencyAssumeTarget)
                 {

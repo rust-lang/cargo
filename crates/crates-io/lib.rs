@@ -73,6 +73,16 @@ pub struct NewCrateDependency {
     pub registry: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub explicit_name_in_toml: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artifact: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bindep_target: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub lib: bool,
+}
+
+fn is_false(x: &bool) -> bool {
+    *x == false
 }
 
 #[derive(Deserialize)]
