@@ -518,7 +518,7 @@ pub fn cli() -> Command {
     let usage = if is_rustup {
         "cargo [+toolchain] [OPTIONS] [COMMAND]\n       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
     } else {
-        "cargo [OPTIONS] [COMMAND]\n       cargo [OPTIONS] -Zscript <MANIFEST> [ARGS]..."
+        "cargo [OPTIONS] [COMMAND]\n       cargo [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
     };
     Command::new("cargo")
         // Subcommands all count their args' display order independently (from 0),
