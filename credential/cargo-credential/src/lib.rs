@@ -63,7 +63,7 @@ pub struct RegistryInfo<'a> {
     /// The crates.io registry will be `crates-io` (`CRATES_IO_REGISTRY`).
     pub name: Option<&'a str>,
     /// Headers from attempting to access a registry that resulted in a HTTP 401.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub headers: Vec<String>,
 }
 
