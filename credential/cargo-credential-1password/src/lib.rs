@@ -80,7 +80,7 @@ impl OnePasswordKeychain {
         let mut cmd = Command::new("op");
         cmd.args(["signin", "--raw"]);
         cmd.stdout(Stdio::piped());
-        cmd.stdin(cargo_credential::tty()?);
+        cmd.stdin(cargo_credential::tty().map_err(Box::new)?);
         let mut child = cmd
             .spawn()
             .map_err(|e| format!("failed to spawn `op`: {}", e))?;
@@ -228,7 +228,7 @@ impl OnePasswordKeychain {
         // For unknown reasons, `op item create` seems to not be happy if
         // stdin is not a tty. Otherwise it returns with a 0 exit code without
         // doing anything.
-        cmd.stdin(cargo_credential::tty()?);
+        cmd.stdin(cargo_credential::tty().map_err(Box::new)?);
         self.run_cmd(cmd)?;
         Ok(())
     }

@@ -58,7 +58,7 @@ mod win {
                             if err.raw_os_error() == Some(ERROR_NOT_FOUND as i32) {
                                 return Err(Error::NotFound);
                             }
-                            return Err(err.into());
+                            return Err(Box::new(err).into());
                         }
                         std::slice::from_raw_parts(
                             (*p_credential).CredentialBlob,
@@ -97,7 +97,7 @@ mod win {
                     let result = unsafe { CredWriteW(&credential, 0) };
                     if result != TRUE {
                         let err = std::io::Error::last_os_error();
-                        return Err(err.into());
+                        return Err(Box::new(err).into());
                     }
                     Ok(CredentialResponse::Login)
                 }
@@ -109,7 +109,7 @@ mod win {
                         if err.raw_os_error() == Some(ERROR_NOT_FOUND as i32) {
                             return Err(Error::NotFound);
                         }
-                        return Err(err.into());
+                        return Err(Box::new(err).into());
                     }
                     Ok(CredentialResponse::Logout)
                 }

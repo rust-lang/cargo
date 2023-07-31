@@ -13,29 +13,32 @@ use thiserror::Error as ThisError;
 #[serde(rename_all = "kebab-case", tag = "kind")]
 #[non_exhaustive]
 pub enum Error {
+    /// Registry URL is not supported. This should be used if
+    /// the provider only works for some registries. Cargo will
+    /// try another provider, if available
     #[error("registry not supported")]
     UrlNotSupported,
+
+    /// Credentials could not be found. Cargo will try another
+    /// provider, if available
     #[error("credential not found")]
     NotFound,
+
+    /// The provider doesn't support this operation, such as
+    /// a provider that can't support 'login' / 'logout'
     #[error("requested operation not supported")]
     OperationNotSupported,
-    #[error("protocol version {version} not supported")]
-    ProtocolNotSupported { version: u32 },
+
+    /// The provider failed to perform the operation. Other
+    /// providers will not be attempted
     #[error(transparent)]
     #[serde(with = "error_serialize")]
     Other(Box<dyn StdError + Sync + Send>),
-}
 
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Self {
-        Box::new(err).into()
-    }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Self {
-        Box::new(err).into()
-    }
+    /// A new variant was added to this enum since Cargo was built
+    #[error("unknown error kind; try updating Cargo?")]
+    #[serde(other)]
+    Unknown,
 }
 
 impl From<String> for Error {
@@ -155,6 +158,16 @@ mod error_serialize {
 #[cfg(test)]
 mod tests {
     use super::Error;
+
+    #[test]
+    pub fn unknown_kind() {
+        let json = r#"{
+            "kind": "unexpected-kind",
+            "unexpected-content": "test"
+          }"#;
+        let e: Error = serde_json::from_str(&json).unwrap();
+        assert!(matches!(e, Error::Unknown));
+    }
 
     #[test]
     pub fn roundtrip() {

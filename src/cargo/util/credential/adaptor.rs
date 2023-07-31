@@ -5,6 +5,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+use anyhow::Context;
 use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, RegistryInfo, Secret,
 };
@@ -32,9 +33,14 @@ impl Credential for BasicProcessCredential {
                     cmd.env("CARGO_REGISTRY_NAME_OPT", name);
                 }
                 cmd.stdout(Stdio::piped());
-                let mut child = cmd.spawn()?;
+                let mut child = cmd.spawn().context("failed to spawn credential process")?;
                 let mut buffer = String::new();
-                child.stdout.take().unwrap().read_to_string(&mut buffer)?;
+                child
+                    .stdout
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut buffer)
+                    .context("failed to read from credential provider")?;
                 if let Some(end) = buffer.find('\n') {
                     if buffer.len() > end + 1 {
                         return Err(format!(
@@ -46,7 +52,7 @@ impl Credential for BasicProcessCredential {
                     }
                     buffer.truncate(end);
                 }
-                let status = child.wait().expect("process was started");
+                let status = child.wait().context("credential process never started")?;
                 if !status.success() {
                     return Err(format!("process `{}` failed with status `{status}`", exe).into());
                 }

@@ -189,23 +189,24 @@ fn doit(credential: impl Credential) -> Result<(), Error> {
     let hello = CredentialHello {
         v: vec![PROTOCOL_VERSION_1],
     };
-    serde_json::to_writer(std::io::stdout(), &hello)?;
+    serde_json::to_writer(std::io::stdout(), &hello).map_err(Box::new)?;
     println!();
 
     loop {
         let mut buffer = String::new();
-        let len = std::io::stdin().read_line(&mut buffer)?;
+        let len = std::io::stdin().read_line(&mut buffer).map_err(Box::new)?;
         if len == 0 {
             return Ok(());
         }
-        let request: CredentialRequest = serde_json::from_str(&buffer)?;
+        let request: CredentialRequest = serde_json::from_str(&buffer).map_err(Box::new)?;
         if request.v != PROTOCOL_VERSION_1 {
-            return Err(Error::ProtocolNotSupported { version: request.v });
+            return Err(format!("unsupported protocol version {}", request.v).into());
         }
         serde_json::to_writer(
             std::io::stdout(),
             &credential.perform(&request.registry, &request.action, &request.args),
-        )?;
+        )
+        .map_err(Box::new)?;
         println!();
     }
 }
@@ -248,5 +249,5 @@ pub fn read_token(
         eprintln!("please paste the token for {} below", registry.index_url);
     }
 
-    Ok(Secret::from(read_line()?))
+    Ok(Secret::from(read_line().map_err(Box::new)?))
 }
