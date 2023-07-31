@@ -161,7 +161,7 @@ fn basic_unsupported() {
 [ERROR] credential provider `cargo:basic false` failed action `login`
 
 Caused by:
-  credential provider does not support the requested operation
+  requested operation not supported
 ",
         )
         .run();
@@ -175,7 +175,7 @@ Caused by:
 [ERROR] credential provider `cargo:basic false` failed action `logout`
 
 Caused by:
-  credential provider does not support the requested operation
+  requested operation not supported
 ",
         )
         .run();
@@ -280,7 +280,7 @@ fn invalid_token_output() {
 [ERROR] credential provider `[..]test-cred[EXE]` failed action `get`
 
 Caused by:
-  error: process `[..]` returned more than one line of output; expected a single token
+  process `[..]` returned more than one line of output; expected a single token
 ",
         )
         .run();

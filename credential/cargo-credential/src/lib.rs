@@ -17,7 +17,9 @@ use std::{
 };
 use time::OffsetDateTime;
 
+mod error;
 mod secret;
+pub use error::Error;
 pub use secret::Secret;
 
 /// Message sent by the credential helper on startup
@@ -163,70 +165,6 @@ pub enum CacheControl {
 /// this version will prevent new credential providers
 /// from working with older versions of Cargo.
 pub const PROTOCOL_VERSION_1: u32 = 1;
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "kebab-case", tag = "kind", content = "detail")]
-#[non_exhaustive]
-pub enum Error {
-    UrlNotSupported,
-    ProtocolNotSupported(u32),
-    Subprocess(String),
-    Io(String),
-    Serde(String),
-    Other(String),
-    OperationNotSupported,
-    NotFound,
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Self {
-        Error::Serde(err.to_string())
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Self {
-        Error::Io(err.to_string())
-    }
-}
-
-impl From<String> for Error {
-    fn from(err: String) -> Self {
-        Error::Other(err)
-    }
-}
-
-impl From<&str> for Error {
-    fn from(err: &str) -> Self {
-        Error::Other(err.to_string())
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl core::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::UrlNotSupported => {
-                write!(f, "credential provider does not support this registry")
-            }
-            Error::ProtocolNotSupported(v) => write!(
-                f,
-                "credential provider does not support protocol version {v}"
-            ),
-            Error::Io(msg) => write!(f, "i/o error: {msg}"),
-            Error::Serde(msg) => write!(f, "serialization error: {msg}"),
-            Error::Other(msg) => write!(f, "error: {msg}"),
-            Error::Subprocess(msg) => write!(f, "subprocess failed: {msg}"),
-            Error::OperationNotSupported => write!(
-                f,
-                "credential provider does not support the requested operation"
-            ),
-            Error::NotFound => write!(f, "credential not found"),
-        }
-    }
-}
-
 pub trait Credential {
     /// Retrieves a token for the given registry.
     fn perform(
@@ -262,7 +200,7 @@ fn doit(credential: impl Credential) -> Result<(), Error> {
         }
         let request: CredentialRequest = serde_json::from_str(&buffer)?;
         if request.v != PROTOCOL_VERSION_1 {
-            return Err(Error::ProtocolNotSupported(request.v));
+            return Err(Error::ProtocolNotSupported { version: request.v });
         }
         serde_json::to_writer(
             std::io::stdout(),

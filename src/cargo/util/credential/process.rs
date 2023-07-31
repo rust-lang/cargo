@@ -7,6 +7,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+use anyhow::Context;
 use cargo_credential::{
     Action, Credential, CredentialHello, CredentialRequest, CredentialResponse, RegistryInfo,
 };
@@ -35,11 +36,11 @@ impl<'a> Credential for CredentialProcessCredential {
         cmd.stdin(Stdio::piped());
         cmd.arg("--cargo-plugin");
         log::debug!("credential-process: {cmd:?}");
-        let mut child = cmd.spawn().map_err(|e| {
-            cargo_credential::Error::Subprocess(format!(
-                "failed to spawn credential process `{}`: {e}",
+        let mut child = cmd.spawn().with_context(|| {
+            format!(
+                "failed to spawn credential process `{}`",
                 self.path.display()
-            ))
+            )
         })?;
         let mut output_from_child = BufReader::new(child.stdout.take().unwrap());
         let mut input_to_child = child.stdin.take().unwrap();
@@ -66,11 +67,11 @@ impl<'a> Credential for CredentialProcessCredential {
         drop(input_to_child);
         let status = child.wait().expect("credential process never started");
         if !status.success() {
-            return Err(cargo_credential::Error::Subprocess(format!(
+            return Err(anyhow::anyhow!(
                 "credential process `{}` failed with status {}`",
                 self.path.display(),
                 status
-            ))
+            )
             .into());
         }
         log::trace!("credential process exited successfully");

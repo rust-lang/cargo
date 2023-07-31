@@ -22,7 +22,7 @@ impl Credential for BasicProcessCredential {
             Action::Get(_) => {
                 let mut args = args.iter();
                 let exe = args.next()
-                    .ok_or_else(||cargo_credential::Error::Other(format!("The first argument to the `cargo:basic` adaptor must be the path to the credential provider executable.")))?;
+                    .ok_or("The first argument to the `cargo:basic` adaptor must be the path to the credential provider executable.")?;
                 let args = args.map(|arg| arg.replace("{index_url}", registry.index_url));
 
                 let mut cmd = Command::new(exe);
@@ -32,32 +32,23 @@ impl Credential for BasicProcessCredential {
                     cmd.env("CARGO_REGISTRY_NAME_OPT", name);
                 }
                 cmd.stdout(Stdio::piped());
-                let mut child = cmd
-                    .spawn()
-                    .map_err(|e| cargo_credential::Error::Subprocess(e.to_string()))?;
+                let mut child = cmd.spawn()?;
                 let mut buffer = String::new();
-                child
-                    .stdout
-                    .take()
-                    .unwrap()
-                    .read_to_string(&mut buffer)
-                    .map_err(|e| cargo_credential::Error::Subprocess(e.to_string()))?;
+                child.stdout.take().unwrap().read_to_string(&mut buffer)?;
                 if let Some(end) = buffer.find('\n') {
                     if buffer.len() > end + 1 {
-                        return Err(cargo_credential::Error::Other(format!(
+                        return Err(format!(
                             "process `{}` returned more than one line of output; \
                             expected a single token",
                             exe
-                        )));
+                        )
+                        .into());
                     }
                     buffer.truncate(end);
                 }
                 let status = child.wait().expect("process was started");
                 if !status.success() {
-                    return Err(cargo_credential::Error::Subprocess(format!(
-                        "process `{}` failed with status `{status}`",
-                        exe
-                    )));
+                    return Err(format!("process `{}` failed with status `{status}`", exe).into());
                 }
                 Ok(CredentialResponse::Get {
                     token: Secret::from(buffer),

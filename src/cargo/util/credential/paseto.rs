@@ -1,5 +1,6 @@
 //! Credential provider that implements PASETO asymmetric tokens stored in Cargo's config.
 
+use anyhow::Context;
 use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, Error, Operation, RegistryInfo, Secret,
 };
@@ -61,16 +62,14 @@ impl<'a> Credential for PasetoCredential<'a> {
         action: &Action<'_>,
         _args: &[&str],
     ) -> Result<CredentialResponse, Error> {
-        let index_url = Url::parse(registry.index_url).map_err(|e| e.to_string())?;
+        let index_url = Url::parse(registry.index_url).context("parsing index url")?;
         let sid = if let Some(name) = registry.name {
             SourceId::for_alt_registry(&index_url, name)
         } else {
             SourceId::for_registry(&index_url)
-        }
-        .map_err(|e| e.to_string())?;
+        }?;
 
-        let reg_cfg = registry_credential_config_raw(self.config, &sid)
-            .map_err(|e| Error::Other(e.to_string()))?;
+        let reg_cfg = registry_credential_config_raw(self.config, &sid)?;
 
         match action {
             Action::Get(operation) => {
@@ -87,14 +86,12 @@ impl<'a> Credential for PasetoCredential<'a> {
                     .as_ref()
                     .map(|key| key.as_str().try_into())
                     .transpose()
-                    .map_err(|e| Error::Other(format!("failed to load private key: {e}")))?;
+                    .context("failed to load private key")?;
                 let public: AsymmetricPublicKey<pasetors::version3::V3> = secret
                     .as_ref()
                     .map(|key| key.try_into())
                     .transpose()
-                    .map_err(|e| {
-                        Error::Other(format!("failed to load public key from private key: {e}"))
-                    })?
+                    .context("failed to load public key from private key")?
                     .expose();
                 let kip: pasetors::paserk::Id = (&public).into();
 
@@ -157,7 +154,7 @@ impl<'a> Credential for PasetoCredential<'a> {
                         )
                     })
                     .transpose()
-                    .map_err(|e| Error::Other(format!("failed to sign request: {e}")))?;
+                    .context("failed to sign request")?;
 
                 Ok(CredentialResponse::Get {
                     token,
@@ -181,18 +178,14 @@ impl<'a> Credential for PasetoCredential<'a> {
                 if let Some(p) = paserk_public_from_paserk_secret(secret_key.as_deref()) {
                     eprintln!("{}", &p);
                 } else {
-                    return Err(Error::Other(
-                        "not a validly formatted PASERK secret key".to_string(),
-                    ));
+                    return Err("not a validly formatted PASERK secret key".into());
                 }
                 new_token = RegistryCredentialConfig::AsymmetricKey((secret_key, None));
-                config::save_credentials(self.config, Some(new_token), &sid)
-                    .map_err(|e| Error::Other(e.to_string()))?;
+                config::save_credentials(self.config, Some(new_token), &sid)?;
                 Ok(CredentialResponse::Login)
             }
             Action::Logout => {
-                config::save_credentials(self.config, None, &sid)
-                    .map_err(|e| Error::Other(e.to_string()))?;
+                config::save_credentials(self.config, None, &sid)?;
                 Ok(CredentialResponse::Logout)
             }
             _ => Err(Error::OperationNotSupported),

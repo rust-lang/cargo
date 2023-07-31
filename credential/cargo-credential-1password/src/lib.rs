@@ -243,7 +243,7 @@ impl OnePasswordKeychain {
             Some(password) => password
                 .value
                 .map(Secret::from)
-                .ok_or_else(|| format!("missing password value for entry").into()),
+                .ok_or("missing password value for entry".into()),
             None => Err("could not find password field".into()),
         }
     }

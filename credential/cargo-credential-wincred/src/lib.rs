@@ -65,16 +65,13 @@ mod win {
                             (*p_credential).CredentialBlobSize as usize,
                         )
                     };
-                    let result = match String::from_utf8(bytes.to_vec()) {
-                        Err(_) => Err("failed to convert token to UTF8".into()),
-                        Ok(token) => Ok(CredentialResponse::Get {
-                            token: token.into(),
-                            cache: CacheControl::Session,
-                            operation_independent: true,
-                        }),
-                    };
-                    let _ = unsafe { CredFree(p_credential as *mut _) };
-                    result
+                    let token = String::from_utf8(bytes.to_vec()).map_err(Box::new);
+                    unsafe { CredFree(p_credential as *mut _) };
+                    Ok(CredentialResponse::Get {
+                        token: token?.into(),
+                        cache: CacheControl::Session,
+                        operation_independent: true,
+                    })
                 }
                 Action::Login(options) => {
                     let token = read_token(options, registry)?.expose();

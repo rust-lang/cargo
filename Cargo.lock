@@ -347,8 +347,10 @@ dependencies = [
 name = "cargo-credential"
 version = "0.3.0"
 dependencies = [
+ "anyhow",
  "serde",
  "serde_json",
+ "thiserror",
  "time",
 ]
 
