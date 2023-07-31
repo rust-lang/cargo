@@ -85,7 +85,7 @@
 //! [`RemoteRegistry`]: super::remote::RemoteRegistry
 //! [`Dependency`]: crate::core::Dependency
 
-use crate::core::dependency::{DepKind, Artifact};
+use crate::core::dependency::{Artifact, DepKind};
 use crate::core::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
