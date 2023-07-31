@@ -241,7 +241,8 @@ manifest settings for the target.</dd>
 
 
 <dt class="option-term" id="option-cargo-test---all-targets"><a class="option-anchor" href="#option-cargo-test---all-targets"></a><code>--all-targets</code></dt>
-<dd class="option-desc">Test all targets. This is equivalent to specifying <code>--lib --bins --tests --benches --examples</code>.</dd>
+<dd class="option-desc">Test all targets. This is equivalent to specifying <code>--lib --bins --tests --benches --examples</code>.
+This will not test the library’s documentation, which can be tested separately using <code>--doc</code>.</dd>
 
 
 </dl>
