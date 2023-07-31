@@ -17,7 +17,7 @@ Options:
       --test [<NAME>]           Test only the specified test target
       --benches                 Test all benches
       --bench [<NAME>]          Test only the specified bench target
-      --all-targets             Test all targets
+      --all-targets             Test all targets (does not include doctests)
       --doc                     Test only this library's documentation
       --no-run                  Compile, but don't run tests
       --no-fail-fast            Run all tests regardless of failure
