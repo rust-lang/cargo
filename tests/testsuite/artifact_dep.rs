@@ -1445,13 +1445,7 @@ foo v0.0.0 ([CWD])
         )
         .run();
 }
-
-// TODO: Fix this potentially by reverting 887562bfeb8c540594d7d08e6e9a4ab7eb255865 which adds artifact information to the registry
-//       followed by 0ff93733626f7cbecaf9dce9ab62b4ced0be088e which picks it up.
-//       For reference, see comments by ehuss https://github.com/rust-lang/cargo/pull/9992#discussion_r801086315 and
-//       joshtriplett https://github.com/rust-lang/cargo/pull/9992#issuecomment-1033394197 .
 #[cargo_test]
-#[ignore = "broken, need artifact info in index"]
 fn targets_are_picked_up_from_non_workspace_artifact_deps() {
     if cross_compile::disabled() {
         return;
@@ -1926,15 +1920,23 @@ You may press ctrl-c [..]
           "badges": {},
           "categories": [],
           "deps": [{
+              "artifact": ["bin"],
               "default_features": true,
               "features": [],
               "kind": "normal",
+              "lib": true,
               "name": "bar",
               "optional": false,
               "target": null,
               "version_req": "^1.0"
             },
             {
+              "artifact": [
+                "bin:a",
+                "cdylib",
+                "staticlib"
+              ],
+              "bindep_target": "target",
               "default_features": true,
               "features": [],
               "kind": "build",
@@ -2894,8 +2896,7 @@ fn check_transitive_artifact_dependency_with_different_target() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_contains(
-            "error: could not find specification for target `custom-target`.\n  \
-            Dependency `baz v0.0.0 [..]` requires to build for target `custom-target`.",
+            "error: failed to run `rustc` to learn about target-specific information",
         )
         .with_status(101)
         .run();
