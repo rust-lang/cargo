@@ -126,7 +126,7 @@ fn build_resolve_graph(
     // How should this work?
     let requested_kinds =
         CompileKind::from_requested_targets(ws.config(), &metadata_opts.filter_platforms)?;
-    let target_data = RustcTargetData::new(ws, &requested_kinds)?;
+    let mut target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;
     let force_all = if metadata_opts.filter_platforms.is_empty() {
@@ -139,7 +139,7 @@ fn build_resolve_graph(
     // as that is the behavior of download_accessible.
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
-        &target_data,
+        &mut target_data,
         &requested_kinds,
         &metadata_opts.cli_features,
         &specs,

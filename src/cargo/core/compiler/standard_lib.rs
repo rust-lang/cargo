@@ -62,7 +62,7 @@ pub(crate) fn std_crates(config: &Config, units: Option<&[Unit]>) -> Option<Vec<
 /// Resolve the standard library dependencies.
 pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData<'cfg>,
+    target_data: &mut RustcTargetData<'cfg>,
     build_config: &BuildConfig,
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
