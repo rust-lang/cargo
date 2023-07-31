@@ -77,6 +77,8 @@ pub enum Action<'a> {
     Get(Operation<'a>),
     Login(LoginOptions<'a>),
     Logout,
+    #[serde(other)]
+    Unknown,
 }
 
 impl<'a> Display for Action<'a> {
@@ -85,6 +87,7 @@ impl<'a> Display for Action<'a> {
             Action::Get(_) => f.write_str("get"),
             Action::Login(_) => f.write_str("login"),
             Action::Logout => f.write_str("logout"),
+            Action::Unknown => f.write_str("<unknown>"),
         }
     }
 }
@@ -133,6 +136,8 @@ pub enum Operation<'a> {
         /// The name of the crate
         name: &'a str,
     },
+    #[serde(other)]
+    Unknown,
 }
 
 /// Message sent by the credential helper
@@ -147,6 +152,8 @@ pub enum CredentialResponse {
     },
     Login,
     Logout,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -159,6 +166,8 @@ pub enum CacheControl {
     Expires(#[serde(with = "time::serde::timestamp")] OffsetDateTime),
     /// Cache this result and use it for all subsequent requests in the current Cargo invocation.
     Session,
+    #[serde(other)]
+    Unknown,
 }
 
 /// Credential process JSON protocol version. Incrementing
@@ -177,7 +186,7 @@ pub trait Credential {
 
 /// Runs the credential interaction
 pub fn main(credential: impl Credential) {
-    let result = doit(credential);
+    let result = doit(credential).map_err(|e| Error::Other(e));
     if result.is_err() {
         serde_json::to_writer(std::io::stdout(), &result)
             .expect("failed to serialize credential provider error");
@@ -185,28 +194,29 @@ pub fn main(credential: impl Credential) {
     }
 }
 
-fn doit(credential: impl Credential) -> Result<(), Error> {
+fn doit(
+    credential: impl Credential,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let hello = CredentialHello {
         v: vec![PROTOCOL_VERSION_1],
     };
-    serde_json::to_writer(std::io::stdout(), &hello).map_err(Box::new)?;
+    serde_json::to_writer(std::io::stdout(), &hello)?;
     println!();
 
     loop {
         let mut buffer = String::new();
-        let len = std::io::stdin().read_line(&mut buffer).map_err(Box::new)?;
+        let len = std::io::stdin().read_line(&mut buffer)?;
         if len == 0 {
             return Ok(());
         }
-        let request: CredentialRequest = serde_json::from_str(&buffer).map_err(Box::new)?;
+        let request: CredentialRequest = serde_json::from_str(&buffer)?;
         if request.v != PROTOCOL_VERSION_1 {
             return Err(format!("unsupported protocol version {}", request.v).into());
         }
         serde_json::to_writer(
             std::io::stdout(),
             &credential.perform(&request.registry, &request.action, &request.args),
-        )
-        .map_err(Box::new)?;
+        )?;
         println!();
     }
 }
