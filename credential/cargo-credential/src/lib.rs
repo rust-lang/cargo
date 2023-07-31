@@ -17,7 +17,9 @@ use std::{
 };
 use time::OffsetDateTime;
 
+mod error;
 mod secret;
+pub use error::Error;
 pub use secret::Secret;
 
 /// Message sent by the credential helper on startup
@@ -63,7 +65,7 @@ pub struct RegistryInfo<'a> {
     /// The crates.io registry will be `crates-io` (`CRATES_IO_REGISTRY`).
     pub name: Option<&'a str>,
     /// Headers from attempting to access a registry that resulted in a HTTP 401.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub headers: Vec<String>,
 }
 
@@ -75,6 +77,8 @@ pub enum Action<'a> {
     Get(Operation<'a>),
     Login(LoginOptions<'a>),
     Logout,
+    #[serde(other)]
+    Unknown,
 }
 
 impl<'a> Display for Action<'a> {
@@ -83,6 +87,7 @@ impl<'a> Display for Action<'a> {
             Action::Get(_) => f.write_str("get"),
             Action::Login(_) => f.write_str("login"),
             Action::Logout => f.write_str("logout"),
+            Action::Unknown => f.write_str("<unknown>"),
         }
     }
 }
@@ -131,6 +136,8 @@ pub enum Operation<'a> {
         /// The name of the crate
         name: &'a str,
     },
+    #[serde(other)]
+    Unknown,
 }
 
 /// Message sent by the credential helper
@@ -145,6 +152,8 @@ pub enum CredentialResponse {
     },
     Login,
     Logout,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -157,76 +166,14 @@ pub enum CacheControl {
     Expires(#[serde(with = "time::serde::timestamp")] OffsetDateTime),
     /// Cache this result and use it for all subsequent requests in the current Cargo invocation.
     Session,
+    #[serde(other)]
+    Unknown,
 }
 
 /// Credential process JSON protocol version. Incrementing
 /// this version will prevent new credential providers
 /// from working with older versions of Cargo.
 pub const PROTOCOL_VERSION_1: u32 = 1;
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "kebab-case", tag = "kind", content = "detail")]
-#[non_exhaustive]
-pub enum Error {
-    UrlNotSupported,
-    ProtocolNotSupported(u32),
-    Subprocess(String),
-    Io(String),
-    Serde(String),
-    Other(String),
-    OperationNotSupported,
-    NotFound,
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Self {
-        Error::Serde(err.to_string())
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Self {
-        Error::Io(err.to_string())
-    }
-}
-
-impl From<String> for Error {
-    fn from(err: String) -> Self {
-        Error::Other(err)
-    }
-}
-
-impl From<&str> for Error {
-    fn from(err: &str) -> Self {
-        Error::Other(err.to_string())
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl core::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::UrlNotSupported => {
-                write!(f, "credential provider does not support this registry")
-            }
-            Error::ProtocolNotSupported(v) => write!(
-                f,
-                "credential provider does not support protocol version {v}"
-            ),
-            Error::Io(msg) => write!(f, "i/o error: {msg}"),
-            Error::Serde(msg) => write!(f, "serialization error: {msg}"),
-            Error::Other(msg) => write!(f, "error: {msg}"),
-            Error::Subprocess(msg) => write!(f, "subprocess failed: {msg}"),
-            Error::OperationNotSupported => write!(
-                f,
-                "credential provider does not support the requested operation"
-            ),
-            Error::NotFound => write!(f, "credential not found"),
-        }
-    }
-}
-
 pub trait Credential {
     /// Retrieves a token for the given registry.
     fn perform(
@@ -239,7 +186,7 @@ pub trait Credential {
 
 /// Runs the credential interaction
 pub fn main(credential: impl Credential) {
-    let result = doit(credential);
+    let result = doit(credential).map_err(|e| Error::Other(e));
     if result.is_err() {
         serde_json::to_writer(std::io::stdout(), &result)
             .expect("failed to serialize credential provider error");
@@ -247,7 +194,9 @@ pub fn main(credential: impl Credential) {
     }
 }
 
-fn doit(credential: impl Credential) -> Result<(), Error> {
+fn doit(
+    credential: impl Credential,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let hello = CredentialHello {
         v: vec![PROTOCOL_VERSION_1],
     };
@@ -262,7 +211,7 @@ fn doit(credential: impl Credential) -> Result<(), Error> {
         }
         let request: CredentialRequest = serde_json::from_str(&buffer)?;
         if request.v != PROTOCOL_VERSION_1 {
-            return Err(Error::ProtocolNotSupported(request.v));
+            return Err(format!("unsupported protocol version {}", request.v).into());
         }
         serde_json::to_writer(
             std::io::stdout(),
@@ -310,5 +259,5 @@ pub fn read_token(
         eprintln!("please paste the token for {} below", registry.index_url);
     }
 
-    Ok(Secret::from(read_line()?))
+    Ok(Secret::from(read_line().map_err(Box::new)?))
 }

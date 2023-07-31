@@ -116,7 +116,7 @@ fn empty_login_token() {
 [ERROR] credential provider `cargo:token` failed action `login`
 
 Caused by:
-  [ERROR] please provide a non-empty token
+  please provide a non-empty token
 ",
         )
         .with_status(101)
@@ -130,7 +130,7 @@ Caused by:
 [ERROR] credential provider `cargo:token` failed action `login`
 
 Caused by:
-  [ERROR] please provide a non-empty token
+  please provide a non-empty token
 ",
         )
         .with_status(101)
@@ -160,7 +160,7 @@ fn invalid_login_token() {
             "[ERROR] credential provider `cargo:token` failed action `login`
 
 Caused by:
-  [ERROR] token contains invalid characters.
+  token contains invalid characters.
   Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
             101,
         )

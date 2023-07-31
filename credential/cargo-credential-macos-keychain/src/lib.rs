@@ -17,10 +17,6 @@ mod macos {
         format!("cargo-registry:{}", index_url)
     }
 
-    fn to_credential_error(e: security_framework::base::Error) -> Error {
-        Error::Other(format!("security framework ({}): {e}", e.code()))
-    }
-
     impl Credential for MacKeychain {
         fn perform(
             &self,
@@ -34,11 +30,9 @@ mod macos {
             match action {
                 Action::Get(_) => match keychain.find_generic_password(&service_name, ACCOUNT) {
                     Err(e) if e.code() == not_found => Err(Error::NotFound),
-                    Err(e) => Err(to_credential_error(e)),
+                    Err(e) => Err(Box::new(e).into()),
                     Ok((pass, _)) => {
-                        let token = String::from_utf8(pass.as_ref().to_vec()).map_err(|_| {
-                            Error::Other("failed to convert token to UTF8".to_string())
-                        })?;
+                        let token = String::from_utf8(pass.as_ref().to_vec()).map_err(Box::new)?;
                         Ok(CredentialResponse::Get {
                             token: token.into(),
                             cache: CacheControl::Session,
@@ -57,19 +51,19 @@ mod macos {
                                         ACCOUNT,
                                         token.expose().as_bytes(),
                                     )
-                                    .map_err(to_credential_error)?;
+                                    .map_err(Box::new)?;
                             }
                         }
                         Ok((_, mut item)) => {
                             item.set_password(token.expose().as_bytes())
-                                .map_err(to_credential_error)?;
+                                .map_err(Box::new)?;
                         }
                     }
                     Ok(CredentialResponse::Login)
                 }
                 Action::Logout => match keychain.find_generic_password(&service_name, ACCOUNT) {
                     Err(e) if e.code() == not_found => Err(Error::NotFound),
-                    Err(e) => Err(to_credential_error(e)),
+                    Err(e) => Err(Box::new(e).into()),
                     Ok((_, item)) => {
                         item.delete();
                         Ok(CredentialResponse::Logout)

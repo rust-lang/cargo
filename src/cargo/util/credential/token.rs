@@ -1,5 +1,6 @@
 //! Credential provider that uses plaintext tokens in Cargo's config.
 
+use anyhow::Context;
 use cargo_credential::{Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo};
 use url::Url;
 
@@ -27,16 +28,14 @@ impl<'a> Credential for TokenCredential<'a> {
         action: &Action<'_>,
         _args: &[&str],
     ) -> Result<CredentialResponse, Error> {
-        let index_url = Url::parse(registry.index_url).map_err(|e| e.to_string())?;
+        let index_url = Url::parse(registry.index_url).context("parsing index url")?;
         let sid = if let Some(name) = registry.name {
             SourceId::for_alt_registry(&index_url, name)
         } else {
             SourceId::for_registry(&index_url)
-        }
-        .map_err(|e| e.to_string())?;
-        let previous_token = registry_credential_config_raw(self.config, &sid)
-            .map_err(|e| Error::Other(e.to_string()))?
-            .and_then(|c| c.token);
+        }?;
+        let previous_token =
+            registry_credential_config_raw(self.config, &sid)?.and_then(|c| c.token);
 
         match action {
             Action::Get(_) => {
@@ -53,14 +52,12 @@ impl<'a> Credential for TokenCredential<'a> {
                 let new_token = cargo_credential::read_token(options, registry)?
                     .map(|line| line.replace("cargo login", "").trim().to_string());
 
-                crates_io::check_token(new_token.as_ref().expose())
-                    .map_err(|e| Error::Other(e.to_string()))?;
+                crates_io::check_token(new_token.as_ref().expose()).map_err(Box::new)?;
                 config::save_credentials(
                     self.config,
                     Some(RegistryCredentialConfig::Token(new_token)),
                     &sid,
-                )
-                .map_err(|e| Error::Other(e.to_string()))?;
+                )?;
                 let _ = self.config.shell().status(
                     "Login",
                     format!("token for `{}` saved", sid.display_registry_name()),
@@ -72,8 +69,7 @@ impl<'a> Credential for TokenCredential<'a> {
                     return Err(Error::NotFound);
                 }
                 let reg_name = sid.display_registry_name();
-                config::save_credentials(self.config, None, &sid)
-                    .map_err(|e| Error::Other(e.to_string()))?;
+                config::save_credentials(self.config, None, &sid)?;
                 let _ = self.config.shell().status(
                     "Logout",
                     format!("token for `{reg_name}` has been removed from local storage"),

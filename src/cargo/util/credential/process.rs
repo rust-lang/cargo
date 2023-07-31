@@ -7,6 +7,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+use anyhow::Context;
 use cargo_credential::{
     Action, Credential, CredentialHello, CredentialRequest, CredentialResponse, RegistryInfo,
 };
@@ -35,17 +36,15 @@ impl<'a> Credential for CredentialProcessCredential {
         cmd.stdin(Stdio::piped());
         cmd.arg("--cargo-plugin");
         log::debug!("credential-process: {cmd:?}");
-        let mut child = cmd.spawn().map_err(|e| {
-            cargo_credential::Error::Subprocess(format!(
-                "failed to spawn credential process `{}`: {e}",
-                self.path.display()
-            ))
-        })?;
+        let mut child = cmd.spawn().context("failed to spawn credential process")?;
         let mut output_from_child = BufReader::new(child.stdout.take().unwrap());
         let mut input_to_child = child.stdin.take().unwrap();
         let mut buffer = String::new();
-        output_from_child.read_line(&mut buffer)?;
-        let credential_hello: CredentialHello = serde_json::from_str(&buffer)?;
+        output_from_child
+            .read_line(&mut buffer)
+            .context("failed to read hello from credential provider")?;
+        let credential_hello: CredentialHello =
+            serde_json::from_str(&buffer).context("failed to deserialize hello")?;
         log::debug!("credential-process > {credential_hello:?}");
 
         let req = CredentialRequest {
@@ -54,23 +53,25 @@ impl<'a> Credential for CredentialProcessCredential {
             registry: registry.clone(),
             args: args.to_vec(),
         };
-        let request = serde_json::to_string(&req)?;
+        let request = serde_json::to_string(&req).context("failed to serialize request")?;
         log::debug!("credential-process < {req:?}");
-        writeln!(input_to_child, "{request}")?;
+        writeln!(input_to_child, "{request}").context("failed to write to credential provider")?;
 
         buffer.clear();
-        output_from_child.read_line(&mut buffer)?;
+        output_from_child
+            .read_line(&mut buffer)
+            .context("failed to read response from credential provider")?;
         let response: Result<CredentialResponse, cargo_credential::Error> =
-            serde_json::from_str(&buffer)?;
+            serde_json::from_str(&buffer).context("failed to deserialize response")?;
         log::debug!("credential-process > {response:?}");
         drop(input_to_child);
-        let status = child.wait().expect("credential process never started");
+        let status = child.wait().context("credential process never started")?;
         if !status.success() {
-            return Err(cargo_credential::Error::Subprocess(format!(
+            return Err(anyhow::anyhow!(
                 "credential process `{}` failed with status {}`",
                 self.path.display(),
                 status
-            ))
+            )
             .into());
         }
         log::trace!("credential process exited successfully");

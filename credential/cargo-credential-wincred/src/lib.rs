@@ -58,23 +58,20 @@ mod win {
                             if err.raw_os_error() == Some(ERROR_NOT_FOUND as i32) {
                                 return Err(Error::NotFound);
                             }
-                            return Err(err.into());
+                            return Err(Box::new(err).into());
                         }
                         std::slice::from_raw_parts(
                             (*p_credential).CredentialBlob,
                             (*p_credential).CredentialBlobSize as usize,
                         )
                     };
-                    let result = match String::from_utf8(bytes.to_vec()) {
-                        Err(_) => Err("failed to convert token to UTF8".into()),
-                        Ok(token) => Ok(CredentialResponse::Get {
-                            token: token.into(),
-                            cache: CacheControl::Session,
-                            operation_independent: true,
-                        }),
-                    };
-                    let _ = unsafe { CredFree(p_credential as *mut _) };
-                    result
+                    let token = String::from_utf8(bytes.to_vec()).map_err(Box::new);
+                    unsafe { CredFree(p_credential as *mut _) };
+                    Ok(CredentialResponse::Get {
+                        token: token?.into(),
+                        cache: CacheControl::Session,
+                        operation_independent: true,
+                    })
                 }
                 Action::Login(options) => {
                     let token = read_token(options, registry)?.expose();
@@ -100,7 +97,7 @@ mod win {
                     let result = unsafe { CredWriteW(&credential, 0) };
                     if result != TRUE {
                         let err = std::io::Error::last_os_error();
-                        return Err(err.into());
+                        return Err(Box::new(err).into());
                     }
                     Ok(CredentialResponse::Login)
                 }
@@ -112,7 +109,7 @@ mod win {
                         if err.raw_os_error() == Some(ERROR_NOT_FOUND as i32) {
                             return Err(Error::NotFound);
                         }
-                        return Err(err.into());
+                        return Err(Box::new(err).into());
                     }
                     Ok(CredentialResponse::Logout)
                 }
