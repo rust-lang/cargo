@@ -34,7 +34,7 @@ pub fn cli() -> Command {
             "Test all tests",
             "Test only the specified bench target",
             "Test all benches",
-            "Test all targets",
+            "Test all targets (does not include doctests)",
         )
         .arg(flag("doc", "Test only this library's documentation"))
         .arg(flag("no-run", "Compile, but don't run tests"))
