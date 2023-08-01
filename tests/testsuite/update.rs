@@ -491,10 +491,14 @@ fn update_aggressive_conflicts_with_precise() {
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
     p.cargo("update -p serde:0.2.1 --precise 0.2.2 --aggressive")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: cannot specify both aggressive and precise simultaneously
+error: the argument '--precise <PRECISE>' cannot be used with '--aggressive'
+
+Usage: cargo[EXE] update --package [<SPEC>] --precise <PRECISE>
+
+For more information, try '--help'.
 ",
         )
         .run();

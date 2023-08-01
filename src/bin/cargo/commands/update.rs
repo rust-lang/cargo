@@ -9,10 +9,13 @@ pub fn cli() -> Command {
         .arg_quiet()
         .arg(flag("workspace", "Only update the workspace packages").short('w'))
         .arg_package_spec_simple("Package to update")
-        .arg(flag(
-            "aggressive",
-            "Force updating all dependencies of SPEC as well when used with -p",
-        ))
+        .arg(
+            flag(
+                "aggressive",
+                "Force updating all dependencies of SPEC as well when used with -p",
+            )
+            .conflicts_with("precise"),
+        )
         .arg_dry_run("Don't actually write the lockfile")
         .arg(
             opt(
