@@ -16,7 +16,6 @@ pub fn cli() -> Command {
             )
             .conflicts_with("precise"),
         )
-        .arg_dry_run("Don't actually write the lockfile")
         .arg(
             opt(
                 "precise",
@@ -26,6 +25,7 @@ pub fn cli() -> Command {
             .requires("package"),
         )
         .arg_manifest_path()
+        .arg_dry_run("Don't actually write the lockfile")
         .after_help("Run `cargo help update` for more detailed information.\n")
 }
 

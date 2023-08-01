@@ -7,9 +7,9 @@ Options:
   -w, --workspace             Only update the workspace packages
   -p, --package [<SPEC>]      Package to update
       --aggressive            Force updating all dependencies of SPEC as well when used with -p
-      --dry-run               Don't actually write the lockfile
       --precise <PRECISE>     Update a single dependency to exactly PRECISE when used with -p
       --manifest-path <PATH>  Path to Cargo.toml
+      --dry-run               Don't actually write the lockfile
   -h, --help                  Print help
   -v, --verbose...            Use verbose output (-vv very verbose/build.rs output)
       --color <WHEN>          Coloring: auto, always, never
