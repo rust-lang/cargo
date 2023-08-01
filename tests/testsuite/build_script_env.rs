@@ -117,7 +117,10 @@ fn rustc_bootstrap() {
     "#;
     let p = project()
         .file("Cargo.toml", &basic_manifest("has-dashes", "0.0.1"))
-        .file("src/lib.rs", "#![feature(rustc_attrs)]")
+        .file(
+            "src/lib.rs",
+            "#![allow(internal_features)] #![feature(rustc_attrs)]",
+        )
         .file("build.rs", build_rs)
         .build();
     // RUSTC_BOOTSTRAP unset on stable should error
@@ -154,7 +157,10 @@ fn rustc_bootstrap() {
     // Tests for binaries instead of libraries
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
-        .file("src/main.rs", "#![feature(rustc_attrs)] fn main() {}")
+        .file(
+            "src/main.rs",
+            "#![allow(internal_features)] #![feature(rustc_attrs)] fn main() {}",
+        )
         .file("build.rs", build_rs)
         .build();
     // nightly should warn when there's no library whether or not RUSTC_BOOTSTRAP is set
