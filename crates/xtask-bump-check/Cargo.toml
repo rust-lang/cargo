@@ -1,5 +1,5 @@
 [package]
-name = "xtask-unpublished"
+name = "xtask-bump-check"
 version = "0.0.0"
 edition.workspace = true
 publish = false
@@ -7,6 +7,8 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 cargo.workspace = true
+cargo-util.workspace = true
 clap.workspace = true
 env_logger.workspace = true
+git2.workspace = true
 log.workspace = true
