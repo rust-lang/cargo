@@ -464,6 +464,46 @@ fn update_aggressive() {
         .run();
 }
 
+#[cargo_test]
+fn update_aggressive_conflicts_with_precise() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.2.1").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.2.2").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde:0.2.1 --precise 0.2.2 --aggressive")
+        .with_status(1)
+        .with_stderr(
+            "\
+error: the argument '--precise <PRECISE>' cannot be used with '--aggressive'
+
+Usage: cargo[EXE] update --package [<SPEC>] --precise <PRECISE>
+
+For more information, try '--help'.
+",
+        )
+        .run();
+}
+
 // cargo update should respect its arguments even without a lockfile.
 // See issue "Running cargo update without a Cargo.lock ignores arguments"
 // at <https://github.com/rust-lang/cargo/issues/6872>.
