@@ -12,7 +12,6 @@ use cargo_credential::{
 
 use core::fmt;
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::error::Error;
 use time::{Duration, OffsetDateTime};
 use url::Url;
@@ -31,7 +30,7 @@ use super::{
 /// `[registries.NAME]` tables.
 ///
 /// The values here should be kept in sync with `RegistryConfigExtended`
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct RegistryConfig {
     pub index: Option<String>,
@@ -208,6 +207,19 @@ pub fn registry_credential_config_raw(
     config: &Config,
     sid: &SourceId,
 ) -> CargoResult<Option<RegistryConfig>> {
+    let mut cache = config.registry_config();
+    if let Some(cfg) = cache.get(&sid) {
+        return Ok(cfg.clone());
+    }
+    let cfg = registry_credential_config_raw_uncached(config, sid)?;
+    cache.insert(*sid, cfg.clone());
+    return Ok(cfg);
+}
+
+fn registry_credential_config_raw_uncached(
+    config: &Config,
+    sid: &SourceId,
+) -> CargoResult<Option<RegistryConfig>> {
     log::trace!("loading credential config for {}", sid);
     config.load_credentials()?;
     if !sid.is_remote_registry() {
@@ -237,6 +249,7 @@ pub fn registry_credential_config_raw(
     // This also allows the authorization token for a registry to be set
     // without knowing the registry name by using the _INDEX and _TOKEN
     // environment variables.
+
     let name = {
         // Discover names from environment variables.
         let index = sid.canonical_url();
@@ -256,14 +269,17 @@ pub fn registry_credential_config_raw(
 
         // Discover names from the configuration only if none were found in the environment.
         if names.len() == 0 {
-            names = config
-                .get::<HashMap<String, RegistryConfig>>("registries")?
-                .iter()
-                .filter_map(|(k, v)| Some((k, v.index.as_deref()?)))
-                .filter_map(|(k, v)| Some((k, CanonicalUrl::new(&v.into_url().ok()?).ok()?)))
-                .filter(|(_, v)| v == index)
-                .map(|(k, _)| k.to_string())
-                .collect();
+            if let Some(registries) = config.values()?.get("registries") {
+                let (registries, _) = registries.table("registries")?;
+                for (name, value) in registries {
+                    if let Some(v) = value.table(&format!("registries.{name}"))?.0.get("index") {
+                        let (v, _) = v.string(&format!("registries.{name}.index"))?;
+                        if index == &CanonicalUrl::new(&v.into_url()?)? {
+                            names.push(name.clone());
+                        }
+                    }
+                }
+            }
         }
         names.sort();
         match names.len() {

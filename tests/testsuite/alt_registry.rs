@@ -1506,3 +1506,44 @@ fn publish_with_transitive_dep() {
         .build();
     p2.cargo("publish").run();
 }
+
+#[cargo_test]
+fn warn_for_unused_fields() {
+    let _ = RegistryBuilder::new()
+        .no_configure_token()
+        .alternative()
+        .build();
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            "[registry]
+            unexpected-field = 'foo'
+            [registries.alternative]
+            unexpected-field = 'foo'
+            ",
+        )
+        .build();
+
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+[WARNING] unused config key `registries.alternative.unexpected-field` in `[..]config.toml`
+[ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+        )
+        .run();
+
+    p.cargo("publish --registry crates-io")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[WARNING] unused config key `registry.unexpected-field` in `[..]config.toml`
+[ERROR] no token found, please run `cargo login`
+or use environment variable CARGO_REGISTRY_TOKEN",
+        )
+        .run();
+}
