@@ -1,4 +1,4 @@
-//! Helper library for writing Cargo credential processes.
+//! Helper library for writing Cargo credential providers.
 //!
 //! A credential process should have a `struct` that implements the `Credential` trait.
 //! The `main` function should be called with an instance of that struct, such as:
@@ -7,6 +7,34 @@
 //! fn main() {
 //!     cargo_credential::main(MyCredential);
 //! }
+//! ```
+//!
+//! While in the `perform` function, stdin and stdout will be re-attached to the
+//! active console. This allows credential providers to be interactive if necessary.
+//!
+//! ## Error handling
+//! ### [`Error::UrlNotSupported`]
+//! A credential provider may only support some registry URLs. If this is the case
+//! and an unsupported index URL is passed to the provider, it should respond with
+//! [`Error::UrlNotSupported`]. Other credential providers may be attempted by Cargo.
+//!
+//! ### [`Error::NotFound`]
+//! When attempting an [`Action::Get`] or [`Action::Logout`], if a credential can not
+//! be found, the provider should respond with [`Error::NotFound`]. Other credential
+//! providers may be attempted by Cargo.
+//!
+//! ### [`Error::OperationNotSupported`]
+//! A credential provider might not support all operations. For example if the provider
+//! only supports [`Action::Get`], [`Error::OperationNotSupported`] should be returned
+//! for all other requests.
+//!
+//! ### [`Error::Other`]
+//! All other errors go here. The error will be shown to the user in Cargo, including
+//! the full error chain using [`std::error::Error::source`].
+//!
+//! ## Example
+//! ```rust,ignore
+#![doc = include_str!("../examples/file-provider.rs")]
 //! ```
 
 use serde::{Deserialize, Serialize};

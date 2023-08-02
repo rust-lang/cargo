@@ -339,6 +339,7 @@ dependencies = [
  "anyhow",
  "serde",
  "serde_json",
+ "snapbox",
  "thiserror",
  "time",
 ]
@@ -865,6 +866,18 @@ checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "escargot"
+version = "0.5.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "768064bd3a0e2bedcba91dc87ace90beea91acc41b6a01a3ca8e9aa8827461bf"
+dependencies = [
+ "log",
+ "once_cell",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3003,6 +3016,7 @@ dependencies = [
  "anstyle",
  "content_inspector",
  "dunce",
+ "escargot",
  "filetime",
  "normalize-line-endings",
  "similar",
