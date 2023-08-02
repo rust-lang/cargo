@@ -38,17 +38,16 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::Display,
-    fs::File,
-    io::{self, BufRead, BufReader},
-};
+use std::{fmt::Display, io};
 use time::OffsetDateTime;
 
 mod error;
 mod secret;
+mod stdio;
+
 pub use error::Error;
 pub use secret::Secret;
+use stdio::stdin_stdout_to_console;
 
 /// Message sent by the credential helper on startup
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -241,32 +240,20 @@ fn doit(
         if request.v != PROTOCOL_VERSION_1 {
             return Err(format!("unsupported protocol version {}", request.v).into());
         }
-        serde_json::to_writer(
-            std::io::stdout(),
-            &credential.perform(&request.registry, &request.action, &request.args),
-        )?;
+
+        let response = stdin_stdout_to_console(|| {
+            credential.perform(&request.registry, &request.action, &request.args)
+        })?;
+
+        serde_json::to_writer(std::io::stdout(), &response)?;
         println!();
     }
 }
 
-/// Open stdin from the tty
-pub fn tty() -> Result<File, io::Error> {
-    #[cfg(unix)]
-    const IN_DEVICE: &str = "/dev/tty";
-    #[cfg(windows)]
-    const IN_DEVICE: &str = "CONIN$";
-    let stdin = std::fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(IN_DEVICE)?;
-    Ok(stdin)
-}
-
 /// Read a line of text from stdin.
 pub fn read_line() -> Result<String, io::Error> {
-    let mut reader = BufReader::new(tty()?);
     let mut buf = String::new();
-    reader.read_line(&mut buf)?;
+    io::stdin().read_line(&mut buf)?;
     Ok(buf.trim().to_string())
 }
 
