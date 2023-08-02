@@ -35,7 +35,7 @@ regex = { git = "https://github.com/rust-lang/regex.git" }
 This package has a single dependency, on the `regex` library. We’ve stated in
 this case that we’re relying on a particular Git repository that lives on
 GitHub. Since we haven’t specified any other information, Cargo assumes that
-we intend to use the latest commit on the `master` branch to build our package.
+we intend to use the latest commit on the default branch to build our package.
 
 Sound good? Well, there’s one problem: If you build this package today, and
 then you send a copy to me, and I build this package tomorrow, something bad
