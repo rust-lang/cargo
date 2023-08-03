@@ -80,7 +80,7 @@ shell-escape = "0.1.4"
 snapbox = { version = "0.4.0", features = ["diff", "path"] }
 strip-ansi-escapes = "0.1.0"
 syn = { version = "2.0.14", features = ["extra-traits", "full"] }
-tar = { version = "0.4.38", default-features = false }
+tar = { version = "0.4.39", default-features = false }
 tempfile = "3.1.0"
 termcolor = "1.1.2"
 time = { version = "0.3", features = ["parsing", "formatting"] }

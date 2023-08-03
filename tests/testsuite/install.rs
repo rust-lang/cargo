@@ -1284,7 +1284,8 @@ fn reports_unsuccessful_subcommand_result() {
         .run();
     cargo_process("fail")
         .with_status(101)
-        .with_stderr_contains("thread '[..]' panicked at 'explicit panic', [..]")
+        .with_stderr_contains("thread '[..]' panicked at [..]src/main.rs:1:[..]")
+        .with_stderr_contains("[..]explicit panic[..]")
         .run();
 }
 
