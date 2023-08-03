@@ -35,13 +35,15 @@ pub fn registry_login(
     };
 
     let mut token_from_stdin = None;
-    if !std::io::stdin().is_terminal() {
-        let token = std::io::read_to_string(std::io::stdin()).unwrap_or_default();
-        if !token.is_empty() {
-            token_from_stdin = Some(token);
+    let token = token_from_cmdline.or_else(|| {
+        if !std::io::stdin().is_terminal() {
+            let token = std::io::read_to_string(std::io::stdin()).unwrap_or_default();
+            if !token.is_empty() {
+                token_from_stdin = Some(token);
+            }
         }
-    }
-    let token = token_from_cmdline.or_else(|| token_from_stdin.as_deref().map(Secret::from));
+        token_from_stdin.as_deref().map(Secret::from)
+    });
 
     let options = LoginOptions {
         token,
