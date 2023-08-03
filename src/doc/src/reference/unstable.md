@@ -967,9 +967,9 @@ To use this feature, the registry server must include `"auth-required": true` in
 `config.json`, and you must pass the `-Z registry-auth` flag on the Cargo command line.
 
 When using the sparse protocol, Cargo will attempt to fetch the `config.json` file before
-fetching any other files. If the server responds with an HTTP 401, then Cargo will assume
-that the registry requires authentication and re-attempt the request for `config.json`
-with the authentication token included.
+fetching any other files. If the server responds with an HTTP status code of 401 or 403, 
+then Cargo will assume that the registry requires authentication and re-attempt the
+request for `config.json` with the authentication token included.
 
 On authentication failure (or missing authentication token) the server MAY include a
 `WWW-Authenticate` header with a `Cargo login_url` challenge to indicate where the user

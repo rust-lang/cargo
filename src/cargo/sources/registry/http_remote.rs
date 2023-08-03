@@ -163,6 +163,7 @@ enum StatusCode {
     NotModified,
     NotFound,
     Unauthorized,
+    Forbidden,
 }
 
 /// Represents a complete [`Download`] from an HTTP request.
@@ -315,6 +316,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                     200 => StatusCode::Success,
                     304 => StatusCode::NotModified,
                     401 => StatusCode::Unauthorized,
+                    403 => StatusCode::Forbidden,
                     404 | 410 | 451 => StatusCode::NotFound,
                     _ => {
                         return Err(HttpNotSuccessful::new_from_handle(
@@ -546,7 +548,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     // The crate was not found or deleted from the registry.
                     return Poll::Ready(Ok(LoadResponse::NotFound));
                 }
-                StatusCode::Unauthorized
+                StatusCode::Unauthorized | StatusCode::Forbidden
                     if !self.auth_required
                         && path == Path::new(RegistryConfig::NAME)
                         && self.config.cli_unstable().registry_auth =>
@@ -576,7 +578,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     }
                     self.auth_error_headers = result.header_map.all;
                 }
-                StatusCode::Unauthorized => {
+                StatusCode::Unauthorized | StatusCode::Forbidden => {
                     let err = Err(HttpNotSuccessful {
                         code: 401,
                         body: result.data,
