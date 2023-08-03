@@ -2546,7 +2546,7 @@ fn package_lock_inside_package_is_overwritten() {
         .join("bar-0.0.1")
         .join(".cargo-ok");
 
-    assert_eq!(ok.metadata().unwrap().len(), 2);
+    assert_eq!(ok.metadata().unwrap().len(), 7);
 }
 
 #[cargo_test]
@@ -2586,7 +2586,7 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
     let librs = pkg_root.join("src/lib.rs");
 
     // Is correctly overwritten and doesn't affect the file linked to
-    assert_eq!(ok.metadata().unwrap().len(), 2);
+    assert_eq!(ok.metadata().unwrap().len(), 7);
     assert_eq!(fs::read_to_string(librs).unwrap(), "pub fn f() {}");
 }
 
@@ -3135,7 +3135,7 @@ fn corrupted_ok_overwritten() {
     fs::write(&ok, "").unwrap();
     assert_eq!(fs::read_to_string(&ok).unwrap(), "");
     p.cargo("fetch").with_stderr("").run();
-    assert_eq!(fs::read_to_string(&ok).unwrap(), "ok");
+    assert_eq!(fs::read_to_string(&ok).unwrap(), r#"{"v":1}"#);
 }
 
 #[cargo_test]
@@ -3402,4 +3402,130 @@ Caused by:
   body:
   Please slow down
 ").run();
+}
+
+#[cfg(unix)]
+#[cargo_test]
+fn set_mask_during_unpacking() {
+    use std::os::unix::fs::MetadataExt;
+
+    Package::new("bar", "1.0.0")
+        .file_with_mode("example.sh", 0o777, "#!/bin/sh")
+        .file_with_mode("src/lib.rs", 0o666, "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+",
+        )
+        .run();
+    let src_file_path = |path: &str| {
+        glob::glob(
+            paths::home()
+                .join(".cargo/registry/src/*/bar-1.0.0/")
+                .join(path)
+                .to_str()
+                .unwrap(),
+        )
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+    };
+
+    let umask = cargo::util::get_umask();
+    let metadata = fs::metadata(src_file_path("src/lib.rs")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o666 & !umask);
+    let metadata = fs::metadata(src_file_path("example.sh")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o777 & !umask);
+}
+
+#[cargo_test]
+fn unpack_again_when_cargo_ok_is_unrecognized() {
+    Package::new("bar", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+",
+        )
+        .run();
+
+    let src_file_path = |path: &str| {
+        glob::glob(
+            paths::home()
+                .join(".cargo/registry/src/*/bar-1.0.0/")
+                .join(path)
+                .to_str()
+                .unwrap(),
+        )
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+    };
+
+    // Change permissions to simulate the old behavior not respecting umask.
+    let lib_rs = src_file_path("src/lib.rs");
+    let cargo_ok = src_file_path(".cargo-ok");
+    let mut perms = fs::metadata(&lib_rs).unwrap().permissions();
+    assert!(!perms.readonly());
+    perms.set_readonly(true);
+    fs::set_permissions(&lib_rs, perms).unwrap();
+    let ok = fs::read_to_string(&cargo_ok).unwrap();
+    assert_eq!(&ok, r#"{"v":1}"#);
+
+    p.cargo("fetch").with_stderr("").run();
+
+    // Without changing `.cargo-ok`, a unpack won't be triggered.
+    let perms = fs::metadata(&lib_rs).unwrap().permissions();
+    assert!(perms.readonly());
+
+    // Write "ok" to simulate the old behavior and trigger the unpack again.
+    fs::write(&cargo_ok, "ok").unwrap();
+
+    p.cargo("fetch").with_stderr("").run();
+
+    // Permission has been restored and `.cargo-ok` is in the new format.
+    let perms = fs::metadata(lib_rs).unwrap().permissions();
+    assert!(!perms.readonly());
+    let ok = fs::read_to_string(&cargo_ok).unwrap();
+    assert_eq!(&ok, r#"{"v":1}"#);
 }

@@ -184,8 +184,11 @@
 //! [`IndexPackage`]: index::IndexPackage
 
 use std::collections::HashSet;
+use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Write};
+use std::io;
+use std::io::Read;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::task::{ready, Poll};
 
@@ -194,6 +197,7 @@ use cargo_util::paths::{self, exclude_from_backups_and_indexing};
 use flate2::read::GzDecoder;
 use log::debug;
 use serde::Deserialize;
+use serde::Serialize;
 use tar::Archive;
 
 use crate::core::dependency::Dependency;
@@ -216,6 +220,14 @@ pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index"
 pub const CRATES_IO_HTTP_INDEX: &str = "sparse+https://index.crates.io/";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
 pub const CRATES_IO_DOMAIN: &str = "crates.io";
+
+/// The content inside `.cargo-ok`.
+/// See [`RegistrySource::unpack_package`] for more.
+#[derive(Deserialize, Serialize)]
+struct LockMetadata {
+    /// The version of `.cargo-ok` file
+    v: u32,
+}
 
 /// A [`Source`] implementation for a local or a remote registry.
 ///
@@ -544,6 +556,11 @@ impl<'cfg> RegistrySource<'cfg> {
     /// `.crate` files making `.cargo-ok` a symlink causing cargo to write "ok"
     /// to any arbitrary file on the filesystem it has permission to.
     ///
+    /// In 1.71, `.cargo-ok` changed to contain a JSON `{ v: 1 }` to indicate
+    /// the version of it. A failure of parsing will result in a heavy-hammer
+    /// approach that unpacks the `.crate` file again. This is in response to a
+    /// security issue that the unpacking didn't respect umask on Unix systems.
+    ///
     /// This is all a long-winded way of explaining the circumstances that might
     /// cause a directory to contain a `.cargo-ok` file that is empty or
     /// otherwise corrupted. Either this was extracted by a version of Rust
@@ -565,22 +582,32 @@ impl<'cfg> RegistrySource<'cfg> {
         let path = dst.join(PACKAGE_SOURCE_LOCK);
         let path = self.config.assert_package_cache_locked(&path);
         let unpack_dir = path.parent().unwrap();
-        match path.metadata() {
-            Ok(meta) if meta.len() > 0 => return Ok(unpack_dir.to_path_buf()),
-            Ok(_meta) => {
-                // See comment of `unpack_package` about why removing all stuff.
-                log::warn!("unexpected length of {path:?}, clearing cache");
-                paths::remove_dir_all(dst.as_path_unlocked())?;
-            }
+        match fs::read_to_string(path) {
+            Ok(ok) => match serde_json::from_str::<LockMetadata>(&ok) {
+                Ok(lock_meta) if lock_meta.v == 1 => {
+                    return Ok(unpack_dir.to_path_buf());
+                }
+                _ => {
+                    if ok == "ok" {
+                        log::debug!("old `ok` content found, clearing cache");
+                    } else {
+                        log::warn!("unrecognized .cargo-ok content, clearing cache: {ok}");
+                    }
+                    // See comment of `unpack_package` about why removing all stuff.
+                    paths::remove_dir_all(dst.as_path_unlocked())?;
+                }
+            },
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-            Err(e) => anyhow::bail!("failed to access package completion {path:?}: {e}"),
+            Err(e) => anyhow::bail!("unable to read .cargo-ok file at {path:?}: {e}"),
         }
         dst.create_dir()?;
         let mut tar = {
             let size_limit = max_unpack_size(self.config, tarball.metadata()?.len());
             let gz = GzDecoder::new(tarball);
             let gz = LimitErrorReader::new(gz, size_limit);
-            Archive::new(gz)
+            let mut tar = Archive::new(gz);
+            set_mask(&mut tar);
+            tar
         };
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
@@ -635,7 +662,9 @@ impl<'cfg> RegistrySource<'cfg> {
             .write(true)
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
-        write!(ok, "ok")?;
+
+        let lock_meta = LockMetadata { v: 1 };
+        write!(ok, "{}", serde_json::to_string(&lock_meta).unwrap())?;
 
         Ok(unpack_dir.to_path_buf())
     }
@@ -907,4 +936,17 @@ fn max_unpack_size(config: &Config, size: u64) -> u64 {
     };
 
     u64::max(max_unpack_size, size * max_compression_ratio as u64)
+}
+
+/// Set the current [`umask`] value for the given tarball. No-op on non-Unix
+/// platforms.
+///
+/// On Windows, tar only looks at user permissions and tries to set the "read
+/// only" attribute, so no-op as well.
+///
+/// [`umask`]: https://man7.org/linux/man-pages/man2/umask.2.html
+#[allow(unused_variables)]
+fn set_mask<R: Read>(tar: &mut Archive<R>) {
+    #[cfg(unix)]
+    tar.set_mask(crate::util::get_umask());
 }
