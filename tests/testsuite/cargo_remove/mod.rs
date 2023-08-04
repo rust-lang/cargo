@@ -2,6 +2,7 @@ mod avoid_empty_tables;
 mod build;
 mod dev;
 mod dry_run;
+mod gc_keep_used_patch;
 mod gc_patch;
 mod gc_profile;
 mod gc_replace;

@@ -1,0 +1,5 @@
+# Cargo.toml
+
+[workspace]
+members = ["serde", "serde_derive"]
+
