@@ -4,6 +4,7 @@ use cargo_test_support::{basic_manifest, project};
 use std::fs;
 
 const MINIMAL_LIB: &str = r#"
+#![allow(internal_features)]
 #![feature(no_core)]
 #![feature(lang_items)]
 #![no_core]
@@ -80,6 +81,7 @@ fn custom_target_dependency() {
         .file(
             "src/lib.rs",
             r#"
+                #![allow(internal_features)]
                 #![feature(no_core)]
                 #![feature(lang_items)]
                 #![feature(auto_traits)]
