@@ -87,7 +87,9 @@ impl HttpNotSuccessful {
                 .headers
                 .iter()
                 .filter(|header| {
-                    let Some((name, _)) = header.split_once(":") else { return false };
+                    let Some((name, _)) = header.split_once(":") else {
+                        return false;
+                    };
                     DEBUG_HEADERS.contains(&name.to_ascii_lowercase().trim())
                 })
                 .collect();
