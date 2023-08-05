@@ -12,3 +12,4 @@ clap.workspace = true
 env_logger.workspace = true
 git2.workspace = true
 log.workspace = true
+tracing.workspace = true
