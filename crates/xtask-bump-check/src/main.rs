@@ -1,7 +1,6 @@
 mod xtask;
 
 fn main() {
-    env_logger::init_from_env("CARGO_LOG");
     setup_logger();
 
     let cli = xtask::cli();

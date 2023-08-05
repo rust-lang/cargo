@@ -20,11 +20,6 @@ mod commands;
 use crate::command_prelude::*;
 
 fn main() {
-    #[cfg(feature = "pretty-env-logger")]
-    pretty_env_logger::init_custom_env("CARGO_LOG");
-    #[cfg(not(feature = "pretty-env-logger"))]
-    env_logger::init_from_env("CARGO_LOG");
-
     setup_logger();
 
     let mut config = cli::LazyConfig::new();
