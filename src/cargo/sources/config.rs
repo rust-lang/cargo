@@ -10,7 +10,7 @@ use crate::util::config::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
 use crate::util::{Config, IntoUrl};
 use anyhow::{bail, Context as _};
-use log::debug;
+use tracing::debug;
 use std::collections::{HashMap, HashSet};
 use url::Url;
 

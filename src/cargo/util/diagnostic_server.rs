@@ -11,7 +11,7 @@ use std::thread::{self, JoinHandle};
 
 use anyhow::{Context, Error};
 use cargo_util::ProcessBuilder;
-use log::warn;
+use tracing::warn;
 use serde::{Deserialize, Serialize};
 
 use crate::core::Edition;

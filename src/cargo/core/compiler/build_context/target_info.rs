@@ -1065,7 +1065,7 @@ impl RustDocFingerprint {
                 if fingerprint.rustc_vv == actual_rustdoc_target_data.rustc_vv {
                     return Ok(());
                 } else {
-                    log::debug!(
+                    tracing::debug!(
                         "doc fingerprint changed:\noriginal:\n{}\nnew:\n{}",
                         fingerprint.rustc_vv,
                         actual_rustdoc_target_data.rustc_vv
@@ -1073,11 +1073,11 @@ impl RustDocFingerprint {
                 }
             }
             Err(e) => {
-                log::debug!("could not deserialize {:?}: {}", fingerprint_path, e);
+                tracing::debug!("could not deserialize {:?}: {}", fingerprint_path, e);
             }
         };
         // Fingerprint does not match, delete the doc directories and write a new fingerprint.
-        log::debug!(
+        tracing::debug!(
             "fingerprint {:?} mismatch, clearing doc directories",
             fingerprint_path
         );

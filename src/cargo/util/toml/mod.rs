@@ -11,7 +11,7 @@ use cargo_platform::Platform;
 use cargo_util::paths;
 use itertools::Itertools;
 use lazycell::LazyCell;
-use log::{debug, trace};
+use tracing::{debug, trace};
 use semver::{self, VersionReq};
 use serde::de::IntoDeserializer as _;
 use serde::de::{self, Unexpected};

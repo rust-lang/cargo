@@ -237,7 +237,7 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
             Err(e) => {
                 // Ignore errors while walking. If Cargo can't access it, the
                 // build script probably can't access it, either.
-                log::debug!("failed to determine mtime while walking directory: {}", e);
+                tracing::debug!("failed to determine mtime while walking directory: {}", e);
                 None
             }
         })
@@ -252,7 +252,7 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         // I'm not sure when this is really possible (maybe a
                         // race with unlinking?). Regardless, if Cargo can't
                         // read it, the build script probably can't either.
-                        log::debug!(
+                        tracing::debug!(
                             "failed to determine mtime while fetching symlink metadata of {}: {}",
                             e.path().display(),
                             err
@@ -271,7 +271,7 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         // Can't access the symlink target. If Cargo can't
                         // access it, the build script probably can't access
                         // it either.
-                        log::debug!(
+                        tracing::debug!(
                             "failed to determine mtime of symlink target for {}: {}",
                             e.path().display(),
                             err
@@ -286,7 +286,7 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         // I'm not sure when this is really possible (maybe a
                         // race with unlinking?). Regardless, if Cargo can't
                         // read it, the build script probably can't either.
-                        log::debug!(
+                        tracing::debug!(
                             "failed to determine mtime while fetching metadata of {}: {}",
                             e.path().display(),
                             err
@@ -314,7 +314,7 @@ pub fn set_invocation_time(path: &Path) -> Result<FileTime> {
         "This file has an mtime of when this was started.",
     )?;
     let ft = mtime(&timestamp)?;
-    log::debug!("invocation time for {:?} is {}", path, ft);
+    tracing::debug!("invocation time for {:?} is {}", path, ft);
     Ok(ft)
 }
 
@@ -508,7 +508,7 @@ pub fn link_or_copy(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<()> 
 }
 
 fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
-    log::debug!("linking {} to {}", src.display(), dst.display());
+    tracing::debug!("linking {} to {}", src.display(), dst.display());
     if same_file::is_same_file(src, dst).unwrap_or(false) {
         return Ok(());
     }
@@ -567,7 +567,7 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
     };
     link_result
         .or_else(|err| {
-            log::debug!("link failed {}. falling back to fs::copy", err);
+            tracing::debug!("link failed {}. falling back to fs::copy", err);
             fs::copy(src, dst).map(|_| ())
         })
         .with_context(|| {
@@ -598,8 +598,8 @@ pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<u64> {
 pub fn set_file_time_no_err<P: AsRef<Path>>(path: P, time: FileTime) {
     let path = path.as_ref();
     match filetime::set_file_times(path, time, time) {
-        Ok(()) => log::debug!("set file mtime {} to {}", path.display(), time),
-        Err(e) => log::warn!(
+        Ok(()) => tracing::debug!("set file mtime {} to {}", path.display(), time),
+        Err(e) => tracing::warn!(
             "could not set mtime of {} to {}: {:?}",
             path.display(),
             time,
@@ -621,7 +621,7 @@ pub fn strip_prefix_canonical<P: AsRef<Path>>(
     let safe_canonicalize = |path: &Path| match path.canonicalize() {
         Ok(p) => p,
         Err(e) => {
-            log::warn!("cannot canonicalize {:?}: {:?}", path, e);
+            tracing::warn!("cannot canonicalize {:?}: {:?}", path, e);
             path.to_path_buf()
         }
     };

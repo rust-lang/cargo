@@ -49,7 +49,7 @@ mod imp {
     use std::ptr;
     use std::ptr::addr_of;
 
-    use log::info;
+    use tracing::info;
 
     use windows_sys::Win32::Foundation::CloseHandle;
     use windows_sys::Win32::Foundation::HANDLE;

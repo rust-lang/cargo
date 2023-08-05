@@ -753,7 +753,7 @@ fn remove_duplicate_doc(
             .into_iter()
             .partition(|unit| cb(unit) && !root_units.contains(unit));
         for unit in to_remove {
-            log::debug!(
+            tracing::debug!(
                 "removing duplicate doc due to {} for package {} target `{}`",
                 reason,
                 unit.pkg,

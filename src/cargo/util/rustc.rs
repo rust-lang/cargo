@@ -6,7 +6,7 @@ use std::sync::Mutex;
 
 use anyhow::Context as _;
 use cargo_util::{paths, ProcessBuilder, ProcessError};
-use log::{debug, info, warn};
+use tracing::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::util::interning::InternedString;

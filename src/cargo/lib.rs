@@ -147,7 +147,7 @@
 use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
 use anyhow::Error;
-use log::debug;
+use tracing::debug;
 
 pub use crate::util::errors::{AlreadyPrintedError, InternalError, VerboseError};
 pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, Config};

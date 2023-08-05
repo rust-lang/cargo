@@ -122,7 +122,7 @@ impl<'cfg> Timings<'cfg> {
             match State::current() {
                 Ok(state) => Some(state),
                 Err(e) => {
-                    log::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
+                    tracing::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
                     None
                 }
             }
@@ -276,7 +276,7 @@ impl<'cfg> Timings<'cfg> {
         let current = match State::current() {
             Ok(s) => s,
             Err(e) => {
-                log::info!("failed to get CPU state: {:?}", e);
+                tracing::info!("failed to get CPU state: {:?}", e);
                 return;
             }
         };

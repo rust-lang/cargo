@@ -68,7 +68,7 @@ impl<T> SleepTracker<T> {
         let now = Instant::now();
         let mut result = Vec::new();
         while let Some(next) = self.heap.peek() {
-            log::debug!("ERIC: now={now:?} next={:?}", next.wakeup);
+            tracing::debug!("ERIC: now={now:?} next={:?}", next.wakeup);
             if next.wakeup < now {
                 result.push(self.heap.pop().unwrap().data);
             } else {

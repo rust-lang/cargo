@@ -470,7 +470,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             deferred_weak_dependencies: HashMap::new(),
         };
         r.do_resolve(specs, cli_features)?;
-        log::debug!("features={:#?}", r.activated_features);
+        tracing::debug!("features={:#?}", r.activated_features);
         if r.opts.compare {
             r.compare();
         }
@@ -518,7 +518,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         fk: FeaturesFor,
         fvs: &[FeatureValue],
     ) -> CargoResult<()> {
-        log::trace!("activate_pkg {} {}", pkg_id.name(), fk);
+        tracing::trace!("activate_pkg {} {}", pkg_id.name(), fk);
         // Add an empty entry to ensure everything is covered. This is intended for
         // finding bugs where the resolver missed something it should have visited.
         // Remove this in the future if `activated_features` uses an empty default.
@@ -566,7 +566,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         fk: FeaturesFor,
         fv: &FeatureValue,
     ) -> CargoResult<()> {
-        log::trace!("activate_fv {} {} {}", pkg_id.name(), fk, fv);
+        tracing::trace!("activate_fv {} {} {}", pkg_id.name(), fk, fv);
         match fv {
             FeatureValue::Feature(f) => {
                 self.activate_rec(pkg_id, fk, *f)?;
@@ -593,7 +593,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         fk: FeaturesFor,
         feature_to_enable: InternedString,
     ) -> CargoResult<()> {
-        log::trace!(
+        tracing::trace!(
             "activate_rec {} {} feat={}",
             pkg_id.name(),
             fk,
@@ -615,7 +615,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 // TODO: this should only happen for optional dependencies.
                 // Other cases should be validated by Summary's `build_feature_map`.
                 // Figure out some way to validate this assumption.
-                log::debug!(
+                tracing::debug!(
                     "pkg {:?} does not define feature {}",
                     pkg_id,
                     feature_to_enable
@@ -654,7 +654,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 }
                 if let Some(to_enable) = &to_enable {
                     for dep_feature in to_enable {
-                        log::trace!(
+                        tracing::trace!(
                             "activate deferred {} {} -> {}/{}",
                             pkg_id.name(),
                             fk,
@@ -697,7 +697,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     {
                         // This is weak, but not yet activated. Defer in case
                         // something comes along later and enables it.
-                        log::trace!(
+                        tracing::trace!(
                             "deferring feature {} {} -> {}/{}",
                             pkg_id.name(),
                             fk,

@@ -6,7 +6,7 @@ use crate::util::{human_readable_bytes, network, MetricsCounter, Progress};
 use crate::{CargoResult, Config};
 use cargo_util::paths;
 use gix::bstr::{BString, ByteSlice};
-use log::debug;
+use tracing::debug;
 use std::cell::RefCell;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};

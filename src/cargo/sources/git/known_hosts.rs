@@ -342,7 +342,7 @@ fn check_ssh_known_hosts(
             };
             match parse_known_hosts_line(&line_value.val, location) {
                 Some(known_host) => known_hosts.push(known_host),
-                None => log::warn!(
+                None => tracing::warn!(
                     "failed to parse known host {} from {}",
                     line_value.val,
                     line_value.definition

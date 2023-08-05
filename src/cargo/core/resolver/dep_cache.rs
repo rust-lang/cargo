@@ -23,7 +23,7 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 
 use anyhow::Context as _;
-use log::debug;
+use tracing::debug;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 use std::task::Poll;

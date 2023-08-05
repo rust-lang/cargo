@@ -125,7 +125,7 @@ use std::time::Duration;
 use anyhow::{format_err, Context as _};
 use cargo_util::ProcessBuilder;
 use jobserver::{Acquired, HelperThread};
-use log::{debug, trace};
+use tracing::{debug, trace};
 use semver::Version;
 
 pub use self::job::Freshness::{self, Dirty, Fresh};
@@ -840,7 +840,7 @@ impl<'cfg> DrainState<'cfg> {
             }
             err_state.count += 1;
         } else {
-            log::warn!("{:?}", new_err.error);
+            tracing::warn!("{:?}", new_err.error);
         }
     }
 

@@ -220,7 +220,7 @@ fn registry_credential_config_raw_uncached(
     config: &Config,
     sid: &SourceId,
 ) -> CargoResult<Option<RegistryConfig>> {
-    log::trace!("loading credential config for {}", sid);
+    tracing::trace!("loading credential config for {}", sid);
     config.load_credentials()?;
     if !sid.is_remote_registry() {
         bail!(
@@ -307,10 +307,10 @@ fn registry_credential_config_raw_uncached(
     }
 
     if let Some(name) = &name {
-        log::debug!("found alternative registry name `{name}` for {sid}");
+        tracing::debug!("found alternative registry name `{name}` for {sid}");
         config.get::<Option<RegistryConfig>>(&format!("registries.{name}"))
     } else {
-        log::debug!("no registry name found for {sid}");
+        tracing::debug!("no registry name found for {sid}");
         Ok(None)
     }
 }
@@ -320,7 +320,7 @@ fn resolve_credential_alias(config: &Config, mut provider: PathAndArgs) -> Vec<S
     if provider.args.is_empty() {
         let key = format!("credential-alias.{}", provider.path.raw_value());
         if let Ok(alias) = config.get::<PathAndArgs>(&key) {
-            log::debug!("resolving credential alias '{key}' -> '{alias:?}'");
+            tracing::debug!("resolving credential alias '{key}' -> '{alias:?}'");
             provider = alias;
         }
     }
@@ -444,7 +444,7 @@ fn credential_action(
     for provider in providers {
         let args: Vec<&str> = provider.iter().map(String::as_str).collect();
         let process = args[0];
-        log::debug!("attempting credential provider: {args:?}");
+        tracing::debug!("attempting credential provider: {args:?}");
         let provider: Box<dyn Credential> = match process {
             "cargo:token" => Box::new(TokenCredential::new(config)),
             "cargo:paseto" => Box::new(PasetoCredential::new(config)),
@@ -510,7 +510,7 @@ fn auth_token_optional(
     operation: Operation<'_>,
     headers: Vec<String>,
 ) -> CargoResult<Option<Secret<String>>> {
-    log::trace!("token requested for {}", sid.display_registry_name());
+    tracing::trace!("token requested for {}", sid.display_registry_name());
     let mut cache = config.credential_cache();
     let url = sid.canonical_url();
     if let Some(cached_token) = cache.get(url) {
@@ -520,7 +520,7 @@ fn auth_token_optional(
             .unwrap_or(true)
         {
             if cached_token.operation_independent || matches!(operation, Operation::Read) {
-                log::trace!("using token from in-memory cache");
+                tracing::trace!("using token from in-memory cache");
                 return Ok(Some(cached_token.token_value.clone()));
             }
         } else {
@@ -548,7 +548,7 @@ fn auth_token_optional(
         bail!("credential provider produced unexpected response for `get` request: {credential_response:?}")
     };
     let token = Secret::from(token);
-    log::trace!("found token");
+    tracing::trace!("found token");
     let expiration = match cache_control {
         CacheControl::Expires(expiration) => Some(expiration),
         CacheControl::Session => None,

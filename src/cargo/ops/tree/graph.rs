@@ -642,7 +642,7 @@ fn add_feature_rec(
                 let dep_indexes = match graph.dep_name_map[&package_index].get(dep_name) {
                     Some(indexes) => indexes.clone(),
                     None => {
-                        log::debug!(
+                        tracing::debug!(
                             "enabling feature {} on {}, found {}/{}, \
                              dep appears to not be enabled",
                             feature_name,

@@ -71,7 +71,7 @@ use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
-use log::{debug, trace};
+use tracing::{debug, trace};
 use std::collections::{HashMap, HashSet};
 
 /// Result for `resolve_ws_with_opts`.

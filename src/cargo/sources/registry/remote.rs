@@ -12,7 +12,7 @@ use crate::util::{Config, Filesystem};
 use anyhow::Context as _;
 use cargo_util::paths;
 use lazycell::LazyCell;
-use log::{debug, trace};
+use tracing::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
 use std::fs::File;
 use std::mem;

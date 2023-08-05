@@ -46,7 +46,7 @@ use std::{env, fs, str};
 
 use anyhow::{bail, Context as _};
 use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuilder};
-use log::{debug, trace, warn};
+use tracing::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 use semver::Version;

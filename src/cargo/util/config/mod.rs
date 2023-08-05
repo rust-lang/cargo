@@ -611,7 +611,7 @@ impl Config {
         key: &ConfigKey,
         vals: &HashMap<String, ConfigValue>,
     ) -> CargoResult<Option<ConfigValue>> {
-        log::trace!("get cv {:?}", key);
+        tracing::trace!("get cv {:?}", key);
         if key.is_root() {
             // Returning the entire root table (for example `cargo config get`
             // with no key). The definition here shouldn't matter.
@@ -2798,7 +2798,7 @@ fn disables_multiplexing_for_bad_curl(
             .iter()
             .any(|v| curl_version.starts_with(v))
         {
-            log::info!("disabling multiplexing with proxy, curl version is {curl_version}");
+            tracing::info!("disabling multiplexing with proxy, curl version is {curl_version}");
             http.multiplexing = Some(false);
         }
     }

@@ -1,5 +1,5 @@
 use cargo_platform::Platform;
-use log::trace;
+use tracing::trace;
 use semver::VersionReq;
 use serde::ser;
 use serde::Serialize;

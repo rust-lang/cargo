@@ -6,7 +6,7 @@ use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::util::interning::InternedString;
 use crate::util::Graph;
 use anyhow::format_err;
-use log::debug;
+use tracing::debug;
 use std::collections::HashMap;
 use std::num::NonZeroU64;
 

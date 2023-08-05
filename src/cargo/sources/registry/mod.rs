@@ -195,7 +195,7 @@ use std::task::{ready, Poll};
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
 use flate2::read::GzDecoder;
-use log::debug;
+use tracing::debug;
 use serde::Deserialize;
 use serde::Serialize;
 use tar::Archive;
@@ -589,9 +589,9 @@ impl<'cfg> RegistrySource<'cfg> {
                 }
                 _ => {
                     if ok == "ok" {
-                        log::debug!("old `ok` content found, clearing cache");
+                        tracing::debug!("old `ok` content found, clearing cache");
                     } else {
-                        log::warn!("unrecognized .cargo-ok content, clearing cache: {ok}");
+                        tracing::warn!("unrecognized .cargo-ok content, clearing cache: {ok}");
                     }
                     // See comment of `unpack_package` about why removing all stuff.
                     paths::remove_dir_all(dst.as_path_unlocked())?;

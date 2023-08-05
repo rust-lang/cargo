@@ -8,7 +8,7 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, Config};
 use anyhow::{bail, Context as _};
-use log::{debug, trace};
+use tracing::{debug, trace};
 use url::Url;
 
 /// Source of information about a group of packages.
@@ -876,7 +876,7 @@ fn summary_for_patch(
         // Since the locked patch did not match anything, try the unlocked one.
         let orig_matches =
             ready!(source.query_vec(orig_patch, QueryKind::Exact)).unwrap_or_else(|e| {
-                log::warn!(
+                tracing::warn!(
                     "could not determine unlocked summaries for dep {:?}: {:?}",
                     orig_patch,
                     e
@@ -895,7 +895,7 @@ fn summary_for_patch(
 
     let name_summaries =
         ready!(source.query_vec(&name_only_dep, QueryKind::Exact)).unwrap_or_else(|e| {
-            log::warn!(
+            tracing::warn!(
                 "failed to do name-only summary query for {:?}: {:?}",
                 name_only_dep,
                 e

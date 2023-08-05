@@ -13,7 +13,7 @@ use bytesize::ByteSize;
 use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
 use lazycell::LazyCell;
-use log::debug;
+use tracing::debug;
 use semver::Version;
 use serde::Serialize;
 

@@ -22,7 +22,7 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
-use log::debug;
+use tracing::debug;
 use serde::Serialize;
 use tar::{Archive, Builder, EntryType, Header, HeaderMode};
 use unicase::Ascii as UncasedAscii;
