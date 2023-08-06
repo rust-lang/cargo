@@ -9,7 +9,7 @@ with them:
 You can override these environment variables to change Cargo's behavior on your
 system:
 
-* `CARGO_LOG` --- Cargo uses the [`env_logger`] crate to display debug log messages.
+* `CARGO_LOG` --- Cargo uses the [`tracing`] crate to display debug log messages.
   The `CARGO_LOG` environment variable can be set to enable debug logging,
   with a value such as `trace`, `debug`, or `warn`.
   Usually it is only used during debugging. For more details refer to the
@@ -389,7 +389,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
   the environment; scripts should use `CARGO_ENCODED_RUSTFLAGS` instead.
 * `CARGO_PKG_<var>` --- The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
 
-[`env_logger`]: https://docs.rs/env_logger
+[`tracing`]: https://docs.rs/tracing
 [debug logging]: https://doc.crates.io/contrib/architecture/console.html#debug-logging
 [unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [windows-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
