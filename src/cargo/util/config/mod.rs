@@ -106,6 +106,8 @@ pub use target::{TargetCfgConfig, TargetConfig};
 mod environment;
 use environment::Env;
 
+use super::auth::RegistryConfig;
+
 // Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
@@ -208,6 +210,8 @@ pub struct Config {
     /// Cache of credentials from configuration or credential providers.
     /// Maps from url to credential value.
     credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, CredentialCacheValue>>>,
+    /// Cache of registry config from from the `[registries]` table.
+    registry_config: LazyCell<RefCell<HashMap<SourceId, Option<RegistryConfig>>>>,
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
@@ -299,6 +303,7 @@ impl Config {
             env,
             updated_sources: LazyCell::new(),
             credential_cache: LazyCell::new(),
+            registry_config: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
             future_incompat_config: LazyCell::new(),
@@ -484,6 +489,13 @@ impl Config {
     /// Cached credentials from credential providers or configuration.
     pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, CredentialCacheValue>> {
         self.credential_cache
+            .borrow_with(|| RefCell::new(HashMap::new()))
+            .borrow_mut()
+    }
+
+    /// Cache of already parsed registries from the `[registries]` table.
+    pub(crate) fn registry_config(&self) -> RefMut<'_, HashMap<SourceId, Option<RegistryConfig>>> {
+        self.registry_config
             .borrow_with(|| RefCell::new(HashMap::new()))
             .borrow_mut()
     }
