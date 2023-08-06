@@ -716,7 +716,7 @@ fn main() {
 <a id="repr-align-remove"></a>
 #### Major: Removing `repr(align)` from a struct, union, or enum
 
-It is a breaking change to remove `repr(align)` from a struct, union, or enum.
+It is a breaking change to remove `repr(align)` from a struct, union, or enum, if their layout was well-defined.
 This may change the alignment or layout that external crates are relying on.
 
 This change should be safe to make if the type is not well-defined as discussed in [type layout](#type-layout) (such as having any private fields and having an undocumented alignment).
@@ -966,7 +966,6 @@ extern "C" {
 
 fn main() {}
 ```
-
 
 ### Major: adding a private struct field when all current fields are public {#struct-add-private-field-when-public}
 
