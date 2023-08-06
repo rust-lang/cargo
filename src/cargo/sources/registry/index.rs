@@ -94,7 +94,6 @@ use crate::util::IntoUrl;
 use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
 use anyhow::bail;
 use cargo_util::{paths, registry::make_dep_path};
-use tracing::{debug, info};
 use semver::Version;
 use serde::Deserialize;
 use std::borrow::Cow;
@@ -105,6 +104,7 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
+use tracing::{debug, info};
 
 /// The current version of [`SummariesCache`].
 const CURRENT_CACHE_VERSION: u8 = 3;
@@ -722,7 +722,11 @@ impl Summaries {
                             // entries in the cache preventing those newer
                             // versions from reading them (that is, until the
                             // cache is rebuilt).
-                            tracing::info!("failed to parse {:?} registry package: {}", relative, e);
+                            tracing::info!(
+                                "failed to parse {:?} registry package: {}",
+                                relative,
+                                e
+                            );
                             continue;
                         }
                     };

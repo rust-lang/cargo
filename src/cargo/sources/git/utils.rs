@@ -11,7 +11,6 @@ use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
 use git2::{self, ErrorClass, ObjectType, Oid};
-use tracing::{debug, info};
 use serde::ser;
 use serde::Serialize;
 use std::borrow::Cow;
@@ -21,6 +20,7 @@ use std::process::Command;
 use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
+use tracing::{debug, info};
 use url::Url;
 
 /// A file indicates that if present, `git reset` has been done and a repo
@@ -1328,7 +1328,9 @@ fn clean_repo_temp_files(repo: &git2::Repository) {
         if let Ok(path) = path {
             match paths::remove_file(&path) {
                 Ok(_) => tracing::debug!("removed stale temp git file {path:?}"),
-                Err(e) => tracing::warn!("failed to remove {path:?} while cleaning temp files: {e}"),
+                Err(e) => {
+                    tracing::warn!("failed to remove {path:?} while cleaning temp files: {e}")
+                }
             }
         }
     }

@@ -14,7 +14,6 @@ use cargo_credential::Operation;
 use cargo_util::paths;
 use curl::easy::{Easy, List};
 use curl::multi::{EasyHandle, Multi};
-use tracing::{debug, trace};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -23,6 +22,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::task::{ready, Poll};
 use std::time::Duration;
+use tracing::{debug, trace};
 use url::Url;
 
 // HTTP headers

@@ -366,10 +366,10 @@ use std::time::SystemTime;
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use filetime::FileTime;
-use tracing::{debug, info};
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
+use tracing::{debug, info};
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;

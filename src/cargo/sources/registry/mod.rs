@@ -195,10 +195,10 @@ use std::task::{ready, Poll};
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
 use flate2::read::GzDecoder;
-use tracing::debug;
 use serde::Deserialize;
 use serde::Serialize;
 use tar::Archive;
+use tracing::debug;
 
 use crate::core::dependency::Dependency;
 use crate::core::source::MaybePackage;
