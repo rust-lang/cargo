@@ -5141,6 +5141,35 @@ for more information about build script outputs.
 }
 
 #[cargo_test]
+fn wrong_syntax_with_two_colons() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::foo=bar");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+error: unsupported output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::foo=bar`
+Found a `cargo::key=value` build directive which is reserved for future use.
+Either change the directive to `cargo:key=value` syntax (note the single `:`) or upgrade your version of Rust.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_closes_stdin() {
     // Ensure stdin is closed to prevent deadlock.
     // See https://github.com/rust-lang/cargo/issues/11196
