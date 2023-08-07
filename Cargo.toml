@@ -95,7 +95,7 @@ windows-sys = "0.48"
 
 [package]
 name = "cargo"
-version = "0.72.1"
+version = "0.72.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://crates.io"

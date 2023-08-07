@@ -756,6 +756,7 @@ fn doc_target() {
         .file(
             "src/lib.rs",
             r#"
+                #![allow(internal_features)]
                 #![feature(no_core, lang_items)]
                 #![no_core]
 
