@@ -10,9 +10,9 @@ use crate::util::hex::short_hash;
 use crate::util::Config;
 use anyhow::Context;
 use cargo_util::paths::exclude_from_backups_and_indexing;
-use log::trace;
 use std::fmt::{self, Debug, Formatter};
 use std::task::Poll;
+use tracing::trace;
 use url::Url;
 
 /// `GitSource` contains one or more packages gathering from a Git repository.

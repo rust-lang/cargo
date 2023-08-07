@@ -7,7 +7,7 @@ use std::rc::Rc;
 use anyhow::{anyhow, bail, Context as _};
 use glob::glob;
 use itertools::Itertools;
-use log::debug;
+use tracing::debug;
 use url::Url;
 
 use crate::core::compiler::Unit;

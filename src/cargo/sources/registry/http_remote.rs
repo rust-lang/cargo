@@ -14,7 +14,6 @@ use cargo_credential::Operation;
 use cargo_util::paths;
 use curl::easy::{Easy, List};
 use curl::multi::{EasyHandle, Multi};
-use log::{debug, trace};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -23,6 +22,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::task::{ready, Poll};
 use std::time::Duration;
+use tracing::{debug, trace};
 use url::Url;
 
 // HTTP headers
@@ -394,11 +394,11 @@ impl<'cfg> HttpRegistry<'cfg> {
                 Ok(json) => {
                     self.registry_config = Some(json);
                 }
-                Err(e) => log::debug!("failed to decode cached config.json: {}", e),
+                Err(e) => tracing::debug!("failed to decode cached config.json: {}", e),
             },
             Err(e) => {
                 if e.kind() != ErrorKind::NotFound {
-                    log::debug!("failed to read config.json cache: {}", e)
+                    tracing::debug!("failed to read config.json cache: {}", e)
                 }
             }
         }
@@ -423,7 +423,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                 self.registry_config = Some(serde_json::from_slice(&raw_data)?);
                 if paths::create_dir_all(&config_json_path.parent().unwrap()).is_ok() {
                     if let Err(e) = fs::write(&config_json_path, &raw_data) {
-                        log::debug!("failed to write config.json cache: {}", e);
+                        tracing::debug!("failed to write config.json cache: {}", e);
                     }
                 }
                 Poll::Ready(Ok(self.registry_config.as_ref().unwrap()))

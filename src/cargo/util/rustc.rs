@@ -6,8 +6,8 @@ use std::sync::Mutex;
 
 use anyhow::Context as _;
 use cargo_util::{paths, ProcessBuilder, ProcessError};
-use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
+use tracing::{debug, info, warn};
 
 use crate::util::interning::InternedString;
 use crate::util::{profile, CargoResult, Config, StableHasher};

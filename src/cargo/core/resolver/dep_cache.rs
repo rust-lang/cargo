@@ -23,10 +23,10 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 
 use anyhow::Context as _;
-use log::debug;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 use std::task::Poll;
+use tracing::debug;
 
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),

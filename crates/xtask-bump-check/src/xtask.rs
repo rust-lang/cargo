@@ -126,7 +126,7 @@ fn bump_check(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> Carg
         for referenced_member in checkout_ws(&ws, &repo, referenced_commit)?.members() {
             let Some(changed_member) = changed_members.get(referenced_member) else {
                 let name = referenced_member.name().as_str();
-                log::trace!("skipping {name}, may be removed or not published");
+                tracing::trace!("skipping {name}, may be removed or not published");
                 continue;
             };
 
@@ -264,10 +264,10 @@ fn get_referenced_commit<'a>(
     let referenced_commit = if rev_id == stable_commit.id() {
         None
     } else if rev_id == beta_commit.id() {
-        log::trace!("stable branch from `{}`", stable.name().unwrap().unwrap());
+        tracing::trace!("stable branch from `{}`", stable.name().unwrap().unwrap());
         Some(stable_commit)
     } else {
-        log::trace!("beta branch from `{}`", beta.name().unwrap().unwrap());
+        tracing::trace!("beta branch from `{}`", beta.name().unwrap().unwrap());
         Some(beta_commit)
     };
 
@@ -287,11 +287,11 @@ fn beta_and_stable_branch(repo: &git2::Repository) -> CargoResult<[git2::Branch<
         let (branch, _) = branch?;
         let name = branch.name()?.unwrap();
         let Some((_, version)) = name.split_once("/rust-") else {
-            log::trace!("branch `{name}` is not in the format of `<remote>/rust-<semver>`");
+            tracing::trace!("branch `{name}` is not in the format of `<remote>/rust-<semver>`");
             continue;
         };
         let Ok(version) = version.to_semver() else {
-            log::trace!("branch `{name}` is not a valid semver: `{version}`");
+            tracing::trace!("branch `{name}` is not a valid semver: `{version}`");
             continue;
         };
         release_branches.push((version, branch));
@@ -380,7 +380,7 @@ fn check_crates_io<'a>(
             }
         };
         if possibilities.is_empty() {
-            log::trace!("dep `{name}` has no version greater than or equal to `{current}`");
+            tracing::trace!("dep `{name}` has no version greater than or equal to `{current}`");
         } else {
             needs_bump.push(member);
         }

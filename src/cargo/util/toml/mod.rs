@@ -11,12 +11,12 @@ use cargo_platform::Platform;
 use cargo_util::paths;
 use itertools::Itertools;
 use lazycell::LazyCell;
-use log::{debug, trace};
 use semver::{self, VersionReq};
 use serde::de::IntoDeserializer as _;
 use serde::de::{self, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
+use tracing::{debug, trace};
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};

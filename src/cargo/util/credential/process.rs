@@ -35,7 +35,7 @@ impl<'a> Credential for CredentialProcessCredential {
         cmd.stdout(Stdio::piped());
         cmd.stdin(Stdio::piped());
         cmd.arg("--cargo-plugin");
-        log::debug!("credential-process: {cmd:?}");
+        tracing::debug!("credential-process: {cmd:?}");
         let mut child = cmd.spawn().context("failed to spawn credential process")?;
         let mut output_from_child = BufReader::new(child.stdout.take().unwrap());
         let mut input_to_child = child.stdin.take().unwrap();
@@ -45,7 +45,7 @@ impl<'a> Credential for CredentialProcessCredential {
             .context("failed to read hello from credential provider")?;
         let credential_hello: CredentialHello =
             serde_json::from_str(&buffer).context("failed to deserialize hello")?;
-        log::debug!("credential-process > {credential_hello:?}");
+        tracing::debug!("credential-process > {credential_hello:?}");
 
         let req = CredentialRequest {
             v: cargo_credential::PROTOCOL_VERSION_1,
@@ -54,7 +54,7 @@ impl<'a> Credential for CredentialProcessCredential {
             args: args.to_vec(),
         };
         let request = serde_json::to_string(&req).context("failed to serialize request")?;
-        log::debug!("credential-process < {req:?}");
+        tracing::debug!("credential-process < {req:?}");
         writeln!(input_to_child, "{request}").context("failed to write to credential provider")?;
 
         buffer.clear();
@@ -63,7 +63,7 @@ impl<'a> Credential for CredentialProcessCredential {
             .context("failed to read response from credential provider")?;
         let response: Result<CredentialResponse, cargo_credential::Error> =
             serde_json::from_str(&buffer).context("failed to deserialize response")?;
-        log::debug!("credential-process > {response:?}");
+        tracing::debug!("credential-process > {response:?}");
         drop(input_to_child);
         let status = child.wait().context("credential process never started")?;
         if !status.success() {
@@ -74,7 +74,7 @@ impl<'a> Credential for CredentialProcessCredential {
             )
             .into());
         }
-        log::trace!("credential process exited successfully");
+        tracing::trace!("credential process exited successfully");
         response
     }
 }

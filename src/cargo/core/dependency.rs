@@ -1,5 +1,4 @@
 use cargo_platform::Platform;
-use log::trace;
 use semver::VersionReq;
 use serde::ser;
 use serde::Serialize;
@@ -7,6 +6,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::path::PathBuf;
 use std::rc::Rc;
+use tracing::trace;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::{PackageId, SourceId, Summary};

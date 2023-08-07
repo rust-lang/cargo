@@ -14,10 +14,10 @@ filetime.workspace = true
 hex.workspace = true
 jobserver.workspace = true
 libc.workspace = true
-log.workspace = true
 same-file.workspace = true
 shell-escape.workspace = true
 tempfile.workspace = true
+tracing.workspace = true
 walkdir.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]

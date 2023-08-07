@@ -45,7 +45,7 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
     // rebuilds. We may perhaps one day wish to ensure a deterministic
     // ordering via the order keys were defined in files perhaps.
     let target: BTreeMap<String, TargetCfgConfig> = config.get("target")?;
-    log::debug!("Got all targets {:#?}", target);
+    tracing::debug!("Got all targets {:#?}", target);
     for (key, cfg) in target {
         if key.starts_with("cfg(") {
             // Unfortunately this is not able to display the location of the

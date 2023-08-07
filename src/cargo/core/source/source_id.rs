@@ -3,7 +3,6 @@ use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::{config, CanonicalUrl, CargoResult, Config, IntoUrl};
-use log::trace;
 use serde::de;
 use serde::ser;
 use std::cmp::{self, Ordering};
@@ -14,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::ptr;
 use std::sync::Mutex;
 use std::sync::OnceLock;
+use tracing::trace;
 use url::Url;
 
 static SOURCE_ID_CACHE: OnceLock<Mutex<HashSet<&'static SourceIdInner>>> = OnceLock::new();

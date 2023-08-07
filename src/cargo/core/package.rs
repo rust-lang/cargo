@@ -13,9 +13,9 @@ use bytesize::ByteSize;
 use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
 use lazycell::LazyCell;
-use log::debug;
 use semver::Version;
 use serde::Serialize;
+use tracing::debug;
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;

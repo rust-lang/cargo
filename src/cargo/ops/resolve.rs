@@ -71,8 +71,8 @@ use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
-use log::{debug, trace};
 use std::collections::{HashMap, HashSet};
+use tracing::{debug, trace};
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'cfg> {

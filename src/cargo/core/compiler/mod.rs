@@ -65,7 +65,7 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Error};
 use lazycell::LazyCell;
-use log::{debug, trace};
+use tracing::{debug, trace};
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, TimingOutput};
 pub use self::build_context::{
@@ -368,7 +368,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             // See rust-lang/cargo#8348.
             if output.hardlink.is_some() && output.path.exists() {
                 _ = paths::remove_file(&output.path).map_err(|e| {
-                    log::debug!(
+                    tracing::debug!(
                         "failed to delete previous output file `{:?}`: {e:?}",
                         output.path
                     );

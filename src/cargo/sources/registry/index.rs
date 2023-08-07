@@ -94,7 +94,6 @@ use crate::util::IntoUrl;
 use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
 use anyhow::bail;
 use cargo_util::{paths, registry::make_dep_path};
-use log::{debug, info};
 use semver::Version;
 use serde::Deserialize;
 use std::borrow::Cow;
@@ -105,6 +104,7 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
+use tracing::{debug, info};
 
 /// The current version of [`SummariesCache`].
 const CURRENT_CACHE_VERSION: u8 = 3;
@@ -673,23 +673,23 @@ impl Summaries {
                     index_version = Some(v);
                 }
                 Err(e) => {
-                    log::debug!("failed to parse {:?} cache: {}", relative, e);
+                    tracing::debug!("failed to parse {:?} cache: {}", relative, e);
                 }
             },
-            Err(e) => log::debug!("cache missing for {:?} error: {}", relative, e),
+            Err(e) => tracing::debug!("cache missing for {:?} error: {}", relative, e),
         }
 
         let response = ready!(load.load(root, relative, index_version.as_deref())?);
 
         match response {
             LoadResponse::CacheValid => {
-                log::debug!("fast path for registry cache of {:?}", relative);
+                tracing::debug!("fast path for registry cache of {:?}", relative);
                 return Poll::Ready(Ok(cached_summaries));
             }
             LoadResponse::NotFound => {
                 if let Err(e) = fs::remove_file(cache_path) {
                     if e.kind() != ErrorKind::NotFound {
-                        log::debug!("failed to remove from cache: {}", e);
+                        tracing::debug!("failed to remove from cache: {}", e);
                     }
                 }
                 return Poll::Ready(Ok(None));
@@ -701,7 +701,7 @@ impl Summaries {
                 // This is the fallback path where we actually talk to the registry backend to load
                 // information. Here we parse every single line in the index (as we need
                 // to find the versions)
-                log::debug!("slow path for {:?}", relative);
+                tracing::debug!("slow path for {:?}", relative);
                 let mut cache = SummariesCache::default();
                 let mut ret = Summaries::default();
                 ret.raw_data = raw_data;
@@ -722,7 +722,11 @@ impl Summaries {
                             // entries in the cache preventing those newer
                             // versions from reading them (that is, until the
                             // cache is rebuilt).
-                            log::info!("failed to parse {:?} registry package: {}", relative, e);
+                            tracing::info!(
+                                "failed to parse {:?} registry package: {}",
+                                relative,
+                                e
+                            );
                             continue;
                         }
                     };
@@ -731,7 +735,7 @@ impl Summaries {
                     ret.versions.insert(version, summary.into());
                 }
                 if let Some(index_version) = index_version {
-                    log::trace!("caching index_version {}", index_version);
+                    tracing::trace!("caching index_version {}", index_version);
                     let cache_bytes = cache.serialize(index_version.as_str());
                     // Once we have our `cache_bytes` which represents the `Summaries` we're
                     // about to return, write that back out to disk so future Cargo
@@ -743,7 +747,7 @@ impl Summaries {
                         let path = Filesystem::new(cache_path.clone());
                         config.assert_package_cache_locked(&path);
                         if let Err(e) = fs::write(cache_path, &cache_bytes) {
-                            log::info!("failed to write cache: {}", e);
+                            tracing::info!("failed to write cache: {}", e);
                         }
                     }
 
@@ -906,7 +910,7 @@ impl IndexSummary {
             v,
         } = serde_json::from_slice(line)?;
         let v = v.unwrap_or(1);
-        log::trace!("json parsed registry {}/{}", name, vers);
+        tracing::trace!("json parsed registry {}/{}", name, vers);
         let pkgid = PackageId::new(name, &vers, source_id)?;
         let deps = deps
             .into_iter()

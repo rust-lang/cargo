@@ -6,9 +6,9 @@ use crate::ops;
 use crate::util::config::Config;
 use crate::util::CargoResult;
 use anyhow::Context;
-use log::debug;
 use std::collections::{BTreeMap, HashSet};
 use termcolor::Color::{self, Cyan, Green, Red, Yellow};
+use tracing::debug;
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,

@@ -6,12 +6,12 @@ use crate::util::{human_readable_bytes, network, MetricsCounter, Progress};
 use crate::{CargoResult, Config};
 use cargo_util::paths;
 use gix::bstr::{BString, ByteSlice};
-use log::debug;
 use std::cell::RefCell;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
+use tracing::debug;
 
 /// For the time being, `repo_path` makes it easy to instantiate a gitoxide repo just for fetching.
 /// In future this may change to be the gitoxide repository itself.

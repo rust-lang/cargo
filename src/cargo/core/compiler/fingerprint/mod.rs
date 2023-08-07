@@ -366,10 +366,10 @@ use std::time::SystemTime;
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use filetime::FileTime;
-use log::{debug, info};
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
+use tracing::{debug, info};
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
@@ -1815,7 +1815,7 @@ pub fn parse_dep_info(
     let info = match EncodedDepInfo::parse(&data) {
         Some(info) => info,
         None => {
-            log::warn!("failed to parse cargo's dep-info at {:?}", dep_info);
+            tracing::warn!("failed to parse cargo's dep-info at {:?}", dep_info);
             return Ok(None);
         }
     };

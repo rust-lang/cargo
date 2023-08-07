@@ -879,7 +879,7 @@ mod tests {
                 .arg(&path_of_source_file)
                 .exec_with_output()
             {
-                log::warn!("failed to call rustfmt: {:#}", e);
+                tracing::warn!("failed to call rustfmt: {:#}", e);
             }
         }
     }

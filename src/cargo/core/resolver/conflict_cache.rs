@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use log::trace;
+use tracing::trace;
 
 use super::types::ConflictMap;
 use crate::core::resolver::Context;

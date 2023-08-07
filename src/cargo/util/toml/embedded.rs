@@ -18,7 +18,7 @@ pub fn expand_manifest(
     let comment = match extract_comment(content) {
         Ok(comment) => Some(comment),
         Err(err) => {
-            log::trace!("failed to extract doc comment: {err}");
+            tracing::trace!("failed to extract doc comment: {err}");
             None
         }
     }
@@ -26,7 +26,7 @@ pub fn expand_manifest(
     let manifest = match extract_manifest(&comment)? {
         Some(manifest) => Some(manifest),
         None => {
-            log::trace!("failed to extract manifest");
+            tracing::trace!("failed to extract manifest");
             None
         }
     }

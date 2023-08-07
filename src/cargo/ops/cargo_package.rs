@@ -22,9 +22,9 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
-use log::debug;
 use serde::Serialize;
 use tar::{Archive, Builder, EntryType, Header, HeaderMode};
+use tracing::debug;
 use unicase::Ascii as UncasedAscii;
 
 pub struct PackageOpts<'cfg> {

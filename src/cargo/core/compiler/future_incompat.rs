@@ -417,7 +417,7 @@ pub fn save_and_display_report(
     let current_reports = match OnDiskReports::load(bcx.ws) {
         Ok(r) => r,
         Err(e) => {
-            log::debug!(
+            tracing::debug!(
                 "saving future-incompatible reports failed to load current reports: {:?}",
                 e
             );

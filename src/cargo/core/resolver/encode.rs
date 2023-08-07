@@ -117,13 +117,13 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{internal, Graph};
 use anyhow::{bail, Context as _};
-use log::debug;
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
+use tracing::debug;
 
 /// The `Cargo.lock` structure.
 #[derive(Serialize, Deserialize, Debug)]

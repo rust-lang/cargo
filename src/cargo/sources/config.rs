@@ -10,8 +10,8 @@ use crate::util::config::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
 use crate::util::{Config, IntoUrl};
 use anyhow::{bail, Context as _};
-use log::debug;
 use std::collections::{HashMap, HashSet};
+use tracing::debug;
 use url::Url;
 
 /// Represents the entire [`[source]` replacement table][1] in Cargo configuration.

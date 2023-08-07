@@ -12,13 +12,13 @@ use crate::util::{Config, Filesystem};
 use anyhow::Context as _;
 use cargo_util::paths;
 use lazycell::LazyCell;
-use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
 use std::fs::File;
 use std::mem;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
+use tracing::{debug, trace};
 
 /// A remote registry is a registry that lives at a remote URL (such as
 /// crates.io). The git index is cloned locally, and `.crate` files are

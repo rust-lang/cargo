@@ -20,10 +20,7 @@ mod commands;
 use crate::command_prelude::*;
 
 fn main() {
-    #[cfg(feature = "pretty-env-logger")]
-    pretty_env_logger::init_custom_env("CARGO_LOG");
-    #[cfg(not(feature = "pretty-env-logger"))]
-    env_logger::init_from_env("CARGO_LOG");
+    setup_logger();
 
     let mut config = cli::LazyConfig::new();
 
@@ -38,6 +35,15 @@ fn main() {
         Err(e) => cargo::exit_with_error(e, &mut config.get_mut().shell()),
         Ok(()) => {}
     }
+}
+
+fn setup_logger() {
+    let env = tracing_subscriber::EnvFilter::from_env("CARGO_LOG");
+
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_env_filter(env)
+        .init();
 }
 
 /// Table for defining the aliases which come builtin in `Cargo`.

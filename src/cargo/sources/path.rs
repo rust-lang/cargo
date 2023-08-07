@@ -11,7 +11,7 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
 use ignore::gitignore::GitignoreBuilder;
-use log::{trace, warn};
+use tracing::{trace, warn};
 use walkdir::WalkDir;
 
 /// A source represents one or multiple packages gathering from a given root
@@ -203,7 +203,7 @@ impl<'cfg> PathSource<'cfg> {
         let repo = match git2::Repository::discover(root) {
             Ok(repo) => repo,
             Err(e) => {
-                log::debug!(
+                tracing::debug!(
                     "could not discover git repo at or above {}: {}",
                     root.display(),
                     e
@@ -223,7 +223,7 @@ impl<'cfg> PathSource<'cfg> {
         let repo_relative_path = match paths::strip_prefix_canonical(root, repo_root) {
             Ok(p) => p,
             Err(e) => {
-                log::warn!(
+                tracing::warn!(
                     "cannot determine if path `{:?}` is in git repo `{:?}`: {:?}",
                     root,
                     repo_root,

@@ -17,7 +17,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use log::trace;
+use tracing::trace;
 
 use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
