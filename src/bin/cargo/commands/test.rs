@@ -17,12 +17,23 @@ pub fn cli() -> Command {
                 .num_args(0..)
                 .last(true),
         )
+        .arg(flag("doc", "Test only this library's documentation"))
+        .arg(flag("no-run", "Compile, but don't run tests"))
+        .arg(flag("no-fail-fast", "Run all tests regardless of failure"))
+        .arg_ignore_rust_version()
+        .arg_future_incompat_report()
+        .arg_message_format()
         .arg(
             flag(
                 "quiet",
                 "Display one character per test instead of one line",
             )
             .short('q'),
+        )
+        .arg_package_spec(
+            "Package to run tests for",
+            "Test all packages in the workspace",
+            "Exclude packages from the test",
         )
         .arg_targets_all(
             "Test only this package's library unit tests",
@@ -36,26 +47,15 @@ pub fn cli() -> Command {
             "Test all benches",
             "Test all targets (does not include doctests)",
         )
-        .arg(flag("doc", "Test only this library's documentation"))
-        .arg(flag("no-run", "Compile, but don't run tests"))
-        .arg(flag("no-fail-fast", "Run all tests regardless of failure"))
-        .arg_package_spec(
-            "Package to run tests for",
-            "Test all packages in the workspace",
-            "Exclude packages from the test",
-        )
+        .arg_features()
         .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg_manifest_path()
-        .arg_ignore_rust_version()
-        .arg_message_format()
         .arg_unit_graph()
-        .arg_future_incompat_report()
         .arg_timings()
+        .arg_manifest_path()
         .after_help(
             "Run `cargo help test` for more detailed information.\n\
              Run `cargo test -- --help` for test binary options.\n",

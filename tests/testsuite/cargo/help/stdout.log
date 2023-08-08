@@ -4,7 +4,6 @@ Usage: cargo [..][OPTIONS] [COMMAND]
        cargo [..][OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
 
 Options:
-  -h, --help                Print help
   -V, --version             Print version info and exit
       --list                List installed commands
       --explain <CODE>      Run `rustc --explain CODE`
@@ -17,6 +16,7 @@ Options:
       --offline             Run without accessing the network
       --config <KEY=VALUE>  Override a configuration value
   -Z <FLAG>                 Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                Print help
 
 Some common cargo commands are (see all commands with --list):
     build, b    Compile the current package

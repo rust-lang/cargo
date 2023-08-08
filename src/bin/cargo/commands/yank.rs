@@ -6,7 +6,6 @@ use cargo_credential::Secret;
 pub fn cli() -> Command {
     subcommand("yank")
         .about("Remove a pushed crate from the index")
-        .arg_quiet()
         .arg(Arg::new("crate").action(ArgAction::Set))
         .arg(
             opt("version", "The version to yank or un-yank")
@@ -18,8 +17,9 @@ pub fn cli() -> Command {
             "Undo a yank, putting a version back into the index",
         ))
         .arg(opt("index", "Registry index to yank from").value_name("INDEX"))
-        .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
+        .arg_quiet()
         .after_help("Run `cargo help yank` for more detailed information.\n")
 }
 

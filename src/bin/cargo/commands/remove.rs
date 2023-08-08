@@ -24,10 +24,8 @@ pub fn cli() -> clap::Command {
             .num_args(1..)
             .value_name("DEP_ID")
             .help("Dependencies to be removed")])
-        .arg_package("Package to remove from")
-        .arg_manifest_path()
-        .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
+        .arg_quiet()
         .next_help_heading("Section")
         .args([
             clap::Arg::new("dev")
@@ -49,6 +47,8 @@ pub fn cli() -> clap::Command {
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .help("Remove as dependency from the given target platform"),
         ])
+        .arg_package("Package to remove from")
+        .arg_manifest_path()
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

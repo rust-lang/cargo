@@ -7,22 +7,24 @@ pub fn cli() -> Command {
         // subcommand aliases are handled in aliased_command()
         // .alias("d")
         .about("Build a package's documentation")
-        .arg_quiet()
         .arg(flag(
             "open",
             "Opens the docs in a browser after the operation",
         ))
-        .arg_package_spec(
-            "Package to document",
-            "Document all packages in the workspace",
-            "Exclude packages from the build",
-        )
         .arg(flag(
             "no-deps",
             "Don't build documentation for dependencies",
         ))
         .arg(flag("document-private-items", "Document private items"))
-        .arg_jobs()
+        .arg_ignore_rust_version()
+        .arg_message_format()
+        .arg_quiet()
+        .arg_package_spec(
+            "Package to document",
+            "Document all packages in the workspace",
+            "Exclude packages from the build",
+        )
+        .arg_features()
         .arg_targets_lib_bin_example(
             "Document only this package's library",
             "Document only the specified binary",
@@ -30,16 +32,14 @@ pub fn cli() -> Command {
             "Document only the specified example",
             "Document all examples",
         )
+        .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg_manifest_path()
-        .arg_message_format()
-        .arg_ignore_rust_version()
         .arg_unit_graph()
         .arg_timings()
+        .arg_manifest_path()
         .after_help("Run `cargo help doc` for more detailed information.\n")
 }
 

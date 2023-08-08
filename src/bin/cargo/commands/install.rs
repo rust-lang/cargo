@@ -10,7 +10,6 @@ use cargo_util::paths;
 pub fn cli() -> Command {
     subcommand("install")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
-        .arg_quiet()
         .arg(
             Arg::new("crate")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
@@ -21,6 +20,18 @@ pub fn cli() -> Command {
                 .alias("vers")
                 .value_name("VERSION")
                 .requires("crate"),
+        )
+        .arg(
+            opt("index", "Registry index to install from")
+                .value_name("INDEX")
+                .requires("crate")
+                .conflicts_with_all(&["git", "path", "registry"]),
+        )
+        .arg(
+            opt("registry", "Registry to use")
+                .value_name("REGISTRY")
+                .requires("crate")
+                .conflicts_with_all(&["git", "path", "index"]),
         )
         .arg(
             opt("git", "Git URL to install the specified crate from")
@@ -47,42 +58,31 @@ pub fn cli() -> Command {
                 .value_name("PATH")
                 .conflicts_with_all(&["git", "index", "registry"]),
         )
+        .arg(opt("root", "Directory to install packages into").value_name("DIR"))
+        .arg(flag("force", "Force overwriting existing crates or binaries").short('f'))
+        .arg(flag("no-track", "Do not save tracking information"))
         .arg(flag(
             "list",
             "list all installed packages and their versions",
         ))
-        .arg_jobs()
-        .arg(flag("force", "Force overwriting existing crates or binaries").short('f'))
-        .arg(flag("no-track", "Do not save tracking information"))
-        .arg_features()
-        .arg_profile("Install artifacts with the specified profile")
-        .arg(flag(
-            "debug",
-            "Build in debug mode (with the 'dev' profile) instead of release mode",
-        ))
+        .arg_ignore_rust_version()
+        .arg_message_format()
+        .arg_quiet()
         .arg_targets_bins_examples(
             "Install only the specified binary",
             "Install all binaries",
             "Install only the specified example",
             "Install all examples",
         )
+        .arg_features()
+        .arg_jobs()
+        .arg(flag(
+            "debug",
+            "Build in debug mode (with the 'dev' profile) instead of release mode",
+        ))
+        .arg_profile("Install artifacts with the specified profile")
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg(opt("root", "Directory to install packages into").value_name("DIR"))
-        .arg(
-            opt("index", "Registry index to install from")
-                .value_name("INDEX")
-                .requires("crate")
-                .conflicts_with_all(&["git", "path", "registry"]),
-        )
-        .arg(
-            opt("registry", "Registry to use")
-                .value_name("REGISTRY")
-                .requires("crate")
-                .conflicts_with_all(&["git", "path", "index"]),
-        )
-        .arg_ignore_rust_version()
-        .arg_message_format()
         .arg_timings()
         .after_help("Run `cargo help install` for more detailed information.\n")
 }

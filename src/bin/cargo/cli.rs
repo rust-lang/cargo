@@ -523,7 +523,9 @@ pub fn cli() -> Command {
     Command::new("cargo")
         // Subcommands all count their args' display order independently (from 0),
         // which makes their args interspersed with global args. This puts global args last.
-        .next_display_order(1000)
+        //
+        // We also want these to come before auto-generated `--help`
+        .next_display_order(800)
         .allow_external_subcommands(true)
         // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
         // opening clap up to allow us to style our help template
@@ -586,9 +588,21 @@ See 'cargo help <command>' for more information on a specific command.\n",
                 .value_hint(clap::ValueHint::DirPath)
                 .value_parser(clap::builder::ValueParser::path_buf()),
         )
-        .arg(flag("frozen", "Require Cargo.lock and cache are up to date").global(true))
-        .arg(flag("locked", "Require Cargo.lock is up to date").global(true))
-        .arg(flag("offline", "Run without accessing the network").global(true))
+        .arg(
+            flag("frozen", "Require Cargo.lock and cache are up to date")
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .global(true),
+        )
+        .arg(
+            flag("locked", "Require Cargo.lock is up to date")
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .global(true),
+        )
+        .arg(
+            flag("offline", "Run without accessing the network")
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .global(true),
+        )
         .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
         .arg(
             Arg::new("unstable-features")

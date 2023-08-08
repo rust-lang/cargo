@@ -14,7 +14,6 @@ pub fn cli() -> Command {
         // subcommand aliases are handled in aliased_command()
         // .alias("r")
         .about("Run a binary or example of the local package")
-        .arg_quiet()
         .arg(
             Arg::new("args")
                 .help("Arguments for the binary or example to run")
@@ -22,21 +21,22 @@ pub fn cli() -> Command {
                 .num_args(0..)
                 .trailing_var_arg(true),
         )
+        .arg_ignore_rust_version()
+        .arg_message_format()
+        .arg_quiet()
+        .arg_package("Package with the target to run")
         .arg_targets_bin_example(
             "Name of the bin target to run",
             "Name of the example target to run",
         )
-        .arg_package("Package with the target to run")
+        .arg_features()
         .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
-        .arg_message_format()
         .arg_unit_graph()
-        .arg_ignore_rust_version()
         .arg_timings()
         .after_help("Run `cargo help run` for more detailed information.\n")
 }

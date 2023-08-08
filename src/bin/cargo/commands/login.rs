@@ -5,9 +5,9 @@ use cargo::ops;
 pub fn cli() -> Command {
     subcommand("login")
         .about("Log in to a registry.")
-        .arg_quiet()
         .arg(Arg::new("token").action(ArgAction::Set))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_quiet()
         .after_help("Run `cargo help login` for more detailed information.\n")
 }
 

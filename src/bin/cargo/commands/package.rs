@@ -5,7 +5,6 @@ use cargo::ops::{self, PackageOpts};
 pub fn cli() -> Command {
     subcommand("package")
         .about("Assemble the local package into a distributable tarball")
-        .arg_quiet()
         .arg(
             flag(
                 "list",
@@ -25,16 +24,17 @@ pub fn cli() -> Command {
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
-        .arg_target_triple("Build for the target triple")
-        .arg_target_dir()
-        .arg_features()
+        .arg_quiet()
         .arg_package_spec_no_all(
             "Package(s) to assemble",
             "Assemble all packages in the workspace",
             "Don't assemble specified packages",
         )
-        .arg_manifest_path()
+        .arg_features()
+        .arg_target_triple("Build for the target triple")
+        .arg_target_dir()
         .arg_jobs()
+        .arg_manifest_path()
         .after_help("Run `cargo help package` for more detailed information.\n")
 }
 

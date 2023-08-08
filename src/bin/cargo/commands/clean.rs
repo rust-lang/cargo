@@ -6,14 +6,14 @@ use cargo::util::print_available_packages;
 pub fn cli() -> Command {
     subcommand("clean")
         .about("Remove artifacts that cargo has generated in the past")
+        .arg_doc("Whether or not to clean just the documentation directory")
         .arg_quiet()
         .arg_package_spec_simple("Package to clean artifacts for")
-        .arg_manifest_path()
-        .arg_target_triple("Target triple to clean output for")
-        .arg_target_dir()
         .arg_release("Whether or not to clean release artifacts")
         .arg_profile("Clean artifacts of the specified profile")
-        .arg_doc("Whether or not to clean just the documentation directory")
+        .arg_target_triple("Target triple to clean output for")
+        .arg_target_dir()
+        .arg_manifest_path()
         .after_help("Run `cargo help clean` for more detailed information.\n")
 }
 

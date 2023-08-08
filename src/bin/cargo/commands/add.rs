@@ -79,8 +79,8 @@ Example uses:
         ])
         .arg_manifest_path()
         .arg_package("Package to modify")
-        .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
+        .arg_quiet()
         .next_help_heading("Source")
         .args([
             clap::Arg::new("path")

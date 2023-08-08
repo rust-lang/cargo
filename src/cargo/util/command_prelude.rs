@@ -26,6 +26,14 @@ pub use clap::Command;
 
 use super::config::JobsConfig;
 
+pub mod heading {
+    pub const PACKAGE_SELECTION: &str = "Package Selection";
+    pub const TARGET_SELECTION: &str = "Target Selection";
+    pub const FEATURE_SELECTION: &str = "Feature Selection";
+    pub const COMPILATION_OPTIONS: &str = "Compilation Options";
+    pub const MANIFEST_OPTIONS: &str = "Manifest Options";
+}
+
 pub trait CommandExt: Sized {
     fn _arg(self, arg: Arg) -> Self;
 
@@ -37,8 +45,10 @@ pub trait CommandExt: Sized {
         all: &'static str,
         exclude: &'static str,
     ) -> Self {
-        self.arg_package_spec_no_all(package, all, exclude)
-            ._arg(flag("all", "Alias for --workspace (deprecated)"))
+        self.arg_package_spec_no_all(package, all, exclude)._arg(
+            flag("all", "Alias for --workspace (deprecated)")
+                .help_heading(heading::PACKAGE_SELECTION),
+        )
     }
 
     /// Variant of arg_package_spec that does not include the `--all` flag
@@ -51,19 +61,24 @@ pub trait CommandExt: Sized {
         exclude: &'static str,
     ) -> Self {
         self.arg_package_spec_simple(package)
-            ._arg(flag("workspace", all))
-            ._arg(multi_opt("exclude", "SPEC", exclude))
+            ._arg(flag("workspace", all).help_heading(heading::PACKAGE_SELECTION))
+            ._arg(multi_opt("exclude", "SPEC", exclude).help_heading(heading::PACKAGE_SELECTION))
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
-        self._arg(optional_multi_opt("package", "SPEC", package).short('p'))
+        self._arg(
+            optional_multi_opt("package", "SPEC", package)
+                .short('p')
+                .help_heading(heading::PACKAGE_SELECTION),
+        )
     }
 
     fn arg_package(self, package: &'static str) -> Self {
         self._arg(
             optional_opt("package", package)
                 .short('p')
-                .value_name("SPEC"),
+                .value_name("SPEC")
+                .help_heading(heading::PACKAGE_SELECTION),
         )
     }
 
@@ -72,12 +87,16 @@ pub trait CommandExt: Sized {
             opt("jobs", "Number of parallel jobs, defaults to # of CPUs.")
                 .short('j')
                 .value_name("N")
-                .allow_hyphen_values(true),
+                .allow_hyphen_values(true)
+                .help_heading(heading::COMPILATION_OPTIONS),
         )
-        ._arg(flag(
-            "keep-going",
-            "Do not abort the build as soon as there is an error (unstable)",
-        ))
+        ._arg(
+            flag(
+                "keep-going",
+                "Do not abort the build as soon as there is an error (unstable)",
+            )
+            .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_targets_all(
@@ -94,11 +113,13 @@ pub trait CommandExt: Sized {
         all: &'static str,
     ) -> Self {
         self.arg_targets_lib_bin_example(lib, bin, bins, example, examples)
-            ._arg(flag("tests", tests))
-            ._arg(optional_multi_opt("test", "NAME", test))
-            ._arg(flag("benches", benches))
-            ._arg(optional_multi_opt("bench", "NAME", bench))
-            ._arg(flag("all-targets", all))
+            ._arg(flag("tests", tests).help_heading(heading::TARGET_SELECTION))
+            ._arg(optional_multi_opt("test", "NAME", test).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("benches", benches).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("bench", "NAME", bench).help_heading(heading::TARGET_SELECTION),
+            )
+            ._arg(flag("all-targets", all).help_heading(heading::TARGET_SELECTION))
     }
 
     fn arg_targets_lib_bin_example(
@@ -109,11 +130,14 @@ pub trait CommandExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(flag("lib", lib))
-            ._arg(flag("bins", bins))
-            ._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(flag("examples", examples))
-            ._arg(optional_multi_opt("example", "NAME", example))
+        self._arg(flag("lib", lib).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
+            ._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
     }
 
     fn arg_targets_bins_examples(
@@ -123,15 +147,21 @@ pub trait CommandExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(flag("bins", bins))
-            ._arg(optional_multi_opt("example", "NAME", example))
-            ._arg(flag("examples", examples))
+        self._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
+            ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
     }
 
     fn arg_targets_bin_example(self, bin: &'static str, example: &'static str) -> Self {
-        self._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(optional_multi_opt("example", "NAME", example))
+        self._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
     }
 
     fn arg_features(self) -> Self {
@@ -141,21 +171,36 @@ pub trait CommandExt: Sized {
                 "FEATURES",
                 "Space or comma separated list of features to activate",
             )
-            .short('F'),
+            .short('F')
+            .help_heading(heading::FEATURE_SELECTION),
         )
-        ._arg(flag("all-features", "Activate all available features"))
-        ._arg(flag(
-            "no-default-features",
-            "Do not activate the `default` feature",
-        ))
+        ._arg(
+            flag("all-features", "Activate all available features")
+                .help_heading(heading::FEATURE_SELECTION),
+        )
+        ._arg(
+            flag(
+                "no-default-features",
+                "Do not activate the `default` feature",
+            )
+            .help_heading(heading::FEATURE_SELECTION),
+        )
     }
 
     fn arg_release(self, release: &'static str) -> Self {
-        self._arg(flag("release", release).short('r'))
+        self._arg(
+            flag("release", release)
+                .short('r')
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_profile(self, profile: &'static str) -> Self {
-        self._arg(opt("profile", profile).value_name("PROFILE-NAME"))
+        self._arg(
+            opt("profile", profile)
+                .value_name("PROFILE-NAME")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_doc(self, doc: &'static str) -> Self {
@@ -163,17 +208,23 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(multi_opt("target", "TRIPLE", target))
+        self._arg(multi_opt("target", "TRIPLE", target).help_heading(heading::COMPILATION_OPTIONS))
     }
 
     fn arg_target_dir(self) -> Self {
         self._arg(
-            opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"),
+            opt("target-dir", "Directory for all generated artifacts")
+                .value_name("DIRECTORY")
+                .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
 
     fn arg_manifest_path(self) -> Self {
-        self._arg(opt("manifest-path", "Path to Cargo.toml").value_name("PATH"))
+        self._arg(
+            opt("manifest-path", "Path to Cargo.toml")
+                .value_name("PATH")
+                .help_heading(heading::MANIFEST_OPTIONS),
+        )
     }
 
     fn arg_message_format(self) -> Self {
@@ -181,14 +232,17 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_build_plan(self) -> Self {
-        self._arg(flag(
-            "build-plan",
-            "Output the build plan in JSON (unstable)",
-        ))
+        self._arg(
+            flag("build-plan", "Output the build plan in JSON (unstable)")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_unit_graph(self) -> Self {
-        self._arg(flag("unit-graph", "Output build graph in JSON (unstable)"))
+        self._arg(
+            flag("unit-graph", "Output build graph in JSON (unstable)")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_new_opts(self) -> Self {
@@ -252,7 +306,8 @@ pub trait CommandExt: Sized {
                 "Timing output formats (unstable) (comma separated): html, json",
             )
             .value_name("FMTS")
-            .require_equals(true),
+            .require_equals(true)
+            .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
 }
