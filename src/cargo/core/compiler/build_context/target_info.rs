@@ -185,6 +185,12 @@ impl TargetInfo {
                 .args(&rustflags)
                 .env_remove("RUSTC_LOG");
 
+            // Removes `FD_CLOEXEC` set by `jobserver::Client` to pass jobserver
+            // as environment variables specify.
+            if let Some(client) = config.jobserver_from_env() {
+                process.inherit_jobserver(client);
+            }
+
             if let CompileKind::Target(target) = kind {
                 process.arg("--target").arg(target.rustc_target());
             }
