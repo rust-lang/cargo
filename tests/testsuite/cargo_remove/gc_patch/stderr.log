@@ -1,8 +1,1 @@
     Removing bar from dependencies
-    Updating git repository `[ROOTURL]/bar[..]`
-    Updating git repository `[ROOTURL]/bar[..]`
-    Updating `dummy-registry` index
-warning: Patch `bar v0.1.0 ([..])` was not used in the crate graph.
-Perhaps you misspelled the source URL being patched.
-Possible URLs for `[patch.<URL>]`:
-    [ROOT]/bar2

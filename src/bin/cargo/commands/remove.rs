@@ -110,7 +110,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
         // Reload the workspace since we've changed dependencies
         let ws = args.workspace(config)?;
-        let (_, resolve) = resolve_ws(&ws)?;
+        let resolve = {
+            // HACK: Avoid unused patch warnings by temporarily changing the verbosity.
+            // In rare cases, this might cause index update messages to not show up
+            let verbosity = ws.config().shell().verbosity();
+            ws.config()
+                .shell()
+                .set_verbosity(cargo::core::Verbosity::Quiet);
+            let resolve = resolve_ws(&ws);
+            ws.config().shell().set_verbosity(verbosity);
+            resolve?.1
+        };
 
         // Attempt to gc unused patches and re-resolve if anything is removed
         if gc_unused_patches(&workspace, &resolve)? {
