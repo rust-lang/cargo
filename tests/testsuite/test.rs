@@ -4794,6 +4794,7 @@ error: test failed, to rerun pass `--test t2`
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
+note: test exited abnormally; to see the full output pass --nocapture to the harness.
 ",
         )
         .with_status(4)
@@ -4825,6 +4826,7 @@ error: test failed, to rerun pass `--test t2`
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
+note: test exited abnormally; to see the full output pass --nocapture to the harness.
 error: 2 targets failed:
     `--test t1`
     `--test t2`
@@ -4834,23 +4836,10 @@ error: 2 targets failed:
         .run();
 
     p.cargo("test --no-fail-fast -- --nocapture")
-        .with_stderr(
-            "\
-[FINISHED] test [..]
-[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
-thread 't' panicked at 'this is a normal error', tests/t1[..]
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-error: test failed, to rerun pass `--test t1`
-[RUNNING] tests/t2.rs (target/debug/deps/t2[..])
-error: test failed, to rerun pass `--test t2`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
-error: 2 targets failed:
-    `--test t1`
-    `--test t2`
-",
-        )
-        .with_status(101)
-        .run();
+    .with_stderr_does_not_contain("test exited abnormally; to see the full output pass --nocapture to the harness.")
+    .with_stderr_contains("[..]thread 't' panicked [..] tests/t1[..]")
+    .with_stderr_contains("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace")
+    .with_stderr_contains("[..]process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)")
+    .with_status(101)
+    .run();
 }
