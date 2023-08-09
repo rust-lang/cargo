@@ -136,7 +136,7 @@ fn deduplicate_errors() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 [..]
-{}error: could not compile `foo` (lib) due to previous error
+{}error: could not compile `foo` (lib) due to 1 previous error
 ",
             rustc_message
         ))
