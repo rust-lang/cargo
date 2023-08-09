@@ -23,6 +23,13 @@ fn case() {
     })
     .url();
 
+    let git_project3 = git::new("bar3", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+            .file("src/lib.rs", "")
+    })
+    .url();
+
     let in_project = project()
         .file(
             "Cargo.toml",
@@ -38,7 +45,7 @@ fn case() {
                  bar = {{ git = \"{git_project1}\" }}\n\
                  \n\
                  [patch.\"{git_project1}\"]\n\
-                 bar = {{ git = \"{git_project2}\" }}\n\
+                 bar = {{ git = \"{git_project3}\" }}\n\
                  \n\
                  [patch.crates-io]\n\
                  bar = {{ git = \"{git_project2}\" }}\n",
