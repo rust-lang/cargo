@@ -3,3 +3,6 @@
 [workspace]
 members = ["serde", "serde_derive"]
 
+[patch.crates-io]
+serde = { path = "serde" }
+
