@@ -152,6 +152,8 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
                 _ => return,
             };
             let starts_with_ignore_case = |line: &str, text: &str| -> bool {
+                let line = line.as_bytes();
+                let text = text.as_bytes();
                 line[..line.len().min(text.len())].eq_ignore_ascii_case(text)
             };
             match str::from_utf8(data) {
