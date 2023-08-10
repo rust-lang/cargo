@@ -149,7 +149,7 @@ fn run_unit_tests(
                 unit: unit.clone(),
                 kind: test_kind,
             };
-            report_test_error(ws, &options.compile_opts, &unit_err, e);
+            report_test_error(ws, test_args, &options.compile_opts, &unit_err, e);
             errors.push(unit_err);
             if !options.no_fail_fast {
                 return Err(CliError::code(code));
@@ -275,7 +275,7 @@ fn run_doc_tests(
                 unit: unit.clone(),
                 kind: TestKind::Doctest,
             };
-            report_test_error(ws, &options.compile_opts, &unit_err, e);
+            report_test_error(ws, test_args, &options.compile_opts, &unit_err, e);
             errors.push(unit_err);
             if !options.no_fail_fast {
                 return Err(CliError::code(code));
@@ -407,6 +407,7 @@ fn no_fail_fast_err(
 /// Displays an error on the console about a test failure.
 fn report_test_error(
     ws: &Workspace<'_>,
+    test_args: &[&str],
     opts: &ops::CompileOptions,
     unit_err: &UnitTestError,
     test_error: anyhow::Error,
@@ -420,13 +421,23 @@ fn report_test_error(
     let mut err = format_err!("{}, to rerun pass `{}`", which, unit_err.cli_args(ws, opts));
     // Don't show "process didn't exit successfully" for simple errors.
     // libtest exits with 101 for normal errors.
-    let is_simple = test_error
+    let (is_simple, executed) = test_error
         .downcast_ref::<ProcessError>()
         .and_then(|proc_err| proc_err.code)
-        .map_or(false, |code| code == 101);
+        .map_or((false, false), |code| (code == 101, true));
+
     if !is_simple {
         err = test_error.context(err);
     }
 
     crate::display_error(&err, &mut ws.config().shell());
+
+    let harness: bool = unit_err.unit.target.harness();
+    let nocapture: bool = test_args.contains(&"--nocapture");
+
+    if !is_simple && executed && harness && !nocapture {
+        drop(ws.config().shell().note(
+            "test exited abnormally; to see the full output pass --nocapture to the harness.",
+        ));
+    }
 }
