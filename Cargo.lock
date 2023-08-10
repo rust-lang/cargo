@@ -336,11 +336,13 @@ name = "cargo-credential"
 version = "0.3.0"
 dependencies = [
  "anyhow",
+ "libc",
  "serde",
  "serde_json",
  "snapbox",
  "thiserror",
  "time",
+ "windows-sys",
 ]
 
 [[package]]

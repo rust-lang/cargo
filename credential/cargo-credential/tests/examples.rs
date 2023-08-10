@@ -3,6 +3,23 @@ use std::path::Path;
 use snapbox::cmd::Command;
 
 #[test]
+fn stdout_redirected() {
+    let bin = snapbox::cmd::compile_example("stdout-redirected", []).unwrap();
+
+    let hello = r#"{"v":[1]}"#;
+    let get_request = r#"{"v": 1, "registry": {"index-url":"sparse+https://test/","name":"alternative"},"kind": "get","operation": "read","args": []}"#;
+    let err_not_supported = r#"{"Err":{"kind":"operation-not-supported"}}"#;
+
+    Command::new(bin)
+        .stdin(format!("{get_request}\n"))
+        .arg("--cargo-plugin")
+        .assert()
+        .stdout_eq(format!("{hello}\n{err_not_supported}\n"))
+        .stderr_eq("message on stderr should be sent the the parent process\n")
+        .success();
+}
+
+#[test]
 fn file_provider() {
     let bin = snapbox::cmd::compile_example("file-provider", []).unwrap();
 
