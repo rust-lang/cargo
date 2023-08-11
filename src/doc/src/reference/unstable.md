@@ -1041,16 +1041,19 @@ the `credential-alias` table and referenced instead.
 global-credential-providers = ["/usr/bin/cargo-creds"]
 ```
 
-The provider at the end of the list will be attempted first. This ensures
-that when config files are merged, files closer to the project (and ultimatly
-environment variables) have precedence.
+The providers will be attempted in the order of the list. If `global-credential-providers`
+is defined in multiple files, the lists will be merged as described in the
+[Configuration](config.md) docs. 
+
+The provider defined by the `CARGO_REGISTRY_GLOBAL_CREDENTIAL_PROVIDERS` environment
+variable will be attempted first if set.
 
 In this example, the `my-provider` provider will be attempted first, and if
 it cannot provide credentials, then the `cargo:token` provider will be used.
 
 ```toml
 [registry]
-global-credential-providers = ['cargo:token', 'my-provider']
+global-credential-providers = ["my-provider", "cargo:token"]
 ```
 
 If you want to use a different provider for a specific registry, it can be
@@ -1058,7 +1061,14 @@ specified in the `registries` table:
 
 ```toml
 [registries.my-registry]
-global-credential-provider = "/usr/bin/cargo-creds"
+credential-provider = "/usr/bin/cargo-creds"
+```
+
+The credential provider for crates.io can be specified as:
+
+```toml
+[registry]
+credential-provider = "/usr/bin/cargo-creds"
 ```
 
 The value can be a string with spaces separating arguments or it can be a TOML

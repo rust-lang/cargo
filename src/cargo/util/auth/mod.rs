@@ -22,7 +22,7 @@ use crate::util::credential::adaptor::BasicProcessCredential;
 use crate::util::credential::paseto::PasetoCredential;
 
 use super::{
-    config::{CredentialCacheValue, OptValue, PathAndArgs},
+    config::{CredentialCacheValue, Definition, OptValue, PathAndArgs},
     credential::process::CredentialProcessCredential,
     credential::token::TokenCredential,
 };
@@ -88,17 +88,29 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
             vec![vec!["cargo:token".to_string()]]
         }
     };
+    let key = "registry.global-credential-providers";
+    let env_key = ConfigKey::from_str(key).as_env_key().to_string();
     let global_providers = config
-        .get::<Option<Vec<Value<String>>>>("registry.global-credential-providers")?
+        .get::<Option<Vec<Value<String>>>>(key)?
         .filter(|p| !p.is_empty() && allow_cred_proc)
         .map(|p| {
-            p.iter()
-                .rev()
+            // Cargo normally merges configuration from environment variables at the end of a list,
+            // but here we want to the global credential provider attempted first.
+            let env_iter = config.get_env(&env_key).ok().map(|val| Value {
+                val,
+                definition: Definition::Environment(env_key),
+            });
+            let cfg_iter = p
+                .iter()
+                .filter(|p| !matches!(p.definition, Definition::Environment(_)));
+            let combined_iter = env_iter.iter().chain(cfg_iter);
+            combined_iter
                 .map(PathAndArgs::from_whitespace_separated_string)
                 .map(|p| resolve_credential_alias(config, p))
                 .collect()
         })
         .unwrap_or_else(default_providers);
+    tracing::debug!(?global_providers);
 
     let providers = match cfg {
         // If there's a specific provider configured for this registry, use it.
@@ -478,7 +490,8 @@ fn credential_action(
             }
         }
     }
-    Err(cargo_credential::Error::NotFound.into())
+    Err(cargo_credential::Error::NotFound)
+        .context("no credential providers could handle the request")
 }
 
 /// Returns the token to use for the given registry.

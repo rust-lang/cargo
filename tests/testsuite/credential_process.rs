@@ -1,5 +1,9 @@
 //! Tests for credential-process.
 
+use std::env::consts::EXE_SUFFIX;
+use std::fs;
+use std::path::Path;
+
 use cargo_test_support::registry::{Package, TestRegistry};
 use cargo_test_support::{basic_manifest, cargo_process, paths, project, registry, Project};
 
@@ -314,6 +318,62 @@ fn build_provider(name: &str, response: &str) -> String {
 }
 
 #[cargo_test]
+fn all_not_found() {
+    let server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .auth_required()
+        .http_index()
+        .build();
+    let not_found = build_provider("not_found", r#"{"Err": {"kind": "not-found"}}"#);
+    cargo_util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [registry]
+                global-credential-providers = ["not_found"]
+                [credential-alias]
+                not_found = ["{not_found}"]
+            "#,
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("install -v foo -Zcredential-process -Zregistry-auth")
+        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
+        .replace_crates_io(server.index_url())
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] [..]
+[CREDENTIAL] [..]not_found[..] get crates-io
+{"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"WWW-Authenticate: Cargo login_url=\"https://test-registry-login/me\""[..]]},"kind":"get","operation":"read","args":[]}
+[ERROR] failed to query replaced source registry `crates-io`
+
+Caused by:
+  no token found, please run `cargo login`
+  or use environment variable CARGO_REGISTRY_TOKEN
+"#,
+        )
+        .run();
+
+    cargo_process("login abcdefg -Zcredential-process -Zregistry-auth")
+        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
+        .replace_crates_io(server.index_url())
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] [..]
+{"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"WWW-Authenticate: Cargo login_url=\"https://test-registry-login/me\""[..]]},"kind":"get","operation":"read","args":[]}
+{"v":1,"registry":{"index-url":"[..]","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}
+[ERROR] no credential providers could handle the request
+
+Caused by:
+  credential not found
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn multiple_providers() {
     let server = registry::RegistryBuilder::new()
         .no_configure_token()
@@ -325,20 +385,40 @@ fn multiple_providers() {
         "url_not_supported",
         r#"{"Err": {"kind": "url-not-supported"}}"#,
     );
-
     let success_provider = build_provider("success_provider", r#"{"Ok": {"kind": "login"}}"#);
+
+    // Make a bunch of extra providers that all say UrlNotSupported
+    let additional_providers: Vec<_> = (0..=3)
+        .map(|i| {
+            let src = Path::new(&url_not_supported);
+            let target = src
+                .with_file_name(format!("provider{i}{}", EXE_SUFFIX))
+                .display()
+                .to_string();
+            fs::copy(src, &target).unwrap();
+            target
+        })
+        .collect();
 
     cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         format!(
             r#"
                 [registry]
-                global-credential-providers = ["success_provider", "url_not_supported"]
+                global-credential-providers = ["url_not_supported", "success_provider"]
 
                 [credential-alias]
                 success_provider = ["{success_provider}"]
                 url_not_supported = ["{url_not_supported}"]
+                provider0 = ['{0}']
+                provider1 = ['{1}']
+                provider2 = ['{2}']
+                provider3 = ['{3}']
             "#,
+            additional_providers[0],
+            additional_providers[1],
+            additional_providers[2],
+            additional_providers[3]
         )
         .as_bytes(),
     )
@@ -356,6 +436,52 @@ fn multiple_providers() {
 "#,
         )
         .run();
+
+    // providers listed in project-specific config should be preferred over config in CARGO_HOME.
+    fs::create_dir_all(&paths::root().join(".cargo")).unwrap();
+    cargo_util::paths::append(
+        &paths::root().join(".cargo/config"),
+        r#"
+                [registry]
+                global-credential-providers = ["provider1", "provider0"]
+            "#
+        .as_bytes(),
+    )
+    .unwrap();
+
+    // providers listed in more-nested config should be preferred.
+    let nested = paths::root().join("nested");
+    fs::create_dir_all(&nested.join(".cargo")).unwrap();
+    cargo_util::paths::append(
+        &nested.join(".cargo/config"),
+        r#"
+                [registry]
+                global-credential-providers = ["provider2"]
+            "#
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("login -Z credential-process -v abcdefg")
+            .masquerade_as_nightly_cargo(&["credential-process"])
+            .replace_crates_io(server.index_url())
+            .env("CARGO_REGISTRY_GLOBAL_CREDENTIAL_PROVIDERS", "provider3")
+            .cwd(&nested)
+            .with_stderr(
+                r#"[CREDENTIAL] [..]provider3[..] login crates-io
+[..]
+[CREDENTIAL] [..]provider2[..] login crates-io
+[..]
+[CREDENTIAL] [..]provider1[..] login crates-io
+[..]
+[CREDENTIAL] [..]provider0[..] login crates-io
+[..]
+[CREDENTIAL] [..]url_not_supported[..] login crates-io
+[..]
+[CREDENTIAL] [..]success_provider[..] login crates-io
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}"#,
+            )
+            .run();
 }
 
 #[cargo_test]
