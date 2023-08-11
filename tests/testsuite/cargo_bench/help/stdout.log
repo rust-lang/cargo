@@ -44,7 +44,6 @@ Feature Selection:
 
 Compilation Options:
   -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
-      --keep-going              Do not abort the build as soon as there is an error (unstable)
       --profile <PROFILE-NAME>  Build artifacts with the specified profile
       --target <TRIPLE>         Build for the target triple
       --target-dir <DIRECTORY>  Directory for all generated artifacts
