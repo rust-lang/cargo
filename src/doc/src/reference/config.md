@@ -318,6 +318,12 @@ be specified with environment variables of the form
 `CARGO_REGISTRIES_<name>_TOKEN` where `<name>` is the name of the registry in
 all capital letters.
 
+> **Note:** Cargo also reads and writes credential files without the `.toml`
+> extension, such as `.cargo/credentials`. Support for the `.toml` extension
+> was added in version 1.39. In version 1.68, Cargo writes to the file with the
+> extension by default. However, for backward compatibility reason, when both
+> files exist, Cargo will read and write the file without the extension.
+
 ### Configuration keys
 
 This section documents all configuration keys. The description for keys with
