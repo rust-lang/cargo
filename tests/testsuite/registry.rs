@@ -3529,3 +3529,38 @@ fn unpack_again_when_cargo_ok_is_unrecognized() {
     let ok = fs::read_to_string(&cargo_ok).unwrap();
     assert_eq!(&ok, r#"{"v":1}"#);
 }
+
+#[cargo_test]
+fn differ_only_by_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                baz = "=0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("baz", "0.0.1+b").publish();
+    Package::new("baz", "0.0.1+c").yanked(true).publish();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1+b (registry `dummy-registry`)
+[CHECKING] baz v0.0.1+b
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
