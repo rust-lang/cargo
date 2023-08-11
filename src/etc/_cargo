@@ -45,9 +45,13 @@ _cargo() {
         '(--bench --bin --example --lib)--test=[specify test name]:test name'
     )
 
-    parallel=(
+    jobs=(
         '(-j --jobs)'{-j+,--jobs=}'[specify number of parallel jobs]:jobs [# of CPUs]'
-        '--keep-going[do not abort build on first error]'
+    )
+
+    parallel=(
+        "${jobs[@]}"
+        '--keep-going[do not abort build on first build error]'
     )
 
     features=(
@@ -87,7 +91,7 @@ _cargo() {
                         '*:args:_default'
                         ;;
                 bench)
-                    _arguments -s -A "^--" $common $parallel $features $msgfmt $triple $target $manifest \
+                    _arguments -s -A "^--" $common $jobs $features $msgfmt $triple $target $manifest \
                         "${command_scope_spec[@]}" \
                         '--all-targets[benchmark all targets]' \
                         "--no-run[compile but don't run]" \
@@ -297,7 +301,7 @@ _cargo() {
                         ;;
 
                 test | t)
-                    _arguments -s -S $common $parallel $features $msgfmt $triple $target $manifest \
+                    _arguments -s -S $common $jobs $features $msgfmt $triple $target $manifest \
                         '--test=[test name]: :_cargo_test_names' \
                         '--no-fail-fast[run all tests regardless of failure]' \
                         '--no-run[compile but do not run]' \
