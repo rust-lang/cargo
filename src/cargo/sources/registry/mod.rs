@@ -887,7 +887,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
 impl RegistryConfig {
     /// File name of [`RegistryConfig`].
-    const NAME: &str = "config.json";
+    const NAME: &'static str = "config.json";
 }
 
 /// Get the maximum upack size that Cargo permits
