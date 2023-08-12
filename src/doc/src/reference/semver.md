@@ -218,12 +218,12 @@ The compiler is free to alter the alignment, layout or size, so code should not 
 
 Some examples of changes that are not a breaking change are (assuming no other rules in this guide are violated):
 
-* Adding, removing, or changing fields of a default representation struct, union, or enum in such a way that the change follows the other rules in this guide (for example, using `non_exhaustive` to allow those changes, or changes to private fields that are already private).
+* Adding, removing, reordering, or changing fields of a default representation struct, union, or enum in such a way that the change follows the other rules in this guide (for example, using `non_exhaustive` to allow those changes, or changes to private fields that are already private).
   See [struct-add-private-field-when-public](#struct-add-private-field-when-public), [struct-add-public-field-when-no-private](#struct-add-public-field-when-no-private), [struct-private-fields-with-private](#struct-private-fields-with-private), [enum-fields-new](#enum-fields-new).
 * Adding variants to a default representation enum, if the enum uses `non_exhaustive`.
   This may change the alignment or size of the enumeration, but those are not well-defined.
   See [enum-variant-new](#enum-variant-new).
-* Adding, removing, or changing private fields of a `repr(C)` struct, union, or enum, following the other rules in this guide (for example, using `non_exhaustive`, or adding private fields when other private fields already exist).
+* Adding, removing, reordering, or changing private fields of a `repr(C)` struct, union, or enum, following the other rules in this guide (for example, using `non_exhaustive`, or adding private fields when other private fields already exist).
   See [repr-c-private-change](#repr-c-private-change).
 * Adding variants to a `repr(C)` enum, if the enum uses `non_exhastive`.
   See [repr-c-enum-variant-new](#repr-c-enum-variant-new).
