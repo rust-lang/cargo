@@ -346,8 +346,10 @@ The `rerun-if-env-changed` instruction tells Cargo to re-run the build script
 if the value of an environment variable of the given name has changed.
 
 Note that the environment variables here are intended for global environment
-variables like `CC` and such, it is not necessary to use this for environment
-variables like `TARGET` that Cargo sets.
+variables like `CC` and such, it is not possible to use this for environment
+variables like `TARGET` that [Cargo sets for build scripts][build-env]. The
+environment variables in use are those received by `cargo` invocations, not
+those received by the executable of the build script.
 
 
 ### The `links` Manifest Key
