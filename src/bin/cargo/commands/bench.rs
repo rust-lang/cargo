@@ -42,7 +42,8 @@ pub fn cli() -> Command {
             "Benchmark all targets",
         )
         .arg_features()
-        .arg_jobs()
+        .arg_jobs_without_keep_going()
+        .arg(flag("keep-going", "Use `--no-fail-fast` instead").hide(true)) // See rust-lang/cargo#11702
         .arg_profile("Build artifacts with the specified profile")
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
@@ -54,6 +55,17 @@ pub fn cli() -> Command {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
+
+    if args.keep_going() {
+        return Err(anyhow::format_err!(
+            "\
+unexpected argument `--keep-going` found
+
+  tip: to run as many benchmarks as possible without failing fast, use `--no-fail-fast`"
+        )
+        .into());
+    }
+
     let mut compile_opts = args.compile_options(
         config,
         CompileMode::Bench,

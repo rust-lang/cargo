@@ -186,7 +186,6 @@ includes an option to control the number of threads used:
 {{#options}}
 
 {{> options-jobs }}
-{{> options-keep-going }}
 {{> options-future-incompat }}
 
 {{/options}}

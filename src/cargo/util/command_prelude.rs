@@ -83,19 +83,22 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_jobs(self) -> Self {
+        self.arg_jobs_without_keep_going()._arg(
+            flag(
+                "keep-going",
+                "Do not abort the build as soon as there is an error (unstable)",
+            )
+            .help_heading(heading::COMPILATION_OPTIONS),
+        )
+    }
+
+    fn arg_jobs_without_keep_going(self) -> Self {
         self._arg(
             opt("jobs", "Number of parallel jobs, defaults to # of CPUs.")
                 .short('j')
                 .value_name("N")
                 .allow_hyphen_values(true)
                 .help_heading(heading::COMPILATION_OPTIONS),
-        )
-        ._arg(
-            flag(
-                "keep-going",
-                "Do not abort the build as soon as there is an error (unstable)",
-            )
-            .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
 
