@@ -260,6 +260,8 @@ fn run_doc_tests(
             p.arg("--test-args").arg("--quiet");
         }
 
+        p.args(unit.pkg.manifest().lint_rustflags());
+
         p.args(args);
 
         if *unstable_opts {

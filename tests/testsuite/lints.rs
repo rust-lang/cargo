@@ -637,3 +637,58 @@ error: unresolved link to `bar`
         )
         .run();
 }
+
+#[cargo_test]
+fn doctest_respects_lints() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [lints.rust]
+                confusable-idents = 'allow'
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+/// Test
+///
+/// [`Foo`]
+///
+/// ```
+/// let s = "rust";
+/// let ｓ_ｓ = "rust2";
+/// ```
+pub fn f() {}
+pub const Ě: i32 = 1;
+pub const Ĕ: i32 = 2;
+"#,
+        )
+        .build();
+
+    foo.cargo("check -Zlints")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+
+    foo.cargo("test --doc -Zlints")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]s
+[DOCTEST] foo
+",
+        )
+        .run();
+}
