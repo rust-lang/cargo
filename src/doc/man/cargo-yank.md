@@ -46,7 +46,7 @@ requirements, following a given release being yanked:
 |-------------------------------------|-----------------------------------------|------------------|------------------|
 | `1.5.0`                             | Use either `1.5.1` or `1.5.2`           | **Return Error** | Use `2.0.0`      |
 | `1.5.1`                             | Use either `1.5.0` or `1.5.2`           | Use `1.5.0`      | Use `2.0.0`      |
-| `2.0.0`                             | Use either `1.5.0`, `1.5.1` or `0.22.2` | Use `1.5.0`      | **Return Error** |
+| `2.0.0`                             | Use either `1.5.0`, `1.5.1` or `1.5.2`  | Use `1.5.0`      | **Return Error** |
 
 ### When to yank
 
