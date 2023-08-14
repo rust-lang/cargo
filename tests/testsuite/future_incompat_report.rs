@@ -164,7 +164,7 @@ fn test_multi_crate() {
                 second-dep = "*"
               "#,
         )
-        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "")
         .build();
 
     for command in &["build", "check", "rustc", "test"] {
