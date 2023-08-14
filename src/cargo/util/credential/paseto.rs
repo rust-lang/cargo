@@ -4,6 +4,7 @@ use anyhow::Context;
 use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, Error, Operation, RegistryInfo, Secret,
 };
+use clap::Command;
 use pasetors::{
     keys::{AsymmetricKeyPair, AsymmetricPublicKey, AsymmetricSecretKey, Generate},
     paserk::FormatAsPaserk,
@@ -14,7 +15,7 @@ use url::Url;
 use crate::{
     core::SourceId,
     ops::RegistryCredentialConfig,
-    util::{auth::registry_credential_config_raw, config},
+    util::{auth::registry_credential_config_raw, command_prelude::opt, config},
     Config,
 };
 
@@ -60,7 +61,7 @@ impl<'a> Credential for PasetoCredential<'a> {
         &self,
         registry: &RegistryInfo<'_>,
         action: &Action<'_>,
-        _args: &[&str],
+        args: &[&str],
     ) -> Result<CredentialResponse, Error> {
         let index_url = Url::parse(registry.index_url).context("parsing index url")?;
         let sid = if let Some(name) = registry.name {
@@ -70,6 +71,13 @@ impl<'a> Credential for PasetoCredential<'a> {
         }?;
 
         let reg_cfg = registry_credential_config_raw(self.config, &sid)?;
+
+        let matches = Command::new("cargo:paseto")
+            .no_binary_name(true)
+            .arg(opt("key-subject", "Set the key subject for this registry").value_name("SUBJECT"))
+            .try_get_matches_from(args)
+            .map_err(Box::new)?;
+        let key_subject = matches.get_one("key-subject").map(String::as_str);
 
         match action {
             Action::Get(operation) => {
@@ -163,6 +171,7 @@ impl<'a> Credential for PasetoCredential<'a> {
                 })
             }
             Action::Login(options) => {
+                let old_key_subject = reg_cfg.and_then(|cfg| cfg.secret_key_subject);
                 let new_token;
                 let secret_key: Secret<String>;
                 if let Some(key) = &options.token {
@@ -180,7 +189,13 @@ impl<'a> Credential for PasetoCredential<'a> {
                 } else {
                     return Err("not a validly formatted PASERK secret key".into());
                 }
-                new_token = RegistryCredentialConfig::AsymmetricKey((secret_key, None));
+                new_token = RegistryCredentialConfig::AsymmetricKey((
+                    secret_key,
+                    match key_subject {
+                        Some(key_subject) => Some(key_subject.to_string()),
+                        None => old_key_subject,
+                    },
+                ));
                 config::save_credentials(self.config, Some(new_token), &sid)?;
                 Ok(CredentialResponse::Login)
             }
