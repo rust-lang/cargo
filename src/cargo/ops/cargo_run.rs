@@ -100,6 +100,10 @@ pub fn run(
     // by `compile.target_process` (the package's root directory)
     process.args(args).cwd(config.cwd());
 
+    if config.extra_verbose() {
+        process.display_env_vars();
+    }
+
     config.shell().status("Running", process.to_string())?;
 
     process.exec_replace()
