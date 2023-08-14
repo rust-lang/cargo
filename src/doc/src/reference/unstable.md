@@ -432,9 +432,9 @@ like to stabilize it somehow!
 ### keep-going
 * Tracking Issue: [#10496](https://github.com/rust-lang/cargo/issues/10496)
 
-`cargo build --keep-going` (and similarly for `check`, `test` etc) will build as
-many crates in the dependency graph as possible, rather than aborting the build
-at the first one that fails to build.
+`cargo build --keep-going` (and similarly for every command involving compilation, like `check` and `doc`)
+will build as many crates in the dependency graph as possible,
+rather than aborting the build at the first one that fails to build.
 
 For example if the current package depends on dependencies `fails` and `works`,
 one of which fails to build, `cargo check -j1` may or may not build the one that
@@ -447,6 +447,16 @@ The `-Z unstable-options` command-line option must be used in order to use
 
 ```console
 cargo check --keep-going -Z unstable-options
+```
+
+While `cargo test` and `cargo bench` commands involve compilation, they do not provide a `--keep-going` flag.
+Both commands already include a similar `--no-fail-fast` flag, allowing running as many tests as possible without stopping at the first failure.
+To "compile" as many tests as possible, use target selection flags like `--tests` to build test binaries separately.
+For example,
+
+```console
+cargo build --tests --keep-going -Zunstable-options
+cargo test --tests --no-fail-fast
 ```
 
 ### config-include
