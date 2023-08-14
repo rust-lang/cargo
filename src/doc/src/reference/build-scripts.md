@@ -349,8 +349,9 @@ Note that the environment variables here are intended for global environment
 variables like `CC` and such, it is not possible to use this for environment
 variables like `TARGET` that [Cargo sets for build scripts][build-env]. The
 environment variables in use are those received by `cargo` invocations, not
-those received by the executable of the build script.
-
+those received by the executable of the build script. Due to Cargo's
+internal cache invalidation Cargo will effectively re-run the build script
+every time one of the variables that Cargo sets changes.
 
 ### The `links` Manifest Key
 
