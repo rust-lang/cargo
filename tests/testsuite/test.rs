@@ -389,10 +389,10 @@ failures:
 ---- test_hello stdout ----
 [..]thread '[..]' panicked at [..]",
         )
-        .with_stdout_contains("[..]assertion failed[..]")
-        .with_stdout_contains("[..]`(left == right)`[..]")
-        .with_stdout_contains("[..]left: `\"hello\"`,[..]")
-        .with_stdout_contains("[..]right: `\"nope\"`[..]")
+        .with_stdout_contains("[..]assertion [..]failed[..]")
+        .with_stdout_contains("[..]left == right[..]")
+        .with_stdout_contains("[..]left: [..]\"hello\"[..]")
+        .with_stdout_contains("[..]right: [..]\"nope\"[..]")
         .with_stdout_contains("[..]src/main.rs:12[..]")
         .with_stdout_contains(
             "\
