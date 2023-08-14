@@ -688,18 +688,6 @@ pub const Ĕ: i32 = 2;
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]s
 [DOCTEST] foo
-warning: identifier pair considered confusable between `Ě` and `Ĕ`
-  --> src/lib.rs:12:11
-   |
-11 | pub const Ě: i32 = 1;
-   |           - this is where the previous identifier occurred
-12 | pub const Ĕ: i32 = 2;
-   |           ^
-   |
-   = note: `#[warn(confusable_idents)]` on by default
-
-[WARNING] 1 warning emitted
-
 ",
         )
         .run();
