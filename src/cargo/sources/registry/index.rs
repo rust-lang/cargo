@@ -379,7 +379,9 @@ impl<'cfg> RegistryIndex<'cfg> {
     pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
         let req = OptVersionReq::exact(pkg.version());
         let summary = self.summaries(&pkg.name(), &req, load)?;
-        let summary = ready!(summary).next();
+        let summary = ready!(summary)
+            .filter(|s| s.summary.version() == pkg.version())
+            .next();
         Poll::Ready(Ok(summary
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
             .summary
@@ -623,10 +625,10 @@ impl<'cfg> RegistryIndex<'cfg> {
         load: &mut dyn RegistryData,
     ) -> Poll<CargoResult<bool>> {
         let req = OptVersionReq::exact(pkg.version());
-        let found = self
-            .summaries(&pkg.name(), &req, load)
-            .map_ok(|mut p| p.any(|summary| summary.yanked));
-        found
+        let found = ready!(self.summaries(&pkg.name(), &req, load))?
+            .filter(|s| s.summary.version() == pkg.version())
+            .any(|summary| summary.yanked);
+        Poll::Ready(Ok(found))
     }
 }
 
