@@ -4861,3 +4861,24 @@ error: unexpected argument `--keep-going` found
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn cargo_test_print_env_verbose() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("test -vv")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name foo[..]`
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name foo[..]`
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] [CWD]/target/debug/deps/foo-[..][EXE]`
+[DOCTEST] foo
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustdoc --crate-type lib --crate-name foo[..]",
+        )
+        .run();
+}
