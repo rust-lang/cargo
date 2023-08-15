@@ -132,7 +132,7 @@ pub enum Error {
     #[error(transparent)]
     Curl(#[from] curl::Error),
 
-    /// Error from seriailzing the request payload and deserialzing the
+    /// Error from serializing the request payload and deserializing the
     /// response body (like response body didn't match expected structure).
     #[error(transparent)]
     Json(#[from] serde_json::Error),
@@ -181,6 +181,15 @@ pub enum Error {
          Total size was {0}."
     )]
     Timeout(u64),
+
+    /// Error from the API when the user cannot access a GitHub team.
+    #[error(
+        "{}. \
+        Make sure that you have the right permissions in GitHub: \
+        https://doc.rust-lang.org/cargo/reference/publishing.html#github-permissions",
+        errors.join(", ")
+    )]
+    MissingOwners { errors: Vec<String> },
 }
 
 impl Registry {
@@ -234,8 +243,17 @@ impl Registry {
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.put(&format!("/crates/{}/owners", krate), body.as_bytes())?;
-        assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
-        Ok(serde_json::from_str::<OwnerResponse>(&body)?.msg)
+
+        let response = match serde_json::from_str::<OwnerResponse>(&body).map_err(Into::into) {
+            Ok(response) => response,
+            Err(Error::Api { errors, .. }) if include_github_team_missing(&errors) => {
+                Err(Error::MissingOwners { errors })?
+            }
+            err => err?,
+        };
+
+        assert!(response.ok);
+        Ok(response.msg)
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
@@ -527,4 +545,15 @@ pub fn check_token(token: &str) -> Result<()> {
              are allowed as it is sent in a HTTPS header.",
         ))
     }
+}
+
+/// Checks if the error returned by crates.io is related to a missing GitHub team.
+///
+/// GitHub can return this error if the user doesn't have access to a team because
+/// of missconfigured credentials. We'll decorate the error including a link to
+/// the documentation in that case.
+fn include_github_team_missing(errors: &Vec<String>) -> bool {
+    errors
+        .iter()
+        .any(|e| e.contains("could not find the github team"))
 }
