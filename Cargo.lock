@@ -263,7 +263,6 @@ dependencies = [
  "base64",
  "bytesize",
  "cargo-credential",
- "cargo-credential-1password",
  "cargo-credential-macos-keychain",
  "cargo-credential-wincred",
  "cargo-platform 0.1.4",

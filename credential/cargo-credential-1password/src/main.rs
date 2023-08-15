@@ -301,3 +301,7 @@ impl Credential for OnePasswordCredential {
         }
     }
 }
+
+fn main() {
+    cargo_credential::main(OnePasswordCredential {});
+}

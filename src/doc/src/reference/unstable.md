@@ -1108,18 +1108,27 @@ executed within the Cargo process. They are identified with the `cargo:` prefix.
   * `CARGO_REGISTRY_NAME_OPT` --- Optional name of the registry. Should not be used as a storage key. Not always available.
 
 * `cargo:paseto` - implements asymmetric token support (RFC3231) as a credential provider.
-* `cargo:1password`: Uses the 1password `op` CLI to store the token. You must
-  install the `op` CLI from the [1password
-  website](https://1password.com/downloads/command-line/). You must run `op
-  signin` at least once with the appropriate arguments (such as `op signin
-  my.1password.com user@example.com`), unless you provide the sign-in-address
-  and email arguments. The master password will be required on each request
-  unless the appropriate `OP_SESSION` environment variable is set. It supports
-  the following command-line arguments:
-  * `--account`: The account shorthand name to use.
-  * `--vault`: The vault name to use.
-  * `--sign-in-address`: The sign-in-address, which is a web address such as `my.1password.com`.
-  * `--email`: The email address to sign in with.
+
+
+`cargo-credential-1password` uses the 1password `op` CLI to store the token. You must
+install the `op` CLI from the [1password
+website](https://1password.com/downloads/command-line/). You must run `op
+signin` at least once with the appropriate arguments (such as `op signin
+my.1password.com user@example.com`), unless you provide the sign-in-address
+and email arguments. The master password will be required on each request
+unless the appropriate `OP_SESSION` environment variable is set. It supports
+the following command-line arguments:
+* `--account`: The account shorthand name to use.
+* `--vault`: The vault name to use.
+* `--sign-in-address`: The sign-in-address, which is a web address such as `my.1password.com`.
+* `--email`: The email address to sign in with.
+
+Install the provider with `cargo install cargo-credential-1password`
+In the config, add it to `global-credential-providers`:
+```toml
+[registry]
+global-credential-providers = ["cargo-credential-1password"]
+```
 
 A wrapper is available for GNOME
 [libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens on

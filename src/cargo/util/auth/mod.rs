@@ -449,7 +449,6 @@ fn credential_action(
             "cargo:token" => Box::new(TokenCredential::new(config)),
             "cargo:paseto" => Box::new(PasetoCredential::new(config)),
             "cargo:token-from-stdout" => Box::new(BasicProcessCredential {}),
-            "cargo:1password" => Box::new(cargo_credential_1password::OnePasswordCredential {}),
             "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),
             "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
             process => Box::new(CredentialProcessCredential::new(process)),
