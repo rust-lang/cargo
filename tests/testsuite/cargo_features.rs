@@ -295,6 +295,7 @@ fn allow_features_to_rustc() {
         .file(
             "src/lib.rs",
             r#"
+                #![allow(internal_features)]
                 #![feature(test_2018_feature)]
             "#,
         )
