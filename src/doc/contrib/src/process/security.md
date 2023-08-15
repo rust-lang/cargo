@@ -12,7 +12,7 @@ The general order of events happens as follows:
 1. The WG will start a private Zulip stream to coordinate discussion and plans for a fix.
 1. The WG will pull in one or more team members into the Zulip stream ("responders").
     - Security vulnerabilities are **embargoed** until they are released publicly.
-      People who are brought into these discussions should **not** discuss the issue with *anyone* outside of the group, or with your employer, without first consulting The WG.
+      People who are brought into these discussions should **not** discuss the issue with *anyone* outside of the group, including your employer, without first consulting The WG.
 1. A discussion then starts to evaluate the severity of the issue and what possible solutions should be considered.
    This includes figuring out who will volunteer to actually develop the patches to resolve the issue, and who will review it.
 1. The WG will create a temporary private fork of the `rust-lang/cargo` repo using GitHub's [repository security advisory][github-advisory] system.
