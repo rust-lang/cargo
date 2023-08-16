@@ -148,7 +148,7 @@ fn basic_unsupported() {
     // Non-action commands don't support login/logout.
     let registry = registry::RegistryBuilder::new()
         .no_configure_token()
-        .credential_provider(&["cargo:basic", "false"])
+        .credential_provider(&["cargo:token-from-stdout", "false"])
         .build();
 
     cargo_process("login -Z credential-process abcdefg")
@@ -158,7 +158,7 @@ fn basic_unsupported() {
         .with_stderr(
             "\
 [UPDATING] crates.io index
-[ERROR] credential provider `cargo:basic false` failed action `login`
+[ERROR] credential provider `cargo:token-from-stdout false` failed action `login`
 
 Caused by:
   requested operation not supported
@@ -172,7 +172,7 @@ Caused by:
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] credential provider `cargo:basic false` failed action `logout`
+[ERROR] credential provider `cargo:token-from-stdout false` failed action `logout`
 
 Caused by:
   requested operation not supported
@@ -262,7 +262,10 @@ fn invalid_token_output() {
     cred_proj.cargo("build").run();
     let _server = registry::RegistryBuilder::new()
         .alternative()
-        .credential_provider(&["cargo:basic", &toml_bin(&cred_proj, "test-cred")])
+        .credential_provider(&[
+            "cargo:token-from-stdout",
+            &toml_bin(&cred_proj, "test-cred"),
+        ])
         .no_configure_token()
         .build();
 
@@ -523,7 +526,10 @@ fn basic_provider() {
 
     let _server = registry::RegistryBuilder::new()
         .no_configure_token()
-        .credential_provider(&["cargo:basic", &toml_bin(&cred_proj, "test-cred")])
+        .credential_provider(&[
+            "cargo:token-from-stdout",
+            &toml_bin(&cred_proj, "test-cred"),
+        ])
         .token(cargo_test_support::registry::Token::Plaintext(
             "sekrit".to_string(),
         ))

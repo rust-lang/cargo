@@ -1094,9 +1094,9 @@ executed within the Cargo process. They are identified with the `cargo:` prefix.
 * `cargo:token` - Uses Cargo's config and `credentials.toml` to store the token (default).
 * `cargo:wincred` - Uses the Windows Credential Manager to store the token.
 * `cargo:macos-keychain` - Uses the macOS Keychain to store the token.
-* `cargo:basic` - A basic authenticator is a process that returns a token on stdout. Newlines
-  will be trimmed. The process inherits the user's stdin and stderr. It should
-  exit 0 on success, and nonzero on error.
+* `cargo:token-from-stdout <command>` - Launch a subprocess that returns a token
+  on stdout. Newlines will be trimmed. The process inherits the user's stdin and stderr.
+  It should exit 0 on success, and nonzero on error.
   
   With this form, [`cargo login`] and [`cargo logout`] are not supported and
   return an error if used.
