@@ -10,7 +10,7 @@
 //!         but forgot to bump its version.
 //! ```
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
 use std::task;
@@ -124,9 +124,9 @@ fn bump_check(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> Carg
     if let Some(referenced_commit) = referenced_commit.as_ref() {
         status(&format!("compare against `{}`", referenced_commit.id()))?;
         for referenced_member in checkout_ws(&ws, &repo, referenced_commit)?.members() {
-            let Some(changed_member) = changed_members.get(referenced_member) else {
-                let name = referenced_member.name().as_str();
-                tracing::trace!("skipping {name}, may be removed or not published");
+            let pkg_name = referenced_member.name().as_str();
+            let Some(changed_member) = changed_members.get(pkg_name) else {
+                tracing::trace!("skipping {pkg_name}, may be removed or not published");
                 continue;
             };
 
@@ -317,7 +317,7 @@ fn changed<'r, 'ws>(
     repo: &'r git2::Repository,
     base_commit: &git2::Commit<'r>,
     head: &git2::Commit<'r>,
-) -> CargoResult<HashSet<&'ws Package>> {
+) -> CargoResult<HashMap<&'ws str, &'ws Package>> {
     let root_pkg_name = ws.current()?.name(); // `cargo` crate.
     let ws_members = ws
         .members()
@@ -334,19 +334,20 @@ fn changed<'r, 'ws>(
     let head_tree = head.as_object().peel_to_tree()?;
     let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), Default::default())?;
 
-    let mut changed_members = HashSet::new();
+    let mut changed_members = HashMap::new();
 
     for delta in diff.deltas() {
         let old = delta.old_file().path().unwrap();
         let new = delta.new_file().path().unwrap();
         for (ref pkg_root, pkg) in ws_members.iter() {
             if old.starts_with(pkg_root) || new.starts_with(pkg_root) {
-                changed_members.insert(*pkg);
+                changed_members.insert(pkg.name().as_str(), *pkg);
                 break;
             }
         }
     }
 
+    tracing::trace!("changed_members: {:?}", changed_members.keys());
     Ok(changed_members)
 }
 
@@ -355,7 +356,7 @@ fn changed<'r, 'ws>(
 /// Assumption: We always release a version larger than all existing versions.
 fn check_crates_io<'a>(
     config: &Config,
-    changed_members: &HashSet<&'a Package>,
+    changed_members: &HashMap<&'a str, &'a Package>,
     needs_bump: &mut Vec<&'a Package>,
 ) -> CargoResult<()> {
     let source_id = SourceId::crates_io(config)?;
@@ -366,10 +367,10 @@ fn check_crates_io<'a>(
         STATUS,
         format_args!("compare against `{}`", source_id.display_registry_name()),
     )?;
-    for member in changed_members {
-        let (name, current) = (member.name(), member.version());
+    for (name, member) in changed_members {
+        let current = member.version();
         let version_req = format!(">={current}");
-        let query = Dependency::parse(name, Some(&version_req), source_id)?;
+        let query = Dependency::parse(*name, Some(&version_req), source_id)?;
         let possibilities = loop {
             // Exact to avoid returning all for path/git
             match registry.query_vec(&query, QueryKind::Exact) {
@@ -382,6 +383,13 @@ fn check_crates_io<'a>(
         if possibilities.is_empty() {
             tracing::trace!("dep `{name}` has no version greater than or equal to `{current}`");
         } else {
+            tracing::trace!(
+                "`{name}@{current}` needs a bump because its should have a version newer than crates.io: {:?}`",
+                possibilities
+                    .iter()
+                    .map(|s| format!("{}@{}", s.name(), s.version()))
+                    .collect::<Vec<_>>(),
+            );
             needs_bump.push(member);
         }
     }
