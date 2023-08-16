@@ -23,7 +23,7 @@ impl Credential for BasicProcessCredential {
             Action::Get(_) => {
                 let mut args = args.iter();
                 let exe = args.next()
-                    .ok_or("The first argument to the `cargo:basic` adaptor must be the path to the credential provider executable.")?;
+                    .ok_or("The first argument to `cargo:token-from-stdout` must be a command that prints a token on stdout")?;
                 let args = args.map(|arg| arg.replace("{index_url}", registry.index_url));
 
                 let mut cmd = Command::new(exe);

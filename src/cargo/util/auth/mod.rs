@@ -448,7 +448,7 @@ fn credential_action(
         let provider: Box<dyn Credential> = match process {
             "cargo:token" => Box::new(TokenCredential::new(config)),
             "cargo:paseto" => Box::new(PasetoCredential::new(config)),
-            "cargo:basic" => Box::new(BasicProcessCredential {}),
+            "cargo:token-from-stdout" => Box::new(BasicProcessCredential {}),
             "cargo:1password" => Box::new(cargo_credential_1password::OnePasswordCredential {}),
             "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),
             "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
