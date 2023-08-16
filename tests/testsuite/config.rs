@@ -541,18 +541,18 @@ expected boolean, but found array",
         config.get::<VSOB>("b").unwrap(),
         VSOB::VecString(vec![
             "b".to_string(),
-            "clib".to_string(),
             "env1".to_string(),
-            "env2".to_string()
+            "env2".to_string(),
+            "clib".to_string(),
         ])
     );
     assert_eq!(
         config.get::<VSOB>("c").unwrap(),
         VSOB::VecString(vec![
             "c".to_string(),
-            "clic".to_string(),
             "e1".to_string(),
-            "e2".to_string()
+            "e2".to_string(),
+            "clic".to_string(),
         ])
     );
 }
@@ -1582,12 +1582,12 @@ known-hosts = [
         .as_ref()
         .unwrap();
     assert_eq!(kh.len(), 4);
-    assert_eq!(kh[0].val, "example.org ...");
-    assert_eq!(kh[0].definition, Definition::Path(foo_path.clone()));
-    assert_eq!(kh[1].val, "example.com ...");
+    assert_eq!(kh[0].val, "example.com ...");
+    assert_eq!(kh[0].definition, Definition::Path(root_path.clone()));
+    assert_eq!(kh[1].val, "example.net ...");
     assert_eq!(kh[1].definition, Definition::Path(root_path.clone()));
-    assert_eq!(kh[2].val, "example.net ...");
-    assert_eq!(kh[2].definition, Definition::Path(root_path.clone()));
+    assert_eq!(kh[2].val, "example.org ...");
+    assert_eq!(kh[2].definition, Definition::Path(foo_path.clone()));
     assert_eq!(kh[3].val, "env-example");
     assert_eq!(
         kh[3].definition,

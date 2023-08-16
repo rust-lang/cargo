@@ -10,6 +10,7 @@
 
 use crate::util::config::Config;
 use serde::de;
+use std::cmp::Ordering;
 use std::fmt;
 use std::marker;
 use std::mem;
@@ -61,6 +62,24 @@ pub enum Definition {
     /// Passed in on the command line.
     /// A path is attached when the config value is a path to a config file.
     Cli(Option<PathBuf>),
+}
+
+impl PartialOrd for Definition {
+    fn partial_cmp(&self, other: &Definition) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Definition {
+    fn cmp(&self, other: &Definition) -> Ordering {
+        if mem::discriminant(self) == mem::discriminant(other) {
+            Ordering::Equal
+        } else if self.is_higher_priority(other) {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    }
 }
 
 impl Definition {

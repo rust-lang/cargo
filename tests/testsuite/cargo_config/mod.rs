@@ -84,7 +84,7 @@ fn get_toml() {
 alias.foo = \"abc --xyz\"
 alias.sub-example = [\"sub\", \"example\"]
 build.jobs = 99
-build.rustflags = [\"--flag-directory\", \"--flag-global\"]
+build.rustflags = [\"--flag-global\", \"--flag-directory\"]
 extra-table.somekey = \"somevalue\"
 profile.dev.opt-level = 3
 profile.dev.package.foo.opt-level = 1
@@ -111,7 +111,7 @@ target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\"
     cargo_process("config get build.rustflags -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_stdout("build.rustflags = [\"--flag-directory\", \"--flag-global\"]")
+        .with_stdout("build.rustflags = [\"--flag-global\", \"--flag-directory\"]")
         .with_stderr("")
         .run();
 
@@ -171,8 +171,8 @@ fn get_json() {
               "build": {
                 "jobs": 99,
                 "rustflags": [
-                  "--flag-directory",
-                  "--flag-global"
+                  "--flag-global",
+                  "--flag-directory"
                 ]
               },
               "extra-table": {
@@ -259,8 +259,8 @@ alias.sub-example = [
 ]
 build.jobs = 99 # [ROOT]/home/.cargo/config.toml
 build.rustflags = [
-    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
     \"--flag-global\", # [ROOT]/home/.cargo/config.toml
+    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
 ]
 extra-table.somekey = \"somevalue\" # [ROOT]/home/.cargo/config.toml
 profile.dev.opt-level = 3 # [ROOT]/home/.cargo/config.toml
@@ -280,8 +280,8 @@ target.\"cfg(target_os = \\\"linux\\\")\".runner = \"runme\" # [ROOT]/home/.carg
         .with_stdout(
             "\
 build.rustflags = [
-    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
     \"--flag-global\", # [ROOT]/home/.cargo/config.toml
+    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
     \"env1\", # environment variable `CARGO_BUILD_RUSTFLAGS`
     \"env2\", # environment variable `CARGO_BUILD_RUSTFLAGS`
 ]
@@ -310,12 +310,12 @@ fn show_origin_toml_cli() {
         .with_stdout(
             "\
 build.rustflags = [
-    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
     \"--flag-global\", # [ROOT]/home/.cargo/config.toml
-    \"cli1\", # --config cli option
-    \"cli2\", # --config cli option
+    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
     \"env1\", # environment variable `CARGO_BUILD_RUSTFLAGS`
     \"env2\", # environment variable `CARGO_BUILD_RUSTFLAGS`
+    \"cli1\", # --config cli option
+    \"cli2\", # --config cli option
 ]
 ",
         )
@@ -471,7 +471,7 @@ fn includes() {
     cargo_process("config get build.rustflags -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
-        .with_stdout(r#"build.rustflags = ["--flag-other", "--flag-directory", "--flag-global"]"#)
+        .with_stdout(r#"build.rustflags = ["--flag-global", "--flag-other", "--flag-directory"]"#)
         .with_stderr("")
         .run();
 
@@ -481,9 +481,9 @@ fn includes() {
         .with_stdout(
             "\
 build.rustflags = [
+    \"--flag-global\", # [ROOT]/home/.cargo/config.toml
     \"--flag-other\", # [ROOT]/foo/.cargo/other.toml
     \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
-    \"--flag-global\", # [ROOT]/home/.cargo/config.toml
 ]
 ",
         )

@@ -938,6 +938,7 @@ impl Config {
                     .map(|s| (s.to_string(), def.clone())),
             );
         }
+        output.sort_by(|a, b| a.1.cmp(&b.1));
         Ok(())
     }
 
@@ -2106,8 +2107,8 @@ impl ConfigValue {
 
     /// Merge the given value into self.
     ///
-    /// If `force` is true, primitive (non-container) types will override existing values.
-    /// If false, the original will be kept and the new value ignored.
+    /// If `force` is true, primitive (non-container) types will override existing values
+    /// of equal priority. For arrays, incoming values of equal priority will be placed later.
     ///
     /// Container types (tables and arrays) are merged with existing values.
     ///
@@ -2115,7 +2116,13 @@ impl ConfigValue {
     fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
-                old.extend(mem::take(new).into_iter());
+                if force {
+                    old.append(new);
+                } else {
+                    new.append(old);
+                    mem::swap(new, old);
+                }
+                old.sort_by(|a, b| a.1.cmp(&b.1));
             }
             (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
                 for (key, value) in mem::take(new) {
