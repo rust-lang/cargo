@@ -28,7 +28,8 @@ with a configuration file in your home directory.
 If a key is specified in multiple config files, the values will get merged
 together. Numbers, strings, and booleans will use the value in the deeper
 config directory taking precedence over ancestor directories, where the
-home directory is the lowest priority. Arrays will be joined together.
+home directory is the lowest priority. Arrays will be joined together
+with higher precedence items being placed later in the merged array.
 
 At present, when being invoked from a workspace, Cargo does not read config
 files from crates within the workspace. i.e. if a workspace has two crates in
