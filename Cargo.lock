@@ -355,10 +355,11 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-gnome-secret"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
+ "anyhow",
  "cargo-credential",
- "pkg-config",
+ "libloading",
 ]
 
 [[package]]
@@ -1975,6 +1976,16 @@ dependencies = [
  "libz-sys",
  "openssl-sys",
  "pkg-config",
+]
+
+[[package]]
+name = "libloading"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d580318f95776505201b28cf98eb1fa5e4be3b689633ba6a3e6cd880ff22d8cb"
+dependencies = [
+ "cfg-if",
+ "windows-sys",
 ]
 
 [[package]]

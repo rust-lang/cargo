@@ -1,8 +1,10 @@
 //! Implementation of the libsecret credential helper.
 
+use anyhow::Context;
 use cargo_credential::{
     read_token, Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo, Secret,
 };
+use libloading::{Library, Symbol};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 use std::ptr::{null, null_mut};
@@ -52,29 +54,27 @@ enum SecretSchemaAttributeType {
     String = 0,
 }
 
-extern "C" {
-    fn secret_password_store_sync(
-        schema: *const SecretSchema,
-        collection: *const gchar,
-        label: *const gchar,
-        password: *const gchar,
-        cancellable: *mut GCancellable,
-        error: *mut *mut GError,
-        ...
-    ) -> gboolean;
-    fn secret_password_clear_sync(
-        schema: *const SecretSchema,
-        cancellable: *mut GCancellable,
-        error: *mut *mut GError,
-        ...
-    ) -> gboolean;
-    fn secret_password_lookup_sync(
-        schema: *const SecretSchema,
-        cancellable: *mut GCancellable,
-        error: *mut *mut GError,
-        ...
-    ) -> *mut gchar;
-}
+type SecretPasswordStoreSync = extern "C" fn(
+    schema: *const SecretSchema,
+    collection: *const gchar,
+    label: *const gchar,
+    password: *const gchar,
+    cancellable: *mut GCancellable,
+    error: *mut *mut GError,
+    ...
+) -> gboolean;
+type SecretPasswordClearSync = extern "C" fn(
+    schema: *const SecretSchema,
+    cancellable: *mut GCancellable,
+    error: *mut *mut GError,
+    ...
+) -> gboolean;
+type SecretPasswordLookupSync = extern "C" fn(
+    schema: *const SecretSchema,
+    cancellable: *mut GCancellable,
+    error: *mut *mut GError,
+    ...
+) -> *mut gchar;
 
 pub struct GnomeSecret;
 
@@ -105,6 +105,26 @@ impl Credential for GnomeSecret {
         action: &Action,
         _args: &[&str],
     ) -> Result<CredentialResponse, Error> {
+        // Dynamically load libsecret to avoid users needing to install
+        // additional -dev packages when building this provider.
+        let lib;
+        let secret_password_lookup_sync: Symbol<SecretPasswordLookupSync>;
+        let secret_password_store_sync: Symbol<SecretPasswordStoreSync>;
+        let secret_password_clear_sync: Symbol<SecretPasswordClearSync>;
+        unsafe {
+            lib = Library::new("libsecret-1.so").context(
+                "failed to load libsecret: try installing the `libsecret` \
+                or `libsecret-1-0` package with the system package manager",
+            )?;
+            secret_password_lookup_sync = lib
+                .get(b"secret_password_lookup_sync\0")
+                .map_err(Box::new)?;
+            secret_password_store_sync =
+                lib.get(b"secret_password_store_sync\0").map_err(Box::new)?;
+            secret_password_clear_sync =
+                lib.get(b"secret_password_clear_sync\0").map_err(Box::new)?;
+        }
+
         let index_url_c = CString::new(registry.index_url).unwrap();
         match action {
             cargo_credential::Action::Get(_) => {
