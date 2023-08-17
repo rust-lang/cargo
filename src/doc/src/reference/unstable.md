@@ -1094,6 +1094,7 @@ executed within the Cargo process. They are identified with the `cargo:` prefix.
 * `cargo:token` - Uses Cargo's config and `credentials.toml` to store the token (default).
 * `cargo:wincred` - Uses the Windows Credential Manager to store the token.
 * `cargo:macos-keychain` - Uses the macOS Keychain to store the token.
+* `cargo:libsecret` - Uses [libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens on Linux systems.
 * `cargo:token-from-stdout <command>` - Launch a subprocess that returns a token
   on stdout. Newlines will be trimmed. The process inherits the user's stdin and stderr.
   It should exit 0 on success, and nonzero on error.
@@ -1128,20 +1129,6 @@ In the config, add it to `global-credential-providers`:
 ```toml
 [registry]
 global-credential-providers = ["cargo-credential-1password"]
-```
-
-A wrapper is available for GNOME
-[libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens on
-Linux systems. Due to build limitations, this wrapper is not available as a
-pre-compiled binary. This can be built and installed manually. First, install
-libsecret using your system package manager (for example, `sudo apt install
-libsecret-1-dev`). Then build and install the wrapper with `cargo install
-cargo-credential-gnome-secret`.
-In the config, use a path to the binary like this:
-
-```toml
-[registry]
-global-credential-providers = ["cargo-credential-gnome-secret"]
 ```
 
 #### JSON Interface
