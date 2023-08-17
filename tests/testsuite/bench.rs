@@ -1688,3 +1688,40 @@ error: unexpected argument `--keep-going` found
         .with_status(101)
         .run();
 }
+
+#[cargo_test(nightly, reason = "bench")]
+fn cargo_bench_print_env_verbose() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file(
+            "src/main.rs",
+            r#"
+            #![feature(test)]
+            #[cfg(test)]
+            extern crate test;
+
+            fn hello() -> &'static str {
+                "hello"
+            }
+
+            pub fn main() {
+                println!("{}", hello())
+            }
+
+            #[bench]
+            fn bench_hello(_b: &mut test::Bencher) {
+                assert_eq!(hello(), "hello")
+            }
+            "#,
+        )
+        .build();
+    p.cargo("bench -vv")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc[..]`
+[FINISHED] bench [optimized] target(s) in [..]
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] [CWD]/target/release/deps/foo-[..][EXE] --bench`",
+        )
+        .run();
+}

@@ -1,6 +1,8 @@
 //! Tests for the `cargo run` command.
 
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, Project};
+use cargo_test_support::{
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, project, Project,
+};
 use cargo_util::paths::dylib_path_envvar;
 
 #[cargo_test]
@@ -1414,6 +1416,24 @@ fn default_run_workspace() {
         .build();
 
     p.cargo("run").with_stdout("run-a").run();
+}
+
+#[cargo_test]
+fn print_env_verbose() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("src/main.rs", r#"fn main() {println!("run-a");}"#)
+        .build();
+
+    p.cargo("run -vv")
+        .with_stderr(
+            "\
+[COMPILING] a v0.0.1 ([CWD])
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name a[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] target/debug/a[EXE]`",
+        )
+        .run();
 }
 
 #[cargo_test]

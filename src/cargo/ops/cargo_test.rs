@@ -126,7 +126,7 @@ fn run_unit_tests(
         script_meta,
     } in compilation.tests.iter()
     {
-        let (exe_display, cmd) = cmd_builds(
+        let (exe_display, mut cmd) = cmd_builds(
             config,
             cwd,
             unit,
@@ -136,6 +136,11 @@ fn run_unit_tests(
             compilation,
             "unittests",
         )?;
+
+        if config.extra_verbose() {
+            cmd.display_env_vars();
+        }
+
         config
             .shell()
             .concise(|shell| shell.status("Running", &exe_display))?;
@@ -268,9 +273,14 @@ fn run_doc_tests(
             p.arg("-Zunstable-options");
         }
 
+        if config.extra_verbose() {
+            p.display_env_vars();
+        }
+
         config
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;
+
         if let Err(e) = p.exec() {
             let code = fail_fast_code(&e);
             let unit_err = UnitTestError {
