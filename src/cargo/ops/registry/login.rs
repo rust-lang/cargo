@@ -21,6 +21,7 @@ pub fn registry_login(
     config: &Config,
     token_from_cmdline: Option<Secret<&str>>,
     reg: Option<&str>,
+    args: &[&str],
 ) -> CargoResult<()> {
     let source_ids = get_source_id(config, None, reg)?;
 
@@ -50,6 +51,6 @@ pub fn registry_login(
         login_url: login_url.as_deref(),
     };
 
-    auth::login(config, &source_ids.original, options)?;
+    auth::login(config, &source_ids.original, options, args)?;
     Ok(())
 }

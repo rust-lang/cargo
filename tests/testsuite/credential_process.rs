@@ -185,15 +185,19 @@ Caused by:
 fn login() {
     let registry = registry::RegistryBuilder::new()
         .no_configure_token()
-        .credential_provider(&[&build_provider("test-cred", r#"{"Ok": {"kind": "login"}}"#)])
+        .credential_provider(&[
+            &build_provider("test-cred", r#"{"Ok": {"kind": "login"}}"#),
+            "cfg1",
+            "--cfg2",
+        ])
         .build();
 
-    cargo_process("login -Z credential-process abcdefg")
+    cargo_process("login -Z credential-process abcdefg -- cmd3 --cmd4")
         .masquerade_as_nightly_cargo(&["credential-process"])
         .replace_crates_io(registry.index_url())
         .with_stderr(
             r#"[UPDATING] [..]
-{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]","args":[]}
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]","args":["cfg1","--cfg2","cmd3","--cmd4"]}
 "#,
         )
         .run();
