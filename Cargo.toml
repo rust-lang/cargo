@@ -20,7 +20,7 @@ base64 = "0.21.2"
 bytesize = "1.2"
 cargo = { path = "" }
 cargo-credential = { version = "0.3.0", path = "credential/cargo-credential" }
-cargo-credential-gnome-secret = { version = "0.3.1", path = "credential/cargo-credential-gnome-secret" }
+cargo-credential-libsecret = { version = "0.3.1", path = "credential/cargo-credential-libsecret" }
 cargo-credential-wincred = { version = "0.3.0", path = "credential/cargo-credential-wincred" }
 cargo-credential-macos-keychain = { version = "0.3.0", path = "credential/cargo-credential-macos-keychain" }
 cargo-platform = { path = "crates/cargo-platform", version = "0.1.4" }
@@ -124,7 +124,7 @@ base64.workspace = true
 bytesize.workspace = true
 cargo-platform.workspace = true
 cargo-credential.workspace = true
-cargo-credential-gnome-secret.workspace = true
+cargo-credential-libsecret.workspace = true
 cargo-credential-macos-keychain.workspace = true
 cargo-credential-wincred.workspace = true
 cargo-util.workspace = true
