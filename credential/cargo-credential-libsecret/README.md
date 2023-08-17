@@ -1,4 +1,4 @@
-# cargo-credential-gnome-secret
+# cargo-credential-libsecret
 
 This is the implementation for the Cargo credential helper for [GNOME libsecret].
 See the [credential-process] documentation for how to use this.

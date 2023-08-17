@@ -153,7 +153,7 @@ fn bump_check(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> Carg
         "--exclude",
         "cargo-credential-1password",
         "--exclude",
-        "cargo-credential-gnome-secret",
+        "cargo-credential-libsecret",
         "--exclude",
         "cargo-credential-macos-keychain",
         "--exclude",

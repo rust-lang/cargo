@@ -263,6 +263,7 @@ dependencies = [
  "base64",
  "bytesize",
  "cargo-credential",
+ "cargo-credential-libsecret",
  "cargo-credential-macos-keychain",
  "cargo-credential-wincred",
  "cargo-platform 0.1.4",
@@ -354,7 +355,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cargo-credential-gnome-secret"
+name = "cargo-credential-libsecret"
 version = "0.3.1"
 dependencies = [
  "anyhow",
