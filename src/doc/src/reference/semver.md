@@ -59,6 +59,8 @@ considered incompatible.
     * Items
         * [Major: renaming/moving/removing any public items](#item-remove)
         * [Minor: adding new public items](#item-new)
+    * Types
+        * [Major: Changing the alignment, layout, or size of a well-defined type](#type-layout)
     * Structs
         * [Major: adding a private struct field when all current fields are public](#struct-add-private-field-when-public)
         * [Major: adding a public field when no private field exists](#struct-add-public-field-when-no-private)
@@ -203,6 +205,751 @@ fn main() {
 This is not considered a major change because conventionally glob imports are
 a known forwards-compatibility hazard. Glob imports of items from external
 crates should be avoided.
+
+### Major: Changing the alignment, layout, or size of a well-defined type {#type-layout}
+
+It is a breaking change to change the alignment, layout, or size of a type that was previously well-defined.
+
+In general, types that use the [the default representation] do not have a well-defined alignment, layout, or size.
+The compiler is free to alter the alignment, layout, or size, so code should not make any assumptions about it.
+
+> **Note**: It may be possible for external crates to break if they make assumptions about the alignment, layout, or size of a type even if it is not well-defined.
+> This is not considered a SemVer breaking change since those assumptions should not be made.
+
+Some examples of changes that are not a breaking change are (assuming no other rules in this guide are violated):
+
+* Adding, removing, reordering, or changing fields of a default representation struct, union, or enum in such a way that the change follows the other rules in this guide (for example, using `non_exhaustive` to allow those changes, or changes to private fields that are already private).
+  See [struct-add-private-field-when-public](#struct-add-private-field-when-public), [struct-add-public-field-when-no-private](#struct-add-public-field-when-no-private), [struct-private-fields-with-private](#struct-private-fields-with-private), [enum-fields-new](#enum-fields-new).
+* Adding variants to a default representation enum, if the enum uses `non_exhaustive`.
+  This may change the alignment or size of the enumeration, but those are not well-defined.
+  See [enum-variant-new](#enum-variant-new).
+* Adding, removing, reordering, or changing private fields of a `repr(C)` struct, union, or enum, following the other rules in this guide (for example, using `non_exhaustive`, or adding private fields when other private fields already exist).
+  See [repr-c-private-change](#repr-c-private-change).
+* Adding variants to a `repr(C)` enum, if the enum uses `non_exhaustive`.
+  See [repr-c-enum-variant-new](#repr-c-enum-variant-new).
+* Adding `repr(C)` to a default representation struct, union, or enum.
+  See [repr-c-add](#repr-c-add).
+* Adding `repr(<int>)` [primitive representation] to an enum.
+  See [repr-int-enum-add](#repr-int-enum-add).
+* Adding `repr(transparent)` to a default representation struct or enum.
+  See [repr-transparent-add](#repr-transparent-add).
+
+Types that use the [`repr` attribute] can be said to have an alignment and layout that is defined in some way that code may make some assumptions about that may break as a result of changing that type.
+
+In some cases, types with a `repr` attribute may not have an alignment, layout, or size that is well-defined.
+In these cases, it may be safe to make changes to the types, though care should be exercised.
+For example, types with private fields that do not otherwise document their alignment, layout, or size guarantees cannot be relied upon by external crates since the public API does not fully define the alignment, layout, or size of the type.
+
+A common example where a type with *private* fields is well-defined is a type with a single private field with a generic type, using `repr(transparent)`,
+and the prose of the documentation discusses that it is transparent to the generic type.
+For example, see [`UnsafeCell`].
+
+Some examples of breaking changes are:
+
+* Adding `repr(packed)` to a struct or union.
+  See [repr-packed-add](#repr-packed-add).
+* Adding `repr(align)` to a struct, union, or enum.
+  See [repr-align-add](#repr-align-add).
+* Removing `repr(packed)` from a struct or union.
+  See [repr-packed-remove](#repr-packed-remove).
+* Changing the value N of `repr(packed(N))` if that changes the alignment or layout.
+  See [repr-packed-n-change](#repr-packed-n-change).
+* Changing the value N of `repr(align(N))` if that changes the alignment.
+  See [repr-align-n-change](#repr-align-n-change).
+* Removing `repr(align)` from a struct, union, or enum.
+  See [repr-align-remove](#repr-align-remove).
+* Changing the order of public fields of a `repr(C)` type.
+  See [repr-c-shuffle](#repr-c-shuffle).
+* Removing `repr(C)` from a struct, union, or enum.
+  See [repr-c-remove](#repr-c-remove).
+* Removing `repr(<int>)` from an enum.
+  See [repr-int-enum-remove](#repr-int-enum-remove).
+* Changing the primitive representation of a `repr(<int>)` enum.
+  See [repr-int-enum-change](#repr-int-enum-change).
+* Removing `repr(transparent)` from a struct or enum.
+  See [repr-transparent-remove](#repr-transparent-remove).
+
+[the default representation]: ../../reference/type-layout.html#the-default-representation
+[primitive representation]: ../../reference/type-layout.html#primitive-representations
+[`repr` attribute]: ../../reference/type-layout.html#representations
+[`std::mem::transmute`]: ../../std/mem/fn.transmute.html
+[`UnsafeCell`]: ../../std/cell/struct.UnsafeCell.html#memory-layout
+
+#### Minor: `repr(C)` add, remove, or change a private field {#repr-c-private-change}
+
+It is usually safe to add, remove, or change a private field of a `repr(C)` struct, union, or enum, assuming it follows the other guidelines in this guide (see [struct-add-private-field-when-public](#struct-add-private-field-when-public), [struct-add-public-field-when-no-private](#struct-add-public-field-when-no-private), [struct-private-fields-with-private](#struct-private-fields-with-private), [enum-fields-new](#enum-fields-new)).
+
+For example, adding private fields can only be done if there are already other private fields, or it is `non_exhaustive`.
+Public fields may be added if there are private fields, or it is `non_exhaustive`, and the addition does not alter the layout of the other fields.
+
+However, this may change the size and alignment of the type.
+Care should be taken if the size or alignment changes.
+Code should not make assumptions about the size or alignment of types with private fields or `non_exhaustive` unless it has a documented size or alignment.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[derive(Default)]
+#[repr(C)]
+pub struct Example {
+    pub f1: i32,
+    f2: i32, // a private field
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[derive(Default)]
+#[repr(C)]
+pub struct Example {
+    pub f1: i32,
+    f2: i32,
+    f3: i32, // a new field
+}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    // NOTE: Users should not make assumptions about the size or alignment
+    // since they are not documented.
+    let f = updated_crate::Example::default();
+}
+```
+
+#### Minor: `repr(C)` add enum variant {#repr-c-enum-variant-new}
+
+It is usually safe to add variants to a `repr(C)` enum, if the enum uses `non_exhastive`.
+See [enum-variant-new](#enum-variant-new) for more discussion.
+
+Note that this may be a breaking change since it changes the size and alignment of the type.
+See [repr-c-private-change](#repr-c-private-change) for similar concerns.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C)]
+#[non_exhaustive]
+pub enum Example {
+    Variant1 { f1: i16 },
+    Variant2 { f1: i32 },
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)]
+#[non_exhaustive]
+pub enum Example {
+    Variant1 { f1: i16 },
+    Variant2 { f1: i32 },
+    Variant3 { f1: i64 }, // added
+}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    // NOTE: Users should not make assumptions about the size or alignment
+    // since they are not specified. For example, this raised the size from 8
+    // to 16 bytes.
+    let f = updated_crate::Example::Variant2 { f1: 123 };
+}
+```
+
+#### Minor: Adding `repr(C)` to a default representation {#repr-c-add}
+
+It is safe to add `repr(C)` to a struct, union, or enum with [the default representation].
+This is safe because users should not make assumptions about the alignment, layout, or size of types with with the default representation.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Example {
+    pub f1: i32,
+    pub f2: i16,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)] // added
+pub struct Example {
+    pub f1: i32,
+    pub f2: i16,
+}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    let f = updated_crate::Example { f1: 123, f2: 456 };
+}
+```
+
+#### Minor: Adding `repr(<int>)` to an enum {#repr-int-enum-add}
+
+It is safe to add `repr(<int>)` [primitive representation] to an enum with [the default representation].
+This is safe because users should not make assumptions about the alignment, layout, or size of an enum with the default representation.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub enum E {
+    Variant1,
+    Variant2(i32),
+    Variant3 { f1: f64 },
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(i32)] // added
+pub enum E {
+    Variant1,
+    Variant2(i32),
+    Variant3 { f1: f64 },
+}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    let x = updated_crate::E::Variant3 { f1: 1.23 };
+}
+```
+
+#### Minor: Adding `repr(transparent)` to a default representation struct or enum {#repr-transparent-add}
+
+It is safe to add `repr(transparent)` to a struct or enum with [the default representation].
+This is safe because users should not make assumptions about the alignment, layout, or size of a struct or enum with the default representation.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[derive(Default)]
+pub struct Example<T>(T);
+
+///////////////////////////////////////////////////////////
+// After
+#[derive(Default)]
+#[repr(transparent)] // added
+pub struct Example<T>(T);
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    let x = updated_crate::Example::<i32>::default();
+}
+```
+
+#### Major: Adding `repr(packed)` to a struct or union {#repr-packed-add}
+
+It is a breaking change to add `repr(packed)` to a struct or union.
+Making a type `repr(packed)` makes changes that can break code, such as being invalid to take a reference to a field, or causing truncation of disjoint closure captures.
+
+<!-- TODO: If all fields are private, should this be safe to do? -->
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Example {
+    pub f1: u8,
+    pub f2: u16,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(packed)] // added
+pub struct Example {
+    pub f1: u8,
+    pub f2: u16,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+fn main() {
+    let f = updated_crate::Example { f1: 1, f2: 2 };
+    let x = &f.f2; // Error: reference to packed field is unaligned
+}
+```
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Example(pub i32, pub i32);
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(packed)]
+pub struct Example(pub i32, pub i32);
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+fn main() {
+    let mut f = updated_crate::Example(123, 456);
+    let c = || {
+        // Without repr(packed), the closure precisely captures `&f.0`.
+        // With repr(packed), the closure captures `&f` to avoid undefined behavior.
+        let a = f.0;
+    };
+    f.1 = 789; // Error: cannot assign to `f.1` because it is borrowed
+    c();
+}
+```
+
+#### Major: Adding `repr(align)` to a struct, union, or enum {#repr-align-add}
+
+It is a breaking change to add `repr(align)` to a struct, union, or enum.
+Making a type `repr(align)` would break any use of that type in a `repr(packed)` type because that combination is not allowed.
+
+<!-- TODO: This seems like it should be extraordinarily rare. Should there be any exceptions carved out for this? -->
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Aligned {
+    pub a: i32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(align(8))] // added
+pub struct Aligned {
+    pub a: i32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Aligned;
+
+#[repr(packed)]
+pub struct Packed { // Error: packed type cannot transitively contain a `#[repr(align)]` type
+    f1: Aligned,
+}
+
+fn main() {
+    let p = Packed {
+        f1: Aligned { a: 123 },
+    };
+}
+```
+
+#### Major: Removing `repr(packed)` from a struct or union {#repr-packed-remove}
+
+It is a breaking change to remove `repr(packed)` from a struct or union.
+This may change the alignment or layout that extern crates are relying on.
+
+If any fields are public, then removing `repr(packed)` may change the way disjoint closure captures work.
+In some cases, this can cause code to break, similar to those outlined in the [edition guide][edition-closures].
+
+[edition-closures]: ../../edition-guide/rust-2021/disjoint-capture-in-closures.html
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C, packed)]
+pub struct Packed {
+    pub a: u8,
+    pub b: u16,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)] // removed packed
+pub struct Packed {
+    pub a: u8,
+    pub b: u16,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let p = Packed { a: 1, b: 2 };
+    // Some assumption about the size of the type.
+    // Without `packed`, this fails since the size is 4.
+    const _: () = assert!(std::mem::size_of::<Packed>() == 3); // Error: evaluation of constant value failed
+}
+```
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C, packed)]
+pub struct Packed {
+    pub a: *mut i32,
+    pub b: i32,
+}
+unsafe impl Send for Packed {}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)] // removed packed
+pub struct Packed {
+    pub a: *mut i32,
+    pub b: i32,
+}
+unsafe impl Send for Packed {}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let mut x = 123;
+
+    let p = Packed {
+        a: &mut x as *mut i32,
+        b: 456,
+    };
+
+    // When the structure was packed, the closure captures `p` which is Send.
+    // When `packed` is removed, this ends up capturing `p.a` which is not Send.
+    std::thread::spawn(move || unsafe {
+        *(p.a) += 1; // Error: cannot be sent between threads safely
+    });
+}
+```
+
+#### Major: Changing the value N of `repr(packed(N))` if that changes the alignment or layout {#repr-packed-n-change}
+
+It is a breaking change to change the value of N of `repr(packed(N))` if that changes the alignment or layout.
+This may change the alignment or layout that external crates are relying on.
+
+If the value `N` is lowered below the alignment of a public field, then that would break any code that attempts to take a reference of that field.
+
+Note that some changes to `N` may not change the alignment or layout, for example increasing it when the current value is already equal to the natural alignment of the type.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(packed(4))]
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(packed(2))] // changed to 2
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let p = Packed { a: 1, b: 2 };
+    let x = &p.b; // Error: reference to packed field is unaligned
+}
+```
+
+#### Major: Changing the value N of `repr(align(N))` if that changes the alignment {#repr-align-n-change}
+
+It is a breaking change to change the value `N` of `repr(align(N))` if that changes the alignment.
+This may change the alignment that external crates are relying on.
+
+This change should be safe to make if the type is not well-defined as discussed in [type layout](#type-layout) (such as having any private fields and having an undocumented alignment or layout).
+
+Note that some changes to `N` may not change the alignment or layout, for example decreasing it when the current value is already equal to or less than the natural alignment of the type.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(align(8))]
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(align(4))] // changed to 4
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let p = Packed { a: 1, b: 2 };
+    // Some assumption about the size of the type.
+    // The alignment has changed from 8 to 4.
+    const _: () = assert!(std::mem::align_of::<Packed>() == 8); // Error: evaluation of constant value failed
+}
+```
+
+#### Major: Removing `repr(align)` from a struct, union, or enum {#repr-align-remove}
+
+It is a breaking change to remove `repr(align)` from a struct, union, or enum, if their layout was well-defined.
+This may change the alignment or layout that external crates are relying on.
+
+This change should be safe to make if the type is not well-defined as discussed in [type layout](#type-layout) (such as having any private fields and having an undocumented alignment).
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C, align(8))]
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)] // removed align
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let p = Packed { a: 1, b: 2 };
+    // Some assumption about the size of the type.
+    // The alignment has changed from 8 to 4.
+    const _: () = assert!(std::mem::align_of::<Packed>() == 8); // Error: evaluation of constant value failed
+}
+```
+
+#### Major: Changing the order of public fields of a `repr(C)` type {#repr-c-shuffle}
+
+It is a breaking change to change the order of public fields of a `repr(C)` type.
+External crates may be relying on the specific ordering of the fields.
+
+```rust,ignore,run-fail
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C)]
+pub struct SpecificLayout {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)]
+pub struct SpecificLayout {
+    pub b: u32, // changed order
+    pub a: u8,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::SpecificLayout;
+
+extern "C" {
+    // This C function is assuming a specific layout defined in a C header.
+    fn c_fn_get_b(x: &SpecificLayout) -> u32;
+}
+
+fn main() {
+    let p = SpecificLayout { a: 1, b: 2 };
+    unsafe { assert_eq!(c_fn_get_b(&p), 2) } // Error: value not equal to 2
+}
+
+# mod cdep {
+#     // This simulates what would normally be something included from a build script.
+#     // This definition would be in a C header.
+#     #[repr(C)]
+#     pub struct SpecificLayout {
+#         pub a: u8,
+#         pub b: u32,
+#     }
+#
+#     #[no_mangle]
+#     pub fn c_fn_get_b(x: &SpecificLayout) -> u32 {
+#         x.b
+#     }
+# }
+```
+
+#### Major: Removing `repr(C)` from a struct, union, or enum {#repr-c-remove}
+
+It is a breaking change to remove `repr(C)` from a struct, union, or enum.
+External crates may be relying on the specific layout of the type.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C)]
+pub struct SpecificLayout {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+// removed repr(C)
+pub struct SpecificLayout {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::SpecificLayout;
+
+extern "C" {
+    // This C function is assuming a specific layout defined in a C header.
+    fn c_fn_get_b(x: &SpecificLayout) -> u32; // Error: is not FFI-safe
+}
+
+fn main() {
+    let p = SpecificLayout { a: 1, b: 2 };
+    unsafe { assert_eq!(c_fn_get_b(&p), 2) }
+}
+
+# mod cdep {
+#     // This simulates what would normally be something included from a build script.
+#     // This definition would be in a C header.
+#     #[repr(C)]
+#     pub struct SpecificLayout {
+#         pub a: u8,
+#         pub b: u32,
+#     }
+#
+#     #[no_mangle]
+#     pub fn c_fn_get_b(x: &SpecificLayout) -> u32 {
+#         x.b
+#     }
+# }
+```
+
+#### Major: Removing `repr(<int>)` from an enum {#repr-int-enum-remove}
+
+It is a breaking change to remove `repr(<int>)` from an enum.
+External crates may be assuming that the discriminant is a specific size.
+For example, [`std::mem::transmute`] of an enum may fail.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(u16)]
+pub enum Example {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
+///////////////////////////////////////////////////////////
+// After
+// removed repr(u16)
+pub enum Example {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+
+fn main() {
+    let e = updated_crate::Example::Variant2;
+    let i: u16 = unsafe { std::mem::transmute(e) }; // Error: cannot transmute between types of different sizes
+}
+```
+
+#### Major: Changing the primitive representation of a `repr(<int>)` enum {#repr-int-enum-change}
+
+It is a breaking change to change the primitive representation of a `repr(<int>)` enum.
+External crates may be assuming that the discriminant is a specific size.
+For example, [`std::mem::transmute`] of an enum may fail.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(u16)]
+pub enum Example {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(u8)] // changed repr size
+pub enum Example {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+
+fn main() {
+    let e = updated_crate::Example::Variant2;
+    let i: u16 = unsafe { std::mem::transmute(e) }; // Error: cannot transmute between types of different sizes
+}
+```
+
+#### Major: Removing `repr(transparent)` from a struct or enum {#repr-transparent-remove}
+
+It is a breaking change to remove `repr(transparent)` from a struct or enum.
+External crates may be relying on the type having the alignment, layout, or size of the transparent field.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(transparent)]
+pub struct Transparent<T>(T);
+
+///////////////////////////////////////////////////////////
+// After
+// removed repr
+pub struct Transparent<T>(T);
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+#![deny(improper_ctypes)]
+use updated_crate::Transparent;
+
+extern "C" {
+    fn c_fn() -> Transparent<f64>; // Error: is not FFI-safe
+}
+
+fn main() {}
+```
 
 ### Major: adding a private struct field when all current fields are public {#struct-add-private-field-when-public}
 

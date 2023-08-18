@@ -7,6 +7,11 @@
 //! An example with the word "MINOR" at the top is expected to successfully
 //! build against the before and after. Otherwise it should fail. A comment of
 //! "// Error:" will check that the given message appears in the error output.
+//!
+//! The code block can also include the annotations:
+//! - `run-fail`: The test should fail at runtime, not compiletime.
+//! - `dont-deny`: By default tests have a `#![deny(warnings)]`. This option
+//!   avoids this attribute. Note that `#![allow(unused)]` is always added.
 
 use std::error::Error;
 use std::fs;
@@ -57,7 +62,13 @@ fn doit() -> Result<(), Box<dyn Error>> {
                     if line.trim() == "```" {
                         break;
                     }
-                    block.push(line);
+                    // Support rustdoc/mdbook hidden lines.
+                    let line = line.strip_prefix("# ").unwrap_or(line);
+                    if line == "#" {
+                        block.push("");
+                    } else {
+                        block.push(line);
+                    }
                 }
                 None => {
                     return Err(format!(
