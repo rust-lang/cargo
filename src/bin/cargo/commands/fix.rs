@@ -47,7 +47,7 @@ pub fn cli() -> Command {
             "Fix all targets (default)",
         )
         .arg_features()
-        .arg_jobs()
+        .arg_parallel()
         .arg_release("Fix artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
         .arg_target_triple("Fix for the target triple")

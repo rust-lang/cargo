@@ -82,8 +82,8 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_jobs(self) -> Self {
-        self.arg_jobs_without_keep_going()._arg(
+    fn arg_parallel(self) -> Self {
+        self.arg_jobs()._arg(
             flag(
                 "keep-going",
                 "Do not abort the build as soon as there is an error (unstable)",
@@ -92,7 +92,7 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_jobs_without_keep_going(self) -> Self {
+    fn arg_jobs(self) -> Self {
         self._arg(
             opt("jobs", "Number of parallel jobs, defaults to # of CPUs.")
                 .short('j')

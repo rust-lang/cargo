@@ -20,7 +20,7 @@ pub fn cli() -> Command {
         .arg_quiet()
         .arg_package("Package to publish")
         .arg_features()
-        .arg_jobs()
+        .arg_parallel()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()

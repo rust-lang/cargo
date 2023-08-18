@@ -75,7 +75,7 @@ pub fn cli() -> Command {
             "Install all examples",
         )
         .arg_features()
-        .arg_jobs()
+        .arg_parallel()
         .arg(flag(
             "debug",
             "Build in debug mode (with the 'dev' profile) instead of release mode",

@@ -44,7 +44,7 @@ pub fn cli() -> Command {
             "Build all targets",
         )
         .arg_features()
-        .arg_jobs()
+        .arg_parallel()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
         .arg_target_triple("Target triple which compiles will be for")

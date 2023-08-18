@@ -48,7 +48,7 @@ pub fn cli() -> Command {
             "Test all targets (does not include doctests)",
         )
         .arg_features()
-        .arg_jobs_without_keep_going()
+        .arg_jobs()
         .arg(flag("keep-going", "Use `--no-fail-fast` instead").hide(true)) // See rust-lang/cargo#11702
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")

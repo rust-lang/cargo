@@ -33,7 +33,7 @@ pub fn cli() -> Command {
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg_jobs()
+        .arg_parallel()
         .arg_manifest_path()
         .after_help("Run `cargo help package` for more detailed information.\n")
 }

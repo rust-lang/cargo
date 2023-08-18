@@ -42,7 +42,7 @@ pub fn cli() -> Command {
             "Benchmark all targets",
         )
         .arg_features()
-        .arg_jobs_without_keep_going()
+        .arg_jobs()
         .arg(flag("keep-going", "Use `--no-fail-fast` instead").hide(true)) // See rust-lang/cargo#11702
         .arg_profile("Build artifacts with the specified profile")
         .arg_target_triple("Build for the target triple")
