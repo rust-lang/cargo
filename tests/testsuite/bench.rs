@@ -1681,11 +1681,16 @@ fn cargo_bench_no_keep_going() {
     p.cargo("bench --keep-going")
         .with_stderr(
             "\
-error: unexpected argument `--keep-going` found
+error: unexpected argument '--keep-going' found
 
-  tip: to run as many benchmarks as possible without failing fast, use `--no-fail-fast`",
+  tip: use `--no-fail-fast` to run as many tests as possible regardless of failure
+
+Usage: cargo bench [OPTIONS] [BENCHNAME] [-- [args]...]
+
+For more information, try '--help'.
+",
         )
-        .with_status(101)
+        .with_status(1)
         .run();
 }
 

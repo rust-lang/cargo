@@ -4854,11 +4854,16 @@ fn cargo_test_no_keep_going() {
     p.cargo("test --keep-going")
         .with_stderr(
             "\
-error: unexpected argument `--keep-going` found
+error: unexpected argument '--keep-going' found
 
-  tip: to run as many tests as possible without failing fast, use `--no-fail-fast`",
+  tip: use `--no-fail-fast` to run as many tests as possible regardless of failure
+
+Usage: cargo test [OPTIONS] [TESTNAME] [-- [args]...]
+
+For more information, try '--help'.
+",
         )
-        .with_status(101)
+        .with_status(1)
         .run();
 }
 
