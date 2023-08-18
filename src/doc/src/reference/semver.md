@@ -211,7 +211,7 @@ crates should be avoided.
 It is a breaking change to change the alignment, layout, or size of a type that was previously well-defined.
 
 In general, types that use the [the default representation] do not have a well-defined alignment, layout, or size.
-The compiler is free to alter the alignment, layout or size, so code should not make any assumptions about it.
+The compiler is free to alter the alignment, layout, or size, so code should not make any assumptions about it.
 
 > **Note**: It may be possible for external crates to break if they make assumptions about the alignment, layout, or size of a type even if it is not well-defined.
 > This is not considered a SemVer breaking change since those assumptions should not be made.
@@ -225,7 +225,7 @@ Some examples of changes that are not a breaking change are (assuming no other r
   See [enum-variant-new](#enum-variant-new).
 * Adding, removing, reordering, or changing private fields of a `repr(C)` struct, union, or enum, following the other rules in this guide (for example, using `non_exhaustive`, or adding private fields when other private fields already exist).
   See [repr-c-private-change](#repr-c-private-change).
-* Adding variants to a `repr(C)` enum, if the enum uses `non_exhastive`.
+* Adding variants to a `repr(C)` enum, if the enum uses `non_exhaustive`.
   See [repr-c-enum-variant-new](#repr-c-enum-variant-new).
 * Adding `repr(C)` to a default representation struct, union, or enum.
   See [repr-c-add](#repr-c-add).
@@ -234,9 +234,17 @@ Some examples of changes that are not a breaking change are (assuming no other r
 * Adding `repr(transparent)` to a default representation struct or enum.
   See [repr-transparent-add](#repr-transparent-add).
 
-Nominal types that use the [`repr` attribute] can be said to have an alignment and layout that is defined in some way that code may make some assumptions about that may break as a result of changing that type.
+Types that use the [`repr` attribute] can be said to have an alignment and layout that is defined in some way that code may make some assumptions about that may break as a result of changing that type.
 
-Some examples of a breaking change are:
+In some cases, types with a `repr` attribute may not have an alignment, layout, or size that is well-defined.
+In these cases, it may be safe to make changes to the types, though care should be exercised.
+For example, types with private fields that do not otherwise document their alignment, layout, or size guarantees cannot be relied upon by external crates since the public API does not fully define the alignment, layout, or size of the type.
+
+A common example where a type with *private* fields is well-defined is a type with a single private field with a generic type, using `repr(transparent)`,
+and the prose of the documentation discusses that it is transparent to the generic type.
+For example, see [`UnsafeCell`].
+
+Some examples of breaking changes are:
 
 * Adding `repr(packed)` to a struct or union.
   See [repr-packed-add](#repr-packed-add).
@@ -260,14 +268,6 @@ Some examples of a breaking change are:
   See [repr-int-enum-change](#repr-int-enum-change).
 * Removing `repr(transparent)` from a struct or enum.
   See [repr-transparent-remove](#repr-transparent-remove).
-
-In some cases, types with a `repr` attribute may not have an alignment, layout, or size that is well-defined.
-In these cases, it may be safe to make changes to the types, though care should be exercised.
-For example, types with private fields that do not otherwise document their alignment, layout, or size guarantees cannot be relied upon by external crates since the public API does not fully define the alignment, layout, or size of the type.
-
-A common example where a type with *private* fields is well-defined is a type with a single private field with a generic type, using `repr(transparent)`,
-and the prose of the documentation discusses that it is transparent to the generic type.
-For example, see [`UnsafeCell`].
 
 [the default representation]: ../../reference/type-layout.html#the-default-representation
 [primitive representation]: ../../reference/type-layout.html#primitive-representations
