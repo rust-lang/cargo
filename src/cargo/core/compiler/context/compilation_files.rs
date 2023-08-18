@@ -26,7 +26,7 @@ use crate::util::{self, CargoResult, StableHasher};
 const METADATA_VERSION: u8 = 2;
 
 /// The `Metadata` is a hash used to make unique file names for each unit in a
-/// build. It is also use for symbol mangling.
+/// build. It is also used for symbol mangling.
 ///
 /// For example:
 /// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
