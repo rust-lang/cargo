@@ -32,7 +32,7 @@ static SOURCE_ID_CACHE: OnceLock<Mutex<HashSet<&'static SourceIdInner>>> = OnceL
 ///
 /// [`Source`]: crate::sources::source::Source
 /// [`Source::source_id`]: crate::sources::source::Source::source_id
-/// [`PackageId`]: super::super::PackageId
+/// [`PackageId`]: super::PackageId
 #[derive(Clone, Copy, Eq, Debug)]
 pub struct SourceId {
     inner: &'static SourceIdInner,

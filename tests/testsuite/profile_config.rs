@@ -427,7 +427,7 @@ fn named_config_profile() {
     let ws = Workspace::new(&paths::root().join("Cargo.toml"), &config).unwrap();
     let profiles = Profiles::new(&ws, profile_name).unwrap();
 
-    let crates_io = cargo::core::source::SourceId::crates_io(&config).unwrap();
+    let crates_io = cargo::core::SourceId::crates_io(&config).unwrap();
     let a_pkg = PackageId::new("a", "0.1.0", crates_io).unwrap();
     let dep_pkg = PackageId::new("dep", "0.1.0", crates_io).unwrap();
 
