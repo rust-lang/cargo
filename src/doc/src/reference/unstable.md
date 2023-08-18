@@ -1068,7 +1068,14 @@ specified in the `registries` table:
 
 ```toml
 [registries.my-registry]
-global-credential-provider = "/usr/bin/cargo-creds"
+credential-provider = "/usr/bin/cargo-creds"
+```
+
+The credential provider for crates.io can be specified as:
+
+```toml
+[registry]
+credential-provider = "/usr/bin/cargo-creds"
 ```
 
 The value can be a string with spaces separating arguments or it can be a TOML
