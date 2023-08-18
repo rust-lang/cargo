@@ -275,8 +275,7 @@ Some examples of breaking changes are:
 [`std::mem::transmute`]: ../../std/mem/fn.transmute.html
 [`UnsafeCell`]: ../../std/cell/struct.UnsafeCell.html#memory-layout
 
-<a id="repr-c-private-change"></a>
-#### Minor: `repr(C)` add, remove, or change a private field
+#### Minor: `repr(C)` add, remove, or change a private field {#repr-c-private-change}
 
 It is usually safe to add, remove, or change a private field of a `repr(C)` struct, union, or enum, assuming it follows the other guidelines in this guide (see [struct-add-private-field-when-public](#struct-add-private-field-when-public), [struct-add-public-field-when-no-private](#struct-add-public-field-when-no-private), [struct-private-fields-with-private](#struct-private-fields-with-private), [enum-fields-new](#enum-fields-new)).
 
@@ -318,8 +317,7 @@ fn main() {
 }
 ```
 
-<a id="repr-c-enum-variant-new"></a>
-#### Minor: `repr(C)` add enum variant
+#### Minor: `repr(C)` add enum variant {#repr-c-enum-variant-new}
 
 It is usually safe to add variants to a `repr(C)` enum, if the enum uses `non_exhastive`.
 See [enum-variant-new](#enum-variant-new) for more discussion.
@@ -359,8 +357,7 @@ fn main() {
 }
 ```
 
-<a id="repr-c-add"></a>
-#### Minor: Adding `repr(C)` to a default representation
+#### Minor: Adding `repr(C)` to a default representation {#repr-c-add}
 
 It is safe to add `repr(C)` to a struct, union, or enum with [the default representation].
 This is safe because users should not make assumptions about the alignment, layout, or size of types with with the default representation.
@@ -390,8 +387,7 @@ fn main() {
 }
 ```
 
-<a id="repr-int-enum-add"></a>
-#### Minor: Adding `repr(<int>)` to an enum
+#### Minor: Adding `repr(<int>)` to an enum {#repr-int-enum-add}
 
 It is safe to add `repr(<int>)` [primitive representation] to an enum with [the default representation].
 This is safe because users should not make assumptions about the alignment, layout, or size of an enum with the default representation.
@@ -423,8 +419,7 @@ fn main() {
 }
 ```
 
-<a id="repr-transparent-add"></a>
-#### Minor: Adding `repr(transparent)` to a default representation struct or enum
+#### Minor: Adding `repr(transparent)` to a default representation struct or enum {#repr-transparent-add}
 
 It is safe to add `repr(transparent)` to a struct or enum with [the default representation].
 This is safe because users should not make assumptions about the alignment, layout, or size of a struct or enum with the default representation.
@@ -450,8 +445,7 @@ fn main() {
 }
 ```
 
-<a id="repr-packed-add"></a>
-#### Major: Adding `repr(packed)` to a struct or union
+#### Major: Adding `repr(packed)` to a struct or union {#repr-packed-add}
 
 It is a breaking change to add `repr(packed)` to a struct or union.
 Making a type `repr(packed)` makes changes that can break code, such as being invalid to take a reference to a field, or causing truncation of disjoint closure captures.
@@ -510,8 +504,7 @@ fn main() {
 }
 ```
 
-<a id="repr-align-add"></a>
-#### Major: Adding `repr(align)` to a struct, union, or enum
+#### Major: Adding `repr(align)` to a struct, union, or enum {#repr-align-add}
 
 It is a breaking change to add `repr(align)` to a struct, union, or enum.
 Making a type `repr(align)` would break any use of that type in a `repr(packed)` type because that combination is not allowed.
@@ -550,8 +543,7 @@ fn main() {
 }
 ```
 
-<a id="repr-packed-remove"></a>
-#### Major: Removing `repr(packed)` from a struct or union
+#### Major: Removing `repr(packed)` from a struct or union {#repr-packed-remove}
 
 It is a breaking change to remove `repr(packed)` from a struct or union.
 This may change the alignment or layout that extern crates are relying on.
@@ -633,8 +625,7 @@ fn main() {
 }
 ```
 
-<a id="repr-packed-n-change"></a>
-#### Major: Changing the value N of `repr(packed(N))` if that changes the alignment or layout
+#### Major: Changing the value N of `repr(packed(N))` if that changes the alignment or layout {#repr-packed-n-change}
 
 It is a breaking change to change the value of N of `repr(packed(N))` if that changes the alignment or layout.
 This may change the alignment or layout that external crates are relying on.
@@ -672,8 +663,7 @@ fn main() {
 }
 ```
 
-<a id="repr-align-n-change"></a>
-#### Major: Changing the value N of `repr(align(N))` if that changes the alignment
+#### Major: Changing the value N of `repr(align(N))` if that changes the alignment {#repr-align-n-change}
 
 It is a breaking change to change the value `N` of `repr(align(N))` if that changes the alignment.
 This may change the alignment that external crates are relying on.
@@ -713,8 +703,7 @@ fn main() {
 }
 ```
 
-<a id="repr-align-remove"></a>
-#### Major: Removing `repr(align)` from a struct, union, or enum
+#### Major: Removing `repr(align)` from a struct, union, or enum {#repr-align-remove}
 
 It is a breaking change to remove `repr(align)` from a struct, union, or enum, if their layout was well-defined.
 This may change the alignment or layout that external crates are relying on.
@@ -752,8 +741,7 @@ fn main() {
 }
 ```
 
-<a id="repr-c-shuffle"></a>
-#### Major: Changing the order of public fields of a `repr(C)` type
+#### Major: Changing the order of public fields of a `repr(C)` type {#repr-c-shuffle}
 
 It is a breaking change to change the order of public fields of a `repr(C)` type.
 External crates may be relying on the specific ordering of the fields.
@@ -807,8 +795,7 @@ fn main() {
 # }
 ```
 
-<a id="repr-c-remove"></a>
-#### Major: Removing `repr(C)` from a struct, union, or enum
+#### Major: Removing `repr(C)` from a struct, union, or enum {#repr-c-remove}
 
 It is a breaking change to remove `repr(C)` from a struct, union, or enum.
 External crates may be relying on the specific layout of the type.
@@ -862,8 +849,7 @@ fn main() {
 # }
 ```
 
-<a id="repr-int-enum-remove"></a>
-#### Major: Removing `repr(<int>)` from an enum
+#### Major: Removing `repr(<int>)` from an enum {#repr-int-enum-remove}
 
 It is a breaking change to remove `repr(<int>)` from an enum.
 External crates may be assuming that the discriminant is a specific size.
@@ -899,8 +885,7 @@ fn main() {
 }
 ```
 
-<a id="repr-int-enum-change"></a>
-#### Major: Changing the primitive representation of a `repr(<int>)` enum
+#### Major: Changing the primitive representation of a `repr(<int>)` enum {#repr-int-enum-change}
 
 It is a breaking change to change the primitive representation of a `repr(<int>)` enum.
 External crates may be assuming that the discriminant is a specific size.
@@ -936,8 +921,7 @@ fn main() {
 }
 ```
 
-<a id="repr-transparent-remove"></a>
-#### Major: Removing `repr(transparent)` from a struct or enum
+#### Major: Removing `repr(transparent)` from a struct or enum {#repr-transparent-remove}
 
 It is a breaking change to remove `repr(transparent)` from a struct or enum.
 External crates may be relying on the type having the alignment, layout, or size of the transparent field.
