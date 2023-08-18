@@ -1,7 +1,8 @@
 use std::fmt;
 use std::task::Poll;
 
-use crate::core::{Dependency, PackageId, QueryKind, Registry, Summary};
+use crate::core::{Dependency, PackageId, Registry, Summary};
+use crate::sources::source::QueryKind;
 use crate::util::edit_distance::edit_distance;
 use crate::util::{Config, VersionExt};
 use anyhow::Error;

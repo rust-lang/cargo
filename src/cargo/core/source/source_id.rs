@@ -1,5 +1,6 @@
 use crate::core::PackageId;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
+use crate::sources::source::Source;
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::{config, CanonicalUrl, CargoResult, Config, IntoUrl, ToSemver};
@@ -29,8 +30,8 @@ static SOURCE_ID_CACHE: OnceLock<Mutex<HashSet<&'static SourceIdInner>>> = OnceL
 /// `SourceId` is usually associated with an instance of [`Source`], which is
 /// supposed to provide a `SourceId` via [`Source::source_id`] method.
 ///
-/// [`Source`]: super::Source
-/// [`Source::source_id`]: super::Source::source_id
+/// [`Source`]: crate::sources::source::Source
+/// [`Source::source_id`]: crate::sources::source::Source::source_id
 /// [`PackageId`]: super::super::PackageId
 #[derive(Clone, Copy, Eq, Debug)]
 pub struct SourceId {
@@ -395,7 +396,7 @@ impl SourceId {
         self,
         config: &'a Config,
         yanked_whitelist: &HashSet<PackageId>,
-    ) -> CargoResult<Box<dyn super::Source + 'a>> {
+    ) -> CargoResult<Box<dyn Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
             SourceKind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),

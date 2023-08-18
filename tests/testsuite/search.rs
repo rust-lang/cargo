@@ -89,7 +89,8 @@ fn setup() -> RegistryBuilder {
 fn not_update() {
     let registry = setup().build();
 
-    use cargo::core::{Shell, Source, SourceId};
+    use cargo::core::{Shell, SourceId};
+    use cargo::sources::source::Source;
     use cargo::sources::RegistrySource;
     use cargo::util::Config;
 

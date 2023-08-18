@@ -49,8 +49,8 @@
 //! [`Package`]: crate::core::package
 //! [`Target`]: crate::core::Target
 //! [`Manifest`]: crate::core::Manifest
-//! [`Source`]: crate::core::Source
-//! [`SourceMap`]: crate::core::SourceMap
+//! [`Source`]: crate::sources::source::Source
+//! [`SourceMap`]: crate::sources::source::SourceMap
 //! [`PackageRegistry`]: crate::core::registry::PackageRegistry
 //! [source implementations]: crate::sources
 //! [`Downloads`]: crate::core::package::Downloads

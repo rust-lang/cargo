@@ -3,9 +3,11 @@ use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 use std::task::Poll;
 
-use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, QueryKind, Source, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, SourceId, Summary};
 use crate::ops;
+use crate::sources::source::MaybePackage;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::util::{internal, CargoResult, Config};
 use anyhow::Context as _;
 use cargo_util::paths;

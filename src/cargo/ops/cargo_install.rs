@@ -5,10 +5,11 @@ use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
 use crate::core::{
-    Dependency, Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Target, Workspace,
+    Dependency, Edition, Package, PackageId, PackageIdSpec, SourceId, Target, Workspace,
 };
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
+use crate::sources::source::Source;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem, Rustc};

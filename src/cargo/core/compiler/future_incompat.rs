@@ -34,7 +34,8 @@
 //! [2]: https://github.com/rust-lang/rust/blob/9bb6e60d1f1360234aae90c97964c0fa5524f141/compiler/rustc_errors/src/json.rs#L312-L315
 
 use crate::core::compiler::BuildContext;
-use crate::core::{Dependency, PackageId, QueryKind, Workspace};
+use crate::core::{Dependency, PackageId, Workspace};
+use crate::sources::source::QueryKind;
 use crate::sources::SourceConfigMap;
 use crate::util::{iter_join, CargoResult, Config};
 use anyhow::{bail, format_err, Context};
