@@ -99,6 +99,7 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
                 .collect()
         })
         .unwrap_or_else(default_providers);
+    tracing::debug!(?global_providers);
 
     let providers = match cfg {
         // If there's a specific provider configured for this registry, use it.
@@ -442,6 +443,7 @@ fn credential_action(
         headers,
     };
     let providers = credential_provider(config, sid)?;
+    let mut any_not_found = false;
     for provider in providers {
         let args: Vec<&str> = provider
             .iter()
@@ -471,8 +473,8 @@ fn credential_action(
         })?;
         match provider.perform(&registry, &action, &args[1..]) {
             Ok(response) => return Ok(response),
-            Err(cargo_credential::Error::UrlNotSupported)
-            | Err(cargo_credential::Error::NotFound) => {}
+            Err(cargo_credential::Error::UrlNotSupported) => {}
+            Err(cargo_credential::Error::NotFound) => any_not_found = true,
             e => {
                 return e.with_context(|| {
                     format!(
@@ -483,7 +485,11 @@ fn credential_action(
             }
         }
     }
-    Err(cargo_credential::Error::NotFound.into())
+    if any_not_found {
+        Err(cargo_credential::Error::NotFound.into())
+    } else {
+        anyhow::bail!("no credential providers could handle the request")
+    }
 }
 
 /// Returns the token to use for the given registry.
