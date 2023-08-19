@@ -45,7 +45,7 @@ use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
-use anyhow::bail;
+use anyhow::{bail, Context};
 use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
@@ -871,8 +871,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                                 // not all targets may be queried before resolution since artifact dependencies
                                 // and per-pkg-targets are not immediately known.
                                 let mut activate_target = |target| {
+                                    let name = dep.name_in_toml();
                                     self.target_data
                                         .merge_compile_kind(CompileKind::Target(target))
+                                        .with_context(|| format!("failed to determine target information for target `{target}`.\n  \
+                                        Artifact dependency `{name}` in package `{pkg_id}` requires building for `{target}`", target = target.rustc_target()))
                                 };
                                 CargoResult::Ok((
                                     artifact.is_lib(),

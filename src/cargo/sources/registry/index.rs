@@ -178,7 +178,7 @@ struct Summaries {
 /// A lazily parsed [`IndexSummary`].
 enum MaybeIndexSummary {
     /// A summary which has not been parsed, The `start` and `end` are pointers
-    /// into [`Summaries::raw_data`] which this isRegistryDependency an entry of.
+    /// into [`Summaries::raw_data`] which this is an entry of.
     Unparsed { start: usize, end: usize },
 
     /// An actually parsed summary.
@@ -312,6 +312,9 @@ pub struct IndexPackage<'a> {
     /// versions are ignored.
     ///
     /// Version `2` schema adds the `features2` field.
+    ///
+    /// Version `3` schema adds `artifact`, `bindep_targes`, and `lib` for
+    /// artifact dependencies support.
     ///
     /// This provides a method to safely introduce changes to index entries
     /// and allow older versions of cargo to ignore newer entries it doesn't
@@ -821,7 +824,7 @@ impl<'a> SummariesCache<'a> {
             .get(..4)
             .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index schema version"))?;
         let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
-        if index_v != INDEX_V_MAX && index_v != 3 {
+        if index_v != INDEX_V_MAX {
             bail!(
                 "index schema version {index_v} doesn't match the version I know ({INDEX_V_MAX})",
             );
