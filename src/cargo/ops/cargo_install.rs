@@ -175,7 +175,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         // If we're installing in --locked mode and there's no `Cargo.lock` published
         // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
         if config.locked() && !ws.root().join("Cargo.lock").exists() {
-            config.shell().warn(format!(
+            config.emit_diagnostic(format!(
                 "no Cargo.lock file published in {}",
                 pkg.to_string()
             ))?;
@@ -201,7 +201,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
 
         if from_cwd {
             if pkg.manifest().edition() == Edition::Edition2015 {
-                config.shell().warn(
+                config.emit_diagnostic(
                     "Using `cargo install` to install the binaries for the \
                      package in current working directory is deprecated, \
                      use `cargo install --path .` instead. \
@@ -378,8 +378,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                 .collect();
             if !binaries.is_empty() {
                 self.config
-                    .shell()
-                    .warn(make_warning_about_missing_features(&binaries))?;
+                    .emit_diagnostic(make_warning_about_missing_features(&binaries))?;
             }
 
             return Ok(false);
@@ -472,8 +471,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             {
                 // Don't hard error on remove.
                 self.config
-                    .shell()
-                    .warn(format!("failed to remove orphan: {:?}", e))?;
+                    .emit_diagnostic(format!("failed to remove orphan: {:?}", e))?;
             }
 
             match tracker.save() {
@@ -717,7 +715,7 @@ pub fn install(
         let dst_in_path = env::split_paths(&path).any(|path| path == dst);
 
         if !dst_in_path {
-            config.shell().warn(&format!(
+            config.emit_diagnostic(&format!(
                 "be sure to add `{}` to your PATH to be \
              able to run the installed binaries",
                 dst.display()

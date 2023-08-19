@@ -214,7 +214,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         .collect::<CargoResult<Vec<PackageIdSpec>>>()?;
 
     if root_indexes.len() == 0 {
-        ws.config().shell().warn(
+        ws.config().emit_diagnostic(
             "nothing to print.\n\n\
         To find dependencies that require specific target platforms, \
         try to use option `--target all` first, and then narrow your search scope accordingly.",

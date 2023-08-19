@@ -454,8 +454,7 @@ impl<'cfg> Workspace<'cfg> {
 
         for message in warnings {
             self.config
-                .shell()
-                .warn(format!("[patch] in cargo config: {}", message))?
+                .emit_diagnostic(format!("[patch] in cargo config: {}", message))?
         }
 
         Ok(patch)
@@ -993,7 +992,7 @@ impl<'cfg> Workspace<'cfg> {
                         pkg.manifest_path().display(),
                         root_manifest.display(),
                     );
-                    self.config.shell().warn(&msg)
+                    self.config.emit_diagnostic(&msg)
                 };
                 if manifest.original().has_profiles() {
                     emit_warning("profiles")?;
@@ -1021,7 +1020,7 @@ impl<'cfg> Workspace<'cfg> {
                         .max()
                     {
                         let resolver = edition.default_resolve_behavior().to_manifest();
-                        self.config.shell().warn(format_args!("some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`, but virtual workspaces default to `resolver = \"1\"`"))?;
+                        self.config.emit_diagnostic(format_args!("some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`, but virtual workspaces default to `resolver = \"1\"`"))?;
                         self.config.shell().note(
                             "to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest",
                         )?;
@@ -1098,7 +1097,7 @@ impl<'cfg> Workspace<'cfg> {
                         // originated, so include the path.
                         format!("{}: {}", path.display(), warning.message)
                     };
-                    self.config.shell().warn(msg)?
+                    self.config.emit_diagnostic(msg)?
                 }
             }
         }

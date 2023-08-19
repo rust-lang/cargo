@@ -139,7 +139,7 @@ use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
 };
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{PackageId, Shell, TargetKind};
+use crate::core::{PackageId, TargetKind};
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::errors::AlreadyPrintedError;
 use crate::util::machine_message::{self, Message as _};
@@ -619,7 +619,7 @@ impl<'cfg> DrainState<'cfg> {
                 }
             }
             Message::Warning { id, warning } => {
-                cx.bcx.config.shell().warn(warning)?;
+                cx.bcx.config.emit_diagnostic(warning)?;
                 self.bump_warning_count(id, true, false);
             }
             Message::WarningCount {
@@ -745,7 +745,7 @@ impl<'cfg> DrainState<'cfg> {
         loop {
             if errors.count == 0 || cx.bcx.build_config.keep_going {
                 if let Err(e) = self.spawn_work_if_possible(cx, jobserver_helper, scope) {
-                    self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
+                    self.handle_error(cx.bcx.config, &mut errors, e);
                 }
             }
 
@@ -762,7 +762,7 @@ impl<'cfg> DrainState<'cfg> {
             // to the jobserver itself.
             for event in self.wait_for_events() {
                 if let Err(event_err) = self.handle_event(cx, plan, event) {
-                    self.handle_error(&mut cx.bcx.config.shell(), &mut errors, event_err);
+                    self.handle_error(cx.bcx.config, &mut errors, event_err);
                 }
             }
         }
@@ -788,7 +788,7 @@ impl<'cfg> DrainState<'cfg> {
 
         let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
         if let Err(e) = self.timings.finished(cx, &errors.to_error()) {
-            self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
+            self.handle_error(cx.bcx.config, &mut errors, e);
         }
         if cx.bcx.build_config.emit_json() {
             let mut shell = cx.bcx.config.shell();
@@ -797,7 +797,7 @@ impl<'cfg> DrainState<'cfg> {
             }
             .to_json_string();
             if let Err(e) = writeln!(shell.out(), "{}", msg) {
-                self.handle_error(&mut shell, &mut errors, e);
+                self.handle_error(cx.bcx.config, &mut errors, e);
             }
         }
 
@@ -828,15 +828,15 @@ impl<'cfg> DrainState<'cfg> {
 
     fn handle_error(
         &self,
-        shell: &mut Shell,
+        config: &Config,
         err_state: &mut ErrorsDuringDrain,
         new_err: impl Into<ErrorToHandle>,
     ) {
         let new_err = new_err.into();
         if new_err.print_always || err_state.count == 0 {
-            crate::display_error(&new_err.error, shell);
+            crate::display_error(&new_err.error, &mut config.shell());
             if err_state.count == 0 && !self.active.is_empty() {
-                let _ = shell.warn("build failed, waiting for other jobs to finish...");
+                let _ = config.emit_diagnostic("build failed, waiting for other jobs to finish...");
             }
             err_state.count += 1;
         } else {
@@ -953,7 +953,7 @@ impl<'cfg> DrainState<'cfg> {
                 }
 
                 for warning in output.warnings.iter() {
-                    bcx.config.shell().warn(warning)?;
+                    bcx.config.emit_diagnostic(warning)?;
                 }
 
                 if msg.is_some() {
@@ -1058,7 +1058,7 @@ impl<'cfg> DrainState<'cfg> {
         }
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.
-        let _ = config.shell().warn(message);
+        let _ = config.emit_diagnostic(message);
     }
 
     fn finish(

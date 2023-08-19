@@ -34,7 +34,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let version = match args.get_one::<String>("format-version") {
         None => {
-            config.shell().warn(
+            config.emit_diagnostic(
                 "please specify `--format-version` flag explicitly \
                  to avoid compatibility problems",
             )?;

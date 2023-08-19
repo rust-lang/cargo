@@ -187,7 +187,7 @@ fn read_nested_packages(
             // by users so we can hide the warning about those since the user is unlikely
             // to care about those cases.
             if pkg.publish().is_none() {
-                let _ = config.shell().warn(format!(
+                let _ = config.emit_diagnostic(format!(
                     "skipping duplicate package `{}` found at `{}`",
                     pkg.name(),
                     path.display()

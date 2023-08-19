@@ -59,7 +59,7 @@ impl Packages {
                     .map(Package::package_id)
                     .map(PackageIdSpec::from_package_id)
                     .collect();
-                let warn = |e| ws.config().shell().warn(e);
+                let warn = |e| ws.config().emit_diagnostic(e);
                 emit_package_not_found(ws, names, true).or_else(warn)?;
                 emit_pattern_not_found(ws, patterns, true).or_else(warn)?;
                 specs

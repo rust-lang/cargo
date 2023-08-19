@@ -1,4 +1,4 @@
-use crate::core::{Edition, Shell, Workspace};
+use crate::core::{Edition, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
@@ -164,12 +164,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
 }
 
 /// See also `util::toml::embedded::sanitize_name`
-fn check_name(
-    name: &str,
-    show_name_help: bool,
-    has_bin: bool,
-    shell: &mut Shell,
-) -> CargoResult<()> {
+fn check_name(name: &str, show_name_help: bool, has_bin: bool, config: &Config) -> CargoResult<()> {
     // If --name is already used to override, no point in suggesting it
     // again as a fix.
     let name_help = if show_name_help {
@@ -214,7 +209,7 @@ fn check_name(
                 name_help
             );
         } else {
-            shell.warn(format!(
+            config.emit_diagnostic(format!(
                 "the name `{}` will not support binary \
                 executables with that name, \
                 it conflicts with cargo's build directory names",
@@ -230,7 +225,7 @@ fn check_name(
         );
     }
     if ["core", "std", "alloc", "proc_macro", "proc-macro"].contains(&name) {
-        shell.warn(format!(
+        config.emit_diagnostic(format!(
             "the name `{}` is part of Rust's standard library\n\
             It is recommended to use a different name to avoid problems.{}",
             name,
@@ -245,7 +240,7 @@ fn check_name(
                 name_help
             );
         } else {
-            shell.warn(format!(
+            config.emit_diagnostic(format!(
                 "the name `{}` is a reserved Windows filename\n\
                 This package will not work on Windows platforms.",
                 name
@@ -253,7 +248,7 @@ fn check_name(
         }
     }
     if restricted_names::is_non_ascii_name(name) {
-        shell.warn(format!(
+        config.emit_diagnostic(format!(
             "the name `{}` contains non-ASCII characters\n\
             Non-ASCII crate names are not supported by Rust.",
             name
@@ -264,11 +259,11 @@ fn check_name(
 }
 
 /// Checks if the path contains any invalid PATH env characters.
-fn check_path(path: &Path, shell: &mut Shell) -> CargoResult<()> {
+fn check_path(path: &Path, config: &Config) -> CargoResult<()> {
     // warn if the path contains characters that will break `env::join_paths`
     if let Err(_) = paths::join_paths(slice::from_ref(&OsStr::new(path)), "") {
         let path = path.to_string_lossy();
-        shell.warn(format!(
+        config.emit_diagnostic(format!(
             "the path `{path}` contains invalid PATH characters (usually `:`, `;`, or `\"`)\n\
             It is recommended to use a different name to avoid problems."
         ))?;
@@ -436,12 +431,12 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     }
 
-    check_path(path, &mut config.shell())?;
+    check_path(path, config)?;
 
     let is_bin = opts.kind.is_bin();
 
     let name = get_name(path, opts)?;
-    check_name(name, opts.name.is_none(), is_bin, &mut config.shell())?;
+    check_name(name, opts.name.is_none(), is_bin, config)?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
@@ -475,7 +470,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
 
-    check_path(path, &mut config.shell())?;
+    check_path(path, config)?;
 
     let name = get_name(path, opts)?;
 
@@ -495,7 +490,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
         } else {
             NewProjectKind::Lib
         };
-        config.shell().warn(format!(
+        config.emit_diagnostic(format!(
             "file `{}` seems to be a {} file",
             src_paths_types[0].relative_path, file_type
         ))?;
@@ -511,7 +506,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
         )
     }
 
-    check_name(name, opts.name.is_none(), has_bin, &mut config.shell())?;
+    check_name(name, opts.name.is_none(), has_bin, config)?;
 
     let mut version_control = opts.version_control;
 
@@ -889,7 +884,7 @@ mod tests {
             "compiling this new package may not work due to invalid \
              workspace configuration",
             &e,
-            &mut config.shell(),
+            config,
         );
     }
 

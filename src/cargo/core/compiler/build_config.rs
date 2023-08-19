@@ -73,7 +73,7 @@ impl BuildConfig {
         let cfg = config.build_config()?;
         let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
         if jobs.is_some() && config.jobserver_from_env().is_some() {
-            config.shell().warn(
+            config.emit_diagnostic(
                 "a `-j` argument was passed to Cargo but Cargo is \
                  also configured with an external jobserver in \
                  its environment, ignoring the `-j` parameter",

@@ -249,7 +249,7 @@ impl<'config> ConfigMapAccess<'config> {
                 .iter()
                 .filter(|(k, _v)| !given_fields.iter().any(|gk| gk == k));
             for (unused_key, unused_value) in unused_keys {
-                de.config.shell().warn(format!(
+                de.config.emit_diagnostic(format!(
                     "unused config key `{}.{}` in `{}`",
                     de.key,
                     unused_key,

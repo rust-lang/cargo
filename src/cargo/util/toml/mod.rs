@@ -1952,7 +1952,7 @@ impl TomlManifest {
         let mut package = match (&me.package, &me.project) {
             (Some(_), Some(project)) => {
                 if source_id.is_path() {
-                    config.shell().warn(format!(
+                    config.emit_diagnostic(format!(
                         "manifest at `{}` contains both `project` and `package`, \
                     this could become a hard error in the future",
                         package_root.display()
@@ -1963,7 +1963,7 @@ impl TomlManifest {
             (Some(package), None) => package.clone(),
             (None, Some(project)) => {
                 if source_id.is_path() {
-                    config.shell().warn(format!(
+                    config.emit_diagnostic(format!(
                         "manifest at `{}` contains `[project]` instead of `[package]`, \
                                 this could become a hard error in the future",
                         package_root.display()

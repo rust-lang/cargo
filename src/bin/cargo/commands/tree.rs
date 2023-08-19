@@ -107,14 +107,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         return Ok(());
     }
     let prefix = if args.flag("no-indent") {
-        config
-            .shell()
-            .warn("the --no-indent flag has been changed to --prefix=none")?;
+        config.emit_diagnostic("the --no-indent flag has been changed to --prefix=none")?;
         "none"
     } else if args.flag("prefix-depth") {
-        config
-            .shell()
-            .warn("the --prefix-depth flag has been changed to --prefix=depth")?;
+        config.emit_diagnostic("the --prefix-depth flag has been changed to --prefix=depth")?;
         "depth"
     } else {
         args.get_one::<String>("prefix").unwrap().as_str()
@@ -123,7 +119,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let no_dedupe = args.flag("no-dedupe") || args.flag("all");
     if args.flag("all") {
-        config.shell().warn(
+        config.emit_diagnostic(
             "The `cargo tree` --all flag has been changed to --no-dedupe, \
              and may be removed in a future version.\n\
              If you are looking to display all workspace members, use the --workspace flag.",
@@ -131,9 +127,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 
     let targets = if args.flag("all-targets") {
-        config
-            .shell()
-            .warn("the --all-targets flag has been changed to --target=all")?;
+        config.emit_diagnostic("the --all-targets flag has been changed to --target=all")?;
         vec!["all".to_string()]
     } else {
         args._values_of("target")
@@ -228,9 +222,7 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches) -> CargoResult<(HashSet<
         );
 
         if args.flag("no-dev-dependencies") {
-            config
-                .shell()
-                .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
+            config.emit_diagnostic("the --no-dev-dependencies flag has changed to -e=no-dev")?;
             kinds.push("no-dev");
         }
 

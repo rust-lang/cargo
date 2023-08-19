@@ -217,7 +217,9 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
     }
 
     if options.dry_run {
-        options.config.shell().warn("aborting add due to dry run")?;
+        options
+            .config
+            .emit_diagnostic("aborting add due to dry run")?;
     } else {
         manifest.write()?;
     }
@@ -291,7 +293,7 @@ fn resolve_dependency(
             let dependency = crate_spec.to_dependency()?.set_source(src);
             let selected = select_package(&dependency, config, registry)?;
             if dependency.name != selected.name {
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "translating `{}` to `{}`",
                     dependency.name, selected.name,
                 ))?;
@@ -316,7 +318,7 @@ fn resolve_dependency(
             let dependency = crate_spec.to_dependency()?.set_source(src);
             let selected = select_package(&dependency, config, registry)?;
             if dependency.name != selected.name {
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "translating `{}` to `{}`",
                     dependency.name, selected.name,
                 ))?;
@@ -384,7 +386,7 @@ fn resolve_dependency(
             )?;
 
             if dependency.name != latest.name {
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "translating `{}` to `{}`",
                     dependency.name, latest.name,
                 ))?;
@@ -611,7 +613,7 @@ fn get_latest_dependency(
                         })?;
 
                     if latest_msrv.version() < latest.version() {
-                        config.shell().warn(format_args!(
+                        config.emit_diagnostic(format_args!(
                             "ignoring `{dependency}@{latest_version}` (which has a rust-version of \
                              {latest_rust_version}) to satisfy this package's rust-version of \
                              {rust_version} (use `--ignore-rust-version` to override)",

@@ -222,14 +222,14 @@ pub fn create_bcx<'a, 'cfg>(
         | CompileMode::Bench
         | CompileMode::RunCustomBuild => {
             if ws.config().get_env("RUST_FLAGS").is_ok() {
-                config.shell().warn(
+                config.emit_diagnostic(
                     "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
                 )?;
             }
         }
         CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::Docscrape => {
             if ws.config().get_env("RUSTDOC_FLAGS").is_ok() {
-                config.shell().warn(
+                config.emit_diagnostic(
                     "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
                 )?;
             }
@@ -331,7 +331,7 @@ pub fn create_bcx<'a, 'cfg>(
     let profiles = Profiles::new(ws, build_config.requested_profile)?;
     profiles.validate_packages(
         ws.profiles(),
-        &mut config.shell(),
+        config,
         workspace_resolve.as_ref().unwrap_or(&resolve),
     )?;
 

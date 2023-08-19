@@ -597,7 +597,7 @@ impl<'cfg> PackageSet<'cfg> {
                         .map(|artifact| artifact.is_lib())
                         .unwrap_or(true)
                 }) {
-                    ws.config().shell().warn(&format!(
+                    ws.config().emit_diagnostic(&format!(
                         "{} ignoring invalid dependency `{}` which is missing a lib target",
                         pkg_id,
                         dep.name_in_toml(),

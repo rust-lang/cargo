@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io::IsTerminal;
 
-use termcolor::Color::{Cyan, Green, Red, Yellow};
+use termcolor::Color::{Cyan, Green, Red};
 use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
 
 use crate::util::errors::CargoResult;
@@ -126,7 +126,7 @@ impl Shell {
 
     /// Prints a message, where the status will have `color` color, and can be justified. The
     /// messages follows without color.
-    fn print(
+    pub(crate) fn print(
         &mut self,
         status: &dyn fmt::Display,
         message: Option<&dyn fmt::Display>,
@@ -256,14 +256,6 @@ impl Shell {
         }
         self.output
             .message_stderr(&"error", Some(&message), Red, false)
-    }
-
-    /// Prints an amber 'warning' message.
-    pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        match self.verbosity {
-            Verbosity::Quiet => Ok(()),
-            _ => self.print(&"warning", Some(&message), Yellow, false),
-        }
     }
 
     /// Prints a cyan 'note' message.

@@ -205,10 +205,11 @@ pub fn display_error(err: &Error, shell: &mut Shell) {
 
 /// Displays a warning, with an error object providing detailed information
 /// and context.
-pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell) {
-    drop(shell.warn(warning));
+pub fn display_warning_with_error(warning: &str, err: &Error, config: &Config) {
+    drop(config.emit_diagnostic(warning));
+    let mut shell = config.shell();
     drop(writeln!(shell.err()));
-    _display_error(err, shell, false);
+    _display_error(err, &mut shell, false);
 }
 
 fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {

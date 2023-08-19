@@ -250,7 +250,7 @@ fn wait_for_publish(
 
         let elapsed = now.elapsed();
         if timeout < elapsed {
-            config.shell().warn(format!(
+            config.emit_diagnostic(format!(
                 "timed out waiting for `{short_pkg_description}` to be available in {source_description}",
             ))?;
             config.shell().note(
@@ -387,7 +387,7 @@ fn transmit(
 
     // Do not upload if performing a dry run
     if dry_run {
-        config.shell().warn("aborting upload due to dry run")?;
+        config.emit_diagnostic("aborting upload due to dry run")?;
         return Ok(());
     }
 
@@ -438,7 +438,7 @@ fn transmit(
              ",
             warnings.invalid_categories.join(", ")
         );
-        config.shell().warn(&msg)?;
+        config.emit_diagnostic(&msg)?;
     }
 
     if !warnings.invalid_badges.is_empty() {
@@ -450,12 +450,12 @@ fn transmit(
              for valid badge types and their required attributes.",
             warnings.invalid_badges.join(", ")
         );
-        config.shell().warn(&msg)?;
+        config.emit_diagnostic(&msg)?;
     }
 
     if !warnings.other.is_empty() {
         for msg in warnings.other {
-            config.shell().warn(&msg)?;
+            config.emit_diagnostic(&msg)?;
         }
     }
 

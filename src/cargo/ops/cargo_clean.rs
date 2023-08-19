@@ -100,7 +100,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Translate the spec to a Package.
         let spec = PackageIdSpec::parse(spec_str)?;
         if spec.version().is_some() {
-            config.shell().warn(&format!(
+            config.emit_diagnostic(&format!(
                 "version qualifier in `-p {}` is ignored, \
                 cleaning all versions of `{}` found",
                 spec_str,
@@ -108,7 +108,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
             ))?;
         }
         if spec.url().is_some() {
-            config.shell().warn(&format!(
+            config.emit_diagnostic(&format!(
                 "url qualifier in `-p {}` ignored, \
                 cleaning all versions of `{}` found",
                 spec_str,

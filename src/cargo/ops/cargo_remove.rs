@@ -55,8 +55,7 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
     if options.dry_run {
         options
             .config
-            .shell()
-            .warn("aborting remove due to dry run")?;
+            .emit_diagnostic("aborting remove due to dry run")?;
     } else {
         manifest.write()?;
     }

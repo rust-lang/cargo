@@ -302,7 +302,7 @@ impl TargetInfo {
                 continue;
             }
             if !reached_fixed_point {
-                config.shell().warn("non-trivial mutual dependency between target-specific configuration and RUSTFLAGS")?;
+                config.emit_diagnostic("non-trivial mutual dependency between target-specific configuration and RUSTFLAGS")?;
             }
 
             return Ok(TargetInfo {

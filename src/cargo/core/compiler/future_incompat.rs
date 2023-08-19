@@ -180,7 +180,7 @@ impl OnDiskReports {
             crate::display_warning_with_error(
                 "failed to write on-disk future incompatible report",
                 &e,
-                &mut ws.config().shell(),
+                ws.config(),
             );
         }
 
@@ -395,7 +395,7 @@ pub fn save_and_display_report(
             crate::display_warning_with_error(
                 "failed to read future-incompat config from disk",
                 &e,
-                &mut bcx.config.shell(),
+                bcx.config,
             );
             true
         }
@@ -434,7 +434,7 @@ pub fn save_and_display_report(
     let package_vers: Vec<_> = package_ids.iter().map(|pid| pid.to_string()).collect();
 
     if should_display_message || bcx.build_config.future_incompat_report {
-        drop(bcx.config.shell().warn(&format!(
+        drop(bcx.config.emit_diagnostic(&format!(
             "the following packages contain code that will be rejected by a future \
              version of Rust: {}",
             package_vers.join(", ")

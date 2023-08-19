@@ -110,14 +110,14 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
             ..
         }) if allow_cred_proc => {
             if let Some(token) = token {
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "{sid} has a token configured in {} that will be ignored \
                     because a credential-provider is configured for this registry`",
                     token.definition
                 ))?;
             }
             if let Some(secret_key) = secret_key {
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "{sid} has a secret-key configured in {} that will be ignored \
                     because a credential-provider is configured for this registry`",
                     secret_key.definition
@@ -141,14 +141,14 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
             match (token_pos, paseto_pos) {
                 (Some(token_pos), Some(paseto_pos)) => {
                     if token_pos < paseto_pos {
-                        config.shell().warn(format!(
+                        config.emit_diagnostic(format!(
                             "{sid} has a `secret_key` configured in {} that will be ignored \
                         because a `token` is also configured, and the `cargo:token` provider is \
                         configured with higher precedence",
                             secret_key.definition
                         ))?;
                     } else {
-                        config.shell().warn(format!("{sid} has a `token` configured in {} that will be ignored \
+                        config.emit_diagnostic(format!("{sid} has a `token` configured in {} that will be ignored \
                         because a `secret_key` is also configured, and the `cargo:paseto` provider is \
                         configured with higher precedence", token.definition))?;
                     }
@@ -168,7 +168,7 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:token"))
             {
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "{sid} has a token configured in {} that will be ignored \
                     because the `cargo:token` credential provider is not listed in \
                     `registry.global-credential-providers`",
@@ -187,7 +187,7 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:paseto"))
             {
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "{sid} has a secret-key configured in {} that will be ignored \
                     because the `cargo:paseto` credential provider is not listed in \
                     `registry.global-credential-providers`",

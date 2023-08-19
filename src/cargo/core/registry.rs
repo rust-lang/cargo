@@ -303,7 +303,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 );
 
                 if dep.features().len() != 0 || !dep.uses_default_features() {
-                    self.source_config.config().shell().warn(format!(
+                    self.source_config.config().emit_diagnostic(format!(
                         "patch for `{}` uses the features mechanism. \
                         default-features and features will not take effect because the patch dependency does not support this mechanism",
                         dep.package_name()
@@ -546,7 +546,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
                 dep.package_name(),
                 boilerplate
             );
-            self.source_config.config().shell().warn(&msg)?;
+            self.source_config.config().emit_diagnostic(&msg)?;
             return Ok(());
         }
 
@@ -559,7 +559,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
                 dep.package_name(),
                 boilerplate
             );
-            self.source_config.config().shell().warn(&msg)?;
+            self.source_config.config().emit_diagnostic(&msg)?;
             return Ok(());
         }
 

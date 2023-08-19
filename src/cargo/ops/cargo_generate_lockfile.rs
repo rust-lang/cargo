@@ -159,8 +159,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     }
     if opts.dry_run {
         opts.config
-            .shell()
-            .warn("not updating lockfile due to dry run")?;
+            .emit_diagnostic("not updating lockfile due to dry run")?;
     } else {
         ops::write_pkg_lockfile(ws, &mut resolve)?;
     }

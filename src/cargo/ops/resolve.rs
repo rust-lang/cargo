@@ -155,14 +155,11 @@ pub fn resolve_ws_with_opts<'cfg>(
                 .any(|r| replace_spec.matches(r) && !dep.matches_id(r))
             {
                 ws.config()
-                    .shell()
-                    .warn(format!("package replacement is not used: {}", replace_spec))?
+                    .emit_diagnostic(format!("package replacement is not used: {}", replace_spec))?
             }
 
             if dep.features().len() != 0 || !dep.uses_default_features() {
-                ws.config()
-                .shell()
-                .warn(format!(
+                ws.config().emit_diagnostic(format!(
                     "replacement for `{}` uses the features mechanism. \
                     default-features and features will not take effect because the replacement dependency does not support this mechanism",
                     dep.package_name()
@@ -845,7 +842,7 @@ fn emit_warnings_of_unused_patches(
                 for id in ids.iter() {
                     write!(msg, "\n    {}", id.display_registry_name())?;
                 }
-                ws.config().shell().warn(msg)?;
+                ws.config().emit_diagnostic(msg)?;
             }
             _ => unemitted_unused_patches.push(unused),
         }
@@ -857,9 +854,11 @@ fn emit_warnings_of_unused_patches(
             .iter()
             .map(|pkgid| format!("Patch `{}` {}", pkgid, MESSAGE))
             .collect();
-        ws.config()
-            .shell()
-            .warn(format!("{}\n{}", warnings.join("\n"), UNUSED_PATCH_WARNING))?;
+        ws.config().emit_diagnostic(format!(
+            "{}\n{}",
+            warnings.join("\n"),
+            UNUSED_PATCH_WARNING
+        ))?;
     }
 
     return Ok(());

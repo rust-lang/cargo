@@ -454,7 +454,7 @@ pub trait ArgMatchesExt {
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
                 if self.flag("release") {
-                    config.shell().warn(
+                    config.emit_diagnostic(
                         "the `--release` flag should not be specified with the `--profile` flag\n\
                          The `--release` flag will be ignored.\n\
                          This was historically accepted, but will become an error \

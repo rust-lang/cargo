@@ -1,4 +1,4 @@
-use crate::core::{Shell, Workspace};
+use crate::core::Workspace;
 use crate::ops;
 use crate::util::config::{Config, PathAndArgs};
 use crate::util::CargoResult;
@@ -35,9 +35,8 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
                 cfg.map(|path_args| (path_args.path.resolve_program(ws.config()), path_args.args))
             };
 
-            let mut shell = ws.config().shell();
-            shell.status("Opening", path.display())?;
-            open_docs(&path, &mut shell, config_browser, ws.config())?;
+            ws.config().shell().status("Opening", path.display())?;
+            open_docs(&path, config_browser, ws.config())?;
         }
     }
 
@@ -46,7 +45,6 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
 
 fn open_docs(
     path: &Path,
-    shell: &mut Shell,
     config_browser: Option<(PathBuf, Vec<String>)>,
     config: &Config,
 ) -> CargoResult<()> {
@@ -56,7 +54,7 @@ fn open_docs(
     match browser {
         Some((browser, initial_args)) => {
             if let Err(e) = Command::new(&browser).args(initial_args).arg(path).status() {
-                shell.warn(format!(
+                config.emit_diagnostic(format!(
                     "Couldn't open docs with {}: {}",
                     browser.to_string_lossy(),
                     e
@@ -66,7 +64,7 @@ fn open_docs(
         None => {
             if let Err(e) = opener::open(&path) {
                 let e = e.into();
-                crate::display_warning_with_error("couldn't open docs", &e, shell);
+                crate::display_warning_with_error("couldn't open docs", &e, config);
             }
         }
     };

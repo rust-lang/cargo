@@ -10,7 +10,7 @@ use std::task::Poll;
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::CliFeatures;
 use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
-use crate::core::{Feature, Shell, Verbosity, Workspace};
+use crate::core::{Feature, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
 use crate::util::config::JobsConfig;
@@ -95,7 +95,7 @@ pub fn package_one(
     }
 
     if !pkg.manifest().exclude().is_empty() && !pkg.manifest().include().is_empty() {
-        config.shell().warn(
+        config.emit_diagnostic(
             "both package.include and package.exclude are specified; \
              the exclude list will be ignored",
         )?;
@@ -233,7 +233,7 @@ fn build_ar_list(
 
     for src_file in &src_files {
         let rel_path = src_file.strip_prefix(&root)?;
-        check_filename(rel_path, &mut ws.config().shell())?;
+        check_filename(rel_path, ws.config())?;
         let rel_str = rel_path.to_str().ok_or_else(|| {
             anyhow::format_err!("non-utf8 path in source directory: {}", rel_path.display())
         })?;
@@ -276,7 +276,7 @@ fn build_ar_list(
                 contents: FileContents::Generated(GeneratedFile::Manifest),
             });
     } else {
-        ws.config().shell().warn(&format!(
+        ws.config().emit_diagnostic(&format!(
             "no `Cargo.toml` file found when packaging `{}` (note the case of the file name).",
             pkg.name()
         ))?;
@@ -361,7 +361,7 @@ fn check_for_file_and_add(
             // The file exists somewhere outside of the package.
             let file_name = file_path.file_name().unwrap();
             if result.iter().any(|ar| ar.rel_path == file_name) {
-                ws.config().shell().warn(&format!(
+                ws.config().emit_diagnostic(&format!(
                     "{} `{}` appears to be a path outside of the package, \
                             but there is already a file named `{}` in the root of the package. \
                             The archived crate will contain the copy in the root of the package. \
@@ -395,7 +395,7 @@ fn warn_on_nonexistent_file(
     } else {
         format!(" (relative to `{}`)", pkg.root().display())
     };
-    ws.config().shell().warn(&format!(
+    ws.config().emit_diagnostic(&format!(
         "{manifest_key_name} `{}` does not appear to exist{}.\n\
                 Please update the {manifest_key_name} setting in the manifest at `{}`\n\
                 This may become a hard error in the future.",
@@ -482,7 +482,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
         }
         things.push_str(missing.last().unwrap());
 
-        config.shell().warn(&format!(
+        config.emit_diagnostic(&format!(
             "manifest has no {things}.\n\
              See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.",
             things = things
@@ -523,18 +523,15 @@ fn check_repo_state(
                     }));
                 }
             }
-            config.shell().verbose(|shell| {
-                shell.warn(format!(
-                    "No (git) Cargo.toml found at `{}` in workdir `{}`",
-                    path.display(),
-                    workdir.display()
-                ))
-            })?;
+            config.emit_verbose_diagnostic(format!(
+                "No (git) Cargo.toml found at `{}` in workdir `{}`",
+                path.display(),
+                workdir.display()
+            ))?;
         }
     } else {
-        config.shell().verbose(|shell| {
-            shell.warn(format!("No (git) VCS found for `{}`", p.root().display()))
-        })?;
+        config
+            .emit_verbose_diagnostic(format!("No (git) VCS found for `{}`", p.root().display()))?;
     }
 
     // No VCS with a checked in `Cargo.toml` found, so we don't know if the
@@ -828,7 +825,7 @@ pub fn check_yanked(
 
     for (pkg_id, is_yanked) in results {
         if is_yanked? {
-            config.shell().warn(format!(
+            config.emit_diagnostic(format!(
                 "package `{}` in Cargo.lock is yanked in registry `{}`, {}",
                 pkg_id,
                 pkg_id.source_id().display_registry_name(),
@@ -990,7 +987,7 @@ fn report_hash_difference(orig: &HashMap<PathBuf, u64>, after: &HashMap<PathBuf,
 //
 // To help out in situations like this, issue about weird filenames when
 // packaging as a "heads up" that something may not work on other platforms.
-fn check_filename(file: &Path, shell: &mut Shell) -> CargoResult<()> {
+fn check_filename(file: &Path, config: &Config) -> CargoResult<()> {
     let name = match file.file_name() {
         Some(name) => name,
         None => return Ok(()),
@@ -1012,7 +1009,7 @@ fn check_filename(file: &Path, shell: &mut Shell) -> CargoResult<()> {
         )
     }
     if restricted_names::is_windows_reserved_path(file) {
-        shell.warn(format!(
+        config.emit_diagnostic(format!(
             "file {} is a reserved Windows filename, \
                 it will not work on Windows platforms",
             file.display()

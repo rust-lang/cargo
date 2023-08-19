@@ -361,7 +361,7 @@ impl<'a> UnitGenerator<'a, '_> {
                         if self.mode.is_doc_test() && !target.doctestable() {
                             let types = target.rustc_crate_types();
                             let types_str: Vec<&str> = types.iter().map(|t| t.as_str()).collect();
-                            self.ws.config().shell().warn(format!(
+                            self.ws.config().emit_diagnostic(format!(
                       "doc tests are not supported for crate type(s) `{}` in package `{}`",
                       types_str.join(", "),
                       pkg.name()
@@ -487,9 +487,8 @@ impl<'a> UnitGenerator<'a, '_> {
 
         let skipped_examples = skipped_examples.into_inner();
         if !skipped_examples.is_empty() {
-            let mut shell = self.ws.config().shell();
             let example_str = skipped_examples.join(", ");
-            shell.warn(format!(
+            self.ws.config().emit_diagnostic(format!(
                 "\
 Rustdoc did not scrape the following examples because they require dev-dependencies: {example_str}
     If you want Rustdoc to scrape these examples, then add `doc-scrape-examples = true`
@@ -505,7 +504,6 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
     /// We want to emit a warning to make sure the user knows that this run is a no-op,
     /// and their code remains unchecked despite cargo not returning any errors
     fn unmatched_target_filters(&self, units: &[Unit]) -> CargoResult<()> {
-        let mut shell = self.ws.config().shell();
         if let CompileFilter::Only {
             all_targets,
             lib: _,
@@ -536,7 +534,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
                     filters.pop();
                 }
 
-                return shell.warn(format!(
+                return self.ws.config().emit_diagnostic(format!(
                     "Target {}{} specified, but no targets matched. This is a no-op",
                     if miss_count > 1 { "filters" } else { "filter" },
                     filters,
@@ -562,13 +560,12 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
             Some(resolve) => resolve,
         };
 
-        let mut shell = self.ws.config().shell();
         for feature in required_features {
             let fv = FeatureValue::new(feature.into());
             match &fv {
                 FeatureValue::Feature(f) => {
                     if !summary.features().contains_key(f) {
-                        shell.warn(format!(
+                        self.ws.config().emit_diagnostic(format!(
                             "invalid feature `{}` in required-features of target `{}`: \
                       `{}` is not present in [features] section",
                             fv, target_name, fv
@@ -607,7 +604,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
                                     dep.name_in_toml() == *dep_feature && dep.is_optional()
                                 })
                             {
-                                shell.warn(format!(
+                                self.ws.config().emit_diagnostic(format!(
                                     "invalid feature `{}` in required-features of target `{}`: \
                               feature `{}` does not exist in package `{}`",
                                     fv, target_name, dep_feature, dep_id
@@ -615,7 +612,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
                             }
                         }
                         None => {
-                            shell.warn(format!(
+                            self.ws.config().emit_diagnostic(format!(
                                 "invalid feature `{}` in required-features of target `{}`: \
                           dependency `{}` does not exist",
                                 fv, target_name, dep_name

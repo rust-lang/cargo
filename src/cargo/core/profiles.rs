@@ -24,7 +24,7 @@
 use crate::core::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
-use crate::core::{PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
+use crate::core::{PackageId, PackageIdSpec, Resolve, Target, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::toml::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
@@ -341,7 +341,7 @@ impl Profiles {
     pub fn validate_packages(
         &self,
         profiles: Option<&TomlProfiles>,
-        shell: &mut Shell,
+        config: &Config,
         resolve: &Resolve,
     ) -> CargoResult<()> {
         for (name, profile) in &self.by_name {
@@ -364,7 +364,7 @@ impl Profiles {
             // iterates over the manifest profiles only.
             if let Some(profiles) = profiles {
                 if let Some(toml_profile) = profiles.get(name) {
-                    validate_packages_unmatched(shell, resolve, name, toml_profile, &found)?;
+                    validate_packages_unmatched(config, resolve, name, toml_profile, &found)?;
                 }
             }
         }
@@ -1225,7 +1225,7 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
             )
         })?;
     for warning in warnings {
-        ws.config().shell().warn(warning)?;
+        ws.config().emit_diagnostic(warning)?;
     }
     Ok(Some(profile.val))
 }
@@ -1291,7 +1291,7 @@ fn validate_packages_unique(
 ///
 /// This helps check for typos and mistakes.
 fn validate_packages_unmatched(
-    shell: &mut Shell,
+    config: &Config,
     resolve: &Resolve,
     name: &str,
     toml: &TomlProfile,
@@ -1325,12 +1325,12 @@ fn validate_packages_unmatched(
             .collect();
         if name_matches.is_empty() {
             let suggestion = closest_msg(&spec.name(), resolve.iter(), |p| p.name().as_str());
-            shell.warn(format!(
+            config.emit_diagnostic(format!(
                 "profile package spec `{}` in profile `{}` did not match any packages{}",
                 spec, name, suggestion
             ))?;
         } else {
-            shell.warn(format!(
+            config.emit_diagnostic(format!(
                 "profile package spec `{}` in profile `{}` \
                  has a version or URL that does not match any of the packages: {}",
                 spec,

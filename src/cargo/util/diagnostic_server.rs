@@ -125,7 +125,7 @@ impl<'a> DiagnosticPrinter<'a> {
             }
             Message::ReplaceFailed { file, message } => {
                 let msg = format!("error applying suggestions to `{}`\n", file);
-                self.config.shell().warn(&msg)?;
+                self.config.emit_diagnostic(&msg)?;
                 write!(
                     self.config.shell().err(),
                     "The full error message was:\n\n> {}\n\n",
@@ -146,15 +146,15 @@ impl<'a> DiagnosticPrinter<'a> {
                 abnormal_exit,
             } => {
                 if let Some(ref krate) = *krate {
-                    self.config.shell().warn(&format!(
+                    self.config.emit_diagnostic(&format!(
                         "failed to automatically apply fixes suggested by rustc \
                          to crate `{}`",
                         krate,
                     ))?;
                 } else {
-                    self.config
-                        .shell()
-                        .warn("failed to automatically apply fixes suggested by rustc")?;
+                    self.config.emit_diagnostic(
+                        "failed to automatically apply fixes suggested by rustc",
+                    )?;
                 }
                 if !files.is_empty() {
                     writeln!(
@@ -207,7 +207,7 @@ impl<'a> DiagnosticPrinter<'a> {
                     message: "".to_string(), // Dummy, so that this only long-warns once.
                     edition: *edition,
                 }) {
-                    self.config.shell().warn(&format!("\
+                    self.config.emit_diagnostic(&format!("\
 {}
 
 If you are trying to migrate from the previous edition ({prev_edition}), the
@@ -224,7 +224,7 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
                         message, this_edition=edition, prev_edition=edition.previous().unwrap()
                     ))
                 } else {
-                    self.config.shell().warn(message)
+                    self.config.emit_diagnostic(message)
                 }
             }
         }

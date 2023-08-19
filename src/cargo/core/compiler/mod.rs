@@ -1272,7 +1272,7 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context<'_, '_>, unit: &Unit) 
         if let Some(dep) = deps.iter().find(|dep| {
             !dep.unit.mode.is_doc() && dep.unit.target.is_lib() && !dep.unit.artifact.is_true()
         }) {
-            bcx.config.shell().warn(format!(
+            bcx.config.emit_diagnostic(format!(
                 "The package `{}` \
                  provides no linkable target. The compiler might raise an error while compiling \
                  `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \

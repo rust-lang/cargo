@@ -266,7 +266,7 @@ fn expand_aliases(
         match (exec, aliased_cmd) {
             (Some(_), Ok(Some(_))) => {
                 // User alias conflicts with a built-in subcommand
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "user-defined alias `{}` is ignored, because it is shadowed by a built-in command",
                     cmd,
                 ))?;
@@ -296,7 +296,7 @@ To pass the arguments to the subcommand, remove `--`",
                 // a hard error.
                 if super::builtin_aliases_execs(cmd).is_none() {
                     if let Some(path) = super::find_external_subcommand(config, cmd) {
-                        config.shell().warn(format!(
+                        config.emit_diagnostic(format!(
                         "\
 user-defined alias `{}` is shadowing an external subcommand found at: `{}`
 This was previously accepted but is being phased out; it will become a hard error in a future release.
@@ -310,7 +310,7 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     if config.cli_unstable().script {
                         return Ok((args, GlobalArgs::default()));
                     } else {
-                        config.shell().warn(format_args!(
+                        config.emit_diagnostic(format_args!(
                             "\
 user-defined alias `{cmd}` has the appearance of a manfiest-command
 This was previously accepted but will be phased out when `-Zscript` is stabilized.
@@ -445,7 +445,7 @@ impl Exec {
             Self::Manifest(cmd) => {
                 let ext_path = super::find_external_subcommand(config, &cmd);
                 if !config.cli_unstable().script && ext_path.is_some() {
-                    config.shell().warn(format_args!(
+                    config.emit_diagnostic(format_args!(
                         "\
 external subcommand `{cmd}` has the appearance of a manfiest-command
 This was previously accepted but will be phased out when `-Zscript` is stabilized.

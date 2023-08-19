@@ -53,7 +53,7 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
             // solution might be to create a special "Any" type, but I think
             // that will be quite difficult with the current design.
             for other_key in cfg.other.keys() {
-                config.shell().warn(format!(
+                config.emit_diagnostic(format!(
                     "unused key `{}` in [target] config table `{}`",
                     other_key, key
                 ))?;
@@ -210,7 +210,7 @@ fn parse_links_overrides(
                         let list = value.list(key)?;
                         output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
                     } else {
-                        config.shell().warn(format!(
+                        config.emit_diagnostic(format!(
                             "target config `{}.{}` requires -Zcheck-cfg=output flag",
                             target_key, key
                         ))?;

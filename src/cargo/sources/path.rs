@@ -462,7 +462,7 @@ impl<'cfg> PathSource<'cfg> {
                     }
                 }
                 Err(err) if err.loop_ancestor().is_some() => {
-                    self.config.shell().warn(err)?;
+                    self.config.emit_diagnostic(err)?;
                 }
                 Err(err) => match err.path() {
                     // If an error occurs with a path, filter it again.

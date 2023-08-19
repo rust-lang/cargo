@@ -83,7 +83,7 @@ fn expand_manifest_(
         .entry("version".to_owned())
         .or_insert_with(|| toml::Value::String(DEFAULT_VERSION.to_owned()));
     package.entry("edition".to_owned()).or_insert_with(|| {
-        let _ = config.shell().warn(format_args!(
+        let _ = config.emit_diagnostic(format_args!(
             "`package.edition` is unspecified, defaulting to `{}`",
             DEFAULT_EDITION
         ));

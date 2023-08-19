@@ -52,7 +52,7 @@ impl<'a> Retry<'a> {
                     "spurious network error ({} tries remaining): {err_msg}",
                     self.max_retries - self.retries,
                 );
-                if let Err(e) = self.config.shell().warn(msg) {
+                if let Err(e) = self.config.emit_diagnostic(msg) {
                     return RetryResult::Err(e);
                 }
                 self.retries += 1;

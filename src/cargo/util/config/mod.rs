@@ -807,7 +807,7 @@ impl Config {
 
     fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
         if let Some(env_key) = self.env.get_normalized(key.as_env_key()) {
-            let _ = self.shell().warn(format!(
+            let _ = self.emit_diagnostic(format!(
                 "Environment variables are expected to use uppercase letters and underscores, \
                 the variable `{}` will be ignored and have no effect",
                 env_key
@@ -983,7 +983,7 @@ impl Config {
             .unstable_flags
             .parse(unstable_flags, self.nightly_features_allowed)?
         {
-            self.shell().warn(warning)?;
+            self.emit_diagnostic(warning)?;
         }
         if !unstable_flags.is_empty() {
             // store a copy of the cli flags separately for `load_unstable_flags_from_config`
@@ -1498,7 +1498,7 @@ impl Config {
                 };
 
                 if !skip_warning {
-                    self.shell().warn(format!(
+                    self.emit_diagnostic(format!(
                         "Both `{}` and `{}` exist. Using `{}`",
                         possible.display(),
                         possible_with_extension.display(),
@@ -1949,6 +1949,33 @@ impl Config {
     }
 
     pub fn release_package_cache_lock(&self) {}
+
+    /// Emit a diagnostic to the console.
+    pub fn emit_diagnostic<T: fmt::Display>(&self, diagnostic: T) -> CargoResult<()> {
+        let mut shell = self.shell();
+        match shell.verbosity() {
+            Verbosity::Quiet => Ok(()),
+            _ => shell.print(
+                &"warning",
+                Some(&diagnostic),
+                termcolor::Color::Yellow,
+                false,
+            ),
+        }
+    }
+
+    /// Emits a diagnostic only if the verbosity level is `Verbose`. This uses
+    /// [Config::emit_diagnostic] internally.
+    pub fn emit_verbose_diagnostic<T: fmt::Display>(&self, diagnostic: T) -> CargoResult<()> {
+        // If this is moved to the match statement below, it will cause an
+        // error, as shell will still be mutably borrowed, when calling
+        // `emit_diagnostic` below.
+        let verbosity = self.shell().verbosity();
+        match verbosity {
+            Verbosity::Verbose => self.emit_diagnostic(diagnostic),
+            _ => Ok(()),
+        }
+    }
 }
 
 /// Internal error for serde errors.

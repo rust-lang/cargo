@@ -219,7 +219,7 @@ fn get_base_commit<'a>(
             let upstream_ref = upstream_branches[0].get();
             if upstream_branches.len() > 1 {
                 let name = upstream_ref.name().expect("name is valid UTF-8");
-                let _ = config.shell().warn(format!(
+                let _ = config.emit_diagnostic(format!(
                     "multiple `{UPSTREAM_BRANCH}` found, picking {name}"
                 ));
             }

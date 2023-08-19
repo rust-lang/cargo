@@ -465,7 +465,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                 suggestion: &str|
          -> CargoResult<()> {
             if unit.target.name() == other_unit.target.name() {
-                self.bcx.config.shell().warn(format!(
+                self.bcx.config.emit_diagnostic(format!(
                     "output filename collision.\n\
                      {}\
                      The targets should have unique names.\n\
@@ -474,7 +474,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     suggestion
                 ))
             } else {
-                self.bcx.config.shell().warn(format!(
+                self.bcx.config.emit_diagnostic(format!(
                     "output filename collision.\n\
                     {}\
                     The output filenames should be unique.\n\
@@ -560,7 +560,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
                 if let Some(ref export_path) = output.export_path {
                     if let Some(other_unit) = output_collisions.insert(export_path.clone(), unit) {
-                        self.bcx.config.shell().warn(format!(
+                        self.bcx.config.emit_diagnostic(format!(
                             "`--out-dir` filename collision.\n\
                              {}\
                              The exported filenames should be unique.\n\

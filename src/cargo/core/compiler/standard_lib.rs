@@ -68,8 +68,7 @@ pub fn resolve_std<'cfg>(
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
     if build_config.build_plan {
         ws.config()
-            .shell()
-            .warn("-Zbuild-std does not currently fully support --build-plan")?;
+            .emit_diagnostic("-Zbuild-std does not currently fully support --build-plan")?;
     }
 
     let src_path = detect_sysroot_src_path(target_data)?;
