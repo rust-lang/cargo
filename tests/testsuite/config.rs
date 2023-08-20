@@ -1,9 +1,9 @@
 //! Tests for config settings.
 
 use cargo::core::{PackageIdSpec, Shell};
-use cargo::util::config::{self, Config, SslVersionConfig, StringList};
+use cargo::util::config::{self, Config, Definition, JobsConfig, SslVersionConfig, StringList};
 use cargo::util::interning::InternedString;
-use cargo::util::toml::{self, VecStringOrBool as VSOB};
+use cargo::util::toml::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
 use cargo::CargoResult;
 use cargo_test_support::compare;
 use cargo_test_support::{panic_error, paths, project, symlink_supported, t};
@@ -47,7 +47,7 @@ impl ConfigBuilder {
         self
     }
 
-    /// Unconditionaly enable nightly features, even on stable channels.
+    /// Unconditionally enable nightly features, even on stable channels.
     pub fn nightly_features_allowed(&mut self, allowed: bool) -> &mut Self {
         self.enable_nightly_features = allowed;
         self
@@ -55,10 +55,6 @@ impl ConfigBuilder {
 
     /// Passes a `--config` flag.
     pub fn config_arg(&mut self, arg: impl Into<String>) -> &mut Self {
-        if !self.unstable.iter().any(|s| s == "unstable-options") {
-            // --config is current unstable
-            self.unstable_flag("unstable-options");
-        }
         self.config_args.push(arg.into());
         self
     }
@@ -135,7 +131,7 @@ fn read_env_vars_for_config() {
         )
         .build();
 
-    p.cargo("build").env("CARGO_BUILD_JOBS", "100").run();
+    p.cargo("check").env("CARGO_BUILD_JOBS", "100").run();
 }
 
 pub fn write_config(config: &str) {
@@ -213,6 +209,31 @@ f1 = 123
     let config = ConfigBuilder::new().env("CARGO_S_F1", "456").build();
     let s: S = config.get("S").unwrap();
     assert_eq!(s, S { f1: Some(456) });
+}
+
+#[cfg(windows)]
+#[cargo_test]
+fn environment_variable_casing() {
+    // Issue #11814: Environment variable names are case-insensitive on Windows.
+    let config = ConfigBuilder::new()
+        .env("Path", "abc")
+        .env("Two-Words", "abc")
+        .env("two_words", "def")
+        .build();
+
+    let var = config.get_env("PATH").unwrap();
+    assert_eq!(var, String::from("abc"));
+
+    let var = config.get_env("path").unwrap();
+    assert_eq!(var, String::from("abc"));
+
+    let var = config.get_env("TWO-WORDS").unwrap();
+    assert_eq!(var, String::from("abc"));
+
+    // Make sure that we can still distinguish between dashes and underscores
+    // in variable names.
+    let var = config.get_env("Two_Words").unwrap();
+    assert_eq!(var, String::from("def"));
 }
 
 #[cargo_test]
@@ -356,17 +377,19 @@ lto = false
         .build();
 
     // TODO: don't use actual `tomlprofile`.
-    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
     let mut packages = BTreeMap::new();
-    let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
-    let o_profile = toml::TomlProfile {
-        opt_level: Some(toml::TomlOptLevel("2".to_string())),
+    let key =
+        cargo_toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
+    let o_profile = cargo_toml::TomlProfile {
+        opt_level: Some(cargo_toml::TomlOptLevel("2".to_string())),
         codegen_units: Some(9),
         ..Default::default()
     };
     packages.insert(key, o_profile);
-    let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("env").unwrap());
-    let o_profile = toml::TomlProfile {
+    let key =
+        cargo_toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("env").unwrap());
+    let o_profile = cargo_toml::TomlProfile {
         codegen_units: Some(13),
         ..Default::default()
     };
@@ -374,19 +397,19 @@ lto = false
 
     assert_eq!(
         p,
-        toml::TomlProfile {
-            opt_level: Some(toml::TomlOptLevel("s".to_string())),
-            lto: Some(toml::StringOrBool::Bool(true)),
+        cargo_toml::TomlProfile {
+            opt_level: Some(cargo_toml::TomlOptLevel("s".to_string())),
+            lto: Some(cargo_toml::StringOrBool::Bool(true)),
             codegen_units: Some(5),
-            debug: Some(toml::U32OrBool::Bool(true)),
+            debug: Some(cargo_toml::TomlDebugInfo::Full),
             debug_assertions: Some(true),
             rpath: Some(true),
             panic: Some("abort".to_string()),
             overflow_checks: Some(true),
             incremental: Some(true),
             package: Some(packages),
-            build_override: Some(Box::new(toml::TomlProfile {
-                opt_level: Some(toml::TomlOptLevel("1".to_string())),
+            build_override: Some(Box::new(cargo_toml::TomlProfile {
+                opt_level: Some(cargo_toml::TomlOptLevel("1".to_string())),
                 codegen_units: Some(11),
                 ..Default::default()
             })),
@@ -394,11 +417,11 @@ lto = false
         }
     );
 
-    let p: toml::TomlProfile = config.get("profile.no-lto").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.no-lto").unwrap();
     assert_eq!(
         p,
-        toml::TomlProfile {
-            lto: Some(toml::StringOrBool::Bool(false)),
+        cargo_toml::TomlProfile {
+            lto: Some(cargo_toml::StringOrBool::Bool(false)),
             dir_name: Some(InternedString::new("without-lto")),
             inherits: Some(InternedString::new("dev")),
             ..Default::default()
@@ -412,24 +435,24 @@ fn profile_env_var_prefix() {
     let config = ConfigBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG_ASSERTIONS", "false")
         .build();
-    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, Some(false));
     assert_eq!(p.debug, None);
 
     let config = ConfigBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG", "1")
         .build();
-    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, None);
-    assert_eq!(p.debug, Some(toml::U32OrBool::U32(1)));
+    assert_eq!(p.debug, Some(cargo_toml::TomlDebugInfo::Limited));
 
     let config = ConfigBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG_ASSERTIONS", "false")
         .env("CARGO_PROFILE_DEV_DEBUG", "1")
         .build();
-    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, Some(false));
-    assert_eq!(p.debug, Some(toml::U32OrBool::U32(1)));
+    assert_eq!(p.debug, Some(cargo_toml::TomlDebugInfo::Limited));
 }
 
 #[cargo_test]
@@ -546,7 +569,9 @@ opt-level = 'foo'
     let config = new_config();
 
     assert_error(
-        config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
+        config
+            .get::<cargo_toml::TomlProfile>("profile.dev")
+            .unwrap_err(),
         "\
 error in [..]/.cargo/config: could not load config key `profile.dev.opt-level`
 
@@ -559,7 +584,7 @@ Caused by:
         .build();
 
     assert_error(
-        config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
+        config.get::<cargo_toml::TomlProfile>("profile.dev").unwrap_err(),
         "\
 error in environment variable `CARGO_PROFILE_DEV_OPT_LEVEL`: could not load config key `profile.dev.opt-level`
 
@@ -704,8 +729,7 @@ Caused by:
   |
 1 | asdf
   |     ^
-Unexpected end of input
-Expected `.` or `=`",
+expected `.`, `=`",
     );
 }
 
@@ -775,12 +799,12 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     assert_error(
         config.get::<L>("bad-env").unwrap_err(),
         "\
-error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 8
+error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 2
   |
-1 | value=[zzz]
-  |        ^
-Unexpected `z`
-Expected newline or `#`
+1 | [zzz]
+  |  ^
+invalid array
+expected `]`
 ",
     );
 
@@ -1074,14 +1098,9 @@ Caused by:
   |
 3 | ssl-version.min = 'tlsv1.2'
   | ^
-Dotted key `ssl-version` attempted to extend non-table type (string)
-
+dotted key `ssl-version` attempted to extend non-table type (string)
 ",
     );
-    assert!(config
-        .get::<Option<SslVersionConfig>>("http.ssl-version")
-        .unwrap()
-        .is_none());
 }
 
 #[cargo_test]
@@ -1128,7 +1147,7 @@ unstable.print-im-a-teapot = true
 }
 
 #[cargo_test]
-/// Assert that atempting to set an unstable flag that doesn't exist via config
+/// Assert that attempting to set an unstable flag that doesn't exist via config
 /// is ignored on stable
 fn unstable_invalid_flag_ignored_on_stable() {
     write_config(
@@ -1448,9 +1467,12 @@ strip = 'debuginfo'
 
     let config = new_config();
 
-    let p: toml::TomlProfile = config.get("profile.release").unwrap();
+    let p: cargo_toml::TomlProfile = config.get("profile.release").unwrap();
     let strip = p.strip.unwrap();
-    assert_eq!(strip, toml::StringOrBool::String("debuginfo".to_string()));
+    assert_eq!(
+        strip,
+        cargo_toml::StringOrBool::String("debuginfo".to_string())
+    );
 }
 
 #[cargo_test]
@@ -1474,7 +1496,7 @@ target-dir = ''
 fn cargo_target_empty_env() {
     let project = project().build();
 
-    project.cargo("build")
+    project.cargo("check")
         .env("CARGO_TARGET_DIR", "")
         .with_stderr("error: the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
         .with_status(101)
@@ -1484,12 +1506,12 @@ fn cargo_target_empty_env() {
 #[cargo_test]
 fn all_profile_options() {
     // Check that all profile options can be serialized/deserialized.
-    let base_settings = toml::TomlProfile {
-        opt_level: Some(toml::TomlOptLevel("0".to_string())),
-        lto: Some(toml::StringOrBool::String("thin".to_string())),
+    let base_settings = cargo_toml::TomlProfile {
+        opt_level: Some(cargo_toml::TomlOptLevel("0".to_string())),
+        lto: Some(cargo_toml::StringOrBool::String("thin".to_string())),
         codegen_backend: Some(InternedString::new("example")),
         codegen_units: Some(123),
-        debug: Some(toml::U32OrBool::U32(1)),
+        debug: Some(cargo_toml::TomlDebugInfo::Limited),
         split_debuginfo: Some("packed".to_string()),
         debug_assertions: Some(true),
         rpath: Some(true),
@@ -1498,21 +1520,194 @@ fn all_profile_options() {
         incremental: Some(true),
         dir_name: Some(InternedString::new("dir_name")),
         inherits: Some(InternedString::new("debug")),
-        strip: Some(toml::StringOrBool::String("symbols".to_string())),
+        strip: Some(cargo_toml::StringOrBool::String("symbols".to_string())),
         package: None,
         build_override: None,
         rustflags: None,
     };
     let mut overrides = BTreeMap::new();
-    let key = toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
+    let key = cargo_toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
     overrides.insert(key, base_settings.clone());
-    let profile = toml::TomlProfile {
+    let profile = cargo_toml::TomlProfile {
         build_override: Some(Box::new(base_settings.clone())),
         package: Some(overrides),
         ..base_settings
     };
-    let profile_toml = toml_edit::easy::to_string(&profile).unwrap();
-    let roundtrip: toml::TomlProfile = toml_edit::easy::from_str(&profile_toml).unwrap();
-    let roundtrip_toml = toml_edit::easy::to_string(&roundtrip).unwrap();
+    let profile_toml = toml::to_string(&profile).unwrap();
+    let roundtrip: cargo_toml::TomlProfile = toml::from_str(&profile_toml).unwrap();
+    let roundtrip_toml = toml::to_string(&roundtrip).unwrap();
     compare::assert_match_exact(&profile_toml, &roundtrip_toml);
+}
+
+#[cargo_test]
+fn value_in_array() {
+    // Value<String> in an array should work
+    let root_path = paths::root().join(".cargo/config.toml");
+    write_config_at(
+        &root_path,
+        "\
+[net.ssh]
+known-hosts = [
+    \"example.com ...\",
+    \"example.net ...\",
+]
+",
+    );
+
+    let foo_path = paths::root().join("foo/.cargo/config.toml");
+    write_config_at(
+        &foo_path,
+        "\
+[net.ssh]
+known-hosts = [
+    \"example.org ...\",
+]
+",
+    );
+
+    let config = ConfigBuilder::new()
+        .cwd("foo")
+        // environment variables don't actually work for known-hosts due to
+        // space splitting, but this is included here just to validate that
+        // they work (particularly if other Vec<Value> config vars are added
+        // in the future).
+        .env("CARGO_NET_SSH_KNOWN_HOSTS", "env-example")
+        .build();
+    let net_config = config.net_config().unwrap();
+    let kh = net_config
+        .ssh
+        .as_ref()
+        .unwrap()
+        .known_hosts
+        .as_ref()
+        .unwrap();
+    assert_eq!(kh.len(), 4);
+    assert_eq!(kh[0].val, "example.org ...");
+    assert_eq!(kh[0].definition, Definition::Path(foo_path.clone()));
+    assert_eq!(kh[1].val, "example.com ...");
+    assert_eq!(kh[1].definition, Definition::Path(root_path.clone()));
+    assert_eq!(kh[2].val, "example.net ...");
+    assert_eq!(kh[2].definition, Definition::Path(root_path.clone()));
+    assert_eq!(kh[3].val, "env-example");
+    assert_eq!(
+        kh[3].definition,
+        Definition::Environment("CARGO_NET_SSH_KNOWN_HOSTS".to_string())
+    );
+}
+
+#[cargo_test]
+fn debuginfo_parsing() {
+    let config = ConfigBuilder::new().build();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    assert_eq!(p.debug, None);
+
+    let env_test_cases = [
+        (TomlDebugInfo::None, ["false", "0", "none"].as_slice()),
+        (TomlDebugInfo::LineDirectivesOnly, &["line-directives-only"]),
+        (TomlDebugInfo::LineTablesOnly, &["line-tables-only"]),
+        (TomlDebugInfo::Limited, &["1", "limited"]),
+        (TomlDebugInfo::Full, &["true", "2", "full"]),
+    ];
+    for (expected, config_strs) in env_test_cases {
+        for &val in config_strs {
+            let config = ConfigBuilder::new()
+                .env("CARGO_PROFILE_DEV_DEBUG", val)
+                .build();
+            let debug: TomlDebugInfo = config.get("profile.dev.debug").unwrap();
+            assert_eq!(debug, expected, "failed to parse {val}");
+        }
+    }
+
+    let toml_test_cases = [
+        (TomlDebugInfo::None, ["false", "0", "\"none\""].as_slice()),
+        (
+            TomlDebugInfo::LineDirectivesOnly,
+            &["\"line-directives-only\""],
+        ),
+        (TomlDebugInfo::LineTablesOnly, &["\"line-tables-only\""]),
+        (TomlDebugInfo::Limited, &["1", "\"limited\""]),
+        (TomlDebugInfo::Full, &["true", "2", "\"full\""]),
+    ];
+    for (expected, config_strs) in toml_test_cases {
+        for &val in config_strs {
+            let config = ConfigBuilder::new()
+                .config_arg(format!("profile.dev.debug={val}"))
+                .build();
+            let debug: TomlDebugInfo = config.get("profile.dev.debug").unwrap();
+            assert_eq!(debug, expected, "failed to parse {val}");
+        }
+    }
+
+    let toml_err_cases = ["\"\"", "\"unrecognized\"", "3"];
+    for err_val in toml_err_cases {
+        let config = ConfigBuilder::new()
+            .config_arg(format!("profile.dev.debug={err_val}"))
+            .build();
+        let err = config
+            .get::<TomlDebugInfo>("profile.dev.debug")
+            .unwrap_err();
+        assert!(err
+            .to_string()
+            .ends_with("could not load config key `profile.dev.debug`"));
+    }
+}
+
+#[cargo_test]
+fn build_jobs_missing() {
+    write_config(
+        "\
+[build]
+",
+    );
+
+    let config = new_config();
+
+    assert!(config
+        .get::<Option<JobsConfig>>("build.jobs")
+        .unwrap()
+        .is_none());
+}
+
+#[cargo_test]
+fn build_jobs_default() {
+    write_config(
+        "\
+[build]
+jobs = \"default\"
+",
+    );
+
+    let config = new_config();
+
+    let a = config
+        .get::<Option<JobsConfig>>("build.jobs")
+        .unwrap()
+        .unwrap();
+
+    match a {
+        JobsConfig::String(v) => assert_eq!(&v, "default"),
+        JobsConfig::Integer(_) => panic!("Did not except an integer."),
+    }
+}
+
+#[cargo_test]
+fn build_jobs_integer() {
+    write_config(
+        "\
+[build]
+jobs = 2
+",
+    );
+
+    let config = new_config();
+
+    let a = config
+        .get::<Option<JobsConfig>>("build.jobs")
+        .unwrap()
+        .unwrap();
+
+    match a {
+        JobsConfig::String(_) => panic!("Did not except an integer."),
+        JobsConfig::Integer(v) => assert_eq!(v, 2),
+    }
 }

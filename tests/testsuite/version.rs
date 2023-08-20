@@ -16,7 +16,6 @@ fn simple() {
 }
 
 #[cargo_test]
-#[cfg_attr(target_os = "windows", ignore)]
 fn version_works_without_rustc() {
     let p = project().build();
     p.cargo("version").env("PATH", "").run();

@@ -6,9 +6,9 @@ use crate::ops;
 use crate::util::config::Config;
 use crate::util::CargoResult;
 use anyhow::Context;
-use log::debug;
 use std::collections::{BTreeMap, HashSet};
-use termcolor::Color::{self, Cyan, Green, Red};
+use termcolor::Color::{self, Cyan, Green, Red, Yellow};
+use tracing::debug;
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
@@ -142,7 +142,12 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             } else {
                 format!("{} -> v{}", removed[0], added[0].version())
             };
-            print_change("Updating", msg, Green)?;
+
+            if removed[0].version() > added[0].version() {
+                print_change("Downgrading", msg, Yellow)?;
+            } else {
+                print_change("Updating", msg, Green)?;
+            }
         } else {
             for package in removed.iter() {
                 print_change("Removing", format!("{}", package), Red)?;

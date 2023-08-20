@@ -1,20 +1,20 @@
 CARGO-REPORT(1)
 
 NAME
-       cargo-report - Generate and display various kinds of reports
+       cargo-report — Generate and display various kinds of reports
 
 SYNOPSIS
        cargo report type [options]
 
    DESCRIPTION
-       Displays a report of the given type - currently, only future-incompat is
-       supported
+       Displays a report of the given type — currently, only future-incompat
+       is supported
 
 OPTIONS
        --id id
            Show the report with the specified Cargo-generated id
 
-       -p spec..., --package spec...
+       -p spec…, --package spec…
            Only display a report for the specified package
 
 EXAMPLES

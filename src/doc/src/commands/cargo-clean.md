@@ -1,9 +1,10 @@
 # cargo-clean(1)
 
 
+
 ## NAME
 
-cargo-clean - Remove generated artifacts
+cargo-clean --- Remove generated artifacts
 
 ## SYNOPSIS
 
@@ -24,8 +25,8 @@ When no packages are selected, all packages and all dependencies in the
 workspace are cleaned.
 
 <dl>
-<dt class="option-term" id="option-cargo-clean--p"><a class="option-anchor" href="#option-cargo-clean--p"></a><code>-p</code> <em>spec</em>...</dt>
-<dt class="option-term" id="option-cargo-clean---package"><a class="option-anchor" href="#option-cargo-clean---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-clean--p"><a class="option-anchor" href="#option-cargo-clean--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-clean---package"><a class="option-anchor" href="#option-cargo-clean---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Clean only the specified packages. This flag may be specified
 multiple times. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC format.</dd>
 
@@ -59,7 +60,7 @@ Defaults to <code>target</code> in the root of the workspace.</dd>
 <dt class="option-term" id="option-cargo-clean---target"><a class="option-anchor" href="#option-cargo-clean---target"></a><code>--target</code> <em>triple</em></dt>
 <dd class="option-desc">Clean for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -75,7 +76,7 @@ target artifacts are placed in a separate directory. See the
 <dl>
 <dt class="option-term" id="option-cargo-clean--v"><a class="option-anchor" href="#option-cargo-clean--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-clean---verbose"><a class="option-anchor" href="#option-cargo-clean---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -147,6 +148,23 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-clean---config"><a class="option-anchor" href="#option-cargo-clean---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-clean--C"><a class="option-anchor" href="#option-cargo-clean--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-clean--h"><a class="option-anchor" href="#option-cargo-clean--h"></a><code>-h</code></dt>

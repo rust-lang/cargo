@@ -18,7 +18,7 @@ See also [rust-semverver], which is an experimental tool that attempts to
 programmatically check compatibility rules.
 
 [Change categories]: #change-categories
-[rust-semverver]: https://github.com/rust-dev-tools/rust-semverver
+[rust-semverver]: https://github.com/rust-lang/rust-semverver
 [SemVer compatibility]: resolver.md#semver-compatibility
 
 ## Change categories
@@ -59,6 +59,8 @@ considered incompatible.
     * Items
         * [Major: renaming/moving/removing any public items](#item-remove)
         * [Minor: adding new public items](#item-new)
+    * Types
+        * [Major: Changing the alignment, layout, or size of a well-defined type](#type-layout)
     * Structs
         * [Major: adding a private struct field when all current fields are public](#struct-add-private-field-when-public)
         * [Major: adding a public field when no private field exists](#struct-add-public-field-when-no-private)
@@ -88,11 +90,14 @@ considered incompatible.
         * [Possibly-breaking: introducing a new function type parameter](#fn-generic-new)
         * [Minor: generalizing a function to use generics (supporting original type)](#fn-generalize-compatible)
         * [Major: generalizing a function to use generics with type mismatch](#fn-generalize-mismatch)
+        * [Minor: making an `unsafe` function safe](#fn-unsafe-safe)
     * Attributes
         * [Major: switching from `no_std` support to requiring `std`](#attr-no-std-to-std)
+        * [Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields](#attr-adding-non-exhaustive)
 * Tooling and environment compatibility
     * [Possibly-breaking: changing the minimum version of Rust required](#env-new-rust)
     * [Possibly-breaking: changing the platform and environment requirements](#env-change-requirements)
+    * [Minor: introducing new lints](#new-lints)
     * Cargo
         * [Minor: adding a new Cargo feature](#cargo-feature-add)
         * [Major: removing a Cargo feature](#cargo-feature-remove)
@@ -109,8 +114,7 @@ after it has been modified, and an example usage of the code that could appear
 in another project. In a minor change, the example usage should successfully
 build with both the before and after versions.
 
-<a id="item-remove"></a>
-### Major: renaming/moving/removing any public items
+### Major: renaming/moving/removing any public items {#item-remove}
 
 The absence of a publicly exposed [item][items] will cause any uses of that item to
 fail to compile.
@@ -142,8 +146,7 @@ Mitigating strategies:
 * Mark renamed items as [deprecated], and use a [`pub use`] item to re-export
   to the old name.
 
-<a id="item-new"></a>
-### Minor: adding new public items
+### Minor: adding new public items {#item-new}
 
 Adding new, public [items] is a minor change.
 
@@ -203,8 +206,752 @@ This is not considered a major change because conventionally glob imports are
 a known forwards-compatibility hazard. Glob imports of items from external
 crates should be avoided.
 
-<a id="struct-add-private-field-when-public"></a>
-### Major: adding a private struct field when all current fields are public
+### Major: Changing the alignment, layout, or size of a well-defined type {#type-layout}
+
+It is a breaking change to change the alignment, layout, or size of a type that was previously well-defined.
+
+In general, types that use the [the default representation] do not have a well-defined alignment, layout, or size.
+The compiler is free to alter the alignment, layout, or size, so code should not make any assumptions about it.
+
+> **Note**: It may be possible for external crates to break if they make assumptions about the alignment, layout, or size of a type even if it is not well-defined.
+> This is not considered a SemVer breaking change since those assumptions should not be made.
+
+Some examples of changes that are not a breaking change are (assuming no other rules in this guide are violated):
+
+* Adding, removing, reordering, or changing fields of a default representation struct, union, or enum in such a way that the change follows the other rules in this guide (for example, using `non_exhaustive` to allow those changes, or changes to private fields that are already private).
+  See [struct-add-private-field-when-public](#struct-add-private-field-when-public), [struct-add-public-field-when-no-private](#struct-add-public-field-when-no-private), [struct-private-fields-with-private](#struct-private-fields-with-private), [enum-fields-new](#enum-fields-new).
+* Adding variants to a default representation enum, if the enum uses `non_exhaustive`.
+  This may change the alignment or size of the enumeration, but those are not well-defined.
+  See [enum-variant-new](#enum-variant-new).
+* Adding, removing, reordering, or changing private fields of a `repr(C)` struct, union, or enum, following the other rules in this guide (for example, using `non_exhaustive`, or adding private fields when other private fields already exist).
+  See [repr-c-private-change](#repr-c-private-change).
+* Adding variants to a `repr(C)` enum, if the enum uses `non_exhaustive`.
+  See [repr-c-enum-variant-new](#repr-c-enum-variant-new).
+* Adding `repr(C)` to a default representation struct, union, or enum.
+  See [repr-c-add](#repr-c-add).
+* Adding `repr(<int>)` [primitive representation] to an enum.
+  See [repr-int-enum-add](#repr-int-enum-add).
+* Adding `repr(transparent)` to a default representation struct or enum.
+  See [repr-transparent-add](#repr-transparent-add).
+
+Types that use the [`repr` attribute] can be said to have an alignment and layout that is defined in some way that code may make some assumptions about that may break as a result of changing that type.
+
+In some cases, types with a `repr` attribute may not have an alignment, layout, or size that is well-defined.
+In these cases, it may be safe to make changes to the types, though care should be exercised.
+For example, types with private fields that do not otherwise document their alignment, layout, or size guarantees cannot be relied upon by external crates since the public API does not fully define the alignment, layout, or size of the type.
+
+A common example where a type with *private* fields is well-defined is a type with a single private field with a generic type, using `repr(transparent)`,
+and the prose of the documentation discusses that it is transparent to the generic type.
+For example, see [`UnsafeCell`].
+
+Some examples of breaking changes are:
+
+* Adding `repr(packed)` to a struct or union.
+  See [repr-packed-add](#repr-packed-add).
+* Adding `repr(align)` to a struct, union, or enum.
+  See [repr-align-add](#repr-align-add).
+* Removing `repr(packed)` from a struct or union.
+  See [repr-packed-remove](#repr-packed-remove).
+* Changing the value N of `repr(packed(N))` if that changes the alignment or layout.
+  See [repr-packed-n-change](#repr-packed-n-change).
+* Changing the value N of `repr(align(N))` if that changes the alignment.
+  See [repr-align-n-change](#repr-align-n-change).
+* Removing `repr(align)` from a struct, union, or enum.
+  See [repr-align-remove](#repr-align-remove).
+* Changing the order of public fields of a `repr(C)` type.
+  See [repr-c-shuffle](#repr-c-shuffle).
+* Removing `repr(C)` from a struct, union, or enum.
+  See [repr-c-remove](#repr-c-remove).
+* Removing `repr(<int>)` from an enum.
+  See [repr-int-enum-remove](#repr-int-enum-remove).
+* Changing the primitive representation of a `repr(<int>)` enum.
+  See [repr-int-enum-change](#repr-int-enum-change).
+* Removing `repr(transparent)` from a struct or enum.
+  See [repr-transparent-remove](#repr-transparent-remove).
+
+[the default representation]: ../../reference/type-layout.html#the-default-representation
+[primitive representation]: ../../reference/type-layout.html#primitive-representations
+[`repr` attribute]: ../../reference/type-layout.html#representations
+[`std::mem::transmute`]: ../../std/mem/fn.transmute.html
+[`UnsafeCell`]: ../../std/cell/struct.UnsafeCell.html#memory-layout
+
+#### Minor: `repr(C)` add, remove, or change a private field {#repr-c-private-change}
+
+It is usually safe to add, remove, or change a private field of a `repr(C)` struct, union, or enum, assuming it follows the other guidelines in this guide (see [struct-add-private-field-when-public](#struct-add-private-field-when-public), [struct-add-public-field-when-no-private](#struct-add-public-field-when-no-private), [struct-private-fields-with-private](#struct-private-fields-with-private), [enum-fields-new](#enum-fields-new)).
+
+For example, adding private fields can only be done if there are already other private fields, or it is `non_exhaustive`.
+Public fields may be added if there are private fields, or it is `non_exhaustive`, and the addition does not alter the layout of the other fields.
+
+However, this may change the size and alignment of the type.
+Care should be taken if the size or alignment changes.
+Code should not make assumptions about the size or alignment of types with private fields or `non_exhaustive` unless it has a documented size or alignment.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[derive(Default)]
+#[repr(C)]
+pub struct Example {
+    pub f1: i32,
+    f2: i32, // a private field
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[derive(Default)]
+#[repr(C)]
+pub struct Example {
+    pub f1: i32,
+    f2: i32,
+    f3: i32, // a new field
+}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    // NOTE: Users should not make assumptions about the size or alignment
+    // since they are not documented.
+    let f = updated_crate::Example::default();
+}
+```
+
+#### Minor: `repr(C)` add enum variant {#repr-c-enum-variant-new}
+
+It is usually safe to add variants to a `repr(C)` enum, if the enum uses `non_exhastive`.
+See [enum-variant-new](#enum-variant-new) for more discussion.
+
+Note that this may be a breaking change since it changes the size and alignment of the type.
+See [repr-c-private-change](#repr-c-private-change) for similar concerns.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C)]
+#[non_exhaustive]
+pub enum Example {
+    Variant1 { f1: i16 },
+    Variant2 { f1: i32 },
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)]
+#[non_exhaustive]
+pub enum Example {
+    Variant1 { f1: i16 },
+    Variant2 { f1: i32 },
+    Variant3 { f1: i64 }, // added
+}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    // NOTE: Users should not make assumptions about the size or alignment
+    // since they are not specified. For example, this raised the size from 8
+    // to 16 bytes.
+    let f = updated_crate::Example::Variant2 { f1: 123 };
+}
+```
+
+#### Minor: Adding `repr(C)` to a default representation {#repr-c-add}
+
+It is safe to add `repr(C)` to a struct, union, or enum with [the default representation].
+This is safe because users should not make assumptions about the alignment, layout, or size of types with with the default representation.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Example {
+    pub f1: i32,
+    pub f2: i16,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)] // added
+pub struct Example {
+    pub f1: i32,
+    pub f2: i16,
+}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    let f = updated_crate::Example { f1: 123, f2: 456 };
+}
+```
+
+#### Minor: Adding `repr(<int>)` to an enum {#repr-int-enum-add}
+
+It is safe to add `repr(<int>)` [primitive representation] to an enum with [the default representation].
+This is safe because users should not make assumptions about the alignment, layout, or size of an enum with the default representation.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub enum E {
+    Variant1,
+    Variant2(i32),
+    Variant3 { f1: f64 },
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(i32)] // added
+pub enum E {
+    Variant1,
+    Variant2(i32),
+    Variant3 { f1: f64 },
+}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    let x = updated_crate::E::Variant3 { f1: 1.23 };
+}
+```
+
+#### Minor: Adding `repr(transparent)` to a default representation struct or enum {#repr-transparent-add}
+
+It is safe to add `repr(transparent)` to a struct or enum with [the default representation].
+This is safe because users should not make assumptions about the alignment, layout, or size of a struct or enum with the default representation.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[derive(Default)]
+pub struct Example<T>(T);
+
+///////////////////////////////////////////////////////////
+// After
+#[derive(Default)]
+#[repr(transparent)] // added
+pub struct Example<T>(T);
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+fn main() {
+    let x = updated_crate::Example::<i32>::default();
+}
+```
+
+#### Major: Adding `repr(packed)` to a struct or union {#repr-packed-add}
+
+It is a breaking change to add `repr(packed)` to a struct or union.
+Making a type `repr(packed)` makes changes that can break code, such as being invalid to take a reference to a field, or causing truncation of disjoint closure captures.
+
+<!-- TODO: If all fields are private, should this be safe to do? -->
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Example {
+    pub f1: u8,
+    pub f2: u16,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(packed)] // added
+pub struct Example {
+    pub f1: u8,
+    pub f2: u16,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+fn main() {
+    let f = updated_crate::Example { f1: 1, f2: 2 };
+    let x = &f.f2; // Error: reference to packed field is unaligned
+}
+```
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Example(pub i32, pub i32);
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(packed)]
+pub struct Example(pub i32, pub i32);
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+fn main() {
+    let mut f = updated_crate::Example(123, 456);
+    let c = || {
+        // Without repr(packed), the closure precisely captures `&f.0`.
+        // With repr(packed), the closure captures `&f` to avoid undefined behavior.
+        let a = f.0;
+    };
+    f.1 = 789; // Error: cannot assign to `f.1` because it is borrowed
+    c();
+}
+```
+
+#### Major: Adding `repr(align)` to a struct, union, or enum {#repr-align-add}
+
+It is a breaking change to add `repr(align)` to a struct, union, or enum.
+Making a type `repr(align)` would break any use of that type in a `repr(packed)` type because that combination is not allowed.
+
+<!-- TODO: This seems like it should be extraordinarily rare. Should there be any exceptions carved out for this? -->
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Aligned {
+    pub a: i32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(align(8))] // added
+pub struct Aligned {
+    pub a: i32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Aligned;
+
+#[repr(packed)]
+pub struct Packed { // Error: packed type cannot transitively contain a `#[repr(align)]` type
+    f1: Aligned,
+}
+
+fn main() {
+    let p = Packed {
+        f1: Aligned { a: 123 },
+    };
+}
+```
+
+#### Major: Removing `repr(packed)` from a struct or union {#repr-packed-remove}
+
+It is a breaking change to remove `repr(packed)` from a struct or union.
+This may change the alignment or layout that extern crates are relying on.
+
+If any fields are public, then removing `repr(packed)` may change the way disjoint closure captures work.
+In some cases, this can cause code to break, similar to those outlined in the [edition guide][edition-closures].
+
+[edition-closures]: ../../edition-guide/rust-2021/disjoint-capture-in-closures.html
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C, packed)]
+pub struct Packed {
+    pub a: u8,
+    pub b: u16,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)] // removed packed
+pub struct Packed {
+    pub a: u8,
+    pub b: u16,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let p = Packed { a: 1, b: 2 };
+    // Some assumption about the size of the type.
+    // Without `packed`, this fails since the size is 4.
+    const _: () = assert!(std::mem::size_of::<Packed>() == 3); // Error: evaluation of constant value failed
+}
+```
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C, packed)]
+pub struct Packed {
+    pub a: *mut i32,
+    pub b: i32,
+}
+unsafe impl Send for Packed {}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)] // removed packed
+pub struct Packed {
+    pub a: *mut i32,
+    pub b: i32,
+}
+unsafe impl Send for Packed {}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let mut x = 123;
+
+    let p = Packed {
+        a: &mut x as *mut i32,
+        b: 456,
+    };
+
+    // When the structure was packed, the closure captures `p` which is Send.
+    // When `packed` is removed, this ends up capturing `p.a` which is not Send.
+    std::thread::spawn(move || unsafe {
+        *(p.a) += 1; // Error: cannot be sent between threads safely
+    });
+}
+```
+
+#### Major: Changing the value N of `repr(packed(N))` if that changes the alignment or layout {#repr-packed-n-change}
+
+It is a breaking change to change the value of N of `repr(packed(N))` if that changes the alignment or layout.
+This may change the alignment or layout that external crates are relying on.
+
+If the value `N` is lowered below the alignment of a public field, then that would break any code that attempts to take a reference of that field.
+
+Note that some changes to `N` may not change the alignment or layout, for example increasing it when the current value is already equal to the natural alignment of the type.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(packed(4))]
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(packed(2))] // changed to 2
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let p = Packed { a: 1, b: 2 };
+    let x = &p.b; // Error: reference to packed field is unaligned
+}
+```
+
+#### Major: Changing the value N of `repr(align(N))` if that changes the alignment {#repr-align-n-change}
+
+It is a breaking change to change the value `N` of `repr(align(N))` if that changes the alignment.
+This may change the alignment that external crates are relying on.
+
+This change should be safe to make if the type is not well-defined as discussed in [type layout](#type-layout) (such as having any private fields and having an undocumented alignment or layout).
+
+Note that some changes to `N` may not change the alignment or layout, for example decreasing it when the current value is already equal to or less than the natural alignment of the type.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(align(8))]
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(align(4))] // changed to 4
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let p = Packed { a: 1, b: 2 };
+    // Some assumption about the size of the type.
+    // The alignment has changed from 8 to 4.
+    const _: () = assert!(std::mem::align_of::<Packed>() == 8); // Error: evaluation of constant value failed
+}
+```
+
+#### Major: Removing `repr(align)` from a struct, union, or enum {#repr-align-remove}
+
+It is a breaking change to remove `repr(align)` from a struct, union, or enum, if their layout was well-defined.
+This may change the alignment or layout that external crates are relying on.
+
+This change should be safe to make if the type is not well-defined as discussed in [type layout](#type-layout) (such as having any private fields and having an undocumented alignment).
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C, align(8))]
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)] // removed align
+pub struct Packed {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::Packed;
+
+fn main() {
+    let p = Packed { a: 1, b: 2 };
+    // Some assumption about the size of the type.
+    // The alignment has changed from 8 to 4.
+    const _: () = assert!(std::mem::align_of::<Packed>() == 8); // Error: evaluation of constant value failed
+}
+```
+
+#### Major: Changing the order of public fields of a `repr(C)` type {#repr-c-shuffle}
+
+It is a breaking change to change the order of public fields of a `repr(C)` type.
+External crates may be relying on the specific ordering of the fields.
+
+```rust,ignore,run-fail
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C)]
+pub struct SpecificLayout {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(C)]
+pub struct SpecificLayout {
+    pub b: u32, // changed order
+    pub a: u8,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::SpecificLayout;
+
+extern "C" {
+    // This C function is assuming a specific layout defined in a C header.
+    fn c_fn_get_b(x: &SpecificLayout) -> u32;
+}
+
+fn main() {
+    let p = SpecificLayout { a: 1, b: 2 };
+    unsafe { assert_eq!(c_fn_get_b(&p), 2) } // Error: value not equal to 2
+}
+
+# mod cdep {
+#     // This simulates what would normally be something included from a build script.
+#     // This definition would be in a C header.
+#     #[repr(C)]
+#     pub struct SpecificLayout {
+#         pub a: u8,
+#         pub b: u32,
+#     }
+#
+#     #[no_mangle]
+#     pub fn c_fn_get_b(x: &SpecificLayout) -> u32 {
+#         x.b
+#     }
+# }
+```
+
+#### Major: Removing `repr(C)` from a struct, union, or enum {#repr-c-remove}
+
+It is a breaking change to remove `repr(C)` from a struct, union, or enum.
+External crates may be relying on the specific layout of the type.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(C)]
+pub struct SpecificLayout {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// After
+// removed repr(C)
+pub struct SpecificLayout {
+    pub a: u8,
+    pub b: u32,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::SpecificLayout;
+
+extern "C" {
+    // This C function is assuming a specific layout defined in a C header.
+    fn c_fn_get_b(x: &SpecificLayout) -> u32; // Error: is not FFI-safe
+}
+
+fn main() {
+    let p = SpecificLayout { a: 1, b: 2 };
+    unsafe { assert_eq!(c_fn_get_b(&p), 2) }
+}
+
+# mod cdep {
+#     // This simulates what would normally be something included from a build script.
+#     // This definition would be in a C header.
+#     #[repr(C)]
+#     pub struct SpecificLayout {
+#         pub a: u8,
+#         pub b: u32,
+#     }
+#
+#     #[no_mangle]
+#     pub fn c_fn_get_b(x: &SpecificLayout) -> u32 {
+#         x.b
+#     }
+# }
+```
+
+#### Major: Removing `repr(<int>)` from an enum {#repr-int-enum-remove}
+
+It is a breaking change to remove `repr(<int>)` from an enum.
+External crates may be assuming that the discriminant is a specific size.
+For example, [`std::mem::transmute`] of an enum may fail.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(u16)]
+pub enum Example {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
+///////////////////////////////////////////////////////////
+// After
+// removed repr(u16)
+pub enum Example {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+
+fn main() {
+    let e = updated_crate::Example::Variant2;
+    let i: u16 = unsafe { std::mem::transmute(e) }; // Error: cannot transmute between types of different sizes
+}
+```
+
+#### Major: Changing the primitive representation of a `repr(<int>)` enum {#repr-int-enum-change}
+
+It is a breaking change to change the primitive representation of a `repr(<int>)` enum.
+External crates may be assuming that the discriminant is a specific size.
+For example, [`std::mem::transmute`] of an enum may fail.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(u16)]
+pub enum Example {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[repr(u8)] // changed repr size
+pub enum Example {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+
+fn main() {
+    let e = updated_crate::Example::Variant2;
+    let i: u16 = unsafe { std::mem::transmute(e) }; // Error: cannot transmute between types of different sizes
+}
+```
+
+#### Major: Removing `repr(transparent)` from a struct or enum {#repr-transparent-remove}
+
+It is a breaking change to remove `repr(transparent)` from a struct or enum.
+External crates may be relying on the type having the alignment, layout, or size of the transparent field.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[repr(transparent)]
+pub struct Transparent<T>(T);
+
+///////////////////////////////////////////////////////////
+// After
+// removed repr
+pub struct Transparent<T>(T);
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+#![deny(improper_ctypes)]
+use updated_crate::Transparent;
+
+extern "C" {
+    fn c_fn() -> Transparent<f64>; // Error: is not FFI-safe
+}
+
+fn main() {}
+```
+
+### Major: adding a private struct field when all current fields are public {#struct-add-private-field-when-public}
 
 When a private field is added to a struct that previously had all public fields,
 this will break any code that attempts to construct it with a [struct literal].
@@ -238,8 +985,7 @@ Mitigation strategies:
   a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
-<a id="struct-add-public-field-when-no-private"></a>
-### Major: adding a public field when no private field exists
+### Major: adding a public field when no private field exists {#struct-add-public-field-when-no-private}
 
 When a public field is added to a struct that has all public fields, this will
 break any code that attempts to construct it with a [struct literal].
@@ -273,8 +1019,7 @@ Mitigation strategies:
   a struct to prevent users from using struct literal syntax, and instead
   provide a constructor method and/or [Default] implementation.
 
-<a id="struct-private-fields-with-private"></a>
-### Minor: adding or removing private fields when at least one already exists
+### Minor: adding or removing private fields when at least one already exists {#struct-private-fields-with-private}
 
 It is safe to add or remove private fields from a struct when the struct
 already has at least one private field.
@@ -332,8 +1077,7 @@ fn main() {
 }
 ```
 
-<a id="struct-tuple-normal-with-private"></a>
-### Minor: going from a tuple struct with all private fields (with at least one field) to a normal struct, or vice versa
+### Minor: going from a tuple struct with all private fields (with at least one field) to a normal struct, or vice versa {#struct-tuple-normal-with-private}
 
 Changing a tuple struct to a normal struct (or vice-versa) is safe if all
 fields are private.
@@ -364,8 +1108,7 @@ fn main() {
 This is safe because existing code cannot use a [struct literal] to construct
 it, nor match its contents.
 
-<a id="enum-variant-new"></a>
-### Major: adding new enum variants (without `non_exhaustive`)
+### Major: adding new enum variants (without `non_exhaustive`) {#enum-variant-new}
 
 It is a breaking change to add a new enum variant if the enum does not use the
 [`#[non_exhaustive]`][non_exhaustive] attribute.
@@ -391,7 +1134,7 @@ pub enum E {
 fn main() {
     use updated_crate::E;
     let x = E::Variant1;
-    match x { // Error: `Variant2` not covered
+    match x { // Error: `E::Variant2` not covered
         E::Variant1 => {}
     }
 }
@@ -401,8 +1144,7 @@ Mitigation strategies:
 * When introducing the enum, mark it as [`#[non_exhaustive]`][non_exhaustive]
   to force users to use [wildcard patterns] to catch new variants.
 
-<a id="enum-fields-new"></a>
-### Major: adding new fields to an enum variant
+### Major: adding new fields to an enum variant {#enum-fields-new}
 
 It is a breaking change to add new fields to an enum variant because all
 fields are public, and constructors and matching will fail to compile.
@@ -454,8 +1196,7 @@ Mitigation strategies:
   }
   ```
 
-<a id="trait-new-item-no-default"></a>
-### Major: adding a non-defaulted trait item
+### Major: adding a non-defaulted trait item {#trait-new-item-no-default}
 
 It is a breaking change to add a non-defaulted item to a trait. This will
 break any implementors of the trait.
@@ -487,8 +1228,7 @@ Mitigation strategies:
 * When introducing the trait, use the [sealed trait] technique to prevent
   users outside of the crate from implementing the trait.
 
-<a id="trait-item-signature"></a>
-### Major: any change to trait item signatures
+### Major: any change to trait item signatures {#trait-item-signature}
 
 It is a breaking change to make any change to a trait item signature. This can
 break external implementors of the trait.
@@ -527,8 +1267,7 @@ Mitigation strategies:
 * When introducing the trait, use the [sealed trait] technique to prevent
   users outside of the crate from implementing the trait.
 
-<a id="trait-new-default-item"></a>
-### Possibly-breaking: adding a defaulted trait item
+### Possibly-breaking: adding a defaulted trait item {#trait-new-default-item}
 
 It is usually safe to add a defaulted trait item. However, this can sometimes
 cause a compile error. For example, this can introduce an ambiguity if a
@@ -578,8 +1317,7 @@ Mitigation strategies:
   to require downstream users to add [disambiguation syntax] to select the
   correct function when updating the dependency.
 
-<a id="trait-object-safety"></a>
-### Major: adding a trait item that makes the trait non-object safe
+### Major: adding a trait item that makes the trait non-object safe {#trait-object-safety}
 
 It is a breaking change to add a trait item that changes the trait to not be
 [object safe].
@@ -613,8 +1351,7 @@ fn main() {
 It is safe to do the converse (making a non-object safe trait into a safe
 one).
 
-<a id="trait-new-parameter-no-default"></a>
-### Major: adding a type parameter without a default
+### Major: adding a type parameter without a default {#trait-new-parameter-no-default}
 
 It is a breaking change to add a type parameter without a default to a trait.
 
@@ -640,8 +1377,7 @@ impl Trait for Foo {}  // Error: missing generics
 Mitigating strategies:
 * See [adding a defaulted trait type parameter](#trait-new-parameter-default).
 
-<a id="trait-new-parameter-default"></a>
-### Minor: adding a defaulted trait type parameter
+### Minor: adding a defaulted trait type parameter {#trait-new-parameter-default}
 
 It is safe to add a type parameter to a trait as long as it has a default.
 External implementors will use the default without needing to specify the
@@ -666,8 +1402,7 @@ struct Foo;
 impl Trait for Foo {}
 ```
 
-<a id="impl-item-new"></a>
-### Possibly-breaking change: adding any inherent items
+### Possibly-breaking change: adding any inherent items {#impl-item-new}
 
 Usually adding inherent items to an implementation should be safe because
 inherent items take priority over trait items. However, in some cases the
@@ -701,7 +1436,7 @@ impl Trait for Foo {}
 
 fn main() {
     let x = Foo;
-    x.foo(1); // Error: this function takes 0 arguments
+    x.foo(1); // Error: this method takes 0 arguments but 1 argument was supplied
 }
 ```
 
@@ -716,8 +1451,7 @@ Mitigation strategies:
   to require downstream users to add [disambiguation syntax] to select the
   correct function when updating the dependency.
 
-<a id="generic-bounds-tighten"></a>
-### Major: tightening generic bounds
+### Major: tightening generic bounds {#generic-bounds-tighten}
 
 It is a breaking change to tighten generic bounds on a type since this can
 break users expecting the looser bounds.
@@ -746,8 +1480,7 @@ fn main() {
 }
 ```
 
-<a id="generic-bounds-loosen"></a>
-### Minor: loosening generic bounds
+### Minor: loosening generic bounds {#generic-bounds-loosen}
 
 It is safe to loosen the generic bounds on a type, as it only expands what is
 allowed.
@@ -776,8 +1509,7 @@ fn main() {
 }
 ```
 
-<a id="generic-new-default"></a>
-### Minor: adding defaulted type parameters
+### Minor: adding defaulted type parameters {#generic-new-default}
 
 It is safe to add a type parameter to a type as long as it has a default. All
 existing references will use the default without needing to specify the
@@ -807,8 +1539,7 @@ fn main() {
 }
 ```
 
-<a id="generic-generalize-identical"></a>
-### Minor: generalizing a type to use generics (with identical types)
+### Minor: generalizing a type to use generics (with identical types) {#generic-generalize-identical}
 
 A struct or enum field can change from a concrete type to a generic type
 parameter, provided that the change results in an identical type for all
@@ -837,8 +1568,7 @@ fn main() {
 because existing uses of `Foo` are shorthand for `Foo<u8>` which yields the
 identical field type.
 
-<a id="generic-generalize-different"></a>
-### Major: generalizing a type to use generics (with possibly different types)
+### Major: generalizing a type to use generics (with possibly different types) {#generic-generalize-different}
 
 Changing a struct or enum field from a concrete type to a generic type
 parameter can break if the type can change.
@@ -863,13 +1593,12 @@ fn main() {
 }
 ```
 
-<a id="generic-more-generic"></a>
-### Minor: changing a generic type to a more generic type
+### Minor: changing a generic type to a more generic type {#generic-more-generic}
 
 It is safe to change a generic type to a more generic one. For example, the
 following adds a generic parameter that defaults to the original type, which
 is safe because all existing users will be using the same type for both
-fields, the the defaulted parameter does not need to be specified.
+fields, the defaulted parameter does not need to be specified.
 
 ```rust,ignore
 // MINOR CHANGE
@@ -891,8 +1620,7 @@ fn main() {
 }
 ```
 
-<a id="fn-change-arity"></a>
-### Major: adding/removing function parameters
+### Major: adding/removing function parameters {#fn-change-arity}
 
 Changing the arity of a function is a breaking change.
 
@@ -921,8 +1649,7 @@ Mitigating strategies:
   with the builder pattern. This allows new fields to be added to the struct
   in the future.
 
-<a id="fn-generic-new"></a>
-### Possibly-breaking: introducing a new function type parameter
+### Possibly-breaking: introducing a new function type parameter {#fn-generic-new}
 
 Usually, adding a non-defaulted type parameter is safe, but in some
 cases it can be a breaking change:
@@ -943,7 +1670,7 @@ pub fn foo<T, U>() {}
 use updated_crate::foo;
 
 fn main() {
-    foo::<u8>(); // Error: this function takes 2 generic arguments but 1 generic argument was supplied
+    foo::<u8>(); // Error: function takes 2 generic arguments but 1 generic argument was supplied
 }
 ```
 
@@ -952,10 +1679,9 @@ other ways) that this breakage is usually acceptable. One should take into
 account how likely it is that the function in question is being called with
 explicit type arguments.
 
-<a id="fn-generalize-compatible"></a>
-### Minor: generalizing a function to use generics (supporting original type)
+### Minor: generalizing a function to use generics (supporting original type) {#fn-generalize-compatible}
 
-The type of an parameter to a function, or its return value, can be
+The type of a parameter to a function, or its return value, can be
 *generalized* to use generics, including by introducing a new type parameter,
 as long as it can be instantiated to the original type. For example, the
 following changes are allowed:
@@ -1050,8 +1776,7 @@ fn main() {
 }
 ```
 
-<a id="fn-generalize-mismatch"></a>
-### Major: generalizing a function to use generics with type mismatch
+### Major: generalizing a function to use generics with type mismatch {#fn-generalize-mismatch}
 
 It is a breaking change to change a function parameter or return type if the
 generic type constrains or changes the types previously allowed. For example,
@@ -1078,8 +1803,47 @@ fn main() {
 }
 ```
 
-<a id="attr-no-std-to-std"></a>
-### Major: switching from `no_std` support to requiring `std`
+### Minor: making an `unsafe` function safe {#fn-unsafe-safe}
+
+A previously `unsafe` function can be made safe without breaking code.
+
+Note however that it may cause the [`unused_unsafe`][unused_unsafe] lint to
+trigger as in the example below, which will cause local crates that have
+specified `#![deny(warnings)]` to stop compiling. Per [introducing new
+lints](#new-lints), it is allowed for updates to introduce new warnings.
+
+Going the other way (making a safe function `unsafe`) is a breaking change.
+
+```rust,ignore
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub unsafe fn foo() {}
+
+///////////////////////////////////////////////////////////
+// After
+pub fn foo() {}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will trigger a lint.
+use updated_crate::foo;
+
+unsafe fn bar(f: unsafe fn()) {
+    f()
+}
+
+fn main() {
+    unsafe { foo() }; // The `unused_unsafe` lint will trigger here
+    unsafe { bar(foo) };
+}
+```
+
+Making a previously `unsafe` associated function or method on structs / enums
+safe is also a minor change, while the same is not true for associated
+function on traits (see [any change to trait item signatures](#trait-item-signature)).
+
+### Major: switching from `no_std` support to requiring `std` {#attr-no-std-to-std}
 
 If your library specifically supports a [`no_std`] environment, it is a
 breaking change to make a new release that requires `std`.
@@ -1114,17 +1878,99 @@ Mitigation strategies:
   optionally enables `std` support, and when the feature is off, the library
   can be used in a `no_std` environment.
 
+### Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields {#attr-adding-non-exhaustive}
+
+Making items [`#[non_exhaustive]`][non_exhaustive] changes how they may
+be used outside the crate where they are defined:
+
+- Non-exhaustive structs and enum variants cannot be constructed
+  using [struct literal] syntax, including [functional update syntax].
+- Pattern matching on non-exhaustive structs requires `..` and
+  matching on enums does not count towards exhaustiveness.
+- Casting enum variants to their discriminant with `as` is not allowed.
+
+Structs with private fields cannot be constructed using [struct literal] syntax
+regardless of whether [`#[non_exhaustive]`][non_exhaustive] is used.
+Adding [`#[non_exhaustive]`][non_exhaustive] to such a struct is not
+a breaking change.
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub struct Foo {
+    pub bar: usize,
+}
+
+pub enum Bar {
+    X,
+    Y(usize),
+    Z { a: usize },
+}
+
+pub enum Quux {
+    Var,
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[non_exhaustive]
+pub struct Foo {
+    pub bar: usize,
+}
+
+pub enum Bar {
+    #[non_exhaustive]
+    X,
+
+    #[non_exhaustive]
+    Y(usize),
+
+    #[non_exhaustive]
+    Z { a: usize },
+}
+
+#[non_exhaustive]
+pub enum Quux {
+    Var,
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::{Bar, Foo, Quux};
+
+fn main() {
+    let foo = Foo { bar: 0 }; // Error: cannot create non-exhaustive struct using struct expression
+
+    let bar_x = Bar::X; // Error: unit variant `X` is private
+    let bar_y = Bar::Y(0); // Error: tuple variant `Y` is private
+    let bar_z = Bar::Z { a: 0 }; // Error: cannot create non-exhaustive variant using struct expression
+
+    let q = Quux::Var;
+    match q {
+        Quux::Var => 0,
+        // Error: non-exhaustive patterns: `_` not covered
+    };
+}
+```
+
+Mitigation strategies:
+* Mark structs, enums, and enum variants as
+  [`#[non_exhaustive]`][non_exhaustive] when first introducing them,
+  rather than adding [`#[non_exhaustive]`][non_exhaustive] later on.
+
 ## Tooling and environment compatibility
 
-<a id="env-new-rust"></a>
-### Possibly-breaking: changing the minimum version of Rust required
+### Possibly-breaking: changing the minimum version of Rust required {#env-new-rust}
 
 Introducing the use of new features in a new release of Rust can break
 projects that are using older versions of Rust. This also includes using new
 features in a new release of Cargo, and requiring the use of a nightly-only
 feature in a crate that previously worked on stable.
 
-Some projects choose to allow this in a minor release for various reasons. It
+It is generally recommended to treat this as a minor change, rather than as
+a major change, for [various reasons][msrv-is-minor]. It
 is usually relatively easy to update to a newer version of Rust. Rust also has
 a rapid 6-week release cycle, and some projects will provide compatibility
 within a window of releases (such as the current stable release plus N
@@ -1143,8 +1989,7 @@ Mitigation strategies:
   mechanism for new features. These are currently unstable and only available
   in the nightly channel.
 
-<a id="env-change-requirements"></a>
-### Possibly-breaking: changing the platform and environment requirements
+### Possibly-breaking: changing the platform and environment requirements {#env-change-requirements}
 
 There is a very wide range of assumptions a library makes about the
 environment that it runs in, such as the host platform, operating system
@@ -1164,10 +2009,62 @@ Mitigation strategies:
 * Document the platforms and environments you specifically support.
 * Test your code on a wide range of environments in CI.
 
+### Minor: introducing new lints {#new-lints}
+
+Some changes to a library may cause new lints to be triggered in users of that library.
+This should generally be considered a compatible change.
+
+```rust,ignore,dont-deny
+// MINOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub fn foo() {}
+
+///////////////////////////////////////////////////////////
+// After
+#[deprecated]
+pub fn foo() {}
+
+///////////////////////////////////////////////////////////
+// Example use of the library that will safely work.
+
+fn main() {
+    updated_crate::foo(); // Warning: use of deprecated function
+}
+```
+
+Beware that it may be possible for this to technically cause a project to fail if they have explicitly denied the warning, and the updated crate is a direct dependency.
+Denying warnings should be done with care and the understanding that new lints may be introduced over time.
+However, library authors should be cautious about introducing new warnings and may want to consider the potential impact on their users.
+
+The following lints are examples of those that may be introduced when updating a dependency:
+
+* [`deprecated`][deprecated-lint] --- Introduced when a dependency adds the [`#[deprecated]` attribute][deprecated] to an item you are using.
+* [`unused_must_use`] --- Introduced when a dependency adds the [`#[must_use]` attribute][must-use-attr] to an item where you are not consuming the result.
+* [`unused_unsafe`] --- Introduced when a dependency *removes* the `unsafe` qualifier from a function, and that is the only unsafe function called in an unsafe block.
+
+Additionally, updating `rustc` to a new version may introduce new lints.
+
+Transitive dependencies which introduce new lints should not usually cause a failure because Cargo uses [`--cap-lints`](../../rustc/lints/levels.html#capping-lints) to suppress all lints in dependencies.
+
+Mitigating strategies:
+* If you build with warnings denied, understand you may need to deal with resolving new warnings whenever you update your dependencies.
+  If using RUSTFLAGS to pass `-Dwarnings`, also add the `-A` flag to allow lints that are likely to cause issues, such as `-Adeprecated`.
+* Introduce deprecations behind a [feature][Cargo features].
+  For example `#[cfg_attr(feature = "deprecated", deprecated="use bar instead")]`.
+  Then, when you plan to remove an item in a future SemVer breaking change, you can communicate with your users that they should enable the `deprecated` feature *before* updating to remove the use of the deprecated items.
+  This allows users to choose when to respond to deprecations without needing to immediately respond to them.
+  A downside is that it can be difficult to communicate to users that they need to take these manual steps to prepare for a major update.
+
+[`unused_must_use`]: ../../rustc/lints/listing/warn-by-default.html#unused-must-use
+[deprecated-lint]: ../../rustc/lints/listing/warn-by-default.html#deprecated
+[must-use-attr]: ../../reference/attributes/diagnostics.html#the-must_use-attribute
+[`unused_unsafe`]: ../../rustc/lints/listing/warn-by-default.html#unused-unsafe
+
 ### Cargo
 
-<a id="cargo-feature-add"></a>
-#### Minor: adding a new Cargo feature
+#### Minor: adding a new Cargo feature {#cargo-feature-add}
 
 It is usually safe to add new [Cargo features]. If the feature introduces new
 changes that cause a breaking change, this can cause difficulties for projects
@@ -1189,8 +2086,7 @@ consequences of enabling the feature.
 std = []
 ```
 
-<a id="cargo-feature-remove"></a>
-#### Major: removing a Cargo feature
+#### Major: removing a Cargo feature {#cargo-feature-remove}
 
 It is usually a breaking change to remove [Cargo features]. This will cause
 an error for any project that enabled the feature.
@@ -1216,8 +2112,7 @@ Mitigation strategies:
   functionality. Document that the feature is deprecated, and remove it in a
   future major SemVer release.
 
-<a id="cargo-feature-remove-another"></a>
-#### Major: removing a feature from a feature list if that changes functionality or public items
+#### Major: removing a feature from a feature list if that changes functionality or public items {#cargo-feature-remove-another}
 
 If removing a feature from another feature, this can break existing users if
 they are expecting that functionality to be available through that feature.
@@ -1238,8 +2133,7 @@ default = []  # This may cause packages to fail if they are expecting std to be 
 std = []
 ```
 
-<a id="cargo-remove-opt-dep"></a>
-#### Possibly-breaking: removing an optional dependency
+#### Possibly-breaking: removing an optional dependency {#cargo-remove-opt-dep}
 
 Removing an optional dependency can break a project using your library because
 another project may be enabling that dependency via [Cargo features].
@@ -1272,8 +2166,7 @@ Mitigation strategies:
   optional dependencies necessary to implement "networking". Then document the
   "networking" feature.
 
-<a id="cargo-change-dep-feature"></a>
-#### Minor: changing dependency features
+#### Minor: changing dependency features {#cargo-change-dep-feature}
 
 It is usually safe to change the features on a dependency, as long as the
 feature does not introduce a breaking change.
@@ -1293,8 +2186,7 @@ rand = { version = "0.7.3", features = ["small_rng"] }
 rand = "0.7.3"
 ```
 
-<a id="cargo-dep-add"></a>
-#### Minor: adding dependencies
+#### Minor: adding dependencies {#cargo-dep-add}
 
 It is usually safe to add new dependencies, as long as the new dependency
 does not introduce new requirements that result in a breaking change.
@@ -1338,6 +2230,7 @@ document what your commitments are.
 [Default]: ../../std/default/trait.Default.html
 [deprecated]: ../../reference/attributes/diagnostics.html#the-deprecated-attribute
 [disambiguation syntax]: ../../reference/expressions/call-expr.html#disambiguating-function-calls
+[functional update syntax]: ../../reference/expressions/struct-expr.html#functional-update-syntax
 [inherent implementations]: ../../reference/items/implementations.html#inherent-implementations
 [items]: ../../reference/items.html
 [non_exhaustive]: ../../reference/attributes/type_system.html#the-non_exhaustive-attribute
@@ -1347,3 +2240,5 @@ document what your commitments are.
 [SemVer]: https://semver.org/
 [struct literal]: ../../reference/expressions/struct-expr.html
 [wildcard patterns]: ../../reference/patterns.html#wildcard-pattern
+[unused_unsafe]: ../../rustc/lints/listing/warn-by-default.html#unused-unsafe
+[msrv-is-minor]: https://github.com/rust-lang/api-guidelines/discussions/231

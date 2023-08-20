@@ -93,7 +93,16 @@ pub fn run(
     };
     let pkg = bins[0].0;
     let mut process = compile.target_process(exe, unit.kind, pkg, *script_meta)?;
+
+    // Sets the working directory of the child process to the current working
+    // directory of the parent process.
+    // Overrides the default working directory of the `ProcessBuilder` returned
+    // by `compile.target_process` (the package's root directory)
     process.args(args).cwd(config.cwd());
+
+    if config.extra_verbose() {
+        process.display_env_vars();
+    }
 
     config.shell().status("Running", process.to_string())?;
 

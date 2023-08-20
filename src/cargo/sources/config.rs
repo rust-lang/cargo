@@ -1,4 +1,4 @@
-//! Implementation of configuration for various sources
+//! Implementation of configuration for various sources.
 //!
 //! This module will parse the various `source.*` TOML configuration keys into a
 //! structure usable by Cargo itself. Currently this is primarily used to map
@@ -10,15 +10,18 @@ use crate::util::config::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
 use crate::util::{Config, IntoUrl};
 use anyhow::{bail, Context as _};
-use log::debug;
 use std::collections::{HashMap, HashSet};
+use tracing::debug;
 use url::Url;
 
+/// Represents the entire [`[source]` replacement table][1] in Cargo configuration.
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/config.html#source
 #[derive(Clone)]
 pub struct SourceConfigMap<'cfg> {
     /// Mapping of source name to the toml configuration.
     cfgs: HashMap<String, SourceConfig>,
-    /// Mapping of `SourceId` to the source name.
+    /// Mapping of [`SourceId`] to the source name.
     id2name: HashMap<SourceId, String>,
     config: &'cfg Config,
 }
@@ -67,6 +70,8 @@ struct SourceConfig {
 }
 
 impl<'cfg> SourceConfigMap<'cfg> {
+    /// Like [`SourceConfigMap::empty`] but includes sources from source
+    /// replacement configurations.
     pub fn new(config: &'cfg Config) -> CargoResult<SourceConfigMap<'cfg>> {
         let mut base = SourceConfigMap::empty(config)?;
         let sources: Option<HashMap<String, SourceConfigDef>> = config.get("source")?;
@@ -78,6 +83,8 @@ impl<'cfg> SourceConfigMap<'cfg> {
         Ok(base)
     }
 
+    /// Creates the default set of sources that doesn't take `[source]`
+    /// replacement into account.
     pub fn empty(config: &'cfg Config) -> CargoResult<SourceConfigMap<'cfg>> {
         let mut base = SourceConfigMap {
             cfgs: HashMap::new(),
@@ -91,14 +98,35 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 replace_with: None,
             },
         )?;
+        if SourceId::crates_io_is_sparse(config)? {
+            base.add(
+                CRATES_IO_REGISTRY,
+                SourceConfig {
+                    id: SourceId::crates_io_maybe_sparse_http(config)?,
+                    replace_with: None,
+                },
+            )?;
+        }
+        if let Ok(url) = config.get_env("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS") {
+            base.add(
+                CRATES_IO_REGISTRY,
+                SourceConfig {
+                    id: SourceId::for_alt_registry(&url.parse()?, CRATES_IO_REGISTRY)?,
+                    replace_with: None,
+                },
+            )?;
+        }
         Ok(base)
     }
 
+    /// Returns the `Config` this source config map is associated with.
     pub fn config(&self) -> &'cfg Config {
         self.config
     }
 
-    /// Get the `Source` for a given `SourceId`.
+    /// Gets the [`Source`] for a given [`SourceId`].
+    ///
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn load(
         &self,
         id: SourceId,
@@ -112,18 +140,24 @@ impl<'cfg> SourceConfigMap<'cfg> {
         };
         let mut cfg_loc = "";
         let orig_name = name;
-        let new_id;
-        loop {
+        let new_id = loop {
             let cfg = match self.cfgs.get(name) {
                 Some(cfg) => cfg,
-                None => bail!(
-                    "could not find a configured source with the \
+                None => {
+                    // Attempt to interpret the source name as an alt registry name
+                    if let Ok(alt_id) = SourceId::alt_registry(self.config, name) {
+                        debug!("following pointer to registry {}", name);
+                        break alt_id.with_precise(id.precise().map(str::to_string));
+                    }
+                    bail!(
+                        "could not find a configured source with the \
                      name `{}` when attempting to lookup `{}` \
                      (configuration in `{}`)",
-                    name,
-                    orig_name,
-                    cfg_loc
-                ),
+                        name,
+                        orig_name,
+                        cfg_loc
+                    );
+                }
             };
             match &cfg.replace_with {
                 Some((s, c)) => {
@@ -132,8 +166,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 }
                 None if id == cfg.id => return id.load(self.config, yanked_whitelist),
                 None => {
-                    new_id = cfg.id.with_precise(id.precise().map(|s| s.to_string()));
-                    break;
+                    break cfg.id.with_precise(id.precise().map(|s| s.to_string()));
                 }
             }
             debug!("following pointer to {}", name);
@@ -146,7 +179,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                     cfg_loc
                 )
             }
-        }
+        };
 
         let new_src = new_id.load(
             self.config,
@@ -185,6 +218,7 @@ restore the source replacement configuration to continue the build
         Ok(Box::new(ReplacedSource::new(id, new_id, new_src)))
     }
 
+    /// Adds a source config with an associated name.
     fn add(&mut self, name: &str, cfg: SourceConfig) -> CargoResult<()> {
         if let Some(old_name) = self.id2name.insert(cfg.id, name.to_string()) {
             // The user is allowed to redefine the built-in crates-io
@@ -203,6 +237,7 @@ restore the source replacement configuration to continue the build
         Ok(())
     }
 
+    /// Adds a source config from TOML definition.
     fn add_config(&mut self, name: String, def: SourceConfigDef) -> CargoResult<()> {
         let mut srcs = Vec::new();
         if let Some(registry) = def.registry {
@@ -248,7 +283,7 @@ restore the source replacement configuration to continue the build
             check_not_set("rev", def.rev)?;
         }
         if name == CRATES_IO_REGISTRY && srcs.is_empty() {
-            srcs.push(SourceId::crates_io(self.config)?);
+            srcs.push(SourceId::crates_io_maybe_sparse_http(self.config)?);
         }
 
         match srcs.len() {

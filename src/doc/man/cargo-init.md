@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-init - Create a new Cargo package in an existing directory
+cargo-init --- Create a new Cargo package in an existing directory
 
 ## SYNOPSIS
 

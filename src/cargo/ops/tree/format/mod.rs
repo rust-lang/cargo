@@ -84,7 +84,7 @@ impl<'a> fmt::Display for Display<'a> {
                             )?;
 
                             let source_id = package.package_id().source_id();
-                            if !source_id.is_default_registry() {
+                            if !source_id.is_crates_io() {
                                 write!(fmt, " ({})", source_id)?;
                             }
                         }

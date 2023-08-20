@@ -1,9 +1,10 @@
 # cargo-clean(1)
 {{*set actionverb="Clean"}}
+{{*set multitarget=true}}
 
 ## NAME
 
-cargo-clean - Remove generated artifacts
+cargo-clean --- Remove generated artifacts
 
 ## SYNOPSIS
 

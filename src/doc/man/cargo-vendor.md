@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-vendor - Vendor all dependencies locally
+cargo-vendor --- Vendor all dependencies locally
 
 ## SYNOPSIS
 

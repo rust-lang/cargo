@@ -1,12 +1,12 @@
 use crate::command_prelude::*;
 
 use cargo::ops::{self, OwnersOptions};
+use cargo_credential::Secret;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
-        .arg_quiet()
-        .arg(Arg::new("crate"))
+        .arg(Arg::new("crate").action(ArgAction::Set))
         .arg(
             multi_opt(
                 "add",
@@ -23,28 +23,27 @@ pub fn cli() -> App {
             )
             .short('r'),
         )
-        .arg(opt("list", "List owners of a crate").short('l'))
+        .arg(flag("list", "List owners of a crate").short('l'))
         .arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_quiet()
         .after_help("Run `cargo help owner` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    config.load_credentials()?;
-
     let registry = args.registry(config)?;
     let opts = OwnersOptions {
-        krate: args.value_of("crate").map(|s| s.to_string()),
-        token: args.value_of("token").map(|s| s.to_string()),
-        index: args.value_of("index").map(|s| s.to_string()),
+        krate: args.get_one::<String>("crate").cloned(),
+        token: args.get_one::<String>("token").cloned().map(Secret::from),
+        index: args.get_one::<String>("index").cloned(),
         to_add: args
-            .values_of("add")
-            .map(|xs| xs.map(|s| s.to_string()).collect()),
+            .get_many::<String>("add")
+            .map(|xs| xs.cloned().collect()),
         to_remove: args
-            .values_of("remove")
-            .map(|xs| xs.map(|s| s.to_string()).collect()),
-        list: args.is_present("list"),
+            .get_many::<String>("remove")
+            .map(|xs| xs.cloned().collect()),
+        list: args.flag("list"),
         registry,
     };
     ops::modify_owners(config, &opts)?;

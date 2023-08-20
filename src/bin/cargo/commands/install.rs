@@ -1,25 +1,37 @@
 use crate::command_prelude::*;
 
+use anyhow::anyhow;
 use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
 use cargo::util::IntoUrl;
 
 use cargo_util::paths;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("install")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
-        .arg_quiet()
         .arg(
             Arg::new("crate")
-                .forbid_empty_values(true)
-                .multiple_values(true),
+                .value_parser(clap::builder::NonEmptyStringValueParser::new())
+                .num_args(0..),
         )
         .arg(
             opt("version", "Specify a version to install")
                 .alias("vers")
                 .value_name("VERSION")
                 .requires("crate"),
+        )
+        .arg(
+            opt("index", "Registry index to install from")
+                .value_name("INDEX")
+                .requires("crate")
+                .conflicts_with_all(&["git", "path", "registry"]),
+        )
+        .arg(
+            opt("registry", "Registry to use")
+                .value_name("REGISTRY")
+                .requires("crate")
+                .conflicts_with_all(&["git", "path", "index"]),
         )
         .arg(
             opt("git", "Git URL to install the specified crate from")
@@ -46,38 +58,31 @@ pub fn cli() -> App {
                 .value_name("PATH")
                 .conflicts_with_all(&["git", "index", "registry"]),
         )
-        .arg(opt(
+        .arg(opt("root", "Directory to install packages into").value_name("DIR"))
+        .arg(flag("force", "Force overwriting existing crates or binaries").short('f'))
+        .arg(flag("no-track", "Do not save tracking information"))
+        .arg(flag(
             "list",
             "list all installed packages and their versions",
         ))
-        .arg_jobs()
-        .arg(opt("force", "Force overwriting existing crates or binaries").short('f'))
-        .arg(opt("no-track", "Do not save tracking information"))
-        .arg_features()
-        .arg_profile("Install artifacts with the specified profile")
-        .arg(opt("debug", "Build in debug mode instead of release mode"))
+        .arg_ignore_rust_version()
+        .arg_message_format()
+        .arg_quiet()
         .arg_targets_bins_examples(
             "Install only the specified binary",
             "Install all binaries",
             "Install only the specified example",
             "Install all examples",
         )
+        .arg_features()
+        .arg_jobs()
+        .arg(flag(
+            "debug",
+            "Build in debug mode (with the 'dev' profile) instead of release mode",
+        ))
+        .arg_profile("Install artifacts with the specified profile")
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg(opt("root", "Directory to install packages into").value_name("DIR"))
-        .arg(
-            opt("index", "Registry index to install from")
-                .value_name("INDEX")
-                .requires("crate")
-                .conflicts_with_all(&["git", "path", "registry"]),
-        )
-        .arg(
-            opt("registry", "Registry to use")
-                .value_name("REGISTRY")
-                .requires("crate")
-                .conflicts_with_all(&["git", "path", "index"]),
-        )
-        .arg_message_format()
         .arg_timings()
         .after_help("Run `cargo help install` for more detailed information.\n")
 }
@@ -97,21 +102,33 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // but not `Config::reload_rooted_at` which is always cwd)
     let path = path.map(|p| paths::normalize_path(&p));
 
+    let version = args.get_one::<String>("version").map(String::as_str);
     let krates = args
-        .values_of("crate")
+        .get_many::<String>("crate")
         .unwrap_or_default()
-        .collect::<Vec<_>>();
+        .map(|k| resolve_crate(k, version))
+        .collect::<crate::CargoResult<Vec<_>>>()?;
+
+    for (crate_name, _) in krates.iter() {
+        if let Some(toolchain) = crate_name.strip_prefix("+") {
+            return Err(anyhow!(
+                "invalid character `+` in package name: `+{toolchain}`
+    Use `cargo +{toolchain} install` if you meant to use the `{toolchain}` toolchain."
+            )
+            .into());
+        }
+    }
 
     let mut from_cwd = false;
 
-    let source = if let Some(url) = args.value_of("git") {
+    let source = if let Some(url) = args.get_one::<String>("git") {
         let url = url.into_url()?;
-        let gitref = if let Some(branch) = args.value_of("branch") {
-            GitReference::Branch(branch.to_string())
-        } else if let Some(tag) = args.value_of("tag") {
-            GitReference::Tag(tag.to_string())
-        } else if let Some(rev) = args.value_of("rev") {
-            GitReference::Rev(rev.to_string())
+        let gitref = if let Some(branch) = args.get_one::<String>("branch") {
+            GitReference::Branch(branch.clone())
+        } else if let Some(tag) = args.get_one::<String>("tag") {
+            GitReference::Tag(tag.clone())
+        } else if let Some(rev) = args.get_one::<String>("rev") {
+            GitReference::Rev(rev.clone())
         } else {
             GitReference::DefaultBranch
         };
@@ -121,16 +138,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else if krates.is_empty() {
         from_cwd = true;
         SourceId::for_path(config.cwd())?
+    } else if let Some(index) = args.get_one::<String>("index") {
+        SourceId::for_registry(&index.into_url()?)?
     } else if let Some(registry) = args.registry(config)? {
         SourceId::alt_registry(config, &registry)?
-    } else if let Some(index) = args.value_of("index") {
-        SourceId::for_registry(&index.into_url()?)?
     } else {
         SourceId::crates_io(config)?
     };
 
-    let version = args.value_of("version");
-    let root = args.value_of("root");
+    let root = args.get_one::<String>("root").map(String::as_str);
 
     // We only provide workspace information for local crate installation from
     // one of the following sources:
@@ -157,7 +173,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     compile_opts.build_config.requested_profile =
         args.get_profile_name(config, "release", ProfileChecking::Custom)?;
 
-    if args.is_present("list") {
+    if args.flag("list") {
         ops::install_list(root, config)?;
     } else {
         ops::install(
@@ -166,11 +182,28 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             krates,
             source,
             from_cwd,
-            version,
             &compile_opts,
-            args.is_present("force"),
-            args.is_present("no-track"),
+            args.flag("force"),
+            args.flag("no-track"),
         )?;
     }
     Ok(())
+}
+
+fn resolve_crate<'k>(
+    mut krate: &'k str,
+    mut version: Option<&'k str>,
+) -> crate::CargoResult<(&'k str, Option<&'k str>)> {
+    if let Some((k, v)) = krate.split_once('@') {
+        if version.is_some() {
+            anyhow::bail!("cannot specify both `@{v}` and `--version`");
+        }
+        if k.is_empty() {
+            // by convention, arguments starting with `@` are response files
+            anyhow::bail!("missing crate name for `@{v}`");
+        }
+        krate = k;
+        version = Some(v);
+    }
+    Ok((krate, version))
 }

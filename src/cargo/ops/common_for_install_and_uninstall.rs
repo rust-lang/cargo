@@ -8,11 +8,12 @@ use std::task::Poll;
 
 use anyhow::{bail, format_err, Context as _};
 use git_url_parse::{GitUrl, Scheme};
+use ops::FilterRule;
 use serde::{Deserialize, Serialize};
-use toml_edit::easy as toml;
 
-use crate::core::compiler::Freshness;
-use crate::core::{Dependency, FeatureValue, Package, PackageId, Source, SourceId};
+use crate::core::compiler::{DirtyReason, Freshness};
+use crate::core::Target;
+use crate::core::{Dependency, FeatureValue, Package, PackageId, QueryKind, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
@@ -170,7 +171,7 @@ impl InstallTracker {
         // Check if any tracked exe's are already installed.
         let duplicates = self.find_duplicates(dst, &exes);
         if force || duplicates.is_empty() {
-            return Ok((Freshness::Dirty, duplicates));
+            return Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates));
         }
         // Check if all duplicates come from packages of the same name. If
         // there are duplicates from other packages, then --force will be
@@ -200,7 +201,7 @@ impl InstallTracker {
             let source_id = pkg.package_id().source_id();
             if source_id.is_path() {
                 // `cargo install --path ...` is always rebuilt.
-                return Ok((Freshness::Dirty, duplicates));
+                return Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates));
             }
             let is_up_to_date = |dupe_pkg_id| {
                 let info = self
@@ -224,7 +225,7 @@ impl InstallTracker {
             if matching_duplicates.iter().all(is_up_to_date) {
                 Ok((Freshness::Fresh, duplicates))
             } else {
-                Ok((Freshness::Dirty, duplicates))
+                Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates))
             }
         } else {
             // Format the error message.
@@ -507,7 +508,7 @@ pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesyst
     let config_root = config.get_path("install.root")?;
     Ok(flag
         .map(PathBuf::from)
-        .or_else(|| env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
+        .or_else(|| config.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
         .or_else(move || config_root.map(|v| v.val))
         .map(Filesystem::new)
         .unwrap_or_else(|| config.home().clone()))
@@ -589,7 +590,7 @@ where
     }
 
     let deps = loop {
-        match source.query_vec(&dep)? {
+        match source.query_vec(&dep, QueryKind::Exact)? {
             Poll::Ready(deps) => break deps,
             Poll::Pending => source.block_until_ready()?,
         }
@@ -602,8 +603,20 @@ where
         None => {
             let is_yanked: bool = if dep.version_req().is_exact() {
                 let version: String = dep.version_req().to_string();
-                PackageId::new(dep.package_name(), &version[1..], source.source_id())
-                    .map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false))
+                if let Ok(pkg_id) =
+                    PackageId::new(dep.package_name(), &version[1..], source.source_id())
+                {
+                    source.invalidate_cache();
+                    loop {
+                        match source.is_yanked(pkg_id) {
+                            Poll::Ready(Ok(is_yanked)) => break is_yanked,
+                            Poll::Ready(Err(_)) => break false,
+                            Poll::Pending => source.block_until_ready()?,
+                        }
+                    }
+                } else {
+                    false
+                }
             } else {
                 false
             };
@@ -664,9 +677,10 @@ where
         let examples = candidates
             .iter()
             .filter(|cand| cand.targets().iter().filter(|t| t.is_example()).count() > 0);
-        let pkg = match one(binaries, |v| multi_err("binaries", v))? {
+        let git_url = source.source_id().url().to_string();
+        let pkg = match one(binaries, |v| multi_err("binaries", &git_url, v))? {
             Some(p) => p,
-            None => match one(examples, |v| multi_err("examples", v))? {
+            None => match one(examples, |v| multi_err("examples", &git_url, v))? {
                 Some(p) => p,
                 None => bail!(
                     "no packages found with binaries or \
@@ -677,17 +691,20 @@ where
         Ok(pkg.clone())
     };
 
-    fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
+    fn multi_err(kind: &str, git_url: &str, mut pkgs: Vec<&Package>) -> String {
         pkgs.sort_unstable_by_key(|a| a.name());
+        let first_pkg = pkgs[0];
         format!(
             "multiple packages with {} found: {}. When installing a git repository, \
-            cargo will always search the entire repo for any Cargo.toml. \
-            Please specify which to install.",
+            cargo will always search the entire repo for any Cargo.toml.\n\
+            Please specify a package, e.g. `cargo install --git {} {}`.",
             kind,
             pkgs.iter()
                 .map(|p| p.name().as_str())
                 .collect::<Vec<_>>()
-                .join(", ")
+                .join(", "),
+            git_url,
+            first_pkg.name()
         )
     }
 }
@@ -739,20 +756,17 @@ pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String>
             ref examples,
             ..
         } => {
-            let all_bins: Vec<String> = bins.try_collect().unwrap_or_else(|| {
-                pkg.targets()
+            let collect = |rule: &_, f: fn(&Target) -> _| match rule {
+                FilterRule::All => pkg
+                    .targets()
                     .iter()
-                    .filter(|t| t.is_bin())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
-            let all_examples: Vec<String> = examples.try_collect().unwrap_or_else(|| {
-                pkg.targets()
-                    .iter()
-                    .filter(|t| t.is_exe_example())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
+                    .filter(|t| f(t))
+                    .map(|t| t.name().into())
+                    .collect(),
+                FilterRule::Just(targets) => targets.clone(),
+            };
+            let all_bins = collect(bins, Target::is_bin);
+            let all_examples = collect(examples, Target::is_exe_example);
 
             all_bins
                 .iter()

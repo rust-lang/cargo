@@ -7,8 +7,8 @@
 use std::fs;
 
 use cargo_test_support::git;
-use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{basic_lib_manifest, paths, project, Project};
+use cargo_test_support::registry::{self, Package, RegistryBuilder};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, paths, project, Project};
 
 #[cargo_test]
 fn vendor_simple() {
@@ -34,7 +34,7 @@ fn vendor_simple() {
     assert!(lock.contains("version = \"0.3.5\""));
 
     add_vendor_config(&p);
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -58,8 +58,7 @@ fn vendor_sample_config() {
 
     p.cargo("vendor --respect-source-config")
         .with_stdout(
-            r#"
-[source.crates-io]
+            r#"[source.crates-io]
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
@@ -67,6 +66,86 @@ directory = "vendor"
 "#,
         )
         .run();
+}
+
+#[cargo_test]
+fn vendor_sample_config_alt_registry() {
+    let registry = RegistryBuilder::new().alternative().http_index().build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                log = { version = "0.3.5", registry = "alternative" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").alternative(true).publish();
+
+    p.cargo("vendor --respect-source-config")
+        .with_stdout(format!(
+            r#"[source."{0}"]
+registry = "{0}"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+"#,
+            registry.index_url()
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn vendor_path_specified() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                log = "0.3.5"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").publish();
+
+    let path = if cfg!(windows) {
+        r#"deps\.vendor"#
+    } else {
+        "deps/.vendor"
+    };
+
+    let output = p
+        .cargo("vendor --respect-source-config")
+        .arg(path)
+        .exec_with_output()
+        .unwrap();
+    // Assert against original output to ensure that
+    // path is normalized by `ops::vendor` on Windows.
+    assert_eq!(
+        &String::from_utf8(output.stdout).unwrap(),
+        r#"[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "deps/.vendor"
+"#
+    );
+
+    let lock = p.read_file("deps/.vendor/log/Cargo.toml");
+    assert!(lock.contains("version = \"0.3.5\""));
 }
 
 fn add_vendor_config(p: &Project) {
@@ -117,7 +196,7 @@ fn package_exclude() {
         .publish();
 
     p.cargo("vendor --respect-source-config").run();
-    let csum = dbg!(p.read_file("vendor/bar/.cargo-checksum.json"));
+    let csum = p.read_file("vendor/bar/.cargo-checksum.json");
     assert!(csum.contains(".include"));
     assert!(!csum.contains(".exclude"));
     assert!(!csum.contains(".dotdir/exclude"));
@@ -167,7 +246,7 @@ fn two_versions() {
     assert!(lock.contains("version = \"0.7.0\""));
 
     add_vendor_config(&p);
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -212,7 +291,7 @@ fn two_explicit_versions() {
     assert!(lock.contains("version = \"0.7.0\""));
 
     add_vendor_config(&p);
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -305,8 +384,8 @@ fn two_lockfiles() {
     assert!(lock.contains("version = \"0.7.0\""));
 
     add_vendor_config(&p);
-    p.cargo("build").cwd("foo").run();
-    p.cargo("build").cwd("bar").run();
+    p.cargo("check").cwd("foo").run();
+    p.cargo("check").cwd("bar").run();
 }
 
 #[cargo_test]
@@ -356,12 +435,11 @@ fn test_sync_argument() {
 
     p.cargo("vendor --respect-source-config --manifest-path foo/Cargo.toml -s bar/Cargo.toml baz/Cargo.toml test_vendor")
         .with_stderr("\
-error: Found argument 'test_vendor' which wasn't expected, or isn't valid in this context
+error: unexpected argument 'test_vendor' found
 
-USAGE:
-    cargo[EXE] vendor [OPTIONS] [path]
+Usage: cargo[EXE] vendor [OPTIONS] [path]
 
-For more information try --help",
+For more information, try '--help'.",
         )
         .with_status(1)
         .run();
@@ -563,7 +641,7 @@ fn vendoring_git_crates() {
     p.read_file("vendor/serde_derive/src/wut.rs");
 
     add_vendor_config(&p);
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -594,6 +672,60 @@ fn git_simple() {
     p.cargo("vendor --respect-source-config").run();
     let csum = p.read_file("vendor/a/.cargo-checksum.json");
     assert!(csum.contains("\"package\":null"));
+}
+
+#[cargo_test]
+fn git_diff_rev() {
+    let (git_project, git_repo) = git::new_repo("git", |p| {
+        p.file("Cargo.toml", &basic_manifest("a", "0.1.0"))
+            .file("src/lib.rs", "")
+    });
+    let url = git_project.url();
+    let ref_1 = "v0.1.0";
+    let ref_2 = "v0.2.0";
+
+    git::tag(&git_repo, ref_1);
+
+    git_project.change_file("Cargo.toml", &basic_manifest("a", "0.2.0"));
+    git::add(&git_repo);
+    git::commit(&git_repo);
+    git::tag(&git_repo, ref_2);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    a_1 = {{ package = "a", git = '{url}', rev = '{ref_1}' }}
+                    a_2 = {{ package = "a", git = '{url}', rev = '{ref_2}' }}
+                "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config")
+        .with_stdout(
+            r#"[source."git+file://[..]/git?rev=v0.1.0"]
+git = [..]
+rev = "v0.1.0"
+replace-with = "vendored-sources"
+
+[source."git+file://[..]/git?rev=v0.2.0"]
+git = [..]
+rev = "v0.2.0"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+"#,
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -653,6 +785,79 @@ Caused by:
 ",
         )
         .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn git_complex() {
+    let git_b = git::new("git_b", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+
+                [dependencies]
+                dep_b = { path = 'dep_b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("dep_b/Cargo.toml", &basic_lib_manifest("dep_b"))
+        .file("dep_b/src/lib.rs", "")
+    });
+
+    let git_a = git::new("git_a", |p| {
+        p.file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "a"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    b = {{ git = '{}' }}
+                    dep_a = {{ path = 'dep_a' }}
+                "#,
+                git_b.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("dep_a/Cargo.toml", &basic_lib_manifest("dep_a"))
+        .file("dep_a/src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    a = {{ git = '{}' }}
+                "#,
+                git_a.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let output = p
+        .cargo("vendor --respect-source-config")
+        .exec_with_output()
+        .unwrap();
+    let output = String::from_utf8(output.stdout).unwrap();
+    p.change_file(".cargo/config", &output);
+
+    p.cargo("check -v")
+        .with_stderr_contains("[..]foo/vendor/a/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/dep_a/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/b/src/lib.rs[..]")
+        .with_stderr_contains("[..]foo/vendor/dep_b/src/lib.rs[..]")
         .run();
 }
 
@@ -846,10 +1051,11 @@ fn vendor_preserves_permissions() {
 
     p.cargo("vendor --respect-source-config").run();
 
+    let umask = cargo::util::get_umask();
     let metadata = fs::metadata(p.root().join("vendor/bar/src/lib.rs")).unwrap();
-    assert_eq!(metadata.mode() & 0o777, 0o644);
+    assert_eq!(metadata.mode() & 0o777, 0o644 & !umask);
     let metadata = fs::metadata(p.root().join("vendor/bar/example.sh")).unwrap();
-    assert_eq!(metadata.mode() & 0o777, 0o755);
+    assert_eq!(metadata.mode() & 0o777, 0o755 & !umask);
 }
 
 #[cargo_test]
@@ -881,4 +1087,67 @@ fn no_remote_dependency_no_vendor() {
         .with_stderr("There is no dependency to vendor in this project.")
         .run();
     assert!(!p.root().join("vendor").exists());
+}
+
+#[cargo_test]
+fn vendor_crate_with_ws_inherit() {
+    let git = git::new("ws", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+                [workspace.package]
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version.workspace = true
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    bar = {{ git = '{}' }}
+                "#,
+                git.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+    p.change_file(
+        ".cargo/config",
+        &format!(
+            r#"
+                [source."{}"]
+                git = "{}"
+                replace-with = "vendor"
+
+                [source.vendor]
+                directory = "vendor"
+            "#,
+            git.url(),
+            git.url()
+        ),
+    );
+
+    p.cargo("check -v")
+        .with_stderr_contains("[..]foo/vendor/bar/src/lib.rs[..]")
+        .run();
 }

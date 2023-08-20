@@ -1,31 +1,31 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::fmt;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::ffi::OsStr;
+use std::fmt::{self, Display, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::str;
+use std::str::{self, FromStr};
 
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
-use log::{debug, trace};
+use itertools::Itertools;
+use lazycell::LazyCell;
 use semver::{self, VersionReq};
-use serde::de;
+use serde::de::IntoDeserializer as _;
+use serde::de::{self, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
-use toml_edit::easy as toml;
+use tracing::{debug, trace};
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{
-    find_workspace_root, resolve_relative_path, Dependency, Manifest, PackageId, Summary, Target,
-};
-use crate::core::{
-    Edition, EitherManifest, Feature, Features, InheritableFields, VirtualManifest, Workspace,
-};
+use crate::core::{find_workspace_root, resolve_relative_path, CliUnstable};
+use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
+use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
@@ -34,6 +34,7 @@ use crate::util::{
     self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, VersionReqExt,
 };
 
+pub mod embedded;
 mod targets;
 use self::targets::targets;
 
@@ -55,11 +56,30 @@ pub fn read_manifest(
         path.display(),
         source_id
     );
-    let contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
+    let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
+    let embedded = is_embedded(path);
+    if embedded {
+        if !config.cli_unstable().script {
+            return Err(ManifestError::new(
+                anyhow::anyhow!("parsing `{}` requires `-Zscript`", path.display()),
+                path.into(),
+            ));
+        }
+        contents = embedded::expand_manifest(&contents, path, config)
+            .map_err(|err| ManifestError::new(err, path.into()))?;
+    }
 
-    read_manifest_from_str(&contents, path, source_id, config)
+    read_manifest_from_str(&contents, path, embedded, source_id, config)
         .with_context(|| format!("failed to parse manifest at `{}`", path.display()))
         .map_err(|err| ManifestError::new(err, path.into()))
+}
+
+/// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
+pub fn is_embedded(path: &Path) -> bool {
+    let ext = path.extension();
+    ext == Some(OsStr::new("rs")) ||
+        // Provide better errors by not considering directories to be embedded manifests
+        (ext.is_none() && path.is_file())
 }
 
 /// Parse an already-loaded `Cargo.toml` as a Cargo manifest.
@@ -70,9 +90,10 @@ pub fn read_manifest(
 /// within the manifest. For virtual manifests, these paths can only
 /// come from patched or replaced dependencies. These paths are not
 /// canonicalized.
-pub fn read_manifest_from_str(
+fn read_manifest_from_str(
     contents: &str,
     manifest_file: &Path,
+    embedded: bool,
     source_id: SourceId,
     config: &Config,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
@@ -88,21 +109,16 @@ pub fn read_manifest_from_str(
     // Provide a helpful error message for a common user error.
     if let Some(package) = toml.get("package").or_else(|| toml.get("project")) {
         if let Some(feats) = package.get("cargo-features") {
-            let mut feats = feats.clone();
-            if let Some(value) = feats.as_value_mut() {
-                // Only keep formatting inside of the `[]` and not formatting around it
-                value.decor_mut().clear();
-            }
             bail!(
                 "cargo-features = {} was found in the wrong location: it \
                  should be set at the top of Cargo.toml before any tables",
-                feats.to_string()
+                feats
             );
         }
     }
 
     let mut unused = BTreeSet::new();
-    let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {
+    let manifest: TomlManifest = serde_ignored::deserialize(toml.into_deserializer(), |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
@@ -129,18 +145,11 @@ pub fn read_manifest_from_str(
                     name
                 );
             }
-            if let TomlDependency::Workspace(_) = dep {
-                bail!(
-                    "`workspace.dependencies.{}` specified `{{ workspace = true }}`, but \
-                    workspace dependencies cannot do this",
-                    name
-                );
-            }
         }
     }
     return if manifest.project.is_some() || manifest.package.is_some() {
         let (mut manifest, paths) =
-            TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
+            TomlManifest::to_real_manifest(&manifest, embedded, source_id, package_root, config)?;
         add_unused(manifest.warnings_mut());
         if manifest.targets().iter().all(|t| t.is_custom_build()) {
             bail!(
@@ -183,23 +192,7 @@ pub fn read_manifest_from_str(
     }
 }
 
-/// Attempts to parse a string into a [`toml::Value`]. This is not specific to any
-/// particular kind of TOML file.
-///
-/// The purpose of this wrapper is to detect invalid TOML which was previously
-/// accepted and display a warning to the user in that case. The `file` and `config`
-/// parameters are only used by this fallback path.
-pub fn parse(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Value> {
-    // At the moment, no compatibility checks are needed.
-    toml.parse()
-        .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
-}
-
-pub fn parse_document(
-    toml: &str,
-    _file: &Path,
-    _config: &Config,
-) -> CargoResult<toml_edit::Document> {
+pub fn parse_document(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Table> {
     // At the moment, no compatibility checks are needed.
     toml.parse()
         .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
@@ -226,8 +219,6 @@ pub enum TomlDependency<P: Clone = String> {
     /// In the simple format, only a version is specified, eg.
     /// `package = "<version>"`
     Simple(String),
-    /// `package = { workspace = true }`
-    Workspace(TomlWorkspaceDependency),
     /// The simple format is equivalent to a detailed dependency
     /// specifying only a version, eg.
     /// `package = { version = "<version>" }`
@@ -263,42 +254,19 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
                 V: de::MapAccess<'de>,
             {
                 let mvd = de::value::MapAccessDeserializer::new(map);
-                let details: IntermediateDependency<P> = IntermediateDependency::deserialize(mvd)?;
-                if let Some(workspace) = details.workspace {
-                    if workspace {
-                        Ok(TomlDependency::Workspace(TomlWorkspaceDependency {
-                            workspace: true,
-                            features: details.features,
-                            optional: details.optional,
-                        }))
-                    } else {
-                        return Err(de::Error::custom("workspace cannot be false"));
-                    }
-                } else {
-                    Ok(TomlDependency::Detailed(DetailedTomlDependency {
-                        version: details.version,
-                        registry: details.registry,
-                        registry_index: details.registry_index,
-                        path: details.path,
-                        git: details.git,
-                        branch: details.branch,
-                        tag: details.tag,
-                        rev: details.rev,
-                        features: details.features,
-                        optional: details.optional,
-                        default_features: details.default_features,
-                        default_features2: details.default_features2,
-                        package: details.package,
-                        public: details.public,
-                        artifact: details.artifact,
-                        lib: details.lib,
-                        target: details.target,
-                    }))
-                }
+                DetailedTomlDependency::deserialize(mvd).map(TomlDependency::Detailed)
             }
         }
-
         deserializer.deserialize_any(TomlDependencyVisitor(PhantomData))
+    }
+}
+
+impl TomlDependency {
+    fn unused_keys(&self) -> Vec<String> {
+        match self {
+            TomlDependency::Simple(_) => vec![],
+            TomlDependency::Detailed(detailed) => detailed.other.keys().cloned().collect(),
+        }
     }
 }
 
@@ -316,39 +284,6 @@ impl ResolveToPath for ConfigRelativePath {
     fn resolve(&self, c: &Config) -> PathBuf {
         self.resolve_path(c)
     }
-}
-
-// This is here due to parsing of TomlDependency works.
-// At the time of writing it can not be derived in anyway I could find.
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "kebab-case")]
-pub struct IntermediateDependency<P = String> {
-    workspace: Option<bool>,
-    version: Option<String>,
-    registry: Option<String>,
-    registry_index: Option<String>,
-    path: Option<P>,
-    git: Option<String>,
-    branch: Option<String>,
-    tag: Option<String>,
-    rev: Option<String>,
-    features: Option<Vec<String>>,
-    optional: Option<bool>,
-    default_features: Option<bool>,
-    #[serde(rename = "default_features")]
-    default_features2: Option<bool>,
-    package: Option<String>,
-    public: Option<bool>,
-    artifact: Option<StringOrVec>,
-    lib: Option<bool>,
-    target: Option<String>,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct TomlWorkspaceDependency {
-    workspace: bool,
-    features: Option<Vec<String>>,
-    optional: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -378,12 +313,16 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     package: Option<String>,
     public: Option<bool>,
 
-    /// One ore more of 'bin', 'cdylib', 'staticlib', 'bin:<name>'.
+    /// One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.
     artifact: Option<StringOrVec>,
     /// If set, the artifact should also be a dependency
     lib: Option<bool>,
     /// A platform name, like `x86_64-apple-darwin`
     target: Option<String>,
+    /// This is here to provide a way to see the "unused manifest keys" when deserializing
+    #[serde(skip_serializing)]
+    #[serde(flatten)]
+    other: BTreeMap<String, toml::Value>,
 }
 
 // Explicit implementation so we avoid pulling in P: Default
@@ -407,6 +346,7 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
             artifact: Default::default(),
             lib: Default::default(),
             target: Default::default(),
+            other: Default::default(),
         }
     }
 }
@@ -416,27 +356,28 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
 #[serde(rename_all = "kebab-case")]
 pub struct TomlManifest {
     cargo_features: Option<Vec<String>>,
-    package: Option<Box<TomlProject>>,
-    project: Option<Box<TomlProject>>,
+    package: Option<Box<TomlPackage>>,
+    project: Option<Box<TomlPackage>>,
     profile: Option<TomlProfiles>,
     lib: Option<TomlLibTarget>,
     bin: Option<Vec<TomlBinTarget>>,
     example: Option<Vec<TomlExampleTarget>>,
     test: Option<Vec<TomlTestTarget>>,
     bench: Option<Vec<TomlTestTarget>>,
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
-    dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
+    dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
-    build_dependencies: Option<BTreeMap<String, TomlDependency>>,
+    dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<BTreeMap<String, TomlDependency>>,
+    build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     features: Option<BTreeMap<InternedString, Vec<InternedString>>>,
     target: Option<BTreeMap<String, TomlPlatform>>,
     replace: Option<BTreeMap<String, TomlDependency>>,
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
-    badges: Option<MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>>>,
+    badges: Option<MaybeWorkspaceBtreeMap>,
+    lints: Option<toml::Value>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -451,9 +392,18 @@ impl TomlProfiles {
         self.0.get(name)
     }
 
-    pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
+    /// Checks syntax validity and unstable feature gate for each profile.
+    ///
+    /// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
+    /// because profiles can now be set in either `Cargo.toml` or `config.toml`.
+    pub fn validate(
+        &self,
+        cli_unstable: &CliUnstable,
+        features: &Features,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<()> {
         for (name, profile) in &self.0 {
-            profile.validate(name, features, warnings)?;
+            profile.validate(name, cli_unstable, features, warnings)?;
         }
         Ok(())
     }
@@ -515,11 +465,100 @@ impl ser::Serialize for TomlOptLevel {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(untagged, expecting = "expected a boolean or an integer")]
-pub enum U32OrBool {
-    U32(u32),
-    Bool(bool),
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub enum TomlDebugInfo {
+    None,
+    LineDirectivesOnly,
+    LineTablesOnly,
+    Limited,
+    Full,
+}
+
+impl ser::Serialize for TomlDebugInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        match self {
+            Self::None => 0.serialize(serializer),
+            Self::LineDirectivesOnly => "line-directives-only".serialize(serializer),
+            Self::LineTablesOnly => "line-tables-only".serialize(serializer),
+            Self::Limited => 1.serialize(serializer),
+            Self::Full => 2.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for TomlDebugInfo {
+    fn deserialize<D>(d: D) -> Result<TomlDebugInfo, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = TomlDebugInfo;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str(
+                    "a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"",
+                )
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<TomlDebugInfo, E>
+            where
+                E: de::Error,
+            {
+                let debuginfo = match value {
+                    0 => TomlDebugInfo::None,
+                    1 => TomlDebugInfo::Limited,
+                    2 => TomlDebugInfo::Full,
+                    _ => return Err(de::Error::invalid_value(Unexpected::Signed(value), &self)),
+                };
+                Ok(debuginfo)
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(if v {
+                    TomlDebugInfo::Full
+                } else {
+                    TomlDebugInfo::None
+                })
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<TomlDebugInfo, E>
+            where
+                E: de::Error,
+            {
+                let debuginfo = match value {
+                    "none" => TomlDebugInfo::None,
+                    "limited" => TomlDebugInfo::Limited,
+                    "full" => TomlDebugInfo::Full,
+                    "line-directives-only" => TomlDebugInfo::LineDirectivesOnly,
+                    "line-tables-only" => TomlDebugInfo::LineTablesOnly,
+                    _ => return Err(de::Error::invalid_value(Unexpected::Str(value), &self)),
+                };
+                Ok(debuginfo)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+impl Display for TomlDebugInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TomlDebugInfo::None => f.write_char('0'),
+            TomlDebugInfo::Limited => f.write_char('1'),
+            TomlDebugInfo::Full => f.write_char('2'),
+            TomlDebugInfo::LineDirectivesOnly => f.write_str("line-directives-only"),
+            TomlDebugInfo::LineTablesOnly => f.write_str("line-tables-only"),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
@@ -529,7 +568,7 @@ pub struct TomlProfile {
     pub lto: Option<StringOrBool>,
     pub codegen_backend: Option<InternedString>,
     pub codegen_units: Option<u32>,
-    pub debug: Option<U32OrBool>,
+    pub debug: Option<TomlDebugInfo>,
     pub split_debuginfo: Option<String>,
     pub debug_assertions: Option<bool>,
     pub rpath: Option<bool>,
@@ -588,21 +627,27 @@ impl fmt::Display for ProfilePackageSpec {
 }
 
 impl TomlProfile {
+    /// Checks stytax validity and unstable feature gate for a given profile.
     pub fn validate(
         &self,
         name: &str,
+        cli_unstable: &CliUnstable,
         features: &Features,
         warnings: &mut Vec<String>,
     ) -> CargoResult<()> {
-        self.validate_profile(name, features)?;
+        self.validate_profile(name, cli_unstable, features)?;
         if let Some(ref profile) = self.build_override {
             profile.validate_override("build-override")?;
-            profile.validate_profile(&format!("{name}.build-override"), features)?;
+            profile.validate_profile(&format!("{name}.build-override"), cli_unstable, features)?;
         }
         if let Some(ref packages) = self.package {
             for (override_name, profile) in packages {
                 profile.validate_override("package")?;
-                profile.validate_profile(&format!("{name}.package.{override_name}"), features)?;
+                profile.validate_profile(
+                    &format!("{name}.package.{override_name}"),
+                    cli_unstable,
+                    features,
+                )?;
             }
         }
 
@@ -648,6 +693,16 @@ impl TomlProfile {
                     "`panic` setting of `{}` is not a valid setting, \
                      must be `unwind` or `abort`",
                     panic
+                );
+            }
+        }
+
+        if let Some(StringOrBool::String(arg)) = &self.lto {
+            if arg == "true" || arg == "false" {
+                bail!(
+                    "`lto` setting of string `\"{arg}\"` for `{name}` profile is not \
+                     a valid setting, must be a boolean (`true`/`false`) or a string \
+                    (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.",
                 );
             }
         }
@@ -737,9 +792,21 @@ impl TomlProfile {
     /// Validates a profile.
     ///
     /// This is a shallow check, which is reused for the profile itself and any overrides.
-    fn validate_profile(&self, name: &str, features: &Features) -> CargoResult<()> {
+    fn validate_profile(
+        &self,
+        name: &str,
+        cli_unstable: &CliUnstable,
+        features: &Features,
+    ) -> CargoResult<()> {
         if let Some(codegen_backend) = &self.codegen_backend {
-            features.require(Feature::codegen_backend())?;
+            match (
+                features.require(Feature::codegen_backend()),
+                cli_unstable.codegen_backend,
+            ) {
+                (Err(e), false) => return Err(e),
+                _ => {}
+            }
+
             if codegen_backend.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
                 bail!(
                     "`profile.{}.codegen-backend` setting of `{}` is not a valid backend name.",
@@ -749,7 +816,13 @@ impl TomlProfile {
             }
         }
         if self.rustflags.is_some() {
-            features.require(Feature::profile_rustflags())?;
+            match (
+                features.require(Feature::profile_rustflags()),
+                cli_unstable.profile_rustflags,
+            ) {
+                (Err(e), false) => return Err(e),
+                _ => {}
+            }
         }
         Ok(())
     }
@@ -954,16 +1027,14 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
     }
 }
 
-fn version_trim_whitespace<'de, D>(
-    deserializer: D,
-) -> Result<MaybeWorkspace<semver::Version>, D::Error>
+fn version_trim_whitespace<'de, D>(deserializer: D) -> Result<MaybeWorkspaceSemverVersion, D::Error>
 where
     D: de::Deserializer<'de>,
 {
     struct Visitor;
 
     impl<'de> de::Visitor<'de> for Visitor {
-        type Value = MaybeWorkspace<semver::Version>;
+        type Value = MaybeWorkspaceSemverVersion;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             formatter.write_str("SemVer version")
@@ -991,38 +1062,64 @@ where
     deserializer.deserialize_any(Visitor)
 }
 
-/// Enum that allows for the parsing of { workspace = true } in a Cargo.toml
+/// This Trait exists to make [`MaybeWorkspace::Workspace`] generic. It makes deserialization of
+/// [`MaybeWorkspace`] much easier, as well as making error messages for
+/// [`MaybeWorkspace::resolve`] much nicer
 ///
-/// It allows for things to be inherited from a workspace or defined as needed
-#[derive(Deserialize, Serialize, Clone, Debug)]
-#[serde(untagged)]
-pub enum MaybeWorkspace<T> {
-    Workspace(TomlWorkspaceField),
-    Defined(T),
+/// Implementors should have a field `workspace` with the type of `bool`. It is used to ensure
+/// `workspace` is not `false` in a `Cargo.toml`
+pub trait WorkspaceInherit {
+    /// This is the workspace table that is being inherited from.
+    /// For example `[workspace.dependencies]` would be the table "dependencies"
+    fn inherit_toml_table(&self) -> &str;
+
+    /// This is used to output the value of the implementors `workspace` field
+    fn workspace(&self) -> bool;
 }
 
-impl<T> MaybeWorkspace<T> {
+/// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
+#[derive(Serialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum MaybeWorkspace<T, W: WorkspaceInherit> {
+    /// The "defined" type, or the type that that is used when not inheriting from a workspace.
+    Defined(T),
+    /// The type when inheriting from a workspace.
+    Workspace(W),
+}
+
+impl<T, W: WorkspaceInherit> MaybeWorkspace<T, W> {
     fn resolve<'a>(
         self,
-        cargo_features: &Features,
         label: &str,
-        get_ws_field: impl FnOnce() -> CargoResult<T>,
+        get_ws_inheritable: impl FnOnce() -> CargoResult<T>,
     ) -> CargoResult<T> {
         match self {
             MaybeWorkspace::Defined(value) => Ok(value),
-            MaybeWorkspace::Workspace(TomlWorkspaceField { workspace: true }) => {
-                cargo_features.require(Feature::workspace_inheritance())?;
-                get_ws_field().context(format!(
-                    "error inheriting `{}` from workspace root manifest's `workspace.{}`",
-                    label, label
-                ))
-            }
-            MaybeWorkspace::Workspace(TomlWorkspaceField { workspace: false }) => Err(anyhow!(
-                "`workspace=false` is unsupported for `package.{}`",
-                label,
-            )),
+            MaybeWorkspace::Workspace(w) => get_ws_inheritable().with_context(|| {
+                format!(
+                "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
+                w.inherit_toml_table(),
+            )
+            }),
         }
     }
+
+    fn resolve_with_self<'a>(
+        self,
+        label: &str,
+        get_ws_inheritable: impl FnOnce(&W) -> CargoResult<T>,
+    ) -> CargoResult<T> {
+        match self {
+            MaybeWorkspace::Defined(value) => Ok(value),
+            MaybeWorkspace::Workspace(w) => get_ws_inheritable(&w).with_context(|| {
+                format!(
+                "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
+                w.inherit_toml_table(),
+            )
+            }),
+        }
+    }
+
     fn as_defined(&self) -> Option<&T> {
         match self {
             MaybeWorkspace::Workspace(_) => None,
@@ -1031,9 +1128,368 @@ impl<T> MaybeWorkspace<T> {
     }
 }
 
+type MaybeWorkspaceDependency = MaybeWorkspace<TomlDependency, TomlWorkspaceDependency>;
+
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceDependency {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = serde_value::Value::deserialize(deserializer)?;
+
+        if let Ok(w) = TomlWorkspaceDependency::deserialize(serde_value::ValueDeserializer::<
+            D::Error,
+        >::new(value.clone()))
+        {
+            return if w.workspace() {
+                Ok(MaybeWorkspace::Workspace(w))
+            } else {
+                Err(de::Error::custom("`workspace` cannot be false"))
+            };
+        }
+        TomlDependency::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+            .map(MaybeWorkspace::Defined)
+    }
+}
+
+impl MaybeWorkspaceDependency {
+    fn unused_keys(&self) -> Vec<String> {
+        match self {
+            MaybeWorkspaceDependency::Defined(d) => d.unused_keys(),
+            MaybeWorkspaceDependency::Workspace(w) => w.other.keys().cloned().collect(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct TomlWorkspaceDependency {
+    workspace: bool,
+    features: Option<Vec<String>>,
+    default_features: Option<bool>,
+    #[serde(rename = "default_features")]
+    default_features2: Option<bool>,
+    optional: Option<bool>,
+    /// This is here to provide a way to see the "unused manifest keys" when deserializing
+    #[serde(skip_serializing)]
+    #[serde(flatten)]
+    other: BTreeMap<String, toml::Value>,
+}
+
+impl WorkspaceInherit for TomlWorkspaceDependency {
+    fn inherit_toml_table(&self) -> &str {
+        "dependencies"
+    }
+
+    fn workspace(&self) -> bool {
+        self.workspace
+    }
+}
+
+impl TomlWorkspaceDependency {
+    fn resolve<'a>(
+        &self,
+        name: &str,
+        inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
+        cx: &mut Context<'_, '_>,
+    ) -> CargoResult<TomlDependency> {
+        fn default_features_msg(label: &str, ws_def_feat: Option<bool>, cx: &mut Context<'_, '_>) {
+            let ws_def_feat = match ws_def_feat {
+                Some(true) => "true",
+                Some(false) => "false",
+                None => "not specified",
+            };
+            cx.warnings.push(format!(
+                "`default-features` is ignored for {label}, since `default-features` was \
+                {ws_def_feat} for `workspace.dependencies.{label}`, \
+                this could become a hard error in the future"
+            ))
+        }
+        if self.default_features.is_some() && self.default_features2.is_some() {
+            warn_on_deprecated("default-features", name, "dependency", cx.warnings);
+        }
+        inheritable()?.get_dependency(name, cx.root).map(|d| {
+            match d {
+                TomlDependency::Simple(s) => {
+                    if let Some(false) = self.default_features.or(self.default_features2) {
+                        default_features_msg(name, None, cx);
+                    }
+                    if self.optional.is_some() || self.features.is_some() {
+                        TomlDependency::Detailed(DetailedTomlDependency {
+                            version: Some(s),
+                            optional: self.optional,
+                            features: self.features.clone(),
+                            ..Default::default()
+                        })
+                    } else {
+                        TomlDependency::Simple(s)
+                    }
+                }
+                TomlDependency::Detailed(d) => {
+                    let mut d = d.clone();
+                    match (
+                        self.default_features.or(self.default_features2),
+                        d.default_features.or(d.default_features2),
+                    ) {
+                        // member: default-features = true and
+                        // workspace: default-features = false should turn on
+                        // default-features
+                        (Some(true), Some(false)) => {
+                            d.default_features = Some(true);
+                        }
+                        // member: default-features = false and
+                        // workspace: default-features = true should ignore member
+                        // default-features
+                        (Some(false), Some(true)) => {
+                            default_features_msg(name, Some(true), cx);
+                        }
+                        // member: default-features = false and
+                        // workspace: dep = "1.0" should ignore member default-features
+                        (Some(false), None) => {
+                            default_features_msg(name, None, cx);
+                        }
+                        _ => {}
+                    }
+                    d.add_features(self.features.clone());
+                    d.update_optional(self.optional);
+                    TomlDependency::Detailed(d)
+                }
+            }
+        })
+    }
+}
+
+//. This already has a `Deserialize` impl from version_trim_whitespace
+type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
+
+type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceString;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                f.write_str("a string or workspace")
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(MaybeWorkspaceString::Defined(value))
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceVecString = MaybeWorkspace<Vec<String>, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceVecString;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+                f.write_str("a vector of strings or workspace")
+            }
+            fn visit_seq<A>(self, v: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                let seq = de::value::SeqAccessDeserializer::new(v);
+                Vec::deserialize(seq).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceStringOrBool = MaybeWorkspace<StringOrBool, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceStringOrBool;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+                f.write_str("a string, a bool, or workspace")
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let b = de::value::BoolDeserializer::new(v);
+                StringOrBool::deserialize(b).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let string = de::value::StringDeserializer::new(v);
+                StringOrBool::deserialize(string).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceVecStringOrBool = MaybeWorkspace<VecStringOrBool, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceVecStringOrBool;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+                f.write_str("a boolean, a vector of strings, or workspace")
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let b = de::value::BoolDeserializer::new(v);
+                VecStringOrBool::deserialize(b).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_seq<A>(self, v: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                let seq = de::value::SeqAccessDeserializer::new(v);
+                VecStringOrBool::deserialize(seq).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceBtreeMap =
+    MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>, TomlWorkspaceField>;
+
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = serde_value::Value::deserialize(deserializer)?;
+
+        if let Ok(w) = TomlWorkspaceField::deserialize(
+            serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
+        ) {
+            return if w.workspace() {
+                Ok(MaybeWorkspace::Workspace(w))
+            } else {
+                Err(de::Error::custom("`workspace` cannot be false"))
+            };
+        }
+        BTreeMap::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+            .map(MaybeWorkspace::Defined)
+    }
+}
+
+type MaybeWorkspaceLints = MaybeWorkspace<TomlLints, TomlWorkspaceField>;
+
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceLints {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = serde_value::Value::deserialize(deserializer)?;
+
+        if let Ok(w) = TomlWorkspaceField::deserialize(
+            serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
+        ) {
+            return if w.workspace() {
+                Ok(MaybeWorkspace::Workspace(w))
+            } else {
+                Err(de::Error::custom("`workspace` cannot be false"))
+            };
+        }
+        TomlLints::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+            .map(MaybeWorkspace::Defined)
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlWorkspaceField {
+    #[serde(deserialize_with = "bool_no_false")]
     workspace: bool,
+}
+
+fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
+    let b: bool = Deserialize::deserialize(deserializer)?;
+    if b {
+        Ok(b)
+    } else {
+        Err(de::Error::custom("`workspace` cannot be false"))
+    }
+}
+
+impl WorkspaceInherit for TomlWorkspaceField {
+    fn inherit_toml_table(&self) -> &str {
+        "package"
+    }
+
+    fn workspace(&self) -> bool {
+        self.workspace
+    }
 }
 
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
@@ -1044,13 +1500,13 @@ pub struct TomlWorkspaceField {
 /// tables.
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct TomlProject {
-    edition: Option<MaybeWorkspace<String>>,
-    rust_version: Option<String>,
+pub struct TomlPackage {
+    edition: Option<MaybeWorkspaceString>,
+    rust_version: Option<MaybeWorkspaceString>,
     name: InternedString,
     #[serde(deserialize_with = "version_trim_whitespace")]
-    version: MaybeWorkspace<semver::Version>,
-    authors: Option<MaybeWorkspace<Vec<String>>>,
+    version: MaybeWorkspaceSemverVersion,
+    authors: Option<MaybeWorkspaceVecString>,
     build: Option<StringOrBool>,
     metabuild: Option<StringOrVec>,
     #[serde(rename = "default-target")]
@@ -1058,9 +1514,9 @@ pub struct TomlProject {
     #[serde(rename = "forced-target")]
     forced_target: Option<String>,
     links: Option<String>,
-    exclude: Option<Vec<String>>,
-    include: Option<Vec<String>>,
-    publish: Option<MaybeWorkspace<VecStringOrBool>>,
+    exclude: Option<MaybeWorkspaceVecString>,
+    include: Option<MaybeWorkspaceVecString>,
+    publish: Option<MaybeWorkspaceVecStringOrBool>,
     workspace: Option<String>,
     im_a_teapot: Option<bool>,
     autobins: Option<bool>,
@@ -1070,15 +1526,15 @@ pub struct TomlProject {
     default_run: Option<String>,
 
     // Package metadata.
-    description: Option<MaybeWorkspace<String>>,
-    homepage: Option<MaybeWorkspace<String>>,
-    documentation: Option<MaybeWorkspace<String>>,
-    readme: Option<MaybeWorkspace<StringOrBool>>,
-    keywords: Option<MaybeWorkspace<Vec<String>>>,
-    categories: Option<MaybeWorkspace<Vec<String>>>,
-    license: Option<MaybeWorkspace<String>>,
-    license_file: Option<MaybeWorkspace<String>>,
-    repository: Option<MaybeWorkspace<String>>,
+    description: Option<MaybeWorkspaceString>,
+    homepage: Option<MaybeWorkspaceString>,
+    documentation: Option<MaybeWorkspaceString>,
+    readme: Option<MaybeWorkspaceStringOrBool>,
+    keywords: Option<MaybeWorkspaceVecString>,
+    categories: Option<MaybeWorkspaceVecString>,
+    license: Option<MaybeWorkspaceString>,
+    license_file: Option<MaybeWorkspaceString>,
+    repository: Option<MaybeWorkspaceString>,
     resolver: Option<String>,
 
     // Note that this field must come last due to the way toml serialization
@@ -1095,29 +1551,137 @@ pub struct TomlWorkspace {
     resolver: Option<String>,
 
     // Properties that can be inherited by members.
+    package: Option<InheritableFields>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
-    version: Option<semver::Version>,
-    authors: Option<Vec<String>>,
-    description: Option<String>,
-    documentation: Option<String>,
-    readme: Option<StringOrBool>,
-    homepage: Option<String>,
-    repository: Option<String>,
-    license: Option<String>,
-    #[serde(rename = "license-file")]
-    license_file: Option<String>,
-    keywords: Option<Vec<String>>,
-    categories: Option<Vec<String>>,
-    publish: Option<VecStringOrBool>,
-    edition: Option<String>,
-    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    lints: Option<toml::Value>,
 
     // Note that this field must come last due to the way toml serialization
     // works which requires tables to be emitted after all values.
     metadata: Option<toml::Value>,
 }
 
-impl TomlProject {
+/// A group of fields that are inheritable by members of the workspace
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct InheritableFields {
+    // We use skip here since it will never be present when deserializing
+    // and we don't want it present when serializing
+    #[serde(skip)]
+    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    #[serde(skip)]
+    lints: Option<TomlLints>,
+
+    version: Option<semver::Version>,
+    authors: Option<Vec<String>>,
+    description: Option<String>,
+    homepage: Option<String>,
+    documentation: Option<String>,
+    readme: Option<StringOrBool>,
+    keywords: Option<Vec<String>>,
+    categories: Option<Vec<String>>,
+    license: Option<String>,
+    #[serde(rename = "license-file")]
+    license_file: Option<String>,
+    repository: Option<String>,
+    publish: Option<VecStringOrBool>,
+    edition: Option<String>,
+    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    exclude: Option<Vec<String>>,
+    include: Option<Vec<String>>,
+    #[serde(rename = "rust-version")]
+    rust_version: Option<String>,
+    // We use skip here since it will never be present when deserializing
+    // and we don't want it present when serializing
+    #[serde(skip)]
+    ws_root: PathBuf,
+}
+
+/// Defines simple getter methods for inheritable fields.
+macro_rules! inheritable_field_getter {
+    ( $(($key:literal, $field:ident -> $ret:ty),)* ) => (
+        $(
+            #[doc = concat!("Gets the field `workspace.", $key, "`.")]
+            pub fn $field(&self) -> CargoResult<$ret> {
+                let Some(val) = &self.$field else  {
+                    bail!("`workspace.{}` was not defined", $key);
+                };
+                Ok(val.clone())
+            }
+        )*
+    )
+}
+
+impl InheritableFields {
+    inheritable_field_getter! {
+        // Please keep this list lexicographically ordered.
+        ("dependencies",          dependencies  -> BTreeMap<String, TomlDependency>),
+        ("lints",                 lints         -> TomlLints),
+        ("package.authors",       authors       -> Vec<String>),
+        ("package.badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
+        ("package.categories",    categories    -> Vec<String>),
+        ("package.description",   description   -> String),
+        ("package.documentation", documentation -> String),
+        ("package.edition",       edition       -> String),
+        ("package.exclude",       exclude       -> Vec<String>),
+        ("package.homepage",      homepage      -> String),
+        ("package.include",       include       -> Vec<String>),
+        ("package.keywords",      keywords      -> Vec<String>),
+        ("package.license",       license       -> String),
+        ("package.publish",       publish       -> VecStringOrBool),
+        ("package.repository",    repository    -> String),
+        ("package.rust-version",  rust_version  -> String),
+        ("package.version",       version       -> semver::Version),
+    }
+
+    /// Gets a workspace dependency with the `name`.
+    pub fn get_dependency(&self, name: &str, package_root: &Path) -> CargoResult<TomlDependency> {
+        let Some(deps) = &self.dependencies else {
+            bail!("`workspace.dependencies` was not defined");
+        };
+        let Some(dep) = deps.get(name) else {
+            bail!("`dependency.{name}` was not found in `workspace.dependencies`");
+        };
+        let mut dep = dep.clone();
+        if let TomlDependency::Detailed(detailed) = &mut dep {
+            detailed.resolve_path(name, self.ws_root(), package_root)?;
+        }
+        Ok(dep)
+    }
+
+    /// Gets the field `workspace.package.license-file`.
+    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
+        let Some(license_file) = &self.license_file else {
+            bail!("`workspace.package.license-file` was not defined");
+        };
+        resolve_relative_path("license-file", &self.ws_root, package_root, license_file)
+    }
+
+    /// Gets the field `workspace.package.readme`.
+    pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
+        let Some(readme) = readme_for_package(self.ws_root.as_path(), self.readme.as_ref()) else {
+            bail!("`workspace.package.readme` was not defined");
+        };
+        resolve_relative_path("readme", &self.ws_root, package_root, &readme)
+            .map(StringOrBool::String)
+    }
+
+    pub fn ws_root(&self) -> &PathBuf {
+        &self.ws_root
+    }
+
+    pub fn update_deps(&mut self, deps: Option<BTreeMap<String, TomlDependency>>) {
+        self.dependencies = deps;
+    }
+
+    pub fn update_lints(&mut self, lints: Option<TomlLints>) {
+        self.lints = lints;
+    }
+
+    pub fn update_ws_path(&mut self, ws_root: PathBuf) {
+        self.ws_root = ws_root;
+    }
+}
+
+impl TomlPackage {
     pub fn to_package_id(
         &self,
         source_id: SourceId,
@@ -1155,7 +1719,26 @@ impl TomlManifest {
             .unwrap()
             .clone();
         package.workspace = None;
-        package.resolver = ws.resolve_behavior().to_manifest();
+        let current_resolver = package
+            .resolver
+            .as_ref()
+            .map(|r| ResolveBehavior::from_manifest(r))
+            .unwrap_or_else(|| {
+                package
+                    .edition
+                    .as_ref()
+                    .and_then(|e| e.as_defined())
+                    .map(|e| Edition::from_str(e))
+                    .unwrap_or(Ok(Edition::Edition2015))
+                    .map(|e| e.default_resolve_behavior())
+            })?;
+        if ws.resolve_behavior() != current_resolver {
+            // This ensures the published crate if built as a root (e.g. `cargo install`) will
+            // use the same resolver behavior it was tested with in the workspace.
+            // To avoid forcing a higher MSRV we don't explicitly set this if it would implicitly
+            // result in the same thing.
+            package.resolver = Some(ws.resolve_behavior().to_manifest());
+        }
         if let Some(license_file) = &package.license_file {
             let license_file = license_file
                 .as_defined()
@@ -1266,28 +1849,38 @@ impl TomlManifest {
             workspace: None,
             badges: self.badges.clone(),
             cargo_features: self.cargo_features.clone(),
+            lints: self.lints.clone(),
         });
 
         fn map_deps(
             config: &Config,
-            deps: Option<&BTreeMap<String, TomlDependency>>,
+            deps: Option<&BTreeMap<String, MaybeWorkspaceDependency>>,
             filter: impl Fn(&TomlDependency) -> bool,
-        ) -> CargoResult<Option<BTreeMap<String, TomlDependency>>> {
+        ) -> CargoResult<Option<BTreeMap<String, MaybeWorkspaceDependency>>> {
             let deps = match deps {
                 Some(deps) => deps,
                 None => return Ok(None),
             };
             let deps = deps
                 .iter()
-                .filter(|(_k, v)| filter(v))
+                .filter(|(_k, v)| {
+                    if let MaybeWorkspace::Defined(def) = v {
+                        filter(def)
+                    } else {
+                        false
+                    }
+                })
                 .map(|(k, v)| Ok((k.clone(), map_dependency(config, v)?)))
                 .collect::<CargoResult<BTreeMap<_, _>>>()?;
             Ok(Some(deps))
         }
 
-        fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDependency> {
-            match dep {
-                TomlDependency::Detailed(d) => {
+        fn map_dependency(
+            config: &Config,
+            dep: &MaybeWorkspaceDependency,
+        ) -> CargoResult<MaybeWorkspaceDependency> {
+            let dep = match dep {
+                MaybeWorkspace::Defined(TomlDependency::Detailed(d)) => {
                     let mut d = d.clone();
                     // Path dependencies become crates.io deps.
                     d.path.take();
@@ -1298,31 +1891,32 @@ impl TomlManifest {
                     d.rev.take();
                     // registry specifications are elaborated to the index URL
                     if let Some(registry) = d.registry.take() {
-                        let src = SourceId::alt_registry(config, &registry)?;
-                        d.registry_index = Some(src.url().to_string());
+                        d.registry_index = Some(config.get_registry_index(&registry)?.to_string());
                     }
-                    Ok(TomlDependency::Detailed(d))
+                    Ok(d)
                 }
-                TomlDependency::Simple(s) => Ok(TomlDependency::Detailed(DetailedTomlDependency {
+                MaybeWorkspace::Defined(TomlDependency::Simple(s)) => Ok(DetailedTomlDependency {
                     version: Some(s.clone()),
                     ..Default::default()
-                })),
-                // Unreachable as we resolve everything before this
-                TomlDependency::Workspace(_) => unreachable!(),
-            }
+                }),
+                _ => unreachable!(),
+            };
+            dep.map(TomlDependency::Detailed)
+                .map(MaybeWorkspace::Defined)
         }
     }
 
     pub fn to_real_manifest(
         me: &Rc<TomlManifest>,
+        embedded: bool,
         source_id: SourceId,
         package_root: &Path,
         config: &Config,
     ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
         fn get_ws(
             config: &Config,
-            resolved_path: PathBuf,
-            workspace_config: WorkspaceConfig,
+            resolved_path: &Path,
+            workspace_config: &WorkspaceConfig,
         ) -> CargoResult<InheritableFields> {
             match workspace_config {
                 WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
@@ -1355,38 +1949,62 @@ impl TomlManifest {
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(cargo_features, config, &mut warnings, source_id.is_path())?;
 
-        let project = me.project.clone().or_else(|| me.package.clone());
-        let project = &mut project.ok_or_else(|| anyhow!("no `package` section found"))?;
+        let mut package = match (&me.package, &me.project) {
+            (Some(_), Some(project)) => {
+                if source_id.is_path() {
+                    config.shell().warn(format!(
+                        "manifest at `{}` contains both `project` and `package`, \
+                    this could become a hard error in the future",
+                        package_root.display()
+                    ))?;
+                }
+                project.clone()
+            }
+            (Some(package), None) => package.clone(),
+            (None, Some(project)) => {
+                if source_id.is_path() {
+                    config.shell().warn(format!(
+                        "manifest at `{}` contains `[project]` instead of `[package]`, \
+                                this could become a hard error in the future",
+                        package_root.display()
+                    ))?;
+                }
+                project.clone()
+            }
+            (None, None) => bail!("no `package` section found"),
+        };
 
-        let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
-            (Some(config), None) => {
-                let inheritable = InheritableFields::new(
-                    config.dependencies.clone(),
-                    config.version.clone(),
-                    config.authors.clone(),
-                    config.description.clone(),
-                    config.homepage.clone(),
-                    config.documentation.clone(),
-                    config.readme.clone(),
-                    config.keywords.clone(),
-                    config.categories.clone(),
-                    config.license.clone(),
-                    config.license_file.clone(),
-                    config.repository.clone(),
-                    config.publish.clone(),
-                    config.edition.clone(),
-                    config.badges.clone(),
-                    package_root.to_path_buf(),
-                );
-
-                WorkspaceConfig::Root(WorkspaceRootConfig::new(
+        let workspace_config = match (me.workspace.as_ref(), package.workspace.as_ref()) {
+            (Some(toml_config), None) => {
+                let mut inheritable = toml_config.package.clone().unwrap_or_default();
+                inheritable.update_ws_path(package_root.to_path_buf());
+                inheritable.update_deps(toml_config.dependencies.clone());
+                let lints = parse_unstable_lints(toml_config.lints.clone(), config, &mut warnings)?;
+                let lints = verify_lints(lints)?;
+                inheritable.update_lints(lints);
+                if let Some(ws_deps) = &inheritable.dependencies {
+                    for (name, dep) in ws_deps {
+                        unused_dep_keys(
+                            name,
+                            "workspace.dependencies",
+                            dep.unused_keys(),
+                            &mut warnings,
+                        );
+                    }
+                }
+                let ws_root_config = WorkspaceRootConfig::new(
                     package_root,
-                    &config.members,
-                    &config.default_members,
-                    &config.exclude,
-                    &Some(inheritable.clone()),
-                    &config.metadata,
-                ))
+                    &toml_config.members,
+                    &toml_config.default_members,
+                    &toml_config.exclude,
+                    &Some(inheritable),
+                    &toml_config.metadata,
+                );
+                config
+                    .ws_roots
+                    .borrow_mut()
+                    .insert(package_root.to_path_buf(), ws_root_config.clone());
+                WorkspaceConfig::Root(ws_root_config)
             }
             (None, root) => WorkspaceConfig::Member {
                 root: root.cloned(),
@@ -1397,7 +2015,7 @@ impl TomlManifest {
             ),
         };
 
-        let package_name = project.name.trim();
+        let package_name = package.name.trim();
         if package_name.is_empty() {
             bail!("package name cannot be an empty string")
         }
@@ -1406,22 +2024,25 @@ impl TomlManifest {
 
         let resolved_path = package_root.join("Cargo.toml");
 
-        let version = project.version.clone().resolve(&features, "version", || {
-            get_ws(config, resolved_path.clone(), workspace_config.clone())?.version()
-        })?;
+        let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
+        let inherit =
+            || inherit_cell.try_borrow_with(|| get_ws(config, &resolved_path, &workspace_config));
 
-        project.version = MaybeWorkspace::Defined(version.clone());
+        let version = package
+            .version
+            .clone()
+            .resolve("version", || inherit()?.version())?;
 
-        let pkgid = project.to_package_id(source_id, version)?;
+        package.version = MaybeWorkspace::Defined(version.clone());
 
-        let edition = if let Some(edition) = project.edition.clone() {
+        let pkgid = package.to_package_id(source_id, version)?;
+
+        let edition = if let Some(edition) = package.edition.clone() {
             let edition: Edition = edition
-                .resolve(&features, "edition", || {
-                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.edition()
-                })?
+                .resolve("edition", || inherit()?.edition())?
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?;
-            project.edition = Some(MaybeWorkspace::Defined(edition.to_string()));
+            package.edition = Some(MaybeWorkspace::Defined(edition.to_string()));
             edition
         } else {
             Edition::Edition2015
@@ -1440,8 +2061,11 @@ impl TomlManifest {
             )));
         }
 
-        let rust_version = if let Some(rust_version) = &project.rust_version {
-            let req = match semver::VersionReq::parse(rust_version) {
+        let rust_version = if let Some(rust_version) = &package.rust_version {
+            let rust_version = rust_version
+                .clone()
+                .resolve("rust_version", || inherit()?.rust_version())?;
+            let req = match semver::VersionReq::parse(&rust_version) {
                 // Exclude semver operators like `^` and pre-release identifiers
                 Ok(req) if rust_version.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
                 _ => bail!("`rust-version` must be a value like \"1.32\""),
@@ -1464,12 +2088,12 @@ impl TomlManifest {
             None
         };
 
-        if project.metabuild.is_some() {
+        if package.metabuild.is_some() {
             features.require(Feature::metabuild())?;
         }
 
         let resolve_behavior = match (
-            project.resolver.as_ref(),
+            package.resolver.as_ref(),
             me.workspace.as_ref().and_then(|ws| ws.resolver.as_ref()),
         ) {
             (None, None) => None,
@@ -1488,8 +2112,8 @@ impl TomlManifest {
             package_name,
             package_root,
             edition,
-            &project.build,
-            &project.metabuild,
+            &package.build,
+            &package.metabuild,
             &mut warnings,
             &mut errors,
         )?;
@@ -1498,15 +2122,27 @@ impl TomlManifest {
             debug!("manifest has no build targets");
         }
 
-        if let Err(e) = unique_build_targets(&targets, package_root) {
-            warnings.push(format!(
-                "file found to be present in multiple \
-                 build targets: {}",
-                e
-            ));
+        if let Err(conflict_targets) = unique_build_targets(&targets, package_root) {
+            conflict_targets
+                .iter()
+                .for_each(|(target_path, conflicts)| {
+                    warnings.push(format!(
+                        "file `{}` found to be present in multiple \
+                 build targets:\n{}",
+                        target_path.display().to_string(),
+                        conflicts
+                            .iter()
+                            .map(|t| format!(
+                                "  * `{}` target `{}`",
+                                t.kind().description(),
+                                t.name(),
+                            ))
+                            .join("\n")
+                    ));
+                })
         }
 
-        if let Some(links) = &project.links {
+        if let Some(links) = &package.links {
             if !targets.iter().any(|t| t.is_custom_build()) {
                 bail!(
                     "package `{}` specifies that it links to `{}` but does not \
@@ -1531,40 +2167,54 @@ impl TomlManifest {
         };
 
         fn process_dependencies(
-            features: &Features,
             cx: &mut Context<'_, '_>,
-            new_deps: Option<&BTreeMap<String, TomlDependency>>,
+            new_deps: Option<&BTreeMap<String, MaybeWorkspaceDependency>>,
             kind: Option<DepKind>,
             workspace_config: &WorkspaceConfig,
-        ) -> CargoResult<Option<BTreeMap<String, TomlDependency>>> {
+            inherit_cell: &LazyCell<InheritableFields>,
+        ) -> CargoResult<Option<BTreeMap<String, MaybeWorkspaceDependency>>> {
             let dependencies = match new_deps {
                 Some(dependencies) => dependencies,
                 None => return Ok(None),
             };
-            let mut deps: BTreeMap<String, TomlDependency> = BTreeMap::new();
+
+            let inheritable = || {
+                inherit_cell.try_borrow_with(|| {
+                    get_ws(cx.config, &cx.root.join("Cargo.toml"), &workspace_config)
+                })
+            };
+
+            let mut deps: BTreeMap<String, MaybeWorkspaceDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
-                let resolved = v.clone().resolve(features, n, cx, || {
-                    get_ws(
-                        cx.config,
-                        cx.root.join("Cargo.toml"),
-                        workspace_config.clone(),
-                    )
-                })?;
+                let resolved = v
+                    .clone()
+                    .resolve_with_self(n, |dep| dep.resolve(n, inheritable, cx))?;
                 let dep = resolved.to_dependency(n, cx, kind)?;
-                validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
+                let name_in_toml = dep.name_in_toml().as_str();
+                validate_package_name(name_in_toml, "dependency name", "")?;
+                let kind_name = match kind {
+                    Some(k) => k.kind_table(),
+                    None => "dependencies",
+                };
+                let table_in_toml = if let Some(platform) = &cx.platform {
+                    format!("target.{}.{kind_name}", platform.to_string())
+                } else {
+                    kind_name.to_string()
+                };
+                unused_dep_keys(name_in_toml, &table_in_toml, v.unused_keys(), cx.warnings);
                 cx.deps.push(dep);
-                deps.insert(n.to_string(), resolved.clone());
+                deps.insert(n.to_string(), MaybeWorkspace::Defined(resolved.clone()));
             }
             Ok(Some(deps))
         }
 
         // Collect the dependencies.
         let dependencies = process_dependencies(
-            &features,
             &mut cx,
             me.dependencies.as_ref(),
             None,
             &workspace_config,
+            &inherit_cell,
         )?;
         if me.dev_dependencies.is_some() && me.dev_dependencies2.is_some() {
             warn_on_deprecated("dev-dependencies", package_name, "package", cx.warnings);
@@ -1574,11 +2224,11 @@ impl TomlManifest {
             .as_ref()
             .or_else(|| me.dev_dependencies2.as_ref());
         let dev_deps = process_dependencies(
-            &features,
             &mut cx,
             dev_deps,
             Some(DepKind::Development),
             &workspace_config,
+            &inherit_cell,
         )?;
         if me.build_dependencies.is_some() && me.build_dependencies2.is_some() {
             warn_on_deprecated("build-dependencies", package_name, "package", cx.warnings);
@@ -1588,12 +2238,20 @@ impl TomlManifest {
             .as_ref()
             .or_else(|| me.build_dependencies2.as_ref());
         let build_deps = process_dependencies(
-            &features,
             &mut cx,
             build_deps,
             Some(DepKind::Build),
             &workspace_config,
+            &inherit_cell,
         )?;
+
+        let lints =
+            parse_unstable_lints::<MaybeWorkspaceLints>(me.lints.clone(), config, cx.warnings)?
+                .map(|mw| mw.resolve("lints", || inherit()?.lints()))
+                .transpose()?;
+        let lints = verify_lints(lints)?;
+        let default = TomlLints::default();
+        let rustflags = lints_to_rustflags(lints.as_ref().unwrap_or(&default));
 
         let mut target: BTreeMap<String, TomlPlatform> = BTreeMap::new();
         for (name, platform) in me.target.iter().flatten() {
@@ -1603,13 +2261,12 @@ impl TomlManifest {
                 Some(platform)
             };
             let deps = process_dependencies(
-                &features,
                 &mut cx,
                 platform.dependencies.as_ref(),
                 None,
                 &workspace_config,
-            )
-            .unwrap();
+                &inherit_cell,
+            )?;
             if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
                 warn_on_deprecated("build-dependencies", name, "platform target", cx.warnings);
             }
@@ -1618,13 +2275,12 @@ impl TomlManifest {
                 .as_ref()
                 .or_else(|| platform.build_dependencies2.as_ref());
             let build_deps = process_dependencies(
-                &features,
                 &mut cx,
                 build_deps,
                 Some(DepKind::Build),
                 &workspace_config,
-            )
-            .unwrap();
+                &inherit_cell,
+            )?;
             if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
                 warn_on_deprecated("dev-dependencies", name, "platform target", cx.warnings);
             }
@@ -1633,13 +2289,12 @@ impl TomlManifest {
                 .as_ref()
                 .or_else(|| platform.dev_dependencies2.as_ref());
             let dev_deps = process_dependencies(
-                &features,
                 &mut cx,
                 dev_deps,
                 Some(DepKind::Development),
                 &workspace_config,
-            )
-            .unwrap();
+                &inherit_cell,
+            )?;
             target.insert(
                 name.clone(),
                 TomlPlatform {
@@ -1676,188 +2331,161 @@ impl TomlManifest {
             }
         }
 
-        let exclude = project.exclude.clone().unwrap_or_default();
-        let include = project.include.clone().unwrap_or_default();
+        let exclude = package
+            .exclude
+            .clone()
+            .map(|mw| mw.resolve("exclude", || inherit()?.exclude()))
+            .transpose()?
+            .unwrap_or_default();
+        let include = package
+            .include
+            .clone()
+            .map(|mw| mw.resolve("include", || inherit()?.include()))
+            .transpose()?
+            .unwrap_or_default();
         let empty_features = BTreeMap::new();
 
         let summary = Summary::new(
-            config,
             pkgid,
             deps,
             me.features.as_ref().unwrap_or(&empty_features),
-            project.links.as_deref(),
+            package.links.as_deref(),
+            rust_version.as_deref().map(InternedString::new),
         )?;
 
         let metadata = ManifestMetadata {
-            description: project
+            description: package
                 .description
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "description", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .description()
-                    })
-                })
+                .map(|mw| mw.resolve("description", || inherit()?.description()))
                 .transpose()?,
-            homepage: project
+            homepage: package
                 .homepage
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "homepage", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.homepage()
-                    })
-                })
+                .map(|mw| mw.resolve("homepage", || inherit()?.homepage()))
                 .transpose()?,
-            documentation: project
+            documentation: package
                 .documentation
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "documentation", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .documentation()
-                    })
-                })
+                .map(|mw| mw.resolve("documentation", || inherit()?.documentation()))
                 .transpose()?,
-            readme: readme_for_project(
+            readme: readme_for_package(
                 package_root,
-                project
+                package
                     .readme
                     .clone()
-                    .map(|mw| {
-                        mw.resolve(&features, "readme", || {
-                            get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                                .readme(package_root)
-                        })
-                    })
-                    .transpose()?,
+                    .map(|mw| mw.resolve("readme", || inherit()?.readme(package_root)))
+                    .transpose()?
+                    .as_ref(),
             ),
-            authors: project
+            authors: package
                 .authors
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "authors", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.authors()
-                    })
-                })
+                .map(|mw| mw.resolve("authors", || inherit()?.authors()))
                 .transpose()?
                 .unwrap_or_default(),
-            license: project
+            license: package
                 .license
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "license", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.license()
-                    })
-                })
+                .map(|mw| mw.resolve("license", || inherit()?.license()))
                 .transpose()?,
-            license_file: project
+            license_file: package
                 .license_file
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "license", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .license_file(package_root)
-                    })
-                })
+                .map(|mw| mw.resolve("license", || inherit()?.license_file(package_root)))
                 .transpose()?,
-            repository: project
+            repository: package
                 .repository
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "repository", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .repository()
-                    })
-                })
+                .map(|mw| mw.resolve("repository", || inherit()?.repository()))
                 .transpose()?,
-            keywords: project
+            keywords: package
                 .keywords
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "keywords", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.keywords()
-                    })
-                })
+                .map(|mw| mw.resolve("keywords", || inherit()?.keywords()))
                 .transpose()?
                 .unwrap_or_default(),
-            categories: project
+            categories: package
                 .categories
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "categories", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?
-                            .categories()
-                    })
-                })
+                .map(|mw| mw.resolve("categories", || inherit()?.categories()))
                 .transpose()?
                 .unwrap_or_default(),
             badges: me
                 .badges
                 .clone()
-                .map(|mw| {
-                    mw.resolve(&features, "badges", || {
-                        get_ws(config, resolved_path.clone(), workspace_config.clone())?.badges()
-                    })
-                })
+                .map(|mw| mw.resolve("badges", || inherit()?.badges()))
                 .transpose()?
                 .unwrap_or_default(),
-            links: project.links.clone(),
+            links: package.links.clone(),
+            rust_version: package
+                .rust_version
+                .clone()
+                .map(|mw| mw.resolve("rust-version", || inherit()?.rust_version()))
+                .transpose()?,
         };
-        project.description = metadata
+        package.description = metadata
             .description
             .clone()
             .map(|description| MaybeWorkspace::Defined(description));
-        project.homepage = metadata
+        package.homepage = metadata
             .homepage
             .clone()
             .map(|homepage| MaybeWorkspace::Defined(homepage));
-        project.documentation = metadata
+        package.documentation = metadata
             .documentation
             .clone()
             .map(|documentation| MaybeWorkspace::Defined(documentation));
-        project.readme = metadata
+        package.readme = metadata
             .readme
             .clone()
             .map(|readme| MaybeWorkspace::Defined(StringOrBool::String(readme)));
-        project.authors = project
+        package.authors = package
             .authors
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.authors.clone()));
-        project.license = metadata
+        package.license = metadata
             .license
             .clone()
             .map(|license| MaybeWorkspace::Defined(license));
-        project.license_file = metadata
+        package.license_file = metadata
             .license_file
             .clone()
             .map(|license_file| MaybeWorkspace::Defined(license_file));
-        project.repository = metadata
+        package.repository = metadata
             .repository
             .clone()
             .map(|repository| MaybeWorkspace::Defined(repository));
-        project.keywords = project
+        package.keywords = package
             .keywords
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.keywords.clone()));
-        project.categories = project
+        package.categories = package
             .categories
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.categories.clone()));
+        package.rust_version = rust_version.clone().map(|rv| MaybeWorkspace::Defined(rv));
+        package.exclude = package
+            .exclude
+            .as_ref()
+            .map(|_| MaybeWorkspace::Defined(exclude.clone()));
+        package.include = package
+            .include
+            .as_ref()
+            .map(|_| MaybeWorkspace::Defined(include.clone()));
 
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
-            profiles.validate(&features, &mut warnings)?;
+            let cli_unstable = config.cli_unstable();
+            profiles.validate(cli_unstable, &features, &mut warnings)?;
         }
 
-        let publish = project.publish.clone().map(|publish| {
-            publish
-                .resolve(&features, "publish", || {
-                    get_ws(config, resolved_path.clone(), workspace_config.clone())?.publish()
-                })
-                .unwrap()
-        });
+        let publish = package
+            .publish
+            .clone()
+            .map(|publish| publish.resolve("publish", || inherit()?.publish()).unwrap());
 
-        project.publish = publish.clone().map(|p| MaybeWorkspace::Defined(p));
+        package.publish = publish.clone().map(|p| MaybeWorkspace::Defined(p));
 
         let publish = match publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
@@ -1873,7 +2501,7 @@ impl TomlManifest {
             )
         }
 
-        if let Some(run) = &project.default_run {
+        if let Some(run) = &package.default_run {
             if !targets
                 .iter()
                 .filter(|t| t.is_bin())
@@ -1885,22 +2513,22 @@ impl TomlManifest {
             }
         }
 
-        let default_kind = project
+        let default_kind = package
             .default_target
             .as_ref()
             .map(|t| CompileTarget::new(&*t))
             .transpose()?
             .map(CompileKind::Target);
-        let forced_kind = project
+        let forced_kind = package
             .forced_target
             .as_ref()
             .map(|t| CompileTarget::new(&*t))
             .transpose()?
             .map(CompileKind::Target);
-        let custom_metadata = project.metadata.clone();
+        let custom_metadata = package.metadata.clone();
         let resolved_toml = TomlManifest {
             cargo_features: me.cargo_features.clone(),
-            package: Some(project.clone()),
+            package: Some(package.clone()),
             project: None,
             profile: me.profile.clone(),
             lib: me.lib.clone(),
@@ -1922,6 +2550,8 @@ impl TomlManifest {
                 .badges
                 .as_ref()
                 .map(|_| MaybeWorkspace::Defined(metadata.badges.clone())),
+            lints: lints
+                .map(|lints| toml::Value::try_from(MaybeWorkspaceLints::Defined(lints)).unwrap()),
         };
         let mut manifest = Manifest::new(
             summary,
@@ -1930,7 +2560,7 @@ impl TomlManifest {
             targets,
             exclude,
             include,
-            project.links.clone(),
+            package.links.clone(),
             metadata,
             custom_metadata,
             profiles,
@@ -1941,13 +2571,15 @@ impl TomlManifest {
             features,
             edition,
             rust_version,
-            project.im_a_teapot,
-            project.default_run.clone(),
+            package.im_a_teapot,
+            package.default_run.clone(),
             Rc::new(resolved_toml),
-            project.metabuild.clone().map(|sov| sov.0),
+            package.metabuild.clone().map(|sov| sov.0),
             resolve_behavior,
+            rustflags,
+            embedded,
         );
-        if project.license_file.is_some() && project.license.is_some() {
+        if package.license_file.is_some() && package.license.is_some() {
             manifest.warnings_mut().add_warning(
                 "only one of `license` or `license-file` is necessary\n\
                  `license` should be used if the package license can be expressed \
@@ -2038,7 +2670,7 @@ impl TomlManifest {
         };
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
-            profiles.validate(&features, &mut warnings)?;
+            profiles.validate(config.cli_unstable(), &features, &mut warnings)?;
         }
         let resolve_behavior = me
             .workspace
@@ -2047,33 +2679,26 @@ impl TomlManifest {
             .map(|r| ResolveBehavior::from_manifest(r))
             .transpose()?;
         let workspace_config = match me.workspace {
-            Some(ref config) => {
-                let inheritable = InheritableFields::new(
-                    config.dependencies.clone(),
-                    config.version.clone(),
-                    config.authors.clone(),
-                    config.description.clone(),
-                    config.homepage.clone(),
-                    config.documentation.clone(),
-                    config.readme.clone(),
-                    config.keywords.clone(),
-                    config.categories.clone(),
-                    config.license.clone(),
-                    config.license_file.clone(),
-                    config.repository.clone(),
-                    config.publish.clone(),
-                    config.edition.clone(),
-                    config.badges.clone(),
-                    root.to_path_buf(),
-                );
-                WorkspaceConfig::Root(WorkspaceRootConfig::new(
+            Some(ref toml_config) => {
+                let mut inheritable = toml_config.package.clone().unwrap_or_default();
+                inheritable.update_ws_path(root.to_path_buf());
+                inheritable.update_deps(toml_config.dependencies.clone());
+                let lints = parse_unstable_lints(toml_config.lints.clone(), config, &mut warnings)?;
+                let lints = verify_lints(lints)?;
+                inheritable.update_lints(lints);
+                let ws_root_config = WorkspaceRootConfig::new(
                     root,
-                    &config.members,
-                    &config.default_members,
-                    &config.exclude,
+                    &toml_config.members,
+                    &toml_config.default_members,
+                    &toml_config.exclude,
                     &Some(inheritable),
-                    &config.metadata,
-                ))
+                    &toml_config.metadata,
+                );
+                config
+                    .ws_roots
+                    .borrow_mut()
+                    .insert(root.to_path_buf(), ws_root_config.clone());
+                WorkspaceConfig::Root(ws_root_config)
             }
             None => {
                 bail!("virtual manifests must be configured with [workspace]");
@@ -2125,6 +2750,12 @@ impl TomlManifest {
                     spec
                 )
             })?;
+            unused_dep_keys(
+                dep.name_in_toml().as_str(),
+                "replace",
+                replacement.unused_keys(),
+                &mut cx.warnings,
+            );
             dep.set_version_req(VersionReq::exact(version))
                 .lock_version(version);
             replace.push((spec, dep));
@@ -2134,21 +2765,32 @@ impl TomlManifest {
 
     fn patch(&self, cx: &mut Context<'_, '_>) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
         let mut patch = HashMap::new();
-        for (url, deps) in self.patch.iter().flatten() {
-            let url = match &url[..] {
+        for (toml_url, deps) in self.patch.iter().flatten() {
+            let url = match &toml_url[..] {
                 CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
                 _ => cx
                     .config
-                    .get_registry_index(url)
-                    .or_else(|_| url.into_url())
+                    .get_registry_index(toml_url)
+                    .or_else(|_| toml_url.into_url())
                     .with_context(|| {
-                        format!("[patch] entry `{}` should be a URL or registry name", url)
+                        format!(
+                            "[patch] entry `{}` should be a URL or registry name",
+                            toml_url
+                        )
                     })?,
             };
             patch.insert(
                 url,
                 deps.iter()
-                    .map(|(name, dep)| dep.to_dependency(name, cx, None))
+                    .map(|(name, dep)| {
+                        unused_dep_keys(
+                            name,
+                            &format!("patch.{toml_url}",),
+                            dep.unused_keys(),
+                            &mut cx.warnings,
+                        );
+                        dep.to_dependency(name, cx, None)
+                    })
                     .collect::<CargoResult<Vec<_>>>()?,
             );
         }
@@ -2188,24 +2830,155 @@ impl TomlManifest {
     }
 }
 
+fn parse_unstable_lints<T: Deserialize<'static>>(
+    lints: Option<toml::Value>,
+    config: &Config,
+    warnings: &mut Vec<String>,
+) -> CargoResult<Option<T>> {
+    let Some(lints) = lints else {
+        return Ok(None);
+    };
+
+    if !config.cli_unstable().lints {
+        warn_for_lint_feature(config, warnings);
+        return Ok(None);
+    }
+
+    lints.try_into().map(Some).map_err(|err| err.into())
+}
+
+fn warn_for_lint_feature(config: &Config, warnings: &mut Vec<String>) {
+    use std::fmt::Write as _;
+
+    let key_name = "lints";
+    let feature_name = "lints";
+
+    let mut message = String::new();
+
+    let _ = write!(
+        message,
+        "unused manifest key `{key_name}` (may be supported in a future version)"
+    );
+    if config.nightly_features_allowed {
+        let _ = write!(
+            message,
+            "
+
+consider passing `-Z{feature_name}` to enable this feature."
+        );
+    } else {
+        let _ = write!(
+            message,
+            "
+
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can pass
+`-Z{feature_name}` to enable this feature.",
+        );
+    }
+    warnings.push(message);
+}
+
+fn verify_lints(lints: Option<TomlLints>) -> CargoResult<Option<TomlLints>> {
+    let Some(lints) = lints else {
+        return Ok(None);
+    };
+
+    for (tool, lints) in &lints {
+        let supported = ["rust", "clippy", "rustdoc"];
+        if !supported.contains(&tool.as_str()) {
+            let supported = supported.join(", ");
+            anyhow::bail!("unsupported `{tool}` in `[lints]`, must be one of {supported}")
+        }
+        for name in lints.keys() {
+            if let Some((prefix, suffix)) = name.split_once("::") {
+                if tool == prefix {
+                    anyhow::bail!(
+                        "`lints.{tool}.{name}` is not valid lint name; try `lints.{prefix}.{suffix}`"
+                    )
+                } else if tool == "rust" && supported.contains(&prefix) {
+                    anyhow::bail!(
+                        "`lints.{tool}.{name}` is not valid lint name; try `lints.{prefix}.{suffix}`"
+                    )
+                } else {
+                    anyhow::bail!("`lints.{tool}.{name}` is not a valid lint name")
+                }
+            }
+        }
+    }
+
+    Ok(Some(lints))
+}
+
+fn lints_to_rustflags(lints: &TomlLints) -> Vec<String> {
+    let mut rustflags = lints
+        .iter()
+        .flat_map(|(tool, lints)| {
+            lints.iter().map(move |(name, config)| {
+                let flag = config.level().flag();
+                let option = if tool == "rust" {
+                    format!("{flag}={name}")
+                } else {
+                    format!("{flag}={tool}::{name}")
+                };
+                (
+                    config.priority(),
+                    // Since the most common group will be `all`, put it last so people are more
+                    // likely to notice that they need to use `priority`.
+                    std::cmp::Reverse(name),
+                    option,
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+    rustflags.sort();
+    rustflags.into_iter().map(|(_, _, option)| option).collect()
+}
+
+fn unused_dep_keys(
+    dep_name: &str,
+    kind: &str,
+    unused_keys: Vec<String>,
+    warnings: &mut Vec<String>,
+) {
+    for unused in unused_keys {
+        let key = format!("unused manifest key: {kind}.{dep_name}.{unused}");
+        warnings.push(key);
+    }
+}
+
 fn inheritable_from_path(
     config: &Config,
-    resolved_path: PathBuf,
+    workspace_path: PathBuf,
 ) -> CargoResult<InheritableFields> {
-    let key = resolved_path.parent().unwrap();
-    let source_id = SourceId::for_path(key)?;
-    let (man, _) = read_manifest(&resolved_path, source_id, config)?;
+    // Workspace path should have Cargo.toml at the end
+    let workspace_path_root = workspace_path.parent().unwrap();
+
+    // Let the borrow exit scope so that it can be picked up if there is a need to
+    // read a manifest
+    if let Some(ws_root) = config.ws_roots.borrow().get(workspace_path_root) {
+        return Ok(ws_root.inheritable().clone());
+    };
+
+    let source_id = SourceId::for_path(workspace_path_root)?;
+    let (man, _) = read_manifest(&workspace_path, source_id, config)?;
     match man.workspace_config() {
-        WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+        WorkspaceConfig::Root(root) => {
+            config
+                .ws_roots
+                .borrow_mut()
+                .insert(workspace_path, root.clone());
+            Ok(root.inheritable().clone())
+        }
         _ => bail!(
             "root of a workspace inferred but wasn't a root: {}",
-            resolved_path.display()
+            workspace_path.display()
         ),
     }
 }
 
-/// Returns the name of the README file for a `TomlProject`.
-pub fn readme_for_project(package_root: &Path, readme: Option<StringOrBool>) -> Option<String> {
+/// Returns the name of the README file for a [`TomlPackage`].
+pub fn readme_for_package(package_root: &Path, readme: Option<&StringOrBool>) -> Option<String> {
     match &readme {
         None => default_readme_from_package_root(package_root),
         Some(value) => match value {
@@ -2232,16 +3005,27 @@ fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
 
 /// Checks a list of build targets, and ensures the target names are unique within a vector.
 /// If not, the name of the offending build target is returned.
-fn unique_build_targets(targets: &[Target], package_root: &Path) -> Result<(), String> {
-    let mut seen = HashSet::new();
+fn unique_build_targets(
+    targets: &[Target],
+    package_root: &Path,
+) -> Result<(), HashMap<PathBuf, Vec<Target>>> {
+    let mut source_targets = HashMap::<_, Vec<_>>::new();
     for target in targets {
         if let TargetSourcePath::Path(path) = target.src_path() {
             let full = package_root.join(path);
-            if !seen.insert(full.clone()) {
-                return Err(full.display().to_string());
-            }
+            source_targets.entry(full).or_default().push(target.clone());
         }
     }
+
+    let conflict_targets = source_targets
+        .into_iter()
+        .filter(|(_, targets)| targets.len() > 1)
+        .collect::<HashMap<_, _>>();
+
+    if !conflict_targets.is_empty() {
+        return Err(conflict_targets);
+    }
+
     Ok(())
 }
 
@@ -2287,7 +3071,6 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
             }
             .to_dependency(name, cx, kind),
             TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
-            TomlDependency::Workspace(_) => unreachable!(),
         }
     }
 
@@ -2295,7 +3078,6 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
         match self {
             TomlDependency::Detailed(d) => d.version.is_some(),
             TomlDependency::Simple(..) => true,
-            TomlDependency::Workspace(_) => unreachable!(),
         }
     }
 
@@ -2303,70 +3085,6 @@ impl<P: ResolveToPath + Clone> TomlDependency<P> {
         match self {
             TomlDependency::Detailed(d) => d.optional.unwrap_or(false),
             TomlDependency::Simple(..) => false,
-            TomlDependency::Workspace(w) => w.optional.unwrap_or(false),
-        }
-    }
-}
-
-impl TomlDependency {
-    fn resolve<'a>(
-        self,
-        cargo_features: &Features,
-        label: &str,
-        cx: &mut Context<'_, '_>,
-        get_inheritable: impl FnOnce() -> CargoResult<InheritableFields>,
-    ) -> CargoResult<TomlDependency> {
-        match self {
-            TomlDependency::Detailed(d) => Ok(TomlDependency::Detailed(d)),
-            TomlDependency::Simple(s) => Ok(TomlDependency::Simple(s)),
-            TomlDependency::Workspace(TomlWorkspaceDependency {
-                workspace: true,
-                features,
-                optional,
-            }) => {
-                cargo_features.require(Feature::workspace_inheritance())?;
-                let inheritable = get_inheritable()?;
-                inheritable.get_dependency(label).context(format!(
-                    "error reading `dependencies.{}` from workspace root manifest's `workspace.dependencies.{}`",
-                    label, label
-                )).map(|dep| {
-                    match dep {
-                        TomlDependency::Simple(s) => {
-                            if optional.is_some() || features.is_some() {
-                                Ok(TomlDependency::Detailed(DetailedTomlDependency {
-                                    version: Some(s),
-                                    optional,
-                                    features,
-                                    ..Default::default()
-                                }))
-                            } else {
-                                Ok(TomlDependency::Simple(s))
-                            }
-                        },
-                        TomlDependency::Detailed(d) => {
-                            let mut dep = d.clone();
-                            dep.add_features(features);
-                            dep.update_optional(optional);
-                            dep.resolve_path(label,inheritable.ws_root(), cx.root)?;
-                            Ok(TomlDependency::Detailed(dep))
-                        },
-                        TomlDependency::Workspace(_) => {
-                            unreachable!(
-                                "We check that no workspace defines dependencies with \
-                                `{{ workspace = true }}` when we read a manifest from a string. \
-                                this should not happen but did on {}",
-                                label
-                            )
-                        },
-                    }
-                })?
-            }
-            TomlDependency::Workspace(TomlWorkspaceDependency {
-                workspace: false, ..
-            }) => Err(anyhow!(
-                "`workspace=false` is unsupported for `package.dependencies.{}`",
-                label,
-            )),
         }
     }
 }
@@ -2381,8 +3099,8 @@ impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
             let msg = format!(
                 "dependency ({}) specified without \
-                 providing a local path, Git repository, or \
-                 version to use. This will be considered an \
+                 providing a local path, Git repository, version, or \
+                 workspace dependency to use. This will be considered an \
                  error in future versions",
                 name_in_toml
             );
@@ -2654,12 +3372,12 @@ impl DetailedTomlDependency {
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 struct TomlTarget {
     name: Option<String>,
 
     // The intention was to only accept `crate-type` here but historical
     // versions of Cargo also accepted `crate_type`, so look for both.
-    #[serde(rename = "crate-type")]
     crate_type: Option<Vec<String>>,
     #[serde(rename = "crate_type")]
     crate_type2: Option<Vec<String>>,
@@ -2672,12 +3390,12 @@ struct TomlTarget {
     bench: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
+    doc_scrape_examples: Option<bool>,
     #[serde(rename = "proc-macro")]
     proc_macro_raw: Option<bool>,
     #[serde(rename = "proc_macro")]
     proc_macro_raw2: Option<bool>,
     harness: Option<bool>,
-    #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,
     edition: Option<String>,
 }
@@ -2706,15 +3424,15 @@ impl ser::Serialize for PathValue {
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct TomlPlatform {
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "build-dependencies")]
-    build_dependencies: Option<BTreeMap<String, TomlDependency>>,
+    build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<BTreeMap<String, TomlDependency>>,
+    build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "dev-dependencies")]
-    dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
+    dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
+    dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
 }
 
 impl TomlTarget {
@@ -2772,5 +3490,60 @@ impl TomlTarget {
 impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+pub type TomlLints = BTreeMap<String, TomlToolLints>;
+
+pub type TomlToolLints = BTreeMap<String, TomlLint>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum TomlLint {
+    Level(TomlLintLevel),
+    Config(TomlLintConfig),
+}
+
+impl TomlLint {
+    fn level(&self) -> TomlLintLevel {
+        match self {
+            Self::Level(level) => *level,
+            Self::Config(config) => config.level,
+        }
+    }
+
+    fn priority(&self) -> i8 {
+        match self {
+            Self::Level(_) => 0,
+            Self::Config(config) => config.priority,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct TomlLintConfig {
+    level: TomlLintLevel,
+    #[serde(default)]
+    priority: i8,
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub enum TomlLintLevel {
+    Forbid,
+    Deny,
+    Warn,
+    Allow,
+}
+
+impl TomlLintLevel {
+    fn flag(&self) -> &'static str {
+        match self {
+            Self::Forbid => "--forbid",
+            Self::Deny => "--deny",
+            Self::Warn => "--warn",
+            Self::Allow => "--allow",
+        }
     }
 }

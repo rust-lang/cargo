@@ -34,7 +34,7 @@ The sections below describe how build scripts work, and the [examples
 chapter](build-script-examples.md) shows a variety of examples on how to write
 scripts.
 
-> Note: The [`package.build` manifest key](manifest.md#package-build) can be
+> Note: The [`package.build` manifest key](manifest.md#the-build-field) can be
 > used to change the name of the build script, or disable it entirely.
 
 ### Life Cycle of a Build Script
@@ -77,6 +77,15 @@ Build scripts communicate with Cargo by printing to stdout. Cargo will
 interpret each line that starts with `cargo:` as an instruction that will
 influence compilation of the package. All other lines are ignored.
 
+> Note: The order of `cargo:` instructions printed by the build script *may*
+> affect the order of arguments that `cargo` passes to `rustc`. In turn, the
+> order of arguments passed to `rustc` may affect the order of arguments passed
+> to the linker. Therefore, you will want to pay attention to the order of the
+> build script's instructions. For example, if object `foo` needs to link against
+> library `bar`, you may want to make sure that library `bar`'s
+> [`cargo:rustc-link-lib`](#rustc-link-lib) instruction appears *after*
+> instructions to link object `foo`.
+
 The output of the script is hidden from the terminal during normal
 compilation. If you would like to see the output directly in your terminal,
 invoke Cargo as "very verbose" with the `-vv` flag. This only happens when the
@@ -90,41 +99,40 @@ configuration). The stderr output is also saved in that same directory.
 The following is a summary of the instructions that Cargo recognizes, with each
 one detailed below.
 
-* [`cargo:rerun-if-changed=PATH`](#rerun-if-changed) — Tells Cargo when to
+* [`cargo:rerun-if-changed=PATH`](#rerun-if-changed) --- Tells Cargo when to
   re-run the script.
-* [`cargo:rerun-if-env-changed=VAR`](#rerun-if-env-changed) — Tells Cargo when
+* [`cargo:rerun-if-env-changed=VAR`](#rerun-if-env-changed) --- Tells Cargo when
   to re-run the script.
-* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) – Passes custom flags to a
+* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) --- Passes custom flags to a
   linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
-* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) – Passes custom
+* [`cargo:rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) --- Passes custom
   flags to a linker for the binary `BIN`.
-* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) – Passes custom
+* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) --- Passes custom
   flags to a linker for binaries.
-* [`cargo:rustc-link-arg-tests=FLAG`](#rustc-link-arg-tests) – Passes custom
+* [`cargo:rustc-link-arg-tests=FLAG`](#rustc-link-arg-tests) --- Passes custom
   flags to a linker for tests.
-* [`cargo:rustc-link-arg-examples=FLAG`](#rustc-link-arg-examples) – Passes custom
+* [`cargo:rustc-link-arg-examples=FLAG`](#rustc-link-arg-examples) --- Passes custom
   flags to a linker for examples.
-* [`cargo:rustc-link-arg-benches=FLAG`](#rustc-link-arg-benches) – Passes custom
+* [`cargo:rustc-link-arg-benches=FLAG`](#rustc-link-arg-benches) --- Passes custom
   flags to a linker for benchmarks.
-* [`cargo:rustc-link-lib=[KIND=]NAME`](#rustc-link-lib) — Adds a library to
+* [`cargo:rustc-link-lib=LIB`](#rustc-link-lib) --- Adds a library to
   link.
-* [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) — Adds to the
+* [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) --- Adds to the
   library search path.
-* [`cargo:rustc-flags=FLAGS`](#rustc-flags) — Passes certain flags to the
+* [`cargo:rustc-flags=FLAGS`](#rustc-flags) --- Passes certain flags to the
   compiler.
-* [`cargo:rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) — Enables compile-time `cfg`
+* [`cargo:rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) --- Enables compile-time `cfg`
   settings.
-* [`cargo:rustc-env=VAR=VALUE`](#rustc-env) — Sets an environment variable.
-* [`cargo:rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) — Passes custom
+* [`cargo:rustc-env=VAR=VALUE`](#rustc-env) --- Sets an environment variable.
+* [`cargo:rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
   flags to a linker for cdylib crates.
-* [`cargo:warning=MESSAGE`](#cargo-warning) — Displays a warning on the
+* [`cargo:warning=MESSAGE`](#cargo-warning) --- Displays a warning on the
   terminal.
-* [`cargo:KEY=VALUE`](#the-links-manifest-key) — Metadata, used by `links`
+* [`cargo:KEY=VALUE`](#the-links-manifest-key) --- Metadata, used by `links`
   scripts.
 
 
-<a id="rustc-link-arg"></a>
-#### `cargo:rustc-link-arg=FLAG`
+#### `cargo:rustc-link-arg=FLAG` {#rustc-link-arg}
 
 The `rustc-link-arg` instruction tells Cargo to pass the [`-C link-arg=FLAG`
 option][link-arg] to the compiler, but only when building supported targets
@@ -134,8 +142,7 @@ linker script.
 
 [link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
-<a id="rustc-link-arg-bin"></a>
-#### `cargo:rustc-link-arg-bin=BIN=FLAG`
+#### `cargo:rustc-link-arg-bin=BIN=FLAG` {#rustc-link-arg-bin}
 
 The `rustc-link-arg-bin` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building
@@ -143,8 +150,7 @@ the binary target with name `BIN`. Its usage is highly platform specific. It is 
 to set a linker script or other linker options.
 
 
-<a id="rustc-link-arg-bins"></a>
-#### `cargo:rustc-link-arg-bins=FLAG`
+#### `cargo:rustc-link-arg-bins=FLAG` {#rustc-link-arg-bins}
 
 The `rustc-link-arg-bins` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
@@ -152,12 +158,15 @@ binary target. Its usage is highly platform specific. It is useful
 to set a linker script or other linker options.
 
 
-<a id="rustc-link-lib"></a>
-#### `cargo:rustc-link-lib=[KIND=]NAME`
+#### `cargo:rustc-link-lib=LIB` {#rustc-link-lib}
 
 The `rustc-link-lib` instruction tells Cargo to link the given library using
 the compiler's [`-l` flag][option-link]. This is typically used to link a
 native library using [FFI].
+
+The `LIB` string is passed directly to rustc, so it supports any syntax that
+`-l` does. \
+Currently the full supported syntax for `LIB` is `[KIND[:MODIFIERS]=]NAME[:RENAME]`.
 
 The `-l` flag is only passed to the library target of the package, unless
 there is no library target, in which case it is passed to all targets. This is
@@ -174,30 +183,26 @@ The optional `KIND` may be one of `dylib`, `static`, or `framework`. See the
 [FFI]: ../../nomicon/ffi.md
 
 
-<a id="rustc-link-arg-tests"></a>
-#### `cargo:rustc-link-arg-tests=FLAG`
+#### `cargo:rustc-link-arg-tests=FLAG` {#rustc-link-arg-tests}
 
 The `rustc-link-arg-tests` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 tests target.
 
 
-<a id="rustc-link-arg-examples"></a>
-#### `cargo:rustc-link-arg-examples=FLAG`
+#### `cargo:rustc-link-arg-examples=FLAG` {#rustc-link-arg-examples}
 
 The `rustc-link-arg-examples` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building an examples
 target.
 
-<a id="rustc-link-arg-benches"></a>
-#### `cargo:rustc-link-arg-benches=FLAG`
+#### `cargo:rustc-link-arg-benches=FLAG` {#rustc-link-arg-benches}
 
 The `rustc-link-arg-benches` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building an benchmark
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a benchmark
 target.
 
-<a id="rustc-link-search"></a>
-#### `cargo:rustc-link-search=[KIND=]PATH`
+#### `cargo:rustc-link-search=[KIND=]PATH` {#rustc-link-search}
 
 The `rustc-link-search` instruction tells Cargo to pass the [`-L`
 flag][option-search] to the compiler to add a directory to the library search
@@ -215,16 +220,14 @@ is fine).
 
 [option-search]: ../../rustc/command-line-arguments.md#option-l-search-path
 
-<a id="rustc-flags"></a>
-#### `cargo:rustc-flags=FLAGS`
+#### `cargo:rustc-flags=FLAGS` {#rustc-flags}
 
 The `rustc-flags` instruction tells Cargo to pass the given space-separated
 flags to the compiler. This only allows the `-l` and `-L` flags, and is
 equivalent to using [`rustc-link-lib`](#rustc-link-lib) and
 [`rustc-link-search`](#rustc-link-search).
 
-<a id="rustc-cfg"></a>
-#### `cargo:rustc-cfg=KEY[="VALUE"]`
+#### `cargo:rustc-cfg=KEY[="VALUE"]` {#rustc-cfg}
 
 The `rustc-cfg` instruction tells Cargo to pass the given value to the
 [`--cfg` flag][option-cfg] to the compiler. This may be used for compile-time
@@ -245,8 +248,7 @@ identifier, the value should be a string.
 [conditional compilation]: ../../reference/conditional-compilation.md
 [option-cfg]: ../../rustc/command-line-arguments.md#option-cfg
 
-<a id="rustc-env"></a>
-#### `cargo:rustc-env=VAR=VALUE`
+#### `cargo:rustc-env=VAR=VALUE` {#rustc-env}
 
 The `rustc-env` instruction tells Cargo to set the given environment variable
 when compiling the package. The value can be then retrieved by the [`env!`
@@ -266,8 +268,7 @@ Cargo][env-cargo].
 [env-macro]: ../../std/macro.env.html
 [env-cargo]: environment-variables.md#environment-variables-cargo-sets-for-crates
 
-<a id="rustc-cdylib-link-arg"></a>
-#### `cargo:rustc-cdylib-link-arg=FLAG`
+#### `cargo:rustc-cdylib-link-arg=FLAG` {#rustc-cdylib-link-arg}
 
 The `rustc-cdylib-link-arg` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
@@ -275,8 +276,7 @@ link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 to set the shared library version or the runtime-path.
 
 
-<a id="cargo-warning"></a>
-#### `cargo:warning=MESSAGE`
+#### `cargo:warning=MESSAGE` {#cargo-warning}
 
 The `warning` instruction tells Cargo to display a warning after the build
 script has finished running. Warnings are only shown for `path` dependencies
@@ -315,12 +315,13 @@ list of files controlled by the [`exclude` and `include` fields]). For most
 cases, this is not a good choice, so it is recommended that every build script
 emit at least one of the `rerun-if` instructions (described below). If these
 are emitted, then Cargo will only re-run the script if the given value has
-changed.
+changed. If Cargo is re-running the build scripts of your own crate or a
+dependency and you don't know why, see ["Why is Cargo rebuilding my code?" in the
+FAQ](../faq.md#why-is-cargo-rebuilding-my-code).
 
 [`exclude` and `include` fields]: manifest.md#the-exclude-and-include-fields
 
-<a id="rerun-if-changed"></a>
-#### `cargo:rerun-if-changed=PATH`
+#### `cargo:rerun-if-changed=PATH` {#rerun-if-changed}
 
 The `rerun-if-changed` instruction tells Cargo to re-run the build script if
 the file at the given path has changed. Currently, Cargo only uses the
@@ -339,15 +340,16 @@ automatically handles whether or not the script itself needs to be recompiled,
 and of course the script will be re-run after it has been recompiled.
 Otherwise, specifying `build.rs` is redundant and unnecessary.
 
-<a id="rerun-if-env-changed"></a>
-#### `cargo:rerun-if-env-changed=NAME`
+#### `cargo:rerun-if-env-changed=NAME` {#rerun-if-env-changed}
 
 The `rerun-if-env-changed` instruction tells Cargo to re-run the build script
 if the value of an environment variable of the given name has changed.
 
 Note that the environment variables here are intended for global environment
-variables like `CC` and such, it is not necessary to use this for environment
-variables like `TARGET` that Cargo sets.
+variables like `CC` and such, it is not possible to use this for environment
+variables like `TARGET` that [Cargo sets for build scripts][build-env]. The
+environment variables in use are those received by `cargo` invocations, not
+those received by the executable of the build script.
 
 
 ### The `links` Manifest Key
@@ -428,8 +430,7 @@ script specified with a custom library. The purpose of this functionality is to
 prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
-To override a build script, place the following configuration in any acceptable
-Cargo [configuration location](config.md).
+To override a build script, place the following configuration in any acceptable [`config.toml`](config.md) file.
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]

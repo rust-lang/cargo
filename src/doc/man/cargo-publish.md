@@ -1,9 +1,10 @@
 # cargo-publish(1)
 {{*set actionverb="Publish"}}
+{{*set multitarget=true}}
 
 ## NAME
 
-cargo-publish - Upload a package to the registry
+cargo-publish --- Upload a package to the registry
 
 ## SYNOPSIS
 

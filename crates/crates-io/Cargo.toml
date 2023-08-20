@@ -1,8 +1,8 @@
 [package]
 name = "crates-io"
-version = "0.34.0"
-edition = "2021"
-license = "MIT OR Apache-2.0"
+version = "0.38.0"
+edition.workspace = true
+license.workspace = true
 repository = "https://github.com/rust-lang/cargo"
 description = """
 Helpers for interacting with crates.io
@@ -13,9 +13,9 @@ name = "crates_io"
 path = "lib.rs"
 
 [dependencies]
-curl = "0.4"
-anyhow = "1.0.34"
-percent-encoding = "2.0"
-serde = { version = "1.0", features = ['derive'] }
-serde_json = "1.0"
-url = "2.0"
+curl.workspace = true
+percent-encoding.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+thiserror.workspace = true
+url.workspace = true

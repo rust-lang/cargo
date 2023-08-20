@@ -2,9 +2,10 @@
 
 
 
+
 ## NAME
 
-cargo-bench - Execute benchmarks of a package
+cargo-bench --- Execute benchmarks of a package
 
 ## SYNOPSIS
 
@@ -28,10 +29,11 @@ similarly named benchmarks like `foobar`):
 
     cargo bench -- foo --exact
 
-Benchmarks are built with the `--test` option to `rustc` which creates an
-executable with a `main` function that automatically runs all functions
-annotated with the `#[bench]` attribute. Cargo passes the `--bench` flag to
-the test harness to tell it to run only benchmarks.
+Benchmarks are built with the `--test` option to `rustc` which creates a
+special executable by linking your code with libtest. The executable
+automatically runs all functions annotated with the `#[bench]` attribute.
+Cargo passes the `--bench` flag to the test harness to tell it to run
+only benchmarks.
 
 The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
@@ -54,6 +56,14 @@ debugger.
 
 [`bench` profile]: ../reference/profiles.html#bench
 
+### Working directory of benchmarks
+
+The working directory of every benchmark is set to the root directory of the 
+package the benchmark belongs to.
+Setting the working directory of benchmarks to the package's root directory 
+makes it possible for benchmarks to reliably access the package's files using 
+relative paths, regardless from where `cargo bench` was executed from.
+
 ## OPTIONS
 
 ### Benchmark Options
@@ -61,7 +71,7 @@ debugger.
 <dl>
 
 <dt class="option-term" id="option-cargo-bench---no-run"><a class="option-anchor" href="#option-cargo-bench---no-run"></a><code>--no-run</code></dt>
-<dd class="option-desc">Compile, but don't run benchmarks.</dd>
+<dd class="option-desc">Compile, but don’t run benchmarks.</dd>
 
 
 <dt class="option-term" id="option-cargo-bench---no-fail-fast"><a class="option-anchor" href="#option-cargo-bench---no-fail-fast"></a><code>--no-fail-fast</code></dt>
@@ -89,8 +99,8 @@ virtual workspace will include all workspace members (equivalent to passing
 
 <dl>
 
-<dt class="option-term" id="option-cargo-bench--p"><a class="option-anchor" href="#option-cargo-bench--p"></a><code>-p</code> <em>spec</em>...</dt>
-<dt class="option-term" id="option-cargo-bench---package"><a class="option-anchor" href="#option-cargo-bench---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-bench--p"><a class="option-anchor" href="#option-cargo-bench--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-bench---package"><a class="option-anchor" href="#option-cargo-bench---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Benchmark only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
@@ -108,7 +118,7 @@ double quotes around each pattern.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-bench---exclude"><a class="option-anchor" href="#option-cargo-bench---exclude"></a><code>--exclude</code> <em>SPEC</em>...</dt>
+<dt class="option-term" id="option-cargo-bench---exclude"><a class="option-anchor" href="#option-cargo-bench---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
 common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
@@ -124,7 +134,7 @@ single quotes or double quotes around each pattern.</dd>
 When no target selection options are given, `cargo bench` will build the
 following targets of the selected packages:
 
-- lib — used to link with binaries and benchmarks
+- lib --- used to link with binaries and benchmarks
 - bins (only if benchmark targets are built and required features are
   available)
 - lib as a benchmark
@@ -133,10 +143,26 @@ following targets of the selected packages:
 
 The default behavior can be changed by setting the `bench` flag for the target
 in the manifest settings. Setting examples to `bench = true` will build and
-run the example as a benchmark. Setting targets to `bench = false` will stop
-them from being benchmarked by default. Target selection options that take a
-target by name ignore the `bench` flag and will always benchmark the given
+run the example as a benchmark, replacing the example's `main` function with
+the libtest harness.
+
+Setting targets to `bench = false` will stop them from being bencharmked by
+default. Target selection options that take a target by name (such as
+`--example foo`) ignore the `bench` flag and will always benchmark the given
 target.
+
+See [Configuring a target](../reference/cargo-targets.html#configuring-a-target)
+for more information on per-target settings.
+
+Binary targets are automatically built if there is an integration test or
+benchmark being selected to benchmark. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The `CARGO_BIN_EXE_<name>`
+[environment variable](../reference/environment-variables.html#environment-variables-cargo-sets-for-crates)
+is set when the integration test is built so that it can use the
+[`env` macro](https://doc.rust-lang.org/std/macro.env.html) to locate the
+executable.
+
 
 Passing target selection flags will benchmark only the specified
 targets. 
@@ -149,10 +175,10 @@ use single quotes or double quotes around each glob pattern.
 <dl>
 
 <dt class="option-term" id="option-cargo-bench---lib"><a class="option-anchor" href="#option-cargo-bench---lib"></a><code>--lib</code></dt>
-<dd class="option-desc">Benchmark the package's library.</dd>
+<dd class="option-desc">Benchmark the package’s library.</dd>
 
 
-<dt class="option-term" id="option-cargo-bench---bin"><a class="option-anchor" href="#option-cargo-bench---bin"></a><code>--bin</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-bench---bin"><a class="option-anchor" href="#option-cargo-bench---bin"></a><code>--bin</code> <em>name</em>…</dt>
 <dd class="option-desc">Benchmark the specified binary. This flag may be specified multiple times
 and supports common Unix glob patterns.</dd>
 
@@ -162,7 +188,7 @@ and supports common Unix glob patterns.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-bench---example"><a class="option-anchor" href="#option-cargo-bench---example"></a><code>--example</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-bench---example"><a class="option-anchor" href="#option-cargo-bench---example"></a><code>--example</code> <em>name</em>…</dt>
 <dd class="option-desc">Benchmark the specified example. This flag may be specified multiple times
 and supports common Unix glob patterns.</dd>
 
@@ -171,7 +197,7 @@ and supports common Unix glob patterns.</dd>
 <dd class="option-desc">Benchmark all example targets.</dd>
 
 
-<dt class="option-term" id="option-cargo-bench---test"><a class="option-anchor" href="#option-cargo-bench---test"></a><code>--test</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-bench---test"><a class="option-anchor" href="#option-cargo-bench---test"></a><code>--test</code> <em>name</em>…</dt>
 <dd class="option-desc">Benchmark the specified integration test. This flag may be specified
 multiple times and supports common Unix glob patterns.</dd>
 
@@ -186,7 +212,7 @@ Targets may be enabled or disabled by setting the <code>test</code> flag in the
 manifest settings for the target.</dd>
 
 
-<dt class="option-term" id="option-cargo-bench---bench"><a class="option-anchor" href="#option-cargo-bench---bench"></a><code>--bench</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-bench---bench"><a class="option-anchor" href="#option-cargo-bench---bench"></a><code>--bench</code> <em>name</em>…</dt>
 <dd class="option-desc">Benchmark the specified benchmark. This flag may be specified multiple
 times and supports common Unix glob patterns.</dd>
 
@@ -219,6 +245,7 @@ for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-bench--F"><a class="option-anchor" href="#option-cargo-bench--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-bench---features"><a class="option-anchor" href="#option-cargo-bench---features"></a><code>--features</code> <em>features</em></dt>
 <dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
 members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
@@ -243,7 +270,7 @@ be specified multiple times, which enables all specified features.</dd>
 <dt class="option-term" id="option-cargo-bench---target"><a class="option-anchor" href="#option-cargo-bench---target"></a><code>--target</code> <em>triple</em></dt>
 <dd class="option-desc">Benchmark for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -260,7 +287,7 @@ See the <a href="../reference/profiles.html">the reference</a> for more details 
 
 <dt class="option-term" id="option-cargo-bench---ignore-rust-version"><a class="option-anchor" href="#option-cargo-bench---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
 <dd class="option-desc">Benchmark the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project's <code>rust-version</code> field.</dd>
+required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
 
 
 
@@ -271,7 +298,7 @@ formats; <code>--timings</code> without an argument will default to <code>--timi
 Specifying an output format (rather than the default) is unstable and requires
 <code>-Zunstable-options</code>. Valid output formats:</p>
 <ul>
-<li><code>html</code>: Write a human-readable file <code>cargo-timing.html</code> to the
+<li><code>html</code> (unstable, requires <code>-Zunstable-options</code>): Write a human-readable file <code>cargo-timing.html</code> to the
 <code>target/cargo-timings</code> directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
@@ -309,7 +336,7 @@ passing `--nocapture` to the benchmark binaries:
 
 <dt class="option-term" id="option-cargo-bench--v"><a class="option-anchor" href="#option-cargo-bench--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-bench---verbose"><a class="option-anchor" href="#option-cargo-bench---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -347,13 +374,13 @@ and <code>json</code>.</li>
 <a href="../reference/external-tools.html#json-messages">the reference</a>
 for more details. Conflicts with <code>human</code> and <code>short</code>.</li>
 <li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
-the &quot;short&quot; rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
+the “short” rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
+contains embedded ANSI color codes for respecting rustc’s default color
 scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
-<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo’s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
 </ul></dd>
 
@@ -408,6 +435,23 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-bench---config"><a class="option-anchor" href="#option-cargo-bench---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-bench--C"><a class="option-anchor" href="#option-cargo-bench--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+
+
 <dt class="option-term" id="option-cargo-bench--h"><a class="option-anchor" href="#option-cargo-bench--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-bench---help"><a class="option-anchor" href="#option-cargo-bench---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -431,7 +475,10 @@ Rust test harness runs benchmarks serially in a single thread.
 <dt class="option-term" id="option-cargo-bench---jobs"><a class="option-anchor" href="#option-cargo-bench---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string <code>default</code> is provided, it sets the value back to defaults.
+Should not be 0.</dd>
 
 
 <dt class="option-term" id="option-cargo-bench---keep-going"><a class="option-anchor" href="#option-cargo-bench---keep-going"></a><code>--keep-going</code></dt>

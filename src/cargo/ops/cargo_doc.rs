@@ -1,6 +1,6 @@
 use crate::core::{Shell, Workspace};
 use crate::ops;
-use crate::util::config::PathAndArgs;
+use crate::util::config::{Config, PathAndArgs};
 use crate::util::CargoResult;
 use std::path::Path;
 use std::path::PathBuf;
@@ -37,7 +37,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
 
             let mut shell = ws.config().shell();
             shell.status("Opening", path.display())?;
-            open_docs(&path, &mut shell, config_browser)?;
+            open_docs(&path, &mut shell, config_browser, ws.config())?;
         }
     }
 
@@ -48,9 +48,10 @@ fn open_docs(
     path: &Path,
     shell: &mut Shell,
     config_browser: Option<(PathBuf, Vec<String>)>,
+    config: &Config,
 ) -> CargoResult<()> {
     let browser =
-        config_browser.or_else(|| Some((PathBuf::from(std::env::var_os("BROWSER")?), Vec::new())));
+        config_browser.or_else(|| Some((PathBuf::from(config.get_env_os("BROWSER")?), Vec::new())));
 
     match browser {
         Some((browser, initial_args)) => {

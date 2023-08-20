@@ -12,8 +12,12 @@ limit to the number of versions which can be published, however.
 
 First things first, you’ll need an account on [crates.io] to acquire
 an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
-account (required for now). After this, visit your [Account
-Settings](https://crates.io/me) page and run the [`cargo login`] command.
+account (required for now). You will also need to provide and verify your email
+address on the [Account Settings](https://crates.io/settings/profile) page. Once
+that is done [create an API token](https://crates.io/settings/tokens), make sure
+you copy it. Once you leave the page you will not be able to see it again.
+
+Then run the [`cargo login`] command.
 
 ```console
 $ cargo login
@@ -30,10 +34,14 @@ This command will inform Cargo of your API token and store it locally in your
 shared with anyone else. If it leaks for any reason, you should revoke it
 immediately.
 
+> **Note**: The [`cargo logout`] command can be used to remove the token from
+> `credentials.toml`. This can be useful if you no longer need it stored on
+> the local machine.
+
 ### Before publishing a new crate
 
-Keep in mind that crate names on [crates.io] are allocated on a first-come-first-
-serve basis. Once a crate name is taken, it cannot be used for another crate.
+Keep in mind that crate names on [crates.io] are allocated on a first-come-first-serve
+basis. Once a crate name is taken, it cannot be used for another crate.
 
 Check out the [metadata you can specify](manifest.md) in `Cargo.toml` to
 ensure your crate can be discovered more easily! Before publishing, make sure
@@ -142,8 +150,8 @@ etc.). For situations such as this, Cargo supports a “yank” of a version of 
 crate.
 
 ```console
-$ cargo yank --vers 1.0.1
-$ cargo yank --vers 1.0.1 --undo
+$ cargo yank --version 1.0.1
+$ cargo yank --version 1.0.1 --undo
 ```
 
 A yank **does not** delete any code. This feature is not intended for deleting
@@ -260,6 +268,7 @@ request the org owner to do so.
 
 [Rust API Guidelines]: https://rust-lang.github.io/api-guidelines/
 [`cargo login`]: ../commands/cargo-login.md
+[`cargo logout`]: ../commands/cargo-logout.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`categories`]: manifest.md#the-categories-field

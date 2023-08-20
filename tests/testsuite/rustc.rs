@@ -18,7 +18,7 @@ fn build_lib_for_foo() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]-C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -40,7 +40,7 @@ fn lib() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]-C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 [..]\
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
@@ -63,12 +63,12 @@ fn build_main_and_allow_unstable_options() {
             "\
 [COMPILING] {name} v{version} ([CWD])
 [RUNNING] `rustc --crate-name {name} src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]-C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [RUNNING] `rustc --crate-name {name} src/main.rs [..]--crate-type bin \
-        --emit=[..]link[..]-C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 [..]\
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
@@ -109,10 +109,10 @@ fn build_with_args_to_one_of_multiple_binaries() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link[..]\
-        -C debuginfo=2 -C metadata=[..] \
+        -C debuginfo=2 [..]-C metadata=[..] \
         --out-dir [..]`
 [RUNNING] `rustc --crate-name bar src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]\
-        -C debuginfo=2 -C debug-assertions [..]`
+        -C debuginfo=2 [..]-C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -135,20 +135,6 @@ fn fails_with_args_to_all_binaries() {
 }
 
 #[cargo_test]
-fn fails_with_crate_type_and_without_unstable_options() {
-    let p = project().file("src/lib.rs", r#" "#).build();
-
-    p.cargo("rustc --crate-type lib")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "[ERROR] the `crate-type` flag is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/10083 for more information about the `crate-type` flag.",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn fails_with_crate_type_to_multi_binaries() {
     let p = project()
         .file("src/bin/foo.rs", "fn main() {}")
@@ -157,8 +143,7 @@ fn fails_with_crate_type_to_multi_binaries() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    p.cargo("rustc --crate-type lib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc --crate-type lib")
         .with_status(101)
         .with_stderr(
             "[ERROR] crate types to rustc can only be passed to one target, consider filtering
@@ -191,8 +176,7 @@ fn fails_with_crate_type_to_multi_examples() {
         .file("examples/ex2.rs", "")
         .build();
 
-    p.cargo("rustc -v --example ex1 --example ex2 --crate-type lib,cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc -v --example ex1 --example ex2 --crate-type lib,cdylib")
         .with_status(101)
         .with_stderr(
             "[ERROR] crate types to rustc can only be passed to one target, consider filtering
@@ -205,8 +189,7 @@ the package by passing, e.g., `--lib` or `--example` to specify a single target"
 fn fails_with_crate_type_to_binary() {
     let p = project().file("src/bin/foo.rs", "fn main() {}").build();
 
-    p.cargo("rustc --crate-type lib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc --crate-type lib")
         .with_status(101)
         .with_stderr(
             "[ERROR] crate types can only be specified for libraries and example libraries.
@@ -219,8 +202,7 @@ Binaries, tests, and benchmarks are always the `bin` crate type",
 fn build_with_crate_type_for_foo() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustc -v --crate-type cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc -v --crate-type cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -257,8 +239,7 @@ fn build_with_crate_type_for_foo_with_deps() {
         .file("a/src/lib.rs", "pub fn hello() {}")
         .build();
 
-    p.cargo("rustc -v --crate-type cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc -v --crate-type cdylib")
         .with_stderr(
             "\
 [COMPILING] a v0.1.0 ([CWD]/a)
@@ -275,8 +256,7 @@ fn build_with_crate_type_for_foo_with_deps() {
 fn build_with_crate_types_for_foo() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustc -v --crate-type lib,cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc -v --crate-type lib,cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -307,8 +287,7 @@ fn build_with_crate_type_to_example() {
         .file("examples/ex.rs", "")
         .build();
 
-    p.cargo("rustc -v --example ex --crate-type cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc -v --example ex --crate-type cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -340,8 +319,7 @@ fn build_with_crate_types_to_example() {
         .file("examples/ex.rs", "")
         .build();
 
-    p.cargo("rustc -v --example ex --crate-type lib,cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc -v --example ex --crate-type lib,cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -377,8 +355,7 @@ fn build_with_crate_types_to_one_of_multi_examples() {
         .file("examples/ex2.rs", "")
         .build();
 
-    p.cargo("rustc -v --example ex1 --crate-type lib,cdylib -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc -v --example ex1 --crate-type lib,cdylib")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -404,9 +381,9 @@ fn build_with_args_to_one_of_multiple_tests() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link[..]\
-        -C debuginfo=2 -C metadata=[..] \
+        -C debuginfo=2 [..]-C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 \
+[RUNNING] `rustc --crate-name bar tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 [..]\
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -443,7 +420,7 @@ fn build_foo_with_bar_dependency() {
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..] -C debuginfo=2 [..]`
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `[..] -C debuginfo=2 -C debug-assertions [..]`
+[RUNNING] `[..] -C debuginfo=2 [..]-C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -501,7 +478,7 @@ fn targets_selected_default() {
         // unit test
         .with_stderr_does_not_contain(
             "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
-             -C debuginfo=2 --test [..]",
+             -C debuginfo=2 [..]--test [..]",
         )
         .run();
 }
@@ -518,7 +495,7 @@ fn targets_selected_all() {
         // unit test
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
-             -C debuginfo=2 --test [..]",
+             -C debuginfo=2 [..]--test [..]",
         )
         .run();
 }
@@ -574,8 +551,7 @@ fn fail_with_multiple_packages() {
         .with_status(1)
         .with_stderr_contains(
             "\
-error: The argument '--package [<SPEC>...]' was provided more than once, \
-       but cannot be used multiple times
+error: the argument '--package [<SPEC>]' cannot be used multiple times
 ",
         )
         .run();
@@ -663,6 +639,7 @@ fn rustc_fingerprint() {
         .with_stderr_does_not_contain("-C debug-assertions")
         .with_stderr(
             "\
+[DIRTY] foo [..]: the profile configuration changed
 [COMPILING] foo [..]
 [RUNNING] `rustc [..]
 [FINISHED] [..]
@@ -723,7 +700,7 @@ fn rustc_with_print_cfg_single_target() {
         .build();
 
     p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["print"])
         .with_stdout_contains("debug_assertions")
         .with_stdout_contains("target_arch=\"x86_64\"")
         .with_stdout_contains("target_endian=\"little\"")
@@ -743,8 +720,8 @@ fn rustc_with_print_cfg_multiple_targets() {
         .file("src/main.rs", r#"fn main() {} "#)
         .build();
 
-    p.cargo("rustc -Z unstable-options -Z multitarget --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
-        .masquerade_as_nightly_cargo()
+    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
+        .masquerade_as_nightly_cargo(&["print"])
         .with_stdout_contains("debug_assertions")
         .with_stdout_contains("target_arch=\"x86_64\"")
         .with_stdout_contains("target_endian=\"little\"")
@@ -771,7 +748,7 @@ fn rustc_with_print_cfg_rustflags_env_var() {
         .build();
 
     p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["print"])
         .env("RUSTFLAGS", "-C target-feature=+crt-static")
         .with_stdout_contains("debug_assertions")
         .with_stdout_contains("target_arch=\"x86_64\"")
@@ -801,7 +778,7 @@ rustflags = ["-C", "target-feature=+crt-static"]
         .build();
 
     p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["print"])
         .env("RUSTFLAGS", "-C target-feature=+crt-static")
         .with_stdout_contains("debug_assertions")
         .with_stdout_contains("target_arch=\"x86_64\"")

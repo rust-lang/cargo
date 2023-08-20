@@ -14,7 +14,7 @@ fn rename_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -36,7 +36,7 @@ fn rename_with_different_names() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -49,7 +49,7 @@ fn rename_with_different_names() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 authors = []
@@ -244,7 +244,7 @@ fn can_run_doc_tests() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 

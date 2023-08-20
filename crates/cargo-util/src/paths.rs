@@ -18,18 +18,19 @@ use tempfile::Builder as TempFileBuilder;
 /// environment variable this is will be used for, which is included in the
 /// error message.
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> Result<OsString> {
-    env::join_paths(paths.iter())
-        .with_context(|| {
-            let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
-            format!("failed to join path array: {:?}", paths)
-        })
-        .with_context(|| {
-            format!(
-                "failed to join search paths together\n\
-                     Does ${} have an unterminated quote character?",
-                env
-            )
-        })
+    env::join_paths(paths.iter()).with_context(|| {
+        let mut message = format!(
+            "failed to join paths from `${env}` together\n\n\
+             Check if any of path segments listed below contain an \
+             unterminated quote character or path separator:"
+        );
+        for path in paths {
+            use std::fmt::Write;
+            write!(&mut message, "\n    {:?}", Path::new(path)).unwrap();
+        }
+
+        message
+    })
 }
 
 /// Returns the name of the environment variable used for searching for
@@ -54,6 +55,8 @@ pub fn dylib_path_envvar() -> &'static str {
         // penalty starting in 10.13. Cargo's testsuite ran more than twice as
         // slow with it on CI.
         "DYLD_FALLBACK_LIBRARY_PATH"
+    } else if cfg!(target_os = "aix") {
+        "LIBPATH"
     } else {
         "LD_LIBRARY_PATH"
     }
@@ -234,7 +237,7 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
             Err(e) => {
                 // Ignore errors while walking. If Cargo can't access it, the
                 // build script probably can't access it, either.
-                log::debug!("failed to determine mtime while walking directory: {}", e);
+                tracing::debug!("failed to determine mtime while walking directory: {}", e);
                 None
             }
         })
@@ -249,8 +252,8 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         // I'm not sure when this is really possible (maybe a
                         // race with unlinking?). Regardless, if Cargo can't
                         // read it, the build script probably can't either.
-                        log::debug!(
-                            "failed to determine mtime while fetching symlink metdata of {}: {}",
+                        tracing::debug!(
+                            "failed to determine mtime while fetching symlink metadata of {}: {}",
                             e.path().display(),
                             err
                         );
@@ -268,7 +271,7 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         // Can't access the symlink target. If Cargo can't
                         // access it, the build script probably can't access
                         // it either.
-                        log::debug!(
+                        tracing::debug!(
                             "failed to determine mtime of symlink target for {}: {}",
                             e.path().display(),
                             err
@@ -283,7 +286,7 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         // I'm not sure when this is really possible (maybe a
                         // race with unlinking?). Regardless, if Cargo can't
                         // read it, the build script probably can't either.
-                        log::debug!(
+                        tracing::debug!(
                             "failed to determine mtime while fetching metadata of {}: {}",
                             e.path().display(),
                             err
@@ -311,7 +314,7 @@ pub fn set_invocation_time(path: &Path) -> Result<FileTime> {
         "This file has an mtime of when this was started.",
     )?;
     let ft = mtime(&timestamp)?;
-    log::debug!("invocation time for {:?} is {}", path, ft);
+    tracing::debug!("invocation time for {:?} is {}", path, ft);
     Ok(ft)
 }
 
@@ -410,11 +413,22 @@ fn _create_dir_all(p: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Recursively remove all files and directories at the given directory.
+/// Equivalent to [`std::fs::remove_dir_all`] with better error messages.
 ///
 /// This does *not* follow symlinks.
 pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> Result<()> {
-    _remove_dir_all(p.as_ref())
+    _remove_dir_all(p.as_ref()).or_else(|prev_err| {
+        // `std::fs::remove_dir_all` is highly specialized for different platforms
+        // and may be more reliable than a simple walk. We try the walk first in
+        // order to report more detailed errors.
+        fs::remove_dir_all(p.as_ref()).with_context(|| {
+            format!(
+                "{:?}\n\nError: failed to remove directory `{}`",
+                prev_err,
+                p.as_ref().display(),
+            )
+        })
+    })
 }
 
 fn _remove_dir_all(p: &Path) -> Result<()> {
@@ -494,7 +508,7 @@ pub fn link_or_copy(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<()> 
 }
 
 fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
-    log::debug!("linking {} to {}", src.display(), dst.display());
+    tracing::debug!("linking {} to {}", src.display(), dst.display());
     if same_file::is_same_file(src, dst).unwrap_or(false) {
         return Ok(());
     }
@@ -541,7 +555,7 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
         if cfg!(target_os = "macos") {
             // This is a work-around for a bug on macos. There seems to be a race condition
             // with APFS when hard-linking binaries. Gatekeeper does not have signing or
-            // hash informations stored in kernel when running the process. Therefore killing it.
+            // hash information stored in kernel when running the process. Therefore killing it.
             // This problem does not appear when copying files as kernel has time to process it.
             // Note that: fs::copy on macos is using CopyOnWrite (syscall fclonefileat) which should be
             // as fast as hardlinking.
@@ -553,7 +567,7 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
     };
     link_result
         .or_else(|err| {
-            log::debug!("link failed {}. falling back to fs::copy", err);
+            tracing::debug!("link failed {}. falling back to fs::copy", err);
             fs::copy(src, dst).map(|_| ())
         })
         .with_context(|| {
@@ -584,8 +598,8 @@ pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<u64> {
 pub fn set_file_time_no_err<P: AsRef<Path>>(path: P, time: FileTime) {
     let path = path.as_ref();
     match filetime::set_file_times(path, time, time) {
-        Ok(()) => log::debug!("set file mtime {} to {}", path.display(), time),
-        Err(e) => log::warn!(
+        Ok(()) => tracing::debug!("set file mtime {} to {}", path.display(), time),
+        Err(e) => tracing::warn!(
             "could not set mtime of {} to {}: {:?}",
             path.display(),
             time,
@@ -607,7 +621,7 @@ pub fn strip_prefix_canonical<P: AsRef<Path>>(
     let safe_canonicalize = |path: &Path| match path.canonicalize() {
         Ok(p) => p,
         Err(e) => {
-            log::warn!("cannot canonicalize {:?}: {:?}", path, e);
+            tracing::warn!("cannot canonicalize {:?}: {:?}", path, e);
             path.to_path_buf()
         }
     };
@@ -632,11 +646,11 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     let parent = path.parent().unwrap();
     let base = path.file_name().unwrap();
     create_dir_all(parent)?;
-    // We do this in two steps (first create a temporary directory and exlucde
+    // We do this in two steps (first create a temporary directory and exclude
     // it from backups, then rename it to the desired name. If we created the
     // directory directly where it should be and then excluded it from backups
     // we would risk a situation where cargo is interrupted right after the directory
-    // creation but before the exclusion the the directory would remain non-excluded from
+    // creation but before the exclusion the directory would remain non-excluded from
     // backups because we only perform exclusion right after we created the directory
     // ourselves.
     //
@@ -650,14 +664,23 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     // here to create the directory directly and fs::create_dir_all() explicitly treats
     // the directory being created concurrently by another thread or process as success,
     // hence the check below to follow the existing behavior. If we get an error at
-    // rename() and suddently the directory (which didn't exist a moment earlier) exists
-    // we can infer from it it's another cargo process doing work.
+    // rename() and suddenly the directory (which didn't exist a moment earlier) exists
+    // we can infer from it's another cargo process doing work.
     if let Err(e) = fs::rename(tempdir.path(), path) {
         if !path.exists() {
             return Err(anyhow::Error::from(e));
         }
     }
     Ok(())
+}
+
+/// Mark an existing directory as excluded from backups and indexing.
+///
+/// Errors in marking it are ignored.
+pub fn exclude_from_backups_and_indexing(p: impl AsRef<Path>) {
+    let path = p.as_ref();
+    exclude_from_backups(path);
+    exclude_from_content_indexing(path);
 }
 
 /// Marks the directory as excluded from archives/backups.
@@ -691,8 +714,9 @@ fn exclude_from_content_indexing(path: &Path) {
     {
         use std::iter::once;
         use std::os::windows::prelude::OsStrExt;
-        use winapi::um::fileapi::{GetFileAttributesW, SetFileAttributesW};
-        use winapi::um::winnt::FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+        use windows_sys::Win32::Storage::FileSystem::{
+            GetFileAttributesW, SetFileAttributesW, FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+        };
 
         let path: Vec<u16> = path.as_os_str().encode_wide().chain(once(0)).collect();
         unsafe {
@@ -733,4 +757,45 @@ fn exclude_from_time_machine(path: &Path) {
     }
     // Errors are ignored, since it's an optional feature and failure
     // doesn't prevent Cargo from working
+}
+
+#[cfg(test)]
+mod tests {
+    use super::join_paths;
+
+    #[test]
+    fn join_paths_lists_paths_on_error() {
+        let valid_paths = vec!["/testing/one", "/testing/two"];
+        // does not fail on valid input
+        let _joined = join_paths(&valid_paths, "TESTING1").unwrap();
+
+        #[cfg(unix)]
+        {
+            let invalid_paths = vec!["/testing/one", "/testing/t:wo/three"];
+            let err = join_paths(&invalid_paths, "TESTING2").unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                "failed to join paths from `$TESTING2` together\n\n\
+             Check if any of path segments listed below contain an \
+             unterminated quote character or path separator:\
+             \n    \"/testing/one\"\
+             \n    \"/testing/t:wo/three\"\
+             "
+            );
+        }
+        #[cfg(windows)]
+        {
+            let invalid_paths = vec!["/testing/one", "/testing/t\"wo/three"];
+            let err = join_paths(&invalid_paths, "TESTING2").unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                "failed to join paths from `$TESTING2` together\n\n\
+             Check if any of path segments listed below contain an \
+             unterminated quote character or path separator:\
+             \n    \"/testing/one\"\
+             \n    \"/testing/t\\\"wo/three\"\
+             "
+            );
+        }
+    }
 }

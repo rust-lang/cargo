@@ -3,16 +3,16 @@
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
-use std::process::Command;
 
 use cargo_test_support::git;
+use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 
 use url::Url;
 
-fn find_index() -> PathBuf {
+pub fn find_index() -> PathBuf {
     let dir = paths::home().join(".cargo/registry/index");
     dir.read_dir().unwrap().next().unwrap().unwrap().path()
 }
@@ -37,7 +37,7 @@ fn run_test(path_env: Option<&OsStr>) {
         .build();
     Package::new("bar", "0.1.0").publish();
 
-    foo.cargo("build").run();
+    foo.cargo("check").run();
 
     let index = find_index();
     let path = paths::home().join("tmp");
@@ -90,16 +90,18 @@ fn run_test(path_env: Option<&OsStr>) {
     );
 }
 
-#[cargo_test]
+#[cargo_test(requires_git)]
 fn use_git_gc() {
-    if Command::new("git").arg("--version").output().is_err() {
-        return;
-    }
     run_test(None);
 }
 
 #[cargo_test]
 fn avoid_using_git() {
+    if cargo_uses_gitoxide() {
+        // file protocol without git binary is currently not possible - needs built-in upload-pack.
+        // See https://github.com/Byron/gitoxide/issues/734 (support for the file protocol) progress updates.
+        return;
+    }
     let path = env::var_os("PATH").unwrap_or_default();
     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
     let idx = paths

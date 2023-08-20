@@ -1,12 +1,14 @@
+//! Type definitions for the result of a compilation.
+
 use std::collections::{BTreeSet, HashMap};
-use std::env;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
 use cargo_util::{paths, ProcessBuilder};
 
-use super::BuildContext;
+use crate::core::compiler::apply_env_config;
+use crate::core::compiler::BuildContext;
 use crate::core::compiler::{CompileKind, Metadata, Unit};
 use crate::core::Package;
 use crate::util::{config, CargoResult, Config};
@@ -129,16 +131,7 @@ impl<'cfg> Compilation<'cfg> {
                 .info(CompileKind::Host)
                 .sysroot_host_libdir
                 .clone(),
-            sysroot_target_libdir: bcx
-                .all_kinds
-                .iter()
-                .map(|&kind| {
-                    (
-                        kind,
-                        bcx.target_data.info(kind).sysroot_target_libdir.clone(),
-                    )
-                })
-                .collect(),
+            sysroot_target_libdir: get_sysroot_target_libdir(bcx)?,
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
@@ -293,7 +286,7 @@ impl<'cfg> Compilation<'cfg> {
             // These are the defaults when DYLD_FALLBACK_LIBRARY_PATH isn't
             // set or set to an empty string. Since Cargo is explicitly setting
             // the value, make sure the defaults still work.
-            if let Some(home) = env::var_os("HOME") {
+            if let Some(home) = self.config.get_env_os("HOME") {
                 search_path.push(PathBuf::from(home).join("lib"));
             }
             search_path.push(PathBuf::from("/usr/local/lib"));
@@ -347,19 +340,17 @@ impl<'cfg> Compilation<'cfg> {
                 metadata.license_file.as_ref().unwrap_or(&String::new()),
             )
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
+            .env(
+                "CARGO_PKG_RUST_VERSION",
+                &pkg.rust_version().unwrap_or(&String::new()),
+            )
+            .env(
+                "CARGO_PKG_README",
+                metadata.readme.as_ref().unwrap_or(&String::new()),
+            )
             .cwd(pkg.root());
 
-        // Apply any environment variables from the config
-        for (key, value) in self.config.env_config()?.iter() {
-            // never override a value that has already been set by cargo
-            if cmd.get_envs().contains_key(key) {
-                continue;
-            }
-
-            if value.is_force() || env::var_os(key).is_none() {
-                cmd.env(key, value.resolve(self.config));
-            }
-        }
+        apply_env_config(self.config, &mut cmd)?;
 
         Ok(cmd)
     }
@@ -368,7 +359,7 @@ impl<'cfg> Compilation<'cfg> {
 /// Prepares a rustc_tool process with additional environment variables
 /// that are only relevant in a context that has a unit
 fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
-    if unit.target.is_bin() {
+    if unit.target.is_executable() {
         let name = unit
             .target
             .binary_filename()
@@ -378,6 +369,35 @@ fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
     cmd
+}
+
+fn get_sysroot_target_libdir(
+    bcx: &BuildContext<'_, '_>,
+) -> CargoResult<HashMap<CompileKind, PathBuf>> {
+    bcx.all_kinds
+        .iter()
+        .map(|&kind| {
+            let Some(info) = bcx.target_data.get_info(kind) else {
+                let target = match kind {
+                    CompileKind::Host => "host".to_owned(),
+                    CompileKind::Target(s) => s.short_name().to_owned(),
+                };
+
+                let dependency = bcx
+                    .unit_graph
+                    .iter()
+                    .find_map(|(u, _)| (u.kind == kind).then_some(u.pkg.summary().package_id()))
+                    .unwrap();
+
+                anyhow::bail!(
+                    "could not find specification for target `{target}`.\n  \
+                    Dependency `{dependency}` requires to build for target `{target}`."
+                )
+            };
+
+            Ok((kind, info.sysroot_target_libdir.clone()))
+        })
+        .collect()
 }
 
 fn target_runner(
@@ -405,7 +425,7 @@ fn target_runner(
     let matching_runner = cfgs.next();
     if let Some((key, runner)) = cfgs.next() {
         anyhow::bail!(
-            "several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`\n\
+            "several matching instances of `target.'cfg(..)'.runner` in configurations\n\
              first match `{}` located in {}\n\
              second match `{}` located in {}",
             matching_runner.unwrap().0,

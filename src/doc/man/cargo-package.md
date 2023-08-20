@@ -1,10 +1,11 @@
 # cargo-package(1)
 {{*set actionverb="Package"}}
 {{*set noall=true}}
+{{*set multitarget=true}}
 
 ## NAME
 
-cargo-package - Assemble the local package into a distributable tarball
+cargo-package --- Assemble the local package into a distributable tarball
 
 ## SYNOPSIS
 

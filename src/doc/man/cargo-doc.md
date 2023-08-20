@@ -1,9 +1,10 @@
 # cargo-doc(1)
 {{*set actionverb="Document"}}
+{{*set multitarget=true}}
 
 ## NAME
 
-cargo-doc - Build a package's documentation
+cargo-doc --- Build a package's documentation
 
 ## SYNOPSIS
 

@@ -1,7 +1,7 @@
 CARGO-BUILD(1)
 
 NAME
-       cargo-build - Compile the current package
+       cargo-build — Compile the current package
 
 SYNOPSIS
        cargo build [options]
@@ -24,7 +24,7 @@ OPTIONS
        passing --workspace), and a non-virtual workspace will include only the
        root crate itself.
 
-       -p spec..., --package spec...
+       -p spec…, --package spec…
            Build only the specified packages. See cargo-pkgid(1) for the SPEC
            format. This flag may be specified multiple times and supports
            common Unix glob patterns like *, ? and []. However, to avoid your
@@ -38,7 +38,7 @@ OPTIONS
        --all
            Deprecated alias for --workspace.
 
-       --exclude SPEC...
+       --exclude SPEC…
            Exclude the specified packages. Must be used in conjunction with the
            --workspace flag. This flag may be specified multiple times and
            supports common Unix glob patterns like *, ? and []. However, to
@@ -51,6 +51,15 @@ OPTIONS
        binary and library targets of the selected packages. Binaries are
        skipped if they have required-features that are missing.
 
+       Binary targets are automatically built if there is an integration test
+       or benchmark being selected to build. This allows an integration test to
+       execute the binary to exercise and test its behavior. The
+       CARGO_BIN_EXE_<name> environment variable
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates>
+       is set when the integration test is built so that it can use the env
+       macro <https://doc.rust-lang.org/std/macro.env.html> to locate the
+       executable.
+
        Passing target selection flags will build only the specified targets.
 
        Note that --bin, --example, --test and --bench flags also support common
@@ -59,23 +68,23 @@ OPTIONS
        use single quotes or double quotes around each glob pattern.
 
        --lib
-           Build the package's library.
+           Build the package’s library.
 
-       --bin name...
+       --bin name…
            Build the specified binary. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
        --bins
            Build all binary targets.
 
-       --example name...
+       --example name…
            Build the specified example. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
        --examples
            Build all example targets.
 
-       --test name...
+       --test name…
            Build the specified integration test. This flag may be specified
            multiple times and supports common Unix glob patterns.
 
@@ -88,7 +97,7 @@ OPTIONS
            integration tests, etc.). Targets may be enabled or disabled by
            setting the test flag in the manifest settings for the target.
 
-       --bench name...
+       --bench name…
            Build the specified benchmark. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
@@ -114,7 +123,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -131,7 +140,8 @@ OPTIONS
            Build for the given architecture. The default is the host
            architecture. The general format of the triple is
            <arch><sub>-<vendor>-<sys>-<abi>. Run rustc --print target-list for
-           a list of supported targets.
+           a list of supported targets. This flag may be specified multiple
+           times.
 
            This may also be specified with the build.target config value
            <https://doc.rust-lang.org/cargo/reference/config.html>.
@@ -153,7 +163,7 @@ OPTIONS
 
        --ignore-rust-version
            Build the target even if the selected Rust compiler is older than
-           the required Rust version as configured in the project's
+           the required Rust version as configured in the project’s
            rust-version field.
 
        --timings=fmts
@@ -164,12 +174,13 @@ OPTIONS
            (rather than the default) is unstable and requires
            -Zunstable-options. Valid output formats:
 
-           o  html: Write a human-readable file cargo-timing.html to the
-              target/cargo-timings directory with a report of the compilation.
-              Also write a report to the same directory with a timestamp in the
-              filename if you want to look at older runs. HTML output is
-              suitable for human consumption only, and does not provide
-              machine-readable timing data.
+           o  html (unstable, requires -Zunstable-options): Write a
+              human-readable file cargo-timing.html to the target/cargo-timings
+              directory with a report of the compilation. Also write a report
+              to the same directory with a timestamp in the filename if you
+              want to look at older runs. HTML output is suitable for human
+              consumption only, and does not provide machine-readable timing
+              data.
 
            o  json (unstable, requires -Zunstable-options): Emit
               machine-readable JSON information about timing information.
@@ -193,10 +204,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -231,18 +243,19 @@ OPTIONS
               for more details. Conflicts with human and short.
 
            o  json-diagnostic-short: Ensure the rendered field of JSON messages
-              contains the "short" rendering from rustc. Cannot be used with
-              human or short.
+              contains the “short” rendering from rustc. Cannot be used
+              with human or short.
 
            o  json-diagnostic-rendered-ansi: Ensure the rendered field of JSON
               messages contains embedded ANSI color codes for respecting
-              rustc's default color scheme. Cannot be used with human or short.
+              rustc’s default color scheme. Cannot be used with human or
+              short.
 
            o  json-render-diagnostics: Instruct Cargo to not include rustc
-              diagnostics in in JSON messages printed, but instead Cargo itself
-              should render the JSON diagnostics coming from rustc. Cargo's own
-              JSON diagnostics and others coming from rustc are still emitted.
-              Cannot be used with human or short.
+              diagnostics in JSON messages printed, but instead Cargo itself
+              should render the JSON diagnostics coming from rustc. Cargo’s
+              own JSON diagnostics and others coming from rustc are still
+              emitted. Cannot be used with human or short.
 
        --build-plan
            Outputs a series of JSON messages to stdout that indicate the
@@ -293,6 +306,27 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
+
        -h, --help
            Prints help information.
 
@@ -305,7 +339,10 @@ OPTIONS
            Number of parallel jobs to run. May also be specified with the
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
-           the number of CPUs.
+           the number of logical CPUs. If negative, it sets the maximum number
+           of parallel jobs to the number of logical CPUs plus provided value.
+           If a string default is provided, it sets the value back to defaults.
+           Should not be 0.
 
        --keep-going
            Build as many crates in the dependency graph as possible, rather

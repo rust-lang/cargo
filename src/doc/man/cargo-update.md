@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-update - Update dependencies as recorded in the local lock file
+cargo-update --- Update dependencies as recorded in the local lock file
 
 ## SYNOPSIS
 

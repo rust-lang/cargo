@@ -2,9 +2,9 @@ use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
+use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::lev_distance;
 use crate::util::{Config, Progress, ProgressStyle};
 
 use anyhow::Context as _;
@@ -118,7 +118,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         let matches: Vec<_> = resolve.iter().filter(|id| spec.matches(*id)).collect();
         if matches.is_empty() {
             let mut suggestion = String::new();
-            suggestion.push_str(&lev_distance::closest_msg(
+            suggestion.push_str(&edit_distance::closest_msg(
                 &spec.name(),
                 resolve.iter(),
                 |id| id.name().as_str(),
@@ -141,7 +141,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
             let dir = escape_glob_path(layout.fingerprint())?;
-            rm_rf_glob(&Path::new(&dir).join(&pkg_dir), config, &mut progress)?;
+            rm_rf_package_glob_containing_hash(
+                &pkg.name(),
+                &Path::new(&dir).join(&pkg_dir),
+                config,
+                &mut progress,
+            )?;
         }
 
         for target in pkg.targets() {
@@ -149,7 +154,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                 // Get both the build_script_build and the output directory.
                 for (_, layout) in &layouts_with_host {
                     let dir = escape_glob_path(layout.build())?;
-                    rm_rf_glob(&Path::new(&dir).join(&pkg_dir), config, &mut progress)?;
+                    rm_rf_package_glob_containing_hash(
+                        &pkg.name(),
+                        &Path::new(&dir).join(&pkg_dir),
+                        config,
+                        &mut progress,
+                    )?;
                 }
                 continue;
             }
@@ -193,6 +203,8 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                         rm_rf_glob(&split_debuginfo_obj, config, &mut progress)?;
                         let split_debuginfo_dwo = dir_glob.join(format!("{}.*.dwo", crate_name));
                         rm_rf_glob(&split_debuginfo_dwo, config, &mut progress)?;
+                        let split_debuginfo_dwp = dir_glob.join(format!("{}.*.dwp", crate_name));
+                        rm_rf_glob(&split_debuginfo_dwp, config, &mut progress)?;
 
                         // Remove the uplifted copy.
                         if let Some(uplift_dir) = uplift_dir {
@@ -220,6 +232,40 @@ fn escape_glob_path(pattern: &Path) -> CargoResult<String> {
         .to_str()
         .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?;
     Ok(glob::Pattern::escape(pattern))
+}
+
+/// Glob remove artifacts for the provided `package`
+///
+/// Make sure the artifact is for `package` and not another crate that is prefixed by
+/// `package` by getting the original name stripped of the trailing hash and possible
+/// extension
+fn rm_rf_package_glob_containing_hash(
+    package: &str,
+    pattern: &Path,
+    config: &Config,
+    progress: &mut dyn CleaningProgressBar,
+) -> CargoResult<()> {
+    // TODO: Display utf8 warning to user?  Or switch to globset?
+    let pattern = pattern
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?;
+    for path in glob::glob(pattern)? {
+        let path = path?;
+
+        let pkg_name = path
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .and_then(|artifact| artifact.rsplit_once('-'))
+            .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?
+            .0;
+
+        if pkg_name != package {
+            continue;
+        }
+
+        rm_rf(&path, config, progress)?;
+    }
+    Ok(())
 }
 
 fn rm_rf_glob(
@@ -251,7 +297,12 @@ fn rm_rf(path: &Path, config: &Config, progress: &mut dyn CleaningProgressBar) -
         let entry = entry?;
         progress.on_clean()?;
         if entry.file_type().is_dir() {
-            paths::remove_dir(entry.path()).with_context(|| "could not remove build directory")?;
+            // The contents should have been removed by now, but sometimes a race condition is hit
+            // where other files have been added by the OS. `paths::remove_dir_all` also falls back
+            // to `std::fs::remove_dir_all`, which may be more reliable than a simple walk in
+            // platform-specific edge cases.
+            paths::remove_dir_all(entry.path())
+                .with_context(|| "could not remove build directory")?;
         } else {
             paths::remove_file(entry.path()).with_context(|| "failed to remove build artifact")?;
         }

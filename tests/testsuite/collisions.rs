@@ -91,9 +91,11 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
 }
 
 #[cargo_test]
-// --out-dir and examples are currently broken on MSVC and apple.
 // See https://github.com/rust-lang/cargo/issues/7493
-#[cfg_attr(any(target_env = "msvc", target_vendor = "apple"), ignore)]
+#[cfg_attr(
+    any(target_env = "msvc", target_vendor = "apple"),
+    ignore = "--out-dir and examples are currently broken on MSVC and apple"
+)]
 fn collision_export() {
     // `--out-dir` combines some things which can cause conflicts.
     let p = project()
@@ -105,7 +107,7 @@ fn collision_export() {
     // -j1 to avoid issues with two processes writing to the same file at the
     // same time.
     p.cargo("build -j1 --out-dir=out -Z unstable-options --bins --examples")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
         .with_stderr_contains("\
 [WARNING] `--out-dir` filename collision.
 The example target `foo` in package `foo v1.0.0 ([..]/foo)` has the same output filename as the bin target `foo` in package `foo v1.0.0 ([..]/foo)`.
@@ -353,8 +355,10 @@ fn collision_doc_profile_split() {
         .build();
 
     // Just to verify that common is normally built twice.
+    // This is unordered because in rare cases `pm` may start
+    // building in-between the two `common`.
     p.cargo("build -v")
-        .with_stderr(
+        .with_stderr_unordered(
             "\
 [UPDATING] [..]
 [DOWNLOADING] crates ...

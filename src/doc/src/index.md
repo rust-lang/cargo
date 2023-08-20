@@ -35,9 +35,9 @@ The commands will let you interact with Cargo using its command-line interface.
 * [Git Authentication](appendix/git-authentication.md)
 
 **Other Documentation:**
-* [Changelog](https://github.com/rust-lang/cargo/blob/master/CHANGELOG.md) —
-  Detailed notes about changes in Cargo in each release.
-* [Rust documentation website](https://doc.rust-lang.org/) — Links to official
+* [Changelog](https://github.com/rust-lang/cargo/blob/master/CHANGELOG.md)
+  --- Detailed notes about changes in Cargo in each release.
+* [Rust documentation website](https://doc.rust-lang.org/) --- Links to official
   Rust documentation and tools.
 
 [def-crate]:            ./appendix/glossary.md#crate            '"crate" (glossary entry)'

@@ -9,7 +9,7 @@
 
 use super::config::write_config_toml;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, is_nightly, project, Project};
+use cargo_test_support::{basic_manifest, project, Project};
 
 // An arbitrary lint (unused_variables) that triggers a lint.
 // We use a special flag to force it to generate a report.
@@ -24,12 +24,11 @@ fn simple_project() -> Project {
         .build()
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn output_on_stable() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
     let p = simple_project();
 
     p.cargo("check")
@@ -44,7 +43,7 @@ fn output_on_stable() {
 fn no_gate_future_incompat_report() {
     let p = simple_project();
 
-    p.cargo("build --future-incompat-report")
+    p.cargo("check --future-incompat-report")
         .with_status(0)
         .run();
 
@@ -54,30 +53,28 @@ fn no_gate_future_incompat_report() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn test_zero_future_incompat() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("src/main.rs", "fn main() {}")
         .build();
 
     // No note if --future-incompat-report is not specified.
-    p.cargo("build")
+    p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.0 [..]
+[CHECKING] foo v0.0.0 [..]
 [FINISHED] [..]
 ",
         )
         .run();
 
-    p.cargo("build --future-incompat-report")
+    p.cargo("check --future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr(
             "\
@@ -88,13 +85,11 @@ note: 0 dependencies had future-incompatible warnings
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn test_single_crate() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     let p = simple_project();
 
     for command in &["build", "check", "rustc", "test"] {
@@ -111,7 +106,7 @@ fn test_single_crate() {
         write_config_toml("");
         check_has_future_compat();
 
-        // Check that we show a message with `frequence = "always"`
+        // Check that we show a message with `frequency = "always"`
         write_config_toml(
             "\
 [future-incompat-report]
@@ -139,18 +134,16 @@ frequency = 'never'
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains(FUTURE_OUTPUT)
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
-            .with_stderr_contains("  - foo:0.0.0[..]")
+            .with_stderr_contains("  - foo@0.0.0[..]")
             .run();
     }
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn test_multi_crate() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     Package::new("first-dep", "0.0.1")
         .file("src/lib.rs", FUTURE_EXAMPLE)
         .publish();
@@ -171,7 +164,7 @@ fn test_multi_crate() {
                 second-dep = "*"
               "#,
         )
-        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "")
         .build();
 
     for command in &["build", "check", "rustc", "test"] {
@@ -189,17 +182,17 @@ fn test_multi_crate() {
         p.cargo(command).arg("--future-incompat-report")
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
-            .with_stderr_contains("  - first-dep:0.0.1")
-            .with_stderr_contains("  - second-dep:0.0.2")
+            .with_stderr_contains("  - first-dep@0.0.1")
+            .with_stderr_contains("  - second-dep@0.0.2")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--package").arg("first-dep:0.0.1")
+        p.cargo("report future-incompatibilities").arg("--package").arg("first-dep@0.0.1")
             .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
             .with_stdout_does_not_contain("[..]second-dep-0.0.2/src[..]")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--package").arg("second-dep:0.0.2")
+        p.cargo("report future-incompatibilities").arg("--package").arg("second-dep@0.0.2")
             .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
             .with_stdout_contains(FUTURE_OUTPUT)
             .with_stdout_does_not_contain("[..]first-dep-0.0.1/src[..]")
@@ -208,7 +201,7 @@ fn test_multi_crate() {
 
     // Test that passing the correct id via '--id' doesn't generate a warning message
     let output = p
-        .cargo("build")
+        .cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .exec_with_output()
         .unwrap();
@@ -267,60 +260,51 @@ fn test_multi_crate() {
     assert_eq!(lines.next(), None);
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn color() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     let p = simple_project();
 
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .run();
 
     p.cargo("report future-incompatibilities")
-        .masquerade_as_nightly_cargo()
         .with_stdout_does_not_contain("[..]\x1b[[..]")
         .run();
 
     p.cargo("report future-incompatibilities")
-        .masquerade_as_nightly_cargo()
         .env("CARGO_TERM_COLOR", "always")
         .with_stdout_contains("[..]\x1b[[..]")
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn bad_ids() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     let p = simple_project();
 
     p.cargo("report future-incompatibilities --id 1")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("error: no reports are currently available")
         .run();
 
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .run();
 
     p.cargo("report future-incompatibilities --id foo")
-        .masquerade_as_nightly_cargo()
         .with_status(1)
         .with_stderr("error: Invalid value: could not parse `foo` as a number")
         .run();
 
     p.cargo("report future-incompatibilities --id 7")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -331,13 +315,11 @@ Available IDs are: 1
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
 fn suggestions_for_updates() {
-    if !is_nightly() {
-        // -Zfuture-incompat-test requires nightly (permanently)
-        return;
-    }
-
     Package::new("with_updates", "1.0.0")
         .file("src/lib.rs", FUTURE_EXAMPLE)
         .publish();
@@ -398,13 +380,12 @@ with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.
 ";
 
     p.cargo("check --future-incompat-report")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_contains(update_message)
         .run();
 
     p.cargo("report future-incompatibilities")
-        .masquerade_as_nightly_cargo()
         .with_stdout_contains(update_message)
         .run()
 }

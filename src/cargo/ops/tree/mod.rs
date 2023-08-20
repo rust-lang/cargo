@@ -213,7 +213,15 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         })
         .collect::<CargoResult<Vec<PackageIdSpec>>>()?;
 
-    print(ws.config(), opts, root_indexes, &pkgs_to_prune, &graph)?;
+    if root_indexes.len() == 0 {
+        ws.config().shell().warn(
+            "nothing to print.\n\n\
+        To find dependencies that require specific target platforms, \
+        try to use option `--target all` first, and then narrow your search scope accordingly.",
+        )?;
+    } else {
+        print(ws.config(), opts, root_indexes, &pkgs_to_prune, &graph)?;
+    }
     Ok(())
 }
 
@@ -259,7 +267,6 @@ fn print(
             opts.prefix,
             opts.no_dedupe,
             opts.max_display_depth,
-            opts.no_proc_macro,
             &mut visited_deps,
             &mut levels_continue,
             &mut print_stack,
@@ -280,7 +287,6 @@ fn print_node<'a>(
     prefix: Prefix,
     no_dedupe: bool,
     max_display_depth: u32,
-    no_proc_macro: bool,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
@@ -340,7 +346,6 @@ fn print_node<'a>(
             prefix,
             no_dedupe,
             max_display_depth,
-            no_proc_macro,
             visited_deps,
             levels_continue,
             print_stack,
@@ -361,7 +366,6 @@ fn print_dependencies<'a>(
     prefix: Prefix,
     no_dedupe: bool,
     max_display_depth: u32,
-    no_proc_macro: bool,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
@@ -398,19 +402,6 @@ fn print_dependencies<'a>(
     let mut it = deps
         .iter()
         .filter(|dep| {
-            // Filter out proc-macro dependencies.
-            if no_proc_macro {
-                match graph.node(**dep) {
-                    &Node::Package { package_id, .. } => {
-                        !graph.package_for_id(package_id).proc_macro()
-                    }
-                    _ => true,
-                }
-            } else {
-                true
-            }
-        })
-        .filter(|dep| {
             // Filter out packages to prune.
             match graph.node(**dep) {
                 Node::Package { package_id, .. } => {
@@ -433,7 +424,6 @@ fn print_dependencies<'a>(
             prefix,
             no_dedupe,
             max_display_depth,
-            no_proc_macro,
             visited_deps,
             levels_continue,
             print_stack,

@@ -1,9 +1,10 @@
 # cargo-publish(1)
 
 
+
 ## NAME
 
-cargo-publish - Upload a package to the registry
+cargo-publish --- Upload a package to the registry
 
 ## SYNOPSIS
 
@@ -52,7 +53,7 @@ of the registry in all capital letters.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---no-verify"><a class="option-anchor" href="#option-cargo-publish---no-verify"></a><code>--no-verify</code></dt>
-<dd class="option-desc">Don't verify the contents by building them.</dd>
+<dd class="option-desc">Don’t verify the contents by building them.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---allow-dirty"><a class="option-anchor" href="#option-cargo-publish---allow-dirty"></a><code>--allow-dirty</code></dt>
@@ -99,7 +100,7 @@ format.</dd>
 <dt class="option-term" id="option-cargo-publish---target"><a class="option-anchor" href="#option-cargo-publish---target"></a><code>--target</code> <em>triple</em></dt>
 <dd class="option-desc">Publish for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -129,6 +130,7 @@ for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-publish--F"><a class="option-anchor" href="#option-cargo-publish--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-publish---features"><a class="option-anchor" href="#option-cargo-publish---features"></a><code>--features</code> <em>features</em></dt>
 <dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
 members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
@@ -190,7 +192,10 @@ offline.</p>
 <dt class="option-term" id="option-cargo-publish---jobs"><a class="option-anchor" href="#option-cargo-publish---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string <code>default</code> is provided, it sets the value back to defaults.
+Should not be 0.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---keep-going"><a class="option-anchor" href="#option-cargo-publish---keep-going"></a><code>--keep-going</code></dt>
@@ -206,7 +211,7 @@ the build on the first one that fails to build. Unstable, requires
 <dl>
 <dt class="option-term" id="option-cargo-publish--v"><a class="option-anchor" href="#option-cargo-publish--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-publish---verbose"><a class="option-anchor" href="#option-cargo-publish---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -243,6 +248,23 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish---config"><a class="option-anchor" href="#option-cargo-publish---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish--C"><a class="option-anchor" href="#option-cargo-publish--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-publish--h"><a class="option-anchor" href="#option-cargo-publish--h"></a><code>-h</code></dt>

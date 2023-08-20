@@ -4,7 +4,7 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo \- The Rust package manager
+cargo \[em] The Rust package manager
 .SH "SYNOPSIS"
 \fBcargo\fR [\fIoptions\fR] \fIcommand\fR [\fIargs\fR]
 .br
@@ -38,7 +38,7 @@ available at <https://rust\-lang.org>\&.
 .sp
 \fBcargo\-doc\fR(1)
 .br
-\ \ \ \ Build a package's documentation.
+\ \ \ \ Build a package\[cq]s documentation.
 .sp
 \fBcargo\-fetch\fR(1)
 .br
@@ -58,7 +58,7 @@ available at <https://rust\-lang.org>\&.
 .sp
 \fBcargo\-rustdoc\fR(1)
 .br
-\ \ \ \ Build a package's documentation, using specified custom flags.
+\ \ \ \ Build a package\[cq]s documentation, using specified custom flags.
 .sp
 \fBcargo\-test\fR(1)
 .br
@@ -70,7 +70,7 @@ available at <https://rust\-lang.org>\&.
 .sp
 \fBcargo\-locate\-project\fR(1)
 .br
-\ \ \ \ Print a JSON representation of a \fBCargo.toml\fR file's location.
+\ \ \ \ Print a JSON representation of a \fBCargo.toml\fR file\[cq]s location.
 .sp
 \fBcargo\-metadata\fR(1)
 .br
@@ -119,6 +119,10 @@ available at <https://rust\-lang.org>\&.
 \fBcargo\-login\fR(1)
 .br
 \ \ \ \ Save an API token from the registry locally.
+.sp
+\fBcargo\-logout\fR(1)
+.br
+\ \ \ \ Remove an API token from the registry locally.
 .sp
 \fBcargo\-owner\fR(1)
 .br
@@ -169,7 +173,7 @@ error message (for example, \fBE0004\fR).
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -244,6 +248,26 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -269,7 +293,7 @@ details on environment variables that Cargo reads.
 .SH "FILES"
 \fB~/.cargo/\fR
 .br
-\ \ \ \ Default location for Cargo's "home" directory where it
+\ \ \ \ Default location for Cargo\[cq]s \[lq]home\[rq] directory where it
 stores various files. The location can be changed with the \fBCARGO_HOME\fR
 environment variable.
 .sp
@@ -358,7 +382,7 @@ cargo init .
 .RE
 .sp
 .RS 4
-\h'-04' 6.\h'+01'Learn about a command's options and usage:
+\h'-04' 6.\h'+01'Learn about a command\[cq]s options and usage:
 .sp
 .RS 4
 .nf

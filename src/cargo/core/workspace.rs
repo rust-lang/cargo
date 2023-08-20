@@ -7,8 +7,7 @@ use std::rc::Rc;
 use anyhow::{anyhow, bail, Context as _};
 use glob::glob;
 use itertools::Itertools;
-use log::debug;
-use toml_edit::easy as toml;
+use tracing::debug;
 use url::Url;
 
 use crate::core::compiler::Unit;
@@ -20,12 +19,10 @@ use crate::core::{Dependency, Edition, FeatureValue, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lev_distance;
-use crate::util::toml::{
-    read_manifest, readme_for_project, StringOrBool, TomlDependency, TomlProfiles, VecStringOrBool,
-};
+use crate::util::toml::{read_manifest, InheritableFields, TomlDependency, TomlProfiles};
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
@@ -132,6 +129,34 @@ impl WorkspaceConfig {
     pub fn inheritable(&self) -> Option<&InheritableFields> {
         match self {
             WorkspaceConfig::Root(root) => Some(&root.inheritable_fields),
+            WorkspaceConfig::Member { .. } => None,
+        }
+    }
+
+    /// Returns the path of the workspace root based on this `[workspace]` configuration.
+    ///
+    /// Returns `None` if the root is not explicitly known.
+    ///
+    /// * `self_path` is the path of the manifest this `WorkspaceConfig` is located.
+    /// * `look_from` is the path where discovery started (usually the current
+    ///   working directory), used for `workspace.exclude` checking.
+    fn get_ws_root(&self, self_path: &Path, look_from: &Path) -> Option<PathBuf> {
+        match self {
+            WorkspaceConfig::Root(ances_root_config) => {
+                debug!("find_root - found a root checking exclusion");
+                if !ances_root_config.is_excluded(look_from) {
+                    debug!("find_root - found!");
+                    Some(self_path.to_owned())
+                } else {
+                    None
+                }
+            }
+            WorkspaceConfig::Member {
+                root: Some(path_to_root),
+            } => {
+                debug!("find_root - found pointer");
+                Some(read_root_pointer(self_path, path_to_root))
+            }
             WorkspaceConfig::Member { .. } => None,
         }
     }
@@ -261,16 +286,12 @@ impl<'cfg> Workspace<'cfg> {
         // - If the root package specifies edition 2021, use v2.
         // - Otherwise, use the default v1.
         self.resolve_behavior = match self.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().resolve_behavior().or_else(|| {
-                if p.manifest().edition() >= Edition::Edition2021 {
-                    Some(ResolveBehavior::V2)
-                } else {
-                    None
-                }
-            }),
-            MaybePackage::Virtual(vm) => vm.resolve_behavior(),
+            MaybePackage::Package(p) => p
+                .manifest()
+                .resolve_behavior()
+                .unwrap_or_else(|| p.manifest().edition().default_resolve_behavior()),
+            MaybePackage::Virtual(vm) => vm.resolve_behavior().unwrap_or(ResolveBehavior::V1),
         }
-        .unwrap_or(ResolveBehavior::V1);
     }
 
     /// Returns the current package of this workspace.
@@ -360,7 +381,21 @@ impl<'cfg> Workspace<'cfg> {
     pub fn target_dir(&self) -> Filesystem {
         self.target_dir
             .clone()
-            .unwrap_or_else(|| Filesystem::new(self.root().join("target")))
+            .unwrap_or_else(|| self.default_target_dir())
+    }
+
+    fn default_target_dir(&self) -> Filesystem {
+        if self.root_maybe().is_embedded() {
+            let hash = crate::util::hex::short_hash(&self.root_manifest().to_string_lossy());
+            let mut rel_path = PathBuf::new();
+            rel_path.push("target");
+            rel_path.push(&hash[0..2]);
+            rel_path.push(&hash[2..]);
+
+            self.config().home().join(rel_path)
+        } else {
+            Filesystem::new(self.root().join("target"))
+        }
     }
 
     /// Returns the root `[replace]` section of this workspace.
@@ -594,40 +629,23 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns an error if `manifest_path` isn't actually a valid manifest or
     /// if some other transient error happens.
     fn find_root(&mut self, manifest_path: &Path) -> CargoResult<Option<PathBuf>> {
+        let current = self.packages.load(manifest_path)?;
+        match current
+            .workspace_config()
+            .get_ws_root(manifest_path, manifest_path)
         {
-            let current = self.packages.load(manifest_path)?;
-            match *current.workspace_config() {
-                WorkspaceConfig::Root(_) => {
-                    debug!("find_root - is root {}", manifest_path.display());
-                    return Ok(Some(manifest_path.to_path_buf()));
-                }
-                WorkspaceConfig::Member {
-                    root: Some(ref path_to_root),
-                } => return Ok(Some(read_root_pointer(manifest_path, path_to_root))),
-                WorkspaceConfig::Member { root: None } => {}
+            Some(root_path) => {
+                debug!("find_root - is root {}", manifest_path.display());
+                Ok(Some(root_path))
             }
+            None => find_workspace_root_with_loader(manifest_path, self.config, |self_path| {
+                Ok(self
+                    .packages
+                    .load(self_path)?
+                    .workspace_config()
+                    .get_ws_root(self_path, manifest_path))
+            }),
         }
-
-        for ances_manifest_path in find_root_iter(manifest_path, self.config) {
-            debug!("find_root - trying {}", ances_manifest_path.display());
-            match *self.packages.load(&ances_manifest_path)?.workspace_config() {
-                WorkspaceConfig::Root(ref ances_root_config) => {
-                    debug!("find_root - found a root checking exclusion");
-                    if !ances_root_config.is_excluded(manifest_path) {
-                        debug!("find_root - found!");
-                        return Ok(Some(ances_manifest_path));
-                    }
-                }
-                WorkspaceConfig::Member {
-                    root: Some(ref path_to_root),
-                } => {
-                    debug!("find_root - found pointer");
-                    return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
-                }
-                WorkspaceConfig::Member { .. } => {}
-            }
-        }
-        Ok(None)
     }
 
     /// After the root of a workspace has been located, probes for all members
@@ -677,6 +695,8 @@ impl<'cfg> Workspace<'cfg> {
                 })?;
         }
 
+        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)?;
+
         if let Some(default) = default_members_paths {
             for path in default {
                 let normalized_path = paths::normalize_path(&path);
@@ -707,7 +727,7 @@ impl<'cfg> Workspace<'cfg> {
             self.default_members.push(self.current_manifest.clone())
         }
 
-        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)
+        Ok(())
     }
 
     fn find_path_deps(
@@ -718,6 +738,10 @@ impl<'cfg> Workspace<'cfg> {
     ) -> CargoResult<()> {
         let manifest_path = paths::normalize_path(manifest_path);
         if self.members.contains(&manifest_path) {
+            return Ok(());
+        }
+        if is_path_dep && self.root_maybe().is_embedded() {
+            // Embedded manifests cannot have workspace members
             return Ok(());
         }
         if is_path_dep
@@ -987,6 +1011,24 @@ impl<'cfg> Workspace<'cfg> {
                     }
                 }
             }
+            if let MaybePackage::Virtual(vm) = self.root_maybe() {
+                if vm.resolve_behavior().is_none() {
+                    if let Some(edition) = self
+                        .members()
+                        .filter(|p| p.manifest_path() != root_manifest)
+                        .map(|p| p.manifest().edition())
+                        .filter(|&e| e >= Edition::Edition2021)
+                        .max()
+                    {
+                        let resolver = edition.default_resolve_behavior().to_manifest();
+                        self.config.shell().warn(format_args!("some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`, but virtual workspaces default to `resolver = \"1\"`"))?;
+                        self.config.shell().note(
+                            "to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest",
+                        )?;
+                        self.config.shell().note(format_args!("to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"` in the workspace root's manifest"))?;
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -1239,8 +1281,9 @@ impl<'cfg> Workspace<'cfg> {
             optional_dependency_names_per_member.insert(member, optional_dependency_names_raw);
         }
 
-        let levenshtein_test =
-            |a: InternedString, b: InternedString| lev_distance(a.as_str(), b.as_str()) < 4;
+        let edit_distance_test = |a: InternedString, b: InternedString| {
+            edit_distance(a.as_str(), b.as_str(), 3).is_some()
+        };
 
         let suggestions: Vec<_> = cli_features
             .features
@@ -1251,12 +1294,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds member features which are similar to the requested feature.
                     let summary_features = summary_features
                         .iter()
-                        .filter(move |feature| levenshtein_test(**feature, *typo));
+                        .filter(move |feature| edit_distance_test(**feature, *typo));
 
                     // Finds optional dependencies which name is similar to the feature
                     let optional_dependency_features = optional_dependency_names
                         .iter()
-                        .filter(move |feature| levenshtein_test(**feature, *typo));
+                        .filter(move |feature| edit_distance_test(**feature, *typo));
 
                     summary_features
                         .chain(optional_dependency_features)
@@ -1272,13 +1315,13 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `pkg/feat` that are very similar to current `pkg/feat`.
                     let pkg_feat_similar = dependencies_features
                         .iter()
-                        .filter(|(name, _)| levenshtein_test(**name, *dep_name))
+                        .filter(|(name, _)| edit_distance_test(**name, *dep_name))
                         .map(|(name, features)| {
                             (
                                 name,
                                 features
                                     .iter()
-                                    .filter(|feature| levenshtein_test(**feature, *dep_feature))
+                                    .filter(|feature| edit_distance_test(**feature, *dep_feature))
                                     .collect::<Vec<_>>(),
                             )
                         })
@@ -1292,12 +1335,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `member/optional_dep` features which name is similar to current `pkg/feat`.
                     let optional_dependency_features = optional_dependency_names_per_member
                         .iter()
-                        .filter(|(package, _)| levenshtein_test(package.name(), *dep_name))
+                        .filter(|(package, _)| edit_distance_test(package.name(), *dep_name))
                         .map(|(package, optional_dependencies)| {
                             optional_dependencies
                                 .into_iter()
                                 .filter(|optional_dependency| {
-                                    levenshtein_test(**optional_dependency, *dep_name)
+                                    edit_distance_test(**optional_dependency, *dep_name)
                                 })
                                 .map(move |optional_dependency| {
                                     format!("{}/{}", package.name(), optional_dependency)
@@ -1308,12 +1351,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `member/feat` features which name is similar to current `pkg/feat`.
                     let summary_features = summary_features_per_member
                         .iter()
-                        .filter(|(package, _)| levenshtein_test(package.name(), *dep_name))
+                        .filter(|(package, _)| edit_distance_test(package.name(), *dep_name))
                         .map(|(package, summary_features)| {
                             summary_features
                                 .into_iter()
                                 .filter(|summary_feature| {
-                                    levenshtein_test(**summary_feature, *dep_feature)
+                                    edit_distance_test(**summary_feature, *dep_feature)
                                 })
                                 .map(move |summary_feature| {
                                     format!("{}/{}", package.name(), summary_feature)
@@ -1508,7 +1551,7 @@ impl<'cfg> Workspace<'cfg> {
         // (not documented) or proc macros (have no scrape-able exports). Additionally,
         // naively passing a proc macro's unit_for to new_unit_dep will currently cause
         // Cargo to panic, see issue #10545.
-        self.is_member(&unit.pkg) && !unit.target.for_host()
+        self.is_member(&unit.pkg) && !(unit.target.for_host() || unit.pkg.proc_macro())
     }
 }
 
@@ -1553,6 +1596,14 @@ impl MaybePackage {
         match *self {
             MaybePackage::Package(ref p) => p.manifest().workspace_config(),
             MaybePackage::Virtual(ref vm) => vm.workspace_config(),
+        }
+    }
+
+    /// Has an embedded manifest (single-file package)
+    pub fn is_embedded(&self) -> bool {
+        match self {
+            MaybePackage::Package(p) => p.manifest().is_embedded(),
+            MaybePackage::Virtual(_) => false,
         }
     }
 }
@@ -1644,203 +1695,6 @@ impl WorkspaceRootConfig {
     }
 }
 
-/// A group of fields that are inheritable by members of the workspace
-#[derive(Clone, Debug, Default)]
-pub struct InheritableFields {
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
-    version: Option<semver::Version>,
-    authors: Option<Vec<String>>,
-    description: Option<String>,
-    homepage: Option<String>,
-    documentation: Option<String>,
-    readme: Option<StringOrBool>,
-    keywords: Option<Vec<String>>,
-    categories: Option<Vec<String>>,
-    license: Option<String>,
-    license_file: Option<String>,
-    repository: Option<String>,
-    publish: Option<VecStringOrBool>,
-    edition: Option<String>,
-    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
-    ws_root: PathBuf,
-}
-
-impl InheritableFields {
-    pub fn new(
-        dependencies: Option<BTreeMap<String, TomlDependency>>,
-        version: Option<semver::Version>,
-        authors: Option<Vec<String>>,
-        description: Option<String>,
-        homepage: Option<String>,
-        documentation: Option<String>,
-        readme: Option<StringOrBool>,
-        keywords: Option<Vec<String>>,
-        categories: Option<Vec<String>>,
-        license: Option<String>,
-        license_file: Option<String>,
-        repository: Option<String>,
-        publish: Option<VecStringOrBool>,
-        edition: Option<String>,
-        badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
-        ws_root: PathBuf,
-    ) -> InheritableFields {
-        Self {
-            dependencies,
-            version,
-            authors,
-            description,
-            homepage,
-            documentation,
-            readme,
-            keywords,
-            categories,
-            license,
-            license_file,
-            repository,
-            publish,
-            edition,
-            badges,
-            ws_root,
-        }
-    }
-
-    pub fn dependencies(&self) -> CargoResult<BTreeMap<String, TomlDependency>> {
-        self.dependencies.clone().map_or(
-            Err(anyhow!("`workspace.dependencies` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn get_dependency(&self, name: &str) -> CargoResult<TomlDependency> {
-        self.dependencies.clone().map_or(
-            Err(anyhow!("`workspace.dependencies` was not defined")),
-            |deps| {
-                deps.get(name).map_or(
-                    Err(anyhow!(
-                        "`dependency.{}` was not found in `workspace.dependencies`",
-                        name
-                    )),
-                    |dep| Ok(dep.clone()),
-                )
-            },
-        )
-    }
-
-    pub fn version(&self) -> CargoResult<semver::Version> {
-        self.version
-            .clone()
-            .map_or(Err(anyhow!("`workspace.version` was not defined")), |d| {
-                Ok(d)
-            })
-    }
-
-    pub fn authors(&self) -> CargoResult<Vec<String>> {
-        self.authors
-            .clone()
-            .map_or(Err(anyhow!("`workspace.authors` was not defined")), |d| {
-                Ok(d)
-            })
-    }
-
-    pub fn description(&self) -> CargoResult<String> {
-        self.description.clone().map_or(
-            Err(anyhow!("`workspace.description` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn homepage(&self) -> CargoResult<String> {
-        self.homepage
-            .clone()
-            .map_or(Err(anyhow!("`workspace.homepage` was not defined")), |d| {
-                Ok(d)
-            })
-    }
-
-    pub fn documentation(&self) -> CargoResult<String> {
-        self.documentation.clone().map_or(
-            Err(anyhow!("`workspace.documentation` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
-        readme_for_project(self.ws_root.as_path(), self.readme.clone()).map_or(
-            Err(anyhow!("`workspace.readme` was not defined")),
-            |readme| {
-                let rel_path =
-                    resolve_relative_path("readme", &self.ws_root, package_root, &readme)?;
-                Ok(StringOrBool::String(rel_path))
-            },
-        )
-    }
-
-    pub fn keywords(&self) -> CargoResult<Vec<String>> {
-        self.keywords
-            .clone()
-            .map_or(Err(anyhow!("`workspace.keywords` was not defined")), |d| {
-                Ok(d)
-            })
-    }
-
-    pub fn categories(&self) -> CargoResult<Vec<String>> {
-        self.categories.clone().map_or(
-            Err(anyhow!("`workspace.categories` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn license(&self) -> CargoResult<String> {
-        self.license
-            .clone()
-            .map_or(Err(anyhow!("`workspace.license` was not defined")), |d| {
-                Ok(d)
-            })
-    }
-
-    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
-        self.license_file.clone().map_or(
-            Err(anyhow!("`workspace.license_file` was not defined")),
-            |d| resolve_relative_path("license-file", &self.ws_root, package_root, &d),
-        )
-    }
-
-    pub fn repository(&self) -> CargoResult<String> {
-        self.repository.clone().map_or(
-            Err(anyhow!("`workspace.repository` was not defined")),
-            |d| Ok(d),
-        )
-    }
-
-    pub fn publish(&self) -> CargoResult<VecStringOrBool> {
-        self.publish
-            .clone()
-            .map_or(Err(anyhow!("`workspace.publish` was not defined")), |d| {
-                Ok(d)
-            })
-    }
-
-    pub fn edition(&self) -> CargoResult<String> {
-        self.edition
-            .clone()
-            .map_or(Err(anyhow!("`workspace.edition` was not defined")), |d| {
-                Ok(d)
-            })
-    }
-
-    pub fn badges(&self) -> CargoResult<BTreeMap<String, BTreeMap<String, String>>> {
-        self.badges
-            .clone()
-            .map_or(Err(anyhow!("`workspace.badges` was not defined")), |d| {
-                Ok(d)
-            })
-    }
-
-    pub fn ws_root(&self) -> &PathBuf {
-        &self.ws_root
-    }
-}
-
 pub fn resolve_relative_path(
     label: &str,
     old_root: &Path,
@@ -1868,31 +1722,46 @@ pub fn resolve_relative_path(
     }
 }
 
-fn parse_manifest(manifest_path: &Path, config: &Config) -> CargoResult<EitherManifest> {
-    let key = manifest_path.parent().unwrap();
-    let source_id = SourceId::for_path(key)?;
-    let (manifest, _nested_paths) = read_manifest(manifest_path, source_id, config)?;
-    Ok(manifest)
+/// Finds the path of the root of the workspace.
+pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
+    find_workspace_root_with_loader(manifest_path, config, |self_path| {
+        let key = self_path.parent().unwrap();
+        let source_id = SourceId::for_path(key)?;
+        let (manifest, _nested_paths) = read_manifest(self_path, source_id, config)?;
+        Ok(manifest
+            .workspace_config()
+            .get_ws_root(self_path, manifest_path))
+    })
 }
 
-pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
-    for ances_manifest_path in find_root_iter(manifest_path, config) {
-        debug!("find_root - trying {}", ances_manifest_path.display());
-        match *parse_manifest(&ances_manifest_path, config)?.workspace_config() {
-            WorkspaceConfig::Root(ref ances_root_config) => {
-                debug!("find_root - found a root checking exclusion");
-                if !ances_root_config.is_excluded(manifest_path) {
-                    debug!("find_root - found!");
-                    return Ok(Some(ances_manifest_path));
+/// Finds the path of the root of the workspace.
+///
+/// This uses a callback to determine if the given path tells us what the
+/// workspace root is.
+fn find_workspace_root_with_loader(
+    manifest_path: &Path,
+    config: &Config,
+    mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
+) -> CargoResult<Option<PathBuf>> {
+    // Check if there are any workspace roots that have already been found that would work
+    {
+        let roots = config.ws_roots.borrow();
+        // Iterate through the manifests parent directories until we find a workspace
+        // root. Note we skip the first item since that is just the path itself
+        for current in manifest_path.ancestors().skip(1) {
+            if let Some(ws_config) = roots.get(current) {
+                if !ws_config.is_excluded(manifest_path) {
+                    // Add `Cargo.toml` since ws_root is the root and not the file
+                    return Ok(Some(current.join("Cargo.toml")));
                 }
             }
-            WorkspaceConfig::Member {
-                root: Some(ref path_to_root),
-            } => {
-                debug!("find_root - found pointer");
-                return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)));
-            }
-            WorkspaceConfig::Member { .. } => {}
+        }
+    }
+
+    for ances_manifest_path in find_root_iter(manifest_path, config) {
+        debug!("find_root - trying {}", ances_manifest_path.display());
+        if let Some(ws_root_path) = loader(&ances_manifest_path)? {
+            return Ok(Some(ws_root_path));
         }
     }
     Ok(None)

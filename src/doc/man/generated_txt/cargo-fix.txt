@@ -1,13 +1,13 @@
 CARGO-FIX(1)
 
 NAME
-       cargo-fix - Automatically fix lint warnings reported by rustc
+       cargo-fix — Automatically fix lint warnings reported by rustc
 
 SYNOPSIS
        cargo fix [options]
 
 DESCRIPTION
-       This Cargo subcommand will automatically take rustc's suggestions from
+       This Cargo subcommand will automatically take rustc’s suggestions from
        diagnostics like warnings and apply them to your source code. This is
        intended to help automate tasks that rustc itself already knows how to
        tell you to fix!
@@ -15,8 +15,8 @@ DESCRIPTION
        Executing cargo fix will under the hood execute cargo-check(1). Any
        warnings applicable to your crate will be automatically fixed (if
        possible) and all remaining warnings will be displayed when the check
-       process is finished. For example if you'd like to apply all fixes to the
-       current package, you can run:
+       process is finished. For example if you’d like to apply all fixes to
+       the current package, you can run:
 
            cargo fix
 
@@ -34,8 +34,8 @@ DESCRIPTION
            cargo fix --target x86_64-pc-windows-gnu
 
        If you encounter any problems with cargo fix or otherwise have any
-       questions or feature requests please don't hesitate to file an issue at
-       <https://github.com/rust-lang/cargo>.
+       questions or feature requests please don’t hesitate to file an issue
+       at <https://github.com/rust-lang/cargo>.
 
    Edition migration
        The cargo fix subcommand can also be used to migrate a package from one
@@ -57,7 +57,7 @@ DESCRIPTION
           (without the --edition flag) to apply any suggestions given by the
           compiler.
 
-       And hopefully that's it! Just keep in mind of the caveats mentioned
+       And hopefully that’s it! Just keep in mind of the caveats mentioned
        above that cargo fix cannot update code for inactive features or cfg
        expressions. Also, in some rare cases the compiler is unable to
        automatically migrate all code to the new edition, and this may require
@@ -103,7 +103,7 @@ OPTIONS
        passing --workspace), and a non-virtual workspace will include only the
        root crate itself.
 
-       -p spec..., --package spec...
+       -p spec…, --package spec…
            Fix only the specified packages. See cargo-pkgid(1) for the SPEC
            format. This flag may be specified multiple times and supports
            common Unix glob patterns like *, ? and []. However, to avoid your
@@ -117,7 +117,7 @@ OPTIONS
        --all
            Deprecated alias for --workspace.
 
-       --exclude SPEC...
+       --exclude SPEC…
            Exclude the specified packages. Must be used in conjunction with the
            --workspace flag. This flag may be specified multiple times and
            supports common Unix glob patterns like *, ? and []. However, to
@@ -138,23 +138,23 @@ OPTIONS
        use single quotes or double quotes around each glob pattern.
 
        --lib
-           Fix the package's library.
+           Fix the package’s library.
 
-       --bin name...
+       --bin name…
            Fix the specified binary. This flag may be specified multiple times
            and supports common Unix glob patterns.
 
        --bins
            Fix all binary targets.
 
-       --example name...
+       --example name…
            Fix the specified example. This flag may be specified multiple times
            and supports common Unix glob patterns.
 
        --examples
            Fix all example targets.
 
-       --test name...
+       --test name…
            Fix the specified integration test. This flag may be specified
            multiple times and supports common Unix glob patterns.
 
@@ -167,7 +167,7 @@ OPTIONS
            integration tests, etc.). Targets may be enabled or disabled by
            setting the test flag in the manifest settings for the target.
 
-       --bench name...
+       --bench name…
            Fix the specified benchmark. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
@@ -193,7 +193,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -210,7 +210,8 @@ OPTIONS
            Fix for the given architecture. The default is the host
            architecture. The general format of the triple is
            <arch><sub>-<vendor>-<sys>-<abi>. Run rustc --print target-list for
-           a list of supported targets.
+           a list of supported targets. This flag may be specified multiple
+           times.
 
            This may also be specified with the build.target config value
            <https://doc.rust-lang.org/cargo/reference/config.html>.
@@ -239,7 +240,7 @@ OPTIONS
 
        --ignore-rust-version
            Fix the target even if the selected Rust compiler is older than the
-           required Rust version as configured in the project's rust-version
+           required Rust version as configured in the project’s rust-version
            field.
 
        --timings=fmts
@@ -250,12 +251,13 @@ OPTIONS
            (rather than the default) is unstable and requires
            -Zunstable-options. Valid output formats:
 
-           o  html: Write a human-readable file cargo-timing.html to the
-              target/cargo-timings directory with a report of the compilation.
-              Also write a report to the same directory with a timestamp in the
-              filename if you want to look at older runs. HTML output is
-              suitable for human consumption only, and does not provide
-              machine-readable timing data.
+           o  html (unstable, requires -Zunstable-options): Write a
+              human-readable file cargo-timing.html to the target/cargo-timings
+              directory with a report of the compilation. Also write a report
+              to the same directory with a timestamp in the filename if you
+              want to look at older runs. HTML output is suitable for human
+              consumption only, and does not provide machine-readable timing
+              data.
 
            o  json (unstable, requires -Zunstable-options): Emit
               machine-readable JSON information about timing information.
@@ -270,10 +272,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -308,18 +311,19 @@ OPTIONS
               for more details. Conflicts with human and short.
 
            o  json-diagnostic-short: Ensure the rendered field of JSON messages
-              contains the "short" rendering from rustc. Cannot be used with
-              human or short.
+              contains the “short” rendering from rustc. Cannot be used
+              with human or short.
 
            o  json-diagnostic-rendered-ansi: Ensure the rendered field of JSON
               messages contains embedded ANSI color codes for respecting
-              rustc's default color scheme. Cannot be used with human or short.
+              rustc’s default color scheme. Cannot be used with human or
+              short.
 
            o  json-render-diagnostics: Instruct Cargo to not include rustc
-              diagnostics in in JSON messages printed, but instead Cargo itself
-              should render the JSON diagnostics coming from rustc. Cargo's own
-              JSON diagnostics and others coming from rustc are still emitted.
-              Cannot be used with human or short.
+              diagnostics in JSON messages printed, but instead Cargo itself
+              should render the JSON diagnostics coming from rustc. Cargo’s
+              own JSON diagnostics and others coming from rustc are still
+              emitted. Cannot be used with human or short.
 
    Manifest Options
        --manifest-path path
@@ -360,6 +364,27 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
+
        -h, --help
            Prints help information.
 
@@ -372,7 +397,10 @@ OPTIONS
            Number of parallel jobs to run. May also be specified with the
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
-           the number of CPUs.
+           the number of logical CPUs. If negative, it sets the maximum number
+           of parallel jobs to the number of logical CPUs plus provided value.
+           If a string default is provided, it sets the value back to defaults.
+           Should not be 0.
 
        --keep-going
            Build as many crates in the dependency graph as possible, rather

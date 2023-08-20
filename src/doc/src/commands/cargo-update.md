@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-update - Update dependencies as recorded in the local lock file
+cargo-update --- Update dependencies as recorded in the local lock file
 
 ## SYNOPSIS
 
@@ -20,8 +20,8 @@ latest available versions.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-update--p"><a class="option-anchor" href="#option-cargo-update--p"></a><code>-p</code> <em>spec</em>...</dt>
-<dt class="option-term" id="option-cargo-update---package"><a class="option-anchor" href="#option-cargo-update---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-update--p"><a class="option-anchor" href="#option-cargo-update--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-update---package"><a class="option-anchor" href="#option-cargo-update---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Update only the specified packages. This flag may be specified
 multiple times. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC format.</p>
 <p>If packages are specified with the <code>-p</code> flag, then a conservative update of
@@ -46,13 +46,13 @@ revision (such as a SHA hash or tag).</dd>
 <dt class="option-term" id="option-cargo-update--w"><a class="option-anchor" href="#option-cargo-update--w"></a><code>-w</code></dt>
 <dt class="option-term" id="option-cargo-update---workspace"><a class="option-anchor" href="#option-cargo-update---workspace"></a><code>--workspace</code></dt>
 <dd class="option-desc">Attempt to update only packages defined in the workspace. Other packages
-are updated only if they don't already exist in the lockfile. This
-option is useful for updating <code>Cargo.lock</code> after you've changed version
+are updated only if they don’t already exist in the lockfile. This
+option is useful for updating <code>Cargo.lock</code> after you’ve changed version
 numbers in <code>Cargo.toml</code>.</dd>
 
 
 <dt class="option-term" id="option-cargo-update---dry-run"><a class="option-anchor" href="#option-cargo-update---dry-run"></a><code>--dry-run</code></dt>
-<dd class="option-desc">Displays what would be updated, but doesn't actually write the lockfile.</dd>
+<dd class="option-desc">Displays what would be updated, but doesn’t actually write the lockfile.</dd>
 
 
 </dl>
@@ -62,7 +62,7 @@ numbers in <code>Cargo.toml</code>.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-update--v"><a class="option-anchor" href="#option-cargo-update--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-update---verbose"><a class="option-anchor" href="#option-cargo-update---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -136,6 +136,23 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-update---config"><a class="option-anchor" href="#option-cargo-update---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-update--C"><a class="option-anchor" href="#option-cargo-update--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-update--h"><a class="option-anchor" href="#option-cargo-update--h"></a><code>-h</code></dt>

@@ -1,9 +1,10 @@
 # cargo-check(1)
 {{*set actionverb="Check"}}
+{{*set multitarget=true}}
 
 ## NAME
 
-cargo-check - Check the current package
+cargo-check --- Check the current package
 
 ## SYNOPSIS
 

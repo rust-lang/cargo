@@ -21,10 +21,84 @@ fn alias_incorrect_config_type() {
 
     p.cargo("b-cargo-test -v")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [ERROR] invalid configuration for key `alias.b-cargo-test`
 expected a list, but found a integer for [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn alias_malformed_config_string() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+                [alias]
+                b-cargo-test = `
+            "#,
+        )
+        .build();
+
+    p.cargo("b-cargo-test -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  could not parse TOML configuration in `[..]/config`
+
+Caused by:
+  [..]
+
+Caused by:
+  TOML parse error at line [..]
+    |
+  3 |                 b-cargo-test = `
+    |                                ^
+  invalid string
+  expected `\"`, `'`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn alias_malformed_config_list() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+                [alias]
+                b-cargo-test = [1, 2]
+            "#,
+        )
+        .build();
+
+    p.cargo("b-cargo-test -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[..]/config`
+
+Caused by:
+  [..] `alias`
+
+Caused by:
+  [..] `b-cargo-test`
+
+Caused by:
+  expected string but found integer in list
+",
         )
         .run();
 }
@@ -72,6 +146,30 @@ fn dependent_alias() {
             "\
 [COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn builtin_alias_shadowing_external_subcommand() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .executable("cargo-t", "")
+        .build();
+
+    let mut paths: Vec<_> = env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect();
+    paths.push(p.root());
+    let path = env::join_paths(paths).unwrap();
+
+    p.cargo("t")
+        .env("PATH", &path)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] unittests src/main.rs [..]
+",
         )
         .run();
 }
@@ -324,11 +422,12 @@ fn weird_check() {
         .build();
 
     p.cargo("-- check --invalid_argument -some-other-argument")
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] trailing arguments after built-in command `check` are ignored: `--invalid_argument -some-other-argument`
-[CHECKING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[ERROR] trailing arguments after built-in command `check` are unsupported: `--invalid_argument -some-other-argument`
+
+To pass the arguments to the subcommand, remove `--`
 ",
         )
         .run();

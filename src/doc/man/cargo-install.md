@@ -4,11 +4,11 @@
 
 ## NAME
 
-cargo-install - Build and install a Rust binary
+cargo-install --- Build and install a Rust binary
 
 ## SYNOPSIS
 
-`cargo install` [_options_] _crate_...\
+`cargo install` [_options_] _crate_[@_version_]...\
 `cargo install` [_options_] `--path` _path_\
 `cargo install` [_options_] `--git` _url_ [_crate_...]\
 `cargo install` [_options_] `--list`
@@ -18,7 +18,7 @@ cargo-install - Build and install a Rust binary
 This command manages Cargo's local set of installed binary crates. Only
 packages which have executable `[[bin]]` or `[[example]]` targets can be
 installed, and all executables are installed into the installation root's
-`bin` folder.
+`bin` folder. By default only binaries, not examples, are installed.
 
 {{> description-install-root }}
 
@@ -55,6 +55,8 @@ specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
 path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.
 
+### Dealing with the Lockfile
+
 By default, the `Cargo.lock` file that is included with the package will be
 ignored. This means that Cargo will recompute which versions of dependencies
 to use, possibly using newer versions that have been released since the
@@ -68,6 +70,16 @@ will not receive any fixes or updates to any dependency. Note that Cargo did
 not start publishing `Cargo.lock` files until version 1.37, which means
 packages published with prior versions will not have a `Cargo.lock` file
 available.
+
+### Configuration Discovery
+
+This command operates on system or user level, not project level.
+This means that the local [configuration discovery] is ignored.
+Instead, the configuration discovery begins at `$CARGO_HOME/config.toml`. 
+If the package is installed with `--path $PATH`, the local configuration 
+will be used, beginning discovery at `$PATH/.cargo/config.toml`.
+
+[configuration discovery]: ../reference/config.html#hierarchical-structure
 
 ## OPTIONS
 
@@ -129,7 +141,7 @@ Install only the specified binary.
 {{/option}}
 
 {{#option "`--bins`" }}
-Install all binaries.
+Install all binaries. This is the default behavior.
 {{/option}}
 
 {{#option "`--example` _name_..." }}
@@ -161,11 +173,13 @@ Directory to install packages into.
 {{> options-target-dir }}
 
 {{#option "`--debug`" }}
-Build with the `dev` profile instead the `release` profile.
+Build with the `dev` profile instead of the `release` profile.
 See also the `--profile` option for choosing a specific profile by name.
 {{/option}}
 
 {{> options-profile }}
+
+{{> options-ignore-rust-version }}
 
 {{> options-timings }}
 

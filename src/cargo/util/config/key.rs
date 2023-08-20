@@ -111,6 +111,6 @@ fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
         Cow::Borrowed(part)
     } else {
         // This is a bit messy, but toml doesn't expose a function to do this.
-        Cow::Owned(toml_edit::Value::from(part).to_string())
+        Cow::Owned(toml::Value::from(part).to_string())
     }
 }

@@ -2,11 +2,11 @@
 
 use cargo::core::Edition;
 use cargo_test_support::compare::assert_match_exact;
-use cargo_test_support::git;
+use cargo_test_support::git::{self, init};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, is_nightly, project};
+use cargo_test_support::{basic_manifest, is_nightly, project, Project};
+use cargo_test_support::{tools, wrapped_clippy_driver};
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -29,7 +29,7 @@ fn do_not_fix_broken_builds() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_status(101)
-        .with_stderr_contains("[ERROR] could not compile `foo` due to previous error")
+        .with_stderr_contains("[ERROR] could not compile `foo` (lib) due to previous error")
         .run();
     assert!(p.read_file("src/lib.rs").contains("let mut x = 3;"));
 }
@@ -53,8 +53,7 @@ fn fix_broken_if_requested() {
         .run();
 }
 
-#[cargo_test]
-fn broken_fixes_backed_out() {
+fn rustc_shim_for_cargo_fix() -> Project {
     // This works as follows:
     // - Create a `rustc` shim (the "foo" project) which will pretend that the
     //   verification step fails.
@@ -109,7 +108,6 @@ fn broken_fixes_backed_out() {
                             fs::File::create(&first).unwrap();
                         }
                     }
-
                     let status = Command::new("rustc")
                         .args(env::args().skip(1))
                         .status()
@@ -142,7 +140,13 @@ fn broken_fixes_backed_out() {
     // Build our rustc shim
     p.cargo("build").cwd("foo").run();
 
-    // Attempt to fix code, but our shim will always fail the second compile
+    p
+}
+
+#[cargo_test]
+fn broken_fixes_backed_out() {
+    let p = rustc_shim_for_cargo_fix();
+    // Attempt to fix code, but our shim will always fail the second compile.
     p.cargo("fix --allow-no-vcs --lib")
         .cwd("bar")
         .env("__CARGO_FIX_YOLO", "1")
@@ -160,7 +164,50 @@ fn broken_fixes_backed_out() {
              and we would appreciate a bug report! You're likely to see \n\
              a number of compiler warnings after this message which cargo\n\
              attempted to fix but failed. If you could open an issue at\n\
-             [..]\n\
+             https://github.com/rust-lang/rust/issues\n\
+             quoting the full output of this command we'd be very appreciative!\n\
+             Note that you may be able to make some more progress in the near-term\n\
+             fixing code with the `--broken-code` flag\n\
+             \n\
+             The following errors were reported:\n\
+             error: expected one of `!` or `::`, found `rust`\n\
+             ",
+        )
+        .with_stderr_contains("Original diagnostics will follow.")
+        .with_stderr_contains("[WARNING] variable does not need to be mutable")
+        .with_stderr_does_not_contain("[..][FIXED][..]")
+        .run();
+
+    // Make sure the fix which should have been applied was backed out
+    assert!(p.read_file("bar/src/lib.rs").contains("let mut x = 3;"));
+}
+
+#[cargo_test]
+fn broken_clippy_fixes_backed_out() {
+    let p = rustc_shim_for_cargo_fix();
+    // Attempt to fix code, but our shim will always fail the second compile.
+    // Also, we use `clippy` as a workspace wrapper to make sure that we properly
+    // generate the report bug text.
+    p.cargo("fix --allow-no-vcs --lib")
+        .cwd("bar")
+        .env("__CARGO_FIX_YOLO", "1")
+        .env("RUSTC", p.root().join("foo/target/debug/foo"))
+        //  We can't use `clippy` so we use a `rustc` workspace wrapper instead
+        .env("RUSTC_WORKSPACE_WRAPPER", wrapped_clippy_driver())
+        .with_stderr_contains(
+            "warning: failed to automatically apply fixes suggested by rustc \
+             to crate `bar`\n\
+             \n\
+             after fixes were automatically applied the compiler reported \
+             errors within these files:\n\
+             \n  \
+             * src/lib.rs\n\
+             \n\
+             This likely indicates a bug in either rustc or cargo itself,\n\
+             and we would appreciate a bug report! You're likely to see \n\
+             a number of compiler warnings after this message which cargo\n\
+             attempted to fix but failed. If you could open an issue at\n\
+             https://github.com/rust-lang/rust-clippy/issues\n\
              quoting the full output of this command we'd be very appreciative!\n\
              Note that you may be able to make some more progress in the near-term\n\
              fixing code with the `--broken-code` flag\n\
@@ -658,7 +705,7 @@ fn fixes_missing_ampersand() {
         .with_stderr_contains("[FIXED] tests/a.rs (1 fix)")
         .with_stderr_contains("[FINISHED] [..]")
         .run();
-    p.cargo("build").run();
+    p.cargo("check").run();
     p.cargo("test").run();
 }
 
@@ -688,9 +735,9 @@ fn fix_features() {
         .build();
 
     p.cargo("fix --allow-no-vcs").run();
-    p.cargo("build").run();
+    p.cargo("check").run();
     p.cargo("fix --features bar --allow-no-vcs").run();
-    p.cargo("build --features bar").run();
+    p.cargo("check --features bar").run();
 }
 
 #[cargo_test]
@@ -769,6 +816,32 @@ commit the changes to these files:
         )
         .run();
     p.cargo("fix --allow-staged").run();
+}
+
+#[cargo_test]
+fn errors_about_untracked_files() {
+    let mut git_project = project().at("foo");
+    git_project = git_project.file("src/lib.rs", "pub fn foo() {}");
+    let p = git_project.build();
+    let _ = init(&p.root());
+
+    p.cargo("fix")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the working directory of this package has uncommitted changes, \
+and `cargo fix` can potentially perform destructive changes; if you'd \
+like to suppress this error pass `--allow-dirty`, `--allow-staged`, or \
+commit the changes to these files:
+
+  * Cargo.toml (dirty)
+  * src/ (dirty)
+
+
+",
+        )
+        .run();
+    p.cargo("fix --allow-dirty").run();
 }
 
 #[cargo_test]
@@ -861,7 +934,7 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
     }
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr(&format!(
             "\
 [CHECKING] foo [..]
@@ -907,15 +980,11 @@ fn prepare_for_latest_stable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "fundamentally always nightly")]
 fn prepare_for_already_on_latest_unstable() {
     // During the period where a new edition is coming up, but not yet stable,
     // this test will check what happens if you are already on the latest. If
     // there is no next edition, it does nothing.
-    if !is_nightly() {
-        // This test is fundamentally always nightly.
-        return;
-    }
     let next_edition = match Edition::LATEST_UNSTABLE {
         Some(next) => next,
         None => {
@@ -942,7 +1011,7 @@ fn prepare_for_already_on_latest_unstable() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr_contains("[CHECKING] foo [..]")
         .with_stderr_contains(&format!(
             "\
@@ -1409,7 +1478,7 @@ fn fix_in_existing_repo_weird_ignore() {
     let p = git::new("foo", |project| {
         project
             .file("src/lib.rs", "")
-            .file(".gitignore", "foo\ninner\n")
+            .file(".gitignore", "foo\ninner\nCargo.lock\ntarget\n")
             .file("inner/file", "")
     });
 
@@ -1563,7 +1632,6 @@ fn fix_edition_2021() {
         )
         .build();
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [CHECKING] foo v0.1.0 [..]
@@ -1720,7 +1788,7 @@ fn fix_with_run_cargo_in_proc_macros() {
             "src/lib.rs",
             r#"
                 use proc_macro::*;
-    
+
                 #[proc_macro]
                 pub fn foo(_input: TokenStream) -> TokenStream {
                     let output = std::process::Command::new(env!("CARGO"))
@@ -1730,7 +1798,7 @@ fn fix_with_run_cargo_in_proc_macros() {
                     eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
                     println!("{}", std::str::from_utf8(&output.stdout).unwrap());
                     "".parse().unwrap()
-                }                    
+                }
             "#,
         )
         .file(
@@ -1745,7 +1813,6 @@ fn fix_with_run_cargo_in_proc_macros() {
         )
         .build();
     p.cargo("fix --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr_does_not_contain("error: could not find .rs file in rustc args")
         .run();
 }
@@ -1782,10 +1849,7 @@ fn non_edition_lint_migration() {
         .with_stderr_contains("[..]unused_imports[..]")
         .with_stderr_contains("[..]std::str::from_utf8[..]")
         .run();
-    p.cargo("fix --edition --allow-no-vcs")
-        // Remove once --force-warn is stabilized
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("fix --edition --allow-no-vcs").run();
     let contents = p.read_file("src/lib.rs");
     // Check it does not remove the "unused" import.
     assert!(contents.contains("use std::str::from_utf8;"));

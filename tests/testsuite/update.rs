@@ -36,7 +36,7 @@ fn minor_update_two_places() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     Package::new("log", "0.1.1").publish();
 
     p.change_file(
@@ -52,7 +52,7 @@ fn minor_update_two_places() {
         "#,
     );
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -91,7 +91,7 @@ fn transitive_minor_update() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1.1").publish();
@@ -150,7 +150,7 @@ fn conservative() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
@@ -198,11 +198,11 @@ fn update_via_new_dep() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").env("CARGO_LOG", "cargo=trace").run();
+    p.cargo("check").env("CARGO_LOG", "cargo=trace").run();
 }
 
 #[cargo_test]
@@ -240,11 +240,11 @@ fn update_via_new_member() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -267,13 +267,13 @@ fn add_dep_deep_new_requirement() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("bar", "0.1.0").dep("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -297,13 +297,13 @@ fn everything_real_deep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("bar", "0.1.0").dep("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -339,12 +339,11 @@ fn change_package_version() {
         )
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
 fn update_precise() {
-    Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").publish();
     Package::new("serde", "0.2.1").publish();
 
@@ -378,7 +377,7 @@ fn update_precise() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     Package::new("serde", "0.2.0").publish();
 
@@ -386,7 +385,120 @@ fn update_precise() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[UPDATING] serde v0.2.1 -> v0.2.0
+[DOWNGRADING] serde v0.2.1 -> v0.2.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_precise_do_not_force_update_deps() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.2.1").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.2.2").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde:0.2.1 --precise 0.2.2")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.2.1 -> v0.2.2
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_aggressive() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.2.1").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.2.2").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde:0.2.1 --aggressive")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] log v0.1.0 -> v0.1.1
+[UPDATING] serde v0.2.1 -> v0.2.2
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_aggressive_conflicts_with_precise() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.2.1").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.2.2").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde:0.2.1 --precise 0.2.2 --aggressive")
+        .with_status(1)
+        .with_stderr(
+            "\
+error: the argument '--precise <PRECISE>' cannot be used with '--aggressive'
+
+Usage: cargo[EXE] update --package [<SPEC>] --precise <PRECISE>
+
+For more information, try '--help'.
 ",
         )
         .run();
@@ -420,7 +532,7 @@ fn update_precise_first_run() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[UPDATING] serde v0.2.1 -> v0.2.0
+[DOWNGRADING] serde v0.2.1 -> v0.2.0
 ",
         )
         .run();
@@ -561,6 +673,9 @@ fn update_precise_first_run() {
   "workspace_members": [
     "bar 0.0.1 (path+file://[..]/foo)"
   ],
+  "workspace_default_members": [
+    "bar 0.0.1 (path+file://[..]/foo)"
+  ],
   "workspace_root": "[..]/foo",
   "metadata": null
 }"#,
@@ -637,7 +752,7 @@ fn dry_run_update() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     let old_lockfile = p.read_lockfile();
 
     Package::new("log", "0.1.1").publish();

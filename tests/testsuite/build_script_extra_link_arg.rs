@@ -23,7 +23,6 @@ fn build_script_extra_link_arg_bin() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .without_status()
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
@@ -63,7 +62,6 @@ fn build_script_extra_link_arg_bin_single() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .without_status()
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--bogus-flag-all -C link-arg=--bogus-flag-foo[..]",
@@ -90,7 +88,6 @@ fn build_script_extra_link_arg() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .without_status()
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
@@ -126,7 +123,6 @@ fn link_arg_missing_target() {
     );
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("\
 [COMPILING] foo [..]
@@ -141,7 +137,6 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
     );
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -158,7 +153,6 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `ab
     );
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -261,7 +255,6 @@ fn link_arg_transitive_not_allowed() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -303,7 +296,6 @@ fn link_arg_with_doctest() {
         .build();
 
     p.cargo("test --doc -v")
-        .masquerade_as_nightly_cargo()
         .without_status()
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",

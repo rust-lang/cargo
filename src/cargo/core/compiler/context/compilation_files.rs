@@ -1,12 +1,13 @@
+//! See [`CompilationFiles`].
+
 use std::collections::HashMap;
-use std::env;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use lazycell::LazyCell;
-use log::debug;
+use tracing::debug;
 
 use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
@@ -16,14 +17,16 @@ use crate::util::{self, CargoResult, StableHasher};
 /// This is a generic version number that can be changed to make
 /// backwards-incompatible changes to any file structures in the output
 /// directory. For example, the fingerprint files or the build-script
-/// output files. Normally cargo updates ship with rustc updates which will
+/// output files.
+///
+/// Normally cargo updates ship with rustc updates which will
 /// cause a new hash due to the rustc version changing, but this allows
 /// cargo to be extra careful to deal with different versions of cargo that
 /// use the same rustc version.
 const METADATA_VERSION: u8 = 2;
 
 /// The `Metadata` is a hash used to make unique file names for each unit in a
-/// build. It is also use for symbol mangling.
+/// build. It is also used for symbol mangling.
 ///
 /// For example:
 /// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
@@ -41,7 +44,7 @@ const METADATA_VERSION: u8 = 2;
 ///
 /// This also acts as the main layer of caching provided by Cargo.
 /// For example, we want to cache `cargo build` and `cargo doc` separately, so that running one
-/// does not invalidate the artifacts for the other. We do this by including `CompileMode` in the
+/// does not invalidate the artifacts for the other. We do this by including [`CompileMode`] in the
 /// hash, thus the artifacts go in different folders and do not override each other.
 /// If we don't add something that we should have, for this reason, we get the
 /// correct output but rebuild more than is needed.
@@ -170,7 +173,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Gets the metadata for the given unit.
     ///
-    /// See module docs for more details.
+    /// See [`Metadata`] and [`fingerprint`] module for more.
+    ///
+    /// [`fingerprint`]: ../../fingerprint/index.html#fingerprints-and-metadata
     pub fn metadata(&self, unit: &Unit) -> Metadata {
         self.metas[unit].meta_hash
     }
@@ -421,6 +426,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         Some(uplift_path)
     }
 
+    /// Calculates the filenames that the given unit will generate.
+    /// Should use [`CompilationFiles::outputs`] instead
+    /// as it caches the result of this function.
     fn calc_outputs(
         &self,
         unit: &Unit,
@@ -451,9 +459,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 vec![]
             }
             CompileMode::Docscrape => {
-                let path = self
-                    .deps_dir(unit)
-                    .join(format!("{}.examples", unit.buildkey()));
+                // The file name needs to be stable across Cargo sessions.
+                // This originally used unit.buildkey(), but that isn't stable,
+                // so we use metadata instead (prefixed with name for debugging).
+                let file_name = format!("{}-{}.examples", unit.pkg.name(), self.metadata(unit));
+                let path = self.deps_dir(unit).join(file_name);
                 vec![OutputFile {
                     path,
                     hardlink: None,
@@ -535,6 +545,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 }
 
+/// Gets the metadata hash for the given [`Unit`].
+///
+/// Whne a metadata hash doesn't exist for the given unit,
+/// this calls itself recursively to compute metadata hashes of all its dependencies.
+/// See [`compute_metadata`] for how a single metadata hash is computed.
 fn metadata_of<'a>(
     unit: &Unit,
     cx: &Context<'_, '_>,
@@ -550,6 +565,7 @@ fn metadata_of<'a>(
     &metas[unit]
 }
 
+/// Computes the metadata hash for the given [`Unit`].
 fn compute_metadata(
     unit: &Unit,
     cx: &Context<'_, '_>,
@@ -587,10 +603,12 @@ fn compute_metadata(
     unit.mode.hash(&mut hasher);
     cx.lto[unit].hash(&mut hasher);
 
-    // Artifacts compiled for the host should have a different metadata
-    // piece than those compiled for the target, so make sure we throw in
-    // the unit's `kind` as well
-    unit.kind.hash(&mut hasher);
+    // Artifacts compiled for the host should have a different
+    // metadata piece than those compiled for the target, so make sure
+    // we throw in the unit's `kind` as well.  Use `fingerprint_hash`
+    // so that the StableHash doesn't change based on the pathnames
+    // of the custom target JSON spec files.
+    unit.kind.fingerprint_hash().hash(&mut hasher);
 
     // Finally throw in the target name/kind. This ensures that concurrent
     // compiles of targets in the same crate don't collide.
@@ -609,7 +627,7 @@ fn compute_metadata(
 
     // Seed the contents of `__CARGO_DEFAULT_LIB_METADATA` to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.
-    if let Ok(ref channel) = env::var("__CARGO_DEFAULT_LIB_METADATA") {
+    if let Ok(ref channel) = cx.bcx.config.get_env("__CARGO_DEFAULT_LIB_METADATA") {
         channel.hash(&mut hasher);
     }
 
@@ -628,6 +646,7 @@ fn compute_metadata(
     }
 }
 
+/// Hash the version of rustc being used during the build process.
 fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     let vers = &bcx.rustc().version;
     if vers.pre.is_empty() || bcx.config.cli_unstable().separate_nightlies {
@@ -697,7 +716,7 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
         || (unit.target.is_executable() && short_name == "wasm32-unknown-emscripten")
         || (unit.target.is_executable() && short_name.contains("msvc")))
         && unit.pkg.package_id().source_id().is_path()
-        && env::var("__CARGO_DEFAULT_LIB_METADATA").is_err()
+        && bcx.config.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
     {
         return false;
     }

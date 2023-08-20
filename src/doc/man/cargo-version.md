@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-version - Show version information
+cargo-version --- Show version information
 
 ## SYNOPSIS
 

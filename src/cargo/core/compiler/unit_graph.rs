@@ -1,3 +1,7 @@
+//! Serialization of [`UnitGraph`] for unstable option [`--unit-graph`].
+//!
+//! [`--unit-graph`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#unit-graph
+
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::profiles::{Profile, UnitFor};
@@ -69,6 +73,8 @@ struct SerializedUnitDep {
     // internal detail that is mostly used for building the graph.
 }
 
+/// Outputs a JSON serialization of [`UnitGraph`] for given `root_units`
+/// to the standard output.
 pub fn emit_serialized_unit_graph(
     root_units: &[Unit],
     unit_graph: &UnitGraph,

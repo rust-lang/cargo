@@ -1,0 +1,8 @@
+error: the name `test` cannot be used as a package name, it conflicts with Rust's built-in test library
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name "test", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/test.rs` or change the name in Cargo.toml with:
+
+    [[bin]]
+    name = "test"
+    path = "src/main.rs"
+

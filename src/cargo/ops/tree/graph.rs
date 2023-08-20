@@ -325,8 +325,8 @@ fn add_pkg(
     let node_features = resolved_features.activated_features(package_id, features_for);
     let node_kind = match features_for {
         FeaturesFor::HostDep => CompileKind::Host,
-        FeaturesFor::NormalOrDevOrArtifactTarget(Some(target)) => CompileKind::Target(target),
-        FeaturesFor::NormalOrDevOrArtifactTarget(None) => requested_kind,
+        FeaturesFor::ArtifactDep(target) => CompileKind::Target(target),
+        FeaturesFor::NormalOrDev => requested_kind,
     };
     let node = Node::Package {
         package_id,
@@ -360,6 +360,10 @@ fn add_pkg(
                 }
                 // Filter out dev-dependencies if requested.
                 if !opts.edge_kinds.contains(&EdgeKind::Dep(dep.kind())) {
+                    return false;
+                }
+                // Filter out proc-macrcos if requested.
+                if opts.no_proc_macro && graph.package_for_id(dep_id).proc_macro() {
                     return false;
                 }
                 if dep.is_optional() {
@@ -638,7 +642,7 @@ fn add_feature_rec(
                 let dep_indexes = match graph.dep_name_map[&package_index].get(dep_name) {
                     Some(indexes) => indexes.clone(),
                     None => {
-                        log::debug!(
+                        tracing::debug!(
                             "enabling feature {} on {}, found {}/{}, \
                              dep appears to not be enabled",
                             feature_name,

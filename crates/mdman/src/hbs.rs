@@ -7,7 +7,6 @@ use handlebars::{
     RenderContext, RenderError, Renderable,
 };
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::path::Path;
 
 type FormatterRef<'a> = &'a (dyn Formatter + Send + Sync);

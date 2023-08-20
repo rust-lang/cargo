@@ -1,7 +1,7 @@
 CARGO-METADATA(1)
 
 NAME
-       cargo-metadata - Machine-readable metadata about the current package
+       cargo-metadata — Machine-readable metadata about the current package
 
 SYNOPSIS
        cargo metadata [options]
@@ -10,14 +10,34 @@ DESCRIPTION
        Output JSON to stdout containing information about the workspace members
        and resolved dependencies of the current package.
 
-       It is recommended to include the --format-version flag to future-proof
-       your code to ensure the output is in the format you are expecting.
+       The format of the output is subject to change in futures versions of
+       Cargo. It is recommended to include the --format-version flag to
+       future-proof your code to ensure the output is in the format you are
+       expecting. For more on the expectations, see “Compatibility”.
 
        See the cargo_metadata crate <https://crates.io/crates/cargo_metadata>
        for a Rust API for reading the metadata.
 
 OUTPUT FORMAT
-       The output has the following format:
+   Compatibility
+       Within the same output format version, the compatibility is maintained,
+       except some scenarios. The following is a non-exhaustive list of changes
+       that are not considersed as incompatibile:
+
+       o  Adding new fields — New fields will be added when needed. Reserving
+          this helps Cargo evolve without bumping the format version too often.
+
+       o  Adding new values for enum-like fields — Same as adding new fields.
+          It keeps metadata evolving without stagnation.
+
+       o  Changing opaque representations — The inner representations of some
+          fields are implementation details. For example, fields related to
+          “Package ID” or “Source ID” are treated as opaque identifiers
+          to differentiate packages or sources. Consumers shouldn’t rely on
+          those representations unless specified.
+
+   JSON format
+       The JSON output has the following format:
 
            {
                /* Array of all packages in the workspace.
@@ -29,7 +49,9 @@ OUTPUT FORMAT
                        "name": "my-package",
                        /* The version of the package. */
                        "version": "0.1.0",
-                       /* The Package ID, a unique identifier for referring to the package. */
+                       /* The Package ID, an opaque and unique identifier for referring to the
+                          package. See "Compatibility" above for the stability guarantee.
+                       */
                        "id": "my-package 0.1.0 (path+file:///path/to/my-package)",
                        /* The license value from the manifest, or null. */
                        "license": "MIT/Apache-2.0",
@@ -37,14 +59,25 @@ OUTPUT FORMAT
                        "license_file": "LICENSE",
                        /* The description value from the manifest, or null. */
                        "description": "Package description.",
-                       /* The source ID of the package. This represents where
-                          a package is retrieved from.
+                       /* The source ID of the package, an "opaque" identifier representing
+                          where a package is retrieved from. See "Compatibility" above for
+                          the stability guarantee.
+           
                           This is null for path dependencies and workspace members.
+           
                           For other dependencies, it is a string with the format:
                           - "registry+URL" for registry-based dependencies.
                             Example: "registry+https://github.com/rust-lang/crates.io-index"
                           - "git+URL" for git-based dependencies.
                             Example: "git+https://github.com/rust-lang/cargo?rev=5e85ba14aaa20f8133863373404cb0af69eeef2c#5e85ba14aaa20f8133863373404cb0af69eeef2c"
+                          - "sparse+URL" for dependencies from a sparse registry
+                            Example: "sparse+https://my-sparse-registry.org"
+           
+                          The value after the `+` is not explicitly defined, and may change
+                          between versions of Cargo and may not directly correlate to other
+                          things, such as registry definitions in a config file. New source
+                          kinds may be added in the future which will have different `+`
+                          prefixed identifiers.
                        */
                        "source": null,
                        /* Array of dependencies declared in the package's manifest. */
@@ -207,6 +240,12 @@ OUTPUT FORMAT
                "workspace_members": [
                    "my-package 0.1.0 (path+file:///path/to/my-package)",
                ],
+               /* Array of default members of the workspace.
+                  Each entry is the Package ID for the package.
+               */
+               "workspace_default_members": [
+                   "my-package 0.1.0 (path+file:///path/to/my-package)",
+               ],
                // The resolved dependency graph for the entire workspace. The enabled
                // features are based on the enabled features for the "current" package.
                // Inactivated optional dependencies are not listed.
@@ -290,8 +329,8 @@ OUTPUT FORMAT
 OPTIONS
    Output Options
        --no-deps
-           Output information only about the workspace members and don't fetch
-           dependencies.
+           Output information only about the workspace members and don’t
+           fetch dependencies.
 
        --format-version version
            Specify the version of the output format to use. Currently 1 is the
@@ -299,10 +338,11 @@ OPTIONS
 
        --filter-platform triple
            This filters the resolve output to only include dependencies for the
-           given target triple. Without this flag, the resolve includes all
-           targets.
+           given target triple
+           <https://doc.rust-lang.org/cargo/appendix/glossary.html#target>.
+           Without this flag, the resolve includes all targets.
 
-           Note that the dependencies listed in the "packages" array still
+           Note that the dependencies listed in the “packages” array still
            includes all dependencies. Each package definition is intended to be
            an unaltered reproduction of the information within Cargo.toml.
 
@@ -315,7 +355,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -329,10 +369,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -390,6 +431,27 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
 
        -h, --help
            Prints help information.

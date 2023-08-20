@@ -4,16 +4,20 @@ use crate::core::{PackageId, Resolve};
 use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};
 
-/// Validate `links` field does not conflict between packages.
+/// Validates [`package.links`] field in the manifest file does not conflict
+/// between packages.
+///
+/// NOTE: This is the *old* links validator. Links are usually validated in the
+/// resolver. However, the `links` field was added to the index in early 2018
+/// (see [rust-lang/cargo#4978]). However, `links` has been around since 2014,
+/// so there are still many crates in the index that don't have `links`
+/// properly set in the index (over 600 at the time of this writing in 2019).
+/// This can probably be removed at some point in the future, though it might
+/// be worth considering fixing the index.
+///
+/// [rust-lang/cargo#4978]: https://github.com/rust-lang/cargo/pull/4978
+/// [`package.links`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#the-links-manifest-key
 pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph) -> CargoResult<()> {
-    // NOTE: This is the *old* links validator. Links are usually validated in
-    // the resolver. However, the `links` field was added to the index in
-    // early 2018 (see https://github.com/rust-lang/cargo/pull/4978). However,
-    // `links` has been around since 2014, so there are still many crates in
-    // the index that don't have `links` properly set in the index (over 600
-    // at the time of this writing in 2019). This can probably be removed at
-    // some point in the future, though it might be worth considering fixing
-    // the index.
     let mut validated: HashSet<PackageId> = HashSet::new();
     let mut links: HashMap<String, PackageId> = HashMap::new();
     let mut units: Vec<_> = unit_graph.keys().collect();

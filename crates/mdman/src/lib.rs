@@ -69,6 +69,7 @@ pub(crate) fn md_parser(input: &str, url: Option<Url>) -> EventIter {
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_FOOTNOTES);
     options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_SMART_PUNCTUATION);
     let parser = Parser::new_ext(input, options);
     let parser = parser.into_offset_iter();
     // Translate all links to include the base url.

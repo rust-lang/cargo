@@ -8,7 +8,6 @@ use flate2::{Compression, GzBuilder};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use toml_edit::easy as toml;
 
 fn main() {
     let force = std::env::args().any(|arg| arg == "-f");

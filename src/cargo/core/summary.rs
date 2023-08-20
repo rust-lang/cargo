@@ -1,6 +1,6 @@
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
-use crate::util::{CargoResult, Config};
+use crate::util::CargoResult;
 use anyhow::bail;
 use semver::Version;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -25,15 +25,16 @@ struct Inner {
     features: Rc<FeatureMap>,
     checksum: Option<String>,
     links: Option<InternedString>,
+    rust_version: Option<InternedString>,
 }
 
 impl Summary {
     pub fn new(
-        config: &Config,
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
         features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
+        rust_version: Option<impl Into<InternedString>>,
     ) -> CargoResult<Summary> {
         // ****CAUTION**** If you change anything here that may raise a new
         // error, be sure to coordinate that change with either the index
@@ -47,7 +48,7 @@ impl Summary {
                 )
             }
         }
-        let feature_map = build_feature_map(config, pkg_id, features, &dependencies)?;
+        let feature_map = build_feature_map(pkg_id, features, &dependencies)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
@@ -55,6 +56,7 @@ impl Summary {
                 features: Rc::new(feature_map),
                 checksum: None,
                 links: links.map(|l| l.into()),
+                rust_version: rust_version.map(|l| l.into()),
             }),
         })
     }
@@ -83,6 +85,10 @@ impl Summary {
     }
     pub fn links(&self) -> Option<InternedString> {
         self.inner.links
+    }
+
+    pub fn rust_version(&self) -> Option<InternedString> {
+        self.inner.rust_version
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
@@ -133,7 +139,6 @@ impl Hash for Summary {
 /// Checks features for errors, bailing out a CargoResult:Err if invalid,
 /// and creates FeatureValues for each feature.
 fn build_feature_map(
-    config: &Config,
     pkg_id: PackageId,
     features: &BTreeMap<InternedString, Vec<InternedString>>,
     dependencies: &[Dependency],
@@ -197,7 +202,7 @@ fn build_feature_map(
                 feature
             );
         }
-        validate_feature_name(config, pkg_id, feature)?;
+        validate_feature_name(pkg_id, feature)?;
         for fv in fvs {
             // Find data for the referenced dependency...
             let dep_data = {
@@ -277,6 +282,36 @@ fn build_feature_map(
                             feature
                         );
                     }
+
+                    // dep: cannot be combined with /
+                    if let Some(stripped_dep) = dep_name.strip_prefix("dep:") {
+                        let has_other_dep = explicitly_listed.contains(stripped_dep);
+                        let is_optional = dep_map
+                            .get(stripped_dep)
+                            .iter()
+                            .flat_map(|d| d.iter())
+                            .any(|d| d.is_optional());
+                        let extra_help = if *weak || has_other_dep || !is_optional {
+                            // In this case, the user should just remove dep:.
+                            // Note that "hiding" an optional dependency
+                            // wouldn't work with just a single `dep:foo?/bar`
+                            // because there would not be any way to enable
+                            // `foo`.
+                            String::new()
+                        } else {
+                            format!(
+                                "\nIf the intent is to avoid creating an implicit feature \
+                                 `{stripped_dep}` for an optional dependency, \
+                                 then consider replacing this with two values:\n    \
+                                 \"dep:{stripped_dep}\", \"{stripped_dep}/{dep_feature}\""
+                            )
+                        };
+                        bail!(
+                            "feature `{feature}` includes `{fv}` with both `dep:` and `/`\n\
+                            To fix this, remove the `dep:` prefix.{extra_help}"
+                        )
+                    }
+
                     // Validation of the feature name will be performed in the resolver.
                     if !is_any_dep {
                         bail!(
@@ -394,33 +429,63 @@ impl fmt::Display for FeatureValue {
 
 pub type FeatureMap = BTreeMap<InternedString, Vec<FeatureValue>>;
 
-fn validate_feature_name(config: &Config, pkg_id: PackageId, name: &str) -> CargoResult<()> {
+fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
     let mut chars = name.chars();
-    const FUTURE: &str = "This was previously accepted but is being phased out; \
-        it will become a hard error in a future release.\n\
-        For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, \
-        and please leave a comment if this will be a problem for your project.";
     if let Some(ch) = chars.next() {
         if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
-            config.shell().warn(&format!(
+            bail!(
                 "invalid character `{}` in feature `{}` in package {}, \
                 the first character must be a Unicode XID start character or digit \
-                (most letters or `_` or `0` to `9`)\n\
-                {}",
-                ch, name, pkg_id, FUTURE
-            ))?;
+                (most letters or `_` or `0` to `9`)",
+                ch,
+                name,
+                pkg_id
+            );
         }
     }
     for ch in chars {
         if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
-            config.shell().warn(&format!(
+            bail!(
                 "invalid character `{}` in feature `{}` in package {}, \
                 characters must be Unicode XID characters, `+`, or `.` \
-                (numbers, `+`, `-`, `_`, `.`, or most letters)\n\
-                {}",
-                ch, name, pkg_id, FUTURE
-            ))?;
+                (numbers, `+`, `-`, `_`, `.`, or most letters)",
+                ch,
+                name,
+                pkg_id
+            );
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sources::CRATES_IO_INDEX;
+    use crate::util::into_url::IntoUrl;
+
+    use crate::core::SourceId;
+
+    #[test]
+    fn valid_feature_names() {
+        let loc = CRATES_IO_INDEX.into_url().unwrap();
+        let source_id = SourceId::for_registry(&loc).unwrap();
+        let pkg_id = PackageId::new("foo", "1.0.0", source_id).unwrap();
+
+        assert!(validate_feature_name(pkg_id, "c++17").is_ok());
+        assert!(validate_feature_name(pkg_id, "128bit").is_ok());
+        assert!(validate_feature_name(pkg_id, "_foo").is_ok());
+        assert!(validate_feature_name(pkg_id, "feat-name").is_ok());
+        assert!(validate_feature_name(pkg_id, "feat_name").is_ok());
+        assert!(validate_feature_name(pkg_id, "foo.bar").is_ok());
+
+        assert!(validate_feature_name(pkg_id, "+foo").is_err());
+        assert!(validate_feature_name(pkg_id, "-foo").is_err());
+        assert!(validate_feature_name(pkg_id, ".foo").is_err());
+        assert!(validate_feature_name(pkg_id, "foo:bar").is_err());
+        assert!(validate_feature_name(pkg_id, "foo?").is_err());
+        assert!(validate_feature_name(pkg_id, "?foo").is_err());
+        assert!(validate_feature_name(pkg_id, "ⒶⒷⒸ").is_err());
+        assert!(validate_feature_name(pkg_id, "a¼").is_err());
+    }
 }

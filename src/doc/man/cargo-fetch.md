@@ -1,10 +1,11 @@
 # cargo-fetch(1)
 {{*set actionverb="Fetch"}}
 {{*set target-default-to-all-arch=true}}
+{{*set multitarget=true}}
 
 ## NAME
 
-cargo-fetch - Fetch dependencies of a package from the network
+cargo-fetch --- Fetch dependencies of a package from the network
 
 ## SYNOPSIS
 

@@ -67,14 +67,20 @@ amount of debug information included in the compiled binary.
 
 The valid options are:
 
-* `0` or `false`: no debug info at all
-* `1`: line tables only
-* `2` or `true`: full debug info
+* `0`, `false`, or `"none"`: no debug info at all, default for [`release`](#release)
+* `"line-directives-only"`: line info directives only. For the nvptx* targets this enables [profiling]. For other use cases, `line-tables-only` is the better, more compatible choice.
+* `"line-tables-only"`: line tables only. Generates the minimal amount of debug info for backtraces with filename/line number info, but not anything else, i.e. no variable or function parameter info.
+* `1` or `"limited"`: debug info without type or variable-level information. Generates more detailed module-level info than `line-tables-only`.
+* `2`, `true`, or `"full"`: full debug info, default for [`dev`](#dev)
+
+For more information on what each option does see `rustc`'s docs on [debuginfo].
 
 You may wish to also configure the [`split-debuginfo`](#split-debuginfo) option
 depending on your needs as well.
 
 [`-C debuginfo` flag]: ../../rustc/codegen-options/index.html#debuginfo
+[debuginfo]: ../../rustc/codegen-options/index.html#debuginfo
+[profiling]: https://reviews.llvm.org/D46061
 
 #### split-debuginfo
 
@@ -149,9 +155,10 @@ The valid options are:
 
 #### lto
 
-The `lto` setting controls the [`-C lto` flag] which controls LLVM's [link
-time optimizations]. LTO can produce better optimized code, using
-whole-program analysis, at the cost of longer linking time.
+The `lto` setting controls `rustc`'s [`-C lto`], [`-C linker-plugin-lto`], and
+[`-C embed-bitcode`] options, which control LLVM's [link time optimizations].
+LTO can produce better optimized code, using whole-program analysis, at the cost
+of longer linking time.
 
 The valid options are:
 
@@ -165,11 +172,15 @@ The valid options are:
   similar to "fat".
 * `"off"`: Disables LTO.
 
-See also the [`-C linker-plugin-lto`] `rustc` flag for cross-language LTO.
+See the [linker-plugin-lto chapter] if you are interested in cross-language LTO.
+This is not yet supported natively in Cargo, but can be performed via
+`RUSTFLAGS`.
 
-[`-C lto` flag]: ../../rustc/codegen-options/index.html#lto
+[`-C lto`]: ../../rustc/codegen-options/index.html#lto
 [link time optimizations]: https://llvm.org/docs/LinkTimeOptimization.html
 [`-C linker-plugin-lto`]: ../../rustc/codegen-options/index.html#linker-plugin-lto
+[`-C embed-bitcode`]: ../../rustc/codegen-options/index.html#embed-bitcode
+[linker-plugin-lto chapter]: ../../rustc/linker-plugin-lto.html
 ["thin" LTO]: http://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html
 
 #### panic
@@ -246,7 +257,7 @@ whether or not [`rpath`] is enabled.
 #### dev
 
 The `dev` profile is used for normal development and debugging. It is the
-default for build commands like [`cargo build`].
+default for build commands like [`cargo build`], and is used for `cargo install --debug`.
 
 The default settings for the `dev` profile are:
 
@@ -298,18 +309,27 @@ The `bench` profile inherits the settings from the [`release`](#release) profile
 
 #### Build Dependencies
 
-All profiles, by default, do not optimize build dependencies (build scripts,
-proc macros, and their dependencies). The default settings for build overrides
-are:
+To compile quickly, all profiles, by default, do not optimize build
+dependencies (build scripts, proc macros, and their dependencies), and avoid
+computing debug info when a build dependency is not used as a runtime
+dependency. The default settings for build overrides are:
 
 ```toml
 [profile.dev.build-override]
 opt-level = 0
 codegen-units = 256
+debug = false # when possible
 
 [profile.release.build-override]
 opt-level = 0
 codegen-units = 256
+```
+
+However, if errors occur while running build dependencies, turning full debug
+info on will improve backtraces and debuggability when needed:
+
+```toml
+debug = true
 ```
 
 Build dependencies otherwise inherit settings from the active profile in use, as
@@ -422,11 +442,11 @@ opt-level = 3
 The precedence for which value is used is done in the following order (first
 match wins):
 
-1. `[profile.dev.package.name]` — A named package.
-2. `[profile.dev.package."*"]` — For any non-workspace member.
-3. `[profile.dev.build-override]` — Only for build scripts, proc macros, and
+1. `[profile.dev.package.name]` --- A named package.
+2. `[profile.dev.package."*"]` --- For any non-workspace member.
+3. `[profile.dev.build-override]` --- Only for build scripts, proc macros, and
    their dependencies.
-4. `[profile.dev]` — Settings in `Cargo.toml`.
+4. `[profile.dev]` --- Settings in `Cargo.toml`.
 5. Default values built-in to Cargo.
 
 Overrides cannot specify the `panic`, `lto`, or `rpath` settings.

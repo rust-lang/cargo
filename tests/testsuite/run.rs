@@ -1,6 +1,8 @@
 //! Tests for the `cargo run` command.
 
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, Project};
+use cargo_test_support::{
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, project, Project,
+};
 use cargo_util::paths::dylib_path_envvar;
 
 #[cargo_test]
@@ -321,7 +323,7 @@ fn specify_default_run() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -344,7 +346,7 @@ fn bogus_default_run() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -453,7 +455,7 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = []
@@ -503,7 +505,10 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-error: no example target named `a`
+error: no example target named `a`.
+Available example targets:
+    do_magic
+
 ",
         )
         .run();
@@ -528,7 +533,14 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
     let p = autodiscover_examples_project("2015", Some(false));
     p.cargo("run --example a")
         .with_status(101)
-        .with_stderr("error: no example target named `a`\n")
+        .with_stderr(
+            "\
+error: no example target named `a`.
+Available example targets:
+    do_magic
+
+",
+        )
         .run();
 }
 
@@ -552,7 +564,7 @@ fn autobins_disables() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             autobins = false
@@ -579,7 +591,10 @@ fn run_bins() {
     p.cargo("run --bins")
         .with_status(1)
         .with_stderr_contains(
-            "error: Found argument '--bins' which wasn't expected, or isn't valid in this context",
+            "\
+error: unexpected argument '--bins' found
+
+  tip: a similar argument exists: '--bin'",
         )
         .run();
 }
@@ -600,7 +615,14 @@ fn run_with_filename() {
 
     p.cargo("run --bin bin.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no bin target named `bin.rs`")
+        .with_stderr(
+            "\
+[ERROR] no bin target named `bin.rs`.
+Available bin targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("run --bin a.rs")
@@ -615,7 +637,14 @@ fn run_with_filename() {
 
     p.cargo("run --example example.rs")
         .with_status(101)
-        .with_stderr("[ERROR] no example target named `example.rs`")
+        .with_stderr(
+            "\
+[ERROR] no example target named `example.rs`.
+Available example targets:
+    a
+
+",
+        )
         .run();
 
     p.cargo("run --example a.rs")
@@ -675,7 +704,7 @@ fn example_with_release_flag() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -750,14 +779,14 @@ fast2",
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs [..]--crate-type lib \
         --emit=[..]link[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/debug/deps \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs [..]--crate-type bin \
         --emit=[..]link[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/debug/examples \
         -L dependency=[CWD]/target/debug/deps \
@@ -780,7 +809,7 @@ fn run_dylib_dep() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1054,7 +1083,7 @@ fn run_bin_different_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1124,7 +1153,7 @@ fn run_with_library_paths() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1183,7 +1212,7 @@ fn library_paths_sorted_alphabetically() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1290,9 +1319,16 @@ fn run_multiple_packages() {
 
     cargo().with_stdout("foo").run();
 
-    cargo().arg("-p").arg("d1").arg("-p").arg("d2")
-                    .with_status(1)
-                    .with_stderr_contains("error: The argument '--package [<SPEC>...]' was provided more than once, but cannot be used multiple times").run();
+    cargo()
+        .arg("-p")
+        .arg("d1")
+        .arg("-p")
+        .arg("d2")
+        .with_status(1)
+        .with_stderr_contains(
+            "error: the argument '--package [<SPEC>]' cannot be used multiple times",
+        )
+        .run();
 
     cargo()
         .arg("-p")
@@ -1368,7 +1404,7 @@ fn default_run_workspace() {
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.0.1"
                 default-run = "a"
@@ -1383,6 +1419,24 @@ fn default_run_workspace() {
 }
 
 #[cargo_test]
+fn print_env_verbose() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("src/main.rs", r#"fn main() {println!("run-a");}"#)
+        .build();
+
+    p.cargo("run -vv")
+        .with_stderr(
+            "\
+[COMPILING] a v0.0.1 ([CWD])
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name a[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] target/debug/a[EXE]`",
+        )
+        .run();
+}
+
+#[cargo_test]
 #[cfg(target_os = "macos")]
 fn run_link_system_path_macos() {
     use cargo_test_support::paths::{self, CargoPathExt};
@@ -1394,7 +1448,7 @@ fn run_link_system_path_macos() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             [lib]

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::task::Poll;
 
 use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, QueryKind, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::Config;
@@ -13,17 +13,64 @@ use anyhow::Context as _;
 use cargo_util::{paths, Sha256};
 use serde::Deserialize;
 
+/// `DirectorySource` contains a number of crates on the file system. It was
+/// designed for representing vendored dependencies for `cargo vendor`.
+///
+/// `DirectorySource` at this moment is just a root directory containing other
+/// directories, which contain the source files of packages. Assumptions would
+/// be made to determine if a directory should be included as a package of a
+/// directory source's:
+///
+/// * Ignore directories starting with dot `.` (tend to be hidden).
+/// * Only when a `Cargo.toml` exists in a directory will it be included as
+///   a package. `DirectorySource` at this time only looks at one level of
+///   directories and never went deeper.
+/// * There must be a [`Checksum`] file `.cargo-checksum.json` file at the same
+///   level of `Cargo.toml` to ensure the integrity when a directory source was
+///   created (usually by `cargo vendor`). A failure to find or parse a single
+///   checksum results in a denial of loading any package in this source.
+/// * Otherwise, there is no other restrction of the name of directories. At
+///   this moment, it is `cargo vendor` that defines the layout and the name of
+///   each directory.
+///
+/// The file tree of a directory source may look like:
+///
+/// ```text
+/// [source root]
+/// ├── a-valid-crate/
+/// │  ├── src/
+/// │  ├── .cargo-checksum.json
+/// │  └── Cargo.toml
+/// ├── .ignored-a-dot-crate/
+/// │  ├── src/
+/// │  ├── .cargo-checksum.json
+/// │  └── Cargo.toml
+/// ├── skipped-no-manifest/
+/// │  ├── src/
+/// │  └── .cargo-checksum.json
+/// └── no-checksum-so-fails-the-entire-source-reading/
+///    └── Cargo.toml
+/// ```
 pub struct DirectorySource<'cfg> {
+    /// The unique identifier of this source.
     source_id: SourceId,
+    /// The root path of this source.
     root: PathBuf,
+    /// Packages that this sources has discovered.
     packages: HashMap<PackageId, (Package, Checksum)>,
     config: &'cfg Config,
     updated: bool,
 }
 
+/// The checksum file to ensure the integrity of a package in a directory source.
+///
+/// The file name is simply `.cargo-checksum.json`. The checksum algorithm as
+/// of now is SHA256.
 #[derive(Deserialize)]
 struct Checksum {
+    /// Checksum of the package. Normally it is computed from the `.crate` file.
     package: Option<String>,
+    /// Checksums of each source file.
     files: HashMap<String, String>,
 }
 
@@ -46,28 +93,21 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Source for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> Poll<CargoResult<()>> {
-        if !self.updated {
-            return Poll::Pending;
-        }
-        let packages = self.packages.values().map(|p| &p.0);
-        let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
-        for summary in matches.map(|pkg| pkg.summary().clone()) {
-            f(summary);
-        }
-        Poll::Ready(Ok(()))
-    }
-
-    fn fuzzy_query(
+    fn query(
         &mut self,
-        _dep: &Dependency,
+        dep: &Dependency,
+        kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
         if !self.updated {
             return Poll::Pending;
         }
         let packages = self.packages.values().map(|p| &p.0);
-        for summary in packages.map(|pkg| pkg.summary().clone()) {
+        let matches = packages.filter(|pkg| match kind {
+            QueryKind::Exact => dep.matches(pkg.summary()),
+            QueryKind::Fuzzy => true,
+        });
+        for summary in matches.map(|pkg| pkg.summary().clone()) {
             f(summary);
         }
         Poll::Ready(Ok(()))
@@ -219,11 +259,15 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
-        Ok(false)
+    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
+        Poll::Ready(Ok(false))
     }
 
     fn invalidate_cache(&mut self) {
-        // Path source has no local cache.
+        // Directory source has no local cache.
+    }
+
+    fn set_quiet(&mut self, _quiet: bool) {
+        // Directory source does not display status
     }
 }

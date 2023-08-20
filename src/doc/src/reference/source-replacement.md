@@ -8,11 +8,11 @@ A *source* is a provider that contains crates that may be included as
 dependencies for a package. Cargo supports the ability to **replace one source
 with another** to express strategies such as:
 
-* Vendoring - custom sources can be defined which represent crates on the local
+* Vendoring --- custom sources can be defined which represent crates on the local
   filesystem. These sources are subsets of the source that they're replacing and
   can be checked into packages if necessary.
 
-* Mirroring - sources can be replaced with an equivalent version which acts as a
+* Mirroring --- sources can be replaced with an equivalent version which acts as a
   cache for crates.io itself.
 
 Cargo has a core assumption about source replacement that the source code is
@@ -25,6 +25,11 @@ patching a dependency or a private registry. Cargo supports patching
 dependencies through the usage of [the `[patch]` key][overriding
 dependencies], and private registry support is described in [the Registries
 chapter][registries].
+
+When using source replacement, running commands like `cargo publish` that need to
+contact the registry require passing the `--registry` option. This helps avoid
+any ambiguity about which registry to contact, and will use the authentication
+token for the specified registry.
 
 [overriding dependencies]: overriding-dependencies.md
 [registries]: registries.md
@@ -50,6 +55,9 @@ directory = "vendor"
 # The crates.io default source for crates is available under the name
 # "crates-io", and here we use the `replace-with` key to indicate that it's
 # replaced with our source above.
+#
+# The `replace-with` key can also reference an alternative registry name
+# defined in the `[registries]` table.
 [source.crates-io]
 replace-with = "my-vendor-source"
 

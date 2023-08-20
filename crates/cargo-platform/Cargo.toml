@@ -1,12 +1,12 @@
 [package]
 name = "cargo-platform"
-version = "0.1.2"
-edition = "2021"
-license = "MIT OR Apache-2.0"
+version = "0.1.4"
+edition.workspace = true
+license.workspace = true
 homepage = "https://github.com/rust-lang/cargo"
 repository = "https://github.com/rust-lang/cargo"
 documentation = "https://docs.rs/cargo-platform"
 description = "Cargo's representation of a target platform."
 
 [dependencies]
-serde = { version = "1.0.82", features = ['derive'] }
+serde.workspace = true

@@ -378,7 +378,6 @@ mod sys {
             // For targets in which they are the same, the duplicate pattern causes a warning.
             #[allow(unreachable_patterns)]
             Some(libc::ENOTSUP | libc::EOPNOTSUPP) => true,
-            #[cfg(target_os = "linux")]
             Some(libc::ENOSYS) => true,
             _ => false,
         }
@@ -396,8 +395,38 @@ mod sys {
 
     #[cfg(target_os = "solaris")]
     fn flock(file: &File, flag: libc::c_int) -> Result<()> {
-        // Solaris lacks flock(), so simply succeed with a no-op
-        Ok(())
+        // Solaris lacks flock(), so try to emulate using fcntl()
+        let mut flock = libc::flock {
+            l_type: 0,
+            l_whence: 0,
+            l_start: 0,
+            l_len: 0,
+            l_sysid: 0,
+            l_pid: 0,
+            l_pad: [0, 0, 0, 0],
+        };
+        flock.l_type = if flag & libc::LOCK_UN != 0 {
+            libc::F_UNLCK
+        } else if flag & libc::LOCK_EX != 0 {
+            libc::F_WRLCK
+        } else if flag & libc::LOCK_SH != 0 {
+            libc::F_RDLCK
+        } else {
+            panic!("unexpected flock() operation")
+        };
+
+        let mut cmd = libc::F_SETLKW;
+        if (flag & libc::LOCK_NB) != 0 {
+            cmd = libc::F_SETLK;
+        }
+
+        let ret = unsafe { libc::fcntl(file.as_raw_fd(), cmd, &flock) };
+
+        if ret < 0 {
+            Err(Error::last_os_error())
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -408,10 +437,11 @@ mod sys {
     use std::mem;
     use std::os::windows::io::AsRawHandle;
 
-    use winapi::shared::minwindef::DWORD;
-    use winapi::shared::winerror::{ERROR_INVALID_FUNCTION, ERROR_LOCK_VIOLATION};
-    use winapi::um::fileapi::{LockFileEx, UnlockFile};
-    use winapi::um::minwinbase::{LOCKFILE_EXCLUSIVE_LOCK, LOCKFILE_FAIL_IMMEDIATELY};
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Foundation::{ERROR_INVALID_FUNCTION, ERROR_LOCK_VIOLATION};
+    use windows_sys::Win32::Storage::FileSystem::{
+        LockFileEx, UnlockFile, LOCKFILE_EXCLUSIVE_LOCK, LOCKFILE_FAIL_IMMEDIATELY,
+    };
 
     pub(super) fn lock_shared(file: &File) -> Result<()> {
         lock_file(file, 0)
@@ -441,7 +471,7 @@ mod sys {
 
     pub(super) fn unlock(file: &File) -> Result<()> {
         unsafe {
-            let ret = UnlockFile(file.as_raw_handle(), 0, 0, !0, !0);
+            let ret = UnlockFile(file.as_raw_handle() as HANDLE, 0, 0, !0, !0);
             if ret == 0 {
                 Err(Error::last_os_error())
             } else {
@@ -450,10 +480,17 @@ mod sys {
         }
     }
 
-    fn lock_file(file: &File, flags: DWORD) -> Result<()> {
+    fn lock_file(file: &File, flags: u32) -> Result<()> {
         unsafe {
             let mut overlapped = mem::zeroed();
-            let ret = LockFileEx(file.as_raw_handle(), flags, 0, !0, !0, &mut overlapped);
+            let ret = LockFileEx(
+                file.as_raw_handle() as HANDLE,
+                flags,
+                0,
+                !0,
+                !0,
+                &mut overlapped,
+            );
             if ret == 0 {
                 Err(Error::last_os_error())
             } else {

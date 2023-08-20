@@ -1,13 +1,17 @@
+//! Shared download logic between [`HttpRegistry`] and [`RemoteRegistry`].
+//!
+//! [`HttpRegistry`]: super::http_remote::HttpRegistry
+//! [`RemoteRegistry`]: super::remote::RemoteRegistry
+
 use anyhow::Context;
+use cargo_credential::Operation;
+use cargo_util::registry::make_dep_path;
 use cargo_util::Sha256;
 
 use crate::core::PackageId;
-use crate::sources::registry::make_dep_prefix;
 use crate::sources::registry::MaybeLock;
-use crate::sources::registry::{
-    RegistryConfig, CHECKSUM_TEMPLATE, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
-    VERSION_TEMPLATE,
-};
+use crate::sources::registry::RegistryConfig;
+use crate::util::auth;
 use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem};
 use std::fmt::Write as FmtWrite;
@@ -16,10 +20,16 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::str;
 
-pub(super) fn filename(pkg: PackageId) -> String {
-    format!("{}-{}.crate", pkg.name(), pkg.version())
-}
+const CRATE_TEMPLATE: &str = "{crate}";
+const VERSION_TEMPLATE: &str = "{version}";
+const PREFIX_TEMPLATE: &str = "{prefix}";
+const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
+const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 
+/// Checks if `pkg` is downloaded and ready under the directory at `cache_path`.
+/// If not, returns a URL to download it from.
+///
+/// This is primarily called by [`RegistryData::download`](super::RegistryData::download).
 pub(super) fn download(
     cache_path: &Filesystem,
     config: &Config,
@@ -27,8 +37,7 @@ pub(super) fn download(
     checksum: &str,
     registry_config: RegistryConfig,
 ) -> CargoResult<MaybeLock> {
-    let filename = filename(pkg);
-    let path = cache_path.join(&filename);
+    let path = cache_path.join(&pkg.tarball_name());
     let path = config.assert_package_cache_locked(&path);
 
     // Attempt to open a read-only copy first to avoid an exclusive write
@@ -60,7 +69,7 @@ pub(super) fn download(
         )
         .unwrap();
     } else {
-        let prefix = make_dep_prefix(&*pkg.name());
+        let prefix = make_dep_path(&pkg.name(), true);
         url = url
             .replace(CRATE_TEMPLATE, &*pkg.name())
             .replace(VERSION_TEMPLATE, &pkg.version().to_string())
@@ -69,12 +78,29 @@ pub(super) fn download(
             .replace(CHECKSUM_TEMPLATE, checksum);
     }
 
+    let authorization = if registry_config.auth_required {
+        Some(auth::auth_token(
+            config,
+            &pkg.source_id(),
+            None,
+            Operation::Read,
+            vec![],
+        )?)
+    } else {
+        None
+    };
+
     Ok(MaybeLock::Download {
         url,
         descriptor: pkg.to_string(),
+        authorization: authorization,
     })
 }
 
+/// Verifies the integrity of `data` with `checksum` and persists it under the
+/// directory at `cache_path`.
+///
+/// This is primarily called by [`RegistryData::finish_download`](super::RegistryData::finish_download).
 pub(super) fn finish_download(
     cache_path: &Filesystem,
     config: &Config,
@@ -88,9 +114,8 @@ pub(super) fn finish_download(
         anyhow::bail!("failed to verify the checksum of `{}`", pkg)
     }
 
-    let filename = filename(pkg);
     cache_path.create_dir()?;
-    let path = cache_path.join(&filename);
+    let path = cache_path.join(&pkg.tarball_name());
     let path = config.assert_package_cache_locked(&path);
     let mut dst = OpenOptions::new()
         .create(true)
@@ -108,12 +133,16 @@ pub(super) fn finish_download(
     Ok(dst)
 }
 
+/// Checks if a tarball of `pkg` has been already downloaded under the
+/// directory at `cache_path`.
+///
+/// This is primarily called by [`RegistryData::is_crate_downloaded`](super::RegistryData::is_crate_downloaded).
 pub(super) fn is_crate_downloaded(
     cache_path: &Filesystem,
     config: &Config,
     pkg: PackageId,
 ) -> bool {
-    let path = cache_path.join(filename(pkg));
+    let path = cache_path.join(pkg.tarball_name());
     let path = config.assert_package_cache_locked(&path);
     if let Ok(meta) = fs::metadata(path) {
         return meta.len() > 0;

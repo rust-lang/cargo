@@ -77,13 +77,11 @@ fn virtual_no_default_features() {
         .run();
 
     p.cargo("check --features a/dep,b/f1,b/f2,f2")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: a/dep, b/f2, f2, did you mean: a/dep1, f1?")
         .run();
 
     p.cargo("check --features a/dep,a/dep1")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: a/dep, did you mean: b/f1?")
         .run();
@@ -107,7 +105,6 @@ fn virtual_typo_member_feature() {
         .file("src/lib.rs", "")
         .build()
         .cargo("check --features a/deny-warning")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "[ERROR] none of the selected packages contains these features: a/deny-warning, did you mean: a/deny-warnings?",
@@ -469,29 +466,28 @@ fn non_member() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -p dep --features f1")
-        .with_status(101)
-        .with_stderr(
-            "[UPDATING][..]\n[ERROR] cannot specify features for packages outside of workspace",
-        )
-        .run();
-
-    p.cargo("build -p dep --all-features")
+    p.cargo("check -p dep --features f1")
         .with_status(101)
         .with_stderr("[ERROR] cannot specify features for packages outside of workspace")
         .run();
 
-    p.cargo("build -p dep --no-default-features")
+    p.cargo("check -p dep --all-features")
         .with_status(101)
         .with_stderr("[ERROR] cannot specify features for packages outside of workspace")
         .run();
 
-    p.cargo("build -p dep")
+    p.cargo("check -p dep --no-default-features")
+        .with_status(101)
+        .with_stderr("[ERROR] cannot specify features for packages outside of workspace")
+        .run();
+
+    p.cargo("check -p dep")
         .with_stderr(
             "\
+[UPDATING] [..]
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
-[COMPILING] dep [..]
+[CHECKING] dep [..]
 [FINISHED] [..]
 ",
         )

@@ -7,8 +7,10 @@ result of the resolution is stored in the `Cargo.lock` file which "locks" the
 dependencies to specific versions, and keeps them fixed over time.
 
 The resolver attempts to unify common dependencies while considering possibly
-conflicting requirements. The sections below provide some details on how these
-constraints are handled, and how to work with the resolver.
+conflicting requirements. It turns out, however, that in many cases there is no
+single "best" dependency resolution, and so the resolver must use heuristics to
+choose a preferred solution. The sections below provide some details on how
+requirements are handled, and how to work with the resolver.
 
 See the chapter [Specifying Dependencies] for more details about how
 dependency requirements are specified.
@@ -37,17 +39,18 @@ with leading zeros. For example, `0.1.0` and `0.1.2` are compatible, but
 `0.1.0` and `0.2.0` are not. Similarly, `0.0.1` and `0.0.2` are not
 compatible.
 
-As a quick refresher, the *version requirement* syntax Cargo uses for
+As a quick refresher, the
+[*version requirement* syntax][Specifying Dependencies] Cargo uses for
 dependencies is:
 
 Requirement | Example | Equivalence | Description
---|--------|--|-------------
+------------|---------|-------------|-------------
 Caret | `1.2.3` or `^1.2.3` | <code>>=1.2.3,&nbsp;<2.0.0</code> | Any SemVer-compatible version of at least the given value.
 Tilde | `~1.2` | <code>>=1.2.0,&nbsp;<1.3.0</code> | Minimum version, with restricted compatibility range.
 Wildcard | `1.*` | <code>>=1.0.0,&nbsp;<2.0.0</code> | Any version in the `*` position.
 Equals | `=1.2.3` | <code>=1.2.3</code> | Exactly the specified version only.
 Comparison | `>1.1` | <code>>=1.2.0</code> | Naive numeric comparison of specified digits.
-Compound | <code>>=1.2,&nbsp;<1.5</code> | <code>>1.2.0,&nbsp;<1.5.0</code> | Multiple requirements that must be simultaneously satisfied.
+Compound | <code>>=1.2,&nbsp;<1.5</code> | <code>>=1.2.0,&nbsp;<1.5.0</code> | Multiple requirements that must be simultaneously satisfied.
 
 When multiple packages specify a dependency for a common package, the resolver
 attempts to ensure that they use the same version of that common package, as
@@ -179,11 +182,7 @@ release. Non-numeric components are compared lexicographically.
 SemVer has the concept of "version metadata" with a plus in the version, such
 as `1.0.0+21AF26D3`. This metadata is usually ignored, and should not be used
 in a version requirement. You should never publish multiple versions that
-differ only in the metadata tag (note, this is a [known issue] with
-[crates.io] that currently permits this).
-
-[known issue]: https://github.com/rust-lang/crates.io/issues/1059
-[crates.io]: https://crates.io/
+differ only in the metadata tag.
 
 ## Other constraints
 
@@ -248,7 +247,7 @@ situations:
   not currently being built. For example:
 
   ```toml
-  [dependency.common]
+  [dependencies.common]
   version = "1.0"
   features = ["f1"]
 
@@ -427,7 +426,7 @@ members = ["member1", "member2"]
 resolver = "2"
 ```
 
-[virtual workspace]: workspaces.md#virtual-manifest
+[virtual workspace]: workspaces.md#virtual-workspace
 [features-2]: features.md#feature-resolver-version-2
 
 ## Recommendations
@@ -483,11 +482,41 @@ are too loose, it may be possible for new versions to be published that will
 break the build.
 
 [SemVer guidelines]: semver.md
+[crates.io]: https://crates.io/
 
 ## Troubleshooting
 
 The following illustrates some problems you may experience, and some possible
 solutions.
+
+### Unexpected dependency duplication
+
+The resolver algorithm may converge on a solution that includes two copies of a
+dependency when one would suffice. For example:
+
+```toml
+# Package A
+[dependencies]
+rand = "0.7"
+
+# Package B
+[dependencies]
+rand = ">=0.6"  # note: open requirements such as this are discouraged
+```
+
+In this example, Cargo may build two copies of the `rand` crate, even though a
+single copy at version `0.7.3` would meet all requirements. This is because the
+resolver's algorithm favors building the latest available version of `rand` for
+Package B, which is `0.8.5` at the time of this writing, and that is
+incompatible with Package A's specification. The resolver's algorithm does not
+currently attempt to "deduplicate" in this situation.
+
+The use of open-ended version requirements like `>=0.6` is discouraged in Cargo.
+But, if you run into this situation, the [`cargo update`] command with the
+`--precise` flag can be used to manually remove such duplications.
+
+[`cargo update`]: ../commands/cargo-update.md
+
 
 ### SemVer-breaking patch release breaks the build
 

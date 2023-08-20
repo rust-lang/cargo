@@ -52,7 +52,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -98,7 +98,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -111,7 +111,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("Cargo.lock", &old_lockfile)
         .build();
 
-    p.cargo("build --locked").run();
+    p.cargo("check --locked").run();
 
     let lock = p.read_lockfile();
     assert_match_exact(&old_lockfile, &lock);
@@ -125,7 +125,7 @@ fn totally_wild_checksums_works() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -158,7 +158,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     let p = p.build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let lock = p.read_lockfile();
     assert_match_exact(
@@ -191,7 +191,7 @@ fn wrong_checksum_is_an_error() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -223,7 +223,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     let p = p.build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -254,7 +254,7 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -320,7 +320,7 @@ fn listed_checksum_bad_if_we_cannot_compute() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = []
@@ -398,7 +398,7 @@ fn current_lockfile_format() {
         .file("src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let actual = p.read_lockfile();
 
@@ -460,7 +460,7 @@ dependencies = [
 
     let p = p.build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let lock = p.read_lockfile();
     assert_match_exact(
@@ -493,7 +493,7 @@ fn locked_correct_error() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -505,7 +505,7 @@ fn locked_correct_error() {
         .file("src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build --locked")
+    p.cargo("check --locked")
         .with_status(101)
         .with_stderr(
             "\
@@ -545,7 +545,7 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -604,7 +604,7 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -619,7 +619,7 @@ dependencies = [
         .file(
             "a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.2.0"
             "#,
@@ -670,7 +670,7 @@ dependencies = [
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = []
@@ -697,7 +697,7 @@ fn lock_from_the_future() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -749,7 +749,7 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -762,7 +762,7 @@ dependencies = [
         .file("Cargo.lock", &lockfile)
         .build();
 
-    p.cargo("build --locked").run();
+    p.cargo("check --locked").run();
 }
 
 #[cargo_test]
@@ -773,7 +773,7 @@ fn same_name_version_different_sources() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.1.0"
                 "#,
@@ -817,7 +817,7 @@ source = "git+{url}#{sha}"
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.1.0"
 
@@ -832,7 +832,7 @@ source = "git+{url}#{sha}"
         .file("Cargo.lock", &lockfile)
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     assert_eq!(p.read_file("Cargo.lock"), lockfile);
 }
@@ -874,7 +874,7 @@ dependencies = [
 ]"#,
         )
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -887,4 +887,277 @@ perhaps a crate was updated and forgotten to be re-vendored?
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn v4_is_unstable() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                "#,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", "version = 4")
+        .build();
+
+    p.cargo("fetch")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse lock file at: [CWD]/Cargo.lock
+
+Caused by:
+  lock file version `4` was found, but this version of Cargo does not \
+  understand this lock file, perhaps Cargo needs to be updated?
+",
+        )
+        .run();
+
+    // On nightly, let the user know about the `-Z` flag.
+    p.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["-Znext-lockfile-bump"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse lock file at: [CWD]/Cargo.lock
+
+Caused by:
+  lock file version 4 requires `-Znext-lockfile-bump`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn v4_cannot_be_created_from_scratch() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                "#,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["-Znext-lockfile-bump"])
+        .run();
+
+    let lockfile = r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+"#;
+
+    let lock = p.read_lockfile();
+    assert_match_exact(lockfile, &lock);
+}
+
+fn create_branch(repo: &git2::Repository, branch: &str, head_id: git2::Oid) {
+    repo.branch(branch, &repo.find_commit(head_id).unwrap(), true)
+        .unwrap();
+}
+
+fn create_tag(repo: &git2::Repository, tag: &str, head_id: git2::Oid) {
+    repo.tag(
+        tag,
+        &repo.find_object(head_id, None).unwrap(),
+        &repo.signature().unwrap(),
+        "make a new tag",
+        false,
+    )
+    .unwrap();
+}
+
+fn v3_and_git_url_encoded(ref_kind: &str, f: impl FnOnce(&git2::Repository, &str, git2::Oid)) {
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+    let url = git_project.url();
+    let head_id = repo.head().unwrap().target().unwrap();
+    // Ref name with special characters
+    let git_ref = "a-_+#$)";
+    f(&repo, git_ref, head_id);
+
+    let lockfile = format!(
+        r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "dep1"
+version = "0.5.0"
+source = "git+{url}?{ref_kind}={git_ref}#{head_id}"
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "dep1",
+]
+"#,
+    );
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+
+                    [dependencies]
+                    dep1 = {{ git = '{url}', {ref_kind} = '{git_ref}' }}
+                "#,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", "version = 3")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[CHECKING] dep1 v0.5.0 ({url}?{ref_kind}={git_ref}#[..])
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [..]
+"
+        ))
+        .run();
+
+    let lock = p.read_lockfile();
+    assert_match_exact(&lockfile, &lock);
+
+    // v3 doesn't URL-encode URL parameters, but `url` crate does decode as it
+    // was URL-encoded. Therefore Cargo thinks they are from different source
+    // and clones the repository again.
+    p.cargo("check")
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[FINISHED] dev [..]
+"
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn v3_and_git_url_encoded_branch() {
+    v3_and_git_url_encoded("branch", create_branch);
+}
+
+#[cargo_test]
+fn v3_and_git_url_encoded_tag() {
+    v3_and_git_url_encoded("tag", create_tag);
+}
+
+#[cargo_test]
+fn v3_and_git_url_encoded_rev() {
+    v3_and_git_url_encoded("rev", create_tag);
+}
+
+fn v4_and_git_url_encoded(ref_kind: &str, f: impl FnOnce(&git2::Repository, &str, git2::Oid)) {
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+    let url = git_project.url();
+    let head_id = repo.head().unwrap().target().unwrap();
+    // Ref name with special characters
+    let git_ref = "a-_+#$)";
+    let encoded_ref = "a-_%2B%23%24%29";
+    f(&repo, git_ref, head_id);
+
+    let lockfile = format!(
+        r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 4
+
+[[package]]
+name = "dep1"
+version = "0.5.0"
+source = "git+{url}?{ref_kind}={encoded_ref}#{head_id}"
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "dep1",
+]
+"#,
+    );
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+
+                    [dependencies]
+                    dep1 = {{ git = '{url}', {ref_kind} = '{git_ref}' }}
+                "#,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", "version = 4")
+        .build();
+
+    p.cargo("check -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["-Znext-lockfile-bump"])
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[CHECKING] dep1 v0.5.0 ({url}?{ref_kind}={git_ref}#[..])
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [..]
+"
+        ))
+        .run();
+
+    let lock = p.read_lockfile();
+    assert_match_exact(&lockfile, &lock);
+
+    // Unlike v3_and_git_url_encoded, v4 encodes URL parameters so no git
+    // repository re-clone happen.
+    p.cargo("check -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["-Znext-lockfile-bump"])
+        .with_stderr("[FINISHED] dev [..]")
+        .run();
+}
+
+#[cargo_test]
+fn v4_and_git_url_encoded_branch() {
+    v4_and_git_url_encoded("branch", create_branch);
+}
+
+#[cargo_test]
+fn v4_and_git_url_encoded_tag() {
+    v4_and_git_url_encoded("tag", create_tag);
+}
+
+#[cargo_test]
+fn v4_and_git_url_encoded_rev() {
+    v4_and_git_url_encoded("rev", create_tag)
 }

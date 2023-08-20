@@ -37,6 +37,17 @@
 //! everything to bail out immediately and return success, and only if *nothing*
 //! works do we actually return an error up the stack.
 //!
+//! Resolution is currently performed twice
+//! 1. With all features enabled (this is what gets saved to `Cargo.lock`)
+//! 2. With only the specific features the user selected on the command-line. Ideally this
+//!    run will get removed in the future when transitioning to the new feature resolver.
+//!
+//! A new feature-specific resolver was added in 2020 which adds more sophisticated feature
+//! resolution. It is located in the [`features`] module. The original dependency resolver still
+//! performs feature unification, as it can help reduce the dependencies it has to consider during
+//! resolution (rather than assuming every optional dependency of every package is enabled).
+//! Checking if a feature is enabled must go through the new feature resolver.
+//!
 //! ## Performance
 //!
 //! Note that this is a relatively performance-critical portion of Cargo. The
@@ -52,7 +63,7 @@ use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use log::{debug, trace};
+use tracing::{debug, trace};
 
 use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
@@ -78,7 +89,7 @@ pub use self::version_prefs::{VersionOrdering, VersionPreferences};
 mod conflict_cache;
 mod context;
 mod dep_cache;
-mod encode;
+pub(crate) mod encode;
 pub(crate) mod errors;
 pub mod features;
 mod resolve;
@@ -133,11 +144,21 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
+    let direct_minimal_versions = match config {
+        Some(config) => config.cli_unstable().direct_minimal_versions,
+        None => false,
+    };
     let mut registry =
         RegistryQueryer::new(registry, replacements, version_prefs, minimal_versions);
     let cx = loop {
         let cx = Context::new(check_public_visible_dependencies);
-        let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
+        let cx = activate_deps_loop(
+            cx,
+            &mut registry,
+            summaries,
+            direct_minimal_versions,
+            config,
+        )?;
         if registry.reset_pending() {
             break cx;
         } else {
@@ -189,6 +210,7 @@ fn activate_deps_loop(
     mut cx: Context,
     registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, ResolveOpts)],
+    direct_minimal_versions: bool,
     config: Option<&Config>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
@@ -201,7 +223,14 @@ fn activate_deps_loop(
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let res = activate(&mut cx, registry, None, summary.clone(), opts);
+        let res = activate(
+            &mut cx,
+            registry,
+            None,
+            summary.clone(),
+            direct_minimal_versions,
+            opts,
+        );
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -399,7 +428,15 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &opts);
+            let direct_minimal_version = false; // this is an indirect dependency
+            let res = activate(
+                &mut cx,
+                registry,
+                Some((&parent, &dep)),
+                candidate,
+                direct_minimal_version,
+                &opts,
+            );
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -416,7 +453,7 @@ fn activate_deps_loop(
                     // global cache which lists sets of packages where, when
                     // activated, the dependency is unresolvable.
                     //
-                    // If any our our frame's dependencies fit in that bucket,
+                    // If any our frame's dependencies fit in that bucket,
                     // aka known unresolvable, then we extend our own set of
                     // conflicting activations with theirs. We can do this
                     // because the set of conflicts we found implies the
@@ -611,6 +648,7 @@ fn activate(
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
+    first_minimal_version: bool,
     opts: &ResolveOpts,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
@@ -662,8 +700,13 @@ fn activate(
     };
 
     let now = Instant::now();
-    let (used_features, deps) =
-        &*registry.build_deps(cx, parent.map(|p| p.0.package_id()), &candidate, opts)?;
+    let (used_features, deps) = &*registry.build_deps(
+        cx,
+        parent.map(|p| p.0.package_id()),
+        &candidate,
+        opts,
+        first_minimal_version,
+    )?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {
@@ -811,10 +854,8 @@ impl RemainingCandidates {
     }
 }
 
-/// Attempts to find a new conflict that allows a `find_candidate` feather then the input one.
+/// Attempts to find a new conflict that allows a `find_candidate` better then the input one.
 /// It will add the new conflict to the cache if one is found.
-///
-/// Panics if the input conflict is not all active in `cx`.
 fn generalize_conflicting(
     cx: &Context,
     registry: &mut RegistryQueryer<'_>,
@@ -823,15 +864,12 @@ fn generalize_conflicting(
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
 ) -> Option<ConflictMap> {
-    if conflicting_activations.is_empty() {
-        return None;
-    }
     // We need to determine the `ContextAge` that this `conflicting_activations` will jump to, and why.
-    let (backtrack_critical_age, backtrack_critical_id) = conflicting_activations
-        .keys()
-        .map(|&c| (cx.is_active(c).expect("not currently active!?"), c))
-        .max()
-        .unwrap();
+    let (backtrack_critical_age, backtrack_critical_id) = shortcircuit_max(
+        conflicting_activations
+            .keys()
+            .map(|&c| cx.is_active(c).map(|a| (a, c))),
+    )?;
     let backtrack_critical_reason: ConflictReason =
         conflicting_activations[&backtrack_critical_id].clone();
 
@@ -856,11 +894,14 @@ fn generalize_conflicting(
         })
     {
         for critical_parents_dep in critical_parents_deps.iter() {
+            // We only want `first_minimal_version=true` for direct dependencies of workspace
+            // members which isn't the case here as this has a `parent`
+            let first_minimal_version = false;
             // A dep is equivalent to one of the things it can resolve to.
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
             if let Some(others) = registry
-                .query(critical_parents_dep)
+                .query(critical_parents_dep, first_minimal_version)
                 .expect("an already used dep now error!?")
                 .expect("an already used dep now pending!?")
                 .iter()
@@ -923,6 +964,19 @@ fn generalize_conflicting(
     None
 }
 
+/// Returns Some of the largest item in the iterator.
+/// Returns None if any of the items are None or the iterator is empty.
+fn shortcircuit_max<I: Ord>(iter: impl Iterator<Item = Option<I>>) -> Option<I> {
+    let mut out = None;
+    for i in iter {
+        if i.is_none() {
+            return None;
+        }
+        out = std::cmp::max(out, i);
+    }
+    out
+}
+
 /// Looks through the states in `backtrack_stack` for dependencies with
 /// remaining candidates. For each one, also checks if rolling back
 /// could change the outcome of the failed resolution that caused backtracking
@@ -949,12 +1003,10 @@ fn find_candidate(
     // the cause of that backtrack, so we do not update it.
     let age = if !backtracked {
         // we don't have abnormal situations. So we can ask `cx` for how far back we need to go.
-        let a = cx.is_conflicting(Some(parent.package_id()), conflicting_activations);
-        // If the `conflicting_activations` does not apply to `cx`, then something went very wrong
-        // in building it. But we will just fall back to laboriously trying all possibilities witch
-        // will give us the correct answer so only `assert` if there is a developer to debug it.
-        debug_assert!(a.is_some());
-        a
+        // If the `conflicting_activations` does not apply to `cx`,
+        // we will just fall back to laboriously trying all possibilities witch
+        // will give us the correct answer.
+        cx.is_conflicting(Some(parent.package_id()), conflicting_activations)
     } else {
         None
     };

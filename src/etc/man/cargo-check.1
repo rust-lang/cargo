@@ -4,7 +4,7 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-check \- Check the current package
+cargo\-check \[em] Check the current package
 .SH "SYNOPSIS"
 \fBcargo check\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
@@ -13,7 +13,7 @@ essentially compile the packages without performing the final step of code
 generation, which is faster than running \fBcargo build\fR\&. The compiler will save
 metadata files to disk so that future runs will reuse them if the source has
 not been modified. Some diagnostics and errors are only emitted during code
-generation, so they inherently won't be reported with \fBcargo check\fR\&.
+generation, so they inherently won\[cq]t be reported with \fBcargo check\fR\&.
 .SH "OPTIONS"
 .SS "Package Selection"
 By default, when no package selection options are given, the packages selected
@@ -27,8 +27,8 @@ The default members of a workspace can be set explicitly with the
 virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-workspace\fR), and a non\-virtual workspace will include only the root crate itself.
 .sp
-\fB\-p\fR \fIspec\fR\&..., 
-\fB\-\-package\fR \fIspec\fR\&...
+\fB\-p\fR \fIspec\fR\[u2026], 
+\fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
 Check only the specified packages. See \fBcargo\-pkgid\fR(1) for the
 SPEC format. This flag may be specified multiple times and supports common Unix
@@ -47,7 +47,7 @@ Check all members in the workspace.
 Deprecated alias for \fB\-\-workspace\fR\&.
 .RE
 .sp
-\fB\-\-exclude\fR \fISPEC\fR\&...
+\fB\-\-exclude\fR \fISPEC\fR\[u2026]
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
 \fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
@@ -70,10 +70,10 @@ use single quotes or double quotes around each glob pattern.
 .sp
 \fB\-\-lib\fR
 .RS 4
-Check the package's library.
+Check the package\[cq]s library.
 .RE
 .sp
-\fB\-\-bin\fR \fIname\fR\&...
+\fB\-\-bin\fR \fIname\fR\[u2026]
 .RS 4
 Check the specified binary. This flag may be specified multiple times
 and supports common Unix glob patterns.
@@ -84,7 +84,7 @@ and supports common Unix glob patterns.
 Check all binary targets.
 .RE
 .sp
-\fB\-\-example\fR \fIname\fR\&...
+\fB\-\-example\fR \fIname\fR\[u2026]
 .RS 4
 Check the specified example. This flag may be specified multiple times
 and supports common Unix glob patterns.
@@ -95,7 +95,7 @@ and supports common Unix glob patterns.
 Check all example targets.
 .RE
 .sp
-\fB\-\-test\fR \fIname\fR\&...
+\fB\-\-test\fR \fIname\fR\[u2026]
 .RS 4
 Check the specified integration test. This flag may be specified
 multiple times and supports common Unix glob patterns.
@@ -112,7 +112,7 @@ Targets may be enabled or disabled by setting the \fBtest\fR flag in the
 manifest settings for the target.
 .RE
 .sp
-\fB\-\-bench\fR \fIname\fR\&...
+\fB\-\-bench\fR \fIname\fR\[u2026]
 .RS 4
 Check the specified benchmark. This flag may be specified multiple
 times and supports common Unix glob patterns.
@@ -141,6 +141,7 @@ selected package.
 See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
 for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. Features of workspace
@@ -163,7 +164,7 @@ Do not activate the \fBdefault\fR feature of the selected packages.
 .RS 4
 Check for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets.
+list of supported targets. This flag may be specified multiple times.
 .sp
 This may also be specified with the \fBbuild.target\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -195,7 +196,7 @@ See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles
 \fB\-\-ignore\-rust\-version\fR
 .RS 4
 Check the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project's \fBrust\-version\fR field.
+required Rust version as configured in the project\[cq]s \fBrust\-version\fR field.
 .RE
 .sp
 \fB\-\-timings=\fR\fIfmts\fR
@@ -207,7 +208,7 @@ Specifying an output format (rather than the default) is unstable and requires
 \fB\-Zunstable\-options\fR\&. Valid output formats:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the
+\h'-04'\(bu\h'+02'\fBhtml\fR (unstable, requires \fB\-Zunstable\-options\fR): Write a human\-readable file \fBcargo\-timing.html\fR to the
 \fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
@@ -233,7 +234,7 @@ Defaults to \fBtarget\fR in the root of the workspace.
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -291,19 +292,19 @@ for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
-the "short" rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+the \[lq]short\[rq] rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
+contains embedded ANSI color codes for respecting rustc\[cq]s default color
 scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
+\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo\[cq]s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .RE
@@ -354,6 +355,26 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -371,7 +392,10 @@ Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
 .RS 4
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
-the number of CPUs.
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
+Should not be 0.
 .RE
 .sp
 \fB\-\-keep\-going\fR

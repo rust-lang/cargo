@@ -1,10 +1,9 @@
 use super::{Config, ConfigKey, ConfigRelativePath, OptValue, PathAndArgs, StringList, CV};
-use crate::core::compiler::{BuildOutput, LinkType};
+use crate::core::compiler::{BuildOutput, LinkArgTarget};
 use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
-use toml_edit::easy as toml;
 
 /// Config definition of a `[target.'cfg(…)']` table.
 ///
@@ -46,7 +45,7 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
     // rebuilds. We may perhaps one day wish to ensure a deterministic
     // ordering via the order keys were defined in files perhaps.
     let target: BTreeMap<String, TargetCfgConfig> = config.get("target")?;
-    log::debug!("Got all targets {:#?}", target);
+    tracing::debug!("Got all targets {:#?}", target);
     for (key, cfg) in target {
         if key.starts_with("cfg(") {
             // Unfortunately this is not able to display the location of the
@@ -120,7 +119,7 @@ fn load_config_table(config: &Config, prefix: &str) -> CargoResult<TargetConfig>
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
     let links_overrides = match config.get_table(&target_key)? {
-        Some(links) => parse_links_overrides(&target_key, links.val)?,
+        Some(links) => parse_links_overrides(&target_key, links.val, config)?,
         None => BTreeMap::new(),
     };
     Ok(TargetConfig {
@@ -134,8 +133,14 @@ fn load_config_table(config: &Config, prefix: &str) -> CargoResult<TargetConfig>
 fn parse_links_overrides(
     target_key: &ConfigKey,
     links: HashMap<String, CV>,
+    config: &Config,
 ) -> CargoResult<BTreeMap<String, BuildOutput>> {
     let mut links_overrides = BTreeMap::new();
+    let extra_check_cfg = match config.cli_unstable().check_cfg {
+        Some((_, _, _, output)) => output,
+        None => false,
+    };
+
     for (lib_name, value) in links {
         // Skip these keys, it shares the namespace with `TargetConfig`.
         match lib_name.as_str() {
@@ -173,32 +178,43 @@ fn parse_links_overrides(
                         .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                 }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
-                    let args = extra_link_args(LinkType::Cdylib, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Cdylib, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-bins" => {
-                    let args = extra_link_args(LinkType::Bin, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Bin, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg" => {
-                    let args = extra_link_args(LinkType::All, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::All, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-tests" => {
-                    let args = extra_link_args(LinkType::Test, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Test, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-benches" => {
-                    let args = extra_link_args(LinkType::Bench, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Bench, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-link-arg-examples" => {
-                    let args = extra_link_args(LinkType::Example, key, value)?;
+                    let args = extra_link_args(LinkArgTarget::Example, key, value)?;
                     output.linker_args.extend(args);
                 }
                 "rustc-cfg" => {
                     let list = value.list(key)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
+                }
+                "rustc-check-cfg" => {
+                    if extra_check_cfg {
+                        let list = value.list(key)?;
+                        output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
+                    } else {
+                        config.shell().warn(format!(
+                            "target config `{}.{}` requires -Zcheck-cfg=output flag",
+                            target_key, key
+                        ))?;
+                    }
                 }
                 "rustc-env" => {
                     for (name, val) in value.table(key)?.0 {
@@ -221,10 +237,10 @@ fn parse_links_overrides(
 }
 
 fn extra_link_args<'a>(
-    link_type: LinkType,
+    link_type: LinkArgTarget,
     key: &str,
     value: &'a CV,
-) -> CargoResult<impl Iterator<Item = (LinkType, String)> + 'a> {
+) -> CargoResult<impl Iterator<Item = (LinkArgTarget, String)> + 'a> {
     let args = value.list(key)?;
     Ok(args.iter().map(move |v| (link_type.clone(), v.0.clone())))
 }

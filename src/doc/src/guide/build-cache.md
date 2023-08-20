@@ -24,7 +24,7 @@ For historical reasons, the `dev` and `test` profiles are stored in the
 same name as the profile.
 
 When building for another target with `--target`, the output is placed in a
-directory with the name of the target:
+directory with the name of the [target]:
 
 Directory | Example
 ----------|--------
@@ -98,6 +98,7 @@ configuration][config]. Refer to sccache documentation for more details.
 [build scripts]: ../reference/build-scripts.md
 [config]: ../reference/config.md
 [def-workspace]:  ../appendix/glossary.md#workspace  '"workspace" (glossary entry)'
+[target]: ../appendix/glossary.md#target '"target" (glossary entry)'
 [environment variable]: ../reference/environment-variables.md
 [incremental output]: ../reference/profiles.md#incremental
 [sccache]: https://github.com/mozilla/sccache

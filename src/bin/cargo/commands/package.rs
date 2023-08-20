@@ -2,54 +2,61 @@ use crate::command_prelude::*;
 
 use cargo::ops::{self, PackageOpts};
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("package")
         .about("Assemble the local package into a distributable tarball")
-        .arg_quiet()
         .arg(
-            opt(
+            flag(
                 "list",
                 "Print files included in a package without making one",
             )
             .short('l'),
         )
-        .arg(opt(
+        .arg(flag(
             "no-verify",
             "Don't verify the contents by building them",
         ))
-        .arg(opt(
+        .arg(flag(
             "no-metadata",
             "Ignore warnings about a lack of human-usable metadata",
         ))
-        .arg(opt(
+        .arg(flag(
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
-        .arg_target_triple("Build for the target triple")
-        .arg_target_dir()
-        .arg_features()
+        .arg_quiet()
         .arg_package_spec_no_all(
             "Package(s) to assemble",
             "Assemble all packages in the workspace",
             "Don't assemble specified packages",
         )
-        .arg_manifest_path()
+        .arg_features()
+        .arg_target_triple("Build for the target triple")
+        .arg_target_dir()
         .arg_jobs()
+        .arg_manifest_path()
         .after_help("Run `cargo help package` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
+    if ws.root_maybe().is_embedded() {
+        return Err(anyhow::format_err!(
+            "{} is unsupported by `cargo package`",
+            ws.root_manifest().display()
+        )
+        .into());
+    }
     let specs = args.packages_from_flags()?;
 
     ops::package(
         &ws,
         &PackageOpts {
             config,
-            verify: !args.is_present("no-verify"),
-            list: args.is_present("list"),
-            check_metadata: !args.is_present("no-metadata"),
-            allow_dirty: args.is_present("allow-dirty"),
+            verify: !args.flag("no-verify"),
+            list: args.flag("list"),
+            check_metadata: !args.flag("no-metadata"),
+            allow_dirty: args.flag("allow-dirty"),
             to_package: specs,
             targets: args.targets(),
             jobs: args.jobs()?,

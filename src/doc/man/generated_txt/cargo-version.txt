@@ -1,7 +1,7 @@
 CARGO-VERSION(1)
 
 NAME
-       cargo-version - Show version information
+       cargo-version — Show version information
 
 SYNOPSIS
        cargo version [options]

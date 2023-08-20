@@ -3,7 +3,7 @@
 
 ## NAME
 
-cargo-run - Run the current package
+cargo-run --- Run the current package
 
 ## SYNOPSIS
 
@@ -16,6 +16,10 @@ Run a binary or example of the local package.
 All the arguments following the two dashes (`--`) are passed to the binary to
 run. If you're passing arguments to both Cargo and the binary, the ones after
 `--` go to the binary, the ones before go to Cargo.
+
+Unlike {{man "cargo-test" 1}} and {{man "cargo-bench" 1}}, `cargo run` sets the 
+working directory of the binary executed to the current working directory, same 
+as if it was executed in the shell directly.
 
 ## OPTIONS
 

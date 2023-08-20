@@ -1,3 +1,5 @@
+use std::io::IsTerminal;
+
 use cargo::core::dependency::DepKind;
 use cargo::core::Dependency;
 use cargo::util::Config;
@@ -21,7 +23,7 @@ use proptest::prelude::*;
 proptest! {
     #![proptest_config(ProptestConfig {
         max_shrink_iters:
-            if is_ci() || !atty::is(atty::Stream::Stderr) {
+            if is_ci() || !std::io::stderr().is_terminal() {
                 // This attempts to make sure that CI will fail fast,
                 0
             } else {
@@ -97,6 +99,64 @@ proptest! {
                 this.name(),
                 this.version()
             )
+        }
+    }
+
+    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
+    #[test]
+    fn prop_direct_minimum_version_error_implications(
+            PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
+    ) {
+        let mut config = Config::default().unwrap();
+        config.nightly_features_allowed = true;
+        config
+            .configure(
+                1,
+                false,
+                None,
+                false,
+                false,
+                false,
+                &None,
+                &["direct-minimal-versions".to_string()],
+                &[],
+            )
+            .unwrap();
+
+        let reg = registry(input.clone());
+        // there is only a small chance that any one
+        // crate will be interesting.
+        // So we try some of the most complicated.
+        for this in input.iter().rev().take(10) {
+            // direct-minimal-versions reduces the number of available solutions, so we verify that
+            // we do not come up with solutions maximal versions does not
+            let res = resolve(
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+
+            let mres = resolve_with_config(
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+                &config,
+            );
+
+            if res.is_err() {
+                prop_assert!(
+                    mres.is_err(),
+                    "direct-minimal-versions should not have more solutions than the regular, maximal resolver but found one when resolving `{} = \"={}\"`",
+                    this.name(),
+                    this.version()
+                )
+            }
+            if mres.is_ok() {
+                prop_assert!(
+                    res.is_ok(),
+                    "direct-minimal-versions should not have more solutions than the regular, maximal resolver but found one when resolving `{} = \"={}\"`",
+                    this.name(),
+                    this.version()
+                )
+            }
         }
     }
 

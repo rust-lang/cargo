@@ -7,11 +7,14 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str;
 
+use cargo_test_support::basic_manifest;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::tools::echo_subcommand;
 use cargo_test_support::{
     basic_bin_manifest, cargo_exe, cargo_process, paths, project, project_in_home,
 };
+use cargo_util::paths::join_paths;
 
 fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
@@ -101,6 +104,32 @@ fn list_command_looks_at_path() {
     );
 }
 
+#[cfg(windows)]
+#[cargo_test]
+fn list_command_looks_at_path_case_mismatch() {
+    let proj = project()
+        .executable(Path::new("path-test").join("cargo-1"), "")
+        .build();
+
+    let mut path = path();
+    path.push(proj.root().join("path-test"));
+    let path = env::join_paths(path.iter()).unwrap();
+
+    // See issue #11814: Environment variable names are case-insensitive on Windows.
+    // We need to check that having "Path" instead of "PATH" is okay.
+    let output = cargo_process("-v --list")
+        .env("Path", &path)
+        .env_remove("PATH")
+        .exec_with_output()
+        .unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
+    assert!(
+        output.contains("\n    1                   "),
+        "missing 1: {}",
+        output
+    );
+}
+
 #[cargo_test]
 fn list_command_handles_known_external_commands() {
     let p = project()
@@ -153,7 +182,7 @@ fn find_closest_capital_c_to_c() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `C`
+error: no such command: `C`
 
 <tab>Did you mean `c`?
 ",
@@ -162,12 +191,12 @@ error: no such subcommand: `C`
 }
 
 #[cargo_test]
-fn find_closest_captial_b_to_b() {
+fn find_closest_capital_b_to_b() {
     cargo_process("B")
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `B`
+error: no such command: `B`
 
 <tab>Did you mean `b`?
 ",
@@ -181,7 +210,7 @@ fn find_closest_biuld_to_build() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `biuld`
+error: no such command: `biuld`
 
 <tab>Did you mean `build`?
 ",
@@ -232,7 +261,7 @@ fn find_closest_alias() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `myalais`
+error: no such command: `myalais`
 
 <tab>Did you mean `myalias`?
 ",
@@ -244,7 +273,7 @@ error: no such subcommand: `myalais`
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no such subcommand: `myalais`
+error: no such command: `myalais`
 ",
         )
         .with_stderr_does_not_contain(
@@ -262,9 +291,10 @@ fn find_closest_dont_correct_nonsense() {
         .cwd(&paths::root())
         .with_status(101)
         .with_stderr(
-            "[ERROR] no such subcommand: \
-                        `there-is-no-way-that-there-is-a-command-close-to-this`
-",
+            "\
+[ERROR] no such command: `there-is-no-way-that-there-is-a-command-close-to-this`
+
+<tab>View all installed commands with `cargo --list`",
         )
         .run();
 }
@@ -273,7 +303,12 @@ fn find_closest_dont_correct_nonsense() {
 fn displays_subcommand_on_error() {
     cargo_process("invalid-command")
         .with_status(101)
-        .with_stderr("[ERROR] no such subcommand: `invalid-command`\n")
+        .with_stderr(
+            "\
+[ERROR] no such command: `invalid-command`
+
+<tab>View all installed commands with `cargo --list`",
+        )
         .run();
 }
 
@@ -326,13 +361,102 @@ fn cargo_subcommand_env() {
 
     let cargo = cargo_exe().canonicalize().unwrap();
     let mut path = path();
-    path.push(target_dir);
+    path.push(target_dir.clone());
     let path = env::join_paths(path.iter()).unwrap();
 
     cargo_process("envtest")
         .env("PATH", &path)
         .with_stdout(cargo.to_str().unwrap())
         .run();
+
+    // Check that subcommands inherit an overridden $CARGO
+    let envtest_bin = target_dir
+        .join("cargo-envtest")
+        .with_extension(std::env::consts::EXE_EXTENSION)
+        .canonicalize()
+        .unwrap();
+    let envtest_bin = envtest_bin.to_str().unwrap();
+    cargo_process("envtest")
+        .env("PATH", &path)
+        .env(cargo::CARGO_ENV, &envtest_bin)
+        .with_stdout(envtest_bin)
+        .run();
+}
+
+#[cargo_test]
+fn cargo_cmd_bins_vs_explicit_path() {
+    // Set up `cargo-foo` binary in two places: inside `$HOME/.cargo/bin` and outside of it
+    //
+    // Return paths to both places
+    fn set_up_cargo_foo() -> (PathBuf, PathBuf) {
+        let p = project()
+            .at("cargo-foo")
+            .file("Cargo.toml", &basic_manifest("cargo-foo", "1.0.0"))
+            .file(
+                "src/bin/cargo-foo.rs",
+                r#"fn main() { println!("INSIDE"); }"#,
+            )
+            .file(
+                "src/bin/cargo-foo2.rs",
+                r#"fn main() { println!("OUTSIDE"); }"#,
+            )
+            .build();
+        p.cargo("build").run();
+        let cargo_bin_dir = paths::home().join(".cargo/bin");
+        cargo_bin_dir.mkdir_p();
+        let root_bin_dir = paths::root().join("bin");
+        root_bin_dir.mkdir_p();
+        let exe_name = format!("cargo-foo{}", env::consts::EXE_SUFFIX);
+        fs::rename(p.bin("cargo-foo"), cargo_bin_dir.join(&exe_name)).unwrap();
+        fs::rename(p.bin("cargo-foo2"), root_bin_dir.join(&exe_name)).unwrap();
+
+        (root_bin_dir, cargo_bin_dir)
+    }
+
+    let (outside_dir, inside_dir) = set_up_cargo_foo();
+
+    // If `$CARGO_HOME/bin` is not in a path, prefer it over anything in `$PATH`.
+    //
+    // This is the historical behavior we don't want to break.
+    cargo_process("foo").with_stdout_contains("INSIDE").run();
+
+    // When `$CARGO_HOME/bin` is in the `$PATH`
+    // use only `$PATH` so the user-defined ordering is respected.
+    {
+        cargo_process("foo")
+            .env(
+                "PATH",
+                join_paths(&[&inside_dir, &outside_dir], "PATH").unwrap(),
+            )
+            .with_stdout_contains("INSIDE")
+            .run();
+
+        cargo_process("foo")
+            // Note: trailing slash
+            .env(
+                "PATH",
+                join_paths(&[inside_dir.join(""), outside_dir.join("")], "PATH").unwrap(),
+            )
+            .with_stdout_contains("INSIDE")
+            .run();
+
+        cargo_process("foo")
+            .env(
+                "PATH",
+                join_paths(&[&outside_dir, &inside_dir], "PATH").unwrap(),
+            )
+            .with_stdout_contains("OUTSIDE")
+            .run();
+
+        cargo_process("foo")
+            // Note: trailing slash
+            .env(
+                "PATH",
+                join_paths(&[outside_dir.join(""), inside_dir.join("")], "PATH").unwrap(),
+            )
+            .with_stdout_contains("OUTSIDE")
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -379,4 +503,33 @@ fn closed_output_ok() {
     let status = child.wait().unwrap();
     assert!(status.success());
     assert!(s.is_empty(), "{}", s);
+}
+
+#[cargo_test]
+fn subcommand_leading_plus_output_contains() {
+    cargo_process("+nightly")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: no such command: `+nightly`
+
+<tab>Cargo does not handle `+toolchain` directives.
+<tab>Did you mean to invoke `cargo` through `rustup` instead?",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn full_did_you_mean() {
+    cargo_process("bluid")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: no such command: `bluid`
+
+<tab>Did you mean `build`?
+
+<tab>View all installed commands with `cargo --list`",
+        )
+        .run();
 }

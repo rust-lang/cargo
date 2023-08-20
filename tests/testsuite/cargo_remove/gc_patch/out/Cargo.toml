@@ -1,0 +1,9 @@
+[workspace]
+members = [ "my-member" ]
+
+[package]
+name = "my-project"
+version = "0.1.0"
+
+[patch.crates-io]
+bar = { git = "[ROOTURL]/bar2" }

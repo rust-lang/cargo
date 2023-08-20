@@ -4,18 +4,18 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-test \- Execute unit and integration tests of a package
+cargo\-test \[em] Execute unit and integration tests of a package
 .SH "SYNOPSIS"
 \fBcargo test\fR [\fIoptions\fR] [\fItestname\fR] [\fB\-\-\fR \fItest\-options\fR]
 .SH "DESCRIPTION"
-Compile and execute unit and integration tests.
+Compile and execute unit, integration, and documentation tests.
 .sp
 The test filtering argument \fBTESTNAME\fR and all the arguments following the two
-dashes (\fB\-\-\fR) are passed to the test binaries and thus to \fIlibtest\fR (rustc's
-built in unit\-test and micro\-benchmarking framework).  If you're passing
+dashes (\fB\-\-\fR) are passed to the test binaries and thus to \fIlibtest\fR (rustc\[cq]s
+built in unit\-test and micro\-benchmarking framework).  If you\[cq]re passing
 arguments to both Cargo and the binary, the ones after \fB\-\-\fR go to the binary,
-the ones before go to Cargo.  For details about libtest's arguments see the
-output of \fBcargo test \-\- \-\-help\fR and check out the rustc book's chapter on
+the ones before go to Cargo.  For details about libtest\[cq]s arguments see the
+output of \fBcargo test \-\- \-\-help\fR and check out the rustc book\[cq]s chapter on
 how tests work at <https://doc.rust\-lang.org/rustc/tests/index.html>\&.
 .sp
 As an example, this will filter for tests with \fBfoo\fR in their name and run them
@@ -27,26 +27,51 @@ cargo test foo \-\- \-\-test\-threads 3
 .fi
 .RE
 .sp
-Tests are built with the \fB\-\-test\fR option to \fBrustc\fR which creates an
-executable with a \fBmain\fR function that automatically runs all functions
-annotated with the \fB#[test]\fR attribute in multiple threads. \fB#[bench]\fR
-annotated functions will also be run with one iteration to verify that they
-are functional.
+Tests are built with the \fB\-\-test\fR option to \fBrustc\fR which creates a special
+executable by linking your code with libtest. The executable automatically
+runs all functions annotated with the \fB#[test]\fR attribute in multiple threads.
+\fB#[bench]\fR annotated functions will also be run with one iteration to verify
+that they are functional.
+.sp
+If the package contains multiple test targets, each target compiles to a
+special executable as aforementioned, and then is run serially.
 .sp
 The libtest harness may be disabled by setting \fBharness = false\fR in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fR
 function to handle running tests.
-.sp
+.SS "Documentation tests"
 Documentation tests are also run by default, which is handled by \fBrustdoc\fR\&. It
-extracts code samples from documentation comments and executes them. See the
-\fIrustdoc book\fR <https://doc.rust\-lang.org/rustdoc/> for more information on
-writing doc tests.
+extracts code samples from documentation comments of the library target, and
+then executes them.
+.sp
+Different from normal test targets, each code block compiles to a doctest
+executable on the fly with \fBrustc\fR\&. These executables run in parallel in
+separate processes. The compilation of a code block is in fact a part of test
+function controlled by libtest, so some options such as \fB\-\-jobs\fR might not
+take effect. Note that this execution model of doctests is not guaranteed
+and may change in the future; beware of depending on it.
+.sp
+See the \fIrustdoc book\fR <https://doc.rust\-lang.org/rustdoc/> for more information
+on writing doc tests.
+.SS "Working directory of tests"
+The working directory when running each unit and integration test is set to the
+root directory of the package the test belongs to.
+Setting the working directory of tests to the package\[cq]s root directory makes it
+possible for tests to reliably access the package\[cq]s files using relative paths,
+regardless from where \fBcargo test\fR was executed from.
+.sp
+For documentation tests, the working directory when invoking \fBrustdoc\fR is set to
+the workspace root directory, and is also the directory \fBrustdoc\fR uses as the
+compilation directory of each documentation test.
+The working directory when running each documentation test is set to the root
+directory of the package the test belongs to, and is controlled via \fBrustdoc\fR\[cq]s
+\fB\-\-test\-run\-directory\fR option.
 .SH "OPTIONS"
 .SS "Test Options"
 .sp
 \fB\-\-no\-run\fR
 .RS 4
-Compile, but don't run tests.
+Compile, but don\[cq]t run tests.
 .RE
 .sp
 \fB\-\-no\-fail\-fast\fR
@@ -68,8 +93,8 @@ The default members of a workspace can be set explicitly with the
 virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-workspace\fR), and a non\-virtual workspace will include only the root crate itself.
 .sp
-\fB\-p\fR \fIspec\fR\&..., 
-\fB\-\-package\fR \fIspec\fR\&...
+\fB\-p\fR \fIspec\fR\[u2026], 
+\fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
 Test only the specified packages. See \fBcargo\-pkgid\fR(1) for the
 SPEC format. This flag may be specified multiple times and supports common Unix
@@ -88,7 +113,7 @@ Test all members in the workspace.
 Deprecated alias for \fB\-\-workspace\fR\&.
 .RE
 .sp
-\fB\-\-exclude\fR \fISPEC\fR\&...
+\fB\-\-exclude\fR \fISPEC\fR\[u2026]
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
 \fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
@@ -131,16 +156,24 @@ available)
 .sp
 The default behavior can be changed by setting the \fBtest\fR flag for the target
 in the manifest settings. Setting examples to \fBtest = true\fR will build and run
-the example as a test. Setting targets to \fBtest = false\fR will stop them from
-being tested by default. Target selection options that take a target by name
+the example as a test, replacing the example\[cq]s \fBmain\fR function with the
+libtest harness. If you don\[cq]t want the \fBmain\fR function replaced, also include
+\fBharness = false\fR, in which case the example will be built and executed as\-is.
+.sp
+Setting targets to \fBtest = false\fR will stop them from being tested by default.
+Target selection options that take a target by name (such as \fB\-\-example foo\fR)
 ignore the \fBtest\fR flag and will always test the given target.
 .sp
 Doc tests for libraries may be disabled by setting \fBdoctest = false\fR for the
 library in the manifest.
 .sp
+See \fIConfiguring a target\fR <https://doc.rust\-lang.org/cargo/reference/cargo\-targets.html#configuring\-a\-target>
+for more information on per\-target settings.
+.sp
 Binary targets are automatically built if there is an integration test or
-benchmark. This allows an integration test to execute the binary to exercise
-and test its behavior. The \fBCARGO_BIN_EXE_<name>\fR
+benchmark being selected to test. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The \fBCARGO_BIN_EXE_<name>\fR
 \fIenvironment variable\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html#environment\-variables\-cargo\-sets\-for\-crates>
 is set when the integration test is built so that it can use the
 \fI\f(BIenv\fI macro\fR <https://doc.rust\-lang.org/std/macro.env.html> to locate the
@@ -156,10 +189,10 @@ use single quotes or double quotes around each glob pattern.
 .sp
 \fB\-\-lib\fR
 .RS 4
-Test the package's library.
+Test the package\[cq]s library.
 .RE
 .sp
-\fB\-\-bin\fR \fIname\fR\&...
+\fB\-\-bin\fR \fIname\fR\[u2026]
 .RS 4
 Test the specified binary. This flag may be specified multiple times
 and supports common Unix glob patterns.
@@ -170,7 +203,7 @@ and supports common Unix glob patterns.
 Test all binary targets.
 .RE
 .sp
-\fB\-\-example\fR \fIname\fR\&...
+\fB\-\-example\fR \fIname\fR\[u2026]
 .RS 4
 Test the specified example. This flag may be specified multiple times
 and supports common Unix glob patterns.
@@ -181,7 +214,7 @@ and supports common Unix glob patterns.
 Test all example targets.
 .RE
 .sp
-\fB\-\-test\fR \fIname\fR\&...
+\fB\-\-test\fR \fIname\fR\[u2026]
 .RS 4
 Test the specified integration test. This flag may be specified
 multiple times and supports common Unix glob patterns.
@@ -198,7 +231,7 @@ Targets may be enabled or disabled by setting the \fBtest\fR flag in the
 manifest settings for the target.
 .RE
 .sp
-\fB\-\-bench\fR \fIname\fR\&...
+\fB\-\-bench\fR \fIname\fR\[u2026]
 .RS 4
 Test the specified benchmark. This flag may be specified multiple
 times and supports common Unix glob patterns.
@@ -222,7 +255,7 @@ Test all targets. This is equivalent to specifying \fB\-\-lib \-\-bins \-\-tests
 .sp
 \fB\-\-doc\fR
 .RS 4
-Test only the library's documentation. This cannot be mixed with other
+Test only the library\[cq]s documentation. This cannot be mixed with other
 target options.
 .RE
 .SS "Feature Selection"
@@ -233,6 +266,7 @@ selected package.
 See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
 for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. Features of workspace
@@ -255,7 +289,7 @@ Do not activate the \fBdefault\fR feature of the selected packages.
 .RS 4
 Test for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets.
+list of supported targets. This flag may be specified multiple times.
 .sp
 This may also be specified with the \fBbuild.target\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -281,7 +315,7 @@ See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles
 \fB\-\-ignore\-rust\-version\fR
 .RS 4
 Test the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project's \fBrust\-version\fR field.
+required Rust version as configured in the project\[cq]s \fBrust\-version\fR field.
 .RE
 .sp
 \fB\-\-timings=\fR\fIfmts\fR
@@ -293,7 +327,7 @@ Specifying an output format (rather than the default) is unstable and requires
 \fB\-Zunstable\-options\fR\&. Valid output formats:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the
+\h'-04'\(bu\h'+02'\fBhtml\fR (unstable, requires \fB\-Zunstable\-options\fR): Write a human\-readable file \fBcargo\-timing.html\fR to the
 \fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
@@ -328,7 +362,7 @@ cargo test \-\- \-\-nocapture
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -386,19 +420,19 @@ for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
-the "short" rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+the \[lq]short\[rq] rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
+contains embedded ANSI color codes for respecting rustc\[cq]s default color
 scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
+\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo\[cq]s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .RE
@@ -449,6 +483,26 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -475,14 +529,10 @@ cargo test \-j 2 \-\- \-\-test\-threads=2
 .RS 4
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
-the number of CPUs.
-.RE
-.sp
-\fB\-\-keep\-going\fR
-.RS 4
-Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-\fB\-Zunstable\-options\fR\&.
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
+Should not be 0.
 .RE
 .sp
 \fB\-\-future\-incompat\-report\fR

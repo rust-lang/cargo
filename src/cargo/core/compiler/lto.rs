@@ -5,7 +5,7 @@ use crate::util::interning::InternedString;
 use crate::util::errors::CargoResult;
 use std::collections::hash_map::{Entry, HashMap};
 
-/// Possible ways to run rustc and request various parts of LTO.
+/// Possible ways to run rustc and request various parts of [LTO].
 ///
 /// Variant            | Flag                   | Object Code | Bitcode
 /// -------------------|------------------------|-------------|--------
@@ -14,6 +14,8 @@ use std::collections::hash_map::{Entry, HashMap};
 /// `OnlyBitcode`      | `-C linker-plugin-lto` |             | ✓
 /// `ObjectAndBitcode` |                        | ✓           | ✓
 /// `OnlyObject`       | `-C embed-bitcode=no`  | ✓           |
+///
+/// [LTO]: https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#lto
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Lto {
     /// LTO is run for this rustc, and it's `-Clto=foo`. If the given value is

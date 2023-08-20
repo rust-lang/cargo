@@ -1050,6 +1050,11 @@ fn decouple_proc_macro() {
 #[cargo_test]
 fn proc_macro_ws() {
     // Checks for bug with proc-macro in a workspace with dependency (shouldn't panic).
+    //
+    // Note, debuginfo is explicitly requested here to preserve the intent of this non-regression
+    // test: that will disable the debuginfo build dependencies optimization. Otherwise, it would
+    // initially trigger when the crates are built independently, but rebuild them with debuginfo
+    // when it sees the shared build/runtime dependency when checking the complete workspace.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1057,6 +1062,9 @@ fn proc_macro_ws() {
             [workspace]
             members = ["foo", "pm"]
             resolver = "2"
+
+            [profile.dev.build-override]
+            debug = true
             "#,
         )
         .file(
@@ -1265,7 +1273,7 @@ fn resolver_bad_setting() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1349,7 +1357,7 @@ fn resolver_not_both() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1391,6 +1399,41 @@ fn resolver_ws_member() {
 warning: resolver for the non root package will be ignored, specify resolver at the workspace root:
 package:   [..]/foo/a/Cargo.toml
 workspace: [..]/foo/Cargo.toml
+[CHECKING] a v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn edition_2021_workspace_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2021"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+warning: some crates are on edition 2021 which defaults to `resolver = \"2\"`, but virtual workspaces default to `resolver = \"1\"`
+note: to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest
+note: to use the edition 2021 resolver, specify `workspace.resolver = \"2\"` in the workspace root's manifest
 [CHECKING] a v0.1.0 [..]
 [FINISHED] [..]
 ",
@@ -2012,7 +2055,7 @@ fn minimal_download() {
     // none
     // Should be the same as `-Zfeatures=all`
     p.cargo("check -Zfeatures=compare")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["features=compare"])
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
@@ -2389,7 +2432,6 @@ foo v0.1.0 [..]
     // Importantly, this does not include `f1` on `common`.
     p.cargo("tree -f")
         .arg("{p} feats:{f}")
-        .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
 foo v0.1.0 [..]
@@ -2471,5 +2513,76 @@ fn all_features_merges_with_features() {
 ",
         )
         .with_stdout("it works")
+        .run();
+}
+
+#[cargo_test]
+fn dep_with_optional_host_deps_activated() {
+    // To prevent regression like rust-lang/cargo#11330
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                serde = { path = "serde", features = ["derive", "build"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "serde/Cargo.toml",
+            r#"
+                [package]
+                name = "serde"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                serde_derive = { path = "../serde_derive", optional = true }
+
+                [build-dependencies]
+                serde_build = { path = "../serde_build", optional = true }
+
+                [features]
+                derive = ["dep:serde_derive"]
+                build = ["dep:serde_build"]
+            "#,
+        )
+        .file("serde/src/lib.rs", "")
+        .file("serde/build.rs", "fn main() {}")
+        .file(
+            "serde_derive/Cargo.toml",
+            r#"
+                [package]
+                name = "serde_derive"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("serde_derive/src/lib.rs", "")
+        .file(
+            "serde_build/Cargo.toml",
+            &basic_manifest("serde_build", "0.1.0"),
+        )
+        .file("serde_build/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[COMPILING] serde_build v0.1.0 ([CWD]/serde_build)
+[COMPILING] serde_derive v0.1.0 ([CWD]/serde_derive)
+[COMPILING] serde v0.1.0 ([CWD]/serde)
+[CHECKING] foo v0.1.0 ([CWD])
+[FINISHED] dev [..]
+",
+        )
         .run();
 }

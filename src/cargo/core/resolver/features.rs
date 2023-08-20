@@ -1,17 +1,16 @@
-//! Feature resolver.
+//! Resolves conditional compilation for [`features` section] in the manifest.
 //!
-//! This is a new feature resolver that runs independently of the main
+//! This is a [new feature resolver] that runs independently of the main
 //! dependency resolver. It has several options which can enable new feature
 //! resolution behavior.
 //!
 //! One of its key characteristics is that it can avoid unifying features for
-//! shared dependencies in some situations. See `FeatureOpts` for the
+//! shared dependencies in some situations. See [`FeatureOpts`] for the
 //! different behaviors that can be enabled. If no extra options are enabled,
 //! then it should behave exactly the same as the dependency resolver's
 //! feature resolution.
 //!
-//! The preferred way to engage this new resolver is via
-//! `resolve_ws_with_opts`.
+//! The preferred way to engage this new resolver is via [`resolve_ws_with_opts`].
 //!
 //! This does not *replace* feature resolution in the dependency resolver, but
 //! instead acts as a second pass which can *narrow* the features selected in
@@ -24,11 +23,20 @@
 //! we could experiment with that, but it seems unlikely to work or be all
 //! that helpful.
 //!
-//! There are many assumptions made about the dependency resolver. This
-//! feature resolver assumes validation has already been done on the feature
-//! maps, and doesn't do any validation itself. It assumes dev-dependencies
-//! within a dependency have been removed. There are probably other
-//! assumptions that I am forgetting.
+//! ## Assumptions
+//!
+//! There are many assumptions made about the dependency resolver:
+//!
+//! * Assumes feature validation has already been done during the construction
+//!   of feature maps, so the feature resolver doesn't do that validation at all.
+//! * Assumes `dev-dependencies` within a dependency have been removed
+//!   in the given [`Resolve`].
+//!
+//! There are probably other assumptions that I am forgetting.
+//!
+//! [`features` section]: https://doc.rust-lang.org/nightly/cargo/reference/features.html
+//! [new feature resolver]: https://doc.rust-lang.org/nightly/cargo/reference/resolver.html#feature-resolver-version-2
+//! [`resolve_ws_with_opts`]: crate::ops::resolve_ws_with_opts
 
 use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
 use crate::core::dependency::{ArtifactTarget, DepKind, Dependency};
@@ -42,12 +50,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
 /// The key used in various places to store features for a particular dependency.
-/// The actual discrimination happens with the `FeaturesFor` type.
+/// The actual discrimination happens with the [`FeaturesFor`] type.
 type PackageFeaturesKey = (PackageId, FeaturesFor);
 /// Map of activated features.
-///
-/// The key is `(PackageId, bool)` where the bool is `true` if these
-/// are features for a build dependency or proc-macro.
 type ActivateMap = HashMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 
 /// Set of all activated features for all packages in the resolve graph.
@@ -63,7 +68,7 @@ pub struct ResolvedFeatures {
 /// Options for how the feature resolver works.
 #[derive(Default)]
 pub struct FeatureOpts {
-    /// Build deps and proc-macros will not share share features with other dep kinds,
+    /// Build deps and proc-macros will not share features with other dep kinds,
     /// and so won't artifact targets.
     /// In other terms, if true, features associated with certain kinds of dependencies
     /// will only be unified together.
@@ -98,30 +103,29 @@ pub enum ForceAllTargets {
     No,
 }
 
-/// Flag to indicate if features are requested for a build dependency or not.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
+/// Flag to indicate if features are requested for a certain type of dependency.
+///
+/// This is primarily used for constructing a [`PackageFeaturesKey`] to decouple
+/// activated features of the same package with different types of dependency.
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum FeaturesFor {
-    /// If `Some(target)` is present, we represent an artifact target.
-    /// Otherwise any other normal or dev dependency.
-    NormalOrDevOrArtifactTarget(Option<CompileTarget>),
+    /// Normal or dev dependency.
+    #[default]
+    NormalOrDev,
     /// Build dependency or proc-macro.
     HostDep,
-}
-
-impl Default for FeaturesFor {
-    fn default() -> Self {
-        FeaturesFor::NormalOrDevOrArtifactTarget(None)
-    }
+    /// Any dependency with both artifact and target specified.
+    ///
+    /// That is, `dep = { …, artifact = <crate-type>, target = <triple> }`
+    ArtifactDep(CompileTarget),
 }
 
 impl std::fmt::Display for FeaturesFor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FeaturesFor::HostDep => f.write_str("host"),
-            FeaturesFor::NormalOrDevOrArtifactTarget(Some(target)) => {
-                f.write_str(&target.rustc_target())
-            }
-            FeaturesFor::NormalOrDevOrArtifactTarget(None) => Ok(()),
+            FeaturesFor::ArtifactDep(target) => f.write_str(&target.rustc_target()),
+            FeaturesFor::NormalOrDev => Ok(()),
         }
     }
 }
@@ -131,7 +135,7 @@ impl FeaturesFor {
         if for_host {
             FeaturesFor::HostDep
         } else {
-            FeaturesFor::NormalOrDevOrArtifactTarget(None)
+            FeaturesFor::NormalOrDev
         }
     }
 
@@ -140,12 +144,12 @@ impl FeaturesFor {
         artifact_target: Option<CompileTarget>,
     ) -> FeaturesFor {
         match artifact_target {
-            Some(target) => FeaturesFor::NormalOrDevOrArtifactTarget(Some(target)),
+            Some(target) => FeaturesFor::ArtifactDep(target),
             None => {
                 if for_host {
                     FeaturesFor::HostDep
                 } else {
-                    FeaturesFor::NormalOrDevOrArtifactTarget(None)
+                    FeaturesFor::NormalOrDev
                 }
             }
         }
@@ -396,6 +400,12 @@ impl ResolvedFeatures {
 /// Key is `(pkg_id, for_host)`. Value is a set of features or dependencies removed.
 pub type DiffMap = BTreeMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 
+/// The new feature resolver that [`resolve`]s your project.
+///
+/// For more information, please see the [module-level documentation].
+///
+/// [`resolve`]: Self::resolve
+/// [module-level documentation]: crate::core::resolver::features
 pub struct FeatureResolver<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
     target_data: &'a RustcTargetData<'cfg>,
@@ -431,7 +441,7 @@ pub struct FeatureResolver<'a, 'cfg> {
 }
 
 impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
-    /// Runs the resolution algorithm and returns a new `ResolvedFeatures`
+    /// Runs the resolution algorithm and returns a new [`ResolvedFeatures`]
     /// with the result.
     pub fn resolve(
         ws: &Workspace<'cfg>,
@@ -460,7 +470,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             deferred_weak_dependencies: HashMap::new(),
         };
         r.do_resolve(specs, cli_features)?;
-        log::debug!("features={:#?}", r.activated_features);
+        tracing::debug!("features={:#?}", r.activated_features);
         if r.opts.compare {
             r.compare();
         }
@@ -498,13 +508,17 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         Ok(())
     }
 
+    /// Activates [`FeatureValue`]s on the given package.
+    ///
+    /// This is the main entrance into the recursion of feature activation
+    /// for a package.
     fn activate_pkg(
         &mut self,
         pkg_id: PackageId,
         fk: FeaturesFor,
         fvs: &[FeatureValue],
     ) -> CargoResult<()> {
-        log::trace!("activate_pkg {} {}", pkg_id.name(), fk);
+        tracing::trace!("activate_pkg {} {}", pkg_id.name(), fk);
         // Add an empty entry to ensure everything is covered. This is intended for
         // finding bugs where the resolver missed something it should have visited.
         // Remove this in the future if `activated_features` uses an empty default.
@@ -552,7 +566,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         fk: FeaturesFor,
         fv: &FeatureValue,
     ) -> CargoResult<()> {
-        log::trace!("activate_fv {} {} {}", pkg_id.name(), fk, fv);
+        tracing::trace!("activate_fv {} {} {}", pkg_id.name(), fk, fv);
         match fv {
             FeatureValue::Feature(f) => {
                 self.activate_rec(pkg_id, fk, *f)?;
@@ -579,7 +593,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         fk: FeaturesFor,
         feature_to_enable: InternedString,
     ) -> CargoResult<()> {
-        log::trace!(
+        tracing::trace!(
             "activate_rec {} {} feat={}",
             pkg_id.name(),
             fk,
@@ -601,7 +615,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 // TODO: this should only happen for optional dependencies.
                 // Other cases should be validated by Summary's `build_feature_map`.
                 // Figure out some way to validate this assumption.
-                log::debug!(
+                tracing::debug!(
                     "pkg {:?} does not define feature {}",
                     pkg_id,
                     feature_to_enable
@@ -640,7 +654,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 }
                 if let Some(to_enable) = &to_enable {
                     for dep_feature in to_enable {
-                        log::trace!(
+                        tracing::trace!(
                             "activate deferred {} {} -> {}/{}",
                             pkg_id.name(),
                             fk,
@@ -683,7 +697,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     {
                         // This is weak, but not yet activated. Defer in case
                         // something comes along later and enables it.
-                        log::trace!(
+                        tracing::trace!(
                             "deferring feature {} {} -> {}/{}",
                             pkg_id.name(),
                             fk,
@@ -704,7 +718,15 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         // The old behavior before weak dependencies were
                         // added is to also enables a feature of the same
                         // name.
-                        self.activate_rec(pkg_id, fk, dep_name)?;
+                        //
+                        // Don't enable if the implicit optional dependency
+                        // feature wasn't created due to `dep:` hiding.
+                        // See rust-lang/cargo#10788 and rust-lang/cargo#12130
+                        let summary = self.resolve.summary(pkg_id);
+                        let feature_map = summary.features();
+                        if feature_map.contains_key(&dep_name) {
+                            self.activate_rec(pkg_id, fk, dep_name)?;
+                        }
                     }
                 }
                 // Activate the feature on the dependency.
@@ -772,11 +794,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     self.target_data
                         .dep_platform_activated(dep, CompileKind::Host)
                 }
-                (_, FeaturesFor::NormalOrDevOrArtifactTarget(None)) => self
+                (_, FeaturesFor::NormalOrDev) => self
                     .requested_targets
                     .iter()
                     .any(|kind| self.target_data.dep_platform_activated(dep, *kind)),
-                (_, FeaturesFor::NormalOrDevOrArtifactTarget(Some(target))) => self
+                (_, FeaturesFor::ArtifactDep(target)) => self
                     .target_data
                     .dep_platform_activated(dep, CompileKind::Target(target)),
             }
@@ -835,19 +857,19 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                                 artifact.is_lib(),
                                 artifact.target().map(|target| match target {
                                     ArtifactTarget::Force(target) => {
-                                        vec![FeaturesFor::NormalOrDevOrArtifactTarget(Some(target))]
+                                        vec![FeaturesFor::ArtifactDep(target)]
                                     }
                                     ArtifactTarget::BuildDependencyAssumeTarget => self
                                         .requested_targets
                                         .iter()
-                                        .filter_map(|kind| match kind {
-                                            CompileKind::Host => None,
-                                            CompileKind::Target(target) => {
-                                                Some(FeaturesFor::NormalOrDevOrArtifactTarget(
-                                                    Some(*target),
-                                                ))
+                                        .map(|kind| match kind {
+                                            CompileKind::Host => {
+                                                let host_triple = self.target_data.rustc.host;
+                                                CompileTarget::new(&host_triple).unwrap()
                                             }
+                                            CompileKind::Target(target) => *target,
                                         })
+                                        .map(FeaturesFor::ArtifactDep)
                                         .collect(),
                                 }),
                             )

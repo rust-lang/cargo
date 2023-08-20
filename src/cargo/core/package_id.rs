@@ -5,6 +5,7 @@ use std::hash::Hash;
 use std::path::Path;
 use std::ptr;
 use std::sync::Mutex;
+use std::sync::OnceLock;
 
 use serde::de;
 use serde::ser;
@@ -13,10 +14,7 @@ use crate::core::source::SourceId;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, ToSemver};
 
-lazy_static::lazy_static! {
-    static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> =
-        Mutex::new(HashSet::new());
-}
+static PACKAGE_ID_CACHE: OnceLock<Mutex<HashSet<&'static PackageIdInner>>> = OnceLock::new();
 
 /// Identifier for a specific version of a package in a specific source.
 #[derive(Clone, Copy, Eq, PartialOrd, Ord)]
@@ -147,7 +145,10 @@ impl PackageId {
             version,
             source_id,
         };
-        let mut cache = PACKAGE_ID_CACHE.lock().unwrap();
+        let mut cache = PACKAGE_ID_CACHE
+            .get_or_init(|| Default::default())
+            .lock()
+            .unwrap();
         let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
             let inner = Box::leak(Box::new(inner));
             cache.insert(inner);
@@ -195,6 +196,11 @@ impl PackageId {
     pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {
         PackageIdStableHash(self, workspace)
     }
+
+    /// Filename of the `.crate` tarball, e.g., `once_cell-1.18.0.crate`.
+    pub fn tarball_name(&self) -> String {
+        format!("{}-{}.crate", self.name(), self.version())
+    }
 }
 
 pub struct PackageIdStableHash<'a>(PackageId, &'a Path);
@@ -211,7 +217,7 @@ impl fmt::Display for PackageId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} v{}", self.inner.name, self.inner.version)?;
 
-        if !self.inner.source_id.is_default_registry() {
+        if !self.inner.source_id.is_crates_io() {
             write!(f, " ({})", self.inner.source_id)?;
         }
 

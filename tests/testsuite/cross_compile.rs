@@ -2,8 +2,8 @@
 //!
 //! See `cargo_test_support::cross_compile` for more detail.
 
+use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};
-use cargo_test_support::{is_nightly, rustc_host};
 
 #[cargo_test]
 fn simple_cross() {
@@ -216,7 +216,8 @@ fn per_crate_target_test(
     if let Some(t) = arg_target {
         cmd.arg("--target").arg(&t);
     }
-    cmd.masquerade_as_nightly_cargo().run();
+    cmd.masquerade_as_nightly_cargo(&["per-package-target"])
+        .run();
     assert!(p.target_bin(cross_compile::alternate(), "foo").is_file());
 
     if cross_compile::can_run_on_host() {
@@ -344,7 +345,8 @@ fn workspace_with_multiple_targets() {
         .build();
 
     let mut cmd = p.cargo("build -v");
-    cmd.masquerade_as_nightly_cargo().run();
+    cmd.masquerade_as_nightly_cargo(&["per-package-target"])
+        .run();
 
     assert!(p.bin("native").is_file());
     assert!(p.target_bin(cross_compile::alternate(), "cross").is_file());
@@ -396,7 +398,7 @@ fn linker() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name foo src/foo.rs [..]--crate-type bin \
-    --emit=[..]link[..]-C debuginfo=2 \
+    --emit=[..]link[..]-C debuginfo=2 [..]\
     -C metadata=[..] \
     --out-dir [CWD]/target/{target}/debug/deps \
     --target {target} \
@@ -409,13 +411,9 @@ fn linker() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "plugins are unstable")]
 fn plugin_with_extra_dylib_dep() {
     if cross_compile::disabled() {
-        return;
-    }
-    if !is_nightly() {
-        // plugins are unstable
         return;
     }
 
@@ -509,7 +507,7 @@ fn cross_tests() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 authors = []
                 version = "0.0.0"
@@ -592,17 +590,34 @@ fn no_cross_doctests() {
 
     println!("b");
     let target = rustc_host();
-    p.cargo("test --target")
+    p.cargo("test -v --target")
         .arg(&target)
-        .with_stderr(&format!(
+        // Unordered since the two `rustc` invocations happen concurrently.
+        .with_stderr_unordered(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib[..]
+[RUNNING] `rustc --crate-name foo [..]--test[..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/{triple}/debug/deps/foo-[..][EXE])
+[RUNNING] `[CWD]/target/{target}/debug/deps/foo-[..][EXE]`
 [DOCTEST] foo
+[RUNNING] `rustdoc [..]--target {target}[..]`
 ",
-            triple = target
         ))
+        .with_stdout(
+            "
+running 0 tests
+
+test result: ok. 0 passed[..]
+
+
+running 1 test
+test src/lib.rs - (line 2) ... ok
+
+test result: ok. 1 passed[..]
+
+",
+        )
         .run();
 
     println!("c");
@@ -1191,8 +1206,10 @@ fn platform_specific_variables_reflected_in_build_scripts() {
 }
 
 #[cargo_test]
-// Don't have a dylib cross target on macos.
-#[cfg_attr(target_os = "macos", ignore)]
+#[cfg_attr(
+    target_os = "macos",
+    ignore = "don't have a dylib cross target on macos"
+)]
 fn cross_test_dylib() {
     if cross_compile::disabled() {
         return;
@@ -1279,13 +1296,9 @@ fn cross_test_dylib() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
 fn doctest_xcompile_linker() {
     if cross_compile::disabled() {
-        return;
-    }
-    if !is_nightly() {
-        // -Zdoctest-xcompile is unstable
         return;
     }
 
@@ -1317,7 +1330,7 @@ fn doctest_xcompile_linker() {
     p.cargo("test --doc -v -Zdoctest-xcompile --target")
         .arg(&target)
         .with_status(101)
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["doctest-xcompile"])
         .with_stderr_contains(&format!(
             "\
 [RUNNING] `rustdoc --crate-type lib --crate-name foo --test [..]\

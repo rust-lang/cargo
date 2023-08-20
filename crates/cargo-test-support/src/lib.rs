@@ -3,7 +3,6 @@
 //! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 
 #![allow(clippy::all)]
-#![cfg_attr(feature = "deny-warnings", deny(warnings))]
 
 use std::env;
 use std::ffi::OsStr;
@@ -32,6 +31,26 @@ macro_rules! t {
     };
 }
 
+#[macro_export]
+macro_rules! curr_dir {
+    () => {
+        $crate::_curr_dir(std::path::Path::new(file!()));
+    };
+}
+
+#[doc(hidden)]
+pub fn _curr_dir(mut file_path: &'static Path) -> &'static Path {
+    if !file_path.exists() {
+        // HACK: Must be running in the rust-lang/rust workspace, adjust the paths accordingly.
+        let prefix = PathBuf::from("src").join("tools").join("cargo");
+        if let Ok(crate_relative) = file_path.strip_prefix(prefix) {
+            file_path = crate_relative
+        }
+    }
+    assert!(file_path.exists(), "{} does not exist", file_path.display());
+    file_path.parent().unwrap()
+}
+
 #[track_caller]
 pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
     let err = err.into();
@@ -40,8 +59,8 @@ pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
     fn pe(what: &str, err: anyhow::Error) -> ! {
         let mut result = format!("{}\nerror: {}", what, err);
         for cause in err.chain().skip(1) {
-            drop(writeln!(result, "\nCaused by:"));
-            drop(write!(result, "{}", cause));
+            let _ = writeln!(result, "\nCaused by:");
+            let _ = write!(result, "{}", cause);
         }
         panic!("\n{}", result);
     }
@@ -50,6 +69,7 @@ pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
 pub use cargo_test_macro::cargo_test;
 
 pub mod compare;
+pub mod containers;
 pub mod cross_compile;
 mod diff;
 pub mod git;
@@ -58,6 +78,13 @@ pub mod paths;
 pub mod publish;
 pub mod registry;
 pub mod tools;
+
+pub mod prelude {
+    pub use crate::ArgLine;
+    pub use crate::CargoCommand;
+    pub use crate::ChannelChanger;
+    pub use crate::TestEnv;
+}
 
 /*
  *
@@ -83,7 +110,9 @@ impl FileBuilder {
 
     fn mk(&mut self) {
         if self.executable {
-            self.path.set_extension(env::consts::EXE_EXTENSION);
+            let mut path = self.path.clone().into_os_string();
+            write!(path, "{}", env::consts::EXE_SUFFIX).unwrap();
+            self.path = path.into();
         }
 
         self.dirname().mkdir_p();
@@ -156,10 +185,16 @@ impl SymlinkBuilder {
     }
 }
 
+/// A cargo project to run tests against.
+///
+/// See [`ProjectBuilder`] or [`Project::from_template`] to get started.
 pub struct Project {
     root: PathBuf,
 }
 
+/// Create a project to run tests against
+///
+/// The project can be constructed programmatically or from the filesystem with [`Project::from_template`]
 #[must_use]
 pub struct ProjectBuilder {
     root: Project,
@@ -284,6 +319,14 @@ impl ProjectBuilder {
 }
 
 impl Project {
+    /// Copy the test project from a fixed state
+    pub fn from_template(template_path: impl AsRef<std::path::Path>) -> Self {
+        let root = paths::root();
+        let project_root = root.join("case");
+        snapbox::path::copy_template(template_path.as_ref(), &project_root).unwrap();
+        Self { root: project_root }
+    }
+
     /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
         self.root.clone()
@@ -369,9 +412,11 @@ impl Project {
     /// Example:
     ///     p.cargo("build --bin foo").run();
     pub fn cargo(&self, cmd: &str) -> Execs {
-        let mut execs = self.process(&cargo_exe());
+        let cargo = cargo_exe();
+        let mut execs = self.process(&cargo);
         if let Some(ref mut p) = execs.process_builder {
-            split_and_add_args(p, cmd);
+            p.env("CARGO", cargo);
+            p.arg_line(cmd);
         }
         execs
     }
@@ -470,24 +515,31 @@ pub fn main_file(println: &str, deps: &[&str]) -> String {
     buf
 }
 
-// Path to cargo executables
-pub fn cargo_dir() -> PathBuf {
-    env::var_os("CARGO_BIN_PATH")
-        .map(PathBuf::from)
-        .or_else(|| {
-            env::current_exe().ok().map(|mut path| {
-                path.pop();
-                if path.ends_with("deps") {
-                    path.pop();
-                }
-                path
-            })
-        })
-        .unwrap_or_else(|| panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
+pub fn cargo_exe() -> PathBuf {
+    snapbox::cmd::cargo_bin("cargo")
 }
 
-pub fn cargo_exe() -> PathBuf {
-    cargo_dir().join(format!("cargo{}", env::consts::EXE_SUFFIX))
+/// A wrapper around `rustc` instead of calling `clippy`.
+pub fn wrapped_clippy_driver() -> PathBuf {
+    let clippy_driver = project()
+        .at(paths::global_root().join("clippy-driver"))
+        .file("Cargo.toml", &basic_manifest("clippy-driver", "0.0.1"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                let mut args = std::env::args_os();
+                let _me = args.next().unwrap();
+                let rustc = args.next().unwrap();
+                let status = std::process::Command::new(rustc).args(args).status().unwrap();
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            "#,
+        )
+        .build();
+    clippy_driver.cargo("build").run();
+
+    clippy_driver.bin("clippy-driver")
 }
 
 /// This is the raw output from the process.
@@ -541,6 +593,12 @@ impl Execs {
     /// See [`compare`] for supported patterns.
     pub fn with_stderr<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr = Some(expected.to_string());
+        self
+    }
+
+    /// Writes the given lines to stdin.
+    pub fn with_stdin<S: ToString>(&mut self, expected: S) -> &mut Self {
+        self.expect_stdin = Some(expected.to_string());
         self
     }
 
@@ -644,13 +702,15 @@ impl Execs {
     /// The substrings are matched as `contains`. Example:
     ///
     /// ```no_run
-    /// execs.with_stderr_line_without(
+    /// use cargo_test_support::execs;
+    ///
+    /// execs().with_stderr_line_without(
     ///     &[
     ///         "[RUNNING] `rustc --crate-name build_script_build",
     ///         "-C opt-level=3",
     ///     ],
     ///     &["-C debuginfo", "-C incremental"],
-    /// )
+    /// );
     /// ```
     ///
     /// This will check that a build line includes `-C opt-level=3` but does
@@ -775,19 +835,40 @@ impl Execs {
         p.build_command()
     }
 
-    pub fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
+    /// Enables nightly features for testing
+    ///
+    /// The list of reasons should be why nightly cargo is needed. If it is
+    /// becuase of an unstable feature put the name of the feature as the reason,
+    /// e.g. `&["print-im-a-teapot"]`
+    pub fn masquerade_as_nightly_cargo(&mut self, reasons: &[&str]) -> &mut Self {
         if let Some(ref mut p) = self.process_builder {
-            p.masquerade_as_nightly_cargo();
+            p.masquerade_as_nightly_cargo(reasons);
         }
+        self
+    }
+
+    /// Overrides the crates.io URL for testing.
+    ///
+    /// Can be used for testing crates-io functionality where alt registries
+    /// cannot be used.
+    pub fn replace_crates_io(&mut self, url: &Url) -> &mut Self {
+        if let Some(ref mut p) = self.process_builder {
+            p.env("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS", url.as_str());
+        }
+        self
+    }
+
+    pub fn enable_split_debuginfo_packed(&mut self) -> &mut Self {
+        self.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "packed")
+            .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "packed")
+            .env("CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO", "packed")
+            .env("CARGO_PROFILE_BENCH_SPLIT_DEBUGINFO", "packed");
         self
     }
 
     pub fn enable_mac_dsym(&mut self) -> &mut Self {
         if cfg!(target_os = "macos") {
-            self.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "packed")
-                .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "packed")
-                .env("CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO", "packed")
-                .env("CARGO_PROFILE_BENCH_SPLIT_DEBUGINFO", "packed");
+            return self.enable_split_debuginfo_packed();
         }
         self
     }
@@ -795,7 +876,10 @@ impl Execs {
     #[track_caller]
     pub fn run(&mut self) {
         self.ran = true;
-        let p = (&self.process_builder).clone().unwrap();
+        let mut p = (&self.process_builder).clone().unwrap();
+        if let Some(stdin) = self.expect_stdin.take() {
+            p.stdin(stdin);
+        }
         if let Err(e) = self.match_process(&p) {
             panic_error(&format!("test failed running {}", p), e);
         }
@@ -1089,6 +1173,10 @@ pub fn rustc_host_env() -> String {
 
 pub fn is_nightly() -> bool {
     let vv = &RUSTC_INFO.verbose_version;
+    // CARGO_TEST_DISABLE_NIGHTLY is set in rust-lang/rust's CI so that all
+    // nightly-only tests are disabled there. Otherwise, it could make it
+    // difficult to land changes which would need to be made simultaneously in
+    // rust-lang/cargo and rust-lan/rust, which isn't possible.
     env::var("CARGO_TEST_DISABLE_NIGHTLY").is_err()
         && (vv.contains("-nightly") || vv.contains("-dev"))
 }
@@ -1099,110 +1187,205 @@ pub fn process<T: AsRef<OsStr>>(t: T) -> ProcessBuilder {
 
 fn _process(t: &OsStr) -> ProcessBuilder {
     let mut p = ProcessBuilder::new(t);
-
-    // In general just clear out all cargo-specific configuration already in the
-    // environment. Our tests all assume a "default configuration" unless
-    // specified otherwise.
-    for (k, _v) in env::vars() {
-        if k.starts_with("CARGO_") {
-            p.env_remove(&k);
-        }
-    }
-    if env::var_os("RUSTUP_TOOLCHAIN").is_some() {
-        // Override the PATH to avoid executing the rustup wrapper thousands
-        // of times. This makes the testsuite run substantially faster.
-        lazy_static::lazy_static! {
-            static ref RUSTC_DIR: PathBuf = {
-                match ProcessBuilder::new("rustup")
-                    .args(&["which", "rustc"])
-                    .exec_with_output()
-                {
-                    Ok(output) => {
-                        let s = str::from_utf8(&output.stdout).expect("utf8").trim();
-                        let mut p = PathBuf::from(s);
-                        p.pop();
-                        p
-                    }
-                    Err(e) => {
-                        panic!("RUSTUP_TOOLCHAIN was set, but could not run rustup: {}", e);
-                    }
-                }
-            };
-        }
-        let path = env::var_os("PATH").unwrap_or_default();
-        let paths = env::split_paths(&path);
-        let new_path = env::join_paths(std::iter::once(RUSTC_DIR.clone()).chain(paths)).unwrap();
-        p.env("PATH", new_path);
-    }
-
-    p.cwd(&paths::root())
-        .env("HOME", paths::home())
-        .env("CARGO_HOME", paths::home().join(".cargo"))
-        .env("__CARGO_TEST_ROOT", paths::root())
-        // Force Cargo to think it's on the stable channel for all tests, this
-        // should hopefully not surprise us as we add cargo features over time and
-        // cargo rides the trains.
-        .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
-        // For now disable incremental by default as support hasn't ridden to the
-        // stable channel yet. Once incremental support hits the stable compiler we
-        // can switch this to one and then fix the tests.
-        .env("CARGO_INCREMENTAL", "0")
-        .env_remove("__CARGO_DEFAULT_LIB_METADATA")
-        .env_remove("RUSTC")
-        .env_remove("RUSTDOC")
-        .env_remove("RUSTC_WRAPPER")
-        .env_remove("RUSTFLAGS")
-        .env_remove("RUSTDOCFLAGS")
-        .env_remove("XDG_CONFIG_HOME") // see #2345
-        .env("GIT_CONFIG_NOSYSTEM", "1") // keep trying to sandbox ourselves
-        .env_remove("EMAIL")
-        .env_remove("USER") // not set on some rust-lang docker images
-        .env_remove("MFLAGS")
-        .env_remove("MAKEFLAGS")
-        .env_remove("GIT_AUTHOR_NAME")
-        .env_remove("GIT_AUTHOR_EMAIL")
-        .env_remove("GIT_COMMITTER_NAME")
-        .env_remove("GIT_COMMITTER_EMAIL")
-        .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
-    if cfg!(target_os = "macos") {
-        // Work-around a bug in macOS 10.15, see `link_or_copy` for details.
-        p.env("__CARGO_COPY_DONT_LINK_DO_NOT_USE_THIS", "1");
-    }
+    p.cwd(&paths::root()).test_env();
     p
 }
 
-pub trait ChannelChanger: Sized {
-    fn masquerade_as_nightly_cargo(&mut self) -> &mut Self;
+/// Enable nightly features for testing
+pub trait ChannelChanger {
+    /// The list of reasons should be why nightly cargo is needed. If it is
+    /// becuase of an unstable feature put the name of the feature as the reason,
+    /// e.g. `&["print-im-a-teapot"]`.
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self;
 }
 
-impl ChannelChanger for ProcessBuilder {
-    fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
+impl ChannelChanger for &mut ProcessBuilder {
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }
 }
 
-fn split_and_add_args(p: &mut ProcessBuilder, s: &str) {
-    for mut arg in s.split_whitespace() {
-        if (arg.starts_with('"') && arg.ends_with('"'))
-            || (arg.starts_with('\'') && arg.ends_with('\''))
-        {
-            arg = &arg[1..(arg.len() - 1).max(1)];
-        } else if arg.contains(&['"', '\''][..]) {
-            panic!("shell-style argument parsing is not supported")
+impl ChannelChanger for snapbox::cmd::Command {
+    fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self {
+        self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
+    }
+}
+
+/// Establish a process's test environment
+pub trait TestEnv: Sized {
+    fn test_env(mut self) -> Self {
+        // In general just clear out all cargo-specific configuration already in the
+        // environment. Our tests all assume a "default configuration" unless
+        // specified otherwise.
+        for (k, _v) in env::vars() {
+            if k.starts_with("CARGO_") {
+                self = self.env_remove(&k);
+            }
         }
-        p.arg(arg);
+        if env::var_os("RUSTUP_TOOLCHAIN").is_some() {
+            // Override the PATH to avoid executing the rustup wrapper thousands
+            // of times. This makes the testsuite run substantially faster.
+            lazy_static::lazy_static! {
+                static ref RUSTC_DIR: PathBuf = {
+                    match ProcessBuilder::new("rustup")
+                        .args(&["which", "rustc"])
+                        .exec_with_output()
+                    {
+                        Ok(output) => {
+                            let s = str::from_utf8(&output.stdout).expect("utf8").trim();
+                            let mut p = PathBuf::from(s);
+                            p.pop();
+                            p
+                        }
+                        Err(e) => {
+                            panic!("RUSTUP_TOOLCHAIN was set, but could not run rustup: {}", e);
+                        }
+                    }
+                };
+            }
+            let path = env::var_os("PATH").unwrap_or_default();
+            let paths = env::split_paths(&path);
+            let new_path =
+                env::join_paths(std::iter::once(RUSTC_DIR.clone()).chain(paths)).unwrap();
+            self = self.env("PATH", new_path);
+        }
+
+        self = self
+            .current_dir(&paths::root())
+            .env("HOME", paths::home())
+            .env("CARGO_HOME", paths::home().join(".cargo"))
+            .env("__CARGO_TEST_ROOT", paths::global_root())
+            // Force Cargo to think it's on the stable channel for all tests, this
+            // should hopefully not surprise us as we add cargo features over time and
+            // cargo rides the trains.
+            .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
+            // Keeps cargo within its sandbox.
+            .env("__CARGO_TEST_DISABLE_GLOBAL_KNOWN_HOST", "1")
+            // Set retry sleep to 1 millisecond.
+            .env("__CARGO_TEST_FIXED_RETRY_SLEEP_MS", "1")
+            // Incremental generates a huge amount of data per test, which we
+            // don't particularly need. Tests that specifically need to check
+            // the incremental behavior should turn this back on.
+            .env("CARGO_INCREMENTAL", "0")
+            // Don't read the system git config which is out of our control.
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .env_remove("__CARGO_DEFAULT_LIB_METADATA")
+            .env_remove("ALL_PROXY")
+            .env_remove("EMAIL")
+            .env_remove("GIT_AUTHOR_EMAIL")
+            .env_remove("GIT_AUTHOR_NAME")
+            .env_remove("GIT_COMMITTER_EMAIL")
+            .env_remove("GIT_COMMITTER_NAME")
+            .env_remove("http_proxy")
+            .env_remove("HTTPS_PROXY")
+            .env_remove("https_proxy")
+            .env_remove("MAKEFLAGS")
+            .env_remove("MFLAGS")
+            .env_remove("MSYSTEM") // assume cmd.exe everywhere on windows
+            .env_remove("RUSTC")
+            .env_remove("RUSTC_WORKSPACE_WRAPPER")
+            .env_remove("RUSTC_WRAPPER")
+            .env_remove("RUSTDOC")
+            .env_remove("RUSTDOCFLAGS")
+            .env_remove("RUSTFLAGS")
+            .env_remove("SSH_AUTH_SOCK") // ensure an outer agent is never contacted
+            .env_remove("USER") // not set on some rust-lang docker images
+            .env_remove("XDG_CONFIG_HOME"); // see #2345
+        if cfg!(target_os = "macos") {
+            // Work-around a bug in macOS 10.15, see `link_or_copy` for details.
+            self = self.env("__CARGO_COPY_DONT_LINK_DO_NOT_USE_THIS", "1");
+        }
+        if cfg!(windows) {
+            self = self.env("USERPROFILE", paths::home());
+        }
+        self
+    }
+
+    fn current_dir<S: AsRef<std::path::Path>>(self, path: S) -> Self;
+    fn env<S: AsRef<std::ffi::OsStr>>(self, key: &str, value: S) -> Self;
+    fn env_remove(self, key: &str) -> Self;
+}
+
+impl TestEnv for &mut ProcessBuilder {
+    fn current_dir<S: AsRef<std::path::Path>>(self, path: S) -> Self {
+        let path = path.as_ref();
+        self.cwd(path)
+    }
+    fn env<S: AsRef<std::ffi::OsStr>>(self, key: &str, value: S) -> Self {
+        self.env(key, value)
+    }
+    fn env_remove(self, key: &str) -> Self {
+        self.env_remove(key)
+    }
+}
+
+impl TestEnv for snapbox::cmd::Command {
+    fn current_dir<S: AsRef<std::path::Path>>(self, path: S) -> Self {
+        self.current_dir(path)
+    }
+    fn env<S: AsRef<std::ffi::OsStr>>(self, key: &str, value: S) -> Self {
+        self.env(key, value)
+    }
+    fn env_remove(self, key: &str) -> Self {
+        self.env_remove(key)
+    }
+}
+
+/// Test the cargo command
+pub trait CargoCommand {
+    fn cargo_ui() -> Self;
+}
+
+impl CargoCommand for snapbox::cmd::Command {
+    fn cargo_ui() -> Self {
+        Self::new(cargo_exe())
+            .with_assert(compare::assert_ui())
+            .test_env()
+    }
+}
+
+/// Add a list of arguments as a line
+pub trait ArgLine: Sized {
+    fn arg_line(mut self, s: &str) -> Self {
+        for mut arg in s.split_whitespace() {
+            if (arg.starts_with('"') && arg.ends_with('"'))
+                || (arg.starts_with('\'') && arg.ends_with('\''))
+            {
+                arg = &arg[1..(arg.len() - 1).max(1)];
+            } else if arg.contains(&['"', '\''][..]) {
+                panic!("shell-style argument parsing is not supported")
+            }
+            self = self.arg(arg);
+        }
+        self
+    }
+
+    fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self;
+}
+
+impl ArgLine for &mut ProcessBuilder {
+    fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
+        self.arg(s)
+    }
+}
+
+impl ArgLine for snapbox::cmd::Command {
+    fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
+        self.arg(s)
     }
 }
 
 pub fn cargo_process(s: &str) -> Execs {
-    let mut p = process(&cargo_exe());
-    split_and_add_args(&mut p, s);
+    let cargo = cargo_exe();
+    let mut p = process(&cargo);
+    p.env("CARGO", cargo);
+    p.arg_line(s);
     execs().with_process_builder(p)
 }
 
 pub fn git_process(s: &str) -> ProcessBuilder {
     let mut p = process("git");
-    split_and_add_args(&mut p, s);
+    p.arg_line(s);
     p
 }
 
@@ -1230,16 +1413,6 @@ pub fn slow_cpu_multiplier(main: u64) -> Duration {
             env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER").ok().and_then(|m| m.parse().ok()).unwrap_or(1);
     }
     Duration::from_secs(*SLOW_CPU_MULTIPLIER * main)
-}
-
-pub fn command_is_available(cmd: &str) -> bool {
-    if let Err(e) = process(cmd).arg("-V").exec_with_output() {
-        eprintln!("{} not available, skipping tests", cmd);
-        eprintln!("{:?}", e);
-        false
-    } else {
-        true
-    }
 }
 
 #[cfg(windows)]

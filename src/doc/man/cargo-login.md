@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-login - Save an API token from the registry locally
+cargo-login --- Save an API token from the registry locally
 
 ## SYNOPSIS
 
@@ -48,4 +48,4 @@ Take care to keep the token secret, it should not be shared with anyone else.
        cargo login
 
 ## SEE ALSO
-{{man "cargo" 1}}, {{man "cargo-publish" 1}}
+{{man "cargo" 1}}, {{man "cargo-logout" 1}}, {{man "cargo-publish" 1}}

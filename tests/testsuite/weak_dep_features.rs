@@ -2,7 +2,7 @@
 
 use super::features2::switch_to_resolver_2;
 use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
 use cargo_test_support::{project, publish};
 use std::fmt::Write;
 
@@ -523,6 +523,8 @@ bar v1.0.0
 
 #[cargo_test]
 fn publish() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
     // Publish behavior with /? syntax.
     Package::new("bar", "1.0.0").feature("feat", &[]).publish();
     let p = project()
@@ -547,15 +549,22 @@ fn publish() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --token sekrit")
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
         .with_stderr(
             "\
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [VERIFYING] foo v0.1.0 [..]
+[UPDATING] [..]
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
+[PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
+[UPLOADED] foo v0.1.0 to registry `crates-io`
+note: Waiting for `foo v0.1.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] foo v0.1.0 at registry `crates-io`
 ",
         )
         .run();
@@ -573,7 +582,6 @@ fn publish() {
               "kind": "normal",
               "name": "bar",
               "optional": true,
-              "registry": "https://github.com/rust-lang/crates.io-index",
               "target": null,
               "version_req": "^1.0"
             }
@@ -593,6 +601,7 @@ fn publish() {
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.1.0"
           }
         "#,

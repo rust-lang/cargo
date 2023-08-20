@@ -1,0 +1,6 @@
+[package]
+name = "foo"
+version = "0.0.0"
+
+[features]
+test = []

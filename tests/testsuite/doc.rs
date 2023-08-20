@@ -4,7 +4,7 @@ use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
-use cargo_test_support::{is_nightly, rustc_host, symlink_supported, tools};
+use cargo_test_support::{rustc_host, symlink_supported, tools};
 use std::fs;
 use std::str;
 
@@ -748,18 +748,15 @@ fn doc_same_name() {
     p.cargo("doc").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "no_core, lang_items requires nightly")]
 fn doc_target() {
-    if !is_nightly() {
-        // no_core, lang_items requires nightly.
-        return;
-    }
     const TARGET: &str = "arm-unknown-linux-gnueabihf";
 
     let p = project()
         .file(
             "src/lib.rs",
             r#"
+                #![allow(internal_features)]
                 #![feature(no_core, lang_items)]
                 #![no_core]
 
@@ -914,7 +911,7 @@ fn no_document_build_deps() {
 fn doc_release() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("build --release").run();
+    p.cargo("check --release").run();
     p.cargo("doc --release -v")
         .with_stderr(
             "\
@@ -1114,7 +1111,7 @@ fn doc_all_workspace() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
 
@@ -1250,7 +1247,7 @@ fn doc_all_member_dependency_same_name() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
 
@@ -1310,13 +1307,8 @@ fn doc_workspace_open_help_message() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zextern-html-root-url is unstable")]
 fn doc_extern_map_local() {
-    if !is_nightly() {
-        // -Zextern-html-root-url is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1332,7 +1324,7 @@ fn doc_extern_map_local() {
 
     p.cargo("doc -v --no-deps -Zrustdoc-map --open")
         .env("BROWSER", tools::echo())
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.1.0 [..]
@@ -1559,7 +1551,7 @@ fn issue_5345() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
 
-    foo.cargo("build").run();
+    foo.cargo("check").run();
     foo.cargo("doc").run();
 }
 
@@ -2052,11 +2044,6 @@ fn crate_versions_flag_is_overridden() {
 
 #[cargo_test]
 fn doc_test_in_workspace() {
-    if !is_nightly() {
-        // -Zdoctest-in-workspace is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2071,7 +2058,7 @@ fn doc_test_in_workspace() {
         .file(
             "crate-a/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "crate-a"
                 version = "0.1.0"
             "#,
@@ -2087,7 +2074,7 @@ fn doc_test_in_workspace() {
         .file(
             "crate-b/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "crate-b"
                 version = "0.1.0"
             "#,
@@ -2101,8 +2088,7 @@ fn doc_test_in_workspace() {
             ",
         )
         .build();
-    p.cargo("test -Zdoctest-in-workspace --doc -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("test --doc -vv")
         .with_stderr_contains("[DOCTEST] crate-a")
         .with_stdout_contains(
             "
@@ -2110,7 +2096,6 @@ running 1 test
 test crate-a/src/lib.rs - (line 1) ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
-
 ",
         )
         .with_stderr_contains("[DOCTEST] crate-b")
@@ -2120,7 +2105,98 @@ running 1 test
 test crate-b/src/lib.rs - (line 1) ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+",
+        )
+        .run();
+}
 
+/// This is a test for <https://github.com/rust-lang/rust/issues/46372>.
+/// The `file!()` macro inside of an `include!()` should output
+/// workspace-relative paths, just like it does in other cases.
+#[cargo_test]
+fn doc_test_include_file() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "child",
+                ]
+                [package]
+                name = "root"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                /// ```
+                /// assert_eq!("src/lib.rs", file!().replace("\\", "/"))
+                /// ```
+                pub mod included {
+                    include!(concat!("../", file!(), ".included.rs"));
+                }
+            "#,
+        )
+        .file(
+            "src/lib.rs.included.rs",
+            r#"
+                /// ```
+                /// assert_eq!(1, 1)
+                /// ```
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            "child/Cargo.toml",
+            r#"
+                [package]
+                name = "child"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "child/src/lib.rs",
+            r#"
+                /// ```
+                /// assert_eq!("child/src/lib.rs", file!().replace("\\", "/"))
+                /// ```
+                pub mod included {
+                    include!(concat!("../../", file!(), ".included.rs"));
+                }
+            "#,
+        )
+        .file(
+            "child/src/lib.rs.included.rs",
+            r#"
+                /// ```
+                /// assert_eq!(1, 1)
+                /// ```
+                pub fn foo() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("test --workspace --doc -vv -- --test-threads=1")
+        .with_stderr_contains("[DOCTEST] child")
+        .with_stdout_contains(
+            "
+running 2 tests
+test child/src/../../child/src/lib.rs.included.rs - included::foo (line 2) ... ok
+test child/src/lib.rs - included (line 2) ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+",
+        )
+        .with_stderr_contains("[DOCTEST] root")
+        .with_stdout_contains(
+            "
+running 2 tests
+test src/../src/lib.rs.included.rs - included::foo (line 2) ... ok
+test src/lib.rs - included (line 2) ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 ",
         )
         .run();
@@ -2346,7 +2422,7 @@ fn doc_fingerprint_unusual_behavior() {
     p.change_file("src/lib.rs", "// changed2");
     fs::write(real_doc.join("somefile"), "test").unwrap();
     p.cargo("doc -Z skip-rustdoc-fingerprint")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["skip-rustdoc-fingerprint"])
         .with_stderr(
             "[DOCUMENTING] foo [..]\n\
              [FINISHED] [..]",
@@ -2355,294 +2431,6 @@ fn doc_fingerprint_unusual_behavior() {
     // Should not have deleted anything.
     assert!(build_doc.join("somefile").exists());
     assert!(real_doc.join("somefile").exists());
-}
-
-#[cargo_test]
-fn scrape_examples_basic() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-            "#,
-        )
-        .file("examples/ex.rs", "fn main() { foo::foo(); }")
-        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
-        .build();
-
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[..] foo v0.0.1 ([CWD])
-[..] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-
-    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
-    assert!(doc_html.contains("Examples found in repository"));
-    assert!(doc_html.contains("More examples"));
-
-    // Ensure that the reverse-dependency has its sources generated
-    assert!(p.build_dir().join("doc/src/ex/ex.rs.html").exists());
-}
-
-#[cargo_test]
-fn scrape_examples_avoid_build_script_cycle() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
-    let p = project()
-        // package with build dependency
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                links = "foo"
-
-                [workspace]
-                members = ["bar"]
-
-                [build-dependencies]
-                bar = {path = "bar"}
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file("build.rs", "fn main(){}")
-        // dependency
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.0.1"
-                authors = []
-                links = "bar"
-            "#,
-        )
-        .file("bar/src/lib.rs", "")
-        .file("bar/build.rs", "fn main(){}")
-        .build();
-
-    p.cargo("doc --all -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
-        .run();
-}
-
-#[cargo_test]
-fn scrape_examples_complex_reverse_dependencies() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [dev-dependencies]
-                a = {path = "a", features = ["feature"]}
-                b = {path = "b"}
-
-                [workspace]
-                members = ["b"]
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file("examples/ex.rs", "fn main() { a::f(); }")
-        .file(
-            "a/Cargo.toml",
-            r#"
-                [package]
-                name = "a"
-                version = "0.0.1"
-                authors = []
-
-                [lib]
-                proc-macro = true
-
-                [dependencies]
-                b = {path = "../b"}
-
-                [features]
-                feature = []
-            "#,
-        )
-        .file("a/src/lib.rs", "#[cfg(feature)] pub fn f();")
-        .file(
-            "b/Cargo.toml",
-            r#"
-                [package]
-                name = "b"
-                version = "0.0.1"
-                authors = []
-            "#,
-        )
-        .file("b/src/lib.rs", "")
-        .build();
-
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
-        .run();
-}
-
-#[cargo_test]
-fn scrape_examples_crate_with_dash() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "da-sh"
-                version = "0.0.1"
-                authors = []
-            "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
-        .file("examples/a.rs", "fn main() { da_sh::foo(); }")
-        .build();
-
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
-        .run();
-
-    let doc_html = p.read_file("target/doc/da_sh/fn.foo.html");
-    assert!(doc_html.contains("Examples found in repository"));
-}
-
-#[cargo_test]
-fn scrape_examples_missing_flag() {
-    if !is_nightly() {
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "1.2.4"
-            authors = []
-        "#,
-        )
-        .file("src/lib.rs", "//! These are the docs!")
-        .build();
-    p.cargo("doc -Zrustdoc-scrape-examples")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr("error: -Z rustdoc-scrape-examples must take [..] an argument")
-        .run();
-}
-
-#[cargo_test]
-fn scrape_examples_configure_profile() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [profile.dev]
-                panic = "abort"
-            "#,
-        )
-        .file("examples/ex.rs", "fn main() { foo::foo(); }")
-        .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
-        .build();
-
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
-        .run();
-
-    let doc_html = p.read_file("target/doc/foo/fn.foo.html");
-    assert!(doc_html.contains("Examples found in repository"));
-    assert!(doc_html.contains("More examples"));
-}
-
-#[cargo_test]
-fn scrape_examples_issue_10545() {
-    if !is_nightly() {
-        // -Z rustdoc-scrape-examples is unstable
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"                
-                [workspace]
-                resolver = "2"
-                members = ["a", "b"]              
-            "#,
-        )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-            edition = "2021"
-
-            [features]
-            default = ["foo"]
-            foo = []
-        "#,
-        )
-        .file("a/src/lib.rs", "")
-        .file(
-            "b/Cargo.toml",
-            r#"
-                [package]
-                name = "b"
-                version = "0.0.1"
-                authors = []
-                edition = "2021"
-
-                [lib]
-                proc-macro = true
-            "#,
-        )
-        .file("b/src/lib.rs", "")
-        .build();
-
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples=all")
-        .masquerade_as_nightly_cargo()
-        .run();
 }
 
 #[cargo_test]
@@ -2783,39 +2571,23 @@ fn doc_lib_false_dep() {
     assert!(!p.build_dir().join("doc/bar").exists());
 }
 
-#[cfg_attr(windows, ignore)] // weird normalization issue with windows and cargo-test-support
 #[cargo_test]
-fn doc_check_cfg_features() {
-    if !is_nightly() {
-        // --check-cfg is a nightly only rustdoc command line
-        return;
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-
-                [features]
-                default = ["f_a"]
-                f_a = []
-                f_b = []
-            "#,
-        )
-        .file("src/lib.rs", "#[allow(dead_code)] fn foo() {}")
-        .build();
-
-    p.cargo("doc -v -Z check-cfg-features")
-        .masquerade_as_nightly_cargo()
+fn link_to_private_item() {
+    let main = r#"
+    //! [bar]
+    #[allow(dead_code)]
+    fn bar() {}
+    "#;
+    let p = project().file("src/lib.rs", main).build();
+    p.cargo("doc")
+        .with_stderr_contains("[..] documentation for `foo` links to private item `bar`")
+        .run();
+    // Check that binaries don't emit a private_intra_doc_links warning.
+    fs::rename(p.root().join("src/lib.rs"), p.root().join("src/main.rs")).unwrap();
+    p.cargo("doc")
         .with_stderr(
-            "\
-[DOCUMENTING] foo v0.1.0 [..]
-[RUNNING] `rustdoc [..] --check-cfg 'values(feature, \"default\", \"f_a\", \"f_b\")' [..]
-[FINISHED] [..]
-",
+            "[DOCUMENTING] foo [..]\n\
+             [FINISHED] [..]",
         )
         .run();
 }

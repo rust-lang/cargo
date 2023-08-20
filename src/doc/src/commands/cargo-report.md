@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-report - Generate and display various kinds of reports
+cargo-report --- Generate and display various kinds of reports
 
 ## SYNOPSIS
 
@@ -10,7 +10,7 @@ cargo-report - Generate and display various kinds of reports
 
 ### DESCRIPTION
 
-Displays a report of the given _type_ - currently, only `future-incompat` is supported
+Displays a report of the given _type_ --- currently, only `future-incompat` is supported
 
 ## OPTIONS
 
@@ -20,8 +20,8 @@ Displays a report of the given _type_ - currently, only `future-incompat` is sup
 <dd class="option-desc">Show the report with the specified Cargo-generated id</dd>
 
 
-<dt class="option-term" id="option-cargo-report--p"><a class="option-anchor" href="#option-cargo-report--p"></a><code>-p</code> <em>spec</em>...</dt>
-<dt class="option-term" id="option-cargo-report---package"><a class="option-anchor" href="#option-cargo-report---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-report--p"><a class="option-anchor" href="#option-cargo-report--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-report---package"><a class="option-anchor" href="#option-cargo-report---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Only display a report for the specified package</dd>
 
 

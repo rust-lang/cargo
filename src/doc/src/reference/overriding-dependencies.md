@@ -58,7 +58,7 @@ First thing we'll do is to clone the [`uuid` repository][uuid-repository]
 locally via:
 
 ```console
-$ git clone https://github.com/uuid-rs/uuid
+$ git clone https://github.com/uuid-rs/uuid.git
 ```
 
 Next we'll edit the manifest of `my-library` to contain:
@@ -108,7 +108,7 @@ request is merged you could change your `path` dependency to:
 
 ```toml
 [patch.crates-io]
-uuid = { git = 'https://github.com/uuid-rs/uuid' }
+uuid = { git = 'https://github.com/uuid-rs/uuid.git' }
 ```
 
 [uuid-repository]: https://github.com/uuid-rs/uuid
@@ -135,7 +135,7 @@ version = "0.1.0"
 uuid = "1.0.1"
 
 [patch.crates-io]
-uuid = { git = 'https://github.com/uuid-rs/uuid' }
+uuid = { git = 'https://github.com/uuid-rs/uuid.git' }
 ```
 
 Note that our local dependency on `uuid` has been updated to `1.0.1` as it's
@@ -161,7 +161,7 @@ my-library = { git = 'https://example.com/git/my-library' }
 uuid = "1.0"
 
 [patch.crates-io]
-uuid = { git = 'https://github.com/uuid-rs/uuid' }
+uuid = { git = 'https://github.com/uuid-rs/uuid.git' }
 ```
 
 Remember that `[patch]` is applicable *transitively* but can only be defined at
@@ -197,7 +197,7 @@ we've submitted all changes upstream we can update our manifest for
 uuid = "2.0"
 
 [patch.crates-io]
-uuid = { git = "https://github.com/uuid-rs/uuid", branch = "2.0.0" }
+uuid = { git = "https://github.com/uuid-rs/uuid.git", branch = "2.0.0" }
 ```
 
 And that's it! Like with the previous example the 2.0.0 version doesn't actually
@@ -215,7 +215,7 @@ my-library = { git = 'https://example.com/git/my-library' }
 uuid = "1.0"
 
 [patch.crates-io]
-uuid = { git = 'https://github.com/uuid-rs/uuid', branch = '2.0.0' }
+uuid = { git = 'https://github.com/uuid-rs/uuid.git', branch = '2.0.0' }
 ```
 
 Note that this will actually resolve to two versions of the `uuid` crate. The
@@ -234,8 +234,8 @@ configure this we'd do:
 
 ```toml
 [patch.crates-io]
-serde = { git = 'https://github.com/serde-rs/serde' }
-serde2 = { git = 'https://github.com/example/serde', package = 'serde', branch = 'v2' }
+serde = { git = 'https://github.com/serde-rs/serde.git' }
+serde2 = { git = 'https://github.com/example/serde.git', package = 'serde', branch = 'v2' }
 ```
 
 The first `serde = ...` directive indicates that serde `1.*` should be used
@@ -256,15 +256,21 @@ with other copies. The syntax is similar to the
 
 ```toml
 [patch.crates-io]
-foo = { git = 'https://github.com/example/foo' }
+foo = { git = 'https://github.com/example/foo.git' }
 bar = { path = 'my/local/bar' }
 
 [dependencies.baz]
-git = 'https://github.com/example/baz'
+git = 'https://github.com/example/baz.git'
 
 [patch.'https://github.com/example/baz']
-baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
+baz = { git = 'https://github.com/example/patched-baz.git', branch = 'my-branch' }
 ```
+
+> **Note**: The `[patch]` table can also be specified as a [configuration
+> option](config.md), such as in a `.cargo/config.toml` file or a CLI option
+> like `--config 'patch.crates-io.rand.path="rand"'`. This can be useful for
+> local-only changes that you don't want to commit, or temporarily testing a
+> patch.
 
 The `[patch]` table is made of dependency-like sub-tables. Each key after
 `[patch]` is a URL of the source that is being patched, or the name of a
@@ -285,6 +291,10 @@ also be patched with versions of crates that already exist. If a source is
 patched with a crate version that already exists in the source, then the
 source's original crate is replaced.
 
+Cargo only looks at the patch settings in the `Cargo.toml` manifest at the
+root of the workspace. Patch settings defined in dependencies will be
+ignored.
+
 ### The `[replace]` section
 
 > **Note**: `[replace]` is deprecated. You should use the
@@ -295,7 +305,7 @@ copies. The syntax is similar to the `[dependencies]` section:
 
 ```toml
 [replace]
-"foo:0.1.0" = { git = 'https://github.com/example/foo' }
+"foo:0.1.0" = { git = 'https://github.com/example/foo.git' }
 "bar:1.0.2" = { path = 'my/local/bar' }
 ```
 
@@ -306,6 +316,10 @@ value of each key is the same as the `[dependencies]` syntax for specifying
 dependencies, except that you can't specify features. Note that when a crate
 is overridden the copy it's overridden with must have both the same name and
 version, but it can come from a different source (e.g., git or a local path).
+
+Cargo only looks at the replace settings in the `Cargo.toml` manifest at the
+root of the workspace. Replace settings defined in dependencies will be
+ignored.
 
 ### `paths` overrides
 
@@ -335,9 +349,9 @@ crate, instead `[patch]` must be used in that situation. As a result usage of a
 path override is typically isolated to quick bug fixes rather than larger
 changes.
 
-Note: using a local configuration to override paths will only work for crates
-that have been published to [crates.io]. You cannot use this feature to tell
-Cargo how to find local unpublished crates.
+> **Note**: using a local configuration to override paths will only work for
+> crates that have been published to [crates.io]. You cannot use this feature
+> to tell Cargo how to find local unpublished crates.
 
 
 [crates.io]: https://crates.io/

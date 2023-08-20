@@ -58,8 +58,12 @@ However, caching the entire directory is often inefficient as it will contain do
 If we depend on a crate such as `serde 1.0.92` and cache the entire `$CARGO_HOME` we would actually cache the sources twice, the `serde-1.0.92.crate` inside `registry/cache` and the extracted `.rs` files of serde inside `registry/src`.
 That can unnecessarily slow down the build as downloading, extracting, recompressing and reuploading the cache to the CI servers can take some time.
 
-It should be sufficient to only cache the following directories across builds:
+If you wish to cache binaries installed with [`cargo install`], you need to cache the `bin/` folder and the `.crates.toml` and `.crates2.json` files.
 
+It should be sufficient to cache the following files and directories across builds:
+
+* `.crates.toml`
+* `.crates2.json`
 * `bin/`
 * `registry/index/`
 * `registry/cache/`

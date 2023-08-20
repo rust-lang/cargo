@@ -1,7 +1,7 @@
 CARGO-GENERATE-LOCKFILE(1)
 
 NAME
-       cargo-generate-lockfile - Generate the lockfile for a package
+       cargo-generate-lockfile — Generate the lockfile for a package
 
 SYNOPSIS
        cargo generate-lockfile [options]
@@ -17,10 +17,11 @@ DESCRIPTION
 OPTIONS
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -78,6 +79,27 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
 
        -h, --help
            Prints help information.

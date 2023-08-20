@@ -1,4 +1,5 @@
 use crate::core::compiler::CompileKind;
+use crate::util::config::JobsConfig;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
 use anyhow::{bail, Context as _};
@@ -6,10 +7,11 @@ use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::thread::available_parallelism;
 
 /// Configuration information for a rustc build.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BuildConfig {
     /// The requested kind of compilation for this session
     pub requested_kinds: Vec<CompileKind>,
@@ -33,7 +35,7 @@ pub struct BuildConfig {
     pub primary_unit_rustc: Option<ProcessBuilder>,
     /// A thread used by `cargo fix` to receive messages on a socket regarding
     /// the success/failure of applying fixes.
-    pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
+    pub rustfix_diagnostic_server: Arc<RefCell<Option<RustfixDiagnosticServer>>>,
     /// The directory to copy final artifacts to. Note that even if `out_dir` is
     /// set, a copy of artifacts still could be found a `target/(debug\release)`
     /// as usual.
@@ -44,6 +46,12 @@ pub struct BuildConfig {
     pub future_incompat_report: bool,
     /// Which kinds of build timings to output (empty if none).
     pub timing_outputs: Vec<TimingOutput>,
+}
+
+fn default_parallelism() -> CargoResult<u32> {
+    Ok(available_parallelism()
+        .context("failed to determine the amount of parallelism available")?
+        .get() as u32)
 }
 
 impl BuildConfig {
@@ -57,16 +65,13 @@ impl BuildConfig {
     /// * `target.$target.libfoo.metadata`
     pub fn new(
         config: &Config,
-        jobs: Option<u32>,
+        jobs: Option<JobsConfig>,
         keep_going: bool,
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
         let cfg = config.build_config()?;
         let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
-        if jobs == Some(0) {
-            anyhow::bail!("jobs must be at least 1")
-        }
         if jobs.is_some() && config.jobserver_from_env().is_some() {
             config.shell().warn(
                 "a `-j` argument was passed to Cargo but Cargo is \
@@ -74,14 +79,27 @@ impl BuildConfig {
                  its environment, ignoring the `-j` parameter",
             )?;
         }
-        let jobs = match jobs.or(cfg.jobs) {
-            Some(j) => j,
-            None => available_parallelism()
-                .context("failed to determine the amount of parallelism available")?
-                .get() as u32,
+        let jobs = match jobs.or(cfg.jobs.clone()) {
+            None => default_parallelism()?,
+            Some(value) => match value {
+                JobsConfig::Integer(j) => match j {
+                    0 => anyhow::bail!("jobs may not be 0"),
+                    j if j < 0 => (default_parallelism()? as i32 + j).max(1) as u32,
+                    j => j as u32,
+                },
+                JobsConfig::String(j) => match j.as_str() {
+                    "default" => default_parallelism()?,
+                    _ => {
+                        anyhow::bail!(
+			    format!("could not parse `{j}`. Number of parallel jobs should be `default` or a number."))
+                    }
+                },
+            },
         };
-        if jobs == 0 {
-            anyhow::bail!("jobs may not be 0");
+
+        if config.cli_unstable().build_std.is_some() && requested_kinds[0].is_host() {
+            // TODO: This should eventually be fixed.
+            anyhow::bail!("-Zbuild-std requires --target");
         }
 
         Ok(BuildConfig {
@@ -95,7 +113,7 @@ impl BuildConfig {
             build_plan: false,
             unit_graph: false,
             primary_unit_rustc: None,
-            rustfix_diagnostic_server: RefCell::new(None),
+            rustfix_diagnostic_server: Arc::new(RefCell::new(None)),
             export_dir: None,
             future_incompat_report: false,
             timing_outputs: Vec::new(),

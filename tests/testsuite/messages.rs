@@ -60,7 +60,7 @@ fn deduplicate_messages_basic() {
     let rustc_message = raw_rustc_output(&p, "src/lib.rs", &[]);
     let expected_output = format!(
         "{}\
-warning: `foo` (lib) generated 1 warning
+warning: `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
 warning: `foo` (lib test) generated 1 warning (1 duplicate)
 [FINISHED] [..]
 [EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
@@ -103,7 +103,7 @@ fn deduplicate_messages_mismatched_warnings() {
     let expected_output = format!(
         "\
 {}\
-warning: `foo` (lib) generated 1 warning
+warning: `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
 {}\
 warning: `foo` (lib test) generated 2 warnings (1 duplicate)
 [FINISHED] [..]
@@ -136,7 +136,7 @@ fn deduplicate_errors() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 [..]
-{}error: could not compile `foo` due to previous error
+{}error: could not compile `foo` (lib) due to previous error
 ",
             rustc_message
         ))

@@ -1,0 +1,9 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[build-dependencies]
+my-build-package1 = "99999.0.0"
+my-build-package2 = "99999.0.0"

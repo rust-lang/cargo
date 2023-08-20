@@ -1,7 +1,7 @@
 CARGO-VENDOR(1)
 
 NAME
-       cargo-vendor - Vendor all dependencies locally
+       cargo-vendor — Vendor all dependencies locally
 
 SYNOPSIS
        cargo vendor [options] [path]
@@ -25,8 +25,8 @@ OPTIONS
            times.
 
        --no-delete
-           Don't delete the "vendor" directory when vendoring, but rather keep
-           all existing contents of the vendor directory
+           Don’t delete the “vendor” directory when vendoring, but rather
+           keep all existing contents of the vendor directory
 
        --respect-source-config
            Instead of ignoring [source] configuration by default in
@@ -36,10 +36,10 @@ OPTIONS
        --versioned-dirs
            Normally versions are only added to disambiguate multiple versions
            of the same package. This option causes all directories in the
-           "vendor" directory to be versioned, which makes it easier to track
-           the history of vendored packages over time, and can help with the
-           performance of re-vendoring when only a subset of the packages have
-           changed.
+           “vendor” directory to be versioned, which makes it easier to
+           track the history of vendored packages over time, and can help with
+           the performance of re-vendoring when only a subset of the packages
+           have changed.
 
    Manifest Options
        --manifest-path path
@@ -74,10 +74,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -105,6 +106,27 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
+
        -h, --help
            Prints help information.
 
@@ -123,15 +145,15 @@ EXIT STATUS
        o  101: Cargo failed to complete.
 
 EXAMPLES
-       1. Vendor all dependencies into a local "vendor" folder
+       1. Vendor all dependencies into a local “vendor” folder
 
               cargo vendor
 
-       2. Vendor all dependencies into a local "third-party/vendor" folder
+       2. Vendor all dependencies into a local “third-party/vendor” folder
 
               cargo vendor third-party/vendor
 
-       3. Vendor the current workspace as well as another to "vendor"
+       3. Vendor the current workspace as well as another to “vendor”
 
               cargo vendor -s ../path/to/Cargo.toml
 

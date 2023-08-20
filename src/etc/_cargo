@@ -45,14 +45,18 @@ _cargo() {
         '(--bench --bin --example --lib)--test=[specify test name]:test name'
     )
 
-    parallel=(
+    jobs=(
         '(-j --jobs)'{-j+,--jobs=}'[specify number of parallel jobs]:jobs [# of CPUs]'
-        '--keep-going[do not abort build on first error]'
+    )
+
+    parallel=(
+        "${jobs[@]}"
+        '--keep-going[do not abort build on first build error]'
     )
 
     features=(
-        '(--all-features)--features=[specify features to activate]:feature'
-        '(--features)--all-features[activate all available features]'
+        '(--all-features)'{-F+,--features=}'[specify features to activate]:feature'
+        '(--features -F)--all-features[activate all available features]'
         "--no-default-features[don't build the default features]"
     )
 
@@ -66,14 +70,35 @@ _cargo() {
         args)
             curcontext="${curcontext%:*}-${words[1]}:"
             case ${words[1]} in
+                add)
+                    _arguments -s -A "^--" $common $manifest $registry \
+                        {-F+,--features=}'[specify features to activate]:feature' \
+                        "--default-features[enable the default features]" \
+                        "--no-default-features[don't enable the default features]" \
+                        "--optional[mark the dependency as optional]" \
+                        "--no-optional[mark the dependency as required]" \
+                        "--dev[add as a dev dependency]" \
+                        "--build[add as a build dependency]" \
+                        "--target=[add as a dependency to the given target platform]" \
+                        "--rename=[rename the dependency]" \
+                        "--dry-run[don't actually write the manifest]" \
+                        '--branch=[branch to use when adding from git]:branch' \
+                        '--git=[specify URL from which to add the crate]:url:_urls' \
+                        '--path=[local filesystem path to crate to add]: :_directories' \
+                        '--rev=[specific commit to use when adding from git]:commit' \
+                        '--tag=[tag to use when adding from git]:tag' \
+                        '1: :_guard "^-*" "crate name"' \
+                        '*:args:_default'
+                        ;;
                 bench)
-                    _arguments -s -A "^--" $common $parallel $features $msgfmt $triple $target $manifest \
+                    _arguments -s -A "^--" $common $jobs $features $msgfmt $triple $target $manifest \
                         "${command_scope_spec[@]}" \
                         '--all-targets[benchmark all targets]' \
                         "--no-run[compile but don't run]" \
                         '(-p --package)'{-p+,--package=}'[specify package to run benchmarks for]:package:_cargo_package_names' \
                         '--exclude=[exclude packages from the benchmark]:spec' \
                         '--no-fail-fast[run all benchmarks regardless of failure]' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]' \
                         '1: :_guard "^-*" "bench name"' \
                         '*:args:_default'
                         ;;
@@ -85,6 +110,7 @@ _cargo() {
                         '(-p --package)'{-p+,--package=}'[specify package to build]:package:_cargo_package_names' \
                         '--release[build in release mode]' \
                         '--build-plan[output the build plan in JSON]' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]'
                         ;;
 
                 check | c)
@@ -93,6 +119,7 @@ _cargo() {
                         "${command_scope_spec[@]}" \
                         '(-p --package)'{-p+,--package=}'[specify package to check]:package:_cargo_package_names' \
                         '--release[check in release mode]' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]'
                         ;;
 
                 clean)
@@ -109,6 +136,7 @@ _cargo() {
                         '--open[open docs in browser after the build]' \
                         '(-p --package)'{-p+,--package=}'[specify package to document]:package:_cargo_package_names' \
                         '--release[build artifacts in release mode, with optimizations]' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]'
                         ;;
 
                 fetch)
@@ -123,7 +151,8 @@ _cargo() {
                         '--edition-idioms[fix warnings to migrate to the idioms of an edition]' \
                         '--allow-no-vcs[fix code even if a VCS was not detected]' \
                         '--allow-dirty[fix code even if the working directory is dirty]' \
-                        '--allow-staged[fix code even if the working directory has staged changes]'
+                        '--allow-staged[fix code even if the working directory has staged changes]' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]'
                 ;;
 
                 generate-lockfile)
@@ -148,21 +177,22 @@ _cargo() {
                         '(-f --force)'{-f,--force}'[force overwriting of existing crates or binaries]' \
                         '--bin=[only install the specified binary]:binary' \
                         '--branch=[branch to use when installing from git]:branch' \
-                        '--debug[build in debug mode instead of release mode]' \
+                        '--debug[Build in debug mode (with the "dev" profile) instead of release mode]' \
                         '--example=[install the specified example instead of binaries]:example:_cargo_example_names' \
                         '--git=[specify URL from which to install the crate]:url:_urls' \
                         '--path=[local filesystem path to crate to install]: :_directories' \
                         '--rev=[specific commit to use when installing from git]:commit' \
                         '--root=[directory to install packages into]: :_directories' \
                         '--tag=[tag to use when installing from git]:tag' \
-                        '--vers=[version to install from crates.io]:version' \
+                        '--version=[version to install from crates.io]:version' \
                         '--list[list all installed packages and their versions]' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]' \
                         '*: :_guard "^-*" "crate"'
                         ;;
 
                 locate-project)
                     _arguments -s -S $common $manifest \
-                        '--message-format=[specify output representation]:output representation [json]:(json plain)'
+                        '--message-format=[specify output representation]:output representation [json]:(json plain)' \
                         '--workspace[locate Cargo.toml of the workspace root]'
                         ;;
 
@@ -221,12 +251,24 @@ _cargo() {
                     _arguments -s -S $common $manifest
                         ;;
 
+                remove | rm)
+                    _arguments -s -A "^--" $common $manifest \
+                        "--dev[remove as a dev dependency]" \
+                        "--build[remove as a build dependency]" \
+                        "--target=[remove as a dependency from the given target platform]" \
+                        "--dry-run[don't actually write the manifest]" \
+                        '(-p --package)'{-p+,--package=}'[package to remove from]:package:_cargo_package_names' \
+                        '1: :_guard "^-*" "crate name"' \
+                        '*:args:_default'
+                        ;;
+
                 run | r)
                     _arguments -s -S $common $parallel $features $msgfmt $triple $target $manifest \
                         '--example=[name of the bin target]:name:_cargo_example_names' \
                         '--bin=[name of the bin target]:name' \
                         '(-p --package)'{-p+,--package=}'[specify package with the target to run]:package:_cargo_package_names' \
                         '--release[build in release mode]' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]' \
                         '*: :_default'
                         ;;
 
@@ -236,6 +278,7 @@ _cargo() {
                         '--profile=[specify profile to build the selected target for]:profile' \
                         '--release[build artifacts in release mode, with optimizations]' \
                         "${command_scope_spec[@]}" \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]' \
                         '*: : _dispatch rustc rustc -default-'
                         ;;
 
@@ -246,6 +289,7 @@ _cargo() {
                         '(-p --package)'{-p+,--package=}'[specify package to document]:package:_cargo_package_names' \
                         '--release[build artifacts in release mode, with optimizations]' \
                         "${command_scope_spec[@]}" \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]' \
                         '*: : _dispatch rustdoc rustdoc -default-'
                         ;;
 
@@ -257,7 +301,7 @@ _cargo() {
                         ;;
 
                 test | t)
-                    _arguments -s -S $common $parallel $features $msgfmt $triple $target $manifest \
+                    _arguments -s -S $common $jobs $features $msgfmt $triple $target $manifest \
                         '--test=[test name]: :_cargo_test_names' \
                         '--no-fail-fast[run all tests regardless of failure]' \
                         '--no-run[compile but do not run]' \
@@ -271,6 +315,7 @@ _cargo() {
                         '(--lib --doc --bin --test --bench)--example=[example name]:_cargo_example_names' \
                         '(--lib --doc --bin --example --bench)--test=[test name]' \
                         '(--lib --doc --bin --example --test)--bench=[benchmark name]' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]' \
                         '*: :_default'
                         ;;
 
@@ -312,7 +357,7 @@ _cargo() {
 
                 yank)
                     _arguments -s -S $common $registry \
-                        '--vers=[specify yank version]:version' \
+                        '--version=[specify yank version]:version' \
                         '--undo[undo a yank, putting a version back into the index]' \
                         '--index=[specify registry index to yank from]:registry index' \
                         '--token=[specify API token to use when authenticating]:token' \

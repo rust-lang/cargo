@@ -10,7 +10,7 @@ fn features_are_quoted() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.1.0"
             authors = ["mikeyhew@example.com"]

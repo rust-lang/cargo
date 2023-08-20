@@ -96,31 +96,111 @@ fn clean_multiple_packages_in_glob_char_path() {
         .build();
     let foo_path = &p.build_dir().join("debug").join("deps");
 
+    #[cfg(not(target_env = "msvc"))]
+    let file_glob = "foo-*";
+
+    #[cfg(target_env = "msvc")]
+    let file_glob = "foo.pdb";
+
     // Assert that build artifacts are produced
     p.cargo("build").run();
-    assert_ne!(get_build_artifacts(foo_path).len(), 0);
+    assert_ne!(get_build_artifacts(foo_path, file_glob).len(), 0);
 
     // Assert that build artifacts are destroyed
     p.cargo("clean -p foo").run();
-    assert_eq!(get_build_artifacts(foo_path).len(), 0);
+    assert_eq!(get_build_artifacts(foo_path, file_glob).len(), 0);
 }
 
-fn get_build_artifacts(path: &PathBuf) -> Vec<Result<PathBuf, GlobError>> {
+fn get_build_artifacts(path: &PathBuf, file_glob: &str) -> Vec<Result<PathBuf, GlobError>> {
     let pattern = path.to_str().expect("expected utf-8 path");
     let pattern = glob::Pattern::escape(pattern);
 
-    #[cfg(not(target_env = "msvc"))]
-    const FILE: &str = "foo-*";
-
-    #[cfg(target_env = "msvc")]
-    const FILE: &str = "foo.pdb";
-
-    let path = PathBuf::from(pattern).join(FILE);
+    let path = PathBuf::from(pattern).join(file_glob);
     let path = path.to_str().expect("expected utf-8 path");
     glob::glob(path)
         .expect("expected glob to run")
         .into_iter()
         .collect::<Vec<Result<PathBuf, GlobError>>>()
+}
+
+#[cargo_test]
+fn clean_p_only_cleans_specified_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "foo",
+                    "foo_core",
+                    "foo-base",
+                ]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "//! foo")
+        .file("foo_core/Cargo.toml", &basic_manifest("foo_core", "0.1.0"))
+        .file("foo_core/src/lib.rs", "//! foo_core")
+        .file("foo-base/Cargo.toml", &basic_manifest("foo-base", "0.1.0"))
+        .file("foo-base/src/lib.rs", "//! foo-base")
+        .build();
+
+    let fingerprint_path = &p.build_dir().join("debug").join(".fingerprint");
+
+    p.cargo("build -p foo -p foo_core -p foo-base").run();
+
+    let mut fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Artifacts present for all after building
+    assert!(fingerprint_names.iter().any(|e| e == "foo"));
+    let num_foo_core_artifacts = fingerprint_names
+        .iter()
+        .filter(|&e| e == "foo_core")
+        .count();
+    assert_ne!(num_foo_core_artifacts, 0);
+    let num_foo_base_artifacts = fingerprint_names
+        .iter()
+        .filter(|&e| e == "foo-base")
+        .count();
+    assert_ne!(num_foo_base_artifacts, 0);
+
+    p.cargo("clean -p foo").run();
+
+    fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Cleaning `foo` leaves artifacts for the others
+    assert!(!fingerprint_names.iter().any(|e| e == "foo"));
+    assert_eq!(
+        fingerprint_names
+            .iter()
+            .filter(|&e| e == "foo_core")
+            .count(),
+        num_foo_core_artifacts,
+    );
+    assert_eq!(
+        fingerprint_names
+            .iter()
+            .filter(|&e| e == "foo-base")
+            .count(),
+        num_foo_core_artifacts,
+    );
+}
+
+fn get_fingerprints_without_hashes(fingerprint_path: &Path) -> Vec<String> {
+    std::fs::read_dir(fingerprint_path)
+        .expect("Build dir should be readable")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| {
+            let name = entry.file_name();
+            let name = name
+                .into_string()
+                .expect("fingerprint name should be UTF-8");
+            name.rsplit_once('-')
+                .expect("Name should contain at least one hyphen")
+                .0
+                .to_owned()
+        })
+        .collect()
 }
 
 #[cargo_test]
@@ -323,15 +403,22 @@ fn clean_verbose() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("build").run();
-    p.cargo("clean -p bar --verbose")
-        .with_stderr(
-            "\
-[REMOVING] [..]
-[REMOVING] [..]
-[REMOVING] [..]
-[REMOVING] [..]
+    let mut expected = String::from(
+        "\
+[REMOVING] [..]target/debug/.fingerprint/bar[..]
+[REMOVING] [..]target/debug/deps/libbar[..].rlib
+[REMOVING] [..]target/debug/deps/bar-[..].d
+[REMOVING] [..]target/debug/deps/libbar[..].rmeta
 ",
-        )
+    );
+    if cfg!(target_os = "macos") {
+        // Rust 1.69 has changed so that split-debuginfo=unpacked includes unpacked for rlibs.
+        for obj in p.glob("target/debug/deps/bar-*.o") {
+            expected.push_str(&format!("[REMOVING] [..]{}", obj.unwrap().display()));
+        }
+    }
+    p.cargo("clean -p bar --verbose")
+        .with_stderr_unordered(&expected)
         .run();
     p.cargo("build").run();
 }

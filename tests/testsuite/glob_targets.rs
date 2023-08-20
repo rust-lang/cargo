@@ -1,4 +1,4 @@
-//! Tests for target filter flags rith glob patterns.
+//! Tests for target filter flags with glob patterns.
 
 use cargo_test_support::{project, Project};
 

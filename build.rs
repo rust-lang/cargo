@@ -7,13 +7,15 @@ use std::process::Command;
 fn main() {
     commit_info();
     compress_man();
-    println!(
-        "cargo:rustc-env=RUST_HOST_TARGET={}",
-        std::env::var("TARGET").unwrap()
-    );
+    // ALLOWED: Accessing environment during build time shouldn't be prohibited.
+    #[allow(clippy::disallowed_methods)]
+    let target = std::env::var("TARGET").unwrap();
+    println!("cargo:rustc-env=RUST_HOST_TARGET={target}");
 }
 
 fn compress_man() {
+    // ALLOWED: Accessing environment during build time shouldn't be prohibited.
+    #[allow(clippy::disallowed_methods)]
     let out_path = Path::new(&std::env::var("OUT_DIR").unwrap()).join("man.tgz");
     let dst = fs::File::create(out_path).unwrap();
     let encoder = GzBuilder::new()
@@ -53,6 +55,7 @@ fn commit_info() {
         .arg("-1")
         .arg("--date=short")
         .arg("--format=%H %h %cd")
+        .arg("--abbrev=9")
         .output()
     {
         Ok(output) if output.status.success() => output,

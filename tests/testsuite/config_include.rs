@@ -1,15 +1,14 @@
 //! Tests for `include` config field.
 
 use super::config::{assert_error, write_config, write_config_at, ConfigBuilder};
-use cargo_test_support::{no_such_file_err_msg, paths, project};
-use std::fs;
+use cargo_test_support::{no_such_file_err_msg, project};
 
 #[cargo_test]
 fn gated() {
     // Requires -Z flag.
-    write_config("include='other'");
+    write_config("include='other.toml'");
     write_config_at(
-        ".cargo/other",
+        ".cargo/other.toml",
         "
         othervalue = 1
         ",
@@ -26,13 +25,13 @@ fn simple() {
     write_config_at(
         ".cargo/config",
         "
-        include = 'other'
+        include = 'other.toml'
         key1 = 1
         key2 = 2
         ",
     );
     write_config_at(
-        ".cargo/other",
+        ".cargo/other.toml",
         "
         key2 = 3
         key3 = 4
@@ -62,20 +61,21 @@ fn works_with_cli() {
         ",
     );
     let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 [..]
+[CHECKING] foo v0.0.1 [..]
 [RUNNING] `rustc [..]-W unused`
 [FINISHED] [..]
 ",
         )
         .run();
-    p.cargo("build -v -Z config-include")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -v -Z config-include")
+        .masquerade_as_nightly_cargo(&["config-include"])
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 [..]
+[DIRTY] foo v0.0.1 ([..]): the rustflags changed
+[CHECKING] foo v0.0.1 [..]
 [RUNNING] `rustc [..]-W unsafe-code -W unused`
 [FINISHED] [..]
 ",
@@ -84,39 +84,63 @@ fn works_with_cli() {
 }
 
 #[cargo_test]
-fn left_to_right() {
-    // How it merges multiple includes.
+fn left_to_right_bottom_to_top() {
+    // How it merges multiple nested includes.
     write_config_at(
         ".cargo/config",
         "
-        include = ['one', 'two']
-        primary = 1
+        include = ['left-middle.toml', 'right-middle.toml']
+        top = 1
         ",
     );
     write_config_at(
-        ".cargo/one",
+        ".cargo/right-middle.toml",
         "
-        one = 1
-        primary = 2
+        include = 'right-bottom.toml'
+        top = 0
+        right-middle = 0
         ",
     );
     write_config_at(
-        ".cargo/two",
+        ".cargo/right-bottom.toml",
         "
-        two = 2
-        primary = 3
+        top = -1
+        right-middle = -1
+        right-bottom = -1
+        ",
+    );
+    write_config_at(
+        ".cargo/left-middle.toml",
+        "
+        include = 'left-bottom.toml'
+        top = -2
+        right-middle = -2
+        right-bottom = -2
+        left-middle = -2
+        ",
+    );
+    write_config_at(
+        ".cargo/left-bottom.toml",
+        "
+        top = -3
+        right-middle = -3
+        right-bottom = -3
+        left-middle = -3
+        left-bottom = -3
         ",
     );
     let config = ConfigBuilder::new().unstable_flag("config-include").build();
-    assert_eq!(config.get::<i32>("primary").unwrap(), 1);
-    assert_eq!(config.get::<i32>("one").unwrap(), 1);
-    assert_eq!(config.get::<i32>("two").unwrap(), 2);
+    assert_eq!(config.get::<i32>("top").unwrap(), 1);
+    assert_eq!(config.get::<i32>("right-middle").unwrap(), 0);
+    assert_eq!(config.get::<i32>("right-bottom").unwrap(), -1);
+    assert_eq!(config.get::<i32>("left-middle").unwrap(), -2);
+    assert_eq!(config.get::<i32>("left-bottom").unwrap(), -3);
 }
 
 #[cargo_test]
 fn missing_file() {
     // Error when there's a missing file.
-    write_config("include='missing'");
+    write_config("include='missing.toml'");
     let config = ConfigBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -127,10 +151,10 @@ fn missing_file() {
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `missing` from `[..]/.cargo/config`
+  failed to load config include `missing.toml` from `[..]/.cargo/config`
 
 Caused by:
-  failed to read configuration file `[..]/.cargo/missing`
+  failed to read configuration file `[..]/.cargo/missing.toml`
 
 Caused by:
   {}",
@@ -140,11 +164,9 @@ Caused by:
 }
 
 #[cargo_test]
-fn cycle() {
-    // Detects a cycle.
-    write_config_at(".cargo/config", "include='one'");
-    write_config_at(".cargo/one", "include='two'");
-    write_config_at(".cargo/two", "include='config'");
+fn wrong_file_extension() {
+    // Error when it doesn't end with `.toml`.
+    write_config("include='config.png'");
     let config = ConfigBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -154,16 +176,36 @@ fn cycle() {
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `one` from `[..]/.cargo/config`
+  expected a config include path ending with `.toml`, but found `config.png` from `[..]/.cargo/config`
+",
+    );
+}
+
+#[cargo_test]
+fn cycle() {
+    // Detects a cycle.
+    write_config_at(".cargo/config.toml", "include='one.toml'");
+    write_config_at(".cargo/one.toml", "include='two.toml'");
+    write_config_at(".cargo/two.toml", "include='config.toml'");
+    let config = ConfigBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+could not load Cargo configuration
 
 Caused by:
-  failed to load config include `two` from `[..]/.cargo/one`
+  failed to load config include `one.toml` from `[..]/.cargo/config.toml`
 
 Caused by:
-  failed to load config include `config` from `[..]/.cargo/two`
+  failed to load config include `two.toml` from `[..]/.cargo/one.toml`
 
 Caused by:
-  config `include` cycle detected with path `[..]/.cargo/config`",
+  failed to load config include `config.toml` from `[..]/.cargo/two.toml`
+
+Caused by:
+  config `include` cycle detected with path `[..]/.cargo/config.toml`",
     );
 }
 
@@ -178,10 +220,10 @@ fn cli_include() {
         bar = 2
         ",
     );
-    write_config_at(".cargo/config-foo", "foo = 2");
+    write_config_at(".cargo/config-foo.toml", "foo = 2");
     let config = ConfigBuilder::new()
         .unstable_flag("config-include")
-        .config_arg("include='.cargo/config-foo'")
+        .config_arg("include='.cargo/config-foo.toml'")
         .build();
     assert_eq!(config.get::<i32>("foo").unwrap(), 2);
     assert_eq!(config.get::<i32>("bar").unwrap(), 2);
@@ -209,7 +251,7 @@ fn cli_include_failed() {
     // Error message when CLI include fails to load.
     let config = ConfigBuilder::new()
         .unstable_flag("config-include")
-        .config_arg("include='foobar'")
+        .config_arg("include='foobar.toml'")
         .build_err();
     assert_error(
         config.unwrap_err(),
@@ -218,10 +260,10 @@ fn cli_include_failed() {
 failed to load --config include
 
 Caused by:
-  failed to load config include `foobar` from `--config cli option`
+  failed to load config include `foobar.toml` from `--config cli option`
 
 Caused by:
-  failed to read configuration file `[..]/foobar`
+  failed to read configuration file `[..]/foobar.toml`
 
 Caused by:
   {}",
@@ -235,14 +277,14 @@ fn cli_merge_failed() {
     // Error message when CLI include merge fails.
     write_config("foo = ['a']");
     write_config_at(
-        ".cargo/other",
+        ".cargo/other.toml",
         "
         foo = 'b'
         ",
     );
     let config = ConfigBuilder::new()
         .unstable_flag("config-include")
-        .config_arg("include='.cargo/other'")
+        .config_arg("include='.cargo/other.toml'")
         .build_err();
     // Maybe this error message should mention it was from an include file?
     assert_error(
@@ -251,38 +293,35 @@ fn cli_merge_failed() {
 failed to merge --config key `foo` into `[..]/.cargo/config`
 
 Caused by:
-  failed to merge config value from `[..]/.cargo/other` into `[..]/.cargo/config`: \
+  failed to merge config value from `[..]/.cargo/other.toml` into `[..]/.cargo/config`: \
   expected array, but found string",
     );
 }
 
 #[cargo_test]
-fn cli_path() {
-    // --config path_to_file
-    fs::write(paths::root().join("myconfig.toml"), "key = 123").unwrap();
+fn cli_include_take_priority_over_env() {
+    write_config_at(".cargo/include.toml", "k='include'");
+
+    // k=env
+    let config = ConfigBuilder::new().env("CARGO_K", "env").build();
+    assert_eq!(config.get::<String>("k").unwrap(), "env");
+
+    // k=env
+    // --config 'include=".cargo/include.toml"'
     let config = ConfigBuilder::new()
-        .cwd(paths::root())
+        .env("CARGO_K", "env")
         .unstable_flag("config-include")
-        .config_arg("myconfig.toml")
+        .config_arg("include='.cargo/include.toml'")
         .build();
-    assert_eq!(config.get::<u32>("key").unwrap(), 123);
+    assert_eq!(config.get::<String>("k").unwrap(), "include");
 
+    // k=env
+    // --config '.cargo/foo.toml'
+    write_config_at(".cargo/foo.toml", "include='include.toml'");
     let config = ConfigBuilder::new()
+        .env("CARGO_K", "env")
         .unstable_flag("config-include")
-        .config_arg("missing.toml")
-        .build_err();
-    assert_error(
-        config.unwrap_err(),
-        "\
-failed to parse value from --config argument `missing.toml` as a dotted key expression
-
-Caused by:
-  TOML parse error at line 1, column 13
-  |
-1 | missing.toml
-  |             ^
-Unexpected end of input
-Expected `.` or `=`
-",
-    );
+        .config_arg(".cargo/foo.toml")
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "include");
 }

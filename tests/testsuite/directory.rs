@@ -103,11 +103,11 @@ fn simple() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
         )
@@ -188,7 +188,9 @@ fn simple_install_fail() {
         .with_status(101)
         .with_stderr(
             "  Installing bar v0.1.0
-error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`
+error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`.
+To reuse those artifacts with a future compilation, set the environment variable \
+`CARGO_TARGET_DIR` to that path.
 
 Caused by:
   no matching package found
@@ -272,7 +274,7 @@ fn not_there() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -319,11 +321,11 @@ fn multiple() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
         )
@@ -355,14 +357,14 @@ fn crates_io_then_directory() {
         .file("src/lib.rs", "pub fn bar() -> u32 { 0 }")
         .publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 ([..])
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
         )
@@ -376,11 +378,11 @@ fn crates_io_then_directory() {
     v.cksum.package = Some(cksum);
     v.build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 ([CWD])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
         )
@@ -407,7 +409,7 @@ fn crates_io_then_bad_checksum() {
 
     Package::new("bar", "0.1.0").publish();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
     setup();
 
     VendorPackage::new("bar")
@@ -415,7 +417,7 @@ fn crates_io_then_bad_checksum() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -464,7 +466,7 @@ fn bad_file_checksum() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -509,7 +511,7 @@ fn only_dot_files_ok() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -542,7 +544,7 @@ fn random_files_ok() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -577,7 +579,7 @@ fn git_lock_file_doesnt_change() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     let lock1 = p.read_lockfile();
 
@@ -598,11 +600,11 @@ fn git_lock_file_doesnt_change() {
         )
     ));
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] [..]
-[COMPILING] [..]
+[CHECKING] [..]
+[CHECKING] [..]
 [FINISHED] [..]
 ",
         )
@@ -650,7 +652,7 @@ fn git_override_requires_lockfile() {
         "#
     ));
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -719,12 +721,12 @@ fn workspace_different_locations() {
         )
         .build();
 
-    p.cargo("build").cwd("foo").run();
-    p.cargo("build")
+    p.cargo("check").cwd("foo").run();
+    p.cargo("check")
         .cwd("bar")
         .with_stderr(
             "\
-[COMPILING] bar [..]
+[CHECKING] bar [..]
 [FINISHED] [..]
 ",
         )
@@ -759,7 +761,9 @@ fn version_missing() {
         .with_stderr(
             "\
 [INSTALLING] bar v0.1.0
-error: failed to compile [..]
+error: failed to compile [..], intermediate artifacts can be found at `[..]`.
+To reuse those artifacts with a future compilation, set the environment variable \
+`CARGO_TARGET_DIR` to that path.
 
 Caused by:
   failed to select a version for the requirement `foo = \"^2\"`

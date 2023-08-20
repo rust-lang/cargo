@@ -482,7 +482,7 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
 fn cdylib_and_rlib() {
     let p = project_with_dep("'cdylib', 'rlib'");
     let output = p.cargo("build --release -v").exec_with_output().unwrap();
-    // `registry` is ObjectAndBitcode because because it needs Object for the
+    // `registry` is ObjectAndBitcode because it needs Object for the
     // rlib, and Bitcode for the cdylib (which doesn't support LTO).
     verify_lto(
         &output,
@@ -595,6 +595,7 @@ fn dylib() {
 [COMPILING] registry-shared v0.0.1
 [FRESH] registry v0.0.1
 [RUNNING] `rustc --crate-name registry_shared [..]-C embed-bitcode=no[..]
+[DIRTY] bar v0.0.0 ([..]): dependency info changed
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..]--crate-type dylib [..]-C embed-bitcode=no[..]
 [FINISHED] [..]
@@ -612,6 +613,7 @@ fn dylib() {
 [FRESH] registry-shared v0.0.1
 [COMPILING] registry v0.0.1
 [RUNNING] `rustc --crate-name registry [..]
+[DIRTY] bar v0.0.0 ([..]): dependency info changed
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..]--crate-type dylib [..]-C embed-bitcode=no[..]
 [RUNNING] `rustc --crate-name bar [..]-C lto [..]--test[..]
@@ -625,6 +627,11 @@ fn dylib() {
 }
 
 #[cargo_test]
+// This is currently broken on windows-gnu, see https://github.com/rust-lang/rust/issues/109797
+#[cfg_attr(
+    all(target_os = "windows", target_env = "gnu"),
+    ignore = "windows-gnu not working"
+)]
 fn test_profile() {
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "pub fn foo() -> i32 { 123 } ")

@@ -1,84 +1,104 @@
 //! Tests for the `cargo logout` command.
 
-use cargo_test_support::install::cargo_home;
+use super::login::check_token;
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::TestRegistry;
 use cargo_test_support::{cargo_process, registry};
-use std::fs;
-use toml_edit::easy as toml;
 
-#[cargo_test]
-fn gated() {
-    registry::init();
-    cargo_process("logout")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] the `cargo logout` command is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/8933 for more information about \
-the `cargo logout` command.
-",
-        )
-        .run();
-}
-
-/// Checks whether or not the token is set for the given token.
-fn check_config_token(registry: Option<&str>, should_be_set: bool) {
-    let credentials = cargo_home().join("credentials");
-    let contents = fs::read_to_string(&credentials).unwrap();
-    let toml: toml::Value = contents.parse().unwrap();
-    if let Some(registry) = registry {
-        assert_eq!(
-            toml.get("registries")
-                .and_then(|registries| registries.get(registry))
-                .and_then(|registry| registry.get("token"))
-                .is_some(),
-            should_be_set
-        );
-    } else {
-        assert_eq!(
-            toml.get("registry")
-                .and_then(|registry| registry.get("token"))
-                .is_some(),
-            should_be_set
-        );
+fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str, note: &str) {
+    let msg = reg.unwrap_or("crates-io");
+    check_token(Some(registry.token()), reg);
+    let mut cargo = cargo_process(&format!("logout {}", flag));
+    if reg.is_none() {
+        cargo.replace_crates_io(registry.index_url());
     }
-}
-
-fn simple_logout_test(reg: Option<&str>, flag: &str) {
-    registry::init();
-    let msg = reg.unwrap_or("crates.io");
-    check_config_token(reg, true);
-    cargo_process(&format!("logout -Z unstable-options {}", flag))
-        .masquerade_as_nightly_cargo()
+    cargo
         .with_stderr(&format!(
             "\
-[UPDATING] [..]
-[LOGOUT] token for `{}` has been removed from local storage
-",
-            msg
+[LOGOUT] token for `{msg}` has been removed from local storage
+[NOTE] This does not revoke the token on the registry server.\n    \
+If you need to revoke the token, visit {note} and follow the instructions there.
+"
         ))
         .run();
-    check_config_token(reg, false);
+    check_token(None, reg);
 
-    cargo_process(&format!("logout -Z unstable-options {}", flag))
-        .masquerade_as_nightly_cargo()
-        .with_stderr(&format!(
-            "\
-[LOGOUT] not currently logged in to `{}`
-",
-            msg
-        ))
+    let mut cargo = cargo_process(&format!("logout {}", flag));
+    if reg.is_none() {
+        cargo.replace_crates_io(registry.index_url());
+    }
+    cargo
+        .with_stderr(&format!("[LOGOUT] not currently logged in to `{msg}`"))
         .run();
-    check_config_token(reg, false);
+    check_token(None, reg);
 }
 
 #[cargo_test]
-fn default_registry() {
-    simple_logout_test(None, "");
+fn default_registry_unconfigured() {
+    let registry = registry::init();
+    simple_logout_test(&registry, None, "", "<https://crates.io/me>");
 }
 
 #[cargo_test]
 fn other_registry() {
-    registry::alt_init();
-    simple_logout_test(Some("alternative"), "--registry alternative");
+    let registry = registry::alt_init();
+    simple_logout_test(
+        &registry,
+        Some("alternative"),
+        "--registry alternative",
+        "the `alternative` website",
+    );
+    // It should not touch crates.io.
+    check_token(Some("sekrit"), None);
+}
+
+#[cargo_test]
+fn default_registry_configured() {
+    // When registry.default is set, logout should use that one when
+    // --registry is not used.
+    let cargo_home = paths::home().join(".cargo");
+    cargo_home.mkdir_p();
+    cargo_util::paths::write(
+        &cargo_home.join("config.toml"),
+        r#"
+            [registry]
+            default = "dummy-registry"
+
+            [registries.dummy-registry]
+            index = "https://127.0.0.1/index"
+        "#,
+    )
+    .unwrap();
+    cargo_util::paths::write(
+        &cargo_home.join("credentials.toml"),
+        r#"
+        [registry]
+        token = "crates-io-token"
+
+        [registries.dummy-registry]
+        token = "dummy-token"
+        "#,
+    )
+    .unwrap();
+    check_token(Some("dummy-token"), Some("dummy-registry"));
+    check_token(Some("crates-io-token"), None);
+
+    cargo_process("logout -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["cargo-logout"])
+        .with_stderr(
+            "\
+[LOGOUT] token for `dummy-registry` has been removed from local storage
+[NOTE] This does not revoke the token on the registry server.
+    If you need to revoke the token, visit the `dummy-registry` website \
+    and follow the instructions there.
+",
+        )
+        .run();
+    check_token(None, Some("dummy-registry"));
+    check_token(Some("crates-io-token"), None);
+
+    cargo_process("logout -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["cargo-logout"])
+        .with_stderr("[LOGOUT] not currently logged in to `dummy-registry`")
+        .run();
 }

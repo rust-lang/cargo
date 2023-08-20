@@ -1,20 +1,20 @@
 use super::paths;
 use anyhow::{Context, Result};
-use crypto_hash::{Algorithm, Hasher};
+use sha2::{Digest, Sha256 as Sha2_sha256};
 use std::fs::File;
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::path::Path;
 
-pub struct Sha256(Hasher);
+pub struct Sha256(Sha2_sha256);
 
 impl Sha256 {
     pub fn new() -> Sha256 {
-        let hasher = Hasher::new(Algorithm::SHA256);
+        let hasher = Sha2_sha256::new();
         Sha256(hasher)
     }
 
     pub fn update(&mut self, bytes: &[u8]) -> &mut Sha256 {
-        let _ = self.0.write_all(bytes);
+        let _ = self.0.update(bytes);
         self
     }
 
@@ -38,10 +38,7 @@ impl Sha256 {
     }
 
     pub fn finish(&mut self) -> [u8; 32] {
-        let mut ret = [0u8; 32];
-        let data = self.0.finish();
-        ret.copy_from_slice(&data[..]);
-        ret
+        self.0.finalize_reset().into()
     }
 
     pub fn finish_hex(&mut self) -> String {

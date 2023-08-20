@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 use cargo::core::compiler::future_incompat::{OnDiskReports, REPORT_PREAMBLE};
 use cargo::drop_println;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("report")
         .about("Generate and display various kinds of reports")
         .after_help("Run `cargo help report` for more detailed information.\n")
@@ -25,7 +25,7 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     match args.subcommand() {
-        Some(("future-incompatibilities", args)) => report_future_incompatibilies(config, args),
+        Some(("future-incompatibilities", args)) => report_future_incompatibilities(config, args),
         Some((cmd, _)) => {
             unreachable!("unexpected command {}", cmd)
         }
@@ -35,13 +35,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 }
 
-fn report_future_incompatibilies(config: &Config, args: &ArgMatches) -> CliResult {
+fn report_future_incompatibilities(config: &Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let reports = OnDiskReports::load(&ws)?;
     let id = args
         .value_of_u32("id")?
         .unwrap_or_else(|| reports.last_id());
-    let krate = args.value_of("package");
+    let krate = args.get_one::<String>("package").map(String::as_str);
     let report = reports.get_report(id, config, krate)?;
     drop_println!(config, "{}", REPORT_PREAMBLE);
     drop(config.shell().print_ansi_stdout(report.as_bytes()));

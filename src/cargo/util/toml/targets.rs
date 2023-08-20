@@ -18,6 +18,7 @@ use super::{
     PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
     TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };
+use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
 use crate::util::errors::CargoResult;
@@ -623,10 +624,10 @@ fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
 }
 
 fn infer_any(entry: &DirEntry) -> Option<(String, PathBuf)> {
-    if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
-        infer_file(entry)
-    } else if entry.file_type().map(|t| t.is_dir()).ok() == Some(true) {
+    if entry.file_type().map_or(false, |t| t.is_dir()) {
         infer_subdirectory(entry)
+    } else if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
+        infer_file(entry)
     } else {
         None
     }
@@ -808,6 +809,11 @@ fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
         .set_benched(toml.bench.unwrap_or_else(|| t2.benched()))
         .set_harness(toml.harness.unwrap_or_else(|| t2.harness()))
         .set_proc_macro(toml.proc_macro().unwrap_or_else(|| t2.proc_macro()))
+        .set_doc_scrape_examples(match toml.doc_scrape_examples {
+            None => RustdocScrapeExamples::Unset,
+            Some(false) => RustdocScrapeExamples::Disabled,
+            Some(true) => RustdocScrapeExamples::Enabled,
+        })
         .set_for_host(match (toml.plugin, toml.proc_macro()) {
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,

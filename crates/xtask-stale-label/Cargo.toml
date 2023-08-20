@@ -1,0 +1,8 @@
+[package]
+name = "xtask-stale-label"
+version = "0.0.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+toml_edit.workspace = true

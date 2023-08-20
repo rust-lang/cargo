@@ -3,7 +3,7 @@
 use crate::util::{header_text, parse_name_and_section};
 use crate::EventIter;
 use anyhow::{bail, Error};
-use pulldown_cmark::{Alignment, Event, LinkType, Tag};
+use pulldown_cmark::{Alignment, Event, HeadingLevel, LinkType, Tag};
 use std::fmt::Write;
 use url::Url;
 
@@ -122,10 +122,10 @@ impl<'e> ManRenderer<'e> {
                                 self.output.push_str(".sp\n");
                             }
                         }
-                        Tag::Heading(n) => {
-                            if n == 1 {
+                        Tag::Heading(level, ..) => {
+                            if level == HeadingLevel::H1 {
                                 self.push_top_header()?;
-                            } else if n == 2 {
+                            } else if level == HeadingLevel::H2 {
                                 // Section header
                                 let text = header_text(&mut self.parser)?;
                                 self.flush();
@@ -255,7 +255,7 @@ impl<'e> ManRenderer<'e> {
                 Event::End(tag) => {
                     match &tag {
                         Tag::Paragraph => self.flush(),
-                        Tag::Heading(_n) => {}
+                        Tag::Heading(..) => {}
                         Tag::BlockQuote => {
                             self.flush();
                             // restore left margin, restore line length
@@ -400,12 +400,20 @@ impl<'e> ManRenderer<'e> {
 }
 
 fn escape(s: &str) -> Result<String, Error> {
+    // Note: Possible source on output escape sequences: https://man7.org/linux/man-pages/man7/groff_char.7.html.
+    //       Otherwise, use generic escaping in the form `\[u1EE7]` or `\[u1F994]`.
+
     let mut replaced = s
         .replace('\\', "\\(rs")
         .replace('-', "\\-")
         .replace('\u{00A0}', "\\ ") // non-breaking space (non-stretchable)
         .replace('–', "\\[en]") // \u{2013} en-dash
         .replace('—', "\\[em]") // \u{2014} em-dash
+        .replace('‘', "\\[oq]") // \u{2018} left single quote
+        .replace('’', "\\[cq]") // \u{2019} right single quote or apostrophe
+        .replace('“', "\\[lq]") // \u{201C} left double quote
+        .replace('”', "\\[rq]") // \u{201D} right double quote
+        .replace('…', "\\[u2026]") // \u{2026} ellipsis
         .replace('│', "|") // \u{2502} box drawing light vertical (could use \[br])
         .replace('├', "|") // \u{251C} box drawings light vertical and right
         .replace('└', "`") // \u{2514} box drawings light up and right
@@ -413,8 +421,6 @@ fn escape(s: &str) -> Result<String, Error> {
     ;
     if replaced.starts_with('.') {
         replaced = format!("\\&.{}", &replaced[1..]);
-    } else if replaced.starts_with('\'') {
-        replaced = format!("\\(aq{}", &replaced[1..]);
     }
 
     if let Some(ch) = replaced.chars().find(|ch| {

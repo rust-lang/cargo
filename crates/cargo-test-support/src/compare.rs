@@ -16,6 +16,11 @@
 //!   `[WARNING]`) to match cargo's "status" output and allows you to ignore
 //!   the alignment. See the source of `substitute_macros` for a complete list
 //!   of substitutions.
+//! - `[DIRTY-MSVC]` (only when the line starts with it) would be replaced by
+//!   `[DIRTY]` when `cfg(target_env = "msvc")` or the line will be ignored otherwise.
+//!   Tests that work around [issue 7358](https://github.com/rust-lang/cargo/issues/7358)
+//!   can use this to avoid duplicating the `with_stderr` call like:
+//!   `if cfg!(target_env = "msvc") {e.with_stderr("...[DIRTY]...");} else {e.with_stderr("...");}`.
 //!
 //! # Normalization
 //!
@@ -41,6 +46,57 @@ use std::path::Path;
 use std::str;
 use url::Url;
 
+/// Default `snapbox` Assertions
+///
+/// # Snapshots
+///
+/// Updating of snapshots is controlled with the `SNAPSHOTS` environment variable:
+///
+/// - `skip`: do not run the tests
+/// - `ignore`: run the tests but ignore their failure
+/// - `verify`: run the tests
+/// - `overwrite`: update the snapshots based on the output of the tests
+///
+/// # Patterns
+///
+/// - `[..]` is a character wildcard, stopping at line breaks
+/// - `\n...\n` is a multi-line wildcard
+/// - `[EXE]` matches the exe suffix for the current platform
+/// - `[ROOT]` matches [`paths::root()`][crate::paths::root]
+/// - `[ROOTURL]` matches [`paths::root()`][crate::paths::root] as a URL
+///
+/// # Normalization
+///
+/// In addition to the patterns described above, text is normalized
+/// in such a way to avoid unwanted differences. The normalizations are:
+///
+/// - Backslashes are converted to forward slashes to deal with Windows paths.
+///   This helps so that all tests can be written assuming forward slashes.
+///   Other heuristics are applied to try to ensure Windows-style paths aren't
+///   a problem.
+/// - Carriage returns are removed, which can help when running on Windows.
+pub fn assert_ui() -> snapbox::Assert {
+    let root = paths::root();
+    // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
+    // put in the users output, rather than hidden in the variable
+    let root_url = url::Url::from_file_path(&root).unwrap().to_string();
+    let root = root.display().to_string();
+
+    let mut subs = snapbox::Substitutions::new();
+    subs.extend([
+        (
+            "[EXE]",
+            std::borrow::Cow::Borrowed(std::env::consts::EXE_SUFFIX),
+        ),
+        ("[ROOT]", std::borrow::Cow::Owned(root)),
+        ("[ROOTURL]", std::borrow::Cow::Owned(root_url)),
+    ])
+    .unwrap();
+    snapbox::Assert::new()
+        .action_env(snapbox::DEFAULT_ACTION_ENV)
+        .substitutions(subs)
+}
+
 /// Normalizes the output so that it can be compared against the expected value.
 fn normalize_actual(actual: &str, cwd: Option<&Path>) -> String {
     // It's easier to read tabs in outputs if they don't show up as literal
@@ -57,7 +113,9 @@ fn normalize_actual(actual: &str, cwd: Option<&Path>) -> String {
 
 /// Normalizes the expected string so that it can be compared against the actual output.
 fn normalize_expected(expected: &str, cwd: Option<&Path>) -> String {
-    let expected = substitute_macros(expected);
+    let expected = replace_dirty_msvc(expected);
+    let expected = substitute_macros(&expected);
+
     if cfg!(windows) {
         normalize_windows(&expected, cwd)
     } else {
@@ -68,6 +126,29 @@ fn normalize_expected(expected: &str, cwd: Option<&Path>) -> String {
         let expected = expected.replace("[ROOT]", &paths::root().display().to_string());
         expected
     }
+}
+
+fn replace_dirty_msvc_impl(s: &str, is_msvc: bool) -> String {
+    if is_msvc {
+        s.replace("[DIRTY-MSVC]", "[DIRTY]")
+    } else {
+        use itertools::Itertools;
+
+        let mut new = s
+            .lines()
+            .filter(|it| !it.starts_with("[DIRTY-MSVC]"))
+            .join("\n");
+
+        if s.ends_with("\n") {
+            new.push_str("\n");
+        }
+
+        new
+    }
+}
+
+fn replace_dirty_msvc(s: &str) -> String {
+    replace_dirty_msvc_impl(s, cfg!(target_env = "msvc"))
 }
 
 /// Normalizes text for both actual and expected strings on Windows.
@@ -111,21 +192,27 @@ fn substitute_macros(input: &str) -> String {
         ("[CHECKING]", "    Checking"),
         ("[COMPLETED]", "   Completed"),
         ("[CREATED]", "     Created"),
+        ("[CREDENTIAL]", "  Credential"),
+        ("[DOWNGRADING]", " Downgrading"),
         ("[FINISHED]", "    Finished"),
         ("[ERROR]", "error:"),
         ("[WARNING]", "warning:"),
         ("[NOTE]", "note:"),
         ("[HELP]", "help:"),
         ("[DOCUMENTING]", " Documenting"),
+        ("[SCRAPING]", "    Scraping"),
         ("[FRESH]", "       Fresh"),
+        ("[DIRTY]", "       Dirty"),
         ("[UPDATING]", "    Updating"),
         ("[ADDING]", "      Adding"),
         ("[REMOVING]", "    Removing"),
         ("[DOCTEST]", "   Doc-tests"),
         ("[PACKAGING]", "   Packaging"),
+        ("[PACKAGED]", "    Packaged"),
         ("[DOWNLOADING]", " Downloading"),
         ("[DOWNLOADED]", "  Downloaded"),
         ("[UPLOADING]", "   Uploading"),
+        ("[UPLOADED]", "    Uploaded"),
         ("[VERIFYING]", "   Verifying"),
         ("[ARCHIVING]", "   Archiving"),
         ("[INSTALLING]", "  Installing"),
@@ -145,6 +232,9 @@ fn substitute_macros(input: &str) -> String {
         ("[OWNER]", "       Owner"),
         ("[MIGRATING]", "   Migrating"),
         ("[EXECUTABLE]", "  Executable"),
+        ("[SKIPPING]", "    Skipping"),
+        ("[WAITING]", "     Waiting"),
+        ("[PUBLISHED]", "   Published"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {
@@ -581,4 +671,115 @@ fn wild_str_cmp() {
     for (a, b) in &[("[..]b", "c"), ("b", "c"), ("b", "cb")] {
         assert_ne!(WildStr::new(a), WildStr::new(b));
     }
+}
+
+#[test]
+fn dirty_msvc() {
+    let case = |expected: &str, wild: &str, msvc: bool| {
+        assert_eq!(expected, &replace_dirty_msvc_impl(wild, msvc));
+    };
+
+    // no replacements
+    case("aa", "aa", false);
+    case("aa", "aa", true);
+
+    // with replacements
+    case(
+        "\
+[DIRTY] a",
+        "\
+[DIRTY-MSVC] a",
+        true,
+    );
+    case(
+        "",
+        "\
+[DIRTY-MSVC] a",
+        false,
+    );
+    case(
+        "\
+[DIRTY] a
+[COMPILING] a",
+        "\
+[DIRTY-MSVC] a
+[COMPILING] a",
+        true,
+    );
+    case(
+        "\
+[COMPILING] a",
+        "\
+[DIRTY-MSVC] a
+[COMPILING] a",
+        false,
+    );
+
+    // test trailing newline behavior
+    case(
+        "\
+A
+B
+", "\
+A
+B
+", true,
+    );
+
+    case(
+        "\
+A
+B
+", "\
+A
+B
+", false,
+    );
+
+    case(
+        "\
+A
+B", "\
+A
+B", true,
+    );
+
+    case(
+        "\
+A
+B", "\
+A
+B", false,
+    );
+
+    case(
+        "\
+[DIRTY] a
+",
+        "\
+[DIRTY-MSVC] a
+",
+        true,
+    );
+    case(
+        "\n",
+        "\
+[DIRTY-MSVC] a
+",
+        false,
+    );
+
+    case(
+        "\
+[DIRTY] a",
+        "\
+[DIRTY-MSVC] a",
+        true,
+    );
+    case(
+        "",
+        "\
+[DIRTY-MSVC] a",
+        false,
+    );
 }

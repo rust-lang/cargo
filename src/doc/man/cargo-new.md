@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-new - Create a new Cargo package
+cargo-new --- Create a new Cargo package
 
 ## SYNOPSIS
 

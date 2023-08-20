@@ -4,20 +4,20 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-install \- Build and install a Rust binary
+cargo\-install \[em] Build and install a Rust binary
 .SH "SYNOPSIS"
-\fBcargo install\fR [\fIoptions\fR] \fIcrate\fR\&...
+\fBcargo install\fR [\fIoptions\fR] \fIcrate\fR[@\fIversion\fR]\[u2026]
 .br
 \fBcargo install\fR [\fIoptions\fR] \fB\-\-path\fR \fIpath\fR
 .br
-\fBcargo install\fR [\fIoptions\fR] \fB\-\-git\fR \fIurl\fR [\fIcrate\fR\&...]
+\fBcargo install\fR [\fIoptions\fR] \fB\-\-git\fR \fIurl\fR [\fIcrate\fR\[u2026]]
 .br
 \fBcargo install\fR [\fIoptions\fR] \fB\-\-list\fR
 .SH "DESCRIPTION"
-This command manages Cargo's local set of installed binary crates. Only
+This command manages Cargo\[cq]s local set of installed binary crates. Only
 packages which have executable \fB[[bin]]\fR or \fB[[example]]\fR targets can be
-installed, and all executables are installed into the installation root's
-\fBbin\fR folder.
+installed, and all executables are installed into the installation root\[cq]s
+\fBbin\fR folder. By default only binaries, not examples, are installed.
 .sp
 The installation root is determined, in order of precedence:
 .sp
@@ -51,7 +51,7 @@ Crates from crates.io can optionally specify the version they wish to install
 via the \fB\-\-version\fR flags, and similarly packages from git repositories can
 optionally specify the branch, tag, or revision that should be installed. If a
 crate has multiple binaries, the \fB\-\-bin\fR argument can selectively install only
-one of them, and if you'd rather install examples the \fB\-\-example\fR argument can
+one of them, and if you\[cq]d rather install examples the \fB\-\-example\fR argument can
 be used as well.
 .sp
 If the package is already installed, Cargo will reinstall it if the installed
@@ -87,7 +87,7 @@ in a temporary target directory. To avoid this, the target directory can be
 specified by setting the \fBCARGO_TARGET_DIR\fR environment variable to a relative
 path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.
-.sp
+.SS "Dealing with the Lockfile"
 By default, the \fBCargo.lock\fR file that is included with the package will be
 ignored. This means that Cargo will recompute which versions of dependencies
 to use, possibly using newer versions that have been released since the
@@ -101,6 +101,12 @@ will not receive any fixes or updates to any dependency. Note that Cargo did
 not start publishing \fBCargo.lock\fR files until version 1.37, which means
 packages published with prior versions will not have a \fBCargo.lock\fR file
 available.
+.SS "Configuration Discovery"
+This command operates on system or user level, not project level.
+This means that the local \fIconfiguration discovery\fR <https://doc.rust\-lang.org/cargo/reference/config.html#hierarchical\-structure> is ignored.
+Instead, the configuration discovery begins at \fB$CARGO_HOME/config.toml\fR\&. 
+If the package is installed with \fB\-\-path $PATH\fR, the local configuration 
+will be used, beginning discovery at \fB$PATH/.cargo/config.toml\fR\&.
 .SH "OPTIONS"
 .SS "Install Options"
 .sp
@@ -159,22 +165,22 @@ such as a newer version of \fBrustc\fR\&.
 By default, Cargo keeps track of the installed packages with a metadata file
 stored in the installation root directory. This flag tells Cargo not to use or
 create that file. With this flag, Cargo will refuse to overwrite any existing
-files unless the \fB\-\-force\fR flag is used. This also disables Cargo's ability to
+files unless the \fB\-\-force\fR flag is used. This also disables Cargo\[cq]s ability to
 protect against multiple concurrent invocations of Cargo installing at the
 same time.
 .RE
 .sp
-\fB\-\-bin\fR \fIname\fR\&...
+\fB\-\-bin\fR \fIname\fR\[u2026]
 .RS 4
 Install only the specified binary.
 .RE
 .sp
 \fB\-\-bins\fR
 .RS 4
-Install all binaries.
+Install all binaries. This is the default behavior.
 .RE
 .sp
-\fB\-\-example\fR \fIname\fR\&...
+\fB\-\-example\fR \fIname\fR\[u2026]
 .RS 4
 Install only the specified example.
 .RE
@@ -209,6 +215,7 @@ selected package.
 See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
 for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. Features of workspace
@@ -256,7 +263,7 @@ is specified.
 .sp
 \fB\-\-debug\fR
 .RS 4
-Build with the \fBdev\fR profile instead the \fBrelease\fR profile.
+Build with the \fBdev\fR profile instead of the \fBrelease\fR profile.
 See also the \fB\-\-profile\fR option for choosing a specific profile by name.
 .RE
 .sp
@@ -264,6 +271,12 @@ See also the \fB\-\-profile\fR option for choosing a specific profile by name.
 .RS 4
 Install with the given profile.
 See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+.RE
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Install the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project\[cq]s \fBrust\-version\fR field.
 .RE
 .sp
 \fB\-\-timings=\fR\fIfmts\fR
@@ -275,7 +288,7 @@ Specifying an output format (rather than the default) is unstable and requires
 \fB\-Zunstable\-options\fR\&. Valid output formats:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBhtml\fR: Write a human\-readable file \fBcargo\-timing.html\fR to the
+\h'-04'\(bu\h'+02'\fBhtml\fR (unstable, requires \fB\-Zunstable\-options\fR): Write a human\-readable file \fBcargo\-timing.html\fR to the
 \fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
@@ -324,7 +337,10 @@ May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc
 .RS 4
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
-the number of CPUs.
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
+Should not be 0.
 .RE
 .sp
 \fB\-\-keep\-going\fR
@@ -338,7 +354,7 @@ the build on the first one that fails to build. Unstable, requires
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -396,19 +412,19 @@ for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
-the "short" rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
+the \[lq]short\[rq] rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
+contains embedded ANSI color codes for respecting rustc\[cq]s default color
 scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
+\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo\[cq]s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .RE
@@ -421,6 +437,26 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

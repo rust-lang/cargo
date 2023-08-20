@@ -2,7 +2,7 @@
 //!
 //! Rust code is typically organized as a set of Cargo packages. The
 //! dependencies between the packages themselves are stored in the
-//! `Resolve` struct. However, we can't use that information as is for
+//! [`Resolve`] struct. However, we can't use that information as is for
 //! compilation! A package typically contains several targets, or crates,
 //! and these targets has inter-dependencies. For example, you need to
 //! compile the `lib` target before the `bin` one, and you need to compile
@@ -13,17 +13,18 @@
 //! is exactly what this module is doing! Well, almost exactly: another
 //! complication is that we might want to compile the same target several times
 //! (for example, with and without tests), so we actually build a dependency
-//! graph of `Unit`s, which capture these properties.
+//! graph of [`Unit`]s, which capture these properties.
 
 use std::collections::{HashMap, HashSet};
 
-use log::trace;
+use tracing::trace;
 
+use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::core::compiler::{
     CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner,
 };
-use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
+use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
@@ -35,23 +36,27 @@ use crate::CargoResult;
 
 const IS_NO_ARTIFACT_DEP: Option<&'static Artifact> = None;
 
-/// Collection of stuff used while creating the `UnitGraph`.
+/// Collection of stuff used while creating the [`UnitGraph`].
 struct State<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
     config: &'cfg Config,
+    /// Stores the result of building the [`UnitGraph`].
     unit_dependencies: UnitGraph,
     package_set: &'a PackageSet<'cfg>,
     usr_resolve: &'a Resolve,
     usr_features: &'a ResolvedFeatures,
+    /// Like `usr_resolve` but for building standard library (`-Zbuild-std`).
     std_resolve: Option<&'a Resolve>,
+    /// Like `usr_features` but for building standard library (`-Zbuild-std`).
     std_features: Option<&'a ResolvedFeatures>,
-    /// This flag is `true` while generating the dependencies for the standard
-    /// library.
+    /// `true` while generating the dependencies for the standard library.
     is_std: bool,
+    /// The mode we are compiling in. Used for preventing from building lib thrice.
     global_mode: CompileMode,
     target_data: &'a RustcTargetData<'cfg>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
+    // Units for `-Zrustdoc-scrape-examples`.
     scrape_units: &'a [Unit],
 
     /// A set of edges in `unit_dependencies` where (a, b) means that the
@@ -73,6 +78,9 @@ impl IsArtifact {
     }
 }
 
+/// Then entry point for building a dependency graph of compilation units.
+///
+/// You can find some information for arguments from doc of [`State`].
 pub fn build_unit_dependencies<'a, 'cfg>(
     ws: &'a Workspace<'cfg>,
     package_set: &'a PackageSet<'cfg>,
@@ -141,7 +149,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 
 /// Compute all the dependencies for the standard library.
 fn calc_deps_of_std(
-    mut state: &mut State<'_, '_>,
+    state: &mut State<'_, '_>,
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
 ) -> CargoResult<Option<UnitGraph>> {
     if std_roots.is_empty() {
@@ -550,6 +558,7 @@ fn artifact_targets_to_unit_deps(
     let ret =
         match_artifacts_kind_with_targets(dep, artifact_pkg.targets(), parent.pkg.name().as_str())?
             .into_iter()
+            .map(|(_artifact_kind, target)| target)
             .flat_map(|target| {
                 // We split target libraries into individual units, even though rustc is able
                 // to produce multiple kinds in an single invocation for the sole reason that
@@ -589,45 +598,6 @@ fn artifact_targets_to_unit_deps(
             })
             .collect::<Result<Vec<_>, _>>()?;
     Ok(ret)
-}
-
-/// Given a dependency with an artifact `artifact_dep` and a set of available `targets`
-/// of its package, find a target for each kind of artifacts that are to be built.
-///
-/// Failure to match any target results in an error mentioning the parent manifests
-/// `parent_package` name.
-fn match_artifacts_kind_with_targets<'a>(
-    artifact_dep: &Dependency,
-    targets: &'a [Target],
-    parent_package: &str,
-) -> CargoResult<HashSet<&'a Target>> {
-    let mut out = HashSet::new();
-    let artifact_requirements = artifact_dep.artifact().expect("artifact present");
-    for artifact_kind in artifact_requirements.kinds() {
-        let mut extend = |filter: &dyn Fn(&&Target) -> bool| {
-            let mut iter = targets.iter().filter(filter).peekable();
-            let found = iter.peek().is_some();
-            out.extend(iter);
-            found
-        };
-        let found = match artifact_kind {
-            ArtifactKind::Cdylib => extend(&|t| t.is_cdylib()),
-            ArtifactKind::Staticlib => extend(&|t| t.is_staticlib()),
-            ArtifactKind::AllBinaries => extend(&|t| t.is_bin()),
-            ArtifactKind::SelectedBinary(bin_name) => {
-                extend(&|t| t.is_bin() && t.name() == bin_name.as_str())
-            }
-        };
-        if !found {
-            anyhow::bail!(
-                "dependency `{}` in package `{}` requires a `{}` artifact to be present.",
-                artifact_dep.name_in_toml(),
-                parent_package,
-                artifact_kind
-            );
-        }
-    }
-    Ok(out)
 }
 
 /// Returns the dependencies necessary to document a package.
@@ -711,13 +681,14 @@ fn compute_deps_doc(
     // Add all units being scraped for examples as a dependency of top-level Doc units.
     if state.ws.unit_needs_doc_scrape(unit) {
         for scrape_unit in state.scrape_units.iter() {
-            deps_of(scrape_unit, state, unit_for)?;
+            let scrape_unit_for = UnitFor::new_normal(scrape_unit.kind);
+            deps_of(scrape_unit, state, scrape_unit_for)?;
             ret.push(new_unit_dep(
                 state,
                 scrape_unit,
                 &scrape_unit.pkg,
                 &scrape_unit.target,
-                unit_for,
+                scrape_unit_for,
                 scrape_unit.kind,
                 scrape_unit.mode,
                 IS_NO_ARTIFACT_DEP,
@@ -877,6 +848,10 @@ fn new_unit_dep_with_profile(
         .resolve()
         .is_public_dep(parent.pkg.package_id(), pkg.package_id());
     let features_for = unit_for.map_to_features_for(artifact);
+    let artifact_target = match features_for {
+        FeaturesFor::ArtifactDep(target) => Some(target),
+        _ => None,
+    };
     let features = state.activated_features(pkg.package_id(), features_for);
     let unit = state.interner.intern(
         pkg,
@@ -888,6 +863,7 @@ fn new_unit_dep_with_profile(
         state.is_std,
         /*dep_hash*/ 0,
         artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),
+        artifact_target,
     );
     Ok(UnitDep {
         unit,
@@ -1015,6 +991,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
 }
 
 impl<'a, 'cfg> State<'a, 'cfg> {
+    /// Gets `std_resolve` during building std, otherwise `usr_resolve`.
     fn resolve(&self) -> &'a Resolve {
         if self.is_std {
             self.std_resolve.unwrap()
@@ -1023,6 +1000,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         }
     }
 
+    /// Gets `std_features` during building std, otherwise `usr_features`.
     fn features(&self) -> &'a ResolvedFeatures {
         if self.is_std {
             self.std_features.unwrap()
@@ -1079,7 +1057,6 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         if !dep.is_transitive()
                             && !unit.target.is_test()
                             && !unit.target.is_example()
-                            && !unit.mode.is_doc_scrape()
                             && !unit.mode.is_any_test()
                         {
                             return false;
@@ -1094,7 +1071,10 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                         // If this is an optional dependency, and the new feature resolver
                         // did not enable it, don't include it.
                         if dep.is_optional() {
-                            let features_for = unit_for.map_to_features_for(dep.artifact());
+                            // This `unit_for` is from parent dep and *SHOULD* contains its own
+                            // artifact dep information inside `artifact_target_for_features`.
+                            // So, no need to map any artifact info from an incorrect `dep.artifact()`.
+                            let features_for = unit_for.map_to_features_for(IS_NO_ARTIFACT_DEP);
                             if !self.is_dep_activated(pkg_id, features_for, dep.name_in_toml()) {
                                 return false;
                             }

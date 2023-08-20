@@ -34,7 +34,7 @@
 //! The steps for adding new Cargo.toml syntax are:
 //!
 //! 1. Add the cargo-features unstable gate. Search below for "look here" to
-//!    find the `features!` macro and add your feature to the list.
+//!    find the [`features!`] macro invocation and add your feature to the list.
 //!
 //! 2. Update the Cargo.toml parsing code to handle your new feature.
 //!
@@ -58,16 +58,55 @@
 //!
 //! ## `-Z` options
 //!
+//! New `-Z` options cover all other functionality that isn't covered with
+//! `cargo-features` or `-Z unstable-options`.
+//!
 //! The steps to add a new `-Z` option are:
 //!
 //! 1. Add the option to the [`CliUnstable`] struct below. Flags can take an
 //!    optional value if you want.
-//! 2. Update the [`CliUnstable::add`][CliUnstable] function to parse the flag.
+//! 2. Update the [`CliUnstable::add`] function to parse the flag.
 //! 3. Wherever the new functionality is implemented, call
-//!    [`Config::cli_unstable`][crate::util::config::Config::cli_unstable] to
-//!    get an instance of `CliUnstable` and check if the option has been
-//!    enabled on the `CliUnstable` instance. Nightly gating is already
-//!    handled, so no need to worry about that.
+//!    [`Config::cli_unstable`] to get an instance of [`CliUnstable`]
+//!    and check if the option has been enabled on the [`CliUnstable`] instance.
+//!    Nightly gating is already handled, so no need to worry about that.
+//!
+//! ### `-Z` vs `cargo-features`
+//!
+//! In some cases there might be some changes that `cargo-features` is unable
+//! to sufficiently encompass. An example would be a syntax change in
+//! `Cargo.toml` that also impacts the index or resolver. The resolver doesn't
+//! know about `cargo-features`, so it needs a `-Z` flag to enable the
+//! experimental functionality.
+//!
+//! In those cases, you usually should introduce both a `-Z` flag (to enable
+//! the changes outside of the manifest) and a `cargo-features` entry (to
+//! enable the new syntax in `Cargo.toml`). The `cargo-features` entry ensures
+//! that any experimental syntax that gets uploaded to crates.io is clearly
+//! intended for nightly-only builds. Otherwise, users accessing those crates
+//! may get confusing errors, particularly if the syntax changes during the
+//! development cycle, and the user tries to access it with a stable release.
+//!
+//! ### `-Z` with external files
+//!
+//! Some files, such as `config.toml` config files, or the `config.json` index
+//! file, are used in a global location which can make interaction with stable
+//! releases problematic. In general, before the feature is stabilized, stable
+//! Cargo should behave roughly similar to how it behaved *before* the
+//! unstable feature was introduced. If Cargo would normally have ignored or
+//! warned about the introduction of something, then it probably should
+//! continue to do so.
+//!
+//! For example, Cargo generally ignores (or warns) about `config.toml`
+//! entries it doesn't know about. This allows a limited degree of
+//! forwards-compatibility with future versions of Cargo that add new entries.
+//!
+//! Whether or not to warn on stable may need to be decided on a case-by-case
+//! basis. For example, you may want to avoid generating a warning for options
+//! that are not critical to Cargo's operation in order to reduce the
+//! annoyance of constant warnings. However, ignoring some options may prevent
+//! proper operation, so a warning may be valuable for a user trying to
+//! diagnose why it isn't working correctly.
 //!
 //! ## Stabilization
 //!
@@ -77,19 +116,26 @@
 //! The steps for stabilizing are roughly:
 //!
 //! 1. Update the feature to be stable, based on the kind of feature:
-//!   1. `cargo-features`: Change the feature to `stable` in the `features!`
-//!      macro below, and include the version and a URL for the documentation.
-//!   2. `-Z unstable-options`: Find the call to `fail_if_stable_opt` and
+//!   1. `cargo-features`: Change the feature to `stable` in the [`features!`]
+//!      macro invocation below, and include the version and a URL for the
+//!      documentation.
+//!   2. `-Z unstable-options`: Find the call to [`fail_if_stable_opt`] and
 //!      remove it. Be sure to update the man pages if necessary.
-//!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`][CliUnstable]
-//!      to call `stabilized_warn` or `stabilized_err` and remove the field from
-//!      `CliUnstable. Remove the `(unstable)` note in the clap help text if
+//!   3. `-Z` flag: Change the parsing code in [`CliUnstable::add`] to call
+//!      `stabilized_warn` or `stabilized_err` and remove the field from
+//!      [`CliUnstable`]. Remove the `(unstable)` note in the clap help text if
 //!      necessary.
 //! 2. Remove `masquerade_as_nightly_cargo` from any tests, and remove
-//!    `cargo-features` from `Cargo.toml` test files if any.
+//!    `cargo-features` from `Cargo.toml` test files if any. You can
+//!     quickly find what needs to be removed by searching for the name
+//!     of the feature, e.g. `print_im_a_teapot`
 //! 3. Update the docs in unstable.md to move the section to the bottom
 //!    and summarize it similar to the other entries. Update the rest of the
 //!    documentation to add the new feature.
+//!
+//! [`Config::cli_unstable`]: crate::util::config::Config::cli_unstable
+//! [`fail_if_stable_opt`]: CliUnstable::fail_if_stable_opt
+//! [`features!`]: macro.features.html
 
 use std::collections::BTreeSet;
 use std::env;
@@ -100,6 +146,7 @@ use anyhow::{bail, Error};
 use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
 
+use crate::core::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
 use crate::util::{indented_lines, iter_join};
 use crate::Config;
@@ -109,7 +156,47 @@ pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
 
-/// The edition of the compiler (RFC 2052)
+/// The edition of the compiler ([RFC 2052])
+///
+/// The following sections will guide you how to add and stabilize an edition.
+///
+/// ## Adding a new edition
+///
+/// - Add the next edition to the enum.
+/// - Update every match expression that now fails to compile.
+/// - Update the [`FromStr`] impl.
+/// - Update [`CLI_VALUES`] to include the new edition.
+/// - Set [`LATEST_UNSTABLE`] to Some with the new edition.
+/// - Add an unstable feature to the [`features!`] macro invocation below for the new edition.
+/// - Gate on that new feature in [`TomlManifest::to_real_manifest`].
+/// - Update the shell completion files.
+/// - Update any failing tests (hopefully there are very few).
+/// - Update unstable.md to add a new section for this new edition (see [this example]).
+///
+/// ## Stabilization instructions
+///
+/// - Set [`LATEST_UNSTABLE`] to None.
+/// - Set [`LATEST_STABLE`] to the new version.
+/// - Update [`is_stable`] to `true`.
+/// - Set the editionNNNN feature to stable in the [`features!`] macro invocation below.
+/// - Update any tests that are affected.
+/// - Update the man page for the `--edition` flag.
+/// - Update unstable.md to move the edition section to the bottom.
+/// - Update the documentation:
+///   - Update any features impacted by the edition.
+///   - Update manifest.md#the-edition-field.
+///   - Update the `--edition` flag (options-new.md).
+///   - Rebuild man pages.
+///
+/// [RFC 2052]: https://rust-lang.github.io/rfcs/2052-epochs.html
+/// [`FromStr`]: Edition::from_str
+/// [`CLI_VALUES`]: Edition::CLI_VALUES
+/// [`LATEST_UNSTABLE`]: Edition::LATEST_UNSTABLE
+/// [`LATEST_STABLE`]: Edition::LATEST_STABLE
+/// [this example]: https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
+/// [`is_stable`]: Edition::is_stable
+/// [`TomlManifest::to_real_manifest`]: crate::util::toml::TomlManifest::to_real_manifest
+/// [`features!`]: macro.features.html
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Edition {
     /// The 2015 edition
@@ -120,33 +207,6 @@ pub enum Edition {
     Edition2021,
 }
 
-// Adding a new edition:
-// - Add the next edition to the enum.
-// - Update every match expression that now fails to compile.
-// - Update the `FromStr` impl.
-// - Update CLI_VALUES to include the new edition.
-// - Set LATEST_UNSTABLE to Some with the new edition.
-// - Add an unstable feature to the features! macro below for the new edition.
-// - Gate on that new feature in TomlManifest::to_real_manifest.
-// - Update the shell completion files.
-// - Update any failing tests (hopefully there are very few).
-// - Update unstable.md to add a new section for this new edition (see
-//   https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
-//   as an example).
-//
-// Stabilization instructions:
-// - Set LATEST_UNSTABLE to None.
-// - Set LATEST_STABLE to the new version.
-// - Update `is_stable` to `true`.
-// - Set the editionNNNN feature to stable in the features macro below.
-// - Update any tests that are affected.
-// - Update the man page for the --edition flag.
-// - Update unstable.md to move the edition section to the bottom.
-// - Update the documentation:
-//   - Update any features impacted by the edition.
-//   - Update manifest.md#the-edition-field.
-//   - Update the --edition flag (options-new.md).
-//   - Rebuild man pages.
 impl Edition {
     /// The latest edition that is unstable.
     ///
@@ -158,7 +218,7 @@ impl Edition {
     ///
     /// This requires a static value due to the way clap works, otherwise I
     /// would have built this dynamically.
-    pub const CLI_VALUES: &'static [&'static str] = &["2015", "2018", "2021"];
+    pub const CLI_VALUES: [&'static str; 3] = ["2015", "2018", "2021"];
 
     /// Returns the first version that a particular edition was released on
     /// stable.
@@ -238,6 +298,14 @@ impl Edition {
             Edition2015 => false,
             Edition2018 => true,
             Edition2021 => false,
+        }
+    }
+
+    pub(crate) fn default_resolve_behavior(&self) -> ResolveBehavior {
+        if *self >= Edition::Edition2021 {
+            ResolveBehavior::V2
+        } else {
+            ResolveBehavior::V1
         }
     }
 }
@@ -414,7 +482,7 @@ features! {
     (unstable, profile_rustflags, "", "reference/unstable.html#profile-rustflags-option"),
 
     // Allow specifying rustflags directly in a profile
-    (unstable, workspace_inheritance, "", "reference/unstable.html#workspace-inheritance"),
+    (stable, workspace_inheritance, "1.64", "reference/unstable.html#workspace-inheritance"),
 }
 
 pub struct Feature {
@@ -517,19 +585,19 @@ impl Features {
                     feature_name, feature.version
                 );
                 if self.is_local {
-                    drop(writeln!(
+                    let _ = writeln!(
                         msg,
                         "Remove the feature from Cargo.toml to remove this error."
-                    ));
+                    );
                 } else {
-                    drop(writeln!(
+                    let _ = writeln!(
                         msg,
                         "This package cannot be used with this version of Cargo, \
                          as the unstable feature `{}` is no longer supported.",
                         feature_name
-                    ));
+                    );
                 }
-                drop(writeln!(msg, "{}", see_docs()));
+                let _ = writeln!(msg, "{}", see_docs());
                 bail!(msg);
             }
         }
@@ -561,32 +629,29 @@ impl Features {
 
         if self.nightly_features_allowed {
             if self.is_local {
-                drop(writeln!(
+                let _ = writeln!(
                     msg,
                     "Consider adding `cargo-features = [\"{}\"]` \
                      to the top of Cargo.toml (above the [package] table) \
                      to tell Cargo you are opting in to use this unstable feature.",
                     feature_name
-                ));
+                );
             } else {
-                drop(writeln!(
-                    msg,
-                    "Consider trying a more recent nightly release."
-                ));
+                let _ = writeln!(msg, "Consider trying a more recent nightly release.");
             }
         } else {
-            drop(writeln!(
+            let _ = writeln!(
                 msg,
                 "Consider trying a newer version of Cargo \
                  (this may require the nightly release)."
-            ));
+            );
         }
-        drop(writeln!(
+        let _ = writeln!(
             msg,
             "See https://doc.rust-lang.org/nightly/cargo/{} for more information \
              about the status of this feature.",
             feature.docs
-        ));
+        );
 
         bail!("{}", msg);
     }
@@ -622,6 +687,26 @@ macro_rules! unstable_cli_options {
                 fields
             }
         }
+
+        #[cfg(test)]
+        mod test {
+            #[test]
+            fn ensure_sorted() {
+                // This will be printed out if the fields are not sorted.
+                let location = std::panic::Location::caller();
+                println!(
+                    "\nTo fix this test, sort the features inside the macro at {}:{}\n",
+                    location.file(),
+                    location.line()
+                );
+                let mut expected = vec![$(stringify!($element)),*];
+                expected[2..].sort();
+                snapbox::assert_eq(
+                    format!("{:#?}", expected),
+                    format!("{:#?}", vec![$(stringify!($element)),*])
+                );
+            }
+        }
     }
 }
 
@@ -631,7 +716,7 @@ unstable_cli_options!(
     print_im_a_teapot: bool = (HIDDEN),
 
     // All other unstable features.
-    // Please keep this list lexiographically ordered.
+    // Please keep this list lexicographically ordered.
     advanced_env: bool = (HIDDEN),
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
@@ -639,32 +724,34 @@ unstable_cli_options!(
     #[serde(deserialize_with = "deserialize_build_std")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
+    #[serde(deserialize_with = "deserialize_check_cfg")]
+    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
+    codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
     credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
-    check_cfg_features: bool = ("Enable compile-time checking of features in `cfg`"),
-    check_cfg_well_known_names: bool = ("Enable compile-time checking of well known names in `cfg`"),
-    check_cfg_well_known_values: bool = ("Enable compile-time checking of well known values in `cfg`"),
-    doctest_in_workspace: bool = ("Compile doctests with paths relative to the workspace root"),
+    direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     features: Option<Vec<String>>  = (HIDDEN),
-    jobserver_per_rustc: bool = (HIDDEN),
+    gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
+    host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
+    lints: bool = ("Pass `[lints]` to the linting tools"),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
+    msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
-    multitarget: bool = ("Allow passing multiple `--target` flags to the cargo subcommand selected"),
+    next_lockfile_bump: bool = (HIDDEN),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
-    host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
-    http_registry: bool = ("Support HTTP-based crate registries"),
-    target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
+    profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
+    publish_timeout: bool = ("Enable the `publish.timeout` key in .cargo/config.toml file"),
+    registry_auth: bool = ("Authentication for alternative registries, and generate registry authentication tokens using asymmetric cryptography"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
+    rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
+    script: bool = ("Enable support for single-file, `.rs` packages"),
     separate_nightlies: bool = (HIDDEN),
-    terminal_width: Option<Option<usize>>  = ("Provide a terminal width to rustc for error truncation"),
-    unstable_options: bool = ("Allow the usage of unstable options"),
-    // TODO(wcrichto): move scrape example configuration into Cargo.toml before stabilization
-    // See: https://github.com/rust-lang/cargo/pull/9525#discussion_r728470927
-    rustdoc_scrape_examples: Option<String> = ("Allow rustdoc to scrape examples from reverse-dependencies for documentation"),
     skip_rustdoc_fingerprint: bool = (HIDDEN),
+    target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
+    unstable_options: bool = ("Allow the usage of unstable options"),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -712,6 +799,9 @@ const STABILIZED_NAMED_PROFILES: &str = "The named-profiles feature is now alway
     See https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles \
     for more information";
 
+const STABILIZED_DOCTEST_IN_WORKSPACE: &str =
+    "The doctest-in-workspace feature is now always enabled.";
+
 const STABILIZED_FUTURE_INCOMPAT_REPORT: &str =
     "The future-incompat-report feature is now always enabled.";
 
@@ -720,6 +810,13 @@ const STABILIZED_WEAK_DEP_FEATURES: &str = "Weak dependency features are now alw
 const STABILISED_NAMESPACED_FEATURES: &str = "Namespaced features are now always available.";
 
 const STABILIZED_TIMINGS: &str = "The -Ztimings option has been stabilized as --timings.";
+
+const STABILISED_MULTITARGET: &str = "Multiple `--target` options are now always available.";
+
+const STABILIZED_TERMINAL_WIDTH: &str =
+    "The -Zterminal-width option is now always enabled for terminal output.";
+
+const STABILISED_SPARSE_REGISTRY: &str = "The sparse protocol is now the default for crates.io";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -733,6 +830,115 @@ where
     Ok(Some(
         crate::core::compiler::standard_lib::parse_unstable_flag(Some(&v)),
     ))
+}
+
+fn deserialize_check_cfg<'de, D>(
+    deserializer: D,
+) -> Result<Option<(bool, bool, bool, bool)>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+    let crates = match <Option<Vec<String>>>::deserialize(deserializer)? {
+        Some(list) => list,
+        None => return Ok(None),
+    };
+
+    parse_check_cfg(crates.into_iter()).map_err(D::Error::custom)
+}
+
+#[derive(Debug, Copy, Clone, Default, Deserialize)]
+pub struct GitoxideFeatures {
+    /// All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
+    pub fetch: bool,
+    /// When cloning the index, perform a shallow clone. Maintain shallowness upon subsequent fetches.
+    pub shallow_index: bool,
+    /// When cloning git dependencies, perform a shallow clone and maintain shallowness on subsequent fetches.
+    pub shallow_deps: bool,
+    /// Checkout git dependencies using `gitoxide` (submodules are still handled by git2 ATM, and filters
+    /// like linefeed conversions are unsupported).
+    pub checkout: bool,
+    /// A feature flag which doesn't have any meaning except for preventing
+    /// `__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2=1` builds to enable all safe `gitoxide` features.
+    /// That way, `gitoxide` isn't actually used even though it's enabled.
+    pub internal_use_git2: bool,
+}
+
+impl GitoxideFeatures {
+    fn all() -> Self {
+        GitoxideFeatures {
+            fetch: true,
+            shallow_index: true,
+            checkout: true,
+            shallow_deps: true,
+            internal_use_git2: false,
+        }
+    }
+
+    /// Features we deem safe for everyday use - typically true when all tests pass with them
+    /// AND they are backwards compatible.
+    fn safe() -> Self {
+        GitoxideFeatures {
+            fetch: true,
+            shallow_index: false,
+            checkout: true,
+            shallow_deps: false,
+            internal_use_git2: false,
+        }
+    }
+}
+
+fn parse_gitoxide(
+    it: impl Iterator<Item = impl AsRef<str>>,
+) -> CargoResult<Option<GitoxideFeatures>> {
+    let mut out = GitoxideFeatures::default();
+    let GitoxideFeatures {
+        fetch,
+        shallow_index,
+        checkout,
+        shallow_deps,
+        internal_use_git2,
+    } = &mut out;
+
+    for e in it {
+        match e.as_ref() {
+            "fetch" => *fetch = true,
+            "shallow-index" => *shallow_index = true,
+            "shallow-deps" => *shallow_deps = true,
+            "checkout" => *checkout = true,
+            "internal-use-git2" => *internal_use_git2 = true,
+            _ => {
+                bail!("unstable 'gitoxide' only takes `fetch`, 'shallow-index', 'shallow-deps' and 'checkout' as valid inputs")
+            }
+        }
+    }
+    Ok(Some(out))
+}
+
+fn parse_check_cfg(
+    it: impl Iterator<Item = impl AsRef<str>>,
+) -> CargoResult<Option<(bool, bool, bool, bool)>> {
+    let mut features = false;
+    let mut well_known_names = false;
+    let mut well_known_values = false;
+    let mut output = false;
+
+    for e in it {
+        match e.as_ref() {
+            "features" => features = true,
+            "names" => well_known_names = true,
+            "values" => well_known_values = true,
+            "output" => output = true,
+            _ => bail!("unstable check-cfg only takes `features`, `names`, `values` or `output` as valid inputs"),
+        }
+    }
+
+    Ok(Some((
+        features,
+        well_known_names,
+        well_known_values,
+        output,
+    )))
 }
 
 impl CliUnstable {
@@ -760,6 +966,10 @@ impl CliUnstable {
         }
         for flag in flags {
             self.add(flag, &mut warnings)?;
+        }
+
+        if self.gitoxide.is_none() && cargo_use_gitoxide_instead_of_git2() {
+            self.gitoxide = GitoxideFeatures::safe().into();
         }
         Ok(warnings)
     }
@@ -793,16 +1003,6 @@ impl CliUnstable {
             Ok(true)
         }
 
-        fn parse_usize_opt(value: Option<&str>) -> CargoResult<Option<usize>> {
-            Ok(match value {
-                Some(value) => match value.parse::<usize>() {
-                    Ok(value) => Some(value),
-                    Err(e) => bail!("expected a number, found: {}", e),
-                },
-                None => None,
-            })
-        }
-
         let mut stabilized_warn = |key: &str, version: &str, message: &str| {
             warnings.push(format!(
                 "flag `-Z {}` has been stabilized in the {} release, \
@@ -834,38 +1034,27 @@ impl CliUnstable {
         }
 
         match k {
-            "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
+            // Permanently unstable features
+            // Sorted alphabetically:
             "allow-features" => self.allow_features = Some(parse_features(v).into_iter().collect()),
-            "unstable-options" => self.unstable_options = parse_empty(k, v)?,
-            "no-index-update" => self.no_index_update = parse_empty(k, v)?,
-            "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,
-            "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
-            "advanced-env" => self.advanced_env = parse_empty(k, v)?,
-            "config-include" => self.config_include = parse_empty(k, v)?,
-            "check-cfg-features" => self.check_cfg_features = parse_empty(k, v)?,
-            "check-cfg-well-known-names" => self.check_cfg_well_known_names = parse_empty(k, v)?,
-            "check-cfg-well-known-values" => self.check_cfg_well_known_values = parse_empty(k, v)?,
-            "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
-            // can also be set in .cargo/config or with and ENV
-            "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
-            "named-profiles" => stabilized_warn(k, "1.57", STABILIZED_NAMED_PROFILES),
-            "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
-            "bindeps" => self.bindeps = parse_empty(k, v)?,
-            "build-std" => {
-                self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
-            }
-            "build-std-features" => self.build_std_features = Some(parse_features(v)),
-            "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
-            "doctest-in-workspace" => self.doctest_in_workspace = parse_empty(k, v)?,
-            "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
-            "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
-            "host-config" => self.host_config = parse_empty(k, v)?,
-            "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
+            "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
+
+            // Stabilized features
+            // Sorted by version, then alphabetically:
+            "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
+            "offline" => stabilized_err(k, "1.36", STABILIZED_OFFLINE)?,
+            "cache-messages" => stabilized_warn(k, "1.40", STABILIZED_CACHE_MESSAGES),
+            "install-upgrade" => stabilized_warn(k, "1.41", STABILIZED_INSTALL_UPGRADE),
+            "config-profile" => stabilized_warn(k, "1.43", STABILIZED_CONFIG_PROFILE),
+            "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "features" => {
-                // For now this is still allowed (there are still some
-                // unstable options like "compare"). This should be removed at
-                // some point, and migrate to a new -Z flag for any future
-                // things.
+                // `-Z features` has been stabilized since 1.51,
+                // but `-Z features=compare` is still allowed for convenience
+                // to validate that the feature resolver resolves features
+                // in the same way as the dependency resolver,
+                // until we feel confident to remove entirely.
+                //
+                // See rust-lang/cargo#11168
                 let feats = parse_features(v);
                 let stab_is_not_empty = feats.iter().any(|feat| {
                     matches!(
@@ -879,38 +1068,66 @@ impl CliUnstable {
                 }
                 self.features = Some(feats);
             }
-            "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
-            "multitarget" => self.multitarget = parse_empty(k, v)?,
-            "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
-            "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
-            "http-registry" => self.http_registry = parse_empty(k, v)?,
-            "namespaced-features" => stabilized_warn(k, "1.60", STABILISED_NAMESPACED_FEATURES),
-            "weak-dep-features" => stabilized_warn(k, "1.60", STABILIZED_WEAK_DEP_FEATURES),
-            "credential-process" => self.credential_process = parse_empty(k, v)?,
-            "rustdoc-scrape-examples" => {
-                if let Some(s) = v {
-                    self.rustdoc_scrape_examples = Some(s.to_string())
-                } else {
-                    bail!(
-                        r#"-Z rustdoc-scrape-examples must take "all" or "examples" as an argument"#
-                    )
-                }
-            }
-            "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
-            "compile-progress" => stabilized_warn(k, "1.30", STABILIZED_COMPILE_PROGRESS),
-            "offline" => stabilized_err(k, "1.36", STABILIZED_OFFLINE)?,
-            "cache-messages" => stabilized_warn(k, "1.40", STABILIZED_CACHE_MESSAGES),
-            "install-upgrade" => stabilized_warn(k, "1.41", STABILIZED_INSTALL_UPGRADE),
-            "config-profile" => stabilized_warn(k, "1.43", STABILIZED_CONFIG_PROFILE),
-            "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
-            "extra-link-arg" => stabilized_warn(k, "1.56", STABILIZED_EXTRA_LINK_ARG),
             "configurable-env" => stabilized_warn(k, "1.56", STABILIZED_CONFIGURABLE_ENV),
+            "extra-link-arg" => stabilized_warn(k, "1.56", STABILIZED_EXTRA_LINK_ARG),
             "patch-in-config" => stabilized_warn(k, "1.56", STABILIZED_PATCH_IN_CONFIG),
+            "named-profiles" => stabilized_warn(k, "1.57", STABILIZED_NAMED_PROFILES),
             "future-incompat-report" => {
                 stabilized_warn(k, "1.59.0", STABILIZED_FUTURE_INCOMPAT_REPORT)
             }
+            "namespaced-features" => stabilized_warn(k, "1.60", STABILISED_NAMESPACED_FEATURES),
             "timings" => stabilized_warn(k, "1.60", STABILIZED_TIMINGS),
+            "weak-dep-features" => stabilized_warn(k, "1.60", STABILIZED_WEAK_DEP_FEATURES),
+            "multitarget" => stabilized_warn(k, "1.64", STABILISED_MULTITARGET),
+            "sparse-registry" => stabilized_warn(k, "1.68", STABILISED_SPARSE_REGISTRY),
+            "terminal-width" => stabilized_warn(k, "1.68", STABILIZED_TERMINAL_WIDTH),
+            "doctest-in-workspace" => stabilized_warn(k, "1.72", STABILIZED_DOCTEST_IN_WORKSPACE),
+
+            // Unstable features
+            // Sorted alphabetically:
+            "advanced-env" => self.advanced_env = parse_empty(k, v)?,
+            "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,
+            "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
+            "bindeps" => self.bindeps = parse_empty(k, v)?,
+            "build-std" => {
+                self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
+            }
+            "build-std-features" => self.build_std_features = Some(parse_features(v)),
+            "check-cfg" => {
+                self.check_cfg = v.map_or(Ok(None), |v| parse_check_cfg(v.split(',')))?
+            }
+            "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
+            "config-include" => self.config_include = parse_empty(k, v)?,
+            "credential-process" => self.credential_process = parse_empty(k, v)?,
+            "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
+            "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
+            "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
+            "gitoxide" => {
+                self.gitoxide = v.map_or_else(
+                    || Ok(Some(GitoxideFeatures::all())),
+                    |v| parse_gitoxide(v.split(',')),
+                )?
+            }
+            "host-config" => self.host_config = parse_empty(k, v)?,
+            "lints" => self.lints = parse_empty(k, v)?,
+            "next-lockfile-bump" => self.next_lockfile_bump = parse_empty(k, v)?,
+            "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
+            "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
+            // can also be set in .cargo/config or with and ENV
+            "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
+            "no-index-update" => self.no_index_update = parse_empty(k, v)?,
+            "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
+            "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
+            "publish-timeout" => self.publish_timeout = parse_empty(k, v)?,
+            "registry-auth" => self.registry_auth = parse_empty(k, v)?,
+            "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
+            "rustdoc-scrape-examples" => self.rustdoc_scrape_examples = parse_empty(k, v)?,
+            "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
+            "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
+            "script" => self.script = parse_empty(k, v)?,
+            "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
+            "unstable-options" => self.unstable_options = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
@@ -922,29 +1139,22 @@ impl CliUnstable {
     pub fn fail_if_stable_opt(&self, flag: &str, issue: u32) -> CargoResult<()> {
         if !self.unstable_options {
             let see = format!(
-                "See https://github.com/rust-lang/cargo/issues/{} for more \
-                 information about the `{}` flag.",
-                issue, flag
+                "See https://github.com/rust-lang/cargo/issues/{issue} for more \
+                 information about the `{flag}` flag."
             );
             // NOTE: a `config` isn't available here, check the channel directly
             let channel = channel();
             if channel == "nightly" || channel == "dev" {
                 bail!(
-                    "the `{}` flag is unstable, pass `-Z unstable-options` to enable it\n\
-                     {}",
-                    flag,
-                    see
+                    "the `{flag}` flag is unstable, pass `-Z unstable-options` to enable it\n\
+                     {see}"
                 );
             } else {
                 bail!(
-                    "the `{}` flag is unstable, and only available on the nightly channel \
-                     of Cargo, but this is the `{}` channel\n\
-                     {}\n\
-                     {}",
-                    flag,
-                    channel,
-                    SEE_CHANNELS,
-                    see
+                    "the `{flag}` flag is unstable, and only available on the nightly channel \
+                     of Cargo, but this is the `{channel}` channel\n\
+                     {SEE_CHANNELS}\n\
+                     {see}"
                 );
             }
         }
@@ -991,9 +1201,15 @@ impl CliUnstable {
 
 /// Returns the current release channel ("stable", "beta", "nightly", "dev").
 pub fn channel() -> String {
+    // ALLOWED: For testing cargo itself only.
+    #[allow(clippy::disallowed_methods)]
     if let Ok(override_channel) = env::var("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS") {
         return override_channel;
     }
+    // ALLOWED: the process of rustc boostrapping reads this through
+    // `std::env`. We should make the behavior consistent. Also, we
+    // don't advertise this for bypassing nightly.
+    #[allow(clippy::disallowed_methods)]
     if let Ok(staging) = env::var("RUSTC_BOOTSTRAP") {
         if staging == "1" {
             return "dev".to_string();
@@ -1002,4 +1218,13 @@ pub fn channel() -> String {
     crate::version()
         .release_channel
         .unwrap_or_else(|| String::from("dev"))
+}
+
+/// Only for testing and developing. See ["Running with gitoxide as default git backend in tests"][1].
+///
+/// [1]: https://doc.crates.io/contrib/tests/running.html#running-with-gitoxide-as-default-git-backend-in-tests
+// ALLOWED: For testing cargo itself only.
+#[allow(clippy::disallowed_methods)]
+fn cargo_use_gitoxide_instead_of_git2() -> bool {
+    std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2").map_or(false, |value| value == "1")
 }

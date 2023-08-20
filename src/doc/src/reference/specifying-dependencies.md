@@ -2,7 +2,7 @@
 
 Your crates can depend on other libraries from [crates.io] or other
 registries, `git` repositories, or subdirectories on your local file system.
-You can also temporarily override the location of a dependency — for example,
+You can also temporarily override the location of a dependency --- for example,
 to be able to test out a bug fix in the dependency that you are working on
 locally. You can have different dependencies for different platforms, and
 dependencies that are only used during development. Let's take a look at how
@@ -22,7 +22,7 @@ time = "0.1.12"
 The string `"0.1.12"` is a version requirement. Although it looks like a
 specific *version* of the `time` crate, it actually specifies a *range* of
 versions and allows [SemVer] compatible updates. An update is allowed if the new
-version number does not modify the left-most non-zero digit in the major, minor,
+version number does not modify the left-most non-zero number in the major, minor,
 patch grouping. In this case, if we ran `cargo update -p time`, cargo should
 update us to version `0.1.13` if it is the latest `0.1.z` release, but would not
 update us to `0.2.0`. If instead we had specified the version string as `1.0`,
@@ -107,6 +107,43 @@ Here are some examples of comparison requirements:
 As shown in the examples above, multiple version requirements can be
 separated with a comma, e.g., `>= 1.2, < 1.5`.
 
+> **Recommendation:** When in doubt, use the default version requirement operator.
+>
+> In rare circumstances, a package with a "public dependency"
+> (re-exports the dependency or interoperates with it in its public API)
+> that is compatible with multiple semver-incompatible versions
+> (e.g. only uses a simple type that hasn't changed between releases, like an `Id`)
+> may support users choosing which version of the "public dependency" to use.
+> In this case, a version requirement like `">=0.4, <2"` may be of interest.
+> *However* users of the package will likely run into errors and need to to
+> manually select a version of the "public dependency" via `cargo update` if
+> they also depend on it as Cargo might pick different versions of the "public
+> dependency" when [resolving dependency versions](resolver.md)  (see
+> [#10599]).
+>
+> Avoid constraining the upper bound of a version to be anything less than the
+> next semver incompatible version
+> (e.g. avoid `">=2.0, <2.4"`) as other packages in the dependency tree may
+> require a newer version, leading to an unresolvable error (see #6584).
+> Consider whether controlling the version in your [`Cargo.lock`] would be more
+> appropriate.
+>
+> In some instances this won't matter or the benefits might outweigh the cost, including:
+> - When no one else depends on your package e.g. it only has a `[[bin]]`
+> - When depending on a pre-release package and wishing to avoid breaking
+>   changes then a fully specified `"=1.2.3-alpha.3"` might be warranted (see
+>   [#2222])
+> - When a library re-exports a proc-macro but the proc-macro generates code that
+>   calls into the re-exporting library then a fully specified `=1.2.3` might be
+>   warranted to ensure the proc-macro isn't newer than the re-exporting library
+>   and generating code that uses parts of the API that don't exist within the
+>   current version
+
+[`Cargo.lock`]: ../guide/cargo-toml-vs-cargo-lock.md
+[#2222]: https://github.com/rust-lang/cargo/issues/2222
+[#6584]: https://github.com/rust-lang/cargo/issues/6584
+[#10599]: https://github.com/rust-lang/cargo/issues/10599
+
 ### Specifying dependencies from other registries
 
 To specify a dependency from a registry other than [crates.io], first the
@@ -131,23 +168,24 @@ you need to specify is the location of the repository with the `git` key:
 
 ```toml
 [dependencies]
-regex = { git = "https://github.com/rust-lang/regex" }
+regex = { git = "https://github.com/rust-lang/regex.git" }
 ```
 
 Cargo will fetch the `git` repository at this location then look for a
 `Cargo.toml` for the requested crate anywhere inside the `git` repository
-(not necessarily at the root - for example, specifying a member crate name
+(not necessarily at the root --- for example, specifying a member crate name
 of a workspace and setting `git` to the repository containing the workspace).
 
 Since we haven’t specified any other information, Cargo assumes that
-we intend to use the latest commit on the main branch to build our package.
+we intend to use the latest commit on the default branch branch 
+to build our package, which may not necessarily be the main branch.
 You can combine the `git` key with the `rev`, `tag`, or `branch` keys to
 specify something else. Here's an example of specifying that you want to use
 the latest commit on a branch named `next`:
 
 ```toml
 [dependencies]
-regex = { git = "https://github.com/rust-lang/regex", branch = "next" }
+regex = { git = "https://github.com/rust-lang/regex.git", branch = "next" }
 ```
 
 Anything that is not a branch or tag falls under `rev`. This can be a commit
@@ -227,7 +265,7 @@ bitflags = { path = "my-bitflags", version = "1.0" }
 
 # Uses the given git repo when used locally, and uses
 # version 1.0 from crates.io when published.
-smallvec = { git = "https://github.com/servo/rust-smallvec", version = "1.0" }
+smallvec = { git = "https://github.com/servo/rust-smallvec.git", version = "1.0" }
 
 # N.B. that if a version doesn't match, Cargo will fail to compile!
 ```
@@ -417,7 +455,7 @@ version = "0.0.1"
 
 [dependencies]
 foo = "0.1"
-bar = { git = "https://github.com/example/project", package = "foo" }
+bar = { git = "https://github.com/example/project.git", package = "foo" }
 baz = { version = "0.1", registry = "custom", package = "foo" }
 ```
 
@@ -454,8 +492,44 @@ following to the above manifest:
 log-debug = ['bar/log-debug'] # using 'foo/log-debug' would be an error!
 ```
 
+### Inheriting a dependency from a workspace
+
+Dependencies can be inherited from a workspace by specifying the
+dependency in the workspace's [`[workspace.dependencies]`][workspace.dependencies] table.
+After that, add it to the `[dependencies]` table with `workspace = true`.
+
+Along with the `workspace` key, dependencies can also include these keys:
+- [`optional`][optional]: Note that the`[workspace.dependencies]` table is not allowed to specify `optional`.
+- [`features`][features]: These are additive with the features declared in the `[workspace.dependencies]`
+
+Other than `optional` and `features`, inherited dependencies cannot use any other
+dependency key (such as `version` or `default-features`).
+
+Dependencies in the `[dependencies]`, `[dev-dependencies]`, `[build-dependencies]`, and
+`[target."...".dependencies]` sections support the ability to reference the
+`[workspace.dependencies]` definition of dependencies.
+
+```toml
+[package]
+name = "bar"
+version = "0.2.0"
+
+[dependencies]
+regex = { workspace = true, features = ["unicode"] }
+
+[build-dependencies]
+cc.workspace = true
+
+[dev-dependencies]
+rand = { workspace = true, optional = true }
+```
+
+
 [crates.io]: https://crates.io/
 [dev-dependencies]: #development-dependencies
+[workspace.dependencies]: workspaces.md#the-dependencies-table
+[optional]: features.md#optional-dependencies
+[features]: features.md
 
 <script>
 (function() {

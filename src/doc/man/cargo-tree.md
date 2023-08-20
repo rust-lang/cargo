@@ -4,7 +4,7 @@
 
 ## NAME
 
-cargo-tree - Display a tree visualization of a dependency graph
+cargo-tree --- Display a tree visualization of a dependency graph
 
 ## SYNOPSIS
 
@@ -52,6 +52,23 @@ In this tree, `myproject` depends on `log` with the `serde` feature. `log` in
 turn depends on `cfg-if` with "default" features. When using `-e features` it
 can be helpful to use `-i` flag to show how the features flow into a package.
 See the examples below for more detail.
+
+### Feature Unification
+
+This command shows a graph much closer to a feature-unified graph Cargo will
+build, rather than what you list in `Cargo.toml`. For instance, if you specify
+the same dependency in both `[dependencies]` and `[dev-dependencies]` but with
+different features on. This command may merge all features and show a `(*)` on
+one of the dependency to indicate the duplicate.
+
+As a result, for a mostly equivalent overview of what `cargo build` does,
+`cargo tree -e normal,build` is pretty close; for a mostly equivalent overview
+of what `cargo test` does, `cargo tree` is pretty close. However, it doesn't
+guarantee the exact equivalence to what Cargo is going to build, since a
+compilation is complex and depends on lots of different factors.
+
+To learn more about feature unification, check out this
+[dedicated section](../reference/features.html#feature-unification).
 
 ## OPTIONS
 
@@ -102,16 +119,16 @@ only one instance is built.
 {{#option "`-e` _kinds_" "`--edges` _kinds_" }}
 The dependency kinds to display. Takes a comma separated list of values:
 
-- `all` — Show all edge kinds.
-- `normal` — Show normal dependencies.
-- `build` — Show build dependencies.
-- `dev` — Show development dependencies.
-- `features` — Show features enabled by each dependency. If this is the only
+- `all` --- Show all edge kinds.
+- `normal` --- Show normal dependencies.
+- `build` --- Show build dependencies.
+- `dev` --- Show development dependencies.
+- `features` --- Show features enabled by each dependency. If this is the only
   kind given, then it will automatically include the other dependency kinds.
-- `no-normal` — Do not include normal dependencies.
-- `no-build` — Do not include build dependencies.
-- `no-dev` — Do not include development dependencies.
-- `no-proc-macro` — Do not include procedural macro dependencies.
+- `no-normal` --- Do not include normal dependencies.
+- `no-build` --- Do not include build dependencies.
+- `no-dev` --- Do not include development dependencies.
+- `no-proc-macro` --- Do not include procedural macro dependencies.
 
 The `normal`, `build`, `dev`, and `all` dependency kinds cannot be mixed with
 `no-normal`, `no-build`, or `no-dev` dependency kinds.
@@ -120,8 +137,8 @@ The default is `normal,build,dev`.
 {{/option}}
 
 {{#option "`--target` _triple_" }}
-Filter dependencies matching the given target-triple. The default is the host
-platform. Use the value `all` to include *all* targets.
+Filter dependencies matching the given [target triple](../appendix/glossary.html#target). 
+The default is the host platform. Use the value `all` to include *all* targets.
 {{/option}}
 
 {{/options}}
@@ -141,19 +158,19 @@ Set the format string for each package. The default is "{p}".
 This is an arbitrary string which will be used to display each package. The following
 strings will be replaced with the corresponding value:
 
-- `{p}` — The package name.
-- `{l}` — The package license.
-- `{r}` — The package repository URL.
-- `{f}` — Comma-separated list of package features that are enabled.
-- `{lib}` — The name, as used in a `use` statement, of the package's library.
+- `{p}` --- The package name.
+- `{l}` --- The package license.
+- `{r}` --- The package repository URL.
+- `{f}` --- Comma-separated list of package features that are enabled.
+- `{lib}` --- The name, as used in a `use` statement, of the package's library.
 {{/option}}
 
 {{#option "`--prefix` _prefix_" }}
 Sets how each line is displayed. The _prefix_ value can be one of:
 
-- `indent` (default) — Shows each line indented as a tree.
-- `depth` — Show as a list, with the numeric depth printed before each entry.
-- `none` — Show as a flat list.
+- `indent` (default) --- Shows each line indented as a tree.
+- `depth` --- Show as a list, with the numeric depth printed before each entry.
+- `none` --- Show as a flat list.
 {{/option}}
 
 {{/options}}

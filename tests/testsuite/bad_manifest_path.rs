@@ -63,7 +63,7 @@ fn bench_dir_to_nonexistent_cargo_toml() {
 
 #[cargo_test]
 fn build_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("build", "foo");
+    assert_not_a_cargo_toml("check", "foo");
 }
 
 #[cargo_test]
@@ -78,7 +78,7 @@ fn build_dir_plus_path() {
 
 #[cargo_test]
 fn build_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("build", "foo/bar/baz/Cargo.toml");
+    assert_cargo_toml_doesnt_exist("check", "foo/bar/baz/Cargo.toml");
 }
 
 #[cargo_test]

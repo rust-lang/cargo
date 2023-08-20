@@ -1,8 +1,8 @@
 use std::fmt;
 use std::task::Poll;
 
-use crate::core::{Dependency, PackageId, Registry, Summary};
-use crate::util::lev_distance::lev_distance;
+use crate::core::{Dependency, PackageId, QueryKind, Registry, Summary};
+use crate::util::edit_distance::edit_distance;
 use crate::util::{Config, VersionExt};
 use anyhow::Error;
 
@@ -182,7 +182,7 @@ pub(super) fn activation_error(
                     msg.push_str("` does not have these features.\n");
                     msg.push_str(
                         " It has an optional dependency with that name, \
-                         but but that dependency uses the \"dep:\" \
+                         but that dependency uses the \"dep:\" \
                          syntax in the features table, so it does not have an \
                          implicit feature with that name.\n",
                     );
@@ -228,7 +228,7 @@ pub(super) fn activation_error(
     new_dep.set_version_req(all_req);
 
     let mut candidates = loop {
-        match registry.query_vec(&new_dep, false) {
+        match registry.query_vec(&new_dep, QueryKind::Exact) {
             Poll::Ready(Ok(candidates)) => break candidates,
             Poll::Ready(Err(e)) => return to_resolve_err(e),
             Poll::Pending => match registry.block_until_ready() {
@@ -294,7 +294,7 @@ pub(super) fn activation_error(
             // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
             // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
             let mut candidates = loop {
-                match registry.query_vec(&new_dep, true) {
+                match registry.query_vec(&new_dep, QueryKind::Fuzzy) {
                     Poll::Ready(Ok(candidates)) => break candidates,
                     Poll::Ready(Err(e)) => return to_resolve_err(e),
                     Poll::Pending => match registry.block_until_ready() {
@@ -308,8 +308,7 @@ pub(super) fn activation_error(
             candidates.dedup_by(|a, b| a.name() == b.name());
             let mut candidates: Vec<_> = candidates
                 .iter()
-                .map(|n| (lev_distance(&*new_dep.package_name(), &*n.name()), n))
-                .filter(|&(d, _)| d < 4)
+                .filter_map(|n| Some((edit_distance(&*new_dep.package_name(), &*n.name(), 3)?, n)))
                 .collect();
             candidates.sort_by_key(|o| o.0);
             let mut msg: String;

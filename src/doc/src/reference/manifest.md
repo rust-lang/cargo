@@ -1,56 +1,58 @@
 ## The Manifest Format
 
 The `Cargo.toml` file for each package is called its *manifest*. It is written
-in the [TOML] format. Every manifest file consists of the following sections:
+in the [TOML] format. It contains metadata that is needed to compile the package. Checkout
+the `cargo locate-project` section for more detail on how cargo finds the manifest file.
 
-* [`cargo-features`](unstable.md) — Unstable, nightly-only features.
-* [`[package]`](#the-package-section) — Defines a package.
-  * [`name`](#the-name-field) — The name of the package.
-  * [`version`](#the-version-field) — The version of the package.
-  * [`authors`](#the-authors-field) — The authors of the package.
-  * [`edition`](#the-edition-field) — The Rust edition.
-  * [`rust-version`](#the-rust-version-field) — The minimal supported Rust version.
-  * [`description`](#the-description-field) — A description of the package.
-  * [`documentation`](#the-documentation-field) — URL of the package documentation.
-  * [`readme`](#the-readme-field) — Path to the package's README file.
-  * [`homepage`](#the-homepage-field) — URL of the package homepage.
-  * [`repository`](#the-repository-field) — URL of the package source repository.
-  * [`license`](#the-license-and-license-file-fields) — The package license.
-  * [`license-file`](#the-license-and-license-file-fields) — Path to the text of the license.
-  * [`keywords`](#the-keywords-field) — Keywords for the package.
-  * [`categories`](#the-categories-field) — Categories of the package.
-  * [`workspace`](#the-workspace-field) — Path to the workspace for the package.
-  * [`build`](#the-build-field) — Path to the package build script.
-  * [`links`](#the-links-field) — Name of the native library the package links with.
-  * [`exclude`](#the-exclude-and-include-fields) — Files to exclude when publishing.
-  * [`include`](#the-exclude-and-include-fields) — Files to include when publishing.
-  * [`publish`](#the-publish-field) — Can be used to prevent publishing the package.
-  * [`metadata`](#the-metadata-table) — Extra settings for external tools.
-  * [`default-run`](#the-default-run-field) — The default binary to run by [`cargo run`].
-  * [`autobins`](cargo-targets.md#target-auto-discovery) — Disables binary auto discovery.
-  * [`autoexamples`](cargo-targets.md#target-auto-discovery) — Disables example auto discovery.
-  * [`autotests`](cargo-targets.md#target-auto-discovery) — Disables test auto discovery.
-  * [`autobenches`](cargo-targets.md#target-auto-discovery) — Disables bench auto discovery.
-  * [`resolver`](resolver.md#resolver-versions) — Sets the dependency resolver to use.
+Every manifest file consists of the following sections:
+
+* [`cargo-features`](unstable.md) --- Unstable, nightly-only features.
+* [`[package]`](#the-package-section) --- Defines a package.
+  * [`name`](#the-name-field) --- The name of the package.
+  * [`version`](#the-version-field) --- The version of the package.
+  * [`authors`](#the-authors-field) --- The authors of the package.
+  * [`edition`](#the-edition-field) --- The Rust edition.
+  * [`rust-version`](#the-rust-version-field) --- The minimal supported Rust version.
+  * [`description`](#the-description-field) --- A description of the package.
+  * [`documentation`](#the-documentation-field) --- URL of the package documentation.
+  * [`readme`](#the-readme-field) --- Path to the package's README file.
+  * [`homepage`](#the-homepage-field) --- URL of the package homepage.
+  * [`repository`](#the-repository-field) --- URL of the package source repository.
+  * [`license`](#the-license-and-license-file-fields) --- The package license.
+  * [`license-file`](#the-license-and-license-file-fields) --- Path to the text of the license.
+  * [`keywords`](#the-keywords-field) --- Keywords for the package.
+  * [`categories`](#the-categories-field) --- Categories of the package.
+  * [`workspace`](#the-workspace-field) --- Path to the workspace for the package.
+  * [`build`](#the-build-field) --- Path to the package build script.
+  * [`links`](#the-links-field) --- Name of the native library the package links with.
+  * [`exclude`](#the-exclude-and-include-fields) --- Files to exclude when publishing.
+  * [`include`](#the-exclude-and-include-fields) --- Files to include when publishing.
+  * [`publish`](#the-publish-field) --- Can be used to prevent publishing the package.
+  * [`metadata`](#the-metadata-table) --- Extra settings for external tools.
+  * [`default-run`](#the-default-run-field) --- The default binary to run by [`cargo run`].
+  * [`autobins`](cargo-targets.md#target-auto-discovery) --- Disables binary auto discovery.
+  * [`autoexamples`](cargo-targets.md#target-auto-discovery) --- Disables example auto discovery.
+  * [`autotests`](cargo-targets.md#target-auto-discovery) --- Disables test auto discovery.
+  * [`autobenches`](cargo-targets.md#target-auto-discovery) --- Disables bench auto discovery.
+  * [`resolver`](resolver.md#resolver-versions) --- Sets the dependency resolver to use.
 * Target tables: (see [configuration](cargo-targets.md#configuring-a-target) for settings)
-  * [`[lib]`](cargo-targets.md#library) — Library target settings.
-  * [`[[bin]]`](cargo-targets.md#binaries) — Binary target settings.
-  * [`[[example]]`](cargo-targets.md#examples) — Example target settings.
-  * [`[[test]]`](cargo-targets.md#tests) — Test target settings.
-  * [`[[bench]]`](cargo-targets.md#benchmarks) — Benchmark target settings.
+  * [`[lib]`](cargo-targets.md#library) --- Library target settings.
+  * [`[[bin]]`](cargo-targets.md#binaries) --- Binary target settings.
+  * [`[[example]]`](cargo-targets.md#examples) --- Example target settings.
+  * [`[[test]]`](cargo-targets.md#tests) --- Test target settings.
+  * [`[[bench]]`](cargo-targets.md#benchmarks) --- Benchmark target settings.
 * Dependency tables:
-  * [`[dependencies]`](specifying-dependencies.md) — Package library dependencies.
-  * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) — Dependencies for examples, tests, and benchmarks.
-  * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) — Dependencies for build scripts.
-  * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) — Platform-specific dependencies.
-* [`[badges]`](#the-badges-section) — Badges to display on a registry.
-* [`[features]`](features.md) — Conditional compilation features.
-* [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
-* [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
-* [`[profile]`](profiles.md) — Compiler settings and optimizations.
-* [`[workspace]`](workspaces.md) — The workspace definition.
+  * [`[dependencies]`](specifying-dependencies.md) --- Package library dependencies.
+  * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) --- Dependencies for examples, tests, and benchmarks.
+  * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) --- Dependencies for build scripts.
+  * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) --- Platform-specific dependencies.
+* [`[badges]`](#the-badges-section) --- Badges to display on a registry.
+* [`[features]`](features.md) --- Conditional compilation features.
+* [`[patch]`](overriding-dependencies.md#the-patch-section) --- Override dependencies.
+* [`[replace]`](overriding-dependencies.md#the-replace-section) --- Override dependencies (deprecated).
+* [`[profile]`](profiles.md) --- Compiler settings and optimizations.
+* [`[workspace]`](workspaces.md) --- The workspace definition.
 
-<a id="package-metadata"></a>
 ### The `[package]` section
 
 The first section in a `Cargo.toml` is `[package]`.
@@ -74,11 +76,15 @@ when listed as a dependency in another package, and as the default name of
 inferred lib and bin targets.
 
 The name must use only [alphanumeric] characters or `-` or `_`, and cannot be empty.
+
 Note that [`cargo new`] and [`cargo init`] impose some additional restrictions on
 the package name, such as enforcing that it is a valid Rust identifier and not
-a keyword. [crates.io] imposes even more restrictions, such as
-enforcing only ASCII characters, not a reserved name, not a special Windows
-name such as "nul", is not too long, etc.
+a keyword. [crates.io] imposes even more restrictions, such as:
+
+- Only ASCII characters are allowed.
+- Do not use reserved names.
+- Do not use special Windows names such as "nul".
+- Use a maximum of 64 characters of length.
 
 [alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
 
@@ -105,14 +111,19 @@ breaking change.
 [Resolver]: resolver.md
 [SemVer compatibility]: semver.md
 
-<a id="the-authors-field-optional"></a>
 #### The `authors` field
 
-The optional `authors` field lists people or organizations that are considered
-the "authors" of the package. The exact meaning is open to interpretation — it
+The optional `authors` field lists in an array the people or organizations that are considered
+the "authors" of the package. The exact meaning is open to interpretation --- it
 may list the original or primary authors, current maintainers, or owners of the
 package. An optional email address may be included within angled brackets at
 the end of each author entry.
+
+```toml
+[package]
+# ...
+authors = ["Graydon Hoare", "Fnu Lnu <no-reply@rust-lang.org>"]
+```
 
 This field is only surfaced in package metadata and in the `CARGO_PKG_AUTHORS`
 environment variable within `build.rs`. It is not displayed in the [crates.io]
@@ -122,7 +133,6 @@ user interface.
 > field cannot be changed or removed in already-published versions of a
 > package.
 
-<a id="the-edition-field-optional"></a>
 #### The `edition` field
 
 The `edition` key is an optional key that affects which [Rust Edition] your package
@@ -185,18 +195,20 @@ description = "A short description of my package"
 
 > **Note**: [crates.io] requires the `description` to be set.
 
-<a id="the-documentation-field-optional"></a>
 #### The `documentation` field
 
 The `documentation` field specifies a URL to a website hosting the crate's
 documentation. If no URL is specified in the manifest file, [crates.io] will
-automatically link your crate to the corresponding [docs.rs] page.
+automatically link your crate to the corresponding [docs.rs] page when the
+documentation has been built and is available (see [docs.rs queue]).
 
 ```toml
 [package]
 # ...
 documentation = "https://docs.rs/bitflags"
 ```
+
+[docs.rs queue]: https://docs.rs/releases/queue
 
 #### The `readme` field
 
@@ -310,7 +322,6 @@ categories = ["command-line-utilities", "development-tools::cargo-plugins"]
 > match one of the strings available at <https://crates.io/category_slugs>, and
 > must match exactly.
 
-<a id="the-workspace--field-optional"></a>
 #### The `workspace` field
 
 The `workspace` field can be used to configure the workspace that this package
@@ -331,8 +342,6 @@ table defined. That is, a crate cannot both be a root crate in a workspace
 
 For more information, see the [workspaces chapter](workspaces.md).
 
-<a id="package-build"></a>
-<a id="the-build-field-optional"></a>
 #### The `build` field
 
 The `build` field specifies a file in the package root which is a [build
@@ -352,7 +361,6 @@ The default is `"build.rs"`, which loads the script from a file named
 specify a path to a different file or `build = false` to disable automatic
 detection of the build script.
 
-<a id="the-links-field-optional"></a>
 #### The `links` field
 
 The `links` field specifies the name of a native library that is being linked
@@ -361,13 +369,15 @@ script guide.
 
 [links]: build-scripts.md#the-links-manifest-key
 
+For example, a crate that links a native library called "git2" (e.g. `libgit2.a`
+on Linux) may specify:
+
 ```toml
 [package]
 # ...
-links = "foo"
+links = "git2"
 ```
 
-<a id="the-exclude-and-include-fields-optional"></a>
 #### The `exclude` and `include` fields
 
 The `exclude` and `include` fields can be used to explicitly specify which
@@ -457,7 +467,6 @@ if any of those files change.
 
 [gitignore]: https://git-scm.com/docs/gitignore
 
-<a id="the-publish--field-optional"></a>
 #### The `publish` field
 
 The `publish` field can be used to prevent a package from being published to a
@@ -482,7 +491,6 @@ publish = ["some-registry-name"]
 If publish array contains a single registry, `cargo publish` command will use
 it when `--registry` flag is not specified.
 
-<a id="the-metadata-table-optional"></a>
 #### The `metadata` table
 
 Cargo by default will warn about unused keys in `Cargo.toml` to assist in
@@ -509,7 +517,7 @@ external tools may wish to use them in a consistent fashion, such as referring
 to the data in `workspace.metadata` if data is missing from `package.metadata`,
 if that makes sense for the tool in question.
 
-[workspace-metadata]: workspaces.md#the-workspacemetadata-table
+[workspace-metadata]: workspaces.md#the-metadata-table
 
 #### The `default-run` field
 
@@ -596,7 +604,7 @@ more detail.
         "#the-required-features-field-optional": "cargo-targets.html#the-required-features-field",
         "#building-dynamic-or-static-libraries": "cargo-targets.html#the-crate-type-field",
         "#the-workspace-section": "workspaces.html#the-workspace-section",
-        "#virtual-manifest": "workspaces.html",
+        "#virtual-workspace": "workspaces.html",
         "#package-selection": "workspaces.html#package-selection",
         "#the-features-section": "features.html#the-features-section",
         "#rules": "features.html",
@@ -605,6 +613,17 @@ more detail.
         "#the-patch-section": "overriding-dependencies.html#the-patch-section",
         "#using-patch-with-multiple-versions": "overriding-dependencies.html#using-patch-with-multiple-versions",
         "#the-replace-section": "overriding-dependencies.html#the-replace-section",
+        "#package-metadata": "manifest.html#the-package-section",
+        "#the-authors-field-optional": "manifest.html#the-authors-field",
+        "#the-edition-field-optional": "manifest.html#the-edition-field",
+        "#the-documentation-field-optional": "manifest.html#the-documentation-field",
+        "#the-workspace--field-optional": "manifest.html#the-workspace-field",
+        "#package-build": "manifest.html#the-build-field",
+        "#the-build-field-optional": "manifest.html#the-build-field",
+        "#the-links-field-optional": "manifest.html#the-links-field",
+        "#the-exclude-and-include-fields-optional": "manifest.html#the-exclude-and-include-fields",
+        "#the-publish--field-optional": "manifest.html#the-publish-field",
+        "#the-metadata-table-optional": "manifest.html#the-metadata-table",
     };
     var target = fragments[window.location.hash];
     if (target) {

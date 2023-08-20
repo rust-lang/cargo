@@ -12,7 +12,7 @@ use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
 use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
-use cargo::core::source::{GitReference, SourceId};
+use cargo::core::source::{GitReference, QueryKind, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::util::{CargoResult, Config, Graph, IntoUrl};
@@ -128,11 +128,15 @@ pub fn resolve_with_config_raw(
         fn query(
             &mut self,
             dep: &Dependency,
+            kind: QueryKind,
             f: &mut dyn FnMut(Summary),
-            fuzzy: bool,
         ) -> Poll<CargoResult<()>> {
             for summary in self.list.iter() {
-                if fuzzy || dep.matches(summary) {
+                let matched = match kind {
+                    QueryKind::Exact => dep.matches(summary),
+                    QueryKind::Fuzzy => true,
+                };
+                if matched {
                     self.used.insert(summary.package_id());
                     f(summary.clone());
                 }
@@ -175,10 +179,10 @@ pub fn resolve_with_config_raw(
         used: HashSet::new(),
     };
     let summary = Summary::new(
-        config,
         pkg_id("root"),
         deps,
         &BTreeMap::new(),
+        None::<&String>,
         None::<&String>,
     )
     .unwrap();
@@ -576,11 +580,11 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
         None
     };
     Summary::new(
-        &Config::default().unwrap(),
         name.to_pkgid(),
         dep,
         &BTreeMap::new(),
         link,
+        None::<&String>,
     )
     .unwrap()
 }
@@ -604,11 +608,11 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
         None
     };
     Summary::new(
-        &Config::default().unwrap(),
         pkg_id_loc(name, loc),
         Vec::new(),
         &BTreeMap::new(),
         link,
+        None::<&String>,
     )
     .unwrap()
 }
@@ -618,11 +622,11 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
     deps.remove(ind);
     // note: more things will need to be copied over in the future, but it works for now.
     Summary::new(
-        &Config::default().unwrap(),
         sum.package_id(),
         deps,
         &BTreeMap::new(),
         sum.links().map(|a| a.as_str()),
+        None::<&String>,
     )
     .unwrap()
 }
@@ -767,7 +771,7 @@ pub fn registry_strategy(
         format!("{}.{}.{}", major, minor, patch)
     };
 
-    // If this is false than the crate will depend on the nonexistent "bad"
+    // If this is false then the crate will depend on the nonexistent "bad"
     // instead of the complex set we generated for it.
     let allow_deps = prop::bool::weighted(0.99);
 

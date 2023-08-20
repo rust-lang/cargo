@@ -1,7 +1,7 @@
 use crate::cli;
 use crate::command_prelude::*;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("version")
         .about("Show version information")
         .arg_quiet()
@@ -9,7 +9,7 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let verbose = args.occurrences_of("verbose") > 0;
+    let verbose = args.verbose() > 0;
     let version = cli::get_version_string(verbose);
     cargo::drop_print!(config, "{}", version);
     Ok(())

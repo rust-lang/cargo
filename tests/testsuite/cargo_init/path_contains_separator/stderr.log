@@ -1,0 +1,3 @@
+warning: the path `[ROOT]/case/test:ing/.` contains invalid PATH characters (usually `:`, `;`, or `"`)
+It is recommended to use a different name to avoid problems.
+     Created binary (application) package

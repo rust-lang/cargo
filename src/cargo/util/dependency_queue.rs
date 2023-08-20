@@ -149,15 +149,15 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     ///
     /// A package is ready to be built when it has 0 un-built dependencies. If
     /// `None` is returned then no packages are ready to be built.
-    pub fn dequeue(&mut self) -> Option<(N, V)> {
-        let key = self
+    pub fn dequeue(&mut self) -> Option<(N, V, usize)> {
+        let (key, priority) = self
             .dep_map
             .iter()
             .filter(|(_, (deps, _))| deps.is_empty())
-            .map(|(key, _)| key.clone())
-            .max_by_key(|k| self.priority[k])?;
+            .map(|(key, _)| (key.clone(), self.priority[key]))
+            .max_by_key(|(_, priority)| *priority)?;
         let (_, data) = self.dep_map.remove(&key).unwrap();
-        Some((key, data))
+        Some((key, data, priority))
     }
 
     /// Returns `true` if there are remaining packages to be built.
@@ -213,19 +213,19 @@ mod test {
         q.queue(5, (), vec![(4, ()), (3, ())], 1);
         q.queue_finished();
 
-        assert_eq!(q.dequeue(), Some((1, ())));
-        assert_eq!(q.dequeue(), Some((3, ())));
+        assert_eq!(q.dequeue(), Some((1, (), 5)));
+        assert_eq!(q.dequeue(), Some((3, (), 4)));
         assert_eq!(q.dequeue(), None);
         q.finish(&3, &());
         assert_eq!(q.dequeue(), None);
         q.finish(&1, &());
-        assert_eq!(q.dequeue(), Some((2, ())));
+        assert_eq!(q.dequeue(), Some((2, (), 4)));
         assert_eq!(q.dequeue(), None);
         q.finish(&2, &());
-        assert_eq!(q.dequeue(), Some((4, ())));
+        assert_eq!(q.dequeue(), Some((4, (), 3)));
         assert_eq!(q.dequeue(), None);
         q.finish(&4, &());
-        assert_eq!(q.dequeue(), Some((5, ())));
+        assert_eq!(q.dequeue(), Some((5, (), 2)));
     }
 
     #[test]
@@ -238,16 +238,16 @@ mod test {
         q.queue(4, (), vec![(2, ()), (3, ())], 1);
         q.queue_finished();
 
-        assert_eq!(q.dequeue(), Some((3, ())));
-        assert_eq!(q.dequeue(), Some((1, ())));
+        assert_eq!(q.dequeue(), Some((3, (), 9)));
+        assert_eq!(q.dequeue(), Some((1, (), 4)));
         assert_eq!(q.dequeue(), None);
         q.finish(&3, &());
         assert_eq!(q.dequeue(), None);
         q.finish(&1, &());
-        assert_eq!(q.dequeue(), Some((2, ())));
+        assert_eq!(q.dequeue(), Some((2, (), 3)));
         assert_eq!(q.dequeue(), None);
         q.finish(&2, &());
-        assert_eq!(q.dequeue(), Some((4, ())));
+        assert_eq!(q.dequeue(), Some((4, (), 2)));
         assert_eq!(q.dequeue(), None);
         q.finish(&4, &());
         assert_eq!(q.dequeue(), None);

@@ -5,14 +5,32 @@ use cargo::util::interning::InternedString;
 const PRINT_ARG_NAME: &str = "print";
 const CRATE_TYPE_ARG_NAME: &str = "crate-type";
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("rustc")
-        .trailing_var_arg(true)
         .about("Compile a package, and pass extra options to the compiler")
+        .arg(
+            Arg::new("args")
+                .num_args(0..)
+                .help("Extra rustc flags")
+                .trailing_var_arg(true),
+        )
+        .arg(
+            opt(
+                PRINT_ARG_NAME,
+                "Output compiler information without compiling",
+            )
+            .value_name("INFO"),
+        )
+        .arg(multi_opt(
+            CRATE_TYPE_ARG_NAME,
+            "CRATE-TYPE",
+            "Comma separated list of types of crates for the compiler to emit",
+        ))
+        .arg_future_incompat_report()
+        .arg_ignore_rust_version()
+        .arg_message_format()
         .arg_quiet()
-        .arg(Arg::new("args").multiple_values(true).help("Rustc flags"))
         .arg_package("Package to build")
-        .arg_jobs()
         .arg_targets_all(
             "Build only this package's library",
             "Build only the specified binary",
@@ -25,29 +43,15 @@ pub fn cli() -> App {
             "Build all benches",
             "Build all targets",
         )
+        .arg_features()
+        .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_features()
         .arg_target_triple("Target triple which compiles will be for")
-        .arg(
-            opt(
-                PRINT_ARG_NAME,
-                "Output compiler information without compiling",
-            )
-            .value_name("INFO"),
-        )
-        .arg(multi_opt(
-            CRATE_TYPE_ARG_NAME,
-            "CRATE-TYPE",
-            "Comma separated list of types of crates for the compiler to emit (unstable)",
-        ))
         .arg_target_dir()
-        .arg_manifest_path()
-        .arg_message_format()
         .arg_unit_graph()
-        .arg_ignore_rust_version()
-        .arg_future_incompat_report()
         .arg_timings()
+        .arg_manifest_path()
         .after_help("Run `cargo help rustc` for more detailed information.\n")
 }
 
@@ -56,7 +60,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // This is a legacy behavior that changes the behavior based on the profile.
     // If we want to support this more formally, I think adding a --mode flag
     // would be warranted.
-    let mode = match args.value_of("profile") {
+    let mode = match args.get_one::<String>("profile").map(String::as_str) {
         Some("test") => CompileMode::Test,
         Some("bench") => CompileMode::Bench,
         Some("check") => CompileMode::Check { test: false },
@@ -77,7 +81,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else {
         Some(target_args)
     };
-    if let Some(opt_value) = args.value_of(PRINT_ARG_NAME) {
+    if let Some(opt_value) = args.get_one::<String>(PRINT_ARG_NAME) {
         config
             .cli_unstable()
             .fail_if_stable_opt(PRINT_ARG_NAME, 9357)?;
@@ -88,9 +92,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     compile_opts.target_rustc_crate_types = if crate_types.is_empty() {
         None
     } else {
-        config
-            .cli_unstable()
-            .fail_if_stable_opt(CRATE_TYPE_ARG_NAME, 10083)?;
         Some(crate_types)
     };
     ops::compile(&ws, &compile_opts)?;

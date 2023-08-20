@@ -1,0 +1,19 @@
+[package]
+name = "home"
+version = "0.5.7" # also update `html_root_url` in `src/lib.rs`
+authors = ["Brian Anderson <andersrb@gmail.com>"]
+documentation = "https://docs.rs/home"
+edition.workspace = true
+include = [
+    "/src",
+    "/Cargo.toml",
+    "/CHANGELOG",
+    "/LICENSE-*",
+    "/README.md",
+]
+license.workspace = true
+repository = "https://github.com/rust-lang/cargo"
+description = "Shared definitions of home directories."
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_UI_Shell"] }

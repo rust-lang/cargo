@@ -1,0 +1,1 @@
+error: cannot specify multiple crates with `--rename`

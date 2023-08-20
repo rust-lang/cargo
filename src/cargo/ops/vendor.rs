@@ -1,18 +1,19 @@
+use crate::core::package::MANIFEST_PREAMBLE;
 use crate::core::shell::Verbosity;
-use crate::core::{GitReference, Workspace};
+use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
 use crate::sources::CRATES_IO_REGISTRY;
-use crate::util::{CargoResult, Config};
+use crate::util::{try_canonicalize, CargoResult, Config};
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use toml_edit::easy as toml;
 
 pub struct VendorOptions<'a> {
     pub no_delete: bool,
@@ -60,7 +61,7 @@ struct VendorConfig {
 #[serde(rename_all = "lowercase", untagged)]
 enum VendorSource {
     Directory {
-        directory: PathBuf,
+        directory: String,
     },
     Registry {
         registry: Option<String>,
@@ -82,7 +83,7 @@ fn sync(
     workspaces: &[&Workspace<'_>],
     opts: &VendorOptions<'_>,
 ) -> CargoResult<VendorConfig> {
-    let canonical_destination = opts.destination.canonicalize();
+    let canonical_destination = try_canonicalize(opts.destination);
     let canonical_destination = canonical_destination.as_deref().unwrap_or(opts.destination);
     let dest_dir_already_exists = canonical_destination.exists();
 
@@ -124,7 +125,7 @@ fn sync(
             // Don't delete actual source code!
             if pkg.source_id().is_path() {
                 if let Ok(path) = pkg.source_id().url().to_file_path() {
-                    if let Ok(path) = path.canonicalize() {
+                    if let Ok(path) = try_canonicalize(path) {
                         to_remove.remove(&path);
                     }
                 }
@@ -225,7 +226,7 @@ fn sync(
         let pathsource = PathSource::new(src, id.source_id(), config);
         let paths = pathsource.list_files(pkg)?;
         let mut map = BTreeMap::new();
-        cp_sources(src, &paths, &dst, &mut map, &mut tmp_buf)
+        cp_sources(pkg, src, &paths, &dst, &mut map, &mut tmp_buf)
             .with_context(|| format!("failed to copy over vendored sources for: {}", id))?;
 
         // Finally, emit the metadata about this package
@@ -252,13 +253,15 @@ fn sync(
 
     // replace original sources with vendor
     for source_id in sources {
-        let name = if source_id.is_default_registry() {
+        let name = if source_id.is_crates_io() {
             CRATES_IO_REGISTRY.to_string()
         } else {
-            source_id.url().to_string()
+            // Remove `precise` since that makes the source name very long,
+            // and isn't needed to disambiguate multiple sources.
+            source_id.with_precise(None).as_url().to_string()
         };
 
-        let source = if source_id.is_default_registry() {
+        let source = if source_id.is_crates_io() {
             VendorSource::Registry {
                 registry: None,
                 replace_with: merged_source_name.to_string(),
@@ -298,7 +301,10 @@ fn sync(
         config.insert(
             merged_source_name.to_string(),
             VendorSource::Directory {
-                directory: opts.destination.to_path_buf(),
+                // Windows-flavour paths are valid here on Windows but Unix.
+                // This backslash normalization is for making output paths more
+                // cross-platform compatible.
+                directory: opts.destination.to_string_lossy().replace("\\", "/"),
             },
         );
     } else if !dest_dir_already_exists {
@@ -310,6 +316,7 @@ fn sync(
 }
 
 fn cp_sources(
+    pkg: &Package,
     src: &Path,
     paths: &[PathBuf],
     dst: &Path,
@@ -349,25 +356,55 @@ fn cp_sources(
             .fold(dst.to_owned(), |acc, component| acc.join(&component));
 
         paths::create_dir_all(dst.parent().unwrap())?;
+        let mut dst_opts = OpenOptions::new();
+        dst_opts.write(true).create(true).truncate(true);
+        // When vendoring git dependencies, the manifest has not been normalized like it would be
+        // when published. This causes issue when the manifest is using workspace inheritance.
+        // To get around this issue we use the "original" manifest after `{}.workspace = true`
+        // has been resolved for git dependencies.
+        let cksum = if dst.file_name() == Some(OsStr::new("Cargo.toml"))
+            && pkg.package_id().source_id().is_git()
+        {
+            let original_toml = toml::to_string_pretty(pkg.manifest().original())?;
+            let contents = format!("{}\n{}", MANIFEST_PREAMBLE, original_toml);
+            copy_and_checksum(
+                &dst,
+                &mut dst_opts,
+                &mut contents.as_bytes(),
+                "Generated Cargo.toml",
+                tmp_buf,
+            )?
+        } else {
+            let mut src = File::open(&p).with_context(|| format!("failed to open {:?}", &p))?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+                let src_metadata = src
+                    .metadata()
+                    .with_context(|| format!("failed to stat {:?}", p))?;
+                dst_opts.mode(src_metadata.mode());
+            }
+            copy_and_checksum(
+                &dst,
+                &mut dst_opts,
+                &mut src,
+                &p.display().to_string(),
+                tmp_buf,
+            )?
+        };
 
-        let cksum = copy_and_checksum(p, &dst, tmp_buf)?;
         cksums.insert(relative.to_str().unwrap().replace("\\", "/"), cksum);
     }
     Ok(())
 }
 
-fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoResult<String> {
-    let mut src = File::open(src_path).with_context(|| format!("failed to open {:?}", src_path))?;
-    let mut dst_opts = OpenOptions::new();
-    dst_opts.write(true).create(true).truncate(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
-        let src_metadata = src
-            .metadata()
-            .with_context(|| format!("failed to stat {:?}", src_path))?;
-        dst_opts.mode(src_metadata.mode());
-    }
+fn copy_and_checksum<T: Read>(
+    dst_path: &Path,
+    dst_opts: &mut OpenOptions,
+    contents: &mut T,
+    contents_path: &str,
+    buf: &mut [u8],
+) -> CargoResult<String> {
     let mut dst = dst_opts
         .open(dst_path)
         .with_context(|| format!("failed to create {:?}", dst_path))?;
@@ -375,9 +412,9 @@ fn copy_and_checksum(src_path: &Path, dst_path: &Path, buf: &mut [u8]) -> CargoR
     // shouldn't be any under normal conditions.
     let mut cksum = Sha256::new();
     loop {
-        let n = src
+        let n = contents
             .read(buf)
-            .with_context(|| format!("failed to read from {:?}", src_path))?;
+            .with_context(|| format!("failed to read from {:?}", contents_path))?;
         if n == 0 {
             break Ok(cksum.finish_hex());
         }

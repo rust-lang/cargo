@@ -1,0 +1,10 @@
+      Adding foo (local) to dependencies.
+             Features:
+             + default-base
+             + default-merge-base
+             + default-test-base
+             + test
+             + test-base
+             - merge
+             - merge-base
+             - unrelated

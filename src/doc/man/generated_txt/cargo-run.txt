@@ -1,7 +1,7 @@
 CARGO-RUN(1)
 
 NAME
-       cargo-run - Run the current package
+       cargo-run — Run the current package
 
 SYNOPSIS
        cargo run [options] [-- args]
@@ -10,8 +10,12 @@ DESCRIPTION
        Run a binary or example of the local package.
 
        All the arguments following the two dashes (--) are passed to the binary
-       to run. If you're passing arguments to both Cargo and the binary, the
+       to run. If you’re passing arguments to both Cargo and the binary, the
        ones after -- go to the binary, the ones before go to Cargo.
+
+       Unlike cargo-test(1) and cargo-bench(1), cargo run sets the working
+       directory of the binary executed to the current working directory, same
+       as if it was executed in the shell directly.
 
 OPTIONS
    Package Selection
@@ -43,7 +47,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -82,7 +86,7 @@ OPTIONS
 
        --ignore-rust-version
            Run the target even if the selected Rust compiler is older than the
-           required Rust version as configured in the project's rust-version
+           required Rust version as configured in the project’s rust-version
            field.
 
        --timings=fmts
@@ -93,12 +97,13 @@ OPTIONS
            (rather than the default) is unstable and requires
            -Zunstable-options. Valid output formats:
 
-           o  html: Write a human-readable file cargo-timing.html to the
-              target/cargo-timings directory with a report of the compilation.
-              Also write a report to the same directory with a timestamp in the
-              filename if you want to look at older runs. HTML output is
-              suitable for human consumption only, and does not provide
-              machine-readable timing data.
+           o  html (unstable, requires -Zunstable-options): Write a
+              human-readable file cargo-timing.html to the target/cargo-timings
+              directory with a report of the compilation. Also write a report
+              to the same directory with a timestamp in the filename if you
+              want to look at older runs. HTML output is suitable for human
+              consumption only, and does not provide machine-readable timing
+              data.
 
            o  json (unstable, requires -Zunstable-options): Emit
               machine-readable JSON information about timing information.
@@ -113,10 +118,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -151,18 +157,19 @@ OPTIONS
               for more details. Conflicts with human and short.
 
            o  json-diagnostic-short: Ensure the rendered field of JSON messages
-              contains the "short" rendering from rustc. Cannot be used with
-              human or short.
+              contains the “short” rendering from rustc. Cannot be used
+              with human or short.
 
            o  json-diagnostic-rendered-ansi: Ensure the rendered field of JSON
               messages contains embedded ANSI color codes for respecting
-              rustc's default color scheme. Cannot be used with human or short.
+              rustc’s default color scheme. Cannot be used with human or
+              short.
 
            o  json-render-diagnostics: Instruct Cargo to not include rustc
-              diagnostics in in JSON messages printed, but instead Cargo itself
-              should render the JSON diagnostics coming from rustc. Cargo's own
-              JSON diagnostics and others coming from rustc are still emitted.
-              Cannot be used with human or short.
+              diagnostics in JSON messages printed, but instead Cargo itself
+              should render the JSON diagnostics coming from rustc. Cargo’s
+              own JSON diagnostics and others coming from rustc are still
+              emitted. Cannot be used with human or short.
 
    Manifest Options
        --manifest-path path
@@ -203,6 +210,27 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
+
        -h, --help
            Prints help information.
 
@@ -215,7 +243,10 @@ OPTIONS
            Number of parallel jobs to run. May also be specified with the
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
-           the number of CPUs.
+           the number of logical CPUs. If negative, it sets the maximum number
+           of parallel jobs to the number of logical CPUs plus provided value.
+           If a string default is provided, it sets the value back to defaults.
+           Should not be 0.
 
        --keep-going
            Build as many crates in the dependency graph as possible, rather

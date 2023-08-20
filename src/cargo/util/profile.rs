@@ -1,3 +1,9 @@
+//! An internal performance profiler for Cargo itself.
+//!
+//! > **Note**: This might not be the module you are looking for.
+//! > For information about how Cargo handles compiler flags with profiles,
+//! > please see the module [`cargo::core::profiles`](crate::core::profiles).
+
 use std::cell::RefCell;
 use std::env;
 use std::fmt;
@@ -16,6 +22,8 @@ pub struct Profiler {
 }
 
 fn enabled_level() -> Option<usize> {
+    // ALLOWED: for profiling Cargo itself, not intended to be used beyond Cargo contributors.
+    #[allow(clippy::disallowed_methods)]
     env::var("CARGO_PROFILE").ok().and_then(|s| s.parse().ok())
 }
 

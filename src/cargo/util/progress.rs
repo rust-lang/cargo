@@ -1,5 +1,6 @@
+//! Support for CLI progress bars.
+
 use std::cmp;
-use std::env;
 use std::time::{Duration, Instant};
 
 use crate::core::shell::Verbosity;
@@ -8,13 +9,50 @@ use crate::util::{CargoResult, Config};
 use cargo_util::is_ci;
 use unicode_width::UnicodeWidthChar;
 
+/// CLI progress bar.
+///
+/// The `Progress` object can be in an enabled or disabled state. When
+/// disabled, calling any of the methods to update it will not display
+/// anything. Disabling is typically done by the user with options such as
+/// `--quiet` or the `term.progress` config option.
+///
+/// There are several methods to update the progress bar and to cause it to
+/// update its display.
+///
+/// The bar will be removed from the display when the `Progress` object is
+/// dropped or [`Progress::clear`] is called.
+///
+/// The progress bar has built-in rate limiting to avoid updating the display
+/// too fast. It should usually be fine to call [`Progress::tick`] as often as
+/// needed, though be cautious if the tick rate is very high or it is
+/// expensive to compute the progress value.
 pub struct Progress<'cfg> {
     state: Option<State<'cfg>>,
 }
 
+/// Indicates the style of information for displaying the amount of progress.
+///
+/// See also [`Progress::print_now`] for displaying progress without a bar.
 pub enum ProgressStyle {
+    /// Displays progress as a percentage.
+    ///
+    /// Example: `Fetch [=====================>   ]  88.15%`
+    ///
+    /// This is good for large values like number of bytes downloaded.
     Percentage,
+    /// Displays progress as a ratio.
+    ///
+    /// Example: `Building [===>                      ] 35/222`
+    ///
+    /// This is good for smaller values where the exact number is useful to see.
     Ratio,
+    /// Does not display an exact value of how far along it is.
+    ///
+    /// Example: `Fetch [===========>                     ]`
+    ///
+    /// This is good for situations where the exact value is an approximation,
+    /// and thus there isn't anything accurate to display to the user.
+    Indeterminate,
 }
 
 struct Throttle {
@@ -39,11 +77,21 @@ struct Format {
 }
 
 impl<'cfg> Progress<'cfg> {
+    /// Creates a new progress bar.
+    ///
+    /// The first parameter is the text displayed to the left of the bar, such
+    /// as "Fetching".
+    ///
+    /// The progress bar is not displayed until explicitly updated with one if
+    /// its methods.
+    ///
+    /// The progress bar may be created in a disabled state if the user has
+    /// disabled progress display (such as with the `--quiet` option).
     pub fn with_style(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
         // report no progress when -q (for quiet) or TERM=dumb are set
         // or if running on Continuous Integration service like Travis where the
         // output logs get mangled.
-        let dumb = match env::var("TERM") {
+        let dumb = match cfg.get_env("TERM") {
             Ok(term) => term == "dumb",
             Err(_) => false,
         };
@@ -84,18 +132,33 @@ impl<'cfg> Progress<'cfg> {
         }
     }
 
+    /// Disables the progress bar, ensuring it won't be displayed.
     pub fn disable(&mut self) {
         self.state = None;
     }
 
+    /// Returns whether or not the progress bar is allowed to be displayed.
     pub fn is_enabled(&self) -> bool {
         self.state.is_some()
     }
 
+    /// Creates a new `Progress` with the [`ProgressStyle::Percentage`] style.
+    ///
+    /// See [`Progress::with_style`] for more information.
     pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
         Self::with_style(name, ProgressStyle::Percentage, cfg)
     }
 
+    /// Updates the state of the progress bar.
+    ///
+    /// * `cur` should be how far along the progress is.
+    /// * `max` is the maximum value for the progress bar.
+    /// * `msg` is a small piece of text to display at the end of the progress
+    ///   bar. It will be truncated with `...` if it does not fit on the
+    ///   terminal.
+    ///
+    /// This may not actually update the display if `tick` is being called too
+    /// quickly.
     pub fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         let s = match &mut self.state {
             Some(s) => s,
@@ -121,6 +184,14 @@ impl<'cfg> Progress<'cfg> {
         s.tick(cur, max, msg)
     }
 
+    /// Updates the state of the progress bar.
+    ///
+    /// This is the same as [`Progress::tick`], but ignores rate throttling
+    /// and forces the display to be updated immediately.
+    ///
+    /// This may be useful for situations where you know you aren't calling
+    /// `tick` too fast, and accurate information is more important than
+    /// limiting the console update rate.
     pub fn tick_now(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         match self.state {
             Some(ref mut s) => s.tick(cur, max, msg),
@@ -128,6 +199,10 @@ impl<'cfg> Progress<'cfg> {
         }
     }
 
+    /// Returns whether or not updates are currently being throttled.
+    ///
+    /// This can be useful if computing the values for calling the
+    /// [`Progress::tick`] function may require some expensive work.
     pub fn update_allowed(&mut self) -> bool {
         match &mut self.state {
             Some(s) => s.throttle.allowed(),
@@ -135,6 +210,14 @@ impl<'cfg> Progress<'cfg> {
         }
     }
 
+    /// Displays progress without a bar.
+    ///
+    /// The given `msg` is the text to display after the status message.
+    ///
+    /// Example: `Downloading 61 crates, remaining bytes: 28.0 MB`
+    ///
+    /// This does not have any rate limit throttling, so be careful about
+    /// calling it too often.
     pub fn print_now(&mut self, msg: &str) -> CargoResult<()> {
         match &mut self.state {
             Some(s) => s.print("", msg),
@@ -142,6 +225,7 @@ impl<'cfg> Progress<'cfg> {
         }
     }
 
+    /// Clears the progress bar from the console.
     pub fn clear(&mut self) {
         if let Some(ref mut s) = self.state {
             s.clear();
@@ -253,6 +337,7 @@ impl Format {
         let stats = match self.style {
             ProgressStyle::Percentage => format!(" {:6.02}%", pct * 100.0),
             ProgressStyle::Ratio => format!(" {}/{}", cur, max),
+            ProgressStyle::Indeterminate => String::new(),
         };
         let extra_len = stats.len() + 2 /* [ and ] */ + 15 /* status header */;
         let display_width = match self.width().checked_sub(extra_len) {

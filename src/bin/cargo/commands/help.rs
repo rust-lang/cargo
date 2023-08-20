@@ -1,8 +1,10 @@
 use crate::aliased_command;
+use crate::command_prelude::*;
 use cargo::util::errors::CargoResult;
 use cargo::{drop_println, Config};
 use cargo_util::paths::resolve_executable;
 use flate2::read::GzDecoder;
+use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io::Read;
 use std::io::Write;
@@ -10,43 +12,40 @@ use std::path::Path;
 
 const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"));
 
-/// Checks if the `help` command is being issued.
-///
-/// This runs before clap processing, because it needs to intercept the `help`
-/// command if a man page is available.
-///
-/// Returns `true` if help information was successfully displayed to the user.
-/// In this case, Cargo should exit.
-pub fn handle_embedded_help(config: &Config) -> bool {
-    match try_help(config) {
-        Ok(true) => true,
-        Ok(false) => false,
-        Err(e) => {
-            log::warn!("help failed: {:?}", e);
-            false
-        }
-    }
+pub fn cli() -> Command {
+    subcommand("help")
+        .about("Displays help for a cargo subcommand")
+        .arg(Arg::new("COMMAND").action(ArgAction::Set))
 }
 
-fn try_help(config: &Config) -> CargoResult<bool> {
-    let mut args = std::env::args_os()
-        .skip(1)
-        .skip_while(|arg| arg.to_str().map_or(false, |s| s.starts_with('-')));
-    if !args
-        .next()
-        .map_or(false, |arg| arg.to_str() == Some("help"))
-    {
-        return Ok(false);
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let subcommand = args.get_one::<String>("COMMAND");
+    if let Some(subcommand) = subcommand {
+        if !try_help(config, subcommand)? {
+            match check_builtin(&subcommand) {
+                Some(s) => {
+                    crate::execute_internal_subcommand(
+                        config,
+                        &[OsStr::new(s), OsStr::new("--help")],
+                    )?;
+                }
+                None => {
+                    crate::execute_external_subcommand(
+                        config,
+                        subcommand,
+                        &[OsStr::new(subcommand), OsStr::new("--help")],
+                    )?;
+                }
+            }
+        }
+    } else {
+        let mut cmd = crate::cli::cli();
+        let _ = cmd.print_help();
     }
-    let subcommand = match args.next() {
-        Some(arg) => arg,
-        None => return Ok(false),
-    };
-    let subcommand = match subcommand.to_str() {
-        Some(s) => s,
-        None => return Ok(false),
-    };
+    Ok(())
+}
 
+fn try_help(config: &Config, subcommand: &str) -> CargoResult<bool> {
     let subcommand = match check_alias(config, subcommand) {
         // If this alias is more than a simple subcommand pass-through, show the alias.
         Some(argv) if argv.len() > 1 => {

@@ -2,18 +2,23 @@ use cargo::ops::{self, DocOptions};
 
 use crate::command_prelude::*;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("rustdoc")
-        .trailing_var_arg(true)
         .about("Build a package's documentation, using specified custom flags.")
-        .arg_quiet()
-        .arg(Arg::new("args").multiple_values(true))
-        .arg(opt(
+        .arg(
+            Arg::new("args")
+                .help("Extra rustdoc flags")
+                .num_args(0..)
+                .trailing_var_arg(true),
+        )
+        .arg(flag(
             "open",
             "Opens the docs in a browser after the operation",
         ))
+        .arg_ignore_rust_version()
+        .arg_message_format()
+        .arg_quiet()
         .arg_package("Package to document")
-        .arg_jobs()
         .arg_targets_all(
             "Build only this package's library",
             "Build only the specified binary",
@@ -26,16 +31,15 @@ pub fn cli() -> App {
             "Build all benches",
             "Build all targets",
         )
+        .arg_features()
+        .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg_manifest_path()
-        .arg_message_format()
         .arg_unit_graph()
-        .arg_ignore_rust_version()
         .arg_timings()
+        .arg_manifest_path()
         .after_help("Run `cargo help rustdoc` for more detailed information.\n")
 }
 
@@ -54,7 +58,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some(target_args)
     };
     let doc_opts = DocOptions {
-        open_result: args.is_present("open"),
+        open_result: args.flag("open"),
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;

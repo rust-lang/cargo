@@ -1,26 +1,11 @@
 //! Tests for the --config CLI option.
 
-use super::config::{assert_error, assert_match, read_output, write_config, ConfigBuilder};
+use super::config::{
+    assert_error, assert_match, read_output, write_config, write_config_at, ConfigBuilder,
+};
 use cargo::util::config::Definition;
-use cargo_test_support::{paths, project};
+use cargo_test_support::paths;
 use std::{collections::HashMap, fs};
-
-#[cargo_test]
-fn config_gated() {
-    // Requires -Zunstable-options
-    let p = project().file("src/lib.rs", "").build();
-
-    p.cargo("build --config --config build.jobs=1")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] the `--config` flag is unstable, [..]
-See [..]
-See [..]
-",
-        )
-        .run();
-}
 
 #[cargo_test]
 fn basic() {
@@ -68,6 +53,72 @@ fn cli_priority() {
         .config_arg("term.quiet=true")
         .build();
     assert_eq!(config.get::<bool>("term.quiet").unwrap(), true);
+}
+
+#[cargo_test]
+fn merge_primitives_for_multiple_cli_occurrences() {
+    let config_path0 = ".cargo/file0.toml";
+    write_config_at(config_path0, "k = 'file0'");
+    let config_path1 = ".cargo/file1.toml";
+    write_config_at(config_path1, "k = 'file1'");
+
+    // k=env0
+    let config = ConfigBuilder::new().env("CARGO_K", "env0").build();
+    assert_eq!(config.get::<String>("k").unwrap(), "env0");
+
+    // k=env0
+    // --config k='cli0'
+    // --config k='cli1'
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env0")
+        .config_arg("k='cli0'")
+        .config_arg("k='cli1'")
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "cli1");
+
+    // Env has a lower priority when comparing with file from CLI arg.
+    //
+    // k=env0
+    // --config k='cli0'
+    // --config k='cli1'
+    // --config .cargo/file0.toml
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env0")
+        .config_arg("k='cli0'")
+        .config_arg("k='cli1'")
+        .config_arg(config_path0)
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "file0");
+
+    // k=env0
+    // --config k='cli0'
+    // --config k='cli1'
+    // --config .cargo/file0.toml
+    // --config k='cli2'
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env0")
+        .config_arg("k='cli0'")
+        .config_arg("k='cli1'")
+        .config_arg(config_path0)
+        .config_arg("k='cli2'")
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "cli2");
+
+    // k=env0
+    // --config k='cli0'
+    // --config k='cli1'
+    // --config .cargo/file0.toml
+    // --config k='cli2'
+    // --config .cargo/file1.toml
+    let config = ConfigBuilder::new()
+        .env("CARGO_K", "env0")
+        .config_arg("k='cli0'")
+        .config_arg("k='cli1'")
+        .config_arg(config_path0)
+        .config_arg("k='cli2'")
+        .config_arg(config_path1)
+        .build();
+    assert_eq!(config.get::<String>("k").unwrap(), "file1");
 }
 
 #[cargo_test]
@@ -344,8 +395,7 @@ Caused by:
   |
 1 | abc
   |    ^
-Unexpected end of input
-Expected `.` or `=`
+expected `.`, `=`
 ",
     );
 
@@ -365,6 +415,38 @@ fn too_many_values() {
         "\
 --config argument `a=1
 b=2` was not a TOML dotted key expression (such as `build.jobs = 2`)",
+    );
+}
+
+#[cargo_test]
+fn no_disallowed_values() {
+    let config = ConfigBuilder::new()
+        .config_arg("registry.token=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registry.token cannot be set through --config for security reasons",
+    );
+    let config = ConfigBuilder::new()
+        .config_arg("registries.crates-io.token=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registries.crates-io.token cannot be set through --config for security reasons",
+    );
+    let config = ConfigBuilder::new()
+        .config_arg("registry.secret-key=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registry.secret-key cannot be set through --config for security reasons",
+    );
+    let config = ConfigBuilder::new()
+        .config_arg("registries.crates-io.secret-key=\"hello\"")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "registries.crates-io.secret-key cannot be set through --config for security reasons",
     );
 }
 
@@ -452,5 +534,31 @@ Caused by:
 Caused by:
   failed to merge config value from `--config cli option` into `--config cli option`: \
   expected string, but found array",
+    );
+}
+
+#[cargo_test]
+fn cli_path() {
+    // --config path_to_file
+    fs::write(paths::root().join("myconfig.toml"), "key = 123").unwrap();
+    let config = ConfigBuilder::new()
+        .cwd(paths::root())
+        .config_arg("myconfig.toml")
+        .build();
+    assert_eq!(config.get::<u32>("key").unwrap(), 123);
+
+    let config = ConfigBuilder::new().config_arg("missing.toml").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+failed to parse value from --config argument `missing.toml` as a dotted key expression
+
+Caused by:
+  TOML parse error at line 1, column 13
+  |
+1 | missing.toml
+  |             ^
+expected `.`, `=`
+",
     );
 }

@@ -37,7 +37,7 @@ A description of the command.
 <dd class="option-desc">This has multiple flags.</dd>
 
 
-<dt class="option-term" id="option-options-named-arg..."><a class="option-anchor" href="#option-options-named-arg..."></a><em>named-arg...</em></dt>
+<dt class="option-term" id="option-options-named-arg…"><a class="option-anchor" href="#option-options-named-arg…"></a><em>named-arg…</em></dt>
 <dd class="option-desc">A named argument.</dd>
 
 

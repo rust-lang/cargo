@@ -110,7 +110,7 @@ open a Pull Request
   #1234 to the PR. When the PR is merged, GitHub will automatically close the
   issue.
 
-The [rust-highfive] bot will automatically assign a reviewer for the PR. It
+[`@rustbot`] will automatically assign a reviewer for the PR. It
 may take at least a few days for someone to respond. If you don't get a
 response in over a week, feel free to ping the assigned reviewer.
 
@@ -121,6 +121,21 @@ typically finish in under 30 minutes.
 
 The reviewer might point out changes deemed necessary. Large or tricky changes
 may require several passes of review and changes.
+
+### Status labeling
+
+PRs will get marked with [labels] like [`S-waiting-on-review`] or [`S-waiting-on-author`] to indicate their status.
+The [`@rustbot`] bot can be used by anyone to adjust the labels.
+If a PR gets marked as `S-waiting-on-author`, and you have pushed new changes that you would like to be reviewed, you can write a comment on the PR with the text `@rustbot ready`.
+The bot will switch the labels on the PR.
+
+More information about these commands can be found at the [shortcuts documentation].
+
+[labels]: https://github.com/rust-lang/cargo/labels
+[`S-waiting-on-review`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-review
+[`S-waiting-on-author`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-author
+[`@rustbot`]: https://github.com/rustbot
+[shortcuts documentation]: https://forge.rust-lang.org/triagebot/shortcuts.html
 
 ## The merging process
 
@@ -147,7 +162,6 @@ more information on how Cargo releases are made.
 [how-to-clone]: https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository
 [Testing chapter]: ../tests/index.md
 [GitHub's keywords]: https://docs.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
-[rust-highfive]: https://github.com/rust-highfive
 [bors]: https://buildbot2.rust-lang.org/homu/
 [`@bors`]: https://github.com/bors
 [homu-cargo]: https://buildbot2.rust-lang.org/homu/queue/cargo

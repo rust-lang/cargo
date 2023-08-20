@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo - The Rust package manager
+cargo --- The Rust package manager
 
 ## SYNOPSIS
 
@@ -101,6 +101,9 @@ available at <https://rust-lang.org>.
 
 {{man "cargo-login" 1}}\
 &nbsp;&nbsp;&nbsp;&nbsp;Save an API token from the registry locally.
+
+{{man "cargo-logout" 1}}\
+&nbsp;&nbsp;&nbsp;&nbsp;Remove an API token from the registry locally.
 
 {{man "cargo-owner" 1}}\
 &nbsp;&nbsp;&nbsp;&nbsp;Manage the owners of a crate on the registry.

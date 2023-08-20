@@ -6,7 +6,6 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use toml_edit::easy as toml;
 
 use cargo_test_support::install::{cargo_home, exe};
 use cargo_test_support::paths::CargoPathExt;
@@ -231,7 +230,7 @@ fn ambiguous_version_no_longer_allowed() {
     cargo_process("install foo --version=1.0")
         .with_stderr(
             "\
-[ERROR] the `--vers` provided, `1.0`, is not a valid semver version: cannot parse '1.0' as a semver
+[ERROR] the `--version` provided, `1.0`, is not a valid semver version: cannot parse '1.0' as a semver
 
 if you want to specify semver range, add an explicit qualifier, like ^1.0
 ",

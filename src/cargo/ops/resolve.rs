@@ -1,14 +1,59 @@
 //! High-level APIs for executing the resolver.
 //!
-//! This module provides functions for running the resolver given a workspace.
+//! This module provides functions for running the resolver given a workspace, including loading
+//! the `Cargo.lock` file and checkinf if it needs updating.
+//!
 //! There are roughly 3 main functions:
 //!
-//! - `resolve_ws`: A simple, high-level function with no options.
-//! - `resolve_ws_with_opts`: A medium-level function with options like
+//! - [`resolve_ws`]: A simple, high-level function with no options.
+//! - [`resolve_ws_with_opts`]: A medium-level function with options like
 //!   user-provided features. This is the most appropriate function to use in
 //!   most cases.
-//! - `resolve_with_previous`: A low-level function for running the resolver,
+//! - [`resolve_with_previous`]: A low-level function for running the resolver,
 //!   providing the most power and flexibility.
+//!
+//! ### Data Structures
+//!
+//! - [`Workspace`]:
+//!   Usually created by [`crate::util::command_prelude::ArgMatchesExt::workspace`] which discovers the root of the
+//!   workspace, and loads all the workspace members as a [`Package`] object
+//!   - [`Package`]
+//!     Corresponds with `Cargo.toml` manifest (deserialized as [`Manifest`]) and its associated files.
+//!     - [`Target`]s are crates such as the library, binaries, integration test, or examples.
+//!       They are what is actually compiled by `rustc`.
+//!       Each `Target` defines a crate root, like `src/lib.rs` or `examples/foo.rs`.
+//!     - [`PackageId`] --- A unique identifier for a package.
+//! - [`PackageRegistry`]:
+//!   The primary interface for how the dependency
+//!   resolver finds packages. It contains the `SourceMap`, and handles things
+//!   like the `[patch]` table. The dependency resolver
+//!   sends a query to the `PackageRegistry` to "get me all packages that match
+//!   this dependency declaration". The `Registry` trait provides a generic interface
+//!   to the `PackageRegistry`, but this is only used for providing an alternate
+//!   implementation of the `PackageRegistry` for testing.
+//! - [`SourceMap`]: Map of all available sources.
+//!   - [`Source`]: An abstraction for something that can fetch packages (a remote
+//!     registry, a git repo, the local filesystem, etc.). Check out the [source
+//!     implementations] for all the details about registries, indexes, git
+//!     dependencies, etc.
+//!       * [`SourceId`]: A unique identifier for a source.
+//!   - [`Summary`]: A of a [`Manifest`], and is essentially
+//!     the information that can be found in a registry index. Queries against the
+//!     `PackageRegistry` yields a `Summary`. The resolver uses the summary
+//!     information to build the dependency graph.
+//! - [`PackageSet`] --- Contains all of the `Package` objects. This works with the
+//!   [`Downloads`] struct to coordinate downloading packages. It has a reference
+//!   to the `SourceMap` to get the `Source` objects which tell the `Downloads`
+//!   struct which URLs to fetch.
+//!
+//! [`Package`]: crate::core::package
+//! [`Target`]: crate::core::Target
+//! [`Manifest`]: crate::core::Manifest
+//! [`Source`]: crate::core::Source
+//! [`SourceMap`]: crate::core::SourceMap
+//! [`PackageRegistry`]: crate::core::registry::PackageRegistry
+//! [source implementations]: crate::sources
+//! [`Downloads`]: crate::core::package::Downloads
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
@@ -26,8 +71,8 @@ use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
-use log::{debug, trace};
 use std::collections::{HashMap, HashSet};
+use tracing::{debug, trace};
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'cfg> {
@@ -209,7 +254,7 @@ fn resolve_with_registry<'cfg>(
     Ok(resolve)
 }
 
-/// Resolves all dependencies for a package using an optional previous instance.
+/// Resolves all dependencies for a package using an optional previous instance
 /// of resolve to guide the resolution process.
 ///
 /// This also takes an optional hash set, `to_avoid`, which is a list of package
@@ -386,21 +431,19 @@ pub fn resolve_with_previous<'cfg>(
     let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
     let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
-    // In the case where a previous instance of resolve is available, we
-    // want to lock as many packages as possible to the previous version
-    // without disturbing the graph structure.
+
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        register_previous_locks(ws, registry, r, &keep, dev_deps);
-    }
 
-    // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
-    for r in previous {
-        for id in r.iter() {
-            if keep(&id) {
-                debug!("attempting to prefer {}", id);
-                version_prefs.prefer_package_id(id);
-            }
+        // In the case where a previous instance of resolve is available, we
+        // want to lock as many packages as possible to the previous version
+        // without disturbing the graph structure.
+        register_previous_locks(ws, registry, r, &keep, dev_deps);
+
+        // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
+        for id in r.iter().filter(keep) {
+            debug!("attempting to prefer {}", id);
+            version_prefs.prefer_package_id(id);
         }
     }
 
@@ -408,6 +451,12 @@ pub fn resolve_with_previous<'cfg>(
         registry.lock_patches();
     }
 
+    // Some packages are already loaded when setting up a workspace. This
+    // makes it so anything that was already loaded will not be loaded again.
+    // Without this there were cases where members would be parsed multiple times
+    ws.preload(registry);
+
+    // In case any members were not already loaded or the Workspace is_ephemeral.
     for member in ws.members() {
         registry.add_sources(Some(member.package_id().source_id()))?;
     }
@@ -790,7 +839,7 @@ fn emit_warnings_of_unused_patches(
                 writeln!(msg, "Patch `{}` {}", unused, MESSAGE)?;
                 write!(
                     msg,
-                    "Perhaps you misspell the source URL being patched.\n\
+                    "Perhaps you misspelled the source URL being patched.\n\
                     Possible URLs for `[patch.<URL>]`:",
                 )?;
                 for id in ids.iter() {

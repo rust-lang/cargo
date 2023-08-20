@@ -17,10 +17,10 @@
 //! Cargo begins a normal `cargo check` operation with itself set as a proxy
 //! for rustc by setting `primary_unit_rustc` in the build config. When
 //! cargo launches rustc to check a crate, it is actually launching itself.
-//! The `FIX_ENV` environment variable is set so that cargo knows it is in
+//! The `FIX_ENV_INTERNAL` environment variable is set so that cargo knows it is in
 //! fix-proxy-mode.
 //!
-//! Each proxied cargo-as-rustc detects it is in fix-proxy-mode (via `FIX_ENV`
+//! Each proxied cargo-as-rustc detects it is in fix-proxy-mode (via `FIX_ENV_INTERNAL`
 //! environment variable in `main`) and does the following:
 //!
 //! - Acquire a lock from the `LockServer` from the master cargo process.
@@ -46,10 +46,10 @@ use std::{env, fs, str};
 
 use anyhow::{bail, Context as _};
 use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuilder};
-use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 use semver::Version;
+use tracing::{debug, trace, warn};
 
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
@@ -63,10 +63,20 @@ use crate::util::Config;
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 use crate::{drop_eprint, drop_eprintln};
 
-const FIX_ENV: &str = "__CARGO_FIX_PLZ";
-const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
-const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
-const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
+/// **Internal only.**
+/// Indicates Cargo is in fix-proxy-mode if presents.
+/// The value of it is the socket address of the [`LockServer`] being used.
+/// See the [module-level documentation](mod@super::fix) for more.
+const FIX_ENV_INTERNAL: &str = "__CARGO_FIX_PLZ";
+/// **Internal only.**
+/// For passing [`FixOptions::broken_code`] through to cargo running in proxy mode.
+const BROKEN_CODE_ENV_INTERNAL: &str = "__CARGO_FIX_BROKEN_CODE";
+/// **Internal only.**
+/// For passing [`FixOptions::edition`] through to cargo running in proxy mode.
+const EDITION_ENV_INTERNAL: &str = "__CARGO_FIX_EDITION";
+/// **Internal only.**
+/// For passing [`FixOptions::idioms`] through to cargo running in proxy mode.
+const IDIOMS_ENV_INTERNAL: &str = "__CARGO_FIX_IDIOMS";
 
 pub struct FixOptions {
     pub edition: bool,
@@ -87,20 +97,20 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
     let mut wrapper = ProcessBuilder::new(env::current_exe()?);
-    wrapper.env(FIX_ENV, lock_server.addr().to_string());
+    wrapper.env(FIX_ENV_INTERNAL, lock_server.addr().to_string());
     let _started = lock_server.start()?;
 
     opts.compile_opts.build_config.force_rebuild = true;
 
     if opts.broken_code {
-        wrapper.env(BROKEN_CODE_ENV, "1");
+        wrapper.env(BROKEN_CODE_ENV_INTERNAL, "1");
     }
 
     if opts.edition {
-        wrapper.env(EDITION_ENV, "1");
+        wrapper.env(EDITION_ENV_INTERNAL, "1");
     }
     if opts.idioms {
-        wrapper.env(IDIOMS_ENV, "1");
+        wrapper.env(IDIOMS_ENV_INTERNAL, "1");
     }
 
     *opts
@@ -154,6 +164,7 @@ fn check_version_control(config: &Config, opts: &FixOptions) -> CargoResult<()> 
     if let Ok(repo) = git2::Repository::discover(config.cwd()) {
         let mut repo_opts = git2::StatusOptions::new();
         repo_opts.include_ignored(false);
+        repo_opts.include_untracked(true);
         for status in repo.statuses(Some(&mut repo_opts))?.iter() {
             if let Some(path) = status.path() {
                 match status.status() {
@@ -333,29 +344,36 @@ to prevent this issue from happening.
     Ok(())
 }
 
+/// Provide the lock address when running in proxy mode
+///
+/// Returns `None` if `fix` is not being run (not in proxy mode). Returns
+/// `Some(...)` if in `fix` proxy mode
+pub fn fix_get_proxy_lock_addr() -> Option<String> {
+    // ALLOWED: For the internal mechanism of `cargo fix` only.
+    // Shouldn't be set directly by anyone.
+    #[allow(clippy::disallowed_methods)]
+    env::var(FIX_ENV_INTERNAL).ok()
+}
+
 /// Entry point for `cargo` running as a proxy for `rustc`.
 ///
 /// This is called every time `cargo` is run to check if it is in proxy mode.
 ///
-/// Returns `false` if `fix` is not being run (not in proxy mode). Returns
-/// `true` if in `fix` proxy mode, and the fix was complete without any
-/// warnings or errors. If there are warnings or errors, this does not return,
+/// If there are warnings or errors, this does not return,
 /// and the process exits with the corresponding `rustc` exit code.
-pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
-    let lock_addr = match env::var(FIX_ENV) {
-        Ok(s) => s,
-        Err(_) => return Ok(false),
-    };
-
+///
+/// See [`fix_get_proxy_lock_addr`]
+pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     let args = FixArgs::get()?;
     trace!("cargo-fix as rustc got file {:?}", args.file);
 
-    let workspace_rustc = std::env::var("RUSTC_WORKSPACE_WRAPPER")
+    let workspace_rustc = config
+        .get_env("RUSTC_WORKSPACE_WRAPPER")
         .map(PathBuf::from)
         .ok();
     let mut rustc = ProcessBuilder::new(&args.rustc).wrapped(workspace_rustc.as_ref());
     rustc.retry_with_argfile(true);
-    rustc.env_remove(FIX_ENV);
+    rustc.env_remove(FIX_ENV_INTERNAL);
     args.apply(&mut rustc);
 
     trace!("start rustfixing {:?}", args.file);
@@ -384,7 +402,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
                     file: path.clone(),
                     fixes: file.fixes_applied,
                 }
-                .post()?;
+                .post(config)?;
             }
         }
 
@@ -392,14 +410,14 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
         // any. If stderr is empty then there's no need for the final exec at
         // the end, we just bail out here.
         if output.status.success() && output.stderr.is_empty() {
-            return Ok(true);
+            return Ok(());
         }
 
         // Otherwise, if our rustc just failed, then that means that we broke the
         // user's code with our changes. Back out everything and fall through
         // below to recompile again.
         if !output.status.success() {
-            if env::var_os(BROKEN_CODE_ENV).is_none() {
+            if config.get_env_os(BROKEN_CODE_ENV_INTERNAL).is_none() {
                 for (path, file) in fixes.files.iter() {
                     debug!("reverting {:?} due to errors", path);
                     paths::write(path, &file.original_code)?;
@@ -416,7 +434,7 @@ pub fn fix_maybe_exec_rustc(config: &Config) -> CargoResult<bool> {
                 }
                 krate
             };
-            log_failed_fix(krate, &output.stderr, output.status)?;
+            log_failed_fix(config, krate, &output.stderr, output.status)?;
         }
     }
 
@@ -506,7 +524,8 @@ fn rustfix_crate(
     //   definitely can't make progress, so bail out.
     let mut fixes = FixedCrate::default();
     let mut last_fix_counts = HashMap::new();
-    let iterations = env::var("CARGO_FIX_MAX_RETRIES")
+    let iterations = config
+        .get_env("CARGO_FIX_MAX_RETRIES")
         .ok()
         .and_then(|n| n.parse().ok())
         .unwrap_or(4);
@@ -543,7 +562,7 @@ fn rustfix_crate(
                 file: path.clone(),
                 message: error,
             }
-            .post()?;
+            .post(config)?;
         }
     }
 
@@ -572,7 +591,7 @@ fn rustfix_and_fix(
     // worse by applying fixes where a bug could cause *more* broken code.
     // Instead, punt upwards which will reexec rustc over the original code,
     // displaying pretty versions of the diagnostics we just read out.
-    if !output.status.success() && env::var_os(BROKEN_CODE_ENV).is_none() {
+    if !output.status.success() && config.get_env_os(BROKEN_CODE_ENV_INTERNAL).is_none() {
         debug!(
             "rustfixing `{:?}` failed, rustc exited with {:?}",
             filename,
@@ -581,7 +600,8 @@ fn rustfix_and_fix(
         return Ok(());
     }
 
-    let fix_mode = env::var_os("__CARGO_FIX_YOLO")
+    let fix_mode = config
+        .get_env_os("__CARGO_FIX_YOLO")
         .map(|_| rustfix::Filter::Everything)
         .unwrap_or(rustfix::Filter::MachineApplicableOnly);
 
@@ -706,7 +726,12 @@ fn exit_with(status: ExitStatus) -> ! {
     process::exit(status.code().unwrap_or(3));
 }
 
-fn log_failed_fix(krate: Option<String>, stderr: &[u8], status: ExitStatus) -> CargoResult<()> {
+fn log_failed_fix(
+    config: &Config,
+    krate: Option<String>,
+    stderr: &[u8],
+    status: ExitStatus,
+) -> CargoResult<()> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
     let diagnostics = stderr
@@ -741,7 +766,7 @@ fn log_failed_fix(krate: Option<String>, stderr: &[u8], status: ExitStatus) -> C
         errors,
         abnormal_exit,
     }
-    .post()?;
+    .post(config)?;
 
     Ok(())
 }
@@ -835,9 +860,15 @@ impl FixArgs {
         }
 
         let file = file.ok_or_else(|| anyhow::anyhow!("could not find .rs file in rustc args"))?;
-        let idioms = env::var(IDIOMS_ENV).is_ok();
+        // ALLOWED: For the internal mechanism of `cargo fix` only.
+        // Shouldn't be set directly by anyone.
+        #[allow(clippy::disallowed_methods)]
+        let idioms = env::var(IDIOMS_ENV_INTERNAL).is_ok();
 
-        let prepare_for_edition = env::var(EDITION_ENV).ok().map(|_| {
+        // ALLOWED: For the internal mechanism of `cargo fix` only.
+        // Shouldn't be set directly by anyone.
+        #[allow(clippy::disallowed_methods)]
+        let prepare_for_edition = env::var(EDITION_ENV_INTERNAL).ok().map(|_| {
             enabled_edition
                 .unwrap_or(Edition::Edition2015)
                 .saturating_next()
@@ -891,7 +922,7 @@ impl FixArgs {
                 return Message::Fixing {
                     file: self.file.display().to_string(),
                 }
-                .post()
+                .post(config)
                 .and(Ok(true));
             }
         };
@@ -918,7 +949,7 @@ impl FixArgs {
                 message,
                 edition: to_edition.previous().unwrap(),
             }
-            .post()
+            .post(config)
             .and(Ok(false)); // Do not run rustfix for this the edition.
         }
         let from_edition = self.enabled_edition.unwrap_or(Edition::Edition2015);
@@ -933,14 +964,14 @@ impl FixArgs {
                 message,
                 edition: to_edition,
             }
-            .post()
+            .post(config)
         } else {
             Message::Migrating {
                 file: self.file.display().to_string(),
                 from_edition,
                 to_edition,
             }
-            .post()
+            .post(config)
         }
         .and(Ok(true))
     }

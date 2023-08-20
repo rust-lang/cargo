@@ -1,0 +1,5 @@
+    Updating git repository `[ROOTURL]/git-package`
+error: multiple packages found at `[ROOTURL]/git-package`:
+    my-package1, my-package2, my-package3, my-package4, my-package5, my-package6
+    my-package7, my-package8, my-package9
+To disambiguate, run `cargo add --git [ROOTURL]/git-package <package>`

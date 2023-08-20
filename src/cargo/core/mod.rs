@@ -8,12 +8,13 @@ pub use self::package_id_spec::PackageIdSpec;
 pub use self::registry::Registry;
 pub use self::resolver::{Resolve, ResolveVersion};
 pub use self::shell::{Shell, Verbosity};
-pub use self::source::{GitReference, Source, SourceId, SourceMap};
+pub use self::source::{GitReference, QueryKind, Source, SourceId, SourceMap};
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{
-    find_workspace_root, resolve_relative_path, InheritableFields, MaybePackage, Workspace,
-    WorkspaceConfig, WorkspaceRootConfig,
+    find_workspace_root, resolve_relative_path, MaybePackage, Workspace, WorkspaceConfig,
+    WorkspaceRootConfig,
 };
+pub use crate::util::toml::InheritableFields;
 
 pub mod compiler;
 pub mod dependency;

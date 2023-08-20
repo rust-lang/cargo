@@ -1,8 +1,70 @@
 //! Tests for profiles defined in config files.
 
+use cargo::util::toml::TomlDebugInfo;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project};
+
+// TODO: this should be remove once -Zprofile-rustflags is stabilized
+#[cargo_test]
+fn rustflags_works_with_zflag() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [profile.dev]
+                rustflags = ["-C", "link-dead-code=yes"]
+            "#,
+        )
+        .build();
+
+    p.cargo("check -v")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_status(101)
+        .with_stderr_contains("[..]feature `profile-rustflags` is required[..]")
+        .run();
+
+    p.cargo("check -v -Zprofile-rustflags")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [unstable]
+            profile-rustflags = true
+
+            [profile.dev]
+            rustflags = ["-C", "link-dead-code=yes"]
+        "#,
+    );
+
+    p.cargo("check -v")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_stderr(
+            "\
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
 
 #[cargo_test]
 fn profile_config_validate_warnings() {
@@ -168,7 +230,7 @@ fn profile_config_override_spec_multiple() {
         .with_stderr(
             "\
 [ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([..])`
-found package specs: bar, bar:0.5.0",
+found package specs: bar, bar@0.5.0",
         )
         .run();
 }
@@ -205,7 +267,7 @@ fn profile_config_all_options() {
             -C panic=abort \
             -C lto[..]\
             -C codegen-units=2 \
-            -C debuginfo=2 \
+            -C debuginfo=2 [..]\
             -C debug-assertions=on \
             -C overflow-checks=off [..]\
             -C rpath [..]\
@@ -375,7 +437,7 @@ fn named_config_profile() {
     assert_eq!(p.name, "foo");
     assert_eq!(p.codegen_units, Some(2)); // "foo" from config
     assert_eq!(p.opt_level, "1"); // "middle" from manifest
-    assert_eq!(p.debuginfo, Some(1)); // "bar" from config
+    assert_eq!(p.debuginfo.into_inner(), TomlDebugInfo::Limited); // "bar" from config
     assert_eq!(p.debug_assertions, true); // "dev" built-in (ignore build-override)
     assert_eq!(p.overflow_checks, true); // "dev" built-in (ignore package override)
 
@@ -384,7 +446,7 @@ fn named_config_profile() {
     assert_eq!(bo.name, "foo");
     assert_eq!(bo.codegen_units, Some(6)); // "foo" build override from config
     assert_eq!(bo.opt_level, "0"); // default to zero
-    assert_eq!(bo.debuginfo, Some(1)); // SAME as normal
+    assert_eq!(bo.debuginfo.into_inner(), TomlDebugInfo::Limited); // SAME as normal
     assert_eq!(bo.debug_assertions, false); // "foo" build override from manifest
     assert_eq!(bo.overflow_checks, true); // SAME as normal
 
@@ -393,7 +455,7 @@ fn named_config_profile() {
     assert_eq!(po.name, "foo");
     assert_eq!(po.codegen_units, Some(7)); // "foo" package override from config
     assert_eq!(po.opt_level, "1"); // SAME as normal
-    assert_eq!(po.debuginfo, Some(1)); // SAME as normal
+    assert_eq!(po.debuginfo.into_inner(), TomlDebugInfo::Limited); // SAME as normal
     assert_eq!(po.debug_assertions, true); // SAME as normal
     assert_eq!(po.overflow_checks, false); // "middle" package override from manifest
 }
@@ -447,12 +509,13 @@ fn test_with_dev_profile() {
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] somedep v1.0.0
-[RUNNING] `rustc --crate-name somedep [..]-C debuginfo=0[..]
+[RUNNING] `rustc --crate-name somedep [..]
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..]-C debuginfo=0[..]
+[RUNNING] `rustc --crate-name foo [..]
 [FINISHED] [..]
 [EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
+        .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
         .run();
 }

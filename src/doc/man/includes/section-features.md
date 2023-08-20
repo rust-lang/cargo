@@ -9,7 +9,7 @@ for more details.
 
 {{#options}}
 
-{{#option "`--features` _features_" }}
+{{#option "`-F` _features_" "`--features` _features_" }}
 Space or comma separated list of features to activate. Features of workspace
 members may be enabled with `package-name/feature-name` syntax. This flag may
 be specified multiple times, which enables all specified features.

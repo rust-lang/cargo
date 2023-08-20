@@ -3,11 +3,10 @@ use anyhow::bail;
 use cargo::{drop_println, CargoResult};
 use serde::Serialize;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("locate-project")
         .about("Print a JSON representation of a Cargo.toml file's location")
-        .arg_quiet()
-        .arg_manifest_path()
+        .arg(flag("workspace", "Locate Cargo.toml of the workspace root"))
         .arg(
             opt(
                 "message-format",
@@ -15,7 +14,8 @@ pub fn cli() -> App {
             )
             .value_name("FMT"),
         )
-        .arg(opt("workspace", "Locate Cargo.toml of the workspace root"))
+        .arg_quiet()
+        .arg_manifest_path()
         .after_help("Run `cargo help locate-project` for more detailed information.\n")
 }
 
@@ -65,7 +65,7 @@ enum WhatToFind {
 
 impl WhatToFind {
     fn parse(args: &ArgMatches) -> Self {
-        if args.is_present("workspace") {
+        if args.flag("workspace") {
             WhatToFind::Workspace
         } else {
             WhatToFind::CurrentManifest
@@ -80,7 +80,7 @@ enum MessageFormat {
 
 impl MessageFormat {
     fn parse(args: &ArgMatches) -> CargoResult<Self> {
-        let fmt = match args.value_of("message-format") {
+        let fmt = match args.get_one::<String>("message-format") {
             Some(fmt) => fmt,
             None => return Ok(MessageFormat::Json),
         };

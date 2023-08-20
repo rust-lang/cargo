@@ -2,7 +2,6 @@ use crate::core::compiler::{BuildConfig, MessageFormat, TimingOutput};
 use crate::core::resolver::CliFeatures;
 use crate::core::{Edition, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
-use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::restricted_names::is_glob_pattern;
@@ -16,16 +15,27 @@ use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;
 use std::ffi::{OsStr, OsString};
+use std::path::Path;
 use std::path::PathBuf;
 
 pub use crate::core::compiler::CompileMode;
 pub use crate::{CliError, CliResult, Config};
-pub use clap::{AppSettings, Arg, ArgMatches};
+pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
 
-pub type App = clap::Command<'static>;
+pub use clap::Command;
 
-pub trait AppExt: Sized {
-    fn _arg(self, arg: Arg<'static>) -> Self;
+use super::config::JobsConfig;
+
+pub mod heading {
+    pub const PACKAGE_SELECTION: &str = "Package Selection";
+    pub const TARGET_SELECTION: &str = "Target Selection";
+    pub const FEATURE_SELECTION: &str = "Feature Selection";
+    pub const COMPILATION_OPTIONS: &str = "Compilation Options";
+    pub const MANIFEST_OPTIONS: &str = "Manifest Options";
+}
+
+pub trait CommandExt: Sized {
+    fn _arg(self, arg: Arg) -> Self;
 
     /// Do not use this method, it is only for backwards compatibility.
     /// Use `arg_package_spec_no_all` instead.
@@ -35,8 +45,10 @@ pub trait AppExt: Sized {
         all: &'static str,
         exclude: &'static str,
     ) -> Self {
-        self.arg_package_spec_no_all(package, all, exclude)
-            ._arg(opt("all", "Alias for --workspace (deprecated)"))
+        self.arg_package_spec_no_all(package, all, exclude)._arg(
+            flag("all", "Alias for --workspace (deprecated)")
+                .help_heading(heading::PACKAGE_SELECTION),
+        )
     }
 
     /// Variant of arg_package_spec that does not include the `--all` flag
@@ -49,32 +61,45 @@ pub trait AppExt: Sized {
         exclude: &'static str,
     ) -> Self {
         self.arg_package_spec_simple(package)
-            ._arg(opt("workspace", all))
-            ._arg(multi_opt("exclude", "SPEC", exclude))
+            ._arg(flag("workspace", all).help_heading(heading::PACKAGE_SELECTION))
+            ._arg(multi_opt("exclude", "SPEC", exclude).help_heading(heading::PACKAGE_SELECTION))
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
-        self._arg(optional_multi_opt("package", "SPEC", package).short('p'))
+        self._arg(
+            optional_multi_opt("package", "SPEC", package)
+                .short('p')
+                .help_heading(heading::PACKAGE_SELECTION),
+        )
     }
 
     fn arg_package(self, package: &'static str) -> Self {
         self._arg(
             optional_opt("package", package)
                 .short('p')
-                .value_name("SPEC"),
+                .value_name("SPEC")
+                .help_heading(heading::PACKAGE_SELECTION),
         )
     }
 
     fn arg_jobs(self) -> Self {
-        self._arg(
-            opt("jobs", "Number of parallel jobs, defaults to # of CPUs")
-                .short('j')
-                .value_name("N"),
+        self.arg_jobs_without_keep_going()._arg(
+            flag(
+                "keep-going",
+                "Do not abort the build as soon as there is an error (unstable)",
+            )
+            .help_heading(heading::COMPILATION_OPTIONS),
         )
-        ._arg(opt(
-            "keep-going",
-            "Do not abort the build as soon as there is an error (unstable)",
-        ))
+    }
+
+    fn arg_jobs_without_keep_going(self) -> Self {
+        self._arg(
+            opt("jobs", "Number of parallel jobs, defaults to # of CPUs.")
+                .short('j')
+                .value_name("N")
+                .allow_hyphen_values(true)
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_targets_all(
@@ -91,11 +116,13 @@ pub trait AppExt: Sized {
         all: &'static str,
     ) -> Self {
         self.arg_targets_lib_bin_example(lib, bin, bins, example, examples)
-            ._arg(optional_multi_opt("test", "NAME", test))
-            ._arg(opt("tests", tests))
-            ._arg(optional_multi_opt("bench", "NAME", bench))
-            ._arg(opt("benches", benches))
-            ._arg(opt("all-targets", all))
+            ._arg(flag("tests", tests).help_heading(heading::TARGET_SELECTION))
+            ._arg(optional_multi_opt("test", "NAME", test).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("benches", benches).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("bench", "NAME", bench).help_heading(heading::TARGET_SELECTION),
+            )
+            ._arg(flag("all-targets", all).help_heading(heading::TARGET_SELECTION))
     }
 
     fn arg_targets_lib_bin_example(
@@ -106,11 +133,14 @@ pub trait AppExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(opt("lib", lib))
-            ._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(opt("bins", bins))
-            ._arg(optional_multi_opt("example", "NAME", example))
-            ._arg(opt("examples", examples))
+        self._arg(flag("lib", lib).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
+            ._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
     }
 
     fn arg_targets_bins_examples(
@@ -120,54 +150,84 @@ pub trait AppExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(opt("bins", bins))
-            ._arg(optional_multi_opt("example", "NAME", example))
-            ._arg(opt("examples", examples))
+        self._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
+            ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
     }
 
     fn arg_targets_bin_example(self, bin: &'static str, example: &'static str) -> Self {
-        self._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(optional_multi_opt("example", "NAME", example))
+        self._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
     }
 
     fn arg_features(self) -> Self {
-        self._arg(multi_opt(
-            "features",
-            "FEATURES",
-            "Space or comma separated list of features to activate",
-        ))
-        ._arg(opt("all-features", "Activate all available features"))
-        ._arg(opt(
-            "no-default-features",
-            "Do not activate the `default` feature",
-        ))
+        self._arg(
+            multi_opt(
+                "features",
+                "FEATURES",
+                "Space or comma separated list of features to activate",
+            )
+            .short('F')
+            .help_heading(heading::FEATURE_SELECTION),
+        )
+        ._arg(
+            flag("all-features", "Activate all available features")
+                .help_heading(heading::FEATURE_SELECTION),
+        )
+        ._arg(
+            flag(
+                "no-default-features",
+                "Do not activate the `default` feature",
+            )
+            .help_heading(heading::FEATURE_SELECTION),
+        )
     }
 
     fn arg_release(self, release: &'static str) -> Self {
-        self._arg(opt("release", release).short('r'))
+        self._arg(
+            flag("release", release)
+                .short('r')
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_profile(self, profile: &'static str) -> Self {
-        self._arg(opt("profile", profile).value_name("PROFILE-NAME"))
+        self._arg(
+            opt("profile", profile)
+                .value_name("PROFILE-NAME")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_doc(self, doc: &'static str) -> Self {
-        self._arg(opt("doc", doc))
+        self._arg(flag("doc", doc))
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(multi_opt("target", "TRIPLE", target))
+        self._arg(multi_opt("target", "TRIPLE", target).help_heading(heading::COMPILATION_OPTIONS))
     }
 
     fn arg_target_dir(self) -> Self {
         self._arg(
-            opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"),
+            opt("target-dir", "Directory for all generated artifacts")
+                .value_name("DIRECTORY")
+                .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
 
     fn arg_manifest_path(self) -> Self {
-        self._arg(opt("manifest-path", "Path to Cargo.toml").value_name("PATH"))
+        self._arg(
+            opt("manifest-path", "Path to Cargo.toml")
+                .value_name("PATH")
+                .help_heading(heading::MANIFEST_OPTIONS),
+        )
     }
 
     fn arg_message_format(self) -> Self {
@@ -175,14 +235,17 @@ pub trait AppExt: Sized {
     }
 
     fn arg_build_plan(self) -> Self {
-        self._arg(opt(
-            "build-plan",
-            "Output the build plan in JSON (unstable)",
-        ))
+        self._arg(
+            flag("build-plan", "Output the build plan in JSON (unstable)")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_unit_graph(self) -> Self {
-        self._arg(opt("unit-graph", "Output build graph in JSON (unstable)"))
+        self._arg(
+            flag("unit-graph", "Output build graph in JSON (unstable)")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_new_opts(self) -> Self {
@@ -195,13 +258,13 @@ pub trait AppExt: Sized {
                  a global configuration.",
             )
             .value_name("VCS")
-            .possible_values(&["git", "hg", "pijul", "fossil", "none"]),
+            .value_parser(["git", "hg", "pijul", "fossil", "none"]),
         )
-        ._arg(opt("bin", "Use a binary (application) template [default]"))
-        ._arg(opt("lib", "Use a library template"))
+        ._arg(flag("bin", "Use a binary (application) template [default]"))
+        ._arg(flag("lib", "Use a library template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
-                .possible_values(Edition::CLI_VALUES)
+                .value_parser(Edition::CLI_VALUES)
                 .value_name("YEAR"),
         )
         ._arg(
@@ -218,25 +281,25 @@ pub trait AppExt: Sized {
     }
 
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
-        self._arg(opt("dry-run", dry_run))
+        self._arg(flag("dry-run", dry_run))
     }
 
     fn arg_ignore_rust_version(self) -> Self {
-        self._arg(opt(
+        self._arg(flag(
             "ignore-rust-version",
             "Ignore `rust-version` specification in packages",
         ))
     }
 
     fn arg_future_incompat_report(self) -> Self {
-        self._arg(opt(
+        self._arg(flag(
             "future-incompat-report",
             "Outputs a future incompatibility report at the end of the build",
         ))
     }
 
     fn arg_quiet(self) -> Self {
-        self._arg(opt("quiet", "Do not print cargo log messages").short('q'))
+        self._arg(flag("quiet", "Do not print cargo log messages").short('q'))
     }
 
     fn arg_timings(self) -> Self {
@@ -246,48 +309,48 @@ pub trait AppExt: Sized {
                 "Timing output formats (unstable) (comma separated): html, json",
             )
             .value_name("FMTS")
-            .require_equals(true),
+            .require_equals(true)
+            .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
 }
 
-impl AppExt for App {
-    fn _arg(self, arg: Arg<'static>) -> Self {
+impl CommandExt for Command {
+    fn _arg(self, arg: Arg) -> Self {
         self.arg(arg)
     }
 }
 
-pub fn opt(name: &'static str, help: &'static str) -> Arg<'static> {
-    Arg::new(name).long(name).help(help)
+pub fn flag(name: &'static str, help: &'static str) -> Arg {
+    Arg::new(name)
+        .long(name)
+        .help(help)
+        .action(ArgAction::SetTrue)
 }
 
-pub fn optional_opt(name: &'static str, help: &'static str) -> Arg<'static> {
-    opt(name, help).min_values(0)
+pub fn opt(name: &'static str, help: &'static str) -> Arg {
+    Arg::new(name).long(name).help(help).action(ArgAction::Set)
 }
 
-pub fn optional_multi_opt(
-    name: &'static str,
-    value_name: &'static str,
-    help: &'static str,
-) -> Arg<'static> {
+pub fn optional_opt(name: &'static str, help: &'static str) -> Arg {
+    opt(name, help).num_args(0..=1)
+}
+
+pub fn optional_multi_opt(name: &'static str, value_name: &'static str, help: &'static str) -> Arg {
     opt(name, help)
         .value_name(value_name)
-        .multiple_occurrences(true)
-        .multiple_values(true)
-        .min_values(0)
-        .number_of_values(1)
+        .num_args(0..=1)
+        .action(ArgAction::Append)
 }
 
-pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static str) -> Arg<'static> {
+pub fn multi_opt(name: &'static str, value_name: &'static str, help: &'static str) -> Arg {
     opt(name, help)
         .value_name(value_name)
-        .multiple_occurrences(true)
+        .action(ArgAction::Append)
 }
 
-pub fn subcommand(name: &'static str) -> App {
-    App::new(name)
-        .dont_collapse_args_in_usage(true)
-        .setting(AppSettings::DeriveDisplayOrder)
+pub fn subcommand(name: &'static str) -> Command {
+    Command::new(name)
 }
 
 /// Determines whether or not to gate `--profile` as unstable when resolving it.
@@ -308,7 +371,20 @@ pub trait ArgMatchesExt {
             None => None,
             Some(arg) => Some(arg.parse::<u32>().map_err(|_| {
                 clap::Error::raw(
-                    clap::ErrorKind::ValueValidation,
+                    clap::error::ErrorKind::ValueValidation,
+                    format!("Invalid value: could not parse `{}` as a number", arg),
+                )
+            })?),
+        };
+        Ok(arg)
+    }
+
+    fn value_of_i32(&self, name: &str) -> CargoResult<Option<i32>> {
+        let arg = match self._value_of(name) {
+            None => None,
+            Some(arg) => Some(arg.parse::<i32>().map_err(|_| {
+                clap::Error::raw(
+                    clap::error::ErrorKind::ValueValidation,
                     format!("Invalid value: could not parse `{}` as a number", arg),
                 )
             })?),
@@ -322,26 +398,7 @@ pub trait ArgMatchesExt {
     }
 
     fn root_manifest(&self, config: &Config) -> CargoResult<PathBuf> {
-        if let Some(path) = self
-            ._is_valid_arg("manifest-path")
-            .then(|| self.value_of_path("manifest-path", config))
-            .flatten()
-        {
-            // In general, we try to avoid normalizing paths in Cargo,
-            // but in this particular case we need it to fix #3586.
-            let path = paths::normalize_path(&path);
-            if !path.ends_with("Cargo.toml") {
-                anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
-            }
-            if !path.exists() {
-                anyhow::bail!(
-                    "manifest path `{}` does not exist",
-                    self._value_of("manifest-path").unwrap()
-                )
-            }
-            return Ok(path);
-        }
-        find_root_manifest_for_wd(config.cwd())
+        root_manifest(self._value_of("manifest-path").map(Path::new), config)
     }
 
     fn workspace<'a>(&self, config: &'a Config) -> CargoResult<Workspace<'a>> {
@@ -353,12 +410,28 @@ pub trait ArgMatchesExt {
         Ok(ws)
     }
 
-    fn jobs(&self) -> CargoResult<Option<u32>> {
-        self.value_of_u32("jobs")
+    fn jobs(&self) -> CargoResult<Option<JobsConfig>> {
+        let arg = match self._value_of("jobs") {
+            None => None,
+            Some(arg) => match arg.parse::<i32>() {
+                Ok(j) => Some(JobsConfig::Integer(j)),
+                Err(_) => Some(JobsConfig::String(arg.to_string())),
+            },
+        };
+
+        Ok(arg)
+    }
+
+    fn verbose(&self) -> u32 {
+        self._count("verbose")
+    }
+
+    fn dry_run(&self) -> bool {
+        self.flag("dry-run")
     }
 
     fn keep_going(&self) -> bool {
-        self._is_present("keep-going")
+        self.flag("keep-going")
     }
 
     fn targets(&self) -> Vec<String> {
@@ -380,7 +453,7 @@ pub trait ArgMatchesExt {
             (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
-                if self._is_present("release") {
+                if self.flag("release") {
                     config.shell().warn(
                         "the `--release` flag should not be specified with the `--profile` flag\n\
                          The `--release` flag will be ignored.\n\
@@ -404,11 +477,7 @@ pub trait ArgMatchesExt {
             )
         };
 
-        let name = match (
-            self.is_valid_and_present("release"),
-            self.is_valid_and_present("debug"),
-            specified_profile,
-        ) {
+        let name = match (self.flag("release"), self.flag("debug"), specified_profile) {
             (false, false, None) => default,
             (true, _, None | Some("release")) => "release",
             (true, _, Some(name)) => return Err(conflict("release", "release", name)),
@@ -434,13 +503,9 @@ pub trait ArgMatchesExt {
     fn packages_from_flags(&self) -> CargoResult<Packages> {
         Packages::from_flags(
             // TODO Integrate into 'workspace'
-            self.is_valid_and_present("workspace") || self.is_valid_and_present("all"),
-            self._is_valid_arg("exclude")
-                .then(|| self._values_of("exclude"))
-                .unwrap_or_default(),
-            self._is_valid_arg("package")
-                .then(|| self._values_of("package"))
-                .unwrap_or_default(),
+            self.flag("workspace") || self.flag("all"),
+            self._values_of("exclude"),
+            self._values_of("package"),
         )
     }
 
@@ -458,25 +523,26 @@ pub trait ArgMatchesExt {
             ansi: false,
             render_diagnostics: false,
         };
+        let two_kinds_of_msg_format_err = "cannot specify two kinds of `message-format` arguments";
         for fmt in self._values_of("message-format") {
             for fmt in fmt.split(',') {
                 let fmt = fmt.to_ascii_lowercase();
                 match fmt.as_str() {
                     "json" => {
                         if message_format.is_some() {
-                            bail!("cannot specify two kinds of `message-format` arguments");
+                            bail!(two_kinds_of_msg_format_err);
                         }
                         message_format = Some(default_json);
                     }
                     "human" => {
                         if message_format.is_some() {
-                            bail!("cannot specify two kinds of `message-format` arguments");
+                            bail!(two_kinds_of_msg_format_err);
                         }
                         message_format = Some(MessageFormat::Human);
                     }
                     "short" => {
                         if message_format.is_some() {
-                            bail!("cannot specify two kinds of `message-format` arguments");
+                            bail!(two_kinds_of_msg_format_err);
                         }
                         message_format = Some(MessageFormat::Short);
                     }
@@ -488,7 +554,7 @@ pub trait ArgMatchesExt {
                             Some(MessageFormat::Json {
                                 render_diagnostics, ..
                             }) => *render_diagnostics = true,
-                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                            _ => bail!(two_kinds_of_msg_format_err),
                         }
                     }
                     "json-diagnostic-short" => {
@@ -497,7 +563,7 @@ pub trait ArgMatchesExt {
                         }
                         match &mut message_format {
                             Some(MessageFormat::Json { short, .. }) => *short = true,
-                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                            _ => bail!(two_kinds_of_msg_format_err),
                         }
                     }
                     "json-diagnostic-rendered-ansi" => {
@@ -506,7 +572,7 @@ pub trait ArgMatchesExt {
                         }
                         match &mut message_format {
                             Some(MessageFormat::Json { ansi, .. }) => *ansi = true,
-                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                            _ => bail!(two_kinds_of_msg_format_err),
                         }
                     }
                     s => bail!("invalid message format specifier: `{}`", s),
@@ -523,11 +589,11 @@ pub trait ArgMatchesExt {
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
-        build_config.build_plan = self.is_valid_and_present("build-plan");
-        build_config.unit_graph = self.is_valid_and_present("unit-graph");
-        build_config.future_incompat_report = self.is_valid_and_present("future-incompat-report");
+        build_config.build_plan = self.flag("build-plan");
+        build_config.unit_graph = self.flag("unit-graph");
+        build_config.future_incompat_report = self.flag("future-incompat-report");
 
-        if self.is_valid_and_present("timings") {
+        if self._contains("timings") {
             for timing_output in self._values_of("timings") {
                 for timing_output in timing_output.split(',') {
                     let timing_output = timing_output.to_ascii_lowercase();
@@ -575,32 +641,27 @@ pub trait ArgMatchesExt {
             cli_features: self.cli_features()?,
             spec,
             filter: CompileFilter::from_raw_arguments(
-                self.is_valid_and_present("lib"),
+                self.flag("lib"),
                 self._values_of("bin"),
-                self.is_valid_and_present("bins"),
-                self._is_valid_arg("test")
-                    .then(|| self._values_of("test"))
-                    .unwrap_or_default(),
-                self.is_valid_and_present("tests"),
+                self.flag("bins"),
+                self._values_of("test"),
+                self.flag("tests"),
                 self._values_of("example"),
-                self.is_valid_and_present("examples"),
-                self._is_valid_arg("bench")
-                    .then(|| self._values_of("bench"))
-                    .unwrap_or_default(),
-                self.is_valid_and_present("benches"),
-                self.is_valid_and_present("all-targets"),
+                self.flag("examples"),
+                self._values_of("bench"),
+                self.flag("benches"),
+                self.flag("all-targets"),
             ),
             target_rustdoc_args: None,
             target_rustc_args: None,
             target_rustc_crate_types: None,
-            local_rustdoc_args: None,
             rustdoc_document_private_items: false,
-            honor_rust_version: !self.is_valid_and_present("ignore-rust-version"),
+            honor_rust_version: !self.flag("ignore-rust-version"),
         };
 
         if let Some(ws) = workspace {
             self.check_optional_opts(ws, &opts)?;
-        } else if self._is_valid_arg("package") && self.is_present_with_zero_values("package") {
+        } else if self.is_present_with_zero_values("package") {
             // As for cargo 0.50.0, this won't occur but if someone sneaks in
             // we can still provide this informative message for them.
             anyhow::bail!(
@@ -616,8 +677,8 @@ pub trait ArgMatchesExt {
     fn cli_features(&self) -> CargoResult<CliFeatures> {
         CliFeatures::from_command_line(
             &self._values_of("features"),
-            self._is_present("all-features"),
-            !self._is_present("no-default-features"),
+            self.flag("all-features"),
+            !self.flag("no-default-features"),
         )
     }
 
@@ -648,8 +709,8 @@ pub trait ArgMatchesExt {
         });
         NewOptions::new(
             vcs,
-            self._is_present("bin"),
-            self._is_present("lib"),
+            self.flag("bin"),
+            self.flag("lib"),
             self.value_of_path("path", config).unwrap(),
             self._value_of("name").map(|s| s.to_string()),
             self._value_of("edition").map(|s| s.to_string()),
@@ -658,23 +719,23 @@ pub trait ArgMatchesExt {
     }
 
     fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
-        match self._value_of("registry") {
-            Some(registry) => {
-                validate_package_name(registry, "registry name", "")?;
-
-                if registry == CRATES_IO_REGISTRY {
-                    // If "crates.io" is specified, then we just need to return `None`,
-                    // as that will cause cargo to use crates.io. This is required
-                    // for the case where a default alternative registry is used
-                    // but the user wants to switch back to crates.io for a single
-                    // command.
-                    Ok(None)
-                } else {
-                    Ok(Some(registry.to_string()))
-                }
+        let registry = self._value_of("registry");
+        let index = self._value_of("index");
+        let result = match (registry, index) {
+            (None, None) => config.default_registry()?,
+            (None, Some(_)) => {
+                // If --index is set, then do not look at registry.default.
+                None
             }
-            None => config.default_registry(),
-        }
+            (Some(r), None) => {
+                validate_package_name(r, "registry name", "")?;
+                Some(r.to_string())
+            }
+            (Some(_), Some(_)) => {
+                bail!("both `--index` and `--registry` should not be set at the same time")
+            }
+        };
+        Ok(result)
     }
 
     fn index(&self) -> CargoResult<Option<String>> {
@@ -687,7 +748,7 @@ pub trait ArgMatchesExt {
         workspace: &Workspace<'_>,
         compile_opts: &CompileOptions,
     ) -> CargoResult<()> {
-        if self._is_valid_arg("package") && self.is_present_with_zero_values("package") {
+        if self.is_present_with_zero_values("package") {
             print_available_packages(workspace)?
         }
 
@@ -699,11 +760,11 @@ pub trait ArgMatchesExt {
             print_available_binaries(workspace, compile_opts)?;
         }
 
-        if self._is_valid_arg("bench") && self.is_present_with_zero_values("bench") {
+        if self.is_present_with_zero_values("bench") {
             print_available_benches(workspace, compile_opts)?;
         }
 
-        if self._is_valid_arg("test") && self.is_present_with_zero_values("test") {
+        if self.is_present_with_zero_values("test") {
             print_available_tests(workspace, compile_opts)?;
         }
 
@@ -711,12 +772,10 @@ pub trait ArgMatchesExt {
     }
 
     fn is_present_with_zero_values(&self, name: &str) -> bool {
-        self._is_present(name) && self._value_of(name).is_none()
+        self._contains(name) && self._value_of(name).is_none()
     }
 
-    fn is_valid_and_present(&self, name: &str) -> bool {
-        self._is_valid_arg(name) && self._is_present(name)
-    }
+    fn flag(&self, name: &str) -> bool;
 
     fn _value_of(&self, name: &str) -> Option<&str>;
 
@@ -726,40 +785,46 @@ pub trait ArgMatchesExt {
 
     fn _values_of_os(&self, name: &str) -> Vec<OsString>;
 
-    fn _is_present(&self, name: &str) -> bool;
+    fn _count(&self, name: &str) -> u32;
 
-    fn _is_valid_arg(&self, name: &str) -> bool;
+    fn _contains(&self, name: &str) -> bool;
 }
 
 impl<'a> ArgMatchesExt for ArgMatches {
+    fn flag(&self, name: &str) -> bool {
+        ignore_unknown(self.try_get_one::<bool>(name))
+            .copied()
+            .unwrap_or(false)
+    }
+
     fn _value_of(&self, name: &str) -> Option<&str> {
-        self.value_of(name)
+        ignore_unknown(self.try_get_one::<String>(name)).map(String::as_str)
     }
 
     fn _value_of_os(&self, name: &str) -> Option<&OsStr> {
-        self.value_of_os(name)
+        ignore_unknown(self.try_get_one::<OsString>(name)).map(OsString::as_os_str)
     }
 
     fn _values_of(&self, name: &str) -> Vec<String> {
-        self.values_of(name)
+        ignore_unknown(self.try_get_many::<String>(name))
             .unwrap_or_default()
-            .map(|s| s.to_string())
+            .cloned()
             .collect()
     }
 
     fn _values_of_os(&self, name: &str) -> Vec<OsString> {
-        self.values_of_os(name)
+        ignore_unknown(self.try_get_many::<OsString>(name))
             .unwrap_or_default()
-            .map(|s| s.to_os_string())
+            .cloned()
             .collect()
     }
 
-    fn _is_present(&self, name: &str) -> bool {
-        self.is_present(name)
+    fn _count(&self, name: &str) -> u32 {
+        *ignore_unknown(self.try_get_one::<u8>(name)).expect("defaulted by clap") as u32
     }
 
-    fn _is_valid_arg(&self, name: &str) -> bool {
-        self.is_valid_arg(name)
+    fn _contains(&self, name: &str) -> bool {
+        ignore_unknown(self.try_contains_id(name))
     }
 }
 
@@ -769,6 +834,44 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
 
 pub fn values_os(args: &ArgMatches, name: &str) -> Vec<OsString> {
     args._values_of_os(name)
+}
+
+pub fn root_manifest(manifest_path: Option<&Path>, config: &Config) -> CargoResult<PathBuf> {
+    if let Some(manifest_path) = manifest_path {
+        let path = config.cwd().join(manifest_path);
+        // In general, we try to avoid normalizing paths in Cargo,
+        // but in this particular case we need it to fix #3586.
+        let path = paths::normalize_path(&path);
+        if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
+            anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
+        }
+        if !path.exists() {
+            anyhow::bail!("manifest path `{}` does not exist", manifest_path.display())
+        }
+        if path.is_dir() {
+            anyhow::bail!(
+                "manifest path `{}` is a directory but expected a file",
+                manifest_path.display()
+            )
+        }
+        if crate::util::toml::is_embedded(&path) && !config.cli_unstable().script {
+            anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())
+        }
+        Ok(path)
+    } else {
+        find_root_manifest_for_wd(config.cwd())
+    }
+}
+
+#[track_caller]
+pub fn ignore_unknown<T: Default>(r: Result<T, clap::parser::MatchesError>) -> T {
+    match r {
+        Ok(t) => t,
+        Err(clap::parser::MatchesError::UnknownArgument { .. }) => Default::default(),
+        Err(e) => {
+            panic!("Mismatch between definition and access: {}", e);
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]

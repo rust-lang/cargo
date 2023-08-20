@@ -4,7 +4,7 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-publish \- Upload a package to the registry
+cargo\-publish \[em] Upload a package to the registry
 .SH "SYNOPSIS"
 \fBcargo publish\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
@@ -59,7 +59,7 @@ of the registry in all capital letters.
 .sp
 \fB\-\-no\-verify\fR
 .RS 4
-Don't verify the contents by building them.
+Don\[cq]t verify the contents by building them.
 .RE
 .sp
 \fB\-\-allow\-dirty\fR
@@ -98,7 +98,7 @@ format.
 .RS 4
 Publish for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets.
+list of supported targets. This flag may be specified multiple times.
 .sp
 This may also be specified with the \fBbuild.target\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -123,6 +123,7 @@ selected package.
 See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
 for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. Features of workspace
@@ -182,7 +183,10 @@ May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc
 .RS 4
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
-the number of CPUs.
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
+Should not be 0.
 .RE
 .sp
 \fB\-\-keep\-going\fR
@@ -196,7 +200,7 @@ the build on the first one that fails to build. Unstable, requires
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -239,6 +243,26 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

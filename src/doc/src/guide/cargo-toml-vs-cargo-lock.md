@@ -35,7 +35,7 @@ regex = { git = "https://github.com/rust-lang/regex.git" }
 This package has a single dependency, on the `regex` library. We’ve stated in
 this case that we’re relying on a particular Git repository that lives on
 GitHub. Since we haven’t specified any other information, Cargo assumes that
-we intend to use the latest commit on the `master` branch to build our package.
+we intend to use the latest commit on the default branch to build our package.
 
 Sound good? Well, there’s one problem: If you build this package today, and
 then you send a copy to me, and I build this package tomorrow, something bad
@@ -43,7 +43,8 @@ could happen. There could be more commits to `regex` in the meantime, and my
 build would include new commits while yours would not. Therefore, we would
 get different builds. This would be bad because we want reproducible builds.
 
-We could fix this problem by putting a `rev` line in our `Cargo.toml`:
+We could fix this problem by defining a specific `rev` value in our `Cargo.toml`,
+so Cargo could know exactly which revision to use when building the package:
 
 ```toml
 [dependencies]

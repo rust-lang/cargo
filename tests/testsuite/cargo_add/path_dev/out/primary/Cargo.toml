@@ -1,0 +1,8 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[dev-dependencies]
+cargo-list-test-fixture-dependency = { path = "../dependency" }

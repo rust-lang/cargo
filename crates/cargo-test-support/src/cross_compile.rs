@@ -114,13 +114,21 @@ installed. For example, on Ubuntu, run `sudo apt install gcc-multilib` to
 install the necessary libraries.
 ",
         );
+    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        message.push_str(
+            "
+macOS on aarch64 cross tests to target x86_64-apple-darwin.
+This should be natively supported via Xcode, nothing additional besides the
+rustup target should be needed.
+",
+        );
     } else if cfg!(target_os = "macos") {
         message.push_str(
             "
-macOS cross tests target x86_64-apple-ios, which requires the iOS SDK to be
-installed. This should be included with Xcode automatically. If you are using
-the Xcode command line tools, you'll need to install the full Xcode app (from
-the Apple App Store), and switch to it with this command:
+macOS on x86_64 cross tests to target x86_64-apple-ios, which requires the iOS
+SDK to be installed. This should be included with Xcode automatically. If you
+are using the Xcode command line tools, you'll need to install the full Xcode
+app (from the Apple App Store), and switch to it with this command:
 
     sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 

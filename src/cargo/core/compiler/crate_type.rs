@@ -1,5 +1,9 @@
 use std::fmt;
 
+/// Types of the output artifact that the compiler emits.
+/// Usually distributable or linkable either statically or dynamically.
+///
+/// See <https://doc.rust-lang.org/nightly/reference/linkage.html>.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum CrateType {
     Bin,
@@ -57,6 +61,12 @@ impl CrateType {
         }
     }
 
+    /// Returns whether production of this crate type requires the object files
+    /// from dependencies to be available.
+    ///
+    /// See also [`TargetKind::requires_upstream_objects`].
+    ///
+    /// [`TargetKind::requires_upstream_objects`]: crate::core::manifest::TargetKind::requires_upstream_objects
     pub fn requires_upstream_objects(&self) -> bool {
         // "lib" == "rlib" and is a compilation that doesn't actually
         // require upstream object files to exist, only upstream metadata

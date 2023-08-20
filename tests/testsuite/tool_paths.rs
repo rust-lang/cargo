@@ -252,7 +252,7 @@ fn custom_runner_cfg_collision() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`
+[ERROR] several matching instances of `target.'cfg(..)'.runner` in configurations
 first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config
 second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
 ",

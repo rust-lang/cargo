@@ -1,7 +1,8 @@
 CARGO-PACKAGE(1)
 
 NAME
-       cargo-package - Assemble the local package into a distributable tarball
+       cargo-package — Assemble the local package into a distributable
+       tarball
 
 SYNOPSIS
        cargo package [options]
@@ -64,7 +65,7 @@ OPTIONS
            Print files included in a package without making one.
 
        --no-verify
-           Don't verify the contents by building them.
+           Don’t verify the contents by building them.
 
        --no-metadata
            Ignore warnings about a lack of human-usable metadata (such as the
@@ -88,7 +89,7 @@ OPTIONS
        passing --workspace), and a non-virtual workspace will include only the
        root crate itself.
 
-       -p spec..., --package spec...
+       -p spec…, --package spec…
            Package only the specified packages. See cargo-pkgid(1) for the SPEC
            format. This flag may be specified multiple times and supports
            common Unix glob patterns like *, ? and []. However, to avoid your
@@ -99,7 +100,7 @@ OPTIONS
        --workspace
            Package all members in the workspace.
 
-       --exclude SPEC...
+       --exclude SPEC…
            Exclude the specified packages. Must be used in conjunction with the
            --workspace flag. This flag may be specified multiple times and
            supports common Unix glob patterns like *, ? and []. However, to
@@ -112,7 +113,8 @@ OPTIONS
            Package for the given architecture. The default is the host
            architecture. The general format of the triple is
            <arch><sub>-<vendor>-<sys>-<abi>. Run rustc --print target-list for
-           a list of supported targets.
+           a list of supported targets. This flag may be specified multiple
+           times.
 
            This may also be specified with the build.target config value
            <https://doc.rust-lang.org/cargo/reference/config.html>.
@@ -139,7 +141,7 @@ OPTIONS
        <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
        for more details.
 
-       --features features
+       -F features, --features features
            Space or comma separated list of features to activate. Features of
            workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
@@ -187,7 +189,10 @@ OPTIONS
            Number of parallel jobs to run. May also be specified with the
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
-           the number of CPUs.
+           the number of logical CPUs. If negative, it sets the maximum number
+           of parallel jobs to the number of logical CPUs plus provided value.
+           If a string default is provided, it sets the value back to defaults.
+           Should not be 0.
 
        --keep-going
            Build as many crates in the dependency graph as possible, rather
@@ -196,10 +201,11 @@ OPTIONS
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
            Do not print cargo log messages. May also be specified with the
@@ -226,6 +232,27 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
 
        -h, --help
            Prints help information.

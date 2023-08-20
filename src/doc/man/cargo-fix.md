@@ -1,9 +1,10 @@
 # cargo-fix(1)
 {{*set actionverb="Fix"}}
+{{*set multitarget=true}}
 
 ## NAME
 
-cargo-fix - Automatically fix lint warnings reported by rustc
+cargo-fix --- Automatically fix lint warnings reported by rustc
 
 ## SYNOPSIS
 

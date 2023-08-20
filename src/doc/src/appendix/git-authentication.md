@@ -58,9 +58,39 @@ on how to start `ssh-agent` and to add keys.
 > used by Cargo's built-in SSH library. More advanced requirements should use
 > [`net.git-fetch-with-cli`].
 
+### SSH Known Hosts
+
+When connecting to an SSH host, Cargo must verify the identity of the host
+using "known hosts", which are a list of host keys. Cargo can look for these
+known hosts in OpenSSH-style `known_hosts` files located in their standard
+locations (`.ssh/known_hosts` in your home directory, or
+`/etc/ssh/ssh_known_hosts` on Unix-like platforms or
+`%PROGRAMDATA%\ssh\ssh_known_hosts` on Windows). More information about these
+files can be found in the [sshd man page]. Alternatively, keys may be
+configured in a Cargo configuration file with [`net.ssh.known-hosts`].
+
+When connecting to an SSH host before the known hosts has been configured,
+Cargo will display an error message instructing you how to add the host key.
+This also includes a "fingerprint", which is a smaller hash of the host key,
+which should be easier to visually verify. The server administrator can get
+the fingerprint by running `ssh-keygen` against the public key (for example,
+`ssh-keygen -l -f /etc/ssh/ssh_host_ecdsa_key.pub`). Well-known sites may
+publish their fingerprints on the web; for example GitHub posts theirs at
+<https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints>.
+
+Cargo comes with the host keys for [github.com](https://github.com) built-in.
+If those ever change, you can add the new keys to the config or known_hosts file.
+
+> **Note:** Cargo doesn't support the `@cert-authority` or `@revoked`
+> markers in `known_hosts` files. To make use of this functionality, use
+> [`net.git-fetch-with-cli`]. This is also a good tip if Cargo's SSH client
+> isn't behaving the way you expect it to.
+
 [`credential.helper`]: https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage
 [`net.git-fetch-with-cli`]: ../reference/config.md#netgit-fetch-with-cli
+[`net.ssh.known-hosts`]: ../reference/config.md#netsshknown-hosts
 [GCM]: https://github.com/microsoft/Git-Credential-Manager-Core/
 [PuTTY]: https://www.chiark.greenend.org.uk/~sgtatham/putty/
 [Microsoft installation documentation]: https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse
 [key management]: https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement
+[sshd man page]: https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT

@@ -190,8 +190,9 @@ mod imp {
 mod imp {
     use std::io;
     use std::mem;
-    use winapi::shared::minwindef::*;
-    use winapi::um::processthreadsapi::*;
+
+    use windows_sys::Win32::Foundation::FILETIME;
+    use windows_sys::Win32::System::Threading::GetSystemTimes;
 
     pub struct State {
         idle: FILETIME,

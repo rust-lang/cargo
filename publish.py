@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 
 # This script is used to publish Cargo to crates.io.
+#
+# This is run automatically every 6 weeks by the Release team's automation
+# whose source is at https://github.com/rust-lang/simpleinfra/.
+#
+# See https://doc.crates.io/contrib/process/release.html for more about
+# Cargo's release process.
 
 import os
 import re

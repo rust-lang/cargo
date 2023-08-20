@@ -1,0 +1,8 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[dependencies]
+renamed = { version = "99999.0.0", package = "my-package" }

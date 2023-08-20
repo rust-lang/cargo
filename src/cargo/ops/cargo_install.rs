@@ -3,10 +3,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
 
-use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, Freshness, UnitOutput};
-use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
-use crate::ops::CompileFilter;
+use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
+use crate::core::{
+    Dependency, Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Target, Workspace,
+};
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
+use crate::ops::{CompileFilter, Packages};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem, Rustc, ToSemver, VersionReqExt};
@@ -14,6 +16,7 @@ use crate::{drop_println, ops};
 
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::paths;
+use itertools::Itertools;
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
 
@@ -37,7 +40,7 @@ impl Drop for Transaction {
 
 struct InstallablePackage<'cfg, 'a> {
     config: &'cfg Config,
-    opts: &'a ops::CompileOptions,
+    opts: ops::CompileOptions,
     root: Filesystem,
     source_id: SourceId,
     vers: Option<&'a str>,
@@ -60,7 +63,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         source_id: SourceId,
         from_cwd: bool,
         vers: Option<&'a str>,
-        opts: &'a ops::CompileOptions,
+        original_opts: &'a ops::CompileOptions,
         force: bool,
         no_track: bool,
         needs_update_if_source_is_index: bool,
@@ -69,7 +72,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             if name == "." {
                 bail!(
                     "To install the binaries for the package in current working \
-                     directory use `cargo install --path .`. \
+                     directory use `cargo install --path .`. \n\
                      Use `cargo build` if you want to simply build the package."
                 )
             }
@@ -145,7 +148,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                     dep.clone(),
                     &mut source,
                     config,
-                    opts,
+                    original_opts,
                     &root,
                     &dst,
                     force,
@@ -167,7 +170,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             }
         };
 
-        let (ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
+        let (ws, rustc, target) =
+            make_ws_rustc_target(config, &original_opts, &source_id, pkg.clone())?;
         // If we're installing in --locked mode and there's no `Cargo.lock` published
         // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
         if config.locked() && !ws.root().join("Cargo.lock").exists() {
@@ -183,6 +187,17 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         } else {
             ws.current()?.clone()
         };
+
+        // When we build this package, we want to build the *specified* package only,
+        // and avoid building e.g. workspace default-members instead. Do so by constructing
+        // specialized compile options specific to the identified package.
+        // See test `path_install_workspace_root_despite_default_members`.
+        let mut opts = original_opts.clone();
+        // For cargo install tracking, we retain the source git url in `pkg`, but for the build spec
+        // we need to unconditionally use `ws.current()` to correctly address the path where we
+        // locally cloned that repo.
+        let pkgidspec = PackageIdSpec::from_package_id(ws.current()?.package_id());
+        opts.spec = Packages::Packages(vec![pkgidspec.to_string()]);
 
         if from_cwd {
             if pkg.manifest().edition() == Edition::Edition2015 {
@@ -209,8 +224,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             bail!(
                 "there is nothing to install in `{}`, because it has no binaries\n\
                  `cargo install` is only for installing programs, and can't be used with libraries.\n\
-                 To use a library crate, add it as a dependency in a Cargo project instead.",
-                pkg
+                 To use a library crate, add it as a dependency to a Cargo project with `cargo add`.",
+                pkg,
             );
         }
 
@@ -235,7 +250,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             // Check for conflicts.
             ip.no_track_duplicates(&dst)?;
         } else if is_installed(
-            &ip.pkg, config, opts, &ip.rustc, &ip.target, &ip.root, &dst, force,
+            &ip.pkg, config, &ip.opts, &ip.rustc, &ip.target, &ip.root, &dst, force,
         )? {
             let msg = format!(
                 "package `{}` is already installed, use --force to override",
@@ -297,15 +312,17 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         self.check_yanked_install()?;
 
         let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-        let compile = ops::compile_ws(&self.ws, self.opts, &exec).with_context(|| {
+        let compile = ops::compile_ws(&self.ws, &self.opts, &exec).with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
-                td.into_path();
+                drop(td.into_path());
             }
 
             format!(
                 "failed to compile `{}`, intermediate artifacts can be \
-                 found at `{}`",
+                 found at `{}`.\nTo reuse those artifacts with a future \
+                 compilation, set the environment variable \
+                 `CARGO_TARGET_DIR` to that path.",
                 self.pkg,
                 self.ws.target_dir().display()
             )
@@ -353,10 +370,16 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             //
             // Note that we know at this point that _if_ bins or examples is set to `::Just`,
             // they're `::Just([])`, which is `FilterRule::none()`.
-            if self.pkg.targets().iter().any(|t| t.is_executable()) {
+            let binaries: Vec<_> = self
+                .pkg
+                .targets()
+                .iter()
+                .filter(|t| t.is_executable())
+                .collect();
+            if !binaries.is_empty() {
                 self.config
                     .shell()
-                    .warn("none of the package's binaries are available for install using the selected features")?;
+                    .warn(make_warning_about_missing_features(&binaries))?;
             }
 
             return Ok(false);
@@ -372,7 +395,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                 &dst,
                 &self.pkg,
                 self.force,
-                self.opts,
+                &self.opts,
                 &self.target,
                 &self.rustc.verbose_version,
             )?;
@@ -439,7 +462,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                 &self.pkg,
                 &successful_bins,
                 self.vers.map(|s| s.to_string()),
-                self.opts,
+                &self.opts,
                 &self.target,
                 &self.rustc.verbose_version,
             );
@@ -530,36 +553,60 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         // duplicate "Updating", but since `source` is taken by value, then it
         // wouldn't be available for `compile_ws`.
         let (pkg_set, resolve) = ops::resolve_ws(&self.ws)?;
-        let mut sources = pkg_set.sources_mut();
-
-        // Checking the yanked status involves taking a look at the registry and
-        // maybe updating files, so be sure to lock it here.
-        let _lock = self.ws.config().acquire_package_cache_lock()?;
-
-        for pkg_id in resolve.iter() {
-            if let Some(source) = sources.get_mut(pkg_id.source_id()) {
-                if source.is_yanked(pkg_id)? {
-                    self.ws.config().shell().warn(format!(
-                        "package `{}` in Cargo.lock is yanked in registry `{}`, \
-                         consider running without --locked",
-                        pkg_id,
-                        pkg_id.source_id().display_registry_name()
-                    ))?;
-                }
-            }
-        }
-
-        Ok(())
+        ops::check_yanked(
+            self.ws.config(),
+            &pkg_set,
+            &resolve,
+            "consider running without --locked",
+        )
     }
+}
+
+fn make_warning_about_missing_features(binaries: &[&Target]) -> String {
+    let max_targets_listed = 7;
+    let target_features_message = binaries
+        .iter()
+        .take(max_targets_listed)
+        .map(|b| {
+            let name = b.description_named();
+            let features = b
+                .required_features()
+                .unwrap_or(&Vec::new())
+                .iter()
+                .map(|f| format!("`{f}`"))
+                .join(", ");
+            format!("  {name} requires the features: {features}")
+        })
+        .join("\n");
+
+    let additional_bins_message = if binaries.len() > max_targets_listed {
+        format!(
+            "\n{} more targets also requires features not enabled. See them in the Cargo.toml file.",
+            binaries.len() - max_targets_listed
+        )
+    } else {
+        "".into()
+    };
+
+    let example_features = binaries[0]
+        .required_features()
+        .map(|f| f.join(" "))
+        .unwrap_or_default();
+
+    format!(
+        "\
+none of the package's binaries are available for install using the selected features
+{target_features_message}{additional_bins_message}
+Consider enabling some of the needed features by passing, e.g., `--features=\"{example_features}\"`"
+    )
 }
 
 pub fn install(
     config: &Config,
     root: Option<&str>,
-    krates: Vec<&str>,
+    krates: Vec<(&str, Option<&str>)>,
     source_id: SourceId,
     from_cwd: bool,
-    vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
@@ -569,18 +616,13 @@ pub fn install(
     let map = SourceConfigMap::new(config)?;
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
+        let (krate, vers) = krates
+            .into_iter()
+            .next()
+            .map(|(k, v)| (Some(k), v))
+            .unwrap_or((None, None));
         let installable_pkg = InstallablePackage::new(
-            config,
-            root,
-            map,
-            krates.into_iter().next(),
-            source_id,
-            from_cwd,
-            vers,
-            opts,
-            force,
-            no_track,
-            true,
+            config, root, map, krate, source_id, from_cwd, vers, opts, force, no_track, true,
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
@@ -596,7 +638,7 @@ pub fn install(
 
         let pkgs_to_install: Vec<_> = krates
             .into_iter()
-            .filter_map(|krate| {
+            .filter_map(|(krate, vers)| {
                 let root = root.clone();
                 let map = map.clone();
                 match InstallablePackage::new(
@@ -671,7 +713,7 @@ pub fn install(
     if installed_anything {
         // Print a warning that if this directory isn't in PATH that they won't be
         // able to run these commands.
-        let path = env::var_os("PATH").unwrap_or_default();
+        let path = config.get_env_os("PATH").unwrap_or_default();
         let dst_in_path = env::split_paths(&path).any(|path| path == dst);
 
         if !dst_in_path {
@@ -703,7 +745,7 @@ fn is_installed(
     let tracker = InstallTracker::load(config, root)?;
     let (freshness, _duplicates) =
         tracker.check_upgrade(dst, pkg, force, opts, target, &rustc.verbose_version)?;
-    Ok(freshness == Freshness::Fresh)
+    Ok(freshness.is_fresh())
 }
 
 /// Checks if vers can only be satisfied by exactly one version of a package in a registry, and it's
@@ -771,14 +813,14 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
     let first = v
         .chars()
         .next()
-        .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
+        .ok_or_else(|| format_err!("no version provided for the `--version` flag"))?;
 
     let is_req = "<>=^~".contains(first) || v.contains('*');
     if is_req {
         match v.parse::<VersionReq>() {
             Ok(v) => Ok(v),
             Err(_) => bail!(
-                "the `--vers` provided, `{}`, is \
+                "the `--version` provided, `{}`, is \
                      not a valid semver version requirement\n\n\
                      Please have a look at \
                      https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html \
@@ -791,7 +833,7 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
             Ok(v) => Ok(VersionReq::exact(&v)),
             Err(e) => {
                 let mut msg = format!(
-                    "the `--vers` provided, `{}`, is \
+                    "the `--version` provided, `{}`, is \
                          not a valid semver version: {}\n",
                     v, e
                 );

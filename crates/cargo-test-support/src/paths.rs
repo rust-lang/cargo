@@ -1,7 +1,6 @@
 use filetime::{self, FileTime};
-use lazy_static::lazy_static;
+
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{self, ErrorKind};
@@ -9,15 +8,11 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::sync::OnceLock;
 
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
-lazy_static! {
-    // TODO: Use `SyncOnceCell` when stable
-    static ref GLOBAL_ROOT: Mutex<Option<PathBuf>> = Mutex::new(None);
-
-    static ref TEST_ROOTS: Mutex<HashMap<String, PathBuf>> = Default::default();
-}
+static GLOBAL_ROOT: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
 
 /// This is used when running cargo is pre-CARGO_TARGET_TMPDIR
 /// TODO: Remove when CARGO_TARGET_TMPDIR grows old enough.
@@ -31,7 +26,10 @@ fn global_root_legacy() -> PathBuf {
 }
 
 fn set_global_root(tmp_dir: Option<&'static str>) {
-    let mut lock = GLOBAL_ROOT.lock().unwrap();
+    let mut lock = GLOBAL_ROOT
+        .get_or_init(|| Default::default())
+        .lock()
+        .unwrap();
     if lock.is_none() {
         let mut root = match tmp_dir {
             Some(tmp_dir) => PathBuf::from(tmp_dir),
@@ -44,7 +42,10 @@ fn set_global_root(tmp_dir: Option<&'static str>) {
 }
 
 pub fn global_root() -> PathBuf {
-    let lock = GLOBAL_ROOT.lock().unwrap();
+    let lock = GLOBAL_ROOT
+        .get_or_init(|| Default::default())
+        .lock()
+        .unwrap();
     match lock.as_ref() {
         Some(p) => p.clone(),
         None => unreachable!("GLOBAL_ROOT not set yet"),
@@ -141,7 +142,7 @@ impl CargoPathExt for Path {
         // actually performing the removal, but we don't care all that much
         // for our tests.
         if meta.is_dir() {
-            if let Err(e) = remove_dir_all::remove_dir_all(self) {
+            if let Err(e) = fs::remove_dir_all(self) {
                 panic!("failed to remove {:?}: {:?}", self, e)
             }
         } else if let Err(e) = fs::remove_file(self) {
@@ -286,4 +287,62 @@ pub fn sysroot() -> String {
     assert!(output.status.success());
     let sysroot = String::from_utf8(output.stdout).unwrap();
     sysroot.trim().to_string()
+}
+
+/// Returns true if names such as aux.* are allowed.
+///
+/// Traditionally, Windows did not allow a set of file names (see `is_windows_reserved`
+/// for a list). More recent versions of Windows have relaxed this restriction. This test
+/// determines whether we are running in a mode that allows Windows reserved names.
+#[cfg(windows)]
+pub fn windows_reserved_names_are_allowed() -> bool {
+    use cargo_util::is_ci;
+
+    // Ensure tests still run in CI until we need to migrate.
+    if is_ci() {
+        return false;
+    }
+
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr;
+    use windows_sys::Win32::Storage::FileSystem::GetFullPathNameW;
+
+    let test_file_name: Vec<_> = OsStr::new("aux.rs").encode_wide().collect();
+
+    let buffer_length =
+        unsafe { GetFullPathNameW(test_file_name.as_ptr(), 0, ptr::null_mut(), ptr::null_mut()) };
+
+    if buffer_length == 0 {
+        // This means the call failed, so we'll conservatively assume reserved names are not allowed.
+        return false;
+    }
+
+    let mut buffer = vec![0u16; buffer_length as usize];
+
+    let result = unsafe {
+        GetFullPathNameW(
+            test_file_name.as_ptr(),
+            buffer_length,
+            buffer.as_mut_ptr(),
+            ptr::null_mut(),
+        )
+    };
+
+    if result == 0 {
+        // Once again, conservatively assume reserved names are not allowed if the
+        // GetFullPathNameW call failed.
+        return false;
+    }
+
+    // Under the old rules, a file name like aux.rs would get converted into \\.\aux, so
+    // we detect this case by checking if the string starts with \\.\
+    //
+    // Otherwise, the filename will be something like C:\Users\Foo\Documents\aux.rs
+    let prefix: Vec<_> = OsStr::new("\\\\.\\").encode_wide().collect();
+    if buffer.starts_with(&prefix) {
+        false
+    } else {
+        true
+    }
 }

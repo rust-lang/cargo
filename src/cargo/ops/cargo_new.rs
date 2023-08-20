@@ -1,18 +1,18 @@
 use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::CargoResult;
+use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use cargo_util::paths;
 use serde::de;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::fmt;
+use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::str::{from_utf8, FromStr};
-use toml_edit::easy as toml;
+use std::str::FromStr;
+use std::{fmt, slice};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl {
@@ -163,6 +163,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     })
 }
 
+/// See also `util::toml::embedded::sanitize_name`
 fn check_name(
     name: &str,
     show_name_help: bool,
@@ -254,12 +255,24 @@ fn check_name(
     if restricted_names::is_non_ascii_name(name) {
         shell.warn(format!(
             "the name `{}` contains non-ASCII characters\n\
-            Support for non-ASCII crate names is experimental and only valid \
-            on the nightly toolchain.",
+            Non-ASCII crate names are not supported by Rust.",
             name
         ))?;
     }
 
+    Ok(())
+}
+
+/// Checks if the path contains any invalid PATH env characters.
+fn check_path(path: &Path, shell: &mut Shell) -> CargoResult<()> {
+    // warn if the path contains characters that will break `env::join_paths`
+    if let Err(_) = paths::join_paths(slice::from_ref(&OsStr::new(path)), "") {
+        let path = path.to_string_lossy();
+        shell.warn(format!(
+            "the path `{path}` contains invalid PATH characters (usually `:`, `;`, or `\"`)\n\
+            It is recommended to use a different name to avoid problems."
+        ))?;
+    }
     Ok(())
 }
 
@@ -423,6 +436,8 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     }
 
+    check_path(path, &mut config.shell())?;
+
     let is_bin = opts.kind.is_bin();
 
     let name = get_name(path, opts)?;
@@ -450,7 +465,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 
 pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     // This is here just as a random location to exercise the internal error handling.
-    if std::env::var_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
+    if config.get_env_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
         return Err(crate::util::internal("internal error test"));
     }
 
@@ -459,6 +474,8 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     if path.join("Cargo.toml").exists() {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
+
+    check_path(path, &mut config.shell())?;
 
     let name = get_name(path, opts)?;
 
@@ -499,31 +516,31 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     let mut version_control = opts.version_control;
 
     if version_control == None {
-        let mut num_detected_vsces = 0;
+        let mut num_detected_vcses = 0;
 
         if path.join(".git").exists() {
             version_control = Some(VersionControl::Git);
-            num_detected_vsces += 1;
+            num_detected_vcses += 1;
         }
 
         if path.join(".hg").exists() {
             version_control = Some(VersionControl::Hg);
-            num_detected_vsces += 1;
+            num_detected_vcses += 1;
         }
 
         if path.join(".pijul").exists() {
             version_control = Some(VersionControl::Pijul);
-            num_detected_vsces += 1;
+            num_detected_vcses += 1;
         }
 
         if path.join(".fossil").exists() {
             version_control = Some(VersionControl::Fossil);
-            num_detected_vsces += 1;
+            num_detected_vcses += 1;
         }
 
         // if none exists, maybe create git, like in `cargo new`
 
-        if num_detected_vsces > 1 {
+        if num_detected_vcses > 1 {
             anyhow::bail!(
                 "more than one of .hg, .git, .pijul, .fossil configurations \
                  found and the ignore file can't be filled in as \
@@ -597,9 +614,22 @@ impl IgnoreList {
     /// already exists. It reads the contents of the given `BufRead` and
     /// checks if the contents of the ignore list are already existing in the
     /// file.
-    fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> String {
-        // TODO: is unwrap safe?
-        let existing_items = existing.lines().collect::<Result<Vec<_>, _>>().unwrap();
+    fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> CargoResult<String> {
+        let mut existing_items = Vec::new();
+        for (i, item) in existing.lines().enumerate() {
+            match item {
+                Ok(s) => existing_items.push(s),
+                Err(err) => match err.kind() {
+                    ErrorKind::InvalidData => {
+                        return Err(anyhow!(
+                            "Character at line {} is invalid. Cargo only supports UTF-8.",
+                            i
+                        ))
+                    }
+                    _ => return Err(anyhow!(err)),
+                },
+            }
+        }
 
         let ignore_items = match vcs {
             VersionControl::Hg => &self.hg_ignore,
@@ -633,7 +663,7 @@ impl IgnoreList {
             out.push('\n');
         }
 
-        out
+        Ok(out)
     }
 }
 
@@ -662,7 +692,7 @@ fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -
                 Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
                 _ => return Err(err),
             },
-            Ok(file) => list.format_existing(BufReader::new(file), vcs),
+            Ok(file) => list.format_existing(BufReader::new(file), vcs)?,
         };
 
         paths::append(&fp_ignore, ignore.as_bytes())?;
@@ -714,7 +744,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     // Using the push method with multiple arguments ensures that the entries
     // for all mutually-incompatible VCS in terms of syntax are in sync.
     let mut ignore = IgnoreList::new();
-    ignore.push("/target", "^target/", "target");
+    ignore.push("/target", "^target$", "target");
     if !opts.bin {
         ignore.push("/Cargo.lock", "^Cargo.lock$", "Cargo.lock");
     }
@@ -731,69 +761,84 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let mut cargotoml_path_specifier = String::new();
+    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
+    let mut manifest = toml_edit::Document::new();
+    manifest["package"] = toml_edit::Item::Table(toml_edit::Table::new());
+    manifest["package"]["name"] = toml_edit::value(name);
+    manifest["package"]["version"] = toml_edit::value("0.1.0");
+    let edition = match opts.edition {
+        Some(edition) => edition.to_string(),
+        None => Edition::LATEST_STABLE.to_string(),
+    };
+    manifest["package"]["edition"] = toml_edit::value(edition);
+    if let Some(registry) = opts.registry {
+        let mut array = toml_edit::Array::default();
+        array.push(registry);
+        manifest["package"]["publish"] = toml_edit::value(array);
+    }
+    let mut dep_table = toml_edit::Table::default();
+    dep_table.decor_mut().set_prefix("\n# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html\n\n");
+    manifest["dependencies"] = toml_edit::Item::Table(dep_table);
 
     // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
-
     for i in &opts.source_files {
         if i.bin {
             if i.relative_path != "src/main.rs" {
-                cargotoml_path_specifier.push_str(&format!(
-                    r#"
-[[bin]]
-name = "{}"
-path = {}
-"#,
-                    i.target_name,
-                    toml::Value::String(i.relative_path.clone())
-                ));
+                let mut bin = toml_edit::Table::new();
+                bin["name"] = toml_edit::value(i.target_name.clone());
+                bin["path"] = toml_edit::value(i.relative_path.clone());
+                manifest["bin"]
+                    .or_insert(toml_edit::Item::ArrayOfTables(
+                        toml_edit::ArrayOfTables::new(),
+                    ))
+                    .as_array_of_tables_mut()
+                    .expect("bin is an array of tables")
+                    .push(bin);
             }
         } else if i.relative_path != "src/lib.rs" {
-            cargotoml_path_specifier.push_str(&format!(
-                r#"
-[lib]
-name = "{}"
-path = {}
-"#,
-                i.target_name,
-                toml::Value::String(i.relative_path.clone())
-            ));
+            let mut lib = toml_edit::Table::new();
+            lib["name"] = toml_edit::value(i.target_name.clone());
+            lib["path"] = toml_edit::value(i.relative_path.clone());
+            manifest["lib"] = toml_edit::Item::Table(lib);
         }
     }
 
-    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
+    let manifest_path = path.join("Cargo.toml");
+    if let Ok(root_manifest_path) = find_root_manifest_for_wd(&manifest_path) {
+        let root_manifest = paths::read(&root_manifest_path)?;
+        // Sometimes the root manifest is not a valid manifest, so we only try to parse it if it is.
+        // This should not block the creation of the new project. It is only a best effort to
+        // inherit the workspace package keys.
+        if let Ok(workspace_document) = root_manifest.parse::<toml_edit::Document>() {
+            if let Some(workspace_package_keys) = workspace_document
+                .get("workspace")
+                .and_then(|workspace| workspace.get("package"))
+                .and_then(|package| package.as_table())
+            {
+                update_manifest_with_inherited_workspace_package_keys(
+                    opts,
+                    &mut manifest,
+                    workspace_package_keys,
+                )
+            }
 
-    paths::write(
-        &path.join("Cargo.toml"),
-        format!(
-            r#"[package]
-name = "{}"
-version = "0.1.0"
-edition = {}
-{}
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+            // Try to inherit the workspace lints key if it exists.
+            if config.cli_unstable().lints
+                && workspace_document
+                    .get("workspace")
+                    .and_then(|workspace| workspace.get("lints"))
+                    .is_some()
+            {
+                let mut table = toml_edit::Table::new();
+                table["workspace"] = toml_edit::value(true);
+                manifest["lints"] = toml_edit::Item::Table(table);
+            }
+        }
+    }
 
-[dependencies]
-{}"#,
-            name,
-            match opts.edition {
-                Some(edition) => toml::Value::String(edition.to_string()),
-                None => toml::Value::String(Edition::LATEST_STABLE.to_string()),
-            },
-            match opts.registry {
-                Some(registry) => format!(
-                    "publish = {}\n",
-                    toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
-                ),
-                None => "".to_string(),
-            },
-            cargotoml_path_specifier
-        )
-        .as_bytes(),
-    )?;
+    paths::write(&manifest_path, manifest.to_string())?;
 
     // Create all specified source files (with respective parent directories) if they don't exist.
-
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());
 
@@ -809,11 +854,17 @@ fn main() {
 "
         } else {
             b"\
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn it_works() {
-        let result = 2 + 2;
+        let result = add(2, 2);
         assert_eq!(result, 4);
     }
 }
@@ -824,14 +875,12 @@ mod tests {
             paths::write(&path_of_source_file, default_file_content)?;
 
             // Format the newly created source file
-            match Command::new("rustfmt").arg(&path_of_source_file).output() {
-                Err(e) => log::warn!("failed to call rustfmt: {}", e),
-                Ok(output) => {
-                    if !output.status.success() {
-                        log::warn!("rustfmt failed: {:?}", from_utf8(&output.stdout));
-                    }
-                }
-            };
+            if let Err(e) = cargo_util::ProcessBuilder::new("rustfmt")
+                .arg(&path_of_source_file)
+                .exec_with_output()
+            {
+                tracing::warn!("failed to call rustfmt: {:#}", e);
+            }
         }
     }
 
@@ -845,4 +894,41 @@ mod tests {
     }
 
     Ok(())
+}
+
+// Update the manifest with the inherited workspace package keys.
+// If the option is not set, the key is removed from the manifest.
+// If the option is set, keep the value from the manifest.
+fn update_manifest_with_inherited_workspace_package_keys(
+    opts: &MkOptions<'_>,
+    manifest: &mut toml_edit::Document,
+    workspace_package_keys: &toml_edit::Table,
+) {
+    if workspace_package_keys.is_empty() {
+        return;
+    }
+
+    let try_remove_and_inherit_package_key = |key: &str, manifest: &mut toml_edit::Document| {
+        let package = manifest["package"]
+            .as_table_mut()
+            .expect("package is a table");
+        package.remove(key);
+        let mut table = toml_edit::Table::new();
+        table.set_dotted(true);
+        table["workspace"] = toml_edit::value(true);
+        package.insert(key, toml_edit::Item::Table(table));
+    };
+
+    // Inherit keys from the workspace.
+    // Only keep the value from the manifest if the option is set.
+    for (key, _) in workspace_package_keys {
+        if key == "edition" && opts.edition.is_some() {
+            continue;
+        }
+        if key == "publish" && opts.registry.is_some() {
+            continue;
+        }
+
+        try_remove_and_inherit_package_key(key, manifest);
+    }
 }

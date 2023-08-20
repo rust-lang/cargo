@@ -1,10 +1,10 @@
 //! Tests for custom json target specifications.
 
-use cargo_test_support::is_nightly;
 use cargo_test_support::{basic_manifest, project};
 use std::fs;
 
 const MINIMAL_LIB: &str = r#"
+#![allow(internal_features)]
 #![feature(no_core)]
 #![feature(lang_items)]
 #![no_core]
@@ -34,12 +34,8 @@ const SIMPLE_SPEC: &str = r#"
 }
 "#;
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn custom_target_minimal() {
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
@@ -61,17 +57,13 @@ fn custom_target_minimal() {
 
     // Ensure that the correct style of flag is passed to --target with doc tests.
     p.cargo("test --doc --target src/../custom-target.json -v -Zdoctest-xcompile")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["doctest-xcompile", "no_core", "lang_items"])
         .with_stderr_contains("[RUNNING] `rustdoc [..]--target [..]foo/custom-target.json[..]")
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items, auto_traits")]
 fn custom_target_dependency() {
-    if !is_nightly() {
-        // Requires features no_core, lang_items, auto_traits
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -89,6 +81,7 @@ fn custom_target_dependency() {
         .file(
             "src/lib.rs",
             r#"
+                #![allow(internal_features)]
                 #![feature(no_core)]
                 #![feature(lang_items)]
                 #![feature(auto_traits)]
@@ -122,12 +115,8 @@ fn custom_target_dependency() {
     p.cargo("build --lib --target custom-target.json -v").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn custom_bin_target() {
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "src/main.rs",
@@ -143,13 +132,9 @@ fn custom_bin_target() {
     p.cargo("build --target custom-bin-target.json -v").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn changing_spec_rebuilds() {
     // Changing the .json file will trigger a rebuild.
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
@@ -190,13 +175,9 @@ fn changing_spec_rebuilds() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn changing_spec_relearns_crate_types() {
     // Changing the .json file will invalidate the cache of crate types.
-    if !is_nightly() {
-        // Requires features no_core, lang_items
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -232,5 +213,40 @@ fn changing_spec_relearns_crate_types() {
 [FINISHED] [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
+fn custom_target_ignores_filepath() {
+    // Changing the path of the .json file will not trigger a rebuild.
+    let p = project()
+        .file(
+            "src/lib.rs",
+            &"
+                __MINIMAL_LIB__
+
+                pub fn foo() -> u32 {
+                    42
+                }
+            "
+            .replace("__MINIMAL_LIB__", MINIMAL_LIB),
+        )
+        .file("b/custom-target.json", SIMPLE_SPEC)
+        .file("a/custom-target.json", SIMPLE_SPEC)
+        .build();
+
+    // Should build the library the first time.
+    p.cargo("build --lib --target a/custom-target.json")
+        .with_stderr(
+            "\
+[..]Compiling foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    // But not the second time, even though the path to the custom target is dfferent.
+    p.cargo("build --lib --target b/custom-target.json")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
