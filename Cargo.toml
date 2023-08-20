@@ -135,6 +135,7 @@ curl = { workspace = true, features = ["http2"] }
 curl-sys.workspace = true
 filetime.workspace = true
 flate2.workspace = true
+git-url-parse.workspace = true
 git2.workspace = true
 git2-curl.workspace = true
 gix.workspace = true
