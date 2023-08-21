@@ -12,6 +12,7 @@ use std::path::PathBuf;
 pub struct TargetCfgConfig {
     pub runner: OptValue<PathAndArgs>,
     pub rustflags: OptValue<StringList>,
+    pub linker: OptValue<ConfigRelativePath>,
     // This is here just to ignore fields from normal `TargetConfig` because
     // all `[target]` tables are getting deserialized, whether they start with
     // `cfg(` or not.

@@ -272,7 +272,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     unit: unit.clone(),
                     args,
                     unstable_opts,
-                    linker: self.bcx.linker(unit.kind),
+                    linker: self.compilation.target_linker(unit.kind).clone(),
                     script_meta,
                     env: artifact::get_env(&self, self.unit_deps(unit))?,
                 });

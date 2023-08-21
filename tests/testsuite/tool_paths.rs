@@ -393,7 +393,6 @@ fn cfg_ignored_fields() {
 [WARNING] unused key `ar` in [target] config table `cfg(not(target_os = \"none\"))`
 [WARNING] unused key `foo` in [target] config table `cfg(not(target_os = \"none\"))`
 [WARNING] unused key `invalid` in [target] config table `cfg(not(target_os = \"none\"))`
-[WARNING] unused key `linker` in [target] config table `cfg(not(target_os = \"none\"))`
 [CHECKING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
