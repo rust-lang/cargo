@@ -37,7 +37,6 @@ curl-sys = "0.4.65"
 filetime = "0.2.21"
 flate2 = { version = "1.0.26", default-features = false, features = ["zlib"] }
 fwdansi = "1.1.0"
-git-url-parse = "0.4.0"
 git2 = "0.17.2"
 git2-curl = "0.18.0"
 gix = { version = "0.45.1", default-features = false, features = ["blocking-http-transport-curl", "progress-tree"] }
@@ -135,7 +134,6 @@ curl = { workspace = true, features = ["http2"] }
 curl-sys.workspace = true
 filetime.workspace = true
 flate2.workspace = true
-git-url-parse.workspace = true
 git2.workspace = true
 git2-curl.workspace = true
 gix.workspace = true
