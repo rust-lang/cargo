@@ -1,25 +1,8 @@
 ## Continuous Integration
 
-### Travis CI
+### Getting Started
 
-To test your [package][def-package] on Travis CI, here is a sample
-`.travis.yml` file:
-
-```yaml
-language: rust
-rust:
-  - stable
-  - beta
-  - nightly
-matrix:
-  allow_failures:
-    - rust: nightly
-```
-
-This will test all three release channels, but any breakage in nightly
-will not fail your overall build. Please see the [Travis CI Rust
-documentation](https://docs.travis-ci.com/user/languages/rust/) for more
-information.
+A basic CI will build and test your projects:
 
 ### GitHub Actions
 
@@ -122,4 +105,58 @@ channel, but any breakage in nightly will not fail your overall build. Please
 see the [builds.sr.ht documentation](https://man.sr.ht/builds.sr.ht/) for more
 information.
 
-[def-package]:  ../appendix/glossary.md#package  '"package" (glossary entry)'
+### Verifying Latest Dependencies
+
+When [specifying dependencies](../reference/specifying-dependencies.md) in
+`Cargo.toml`, they generally match a range of versions.
+Exhaustively testing all version combination would be unwieldy.
+Verifying the latest versions would at least test for users who run [`cargo
+add`] or [`cargo install`].
+
+When testing the latest versions some considerations are:
+- Minimizing external factors affecting local development or CI
+- Rate of new dependencies being published
+- Level of risk a project is willing to accept
+- CI costs, including indirect costs like if a CI service has a maximum for
+  parallel runners, causing new jobs to be serialized when at the maxium.
+
+Some potential solutions include:
+- [Not checking in the `Cargo.lock`](../faq.md#why-have-cargolock-in-version-control)
+  - Depending on PR velocity, many versions may go untested
+  - This comes at the cost of determinism
+- Have a CI job verify the latest dependencies but mark it to "continue on failure"
+  - Depending on the CI service, failures might not be obvious
+  - Depending on PR velocity, may use more resources than necessary
+- Have a scheduled CI job to verify latest dependencies
+  - A hosted CI service may disable scheduled jobs for repositories that
+    haven't been touched in a while, affecting passively maintained packages
+  - Depending on the CI service, notifications might not be routed to people
+    who can act on the failure
+  - If not balanced with dependency publish rate, may not test enough versions
+    or may do redundant testing
+- Regularly update dependencies through PRs, like with [Dependabot] or [RenovateBot]
+  - Can isolate dependencies to their own PR or roll them up into a single PR
+  - Only uses the resources necessary
+  - Can configure the frequency to balance CI resources and coverage of dependency versions
+
+An example CI job to verify latest dependencies, using Github Actions:
+```yaml
+jobs:
+  latest_deps:
+    name: Latest Dependencies
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustup update stable && rustup default stable
+      - run: cargo update --verbose
+      - run: cargo build --verbose
+      - run: cargo test --verbose
+```
+For projects with higher risks of per-platform or per-Rust version failures,
+more combinations may want to be tested.
+
+[`cargo add`]: ../commands/cargo-add.md
+[`cargo install`]: ../commands/cargo-install.md
+[Dependabot]: https://docs.github.com/en/code-security/dependabot/working-with-dependabot
+[RenovateBot]: https://renovatebot.com/

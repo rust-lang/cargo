@@ -102,33 +102,47 @@ issue][cargo-issues].
 
 [cargo-issues]: https://github.com/rust-lang/cargo/issues
 
-### Why do binaries have `Cargo.lock` in version control, but not libraries?
+### Why have `Cargo.lock` in version control?
+
+While [`cargo new`] defaults to tracking `Cargo.lock` in version control,
+whether you do is dependent on the needs of your package.
 
 The purpose of a `Cargo.lock` lockfile is to describe the state of the world at
-the time of a successful build. Cargo uses the lockfile to provide
-deterministic builds on different times and different systems, by ensuring that
-the exact same dependencies and versions are used as when the `Cargo.lock` file
-was originally generated.
+the time of a successful build.
+Cargo uses the lockfile to provide deterministic builds at different times and
+on different systems,
+by ensuring that the exact same dependencies and versions are used as when the
+`Cargo.lock` file was originally generated.
 
-This property is most desirable from applications and packages which are at the
-very end of the dependency chain (binaries). As a result, it is recommended that
-all binaries check in their `Cargo.lock`.
+Deterministic builds help with
+- Running `git bisect` to find the root cause of a bug
+- Ensuring CI only fails due to new commits and not external factors
+- Reducing confusion when contributors see different behavior as compared to
+  other contributors or CI
 
-For libraries the situation is somewhat different. A library is not only used by
-the library developers, but also any downstream consumers of the library. Users
-dependent on the library will not inspect the library’s `Cargo.lock` (even if it
-exists). This is precisely because a library should **not** be deterministically
-recompiled for all users of the library.
+Having this snapshot of dependencies can also help when projects need to be
+verified against consistent versions of dependencies, like when
+- Verifying a minimum-supported Rust version (MSRV) that is less than the latest
+  version of a dependency supports
+- Verifying human readable output which won't have compatibility guarantees
+  (e.g. snapshot testing error messages to ensure they are "understandable", a
+  metric too fuzzy to automate)
 
-If a library ends up being used transitively by several dependencies, it’s
-likely that just a single copy of the library is desired (based on semver
-compatibility). If Cargo used all of the dependencies' `Cargo.lock` files,
-then multiple copies of the library could be used, and perhaps even a version
-conflict.
+However, this determinism can give a false sense of security because
+`Cargo.lock` does not affect the consumers of your package, only `Cargo.toml` does that.
+For example:
+- [`cargo install`] will select the latest dependencies unless `--locked` is
+  passed in.
+- New dependencies, like those added with [`cargo add`], will be locked to the latest version
 
-In other words, libraries specify SemVer requirements for their dependencies but
-cannot see the full picture. Only end products like binaries have a full
-picture to decide what versions of dependencies should be used.
+The lockfile can also be a source of merge conflicts.
+
+For strategies to verify newer versions of dependencies via CI,
+see [Verifying Latest Dependencies](guide/continuous-integration.md#verifying-latest-dependencies).
+
+[`cargo new`]: commands/cargo-new.md
+[`cargo add`]: commands/cargo-add.md
+[`cargo install`]: commands/cargo-install.md
 
 ### Can libraries use `*` as a version for their dependencies?
 

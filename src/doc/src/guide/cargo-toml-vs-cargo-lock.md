@@ -8,14 +8,11 @@ about them, here’s a summary:
 * `Cargo.lock` contains exact information about your dependencies. It is
   maintained by Cargo and should not be manually edited.
 
-If you’re building a non-end product, such as a rust library that other rust
-[packages][def-package] will depend on, put `Cargo.lock` in your
-`.gitignore`. If you’re building an end product, which are executable like
-command-line tool or an application, or a system library with crate-type of
-`staticlib` or `cdylib`, check `Cargo.lock` into `git`. If you're curious
-about why that is, see
-["Why do binaries have `Cargo.lock` in version control, but not libraries?" in the
-FAQ](../faq.md#why-do-binaries-have-cargolock-in-version-control-but-not-libraries).
+When in doubt, check `Cargo.lock` into git.
+For a better understanding of why and what the alternatives might be, see
+[“Why have Cargo.lock in version control?” in the FAQ](../faq.md#why-have-cargolock-in-version-control).
+We recommend pairing this with
+[Verifying Latest Dependencies](continuous-integration.md#verifying-latest-dependencies)
 
 Let’s dig in a little bit more.
 
