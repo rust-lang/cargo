@@ -541,22 +541,8 @@ fn was_git_url_miscategorised_as_a_registry_dep(dep: &Dependency) -> InstallSugg
     if dep.source_id().is_registry() {
         if let Ok(git_url) = parse(BStr::new(dep.package_name().as_bytes())) {
             let final_git_url: Option<InternedString> = match git_url.scheme {
-                // cargo doesn't support cargo install git@ urls, so
-                Scheme::Ssh | Scheme::Git => {
-                    if let (Some(host), Some(owner)) = (git_url.host(), git_url.user()) {
-                        let https_git_url = format!(
-                            "https://{host}/{owner}/{repo_name}",
-                            // repo_name = git_url.name()
-                            repo_name = "TODO"
-                        );
-                        Some(InternedString::from(https_git_url))
-                    } else {
-                        None
-                    }
-                }
                 Scheme::Http | Scheme::Https => Some(dep.package_name()),
-                // otherwise cargo install bar will interpret bar as a file-based
-                // git repo
+                // cargo doesn't support cargo install git@ urls
                 _ => None,
             };
 

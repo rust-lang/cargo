@@ -1656,19 +1656,6 @@ error: could not find `https://github.com/rust-lang/cargo` in registry `crates-i
 }
 
 #[cargo_test]
-fn test_install_from_git_generate_suggestion() {
-    registry::init();
-    cargo_process("install git@bitbucket.org:jcmoyer/rust-tictactoe.git")
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-error: could not find `git@bitbucket.org:jcmoyer/rust-tictactoe.git` in registry `crates-io` with version `*`. To install a package from a git repository, use `--git https://bitbucket.org/jcmoyer/rust-tictactoe`",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn uninstall_multiple_and_specifying_bin() {
     cargo_process("uninstall foo bar --bin baz")
         .with_status(101)
