@@ -28,7 +28,7 @@ cargo-test-macro = { path = "crates/cargo-test-macro" }
 cargo-test-support = { path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.6", path = "crates/cargo-util" }
 cargo_metadata = "0.14.0"
-clap = "4.3.19"
+clap = "4.3.23"
 core-foundation = { version = "0.9.3", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.38.0", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }

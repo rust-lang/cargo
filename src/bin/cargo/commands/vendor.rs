@@ -32,13 +32,25 @@ pub fn cli() -> Command {
             "versioned-dirs",
             "Always include version in subdir name",
         ))
-        .arg(flag("no-merge-sources", "Not supported").hide(true))
-        .arg(flag("relative-path", "Not supported").hide(true))
-        .arg(flag("only-git-deps", "Not supported").hide(true))
-        .arg(flag("disallow-duplicates", "Not supported").hide(true))
+        .arg(unsupported("no-merge-sources"))
+        .arg(unsupported("relative-path"))
+        .arg(unsupported("only-git-deps"))
+        .arg(unsupported("disallow-duplicates"))
         .arg_quiet()
         .arg_manifest_path()
         .after_help("Run `cargo help vendor` for more detailed information.\n")
+}
+
+fn unsupported(name: &'static str) -> Arg {
+    // When we moved `cargo vendor` into Cargo itself we didn't stabilize a few
+    // flags, so try to provide a helpful error message in that case to ensure
+    // that users currently using the flag aren't tripped up.
+    let value_parser = clap::builder::UnknownArgumentValueParser::suggest("the crates.io `cargo vendor` command has been merged into Cargo")
+        .and_suggest(format!("and the flag `--{name}` isn't supported currently"))
+        .and_suggest("to continue using the flag, execute `cargo-vendor vendor ...`")
+        .and_suggest("to suggest this flag supported in Cargo, file an issue at <https://github.com/rust-lang/cargo/issues/new>");
+
+    flag(name, "").value_parser(value_parser).hide(true)
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -48,34 +60,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // source, e.g. crates.io, to fetch crates.
     if !args.flag("respect-source-config") {
         config.values_mut()?.remove("source");
-    }
-
-    // When we moved `cargo vendor` into Cargo itself we didn't stabilize a few
-    // flags, so try to provide a helpful error message in that case to ensure
-    // that users currently using the flag aren't tripped up.
-    let crates_io_cargo_vendor_flag = if args.flag("no-merge-sources") {
-        Some("--no-merge-sources")
-    } else if args.flag("relative-path") {
-        Some("--relative-path")
-    } else if args.flag("only-git-deps") {
-        Some("--only-git-deps")
-    } else if args.flag("disallow-duplicates") {
-        Some("--disallow-duplicates")
-    } else {
-        None
-    };
-    if let Some(flag) = crates_io_cargo_vendor_flag {
-        return Err(anyhow::format_err!(
-            "\
-the crates.io `cargo vendor` command has now been merged into Cargo itself
-and does not support the flag `{}` currently; to continue using the flag you
-can execute `cargo-vendor vendor ...`, and if you would like to see this flag
-supported in Cargo itself please feel free to file an issue at
-https://github.com/rust-lang/cargo/issues/new
-",
-            flag
-        )
-        .into());
     }
 
     let ws = args.workspace(config)?;

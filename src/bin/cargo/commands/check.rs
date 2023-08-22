@@ -29,7 +29,7 @@ pub fn cli() -> Command {
             "Check all targets",
         )
         .arg_features()
-        .arg_jobs()
+        .arg_parallel()
         .arg_release("Check artifacts in release mode, with optimizations")
         .arg_profile("Check artifacts with the specified profile")
         .arg_target_triple("Check for the target triple")

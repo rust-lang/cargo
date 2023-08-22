@@ -14,6 +14,7 @@ use crate::util::{
 use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;
+use clap::builder::UnknownArgumentValueParser;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -82,8 +83,8 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_jobs(self) -> Self {
-        self.arg_jobs_without_keep_going()._arg(
+    fn arg_parallel(self) -> Self {
+        self.arg_jobs()._arg(
             flag(
                 "keep-going",
                 "Do not abort the build as soon as there is an error (unstable)",
@@ -92,7 +93,7 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_jobs_without_keep_going(self) -> Self {
+    fn arg_jobs(self) -> Self {
         self._arg(
             opt("jobs", "Number of parallel jobs, defaults to # of CPUs.")
                 .short('j')
@@ -100,6 +101,12 @@ pub trait CommandExt: Sized {
                 .allow_hyphen_values(true)
                 .help_heading(heading::COMPILATION_OPTIONS),
         )
+    }
+
+    fn arg_unsupported_keep_going(self) -> Self {
+        let msg = "use `--no-fail-fast` to run as many tests as possible regardless of failure";
+        let value_parser = UnknownArgumentValueParser::suggest(msg);
+        self._arg(flag("keep-going", "").value_parser(value_parser).hide(true))
     }
 
     fn arg_targets_all(
@@ -431,7 +438,7 @@ pub trait ArgMatchesExt {
     }
 
     fn keep_going(&self) -> bool {
-        self.flag("keep-going")
+        self.maybe_flag("keep-going")
     }
 
     fn targets(&self) -> Vec<String> {
@@ -777,6 +784,8 @@ pub trait ArgMatchesExt {
 
     fn flag(&self, name: &str) -> bool;
 
+    fn maybe_flag(&self, name: &str) -> bool;
+
     fn _value_of(&self, name: &str) -> Option<&str>;
 
     fn _values_of(&self, name: &str) -> Vec<String>;
@@ -795,6 +804,17 @@ impl<'a> ArgMatchesExt for ArgMatches {
         ignore_unknown(self.try_get_one::<bool>(name))
             .copied()
             .unwrap_or(false)
+    }
+
+    // This works around before an upstream fix in clap for `UnknownArgumentValueParser` accepting
+    // generics arguments. `flag()` cannot be used with `--keep-going` at this moment due to
+    // <https://github.com/clap-rs/clap/issues/5081>.
+    fn maybe_flag(&self, name: &str) -> bool {
+        self.try_get_one::<bool>(name)
+            .ok()
+            .flatten()
+            .copied()
+            .unwrap_or_default()
     }
 
     fn _value_of(&self, name: &str) -> Option<&str> {
