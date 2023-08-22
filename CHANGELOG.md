@@ -1,5 +1,25 @@
 # Changelog
 
+## Cargo 1.74 (2023-11-16)
+[80eca0e5...HEAD](https://github.com/rust-lang/cargo/compare/80eca0e5...HEAD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Nightly only
+
+### Documentation
+
+- ❗ Policy change: always check `Cargo.lock` in verison control, even for
+  libraries. Lockfile and CI integration documentations are also expanded.
+  [Policy docs](https://doc.rust-lang.org/nightly/cargo/faq.html#why-have-cargolock-in-version-control),
+  [Lockfile docs](https://doc.rust-lang.org/nightly/cargo/guide/cargo-toml-vs-cargo-lock.html),
+  [CI docs](https://doc.rust-lang.org/nightly/cargo/guide/continuous-integration.html),
+  [#12382](https://github.com/rust-lang/cargo/pull/12382)
+
 ## Cargo 1.73 (2023-10-05)
 [45782b6b...rust-1.73.0](https://github.com/rust-lang/cargo/compare/45782b6b...rust-1.73.0)
 
@@ -9,6 +29,7 @@
   [#12498](https://github.com/rust-lang/cargo/pull/12498)
 - Display package versions on Cargo timings graph.
   [#12420](https://github.com/rust-lang/cargo/pull/12420)
+
 ### Changed
 
 - Cargo now bails out when using `cargo::` in custom build scripts. This is
