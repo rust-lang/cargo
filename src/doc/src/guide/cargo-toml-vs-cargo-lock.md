@@ -8,7 +8,7 @@ about them, here’s a summary:
 * `Cargo.lock` contains exact information about your dependencies. It is
   maintained by Cargo and should not be manually edited.
 
-When in doubt, check `Cargo.lock` into git.
+When in doubt, check `Cargo.lock` into the version control system (e.g. Git).
 For a better understanding of why and what the alternatives might be, see
 [“Why have Cargo.lock in version control?” in the FAQ](../faq.md#why-have-cargolock-in-version-control).
 We recommend pairing this with
