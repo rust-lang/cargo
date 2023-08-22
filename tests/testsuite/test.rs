@@ -4845,29 +4845,6 @@ error: 2 targets failed:
 }
 
 #[cargo_test]
-fn cargo_test_no_keep_going() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/main.rs", "")
-        .build();
-
-    p.cargo("test --keep-going")
-        .with_stderr(
-            "\
-error: unexpected argument '--keep-going' found
-
-  tip: use `--no-fail-fast` to run as many tests as possible regardless of failure
-
-Usage: cargo test [OPTIONS] [TESTNAME] [-- [args]...]
-
-For more information, try '--help'.
-",
-        )
-        .with_status(1)
-        .run();
-}
-
-#[cargo_test]
 fn cargo_test_print_env_verbose() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
