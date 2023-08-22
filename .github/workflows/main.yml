@@ -176,7 +176,7 @@ jobs:
       run: 'cargo test -p cargo --test testsuite -- fix::'
       env:
         __CARGO_TEST_FORCE_ARGFILE: 1
-    - run: cargo test --workspace --exclude cargo --exclude benchsuite
+    - run: cargo test --workspace --exclude cargo --exclude benchsuite --exclude resolver-tests
     - name: Check benchmarks
       run: |
         # This only tests one benchmark since it can take over 10 minutes to
