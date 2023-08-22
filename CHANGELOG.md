@@ -75,6 +75,9 @@
   [#12231](https://github.com/rust-lang/cargo/pull/12231)
 - Added a message when `rustup` override shorthand is put in a wrong position.
   [#12226](https://github.com/rust-lang/cargo/pull/12226)
+- Respect scp-like URL as much as possible when fetching nested submodules.
+  [#12359](https://github.com/rust-lang/cargo/pull/12359)
+  [#12411](https://github.com/rust-lang/cargo/pull/12411)
 
 ### Fixed
 
