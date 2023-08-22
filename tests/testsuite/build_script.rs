@@ -453,6 +453,43 @@ fn custom_build_env_var_rustc_linker() {
     p.cargo("build --target").arg(&target).run();
 }
 
+// Only run this test on linux, since it's difficult to construct
+// a case suitable for all platforms.
+// See:https://github.com/rust-lang/cargo/pull/12535#discussion_r1306618264
+#[cargo_test]
+#[cfg(target_os = "linux")]
+fn custom_build_env_var_rustc_linker_with_target_cfg() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(target_pointer_width = "32")']
+            linker = "/path/to/linker"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // no crate type set => linker never called => build succeeds if and
+    // only if build.rs succeeds, despite linker binary not existing.
+    p.cargo("build --target").arg(&target).run();
+}
+
 #[cargo_test]
 fn custom_build_env_var_rustc_linker_bad_host_target() {
     let target = rustc_host();

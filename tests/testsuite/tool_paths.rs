@@ -32,6 +32,93 @@ fn pathless_tools() {
         .run();
 }
 
+// can set a custom linker via `target.'cfg(..)'.linker`
+#[cargo_test]
+fn custom_linker_cfg() {
+    let foo = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(not(target_os = "none"))']
+            linker = "nonexistent-linker"
+            "#,
+        )
+        .build();
+
+    foo.cargo("build --verbose")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+// custom linker set via `target.$triple.linker` have precede over `target.'cfg(..)'.linker`
+#[cargo_test]
+fn custom_linker_cfg_precedence() {
+    let target = rustc_host();
+
+    let foo = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [target.'cfg(not(target_os = "none"))']
+                    linker = "ignored-linker"
+                    [target.{}]
+                    linker = "nonexistent-linker"
+                "#,
+                target
+            ),
+        )
+        .build();
+
+    foo.cargo("build --verbose")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_linker_cfg_collision() {
+    let foo = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(not(target_arch = "avr"))']
+            linker = "nonexistent-linker1"
+            [target.'cfg(not(target_os = "none"))']
+            linker = "nonexistent-linker2"
+            "#,
+        )
+        .build();
+
+    foo.cargo("build --verbose")
+        .with_status(101)
+        .with_stderr(&format!(
+            "\
+[ERROR] several matching instances of `target.'cfg(..)'.linker` in configurations
+first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config
+second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
+",
+        ))
+        .run();
+}
+
 #[cargo_test]
 fn absolute_tools() {
     let target = rustc_host();
