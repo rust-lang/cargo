@@ -1,5 +1,6 @@
 use crate::command_prelude::*;
 
+use anyhow::anyhow;
 use cargo::ops::{self, UpdateOptions};
 use cargo::util::print_available_packages;
 
@@ -58,11 +59,21 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else {
         "package2"
     };
+    let to_update = values(args, to_update);
+    for crate_name in to_update.iter() {
+        if let Some(toolchain) = crate_name.strip_prefix("+") {
+            return Err(anyhow!(
+                "invalid character `+` in package name: `+{toolchain}`
+    Use `cargo +{toolchain} update` if you meant to use the `{toolchain}` toolchain."
+            )
+            .into());
+        }
+    }
 
     let update_opts = UpdateOptions {
         aggressive: args.flag("aggressive"),
         precise: args.get_one::<String>("precise").map(String::as_str),
-        to_update: values(args, to_update),
+        to_update,
         dry_run: args.dry_run(),
         workspace: args.flag("workspace"),
         config,
