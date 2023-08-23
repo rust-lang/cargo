@@ -108,6 +108,59 @@ impl From<VersionReq> for OptVersionReq {
     }
 }
 
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct PartialVersion {
+    pub major: u64,
+    pub minor: Option<u64>,
+    pub patch: Option<u64>,
+}
+
+impl std::str::FromStr for PartialVersion {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        // HACK: `PartialVersion` is a subset of the `VersionReq` syntax that only ever
+        // has one comparator with a required minor and optional patch, and uses no
+        // other features.
+        let version_req = match semver::VersionReq::parse(value) {
+            // Exclude semver operators like `^` and pre-release identifiers
+            Ok(req) if value.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
+            _ => anyhow::bail!("`rust-version` must be a value like \"1.32\""),
+        };
+        assert_eq!(
+            version_req.comparators.len(),
+            1,
+            "guarenteed by character check"
+        );
+        let comp = &version_req.comparators[0];
+        assert_eq!(comp.op, semver::Op::Caret, "guarenteed by character check");
+        assert_eq!(
+            comp.pre,
+            semver::Prerelease::EMPTY,
+            "guarenteed by character check"
+        );
+        Ok(PartialVersion {
+            major: comp.major,
+            minor: comp.minor,
+            patch: comp.patch,
+        })
+    }
+}
+
+impl Display for PartialVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let major = self.major;
+        write!(f, "{major}")?;
+        if let Some(minor) = self.minor {
+            write!(f, ".{minor}")?;
+        }
+        if let Some(patch) = self.patch {
+            write!(f, ".{patch}")?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

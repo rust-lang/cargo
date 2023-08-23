@@ -22,7 +22,7 @@ pub use self::progress::{Progress, ProgressStyle};
 pub use self::queue::Queue;
 pub use self::restricted_names::validate_package_name;
 pub use self::rustc::Rustc;
-pub use self::semver_ext::{OptVersionReq, VersionExt, VersionReqExt};
+pub use self::semver_ext::{OptVersionReq, PartialVersion, VersionExt, VersionReqExt};
 pub use self::to_semver::ToSemver;
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::workspace::{

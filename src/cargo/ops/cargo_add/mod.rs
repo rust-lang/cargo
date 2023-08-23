@@ -34,6 +34,7 @@ use crate::util::toml_mut::dependency::Source;
 use crate::util::toml_mut::dependency::WorkspaceSource;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
+use crate::util::PartialVersion;
 use crate::CargoResult;
 use crate::Config;
 use crate_spec::CrateSpec;
@@ -568,15 +569,10 @@ fn get_latest_dependency(
 
             if config.cli_unstable().msrv_policy && honor_rust_version {
                 fn parse_msrv(rust_version: impl AsRef<str>) -> (u64, u64, u64) {
-                    // HACK: `rust-version` is a subset of the `VersionReq` syntax that only ever
-                    // has one comparator with a required minor and optional patch, and uses no
-                    // other features. If in the future this syntax is expanded, this code will need
-                    // to be updated.
-                    let version_req = semver::VersionReq::parse(rust_version.as_ref()).unwrap();
-                    assert!(version_req.comparators.len() == 1);
-                    let comp = &version_req.comparators[0];
-                    assert_eq!(comp.op, semver::Op::Caret);
-                    assert_eq!(comp.pre, semver::Prerelease::EMPTY);
+                    let comp = rust_version
+                        .as_ref()
+                        .parse::<PartialVersion>()
+                        .expect("validated on parsing of manifest");
                     (comp.major, comp.minor.unwrap_or(0), comp.patch.unwrap_or(0))
                 }
 
