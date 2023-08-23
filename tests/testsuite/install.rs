@@ -1617,7 +1617,7 @@ fn inline_and_explicit_version() {
 
     cargo_process("install foo@0.1.1 --version 0.1.1")
         .with_status(101)
-        .with_stderr("error: cannot specify both `@0.1.1` and `--version 0.1.1`")
+        .with_stderr("error: cannot specify both `@<VERSION>` and `--version <VERSION>`")
         .run();
 }
 
