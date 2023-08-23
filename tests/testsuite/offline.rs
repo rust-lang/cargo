@@ -673,7 +673,7 @@ fn main(){
         .with_stdout("1.2.9")
         .run();
     // updates happen without updating the index
-    p2.cargo("update -p present_dep --precise 1.2.3 --offline")
+    p2.cargo("update present_dep --precise 1.2.3 --offline")
         .with_status(0)
         .with_stderr(
             "\
@@ -706,7 +706,7 @@ fn main(){
         .run();
 
     // No v1.2.8 loaded into the cache so expect failure.
-    p2.cargo("update -p present_dep --precise 1.2.8 --offline")
+    p2.cargo("update present_dep --precise 1.2.8 --offline")
         .with_status(101)
         .with_stderr(
             "\

@@ -344,7 +344,8 @@ _cargo() {
                         '--aggressive=[force dependency update]' \
                         "--dry-run[don't actually write the lockfile]" \
                         '(-p --package)'{-p+,--package=}'[specify package to update]:package:_cargo_package_names' \
-                        '--precise=[update single dependency to precise release]:release'
+                        '--precise=[update single dependency to precise release]:release' \
+                        '*:package:_cargo_package_names'
                         ;;
 
                 verify-project)

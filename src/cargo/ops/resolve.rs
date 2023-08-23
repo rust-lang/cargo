@@ -612,7 +612,7 @@ fn register_previous_locks(
 
     // Ok so we've been passed in a `keep` function which basically says "if I
     // return `true` then this package wasn't listed for an update on the command
-    // line". That is, if we run `cargo update -p foo` then `keep(bar)` will return
+    // line". That is, if we run `cargo update foo` then `keep(bar)` will return
     // `true`, whereas `keep(foo)` will return `false` (roughly speaking).
     //
     // This isn't actually quite what we want, however. Instead we want to
@@ -622,7 +622,7 @@ fn register_previous_locks(
     // * There's a crate `log`.
     // * There's a crate `serde` which depends on `log`.
     //
-    // Let's say we then run `cargo update -p serde`. This may *also* want to
+    // Let's say we then run `cargo update serde`. This may *also* want to
     // update the `log` dependency as our newer version of `serde` may have a
     // new minimum version required for `log`. Now this isn't always guaranteed
     // to work. What'll happen here is we *won't* lock the `log` dependency nor
