@@ -10,11 +10,7 @@ use cargo_util::paths;
 pub fn cli() -> Command {
     subcommand("install")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
-        .arg(
-            Arg::new("crate")
-                .value_parser(clap::builder::NonEmptyStringValueParser::new())
-                .num_args(0..),
-        )
+        .arg(Arg::new("crate").value_parser(parse_crate).num_args(0..))
         .arg(
             opt("version", "Specify a version to install")
                 .alias("vers")
@@ -104,9 +100,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let version = args.get_one::<String>("version").map(String::as_str);
     let krates = args
-        .get_many::<String>("crate")
+        .get_many::<CrateVersion>("crate")
         .unwrap_or_default()
-        .map(|k| resolve_crate(k, version))
+        .cloned()
+        .map(|(krate, local_version)| resolve_crate(krate, local_version, version))
         .collect::<crate::CargoResult<Vec<_>>>()?;
 
     for (crate_name, _) in krates.iter() {
@@ -190,20 +187,42 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     Ok(())
 }
 
-fn resolve_crate<'k>(
-    mut krate: &'k str,
-    mut version: Option<&'k str>,
-) -> crate::CargoResult<(&'k str, Option<&'k str>)> {
-    if let Some((k, v)) = krate.split_once('@') {
-        if version.is_some() {
-            anyhow::bail!("cannot specify both `@{v}` and `--version`");
-        }
+type CrateVersion = (String, Option<String>);
+
+fn parse_crate(krate: &str) -> crate::CargoResult<CrateVersion> {
+    let (krate, version) = if let Some((k, v)) = krate.split_once('@') {
         if k.is_empty() {
             // by convention, arguments starting with `@` are response files
-            anyhow::bail!("missing crate name for `@{v}`");
+            anyhow::bail!("missing crate name before '@'");
         }
-        krate = k;
-        version = Some(v);
+        let krate = k.to_owned();
+        let version = Some(v.to_owned());
+        (krate, version)
+    } else {
+        let krate = krate.to_owned();
+        let version = None;
+        (krate, version)
+    };
+
+    if krate.is_empty() {
+        anyhow::bail!("crate name is empty");
     }
+
+    Ok((krate, version))
+}
+
+fn resolve_crate(
+    krate: String,
+    local_version: Option<String>,
+    version: Option<&str>,
+) -> crate::CargoResult<CrateVersion> {
+    let version = match (local_version, version) {
+        (Some(l), Some(g)) => {
+            anyhow::bail!("cannot specify both `@{l}` and `--version {g}`");
+        }
+        (Some(l), None) => Some(l),
+        (None, Some(g)) => Some(g.to_owned()),
+        (None, None) => None,
+    };
     Ok((krate, version))
 }

@@ -604,7 +604,7 @@ Consider enabling some of the needed features by passing, e.g., `--features=\"{e
 pub fn install(
     config: &Config,
     root: Option<&str>,
-    krates: Vec<(&str, Option<&str>)>,
+    krates: Vec<(String, Option<String>)>,
     source_id: SourceId,
     from_cwd: bool,
     opts: &ops::CompileOptions,
@@ -617,9 +617,9 @@ pub fn install(
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
         let (krate, vers) = krates
-            .into_iter()
+            .iter()
             .next()
-            .map(|(k, v)| (Some(k), v))
+            .map(|(k, v)| (Some(k.as_str()), v.as_deref()))
             .unwrap_or((None, None));
         let installable_pkg = InstallablePackage::new(
             config, root, map, krate, source_id, from_cwd, vers, opts, force, no_track, true,
@@ -637,7 +637,7 @@ pub fn install(
         let mut did_update = false;
 
         let pkgs_to_install: Vec<_> = krates
-            .into_iter()
+            .iter()
             .filter_map(|(krate, vers)| {
                 let root = root.clone();
                 let map = map.clone();
@@ -645,10 +645,10 @@ pub fn install(
                     config,
                     root,
                     map,
-                    Some(krate),
+                    Some(krate.as_str()),
                     source_id,
                     from_cwd,
-                    vers,
+                    vers.as_deref(),
                     opts,
                     force,
                     no_track,
@@ -660,12 +660,12 @@ pub fn install(
                     }
                     Ok(None) => {
                         // Already installed
-                        succeeded.push(krate);
+                        succeeded.push(krate.as_str());
                         None
                     }
                     Err(e) => {
                         crate::display_error(&e, &mut config.shell());
-                        failed.push(krate);
+                        failed.push(krate.as_str());
                         // We assume an update was performed if we got an error.
                         did_update = true;
                         None
