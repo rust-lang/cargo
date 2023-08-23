@@ -46,6 +46,7 @@ fn setup_logger() {
         .with_writer(std::io::stderr)
         .with_env_filter(env)
         .init();
+    tracing::trace!(start = humantime::format_rfc3339(std::time::SystemTime::now()).to_string());
 }
 
 /// Table for defining the aliases which come builtin in `Cargo`.
