@@ -31,7 +31,7 @@ will remain locked at their currently recorded versions.</p>
 <p>If <em>spec</em> is not specified, all dependencies are updated.</dd>
 
 
-<dt class="option-term" id="option-cargo-update---aggressive"><a class="option-anchor" href="#option-cargo-update---aggressive"></a><code>--aggressive</code></dt>
+<dt class="option-term" id="option-cargo-update---recursive"><a class="option-anchor" href="#option-cargo-update---recursive"></a><code>--recursive</code></dt>
 <dd class="option-desc">When used with <em>spec</em>, dependencies of <em>spec</em> are forced to update as well.
 Cannot be used with <code>--precise</code>.</dd>
 

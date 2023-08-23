@@ -26,7 +26,7 @@ OPTIONS
 
            If spec is not specified, all dependencies are updated.
 
-       --aggressive
+       --recursive
            When used with spec, dependencies of spec are forced to update as
            well. Cannot be used with --precise.
 

@@ -428,7 +428,44 @@ fn update_precise_do_not_force_update_deps() {
 }
 
 #[cargo_test]
-fn update_aggressive() {
+fn update_recursive() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.2.1").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.2.2").dep("log", "0.1").publish();
+
+    p.cargo("update serde:0.2.1 --recursive")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] log v0.1.0 -> v0.1.1
+[UPDATING] serde v0.2.1 -> v0.2.2
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_aggressive_alias_for_recursive() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.2.1").dep("log", "0.1").publish();
 
@@ -465,7 +502,7 @@ fn update_aggressive() {
 }
 
 #[cargo_test]
-fn update_aggressive_conflicts_with_precise() {
+fn update_recursive_conflicts_with_precise() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.2.1").dep("log", "0.1").publish();
 
@@ -490,11 +527,11 @@ fn update_aggressive_conflicts_with_precise() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
-    p.cargo("update serde:0.2.1 --precise 0.2.2 --aggressive")
+    p.cargo("update serde:0.2.1 --precise 0.2.2 --recursive")
         .with_status(1)
         .with_stderr(
             "\
-error: the argument '--precise <PRECISE>' cannot be used with '--aggressive'
+error: the argument '--precise <PRECISE>' cannot be used with '--recursive'
 
 Usage: cargo[EXE] update --precise <PRECISE> <SPEC|--package [<SPEC>]>
 

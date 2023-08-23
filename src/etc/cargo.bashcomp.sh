@@ -87,7 +87,7 @@ _cargo()
 	local opt__t="$opt__test"
 	local opt__tree="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock --target -i --invert --prefix --no-dedupe --duplicates -d --charset -f --format -e --edges"
 	local opt__uninstall="$opt_common $opt_lock $opt_pkg --bin --root"
-	local opt__update="$opt_common $opt_mani $opt_lock $opt_pkg --aggressive --precise --dry-run"
+	local opt__update="$opt_common $opt_mani $opt_lock $opt_pkg --aggressive --recursive --precise --dry-run"
 	local opt__vendor="$opt_common $opt_mani $opt_lock $opt_sync --no-delete --respect-source-config --versioned-dirs"
 	local opt__verify_project="$opt_common $opt_mani $opt_lock"
 	local opt__version="$opt_common $opt_lock"

@@ -33,7 +33,7 @@ will remain locked at their currently recorded versions.
 If _spec_ is not specified, all dependencies are updated.
 {{/option}}
 
-{{#option "`--aggressive`" }}
+{{#option "`--recursive`" }}
 When used with _spec_, dependencies of _spec_ are forced to update as well.
 Cannot be used with `--precise`.
 {{/option}}
