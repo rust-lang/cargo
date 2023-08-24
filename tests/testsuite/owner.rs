@@ -117,8 +117,8 @@ fn simple_add_with_asymmetric() {
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
     p.cargo("owner -a username")
-        .arg("-Zcredential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+        .arg("-Zasymmetric-token")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .replace_crates_io(registry.index_url())
         .with_status(0)
         .run();
@@ -184,9 +184,9 @@ fn simple_remove_with_asymmetric() {
     // The http_api server will check that the authorization is correct.
     // If the authorization was not sent then we would get an unauthorized error.
     p.cargo("owner -r username")
-        .arg("-Zcredential-process")
+        .arg("-Zasymmetric-token")
         .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["credential-process"])
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .with_status(0)
         .run();
 }

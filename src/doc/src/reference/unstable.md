@@ -989,7 +989,7 @@ can go to get a token.
 WWW-Authenticate: Cargo login_url="https://test-registry-login/me
 ```
 
-This same flag is also used to enable asymmetric authentication tokens.
+### asymmetric-token
 * Tracking Issue: [10519](https://github.com/rust-lang/cargo/issues/10519)
 * RFC: [#3231](https://github.com/rust-lang/rfcs/pull/3231)
 
@@ -1115,7 +1115,7 @@ executed within the Cargo process. They are identified with the `cargo:` prefix.
   * `CARGO_REGISTRY_INDEX_URL` --- The URL of the registry index.
   * `CARGO_REGISTRY_NAME_OPT` --- Optional name of the registry. Should not be used as a storage key. Not always available.
 
-* `cargo:paseto` - implements asymmetric token support (RFC3231) as a credential provider.
+* `cargo:paseto` - implements asymmetric token support (RFC3231) as a credential provider. Requires `-Zasymmetric-token`.
 
 
 `cargo-credential-1password` uses the 1password `op` CLI to store the token. You must

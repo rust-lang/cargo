@@ -6,9 +6,10 @@ use cargo_test_support::{project, Execs, Project};
 
 fn cargo(p: &Project, s: &str) -> Execs {
     let mut e = p.cargo(s);
-    e.masquerade_as_nightly_cargo(&["registry-auth", "credential-process"])
+    e.masquerade_as_nightly_cargo(&["registry-auth", "credential-process", "asymmetric-token"])
         .arg("-Zregistry-auth")
-        .arg("-Zcredential-process");
+        .arg("-Zcredential-process")
+        .arg("-Zasymmetric-token");
     e
 }
 
