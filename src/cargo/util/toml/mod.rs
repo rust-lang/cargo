@@ -106,17 +106,6 @@ fn read_manifest_from_str(
         parse_document(contents, pretty_filename, config)?
     };
 
-    // Provide a helpful error message for a common user error.
-    if let Some(package) = toml.get("package").or_else(|| toml.get("project")) {
-        if let Some(feats) = package.get("cargo-features") {
-            bail!(
-                "cargo-features = {} was found in the wrong location: it \
-                 should be set at the top of Cargo.toml before any tables",
-                feats
-            );
-        }
-    }
-
     let mut unused = BTreeSet::new();
     let manifest: TomlManifest = serde_ignored::deserialize(toml.into_deserializer(), |path| {
         let mut key = String::new();
@@ -1535,6 +1524,10 @@ pub struct TomlPackage {
     license_file: Option<MaybeWorkspaceString>,
     repository: Option<MaybeWorkspaceString>,
     resolver: Option<String>,
+
+    // Provide a helpful error message for a common user error.
+    #[serde(rename = "cargo-features", skip_serializing)]
+    _invalid_cargo_features: Option<InvalidCargoFeatures>,
 
     // Note that this field must come last due to the way toml serialization
     // works which requires tables to be emitted after all values.
@@ -3544,5 +3537,22 @@ impl TomlLintLevel {
             Self::Warn => "--warn",
             Self::Allow => "--allow",
         }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+#[non_exhaustive]
+struct InvalidCargoFeatures {}
+
+impl<'de> de::Deserialize<'de> for InvalidCargoFeatures {
+    fn deserialize<D>(_d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        use serde::de::Error as _;
+
+        Err(D::Error::custom(
+            "the field `cargo-features` should be set at the top of Cargo.toml before any tables",
+        ))
     }
 }
