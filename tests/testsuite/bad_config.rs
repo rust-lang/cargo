@@ -196,8 +196,11 @@ fn bad_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
+  TOML parse error at line 1, column 1
+    |
+  1 | [[package]]
+    | ^^^^^^^^^^^
   missing field `name`
-  in `package`
 ",
         )
         .run();
@@ -300,8 +303,11 @@ fn bad_source_in_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
+  TOML parse error at line 12, column 26
+     |
+  12 |                 source = \"You shall not parse\"
+     |                          ^^^^^^^^^^^^^^^^^^^^^
   invalid source `You shall not parse`
-  in `package.source`
 ",
         )
         .run();
