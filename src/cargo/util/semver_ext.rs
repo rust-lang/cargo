@@ -136,9 +136,18 @@ impl std::str::FromStr for PartialVersion {
         // HACK: `PartialVersion` is a subset of the `VersionReq` syntax that only ever
         // has one comparator with a required minor and optional patch, and uses no
         // other features.
+        if is_req(value) {
+            anyhow::bail!("unexpected version requirement, expected a version like \"1.32\"")
+        }
         let version_req = match semver::VersionReq::parse(value) {
             // Exclude semver operators like `^` and pre-release identifiers
             Ok(req) if value.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
+            Err(_) if value.contains('+') => {
+                anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
+            }
+            Err(_) if value.contains('-') => {
+                anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+            }
             _ => anyhow::bail!("expected a version like \"1.32\""),
         };
         assert_eq!(
@@ -209,6 +218,13 @@ impl<'de> serde::Deserialize<'de> for PartialVersion {
         let s = String::deserialize(deserializer)?;
         s.parse().map_err(serde::de::Error::custom)
     }
+}
+
+fn is_req(value: &str) -> bool {
+    let Some(first) = value.chars().next() else {
+        return false;
+    };
+    "<>=^~".contains(first) || value.contains('*') || value.contains(',')
 }
 
 #[cfg(test)]
