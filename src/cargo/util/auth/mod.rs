@@ -76,9 +76,8 @@ impl RegistryConfigExtended {
 /// Get the list of credential providers for a registry source.
 fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<String>>> {
     let cfg = registry_credential_config_raw(config, sid)?;
-    let allow_cred_proc = config.cli_unstable().credential_process;
     let default_providers = || {
-        if allow_cred_proc {
+        if config.cli_unstable().asymmetric_token {
             // Enable the PASETO provider
             vec![
                 vec!["cargo:token".to_string()],
@@ -90,7 +89,7 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
     };
     let global_providers = config
         .get::<Option<Vec<Value<String>>>>("registry.global-credential-providers")?
-        .filter(|p| !p.is_empty() && allow_cred_proc)
+        .filter(|p| !p.is_empty() && config.cli_unstable().credential_process)
         .map(|p| {
             p.iter()
                 .rev()
@@ -108,7 +107,7 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
             token,
             secret_key,
             ..
-        }) if allow_cred_proc => {
+        }) if config.cli_unstable().credential_process => {
             if let Some(token) = token {
                 config.shell().warn(format!(
                     "{sid} has a token configured in {} that will be ignored \
@@ -131,7 +130,7 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
             token: Some(token),
             secret_key: Some(secret_key),
             ..
-        }) if allow_cred_proc => {
+        }) if config.cli_unstable().asymmetric_token => {
             let token_pos = global_providers
                 .iter()
                 .position(|p| p.first().map(String::as_str) == Some("cargo:token"));
@@ -182,7 +181,7 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
         Some(RegistryConfig {
             secret_key: Some(token),
             ..
-        }) if allow_cred_proc => {
+        }) if config.cli_unstable().asymmetric_token => {
             if !global_providers
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:paseto"))
@@ -454,7 +453,10 @@ fn credential_action(
         tracing::debug!("attempting credential provider: {args:?}");
         let provider: Box<dyn Credential> = match process {
             "cargo:token" => Box::new(TokenCredential::new(config)),
-            "cargo:paseto" => Box::new(PasetoCredential::new(config)),
+            "cargo:paseto" if config.cli_unstable().asymmetric_token => {
+                Box::new(PasetoCredential::new(config))
+            }
+            "cargo:paseto" => bail!("cargo:paseto requires -Zasymmetric-token"),
             "cargo:token-from-stdout" => Box::new(BasicProcessCredential {}),
             "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),
             "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),

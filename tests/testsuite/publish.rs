@@ -194,8 +194,8 @@ fn simple_publish_with_asymmetric() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify -Zcredential-process --registry dummy-registry")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("publish --no-verify -Zasymmetric-token --registry dummy-registry")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index

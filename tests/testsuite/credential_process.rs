@@ -492,8 +492,8 @@ fn both_asymmetric_and_token() {
     )
     .unwrap();
 
-    cargo_process("login -Z credential-process -v abcdefg")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    cargo_process("login -Zasymmetric-token -v abcdefg")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .replace_crates_io(server.index_url())
         .with_stderr(
             r#"[UPDATING] [..]
