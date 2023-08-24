@@ -1098,6 +1098,12 @@ This option is deprecated and unused.
 Specifies the linker which is passed to `rustc` (via [`-C linker`]) when the
 [`<triple>`] is being compiled for. By default, the linker is not overridden.
 
+##### `target.<cfg>.linker`
+This is similar to the [target linker](#targettriplelinker), but using
+a [`cfg()` expression]. If both a [`<triple>`] and `<cfg>` runner match,
+the `<triple>` will take precedence. It is an error if more than one
+`<cfg>` runner matches the current target.
+
 ##### `target.<triple>.runner`
 * Type: string or array of strings ([program path with args])
 * Default: none
