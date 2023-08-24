@@ -191,10 +191,11 @@
 
 ### Changed
 
-- ❗ Turned feature name validation check to a hard error. The warning was
-  added in Rust 1.49. These extended characters aren't allowed on crates.io, so
-  this should only impact users of other registries, or people who don't publish
-  to a registry.
+- [CVE-2023-40030](https://github.com/rust-lang/cargo/security/advisories/GHSA-wrrj-h57r-vx9p):
+  Malicious dependencies can inject arbitrary JavaScript into cargo-generated timing reports.
+  To mitigate this, feature name validation check is now turned into a hard error.
+  The warning was added in Rust 1.49. These extended characters aren't allowed on crates.io,
+  so this should only impact users of other registries, or people who don't publish to a registry.
   [#12291](https://github.com/rust-lang/cargo/pull/12291)
 - Cargo now warns when an edition 2021 package is in a virtual workspace and
   `workspace.resolver` is not set. It is recommended to set the resolver
