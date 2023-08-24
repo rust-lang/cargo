@@ -492,7 +492,7 @@ pub fn create_bcx<'a, 'cfg>(
                 None => continue,
             };
 
-            let req = semver::VersionReq::parse(version).unwrap();
+            let req = version.caret_req();
             if req.matches(&untagged_version) {
                 continue;
             }

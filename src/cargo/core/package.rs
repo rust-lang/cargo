@@ -31,6 +31,7 @@ use crate::util::network::http::http_handle_and_timeout;
 use crate::util::network::http::HttpTimeout;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
+use crate::util::PartialVersion;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
 pub const MANIFEST_PREAMBLE: &str = "\
@@ -103,7 +104,7 @@ pub struct SerializedPackage {
     #[serde(skip_serializing_if = "Option::is_none")]
     metabuild: Option<Vec<String>>,
     default_run: Option<String>,
-    rust_version: Option<String>,
+    rust_version: Option<PartialVersion>,
 }
 
 impl Package {
@@ -177,7 +178,7 @@ impl Package {
         self.targets().iter().any(|target| target.proc_macro())
     }
     /// Gets the package's minimum Rust version.
-    pub fn rust_version(&self) -> Option<&str> {
+    pub fn rust_version(&self) -> Option<PartialVersion> {
         self.manifest().rust_version()
     }
 
@@ -262,7 +263,7 @@ impl Package {
             metabuild: self.manifest().metabuild().cloned(),
             publish: self.publish().as_ref().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
-            rust_version: self.rust_version().map(|s| s.to_owned()),
+            rust_version: self.rust_version(),
         }
     }
 }

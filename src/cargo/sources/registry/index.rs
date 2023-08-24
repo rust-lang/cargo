@@ -91,7 +91,9 @@ use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::interning::InternedString;
 use crate::util::IntoUrl;
-use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, ToSemver};
+use crate::util::{
+    internal, CargoResult, Config, Filesystem, OptVersionReq, PartialVersion, ToSemver,
+};
 use anyhow::bail;
 use cargo_util::{paths, registry::make_dep_path};
 use semver::Version;
@@ -305,7 +307,7 @@ pub struct IndexPackage<'a> {
     ///
     /// Added in 2023 (see <https://github.com/rust-lang/crates.io/pull/6267>),
     /// can be `None` if published before then or if not set in the manifest.
-    rust_version: Option<InternedString>,
+    rust_version: Option<PartialVersion>,
     /// The schema version for this entry.
     ///
     /// If this is None, it defaults to version `1`. Entries with unknown

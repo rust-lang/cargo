@@ -1,6 +1,7 @@
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
+use crate::util::PartialVersion;
 use anyhow::bail;
 use semver::Version;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -25,7 +26,7 @@ struct Inner {
     features: Rc<FeatureMap>,
     checksum: Option<String>,
     links: Option<InternedString>,
-    rust_version: Option<InternedString>,
+    rust_version: Option<PartialVersion>,
 }
 
 impl Summary {
@@ -34,7 +35,7 @@ impl Summary {
         dependencies: Vec<Dependency>,
         features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
-        rust_version: Option<impl Into<InternedString>>,
+        rust_version: Option<PartialVersion>,
     ) -> CargoResult<Summary> {
         // ****CAUTION**** If you change anything here that may raise a new
         // error, be sure to coordinate that change with either the index
@@ -56,7 +57,7 @@ impl Summary {
                 features: Rc::new(feature_map),
                 checksum: None,
                 links: links.map(|l| l.into()),
-                rust_version: rust_version.map(|l| l.into()),
+                rust_version,
             }),
         })
     }
@@ -87,7 +88,7 @@ impl Summary {
         self.inner.links
     }
 
-    pub fn rust_version(&self) -> Option<InternedString> {
+    pub fn rust_version(&self) -> Option<PartialVersion> {
         self.inner.rust_version
     }
 

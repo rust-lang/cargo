@@ -108,11 +108,25 @@ impl From<VersionReq> for OptVersionReq {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct PartialVersion {
     pub major: u64,
     pub minor: Option<u64>,
     pub patch: Option<u64>,
+}
+
+impl PartialVersion {
+    pub fn caret_req(&self) -> VersionReq {
+        VersionReq {
+            comparators: vec![Comparator {
+                op: semver::Op::Caret,
+                major: self.major,
+                minor: self.minor,
+                patch: self.patch,
+                pre: Default::default(),
+            }],
+        }
+    }
 }
 
 impl std::str::FromStr for PartialVersion {
@@ -125,7 +139,7 @@ impl std::str::FromStr for PartialVersion {
         let version_req = match semver::VersionReq::parse(value) {
             // Exclude semver operators like `^` and pre-release identifiers
             Ok(req) if value.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
-            _ => anyhow::bail!("`rust-version` must be a value like \"1.32\""),
+            _ => anyhow::bail!("expected a version like \"1.32\""),
         };
         assert_eq!(
             version_req.comparators.len(),
@@ -158,6 +172,42 @@ impl Display for PartialVersion {
             write!(f, ".{patch}")?;
         }
         Ok(())
+    }
+}
+
+impl serde::Serialize for PartialVersion {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for PartialVersion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct VersionVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for VersionVisitor {
+            type Value = PartialVersion;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("SemVer version")
+            }
+
+            fn visit_str<E>(self, string: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                string.parse().map_err(serde::de::Error::custom)
+            }
+        }
+
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
     }
 }
 

@@ -568,11 +568,7 @@ fn get_latest_dependency(
             })?;
 
             if config.cli_unstable().msrv_policy && honor_rust_version {
-                fn parse_msrv(rust_version: impl AsRef<str>) -> (u64, u64, u64) {
-                    let comp = rust_version
-                        .as_ref()
-                        .parse::<PartialVersion>()
-                        .expect("validated on parsing of manifest");
+                fn parse_msrv(comp: PartialVersion) -> (u64, u64, u64) {
                     (comp.major, comp.minor.unwrap_or(0), comp.patch.unwrap_or(0))
                 }
 
@@ -632,7 +628,7 @@ fn get_latest_dependency(
 
 fn rust_version_incompat_error(
     dep: &str,
-    rust_version: &str,
+    rust_version: PartialVersion,
     lowest_rust_version: Option<&Summary>,
 ) -> anyhow::Error {
     let mut error_msg = format!(
