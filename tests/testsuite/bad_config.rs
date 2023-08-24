@@ -172,9 +172,6 @@ Caused by:
   could not parse TOML configuration in `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 1, column 2
     |
   1 | 4
@@ -447,9 +444,6 @@ fn malformed_override() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 8, column 27
@@ -802,9 +796,6 @@ error: could not load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 1, column 7

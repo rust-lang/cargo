@@ -1323,9 +1323,6 @@ fn error_malformed_workspace_root() {
 
 Caused by:
   [..]
-
-Caused by:
-  [..]
     |
   3 |             members = [invalid toml
     |                        ^

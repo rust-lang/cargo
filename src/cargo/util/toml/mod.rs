@@ -194,8 +194,7 @@ fn read_manifest_from_str(
 
 pub fn parse_document(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Table> {
     // At the moment, no compatibility checks are needed.
-    toml.parse()
-        .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))
+    toml.parse().map_err(Into::into)
 }
 
 /// Warn about paths that have been deprecated and may conflict.

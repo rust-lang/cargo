@@ -722,9 +722,6 @@ Caused by:
   could not parse TOML configuration in `[..]/.cargo/config`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 1, column 5
   |
 1 | asdf
@@ -1089,9 +1086,6 @@ could not load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]/.cargo/config`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 3, column 1

@@ -53,9 +53,6 @@ Caused by:
   could not parse TOML configuration in `[..]/config`
 
 Caused by:
-  [..]
-
-Caused by:
   TOML parse error at line [..]
     |
   3 |                 b-cargo-test = `

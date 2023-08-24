@@ -1091,9 +1091,6 @@ fn new_warning_with_corrupt_ws() {
 failed to parse manifest at `[..]foo/Cargo.toml`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 1, column 5
     |
   1 | asdf
