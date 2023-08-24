@@ -340,8 +340,11 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 4, column 19
+    |
+  4 |         version = \"1.0\"
+    |                   ^^^^^
   unexpected end of input while parsing minor version number
-  in `package.version`
 ",
         )
         .run();

@@ -12,7 +12,6 @@ use cargo_util::paths;
 use itertools::Itertools;
 use lazycell::LazyCell;
 use semver::{self, VersionReq};
-use serde::de::IntoDeserializer as _;
 use serde::de::{self, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -99,15 +98,9 @@ fn read_manifest_from_str(
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let package_root = manifest_file.parent().unwrap();
 
-    let toml = {
-        let pretty_filename = manifest_file
-            .strip_prefix(config.cwd())
-            .unwrap_or(manifest_file);
-        parse_document(contents, pretty_filename, config)?
-    };
-
     let mut unused = BTreeSet::new();
-    let manifest: TomlManifest = serde_ignored::deserialize(toml.into_deserializer(), |path| {
+    let deserializer = toml::de::Deserializer::new(contents);
+    let manifest: TomlManifest = serde_ignored::deserialize(deserializer, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);

@@ -1821,8 +1821,11 @@ fn cargo_metadata_with_invalid_authors_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "", expected a vector of strings or workspace
-  in `package.authors`"#,
+  TOML parse error at line 3, column 27
+    |
+  3 |                 authors = ""
+    |                           ^^
+  invalid type: string "", expected a vector of strings or workspace"#,
         )
         .run();
 }
@@ -1846,8 +1849,11 @@ fn cargo_metadata_with_invalid_version_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: integer `1`, expected SemVer version
-  in `package.version`"#,
+  TOML parse error at line 3, column 27
+    |
+  3 |                 version = 1
+    |                           ^
+  invalid type: integer `1`, expected SemVer version"#,
         )
         .run();
 }
@@ -1871,8 +1877,11 @@ fn cargo_metadata_with_invalid_publish_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "foo", expected a boolean, a vector of strings, or workspace
-  in `package.publish`"#,
+  TOML parse error at line 3, column 27
+    |
+  3 |                 publish = "foo"
+    |                           ^^^^^
+  invalid type: string "foo", expected a boolean, a vector of strings, or workspace"#,
         )
         .run();
 }
