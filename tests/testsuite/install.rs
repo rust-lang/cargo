@@ -1600,8 +1600,13 @@ fn inline_version_without_name() {
     pkg("foo", "0.1.2");
 
     cargo_process("install @0.1.1")
-        .with_status(101)
-        .with_stderr("error: missing crate name for `@0.1.1`")
+        .with_status(1)
+        .with_stderr(
+            "error: invalid value '@0.1.1' for '[crate]...': missing crate name before '@'
+
+For more information, try '--help'.
+",
+        )
         .run();
 }
 
@@ -1612,7 +1617,7 @@ fn inline_and_explicit_version() {
 
     cargo_process("install foo@0.1.1 --version 0.1.1")
         .with_status(101)
-        .with_stderr("error: cannot specify both `@0.1.1` and `--version`")
+        .with_stderr("error: cannot specify both `@<VERSION>` and `--version <VERSION>`")
         .run();
 }
 
@@ -1827,7 +1832,7 @@ fn install_empty_argument() {
     cargo_process("install")
         .arg("")
         .with_status(1)
-        .with_stderr_contains("[ERROR] a value is required for '[crate]...' but none was supplied")
+        .with_stderr_contains("[ERROR] invalid value '' for '[crate]...': crate name is empty")
         .run();
 }
 

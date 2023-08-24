@@ -1,24 +1,27 @@
 use crate::command_prelude::*;
 
 use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::format_err;
 use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
 use cargo::util::IntoUrl;
+use cargo::util::ToSemver;
+use cargo::util::VersionReqExt;
+use cargo::CargoResult;
+use semver::VersionReq;
 
 use cargo_util::paths;
 
 pub fn cli() -> Command {
     subcommand("install")
         .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
-        .arg(
-            Arg::new("crate")
-                .value_parser(clap::builder::NonEmptyStringValueParser::new())
-                .num_args(0..),
-        )
+        .arg(Arg::new("crate").value_parser(parse_crate).num_args(0..))
         .arg(
             opt("version", "Specify a version to install")
                 .alias("vers")
                 .value_name("VERSION")
+                .value_parser(parse_semver_flag)
                 .requires("crate"),
         )
         .arg(
@@ -102,11 +105,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     // but not `Config::reload_rooted_at` which is always cwd)
     let path = path.map(|p| paths::normalize_path(&p));
 
-    let version = args.get_one::<String>("version").map(String::as_str);
+    let version = args.get_one::<VersionReq>("version");
     let krates = args
-        .get_many::<String>("crate")
+        .get_many::<CrateVersion>("crate")
         .unwrap_or_default()
-        .map(|k| resolve_crate(k, version))
+        .cloned()
+        .map(|(krate, local_version)| resolve_crate(krate, local_version, version))
         .collect::<crate::CargoResult<Vec<_>>>()?;
 
     for (crate_name, _) in krates.iter() {
@@ -190,20 +194,86 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     Ok(())
 }
 
-fn resolve_crate<'k>(
-    mut krate: &'k str,
-    mut version: Option<&'k str>,
-) -> crate::CargoResult<(&'k str, Option<&'k str>)> {
-    if let Some((k, v)) = krate.split_once('@') {
-        if version.is_some() {
-            anyhow::bail!("cannot specify both `@{v}` and `--version`");
-        }
+type CrateVersion = (String, Option<VersionReq>);
+
+fn parse_crate(krate: &str) -> crate::CargoResult<CrateVersion> {
+    let (krate, version) = if let Some((k, v)) = krate.split_once('@') {
         if k.is_empty() {
             // by convention, arguments starting with `@` are response files
-            anyhow::bail!("missing crate name for `@{v}`");
+            anyhow::bail!("missing crate name before '@'");
         }
-        krate = k;
-        version = Some(v);
+        let krate = k.to_owned();
+        let version = Some(parse_semver_flag(v)?);
+        (krate, version)
+    } else {
+        let krate = krate.to_owned();
+        let version = None;
+        (krate, version)
+    };
+
+    if krate.is_empty() {
+        anyhow::bail!("crate name is empty");
     }
+
+    Ok((krate, version))
+}
+
+/// Parses x.y.z as if it were =x.y.z, and gives CLI-specific error messages in the case of invalid
+/// values.
+fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
+    // If the version begins with character <, >, =, ^, ~ parse it as a
+    // version range, otherwise parse it as a specific version
+    let first = v
+        .chars()
+        .next()
+        .ok_or_else(|| format_err!("no version provided for the `--version` flag"))?;
+
+    let is_req = "<>=^~".contains(first) || v.contains('*');
+    if is_req {
+        match v.parse::<VersionReq>() {
+            Ok(v) => Ok(v),
+            Err(_) => bail!(
+                "the `--version` provided, `{}`, is \
+                     not a valid semver version requirement\n\n\
+                     Please have a look at \
+                     https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html \
+                     for the correct format",
+                v
+            ),
+        }
+    } else {
+        match v.to_semver() {
+            Ok(v) => Ok(VersionReq::exact(&v)),
+            Err(e) => {
+                let mut msg = e.to_string();
+
+                // If it is not a valid version but it is a valid version
+                // requirement, add a note to the warning
+                if v.parse::<VersionReq>().is_ok() {
+                    msg.push_str(&format!(
+                        "\n\n  tip: if you want to specify semver range, \
+                             add an explicit qualifier, like '^{}'",
+                        v
+                    ));
+                }
+                bail!(msg);
+            }
+        }
+    }
+}
+
+fn resolve_crate(
+    krate: String,
+    local_version: Option<VersionReq>,
+    version: Option<&VersionReq>,
+) -> crate::CargoResult<CrateVersion> {
+    let version = match (local_version, version) {
+        (Some(_), Some(_)) => {
+            anyhow::bail!("cannot specify both `@<VERSION>` and `--version <VERSION>`");
+        }
+        (Some(l), None) => Some(l),
+        (None, Some(g)) => Some(g.to_owned()),
+        (None, None) => None,
+    };
     Ok((krate, version))
 }
