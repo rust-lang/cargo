@@ -172,9 +172,6 @@ Caused by:
   could not parse TOML configuration in `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 1, column 2
     |
   1 | 4
@@ -199,8 +196,11 @@ fn bad_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
+  TOML parse error at line 1, column 1
+    |
+  1 | [[package]]
+    | ^^^^^^^^^^^
   missing field `name`
-  in `package`
 ",
         )
         .run();
@@ -303,8 +303,11 @@ fn bad_source_in_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
+  TOML parse error at line 12, column 26
+     |
+  12 |                 source = \"You shall not parse\"
+     |                          ^^^^^^^^^^^^^^^^^^^^^
   invalid source `You shall not parse`
-  in `package.source`
 ",
         )
         .run();
@@ -447,9 +450,6 @@ fn malformed_override() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 8, column 27
@@ -802,9 +802,6 @@ error: could not load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 1, column 7
@@ -1288,8 +1285,11 @@ fn bad_dependency() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 8, column 23
+    |
+  8 |                 bar = 3
+    |                       ^
   invalid type: integer `3`, expected a version string like [..]
-  in `dependencies.bar`
 ",
         )
         .run();
@@ -1320,8 +1320,11 @@ fn bad_debuginfo() {
 error: failed to parse manifest [..]
 
 Caused by:
+  TOML parse error at line 8, column 25
+    |
+  8 |                 debug = 'a'
+    |                         ^^^
   invalid value: string \"a\", expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
-  in `profile.dev.debug`
 ",
         )
         .run();
@@ -1352,8 +1355,11 @@ fn bad_debuginfo2() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 8, column 25
+    |
+  8 |                 debug = 3.6
+    |                         ^^^
   invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
-  in `profile.dev.debug`
 ",
         )
         .run();
@@ -1382,8 +1388,11 @@ fn bad_opt_level() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 6, column 25
+    |
+  6 |                 build = 3
+    |                         ^
   expected a boolean or a string
-  in `package.build`
 ",
         )
         .run();

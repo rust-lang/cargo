@@ -676,8 +676,11 @@ fn wrong_position() {
 error: failed to parse manifest at [..]
 
 Caused by:
-  cargo-features = [\"test-dummy-unstable\"] was found in the wrong location: it \
-  should be set at the top of Cargo.toml before any tables
+  TOML parse error at line 5, column 34
+    |
+  5 |                 cargo-features = [\"test-dummy-unstable\"]
+    |                                  ^^^^^^^^^^^^^^^^^^^^^^^
+  the field `cargo-features` should be set at the top of Cargo.toml before any tables
 ",
         )
         .run();

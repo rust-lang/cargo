@@ -259,9 +259,6 @@ fn cargo_compile_with_invalid_manifest2() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 3, column 23
     |
   3 |                 foo = bar
@@ -282,9 +279,6 @@ fn cargo_compile_with_invalid_manifest3() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 1, column 5
@@ -346,8 +340,11 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 4, column 19
+    |
+  4 |         version = \"1.0\"
+    |                   ^^^^^
   unexpected end of input while parsing minor version number
-  in `package.version`
 ",
         )
         .run();
@@ -3034,9 +3031,6 @@ fn bad_cargo_config() {
 
 Caused by:
   could not parse TOML configuration in `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 1, column 6

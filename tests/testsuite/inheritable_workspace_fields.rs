@@ -1234,8 +1234,11 @@ fn error_workspace_false() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
+  TOML parse error at line 7, column 41
+    |
+  7 |             description = { workspace = false }
+    |                                         ^^^^^
   `workspace` cannot be false
-  in `package.description.workspace`
 ",
         )
         .run();
@@ -1320,9 +1323,6 @@ fn error_malformed_workspace_root() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
-
-Caused by:
-  [..]
 
 Caused by:
   [..]
