@@ -23,5 +23,5 @@ CARGO_LOG=cargo::core::compiler::fingerprint=trace cargo build
 ```
 
 [`tracing`]: https://docs.rs/tracing
-[directive]: https://docs.rs/tracing_subscriber/filter/struct.EnvFilter.html#directives
-[shorthand macros]: https://docs.rs/tracing/index.html#shorthand-macros
+[directive]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
+[shorthand macros]: https://docs.rs/tracing/latest/tracing/index.html#shorthand-macros
