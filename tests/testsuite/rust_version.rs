@@ -44,8 +44,15 @@ fn rust_version_bad_caret() {
         .cargo("check")
         .with_status(101)
         .with_stderr(
-            "error: failed to parse manifest at `[..]`\n\n\
-             Caused by:\n  `rust-version` must be a value like \"1.32\"",
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  TOML parse error at line 6, column 28
+    |
+  6 |             rust-version = \"^1.43\"
+    |                            ^^^^^^^
+  unexpected version requirement, expected a version like \"1.32\"",
         )
         .run();
 }
@@ -70,8 +77,15 @@ fn rust_version_bad_pre_release() {
         .cargo("check")
         .with_status(101)
         .with_stderr(
-            "error: failed to parse manifest at `[..]`\n\n\
-             Caused by:\n  `rust-version` must be a value like \"1.32\"",
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  TOML parse error at line 6, column 28
+    |
+  6 |             rust-version = \"1.43-beta.1\"
+    |                            ^^^^^^^^^^^^^
+  unexpected prerelease field, expected a version like \"1.32\"",
         )
         .run();
 }
@@ -96,8 +110,15 @@ fn rust_version_bad_nonsense() {
         .cargo("check")
         .with_status(101)
         .with_stderr(
-            "error: failed to parse manifest at `[..]`\n\n\
-             Caused by:\n  `rust-version` must be a value like \"1.32\"",
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  TOML parse error at line 6, column 28
+    |
+  6 |             rust-version = \"foodaddle\"
+    |                            ^^^^^^^^^^^
+  expected a version like \"1.32\"",
         )
         .run();
 }

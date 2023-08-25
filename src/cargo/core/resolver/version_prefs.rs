@@ -81,6 +81,7 @@ impl VersionPreferences {
 mod test {
     use super::*;
     use crate::core::SourceId;
+    use crate::util::PartialVersion;
     use std::collections::BTreeMap;
 
     fn pkgid(name: &str, version: &str) -> PackageId {
@@ -103,7 +104,7 @@ mod test {
             Vec::new(),
             &features,
             None::<&String>,
-            None::<&String>,
+            None::<PartialVersion>,
         )
         .unwrap()
     }

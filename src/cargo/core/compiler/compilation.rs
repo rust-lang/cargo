@@ -312,6 +312,7 @@ impl<'cfg> Compilation<'cfg> {
         // crate properties which might require rebuild upon change
         // consider adding the corresponding properties to the hash
         // in BuildContext::target_metadata()
+        let rust_version = pkg.rust_version().as_ref().map(ToString::to_string);
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
@@ -342,7 +343,7 @@ impl<'cfg> Compilation<'cfg> {
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .env(
                 "CARGO_PKG_RUST_VERSION",
-                &pkg.rust_version().unwrap_or(&String::new()),
+                &rust_version.as_deref().unwrap_or_default(),
             )
             .env(
                 "CARGO_PKG_README",
