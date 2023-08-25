@@ -213,21 +213,34 @@ fn dependency_rust_version_newer_than_package() {
         .build();
 
     p.cargo("check --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        // This shouldn't fail
+        .with_status(101)
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
-[CHECKING] bar v1.6.0
-[CHECKING] [..]
-[FINISHED] [..]
+[ERROR] failed to select a version for the requirement `bar = \"^1.0.0\"`
+candidate versions found which didn't match: 1.6.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.1 ([CWD])`
+perhaps a crate was updated and forgotten to be re-vendored?
 ",
         )
         .run();
     p.cargo("check")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_status(101)
+        // This should have a better error message
         .with_stderr(
             "\
-[FINISHED] [..]
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `bar = \"^1.0.0\"`
+candidate versions found which didn't match: 1.6.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.1 ([CWD])`
+perhaps a crate was updated and forgotten to be re-vendored?
 ",
         )
         .run();
@@ -261,18 +274,23 @@ fn dependency_rust_version_older_and_newer_than_package() {
         .build();
 
     p.cargo("check --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        // This should pick 1.6.0
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
-[CHECKING] bar v1.6.0
+[DOWNLOADED] bar v1.5.0 (registry `dummy-registry`)
+[CHECKING] bar v1.5.0
 [CHECKING] [..]
 [FINISHED] [..]
 ",
         )
         .run();
     p.cargo("check")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
             "\
 [FINISHED] [..]
@@ -329,18 +347,23 @@ fn workspace_with_mixed_rust_version() {
         .build();
 
     p.cargo("check --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        // This should pick 1.6.0
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
-[CHECKING] bar v1.6.0
+[DOWNLOADED] bar v1.4.0 (registry `dummy-registry`)
+[CHECKING] bar v1.4.0
 [CHECKING] [..]
 [FINISHED] [..]
 ",
         )
         .run();
     p.cargo("check")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
             "\
 [FINISHED] [..]
