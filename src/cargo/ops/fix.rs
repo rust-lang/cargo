@@ -246,6 +246,8 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     let mut target_data =
         RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
     let mut resolve_differences = |has_dev_units| -> CargoResult<(WorkspaceResolve<'_>, DiffMap)> {
+        let max_rust_version = ws.rust_version();
+
         let ws_resolve = ops::resolve_ws_with_opts(
             ws,
             &mut target_data,
@@ -254,6 +256,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
             &specs,
             has_dev_units,
             crate::core::resolver::features::ForceAllTargets::No,
+            max_rust_version,
         )?;
 
         let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);

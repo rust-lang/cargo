@@ -423,6 +423,8 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
         TomlManifest::to_real_manifest(&toml_manifest, false, source_id, package_root, config)?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
+    let max_rust_version = new_pkg.rust_version();
+
     // Regenerate Cargo.lock using the old one as a guide.
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
     let mut tmp_reg = PackageRegistry::new(ws.config())?;
@@ -435,6 +437,7 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
         None,
         &[],
         true,
+        max_rust_version,
     )?;
     let pkg_set = ops::get_resolved_packages(&new_resolve, tmp_reg)?;
 

@@ -145,6 +145,7 @@ pub fn resolve_std<'cfg>(
     let cli_features = CliFeatures::from_command_line(
         &features, /*all_features*/ false, /*uses_default_features*/ false,
     )?;
+    let max_rust_version = ws.rust_version();
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
@@ -153,6 +154,7 @@ pub fn resolve_std<'cfg>(
         &specs,
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
+        max_rust_version,
     )?;
     Ok((
         resolve.pkg_set,

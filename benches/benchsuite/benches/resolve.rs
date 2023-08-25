@@ -31,6 +31,7 @@ fn do_resolve<'cfg>(config: &'cfg Config, ws_root: &Path) -> ResolveInfo<'cfg> {
     let specs = pkgs.to_package_id_specs(&ws).unwrap();
     let has_dev_units = HasDevUnits::Yes;
     let force_all_targets = ForceAllTargets::No;
+    let max_rust_version = None;
     // Do an initial run to download anything necessary so that it does
     // not confuse criterion's warmup.
     let ws_resolve = cargo::ops::resolve_ws_with_opts(
@@ -41,6 +42,7 @@ fn do_resolve<'cfg>(config: &'cfg Config, ws_root: &Path) -> ResolveInfo<'cfg> {
         &specs,
         has_dev_units,
         force_all_targets,
+        max_rust_version,
     )
     .unwrap();
     ResolveInfo {
@@ -82,6 +84,7 @@ fn resolve_ws(c: &mut Criterion) {
                 force_all_targets,
                 ..
             } = lazy_info.get_or_insert_with(|| do_resolve(&config, &ws_root));
+            let max_rust_version = None;
             b.iter(|| {
                 cargo::ops::resolve_ws_with_opts(
                     ws,
@@ -91,6 +94,7 @@ fn resolve_ws(c: &mut Criterion) {
                     specs,
                     *has_dev_units,
                     *force_all_targets,
+                    max_rust_version,
                 )
                 .unwrap();
             })

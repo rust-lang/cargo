@@ -71,6 +71,7 @@ use crate::util::config::Config;
 use crate::util::errors::CargoResult;
 use crate::util::network::PollExt;
 use crate::util::profile;
+use crate::util::PartialVersion;
 
 use self::context::Context;
 use self::dep_cache::RegistryQueryer;
@@ -138,6 +139,7 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
+    mut max_rust_version: Option<PartialVersion>,
 ) -> CargoResult<Resolve> {
     let _p = profile::start("resolving");
     let minimal_versions = match config {
@@ -148,8 +150,19 @@ pub fn resolve(
         Some(config) => config.cli_unstable().direct_minimal_versions,
         None => false,
     };
-    let mut registry =
-        RegistryQueryer::new(registry, replacements, version_prefs, minimal_versions);
+    if !config
+        .map(|c| c.cli_unstable().msrv_policy)
+        .unwrap_or(false)
+    {
+        max_rust_version = None;
+    }
+    let mut registry = RegistryQueryer::new(
+        registry,
+        replacements,
+        version_prefs,
+        minimal_versions,
+        max_rust_version,
+    );
     let cx = loop {
         let cx = Context::new(check_public_visible_dependencies);
         let cx = activate_deps_loop(

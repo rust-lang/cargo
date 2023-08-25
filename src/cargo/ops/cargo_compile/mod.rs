@@ -261,6 +261,7 @@ pub fn create_bcx<'a, 'cfg>(
             HasDevUnits::No
         }
     };
+    let max_rust_version = ws.rust_version();
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -269,6 +270,7 @@ pub fn create_bcx<'a, 'cfg>(
         &specs,
         has_dev_units,
         crate::core::resolver::features::ForceAllTargets::No,
+        max_rust_version,
     )?;
     let WorkspaceResolve {
         mut pkg_set,
