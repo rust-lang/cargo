@@ -152,7 +152,7 @@ fn rust_version_too_high() {
 }
 
 #[cargo_test]
-fn rust_version_dependency_fails() {
+fn dependency_rust_version_newer_than_rustc() {
     Package::new("bar", "0.0.1")
         .rust_version("1.2345.0")
         .file("src/lib.rs", "fn other_stuff() {}")
@@ -187,6 +187,166 @@ fn rust_version_dependency_fails() {
         )
         .run();
     p.cargo("check --ignore-rust-version").run();
+}
+
+#[cargo_test]
+fn dependency_rust_version_newer_than_package() {
+    Package::new("bar", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("check --ignore-rust-version")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
+[CHECKING] bar v1.6.0
+[CHECKING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dependency_rust_version_older_and_newer_than_package() {
+    Package::new("bar", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("check --ignore-rust-version")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
+[CHECKING] bar v1.6.0
+[CHECKING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_mixed_rust_version() {
+    Package::new("bar", "1.4.0")
+        .rust_version("1.45.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["lower"]
+
+            [package]
+            name = "higher"
+            version = "0.0.1"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "lower/Cargo.toml",
+            r#"
+            [package]
+            name = "lower"
+            version = "0.0.1"
+            authors = []
+            rust-version = "1.50.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("lower/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check --ignore-rust-version")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
+[CHECKING] bar v1.6.0
+[CHECKING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
