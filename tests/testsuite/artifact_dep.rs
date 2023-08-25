@@ -1445,13 +1445,7 @@ foo v0.0.0 ([CWD])
         )
         .run();
 }
-
-// TODO: Fix this potentially by reverting 887562bfeb8c540594d7d08e6e9a4ab7eb255865 which adds artifact information to the registry
-//       followed by 0ff93733626f7cbecaf9dce9ab62b4ced0be088e which picks it up.
-//       For reference, see comments by ehuss https://github.com/rust-lang/cargo/pull/9992#discussion_r801086315 and
-//       joshtriplett https://github.com/rust-lang/cargo/pull/9992#issuecomment-1033394197 .
 #[cargo_test]
-#[ignore = "broken, need artifact info in index"]
 fn targets_are_picked_up_from_non_workspace_artifact_deps() {
     if cross_compile::disabled() {
         return;
@@ -1464,6 +1458,7 @@ fn targets_are_picked_up_from_non_workspace_artifact_deps() {
 
     let mut dep = registry::Dependency::new("artifact", "1.0.0");
     Package::new("uses-artifact", "1.0.0")
+        .schema_version(3)
         .file(
             "src/lib.rs",
             r#"pub fn uses_artifact() { let _b = include_bytes!(env!("CARGO_BIN_FILE_ARTIFACT")); }"#,
@@ -1492,6 +1487,127 @@ fn targets_are_picked_up_from_non_workspace_artifact_deps() {
 
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
+        .run();
+}
+
+#[cargo_test]
+fn index_version_filtering() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    Package::new("artifact", "1.0.0")
+        .file("src/main.rs", r#"fn main() {}"#)
+        .file("src/lib.rs", r#"pub fn lib() {}"#)
+        .publish();
+
+    let mut dep = registry::Dependency::new("artifact", "1.0.0");
+
+    Package::new("bar", "1.0.0").publish();
+    Package::new("bar", "1.0.1")
+        .schema_version(3)
+        .add_dep(dep.artifact("bin", Some(target.to_string())))
+        .publish();
+
+    // Verify that without `-Zbindeps` that it does not use 1.0.1.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree")
+        .with_stdout("foo v0.1.0 [..]\n└── bar v1.0.0")
+        .run();
+
+    // And with -Zbindeps it can use 1.0.1.
+    p.cargo("update -Zbindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ADDING] artifact v1.0.0
+[UPDATING] bar v1.0.0 -> v1.0.1",
+        )
+        .run();
+
+    // And without -Zbindeps, now that 1.0.1 is in Cargo.lock, it should fail.
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+error: failed to select a version for the requirement `bar = \"^1.0\"` (locked to 1.0.1)
+candidate versions found which didn't match: 1.0.0
+location searched: [..]
+required by package `foo v0.1.0 [..]`
+perhaps a crate was updated and forgotten to be re-vendored?",
+        )
+        .run();
+}
+
+// FIXME: `download_accessible` should work properly for artifact dependencies
+#[cargo_test]
+#[ignore = "broken, needs download_accessible fix"]
+fn proc_macro_in_artifact_dep() {
+    // Forcing FeatureResolver to check a proc-macro for a dependency behind a
+    // target dependency.
+    if cross_compile::disabled() {
+        return;
+    }
+    Package::new("pm", "1.0.0")
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "1.0.0"
+
+                [lib]
+                proc-macro = true
+
+            "#,
+        )
+        .publish();
+    let alternate = cross_compile::alternate();
+    Package::new("bin-uses-pm", "1.0.0")
+        .target_dep("pm", "1.0", alternate)
+        .file("src/main.rs", "fn main() {}")
+        .publish();
+    // Simulate a network error downloading the proc-macro.
+    std::fs::remove_file(cargo_test_support::paths::root().join("dl/pm/1.0.0/download")).unwrap();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                bin-uses-pm = {{ version = "1.0", artifact = "bin", target = "{alternate}"}}
+            "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr("")
         .run();
 }
 
@@ -1926,15 +2042,23 @@ You may press ctrl-c [..]
           "badges": {},
           "categories": [],
           "deps": [{
+              "artifact": ["bin"],
               "default_features": true,
               "features": [],
               "kind": "normal",
+              "lib": true,
               "name": "bar",
               "optional": false,
               "target": null,
               "version_req": "^1.0"
             },
             {
+              "artifact": [
+                "bin:a",
+                "cdylib",
+                "staticlib"
+              ],
+              "bindep_target": "target",
               "default_features": true,
               "features": [],
               "kind": "build",
@@ -2894,8 +3018,8 @@ fn check_transitive_artifact_dependency_with_different_target() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_contains(
-            "error: could not find specification for target `custom-target`.\n  \
-            Dependency `baz v0.0.0 [..]` requires to build for target `custom-target`.",
+            "error: failed to determine target information for target `custom-target`.\n  \
+            Artifact dependency `baz` in package `bar v0.0.0 [..]` requires building for `custom-target`",
         )
         .with_status(101)
         .run();

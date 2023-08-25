@@ -353,6 +353,17 @@ fn transmit(
                 .to_string(),
                 registry: dep_registry,
                 explicit_name_in_toml: dep.explicit_name_in_toml().map(|s| s.to_string()),
+                artifact: dep.artifact().map(|artifact| {
+                    artifact
+                        .kinds()
+                        .iter()
+                        .map(|x| x.as_str().into_owned())
+                        .collect()
+                }),
+                bindep_target: dep.artifact().and_then(|artifact| {
+                    artifact.target().map(|target| target.as_str().to_owned())
+                }),
+                lib: dep.artifact().map_or(false, |artifact| artifact.is_lib()),
             })
         })
         .collect::<CargoResult<Vec<NewCrateDependency>>>()?;

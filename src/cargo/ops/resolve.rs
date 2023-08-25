@@ -124,7 +124,7 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// members. In this case, `opts.all_features` must be `true`.
 pub fn resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData<'cfg>,
+    target_data: &mut RustcTargetData<'cfg>,
     requested_targets: &[CompileKind],
     cli_features: &CliFeatures,
     specs: &[PackageIdSpec],

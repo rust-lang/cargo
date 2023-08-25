@@ -45,7 +45,8 @@ use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
-use anyhow::bail;
+use anyhow::{bail, Context};
+use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
@@ -408,7 +409,7 @@ pub type DiffMap = BTreeMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 /// [module-level documentation]: crate::core::resolver::features
 pub struct FeatureResolver<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
-    target_data: &'a RustcTargetData<'cfg>,
+    target_data: &'a mut RustcTargetData<'cfg>,
     /// The platforms to build for, requested by the user.
     requested_targets: &'a [CompileKind],
     resolve: &'a Resolve,
@@ -445,7 +446,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     /// with the result.
     pub fn resolve(
         ws: &Workspace<'cfg>,
-        target_data: &RustcTargetData<'cfg>,
+        target_data: &'a mut RustcTargetData<'cfg>,
         resolve: &Resolve,
         package_set: &'a PackageSet<'cfg>,
         cli_features: &CliFeatures,
@@ -544,7 +545,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             // features that enable other features.
             return Ok(());
         }
-        for (dep_pkg_id, deps) in self.deps(pkg_id, fk) {
+        for (dep_pkg_id, deps) in self.deps(pkg_id, fk)? {
             for (dep, dep_fk) in deps {
                 if dep.is_optional() {
                     // Optional dependencies are enabled in `activate_fv` when
@@ -647,7 +648,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             .deferred_weak_dependencies
             .remove(&(pkg_id, fk, dep_name));
         // Activate the optional dep.
-        for (dep_pkg_id, deps) in self.deps(pkg_id, fk) {
+        for (dep_pkg_id, deps) in self.deps(pkg_id, fk)? {
             for (dep, dep_fk) in deps {
                 if dep.name_in_toml() != dep_name {
                     continue;
@@ -681,7 +682,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         dep_feature: InternedString,
         weak: bool,
     ) -> CargoResult<()> {
-        for (dep_pkg_id, deps) in self.deps(pkg_id, fk) {
+        for (dep_pkg_id, deps) in self.deps(pkg_id, fk)? {
             for (dep, dep_fk) in deps {
                 if dep.name_in_toml() != dep_name {
                     continue;
@@ -777,12 +778,17 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
 
     /// Returns the dependencies for a package, filtering out inactive targets.
     fn deps(
-        &self,
+        &mut self,
         pkg_id: PackageId,
         fk: FeaturesFor,
-    ) -> Vec<(PackageId, Vec<(&'a Dependency, FeaturesFor)>)> {
+    ) -> CargoResult<Vec<(PackageId, Vec<(&'a Dependency, FeaturesFor)>)>> {
         // Helper for determining if a platform is activated.
-        let platform_activated = |dep: &Dependency| -> bool {
+        fn platform_activated(
+            dep: &Dependency,
+            fk: FeaturesFor,
+            target_data: &RustcTargetData<'_>,
+            requested_targets: &[CompileKind],
+        ) -> bool {
             // We always count platforms as activated if the target stems from an artifact
             // dependency's target specification. This triggers in conjunction with
             // `[target.'cfg(…)'.dependencies]` manifest sections.
@@ -791,18 +797,17 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     // We always care about build-dependencies, and they are always
                     // Host. If we are computing dependencies "for a build script",
                     // even normal dependencies are host-only.
-                    self.target_data
-                        .dep_platform_activated(dep, CompileKind::Host)
+                    target_data.dep_platform_activated(dep, CompileKind::Host)
                 }
-                (_, FeaturesFor::NormalOrDev) => self
-                    .requested_targets
+                (_, FeaturesFor::NormalOrDev) => requested_targets
                     .iter()
-                    .any(|kind| self.target_data.dep_platform_activated(dep, *kind)),
-                (_, FeaturesFor::ArtifactDep(target)) => self
-                    .target_data
-                    .dep_platform_activated(dep, CompileKind::Target(target)),
+                    .any(|kind| target_data.dep_platform_activated(dep, *kind)),
+                (_, FeaturesFor::ArtifactDep(target)) => {
+                    target_data.dep_platform_activated(dep, CompileKind::Target(target))
+                }
             }
-        };
+        }
+
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
@@ -811,7 +816,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     .filter(|dep| {
                         if dep.platform().is_some()
                             && self.opts.ignore_inactive_targets
-                            && !platform_activated(dep)
+                            && !platform_activated(
+                                dep,
+                                fk,
+                                self.target_data,
+                                self.requested_targets,
+                            )
                         {
                             return false;
                         }
@@ -820,7 +830,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         }
                         true
                     })
-                    .flat_map(|dep| {
+                    .collect_vec() // collect because the next closure mutably borrows `self.target_data`
+                    .into_iter()
+                    .map(|dep| {
                         // Each `dep`endency can be built for multiple targets. For one, it
                         // may be a library target which is built as initially configured
                         // by `fk`. If it appears as build dependency, it must be built
@@ -852,28 +864,52 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         };
 
                         // `artifact_target_keys` are produced to fulfil the needs of artifacts that have a target specification.
-                        let artifact_target_keys = dep.artifact().map(|artifact| {
-                            (
-                                artifact.is_lib(),
-                                artifact.target().map(|target| match target {
-                                    ArtifactTarget::Force(target) => {
-                                        vec![FeaturesFor::ArtifactDep(target)]
-                                    }
-                                    ArtifactTarget::BuildDependencyAssumeTarget => self
-                                        .requested_targets
-                                        .iter()
-                                        .map(|kind| match kind {
-                                            CompileKind::Host => {
-                                                let host_triple = self.target_data.rustc.host;
-                                                CompileTarget::new(&host_triple).unwrap()
-                                            }
-                                            CompileKind::Target(target) => *target,
+                        let artifact_target_keys = dep
+                            .artifact()
+                            .map(|artifact| {
+                                let host_triple = self.target_data.rustc.host;
+                                // not all targets may be queried before resolution since artifact dependencies
+                                // and per-pkg-targets are not immediately known.
+                                let mut activate_target = |target| {
+                                    let name = dep.name_in_toml();
+                                    self.target_data
+                                        .merge_compile_kind(CompileKind::Target(target))
+                                        .with_context(|| format!("failed to determine target information for target `{target}`.\n  \
+                                        Artifact dependency `{name}` in package `{pkg_id}` requires building for `{target}`", target = target.rustc_target()))
+                                };
+                                CargoResult::Ok((
+                                    artifact.is_lib(),
+                                    artifact
+                                        .target()
+                                        .map(|target| {
+                                            CargoResult::Ok(match target {
+                                                ArtifactTarget::Force(target) => {
+                                                    activate_target(target)?;
+                                                    vec![FeaturesFor::ArtifactDep(target)]
+                                                }
+                                                // FIXME: this needs to interact with the `default-target` and `forced-target` values
+                                                // of the dependency
+                                                ArtifactTarget::BuildDependencyAssumeTarget => self
+                                                    .requested_targets
+                                                    .iter()
+                                                    .map(|kind| match kind {
+                                                        CompileKind::Host => {
+                                                            CompileTarget::new(&host_triple)
+                                                                .unwrap()
+                                                        }
+                                                        CompileKind::Target(target) => *target,
+                                                    })
+                                                    .map(|target| {
+                                                        activate_target(target)?;
+                                                        Ok(FeaturesFor::ArtifactDep(target))
+                                                    })
+                                                    .collect::<CargoResult<_>>()?,
+                                            })
                                         })
-                                        .map(FeaturesFor::ArtifactDep)
-                                        .collect(),
-                                }),
-                            )
-                        });
+                                        .transpose()?,
+                                ))
+                            })
+                            .transpose()?;
 
                         let dep_fks = match artifact_target_keys {
                             // The artifact is also a library and does specify custom
@@ -893,12 +929,13 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             // Use the standard feature key without any alteration.
                             Some((_, None)) | None => vec![lib_fk],
                         };
-                        dep_fks.into_iter().map(move |dep_fk| (dep, dep_fk))
+                        Ok(dep_fks.into_iter().map(move |dep_fk| (dep, dep_fk)))
                     })
-                    .collect::<Vec<_>>();
-                (dep_id, deps)
+                    .flatten_ok()
+                    .collect::<CargoResult<Vec<_>>>()?;
+                Ok((dep_id, deps))
             })
-            .filter(|(_id, deps)| !deps.is_empty())
+            .filter(|res| res.as_ref().map_or(true, |(_id, deps)| !deps.is_empty()))
             .collect()
     }
 

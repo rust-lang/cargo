@@ -549,7 +549,9 @@ pub struct Dependency {
     name: String,
     vers: String,
     kind: String,
-    artifact: Option<(String, Option<String>)>,
+    artifact: Option<String>,
+    bindep_target: Option<String>,
+    lib: bool,
     target: Option<String>,
     features: Vec<String>,
     registry: Option<String>,
@@ -1409,13 +1411,20 @@ impl Package {
                     (true, Some("alternative")) => None,
                     _ => panic!("registry_dep currently only supports `alternative`"),
                 };
+                let artifact = if let Some(artifact) = &dep.artifact {
+                    serde_json::json!([artifact])
+                } else {
+                    serde_json::json!(null)
+                };
                 serde_json::json!({
                     "name": dep.name,
                     "req": dep.vers,
                     "features": dep.features,
                     "default_features": true,
                     "target": dep.target,
-                    "artifact": dep.artifact,
+                    "artifact": artifact,
+                    "bindep_target": dep.bindep_target,
+                    "lib": dep.lib,
                     "optional": dep.optional,
                     "kind": dep.kind,
                     "registry": registry_url,
@@ -1536,11 +1545,14 @@ impl Package {
             "#,
                 target, kind, dep.name, dep.vers
             ));
-            if let Some((artifact, target)) = &dep.artifact {
+            if let Some(artifact) = &dep.artifact {
                 manifest.push_str(&format!("artifact = \"{}\"\n", artifact));
-                if let Some(target) = &target {
-                    manifest.push_str(&format!("target = \"{}\"\n", target))
-                }
+            }
+            if let Some(target) = &dep.bindep_target {
+                manifest.push_str(&format!("target = \"{}\"\n", target));
+            }
+            if dep.lib {
+                manifest.push_str("lib = true\n");
             }
             if let Some(registry) = &dep.registry {
                 assert_eq!(registry, "alternative");
@@ -1617,6 +1629,8 @@ impl Dependency {
             vers: vers.to_string(),
             kind: "normal".to_string(),
             artifact: None,
+            bindep_target: None,
+            lib: false,
             target: None,
             features: Vec::new(),
             package: None,
@@ -1646,7 +1660,8 @@ impl Dependency {
     /// Change the artifact to be of the given kind, like "bin", or "staticlib",
     /// along with a specific target triple if provided.
     pub fn artifact(&mut self, kind: &str, target: Option<String>) -> &mut Self {
-        self.artifact = Some((kind.to_string(), target));
+        self.artifact = Some(kind.to_string());
+        self.bindep_target = target;
         self
     }
 
