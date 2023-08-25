@@ -12,10 +12,6 @@ use std::str;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 
-fn leak(s: String) -> &'static str {
-    Box::leak(s.into_boxed_str())
-}
-
 static STRING_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
@@ -63,12 +59,9 @@ impl Eq for InternedString {}
 
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
-        let mut cache = STRING_CACHE
-            .get_or_init(|| Default::default())
-            .lock()
-            .unwrap();
+        let mut cache = STRING_CACHE.get_or_init(Default::default).lock().unwrap();
         let s = cache.get(str).cloned().unwrap_or_else(|| {
-            let s = leak(str.to_string());
+            let s = str.to_string().leak();
             cache.insert(s);
             s
         });
