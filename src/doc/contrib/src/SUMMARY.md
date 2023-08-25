@@ -7,6 +7,7 @@
     - [Working on Cargo](./process/working-on-cargo.md)
     - [Release process](./process/release.md)
     - [Unstable features](./process/unstable.md)
+    - [Security issues](./process/security.md)
 - [Design Principles](./design.md)
 - [Implementing a Change](./implementation/index.md)
     - [Architecture](./implementation/architecture.md)
