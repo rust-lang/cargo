@@ -207,7 +207,11 @@ impl DocFragment {
         let syn::Meta::NameValue(nv) = &attr.meta else {
             anyhow::bail!("unsupported attr meta for {:?}", attr.meta.path())
         };
-        let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(lit), .. }) = &nv.value else {
+        let syn::Expr::Lit(syn::ExprLit {
+            lit: syn::Lit::Str(lit),
+            ..
+        }) = &nv.value
+        else {
             anyhow::bail!("only string literals are supported")
         };
         Ok(Self {
@@ -373,16 +377,21 @@ fn unindent_doc_fragments(docs: &mut [DocFragment]) {
     let Some(min_indent) = docs
         .iter()
         .map(|fragment| {
-            fragment.doc.as_str().lines().fold(usize::MAX, |min_indent, line| {
-                if line.chars().all(|c| c.is_whitespace()) {
-                    min_indent
-                } else {
-                    // Compare against either space or tab, ignoring whether they are
-                    // mixed or not.
-                    let whitespace = line.chars().take_while(|c| *c == ' ' || *c == '\t').count();
-                    min_indent.min(whitespace)
-                }
-            })
+            fragment
+                .doc
+                .as_str()
+                .lines()
+                .fold(usize::MAX, |min_indent, line| {
+                    if line.chars().all(|c| c.is_whitespace()) {
+                        min_indent
+                    } else {
+                        // Compare against either space or tab, ignoring whether they are
+                        // mixed or not.
+                        let whitespace =
+                            line.chars().take_while(|c| *c == ' ' || *c == '\t').count();
+                        min_indent.min(whitespace)
+                    }
+                })
         })
         .min()
     else {

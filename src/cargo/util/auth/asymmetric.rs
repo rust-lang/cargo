@@ -73,7 +73,8 @@ pub fn public_token_from_credential(
     source_id: &SourceId,
     mutation: Option<&'_ Mutation<'_>>,
 ) -> CargoResult<Secret<String>> {
-    let RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) = credential else {
+    let RegistryCredentialConfig::AsymmetricKey((secret_key, secret_key_subject)) = credential
+    else {
         anyhow::bail!("credential must be an asymmetric secret key")
     };
 
