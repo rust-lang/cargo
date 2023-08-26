@@ -1,4 +1,5 @@
 # cargo-rustc(1)
+{{*set command="rustc"}}
 {{*set actionverb="Build"}}
 {{*set multitarget=true}}
 

@@ -1,4 +1,5 @@
 # cargo-doc(1)
+{{*set command="doc"}}
 {{*set actionverb="Document"}}
 {{*set multitarget=true}}
 

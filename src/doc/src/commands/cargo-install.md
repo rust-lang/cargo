@@ -2,6 +2,7 @@
 
 
 
+
 ## NAME
 
 cargo-install --- Build and install a Rust binary

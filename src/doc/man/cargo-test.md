@@ -1,4 +1,5 @@
 # cargo-test(1)
+{{*set command="test"}}
 {{*set actionverb="Test"}}
 {{*set nouns="tests"}}
 {{*set multitarget=true}}

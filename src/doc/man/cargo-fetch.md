@@ -1,4 +1,5 @@
 # cargo-fetch(1)
+{{*set command="fetch"}}
 {{*set actionverb="Fetch"}}
 {{*set target-default-to-all-arch=true}}
 {{*set multitarget=true}}

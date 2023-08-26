@@ -1,4 +1,5 @@
 # cargo-clean(1)
+{{*set command="clean"}}
 {{*set actionverb="Clean"}}
 {{*set multitarget=true}}
 

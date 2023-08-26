@@ -1,4 +1,5 @@
 # cargo-publish(1)
+{{*set command="publish"}}
 {{*set actionverb="Publish"}}
 {{*set multitarget=true}}
 

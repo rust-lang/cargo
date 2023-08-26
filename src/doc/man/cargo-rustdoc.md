@@ -1,4 +1,5 @@
 # cargo-rustdoc(1)
+{{*set command="rustdoc"}}
 {{*set actionverb="Document"}}
 {{*set multitarget=true}}
 

@@ -1,4 +1,5 @@
 # cargo-bench(1)
+{{*set command="bench"}}
 {{*set actionverb="Benchmark"}}
 {{*set nouns="benchmarks"}}
 {{*set multitarget=true}}

@@ -1,4 +1,5 @@
 # cargo-install(1)
+{{*set command="install"}}
 {{*set actionverb="Install"}}
 {{*set temp-target-dir=true}}
 

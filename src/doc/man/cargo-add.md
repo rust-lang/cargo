@@ -1,5 +1,5 @@
 # cargo-add(1)
-
+{{*set command="add"}}
 {{*set actionverb="Add"}}
 {{*set nouns="adds"}}
 
