@@ -12,9 +12,10 @@ use cargo_util::paths;
 use itertools::Itertools;
 use lazycell::LazyCell;
 use semver::{self, VersionReq};
-use serde::de::{self, Unexpected};
+use serde::de::{self, IntoDeserializer as _, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
+use serde_untagged::UntaggedEnumVisitor;
 use tracing::{debug, trace};
 use url::Url;
 
@@ -961,11 +962,23 @@ impl StringOrVec {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(untagged, expecting = "expected a boolean or a string")]
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+#[serde(untagged)]
 pub enum StringOrBool {
     String(String),
     Bool(bool),
+}
+
+impl<'de> Deserialize<'de> for StringOrBool {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .string(|s| Ok(StringOrBool::String(s.to_owned())))
+            .bool(|b| Ok(StringOrBool::Bool(b)))
+            .deserialize(deserializer)
+    }
 }
 
 #[derive(PartialEq, Clone, Debug, Serialize)]
@@ -3513,11 +3526,25 @@ pub type TomlLints = BTreeMap<String, TomlToolLints>;
 
 pub type TomlToolLints = BTreeMap<String, TomlLint>;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum TomlLint {
     Level(TomlLintLevel),
     Config(TomlLintConfig),
+}
+
+impl<'de> Deserialize<'de> for TomlLint {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .string(|string| {
+                TomlLintLevel::deserialize(string.into_deserializer()).map(TomlLint::Level)
+            })
+            .map(|map| map.deserialize().map(TomlLint::Config))
+            .deserialize(deserializer)
+    }
 }
 
 impl TomlLint {

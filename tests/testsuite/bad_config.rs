@@ -1392,7 +1392,7 @@ Caused by:
     |
   6 |                 build = 3
     |                         ^
-  expected a boolean or a string
+  invalid type: integer `3`, expected a boolean or string
 ",
         )
         .run();
@@ -1465,7 +1465,10 @@ fn bad_http_ssl_version_range() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] data did not match any variant of untagged enum SslVersionConfig
+[ERROR] error in [..]/config.toml: could not load config key `http.ssl-version`
+
+Caused by:
+  error in [..]/config.toml: `http.ssl-version.min` expected a string, but found a boolean
 ",
         )
         .run();
@@ -1489,7 +1492,10 @@ fn bad_build_jobs() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] data did not match any variant of untagged enum JobsConfig
+[ERROR] error in [..]/config.toml: could not load config key `build.jobs`
+
+Caused by:
+  invalid type: map, expected an integer or string
 ",
         )
         .run();
@@ -1516,7 +1522,10 @@ fn bad_build_target() {
 [ERROR] error in [..]/config.toml: could not load config key `build.target`
 
 Caused by:
-  data did not match any variant of untagged enum BuildTargetConfigInner
+  error in [..]/config.toml: could not load config key `build.target`
+
+Caused by:
+  invalid type: map, expected a string or array
 ",
         )
         .run();

@@ -235,7 +235,7 @@ fn invalid_type_in_lint_value() {
 error: failed to parse manifest at `[..]/Cargo.toml`
 
 Caused by:
-  data did not match any variant of untagged enum TomlLint
+  invalid type: integer `-1`, expected a string or map
   in `rust.rust-2018-idioms`
 ",
         )
