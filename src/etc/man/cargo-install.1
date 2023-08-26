@@ -346,8 +346,13 @@ Should not be 0.
 \fB\-\-keep\-going\fR
 .RS 4
 Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-\fB\-Zunstable\-options\fR\&.
+the build on the first one that fails to build.
+.sp
+For example if the current package depends on dependencies \fBfails\fR and \fBworks\fR,
+one of which fails to build, \fBcargo install \-j1\fR may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas \fBcargo install \-j1 \-\-keep\-going\fR would definitely run both
+builds, even if the one run first fails.
 .RE
 .SS "Display Options"
 .sp

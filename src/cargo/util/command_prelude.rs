@@ -87,7 +87,7 @@ pub trait CommandExt: Sized {
         self.arg_jobs()._arg(
             flag(
                 "keep-going",
-                "Do not abort the build as soon as there is an error (unstable)",
+                "Do not abort the build as soon as there is an error",
             )
             .help_heading(heading::COMPILATION_OPTIONS),
         )
@@ -627,11 +627,6 @@ pub trait ArgMatchesExt {
             }
         }
 
-        if build_config.keep_going {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--keep-going", 10496)?;
-        }
         if build_config.build_plan {
             config
                 .cli_unstable()

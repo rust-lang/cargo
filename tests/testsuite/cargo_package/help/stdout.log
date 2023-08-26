@@ -28,7 +28,7 @@ Compilation Options:
       --target <TRIPLE>         Build for the target triple
       --target-dir <DIRECTORY>  Directory for all generated artifacts
   -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
-      --keep-going              Do not abort the build as soon as there is an error (unstable)
+      --keep-going              Do not abort the build as soon as there is an error
 
 Manifest Options:
       --manifest-path <PATH>  Path to Cargo.toml

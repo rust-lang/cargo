@@ -407,8 +407,12 @@ Should not be 0.</dd>
 
 <dt class="option-term" id="option-cargo-build---keep-going"><a class="option-anchor" href="#option-cargo-build---keep-going"></a><code>--keep-going</code></dt>
 <dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-<code>-Zunstable-options</code>.</dd>
+the build on the first one that fails to build.</p>
+<p>For example if the current package depends on dependencies <code>fails</code> and <code>works</code>,
+one of which fails to build, <code>cargo build -j1</code> may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas <code>cargo build -j1 --keep-going</code> would definitely run both
+builds, even if the one run first fails.</dd>
 
 
 <dt class="option-term" id="option-cargo-build---future-incompat-report"><a class="option-anchor" href="#option-cargo-build---future-incompat-report"></a><code>--future-incompat-report</code></dt>

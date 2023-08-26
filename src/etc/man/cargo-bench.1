@@ -502,11 +502,16 @@ a string \fBdefault\fR is provided, it sets the value back to defaults.
 Should not be 0.
 .RE
 .sp
-\fB\-\-keep\-going\fR
+While \fBcargo bench\fR involves compilation, it does not provide a \fB\-\-keep\-going\fR
+flag. Use \fB\-\-no\-fail\-fast\fR to run as many benchmarks as possible without
+stopping at the first failure. To \[lq]compile\[rq] as many benchmarks as possible, use
+\fB\-\-benches\fR to build benchmark binaries separately. For example:
+.sp
 .RS 4
-Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-\fB\-Zunstable\-options\fR\&.
+.nf
+cargo build \-\-benches \-\-release \-\-keep\-going
+cargo bench \-\-no\-fail\-fast
+.fi
 .RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for

@@ -478,13 +478,15 @@ a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</dd>
 
 
-<dt class="option-term" id="option-cargo-bench---keep-going"><a class="option-anchor" href="#option-cargo-bench---keep-going"></a><code>--keep-going</code></dt>
-<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-<code>-Zunstable-options</code>.</dd>
-
-
 </dl>
+
+While `cargo bench` involves compilation, it does not provide a `--keep-going`
+flag. Use `--no-fail-fast` to run as many benchmarks as possible without
+stopping at the first failure. To "compile" as many benchmarks as possible, use
+`--benches` to build benchmark binaries separately. For example:
+
+    cargo build --benches --release --keep-going
+    cargo bench --no-fail-fast
 
 ## ENVIRONMENT
 
