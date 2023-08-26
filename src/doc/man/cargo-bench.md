@@ -158,8 +158,15 @@ Rust test harness runs benchmarks serially in a single thread.
 
 {{#options}}
 {{> options-jobs }}
-{{> options-keep-going }}
 {{/options}}
+
+While `cargo bench` involves compilation, it does not provide a `--keep-going`
+flag. Use `--no-fail-fast` to run as many benchmarks as possible without
+stopping at the first failure. To "compile" as many benchmarks as possible, use
+`--benches` to build benchmark binaries separately. For example:
+
+    cargo build --benches --release --keep-going
+    cargo bench --no-fail-fast
 
 {{> section-environment }}
 

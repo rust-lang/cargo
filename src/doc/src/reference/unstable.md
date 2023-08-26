@@ -82,7 +82,6 @@ For the latest nightly, see the [nightly version] of this page.
     * [build-std-features](#build-std-features) --- Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) --- Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) --- Allows running tests with the "abort" panic strategy.
-    * [keep-going](#keep-going) --- Build as much as possible rather than aborting on the first error.
     * [check-cfg](#check-cfg) --- Compile-time validation of `cfg` expressions.
     * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
@@ -428,36 +427,6 @@ It's currently unclear how this feature will be stabilized in Cargo, but we'd
 like to stabilize it somehow!
 
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
-
-### keep-going
-* Tracking Issue: [#10496](https://github.com/rust-lang/cargo/issues/10496)
-
-`cargo build --keep-going` (and similarly for every command involving compilation, like `check` and `doc`)
-will build as many crates in the dependency graph as possible,
-rather than aborting the build at the first one that fails to build.
-
-For example if the current package depends on dependencies `fails` and `works`,
-one of which fails to build, `cargo check -j1` may or may not build the one that
-succeeds (depending on which one of the two builds Cargo picked to run first),
-whereas `cargo check -j1 --keep-going` would definitely run both builds, even if
-the one run first fails.
-
-The `-Z unstable-options` command-line option must be used in order to use
-`--keep-going` while it is not yet stable:
-
-```console
-cargo check --keep-going -Z unstable-options
-```
-
-While `cargo test` and `cargo bench` commands involve compilation, they do not provide a `--keep-going` flag.
-Both commands already include a similar `--no-fail-fast` flag, allowing running as many tests as possible without stopping at the first failure.
-To "compile" as many tests as possible, use target selection flags like `--tests` to build test binaries separately.
-For example,
-
-```console
-cargo build --tests --keep-going -Zunstable-options
-cargo test --tests --no-fail-fast
-```
 
 ### config-include
 * Tracking Issue: [#7723](https://github.com/rust-lang/cargo/issues/7723)
@@ -1909,3 +1878,9 @@ The `-Z doctest-in-workspace` option for `cargo test` has been stabilized and
 enabled by default in the 1.72 release. See the
 [`cargo test` documentation](../commands/cargo-test.md#working-directory-of-tests)
 for more information about the working directory for compiling and running tests.
+
+### keep-going
+
+The `--keep-going` option has been stabilized in the 1.74 release. See the
+[`--keep-going` flag](../commands/cargo-build.html#option-cargo-build---keep-going)
+in `cargo build` as an example for more details.

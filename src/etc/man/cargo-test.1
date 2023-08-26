@@ -542,6 +542,18 @@ produced during execution of this command
 .sp
 See \fBcargo\-report\fR(1)
 .RE
+.sp
+While \fBcargo test\fR involves compilation, it does not provide a \fB\-\-keep\-going\fR
+flag. Use \fB\-\-no\-fail\-fast\fR to run as many tests as possible without stopping at
+the first failure. To \[lq]compile\[rq] as many tests as possible, use \fB\-\-tests\fR to
+build test binaries separately. For example:
+.sp
+.RS 4
+.nf
+cargo build \-\-tests \-\-keep\-going
+cargo test \-\-tests \-\-no\-fail\-fast
+.fi
+.RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.
