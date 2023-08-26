@@ -1,7 +1,5 @@
 # cargo-install(1)
 
-
-
 ## NAME
 
 cargo-install --- Build and install a Rust binary

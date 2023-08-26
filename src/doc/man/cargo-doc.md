@@ -1,6 +1,7 @@
 # cargo-doc(1)
-{{*set actionverb="Document"}}
-{{*set multitarget=true}}
+{{~*set command="doc"}}
+{{~*set actionverb="Document"}}
+{{~*set multitarget=true}}
 
 ## NAME
 

@@ -1,6 +1,7 @@
 # cargo-check(1)
-{{*set actionverb="Check"}}
-{{*set multitarget=true}}
+{{~*set command="check"}}
+{{~*set actionverb="Check"}}
+{{~*set multitarget=true}}
 
 ## NAME
 

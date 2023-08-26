@@ -1,6 +1,5 @@
 # cargo-run(1)
 
-
 ## NAME
 
 cargo-run --- Run the current package

@@ -1,6 +1,7 @@
 # cargo-install(1)
-{{*set actionverb="Install"}}
-{{*set temp-target-dir=true}}
+{{~*set command="install"}}
+{{~*set actionverb="Install"}}
+{{~*set temp-target-dir=true}}
 
 ## NAME
 

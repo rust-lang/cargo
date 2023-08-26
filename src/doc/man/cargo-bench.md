@@ -1,7 +1,8 @@
 # cargo-bench(1)
-{{*set actionverb="Benchmark"}}
-{{*set nouns="benchmarks"}}
-{{*set multitarget=true}}
+{{~*set command="bench"}}
+{{~*set actionverb="Benchmark"}}
+{{~*set nouns="benchmarks"}}
+{{~*set multitarget=true}}
 
 ## NAME
 

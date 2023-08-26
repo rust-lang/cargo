@@ -1,7 +1,5 @@
 # cargo-remove(1)
 
-
-
 ## NAME
 
 cargo-remove --- Remove dependencies from a Cargo.toml manifest file

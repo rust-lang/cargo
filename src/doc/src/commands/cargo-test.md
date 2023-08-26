@@ -1,8 +1,5 @@
 # cargo-test(1)
 
-
-
-
 ## NAME
 
 cargo-test --- Execute unit and integration tests of a package

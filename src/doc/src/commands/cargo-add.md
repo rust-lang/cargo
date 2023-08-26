@@ -1,8 +1,5 @@
 # cargo-add(1)
 
-
-
-
 ## NAME
 
 cargo-add --- Add dependencies to a Cargo.toml manifest file

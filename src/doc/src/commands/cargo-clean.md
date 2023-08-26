@@ -1,7 +1,5 @@
 # cargo-clean(1)
 
-
-
 ## NAME
 
 cargo-clean --- Remove generated artifacts

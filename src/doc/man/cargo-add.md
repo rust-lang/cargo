@@ -1,7 +1,7 @@
 # cargo-add(1)
-
-{{*set actionverb="Add"}}
-{{*set nouns="adds"}}
+{{~*set command="add"}}
+{{~*set actionverb="Add"}}
+{{~*set nouns="adds"}}
 
 ## NAME
 
