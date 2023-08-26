@@ -1,7 +1,7 @@
 # cargo-remove(1)
-{{*set command="remove"}}
-{{*set actionverb="Remove"}}
-{{*set nouns="removes"}}
+{{~*set command="remove"}}
+{{~*set actionverb="Remove"}}
+{{~*set nouns="removes"}}
 
 ## NAME
 

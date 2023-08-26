@@ -1,9 +1,5 @@
 # cargo-bench(1)
 
-
-
-
-
 ## NAME
 
 cargo-bench --- Execute benchmarks of a package

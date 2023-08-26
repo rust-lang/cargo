@@ -1,8 +1,5 @@
 # cargo-doc(1)
 
-
-
-
 ## NAME
 
 cargo-doc --- Build a package's documentation

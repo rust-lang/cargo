@@ -1,7 +1,7 @@
 # cargo-tree(1)
-{{*set command="tree"}}
-{{*set actionverb="Display"}}
-{{*set noall=true}}
+{{~*set command="tree"}}
+{{~*set actionverb="Display"}}
+{{~*set noall=true}}
 
 ## NAME
 

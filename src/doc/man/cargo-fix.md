@@ -1,7 +1,7 @@
 # cargo-fix(1)
-{{*set command="fix"}}
-{{*set actionverb="Fix"}}
-{{*set multitarget=true}}
+{{~*set command="fix"}}
+{{~*set actionverb="Fix"}}
+{{~*set multitarget=true}}
 
 ## NAME
 

@@ -1,7 +1,7 @@
 # cargo-build(1)
-{{*set command="build"}}
-{{*set actionverb="Build"}}
-{{*set multitarget=true}}
+{{~*set command="build"}}
+{{~*set actionverb="Build"}}
+{{~*set multitarget=true}}
 
 ## NAME
 

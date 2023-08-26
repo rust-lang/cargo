@@ -1,6 +1,6 @@
 # cargo-run(1)
-{{*set command="run"}}
-{{*set actionverb="Run"}}
+{{~*set command="run"}}
+{{~*set actionverb="Run"}}
 
 ## NAME
 

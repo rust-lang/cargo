@@ -1,9 +1,5 @@
 # cargo-package(1)
 
-
-
-
-
 ## NAME
 
 cargo-package --- Assemble the local package into a distributable tarball

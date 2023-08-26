@@ -1,8 +1,5 @@
 # cargo-fix(1)
 
-
-
-
 ## NAME
 
 cargo-fix --- Automatically fix lint warnings reported by rustc

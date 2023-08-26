@@ -1,8 +1,5 @@
 # cargo-check(1)
 
-
-
-
 ## NAME
 
 cargo-check --- Check the current package

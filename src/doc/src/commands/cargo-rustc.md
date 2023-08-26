@@ -1,8 +1,5 @@
 # cargo-rustc(1)
 
-
-
-
 ## NAME
 
 cargo-rustc --- Compile the current package, and pass extra options to the compiler

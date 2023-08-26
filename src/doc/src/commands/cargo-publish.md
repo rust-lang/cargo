@@ -1,8 +1,5 @@
 # cargo-publish(1)
 
-
-
-
 ## NAME
 
 cargo-publish --- Upload a package to the registry

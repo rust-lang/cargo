@@ -1,8 +1,5 @@
 # cargo-build(1)
 
-
-
-
 ## NAME
 
 cargo-build --- Compile the current package
