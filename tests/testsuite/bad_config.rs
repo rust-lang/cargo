@@ -1421,6 +1421,108 @@ fn warn_semver_metadata() {
 }
 
 #[cargo_test]
+fn bad_http_ssl_version() {
+    // Invalid type in SslVersionConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [http]
+            ssl-version = ["tlsv1.2", "tlsv1.3"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `http.ssl-version`
+
+Caused by:
+  invalid type: sequence, expected a string or map
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_http_ssl_version_range() {
+    // Invalid type in SslVersionConfigRange.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [http]
+            ssl-version.min = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] data did not match any variant of untagged enum SslVersionConfig
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_build_jobs() {
+    // Invalid type in JobsConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            jobs = { default = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] data did not match any variant of untagged enum JobsConfig
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_build_target() {
+    // Invalid type in BuildTargetConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target.'cfg(unix)' = "x86_64"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `build.target`
+
+Caused by:
+  data did not match any variant of untagged enum BuildTargetConfigInner
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn bad_target_cfg() {
     // Invalid type in a StringList.
     //
