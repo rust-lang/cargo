@@ -1431,9 +1431,10 @@ fn edition_2021_workspace_member() {
     p.cargo("check")
         .with_stderr(
             "\
-warning: some crates are on edition 2021 which defaults to `resolver = \"2\"`, but virtual workspaces default to `resolver = \"1\"`
+warning: virtual workspace defaulting to `resolver = \"1\"` despite one or more workspace members being on edition 2021 which implies `resolver = \"2\"`
 note: to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest
 note: to use the edition 2021 resolver, specify `workspace.resolver = \"2\"` in the workspace root's manifest
+note: for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 [CHECKING] a v0.1.0 [..]
 [FINISHED] [..]
 ",
