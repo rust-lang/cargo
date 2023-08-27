@@ -1021,11 +1021,18 @@ impl<'cfg> Workspace<'cfg> {
                         .max()
                     {
                         let resolver = edition.default_resolve_behavior().to_manifest();
-                        self.config.shell().warn(format_args!("some crates are on edition {edition} which defaults to `resolver = \"{resolver}\"`, but virtual workspaces default to `resolver = \"1\"`"))?;
+                        self.config.shell().warn(format_args!(
+                            "virtual workspace defaulting to `resolver = \"1\"` despite one or more workspace members being on edition {edition} which implies `resolver = \"{resolver}\"`"
+                        ))?;
                         self.config.shell().note(
                             "to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest",
                         )?;
-                        self.config.shell().note(format_args!("to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"` in the workspace root's manifest"))?;
+                        self.config.shell().note(format_args!(
+                            "to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"` in the workspace root's manifest"
+                        ))?;
+                        self.config.shell().note(
+                            "for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions",
+                        )?;
                     }
                 }
             }
