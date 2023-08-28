@@ -1426,7 +1426,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     let m = unit.pkg.manifest().metadata();
     let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
     let mut config = StableHasher::new();
-    if let Some(linker) = cx.bcx.linker(unit.kind) {
+    if let Some(linker) = cx.compilation.target_linker(unit.kind) {
         linker.hash(&mut config);
     }
     if unit.mode.is_doc() && cx.bcx.config.cli_unstable().rustdoc_map {

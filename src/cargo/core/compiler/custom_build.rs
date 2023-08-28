@@ -299,11 +299,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         cmd.env(&var, value);
     }
 
-    if let Some(linker) = &bcx.target_data.target_config(unit.kind).linker {
-        cmd.env(
-            "RUSTC_LINKER",
-            linker.val.clone().resolve_program(bcx.config),
-        );
+    if let Some(linker) = &cx.compilation.target_linker(unit.kind) {
+        cmd.env("RUSTC_LINKER", linker);
     }
 
     if let Some(links) = unit.pkg.manifest().links() {

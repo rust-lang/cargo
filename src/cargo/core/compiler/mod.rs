@@ -1117,7 +1117,10 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
         cmd,
         "-C",
         "linker=",
-        bcx.linker(unit.kind).as_ref().map(|s| s.as_ref()),
+        cx.compilation
+            .target_linker(unit.kind)
+            .as_ref()
+            .map(|s| s.as_ref()),
     );
     if incremental {
         let dir = cx.files().layout(unit.kind).incremental().as_os_str();
