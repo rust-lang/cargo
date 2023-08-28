@@ -446,9 +446,12 @@ pub fn foo(num: i32) -> u32 {
     foo.cargo("check -Zlints")
         .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
-error: usage of an `unsafe` block
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints
 ",
         )
         .run();

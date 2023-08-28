@@ -1475,29 +1475,6 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
     }
 }
 
-type MaybeWorkspaceLints = MaybeWorkspace<TomlLints, TomlWorkspaceField>;
-
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceLints {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let value = serde_value::Value::deserialize(deserializer)?;
-
-        if let Ok(w) = TomlWorkspaceField::deserialize(
-            serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
-        ) {
-            return if w.workspace() {
-                Ok(MaybeWorkspace::Workspace(w))
-            } else {
-                Err(de::Error::custom("`workspace` cannot be false"))
-            };
-        }
-        TomlLints::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
-            .map(MaybeWorkspace::Defined)
-    }
-}
-
 #[derive(Deserialize, Serialize, Copy, Clone, Debug)]
 pub struct TomlWorkspaceField {
     #[serde(deserialize_with = "bool_no_false")]
@@ -2277,7 +2254,7 @@ impl TomlManifest {
 
         let lints =
             parse_unstable_lints::<MaybeWorkspaceLints>(me.lints.clone(), config, cx.warnings)?
-                .map(|mw| mw.resolve("lints", || inherit()?.lints()))
+                .map(|mw| mw.resolve(|| inherit()?.lints()))
                 .transpose()?;
         let lints = verify_lints(lints)?;
         let default = TomlLints::default();
@@ -3518,6 +3495,38 @@ impl TomlTarget {
 impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(expecting = "a map")]
+pub struct MaybeWorkspaceLints {
+    #[serde(skip_serializing_if = "is_false")]
+    #[serde(deserialize_with = "bool_no_false", default)]
+    workspace: bool,
+    #[serde(flatten)]
+    lints: TomlLints,
+}
+
+fn is_false(b: &bool) -> bool {
+    !b
+}
+
+impl MaybeWorkspaceLints {
+    fn resolve<'a>(
+        self,
+        get_ws_inheritable: impl FnOnce() -> CargoResult<TomlLints>,
+    ) -> CargoResult<TomlLints> {
+        if self.workspace {
+            if !self.lints.is_empty() {
+                anyhow::bail!("cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints");
+            }
+            get_ws_inheritable().with_context(|| {
+                "error inheriting `lints` from workspace root manifest's `workspace.lints`"
+            })
+        } else {
+            Ok(self.lints)
+        }
     }
 }
 
