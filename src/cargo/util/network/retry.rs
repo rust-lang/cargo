@@ -1,4 +1,45 @@
 //! Utilities for retrying a network operation.
+//!
+//! Some network errors are considered "spurious", meaning it is not a real
+//! error (such as a 404 not found) and is likely a transient error (like a
+//! bad network connection) that we can hope will resolve itself shortly. The
+//! [`Retry`] type offers a way to repeatedly perform some kind of network
+//! operation with a delay if it detects one of these possibly transient
+//! errors.
+//!
+//! This supports errors from [`git2`], [`gix`], [`curl`], and
+//! [`HttpNotSuccessful`] 5xx HTTP errors.
+//!
+//! The number of retries can be configured by the user via the `net.retry`
+//! config option. This indicates the number of times to retry the operation
+//! (default 3 times for a total of 4 attempts).
+//!
+//! There are hard-coded constants that indicate how long to sleep between
+//! retries. The constants are tuned to balance a few factors, such as the
+//! responsiveness to the user (we don't want cargo to hang for too long
+//! retrying things), and accommodating things like Cloudfront's default
+//! negative TTL of 10 seconds (if Cloudfront gets a 5xx error for whatever
+//! reason it won't try to fetch again for 10 seconds).
+//!
+//! The timeout also implements a primitive form of random jitter. This is so
+//! that if multiple requests fail at the same time that they don't all flood
+//! the server at the same time when they are retried. This jitter still has
+//! some clumping behavior, but should be good enough.
+//!
+//! [`Retry`] is the core type for implementing retry logic. The
+//! [`Retry::try`] method can be called with a callback, and it will
+//! indicate if it needs to be called again sometime in the future if there
+//! was a possibly transient error. The caller is responsible for sleeping the
+//! appropriate amount of time and then calling [`Retry::try`] again.
+//!
+//! [`with_retry`] is a convenience function that will create a [`Retry`] and
+//! handle repeatedly running a callback until it succeeds, or it runs out of
+//! retries.
+//!
+//! Some interesting resources about retries:
+//! - <https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/>
+//! - <https://en.wikipedia.org/wiki/Exponential_backoff>
+//! - <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After>
 
 use crate::util::errors::HttpNotSuccessful;
 use crate::{CargoResult, Config};
@@ -7,15 +48,32 @@ use rand::Rng;
 use std::cmp::min;
 use std::time::Duration;
 
+/// State for managing retrying a network operation.
 pub struct Retry<'a> {
     config: &'a Config,
+    /// The number of failed attempts that have been done so far.
+    ///
+    /// Starts at 0, and increases by one each time an attempt fails.
     retries: u64,
+    /// The maximum number of times the operation should be retried.
+    ///
+    /// 0 means it should never retry.
     max_retries: u64,
 }
 
+/// The result of attempting some operation via [`Retry::try`].
 pub enum RetryResult<T> {
+    /// The operation was successful.
+    ///
+    /// The wrapped value is the return value of the callback function.
     Success(T),
+    /// The operation was an error, and it should not be tried again.
     Err(anyhow::Error),
+    /// The operation failed, and should be tried again in the future.
+    ///
+    /// The wrapped value is the number of milliseconds to wait before trying
+    /// again. The caller is responsible for waiting this long and then
+    /// calling [`Retry::try`] again.
     Retry(u64),
 }
 
@@ -40,7 +98,9 @@ impl<'a> Retry<'a> {
         })
     }
 
-    /// Returns `Ok(None)` for operations that should be re-tried.
+    /// Calls the given callback, and returns a [`RetryResult`] which
+    /// indicates whether or not this needs to be called again at some point
+    /// in the future to retry the operation if it failed.
     pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> RetryResult<T> {
         match f() {
             Err(ref e) if maybe_spurious(e) && self.retries < self.max_retries => {
