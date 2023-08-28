@@ -53,12 +53,14 @@ and `x > 0`.
 It is possible to further tweak the logic for selecting compatible versions
 using special operators, though it shouldn't be necessary most of the time.
 
-### Caret requirements
+### Version requirement syntax
+
+#### Caret requirements
 
 **Caret requirements** are an alternative syntax for the default strategy,
 `^1.2.3` is exactly equivalent to `1.2.3`.
 
-### Tilde requirements
+#### Tilde requirements
 
 **Tilde requirements** specify a minimal version with some ability to update.
 If you specify a major, minor, and patch version or only a major and minor
@@ -73,7 +75,7 @@ version, then minor- and patch-level changes are allowed.
 ~1      := >=1.0.0, <2.0.0
 ```
 
-### Wildcard requirements
+#### Wildcard requirements
 
 **Wildcard requirements** allow for any version where the wildcard is
 positioned.
@@ -88,7 +90,7 @@ positioned.
 
 > **Note**: [crates.io] does not allow bare `*` versions.
 
-### Comparison requirements
+#### Comparison requirements
 
 **Comparison requirements** allow manually specifying a version range or an
 exact version to depend on.
@@ -102,7 +104,7 @@ Here are some examples of comparison requirements:
 = 1.2.3
 ```
 
-### Multiple requirements
+#### Multiple version requirements
 
 As shown in the examples above, multiple version requirements can be
 separated with a comma, e.g., `>= 1.2, < 1.5`.
@@ -157,7 +159,7 @@ some-crate = { version = "1.0", registry = "my-registry" }
 ```
 
 > **Note**: [crates.io] does not allow packages to be published with
-> dependencies on other registries.
+> dependencies on code published outside of [crates.io].
 
 [registries documentation]: registries.md
 
@@ -202,9 +204,20 @@ once the lock is in place. However, they can be pulled down manually with
 
 See [Git Authentication] for help with git authentication for private repos.
 
-> **Note**: [crates.io] does not allow packages to be published with `git`
-> dependencies (`git` [dev-dependencies] are ignored). See the [Multiple
-> locations](#multiple-locations) section for a fallback alternative.
+> **Note**: Neither the `git` key nor the `path` key changes the meaning of the
+> `version` key: the `version` key always implies that the package is available
+> in a registry. `version`, `git`, and `path` keys are considered [separate
+> locations](#multiple-locations) for resolving the dependency.
+>
+> When the dependency is retrieved from `git`, the `version` key will _not_
+> affect which commit is used, but the version information in the dependency's
+> `Cargo.toml` file will still be validated against the `version` requirement.
+
+> **Note**: [crates.io] does not allow packages to be published with
+> dependencies on code published outside of [crates.io] itself
+> ([dev-dependencies] are ignored). See the [Multiple
+> locations](#multiple-locations) section for a fallback alternative for `git`
+> and `path` dependencies.
 
 [Git Authentication]: ../appendix/git-authentication.md
 
@@ -245,9 +258,16 @@ and specify its version in the dependencies line as well:
 hello_utils = { path = "hello_utils", version = "0.1.0" }
 ```
 
-> **Note**: [crates.io] does not allow packages to be published with `path`
-> dependencies (`path` [dev-dependencies] are ignored). See the [Multiple
-> locations](#multiple-locations) section for a fallback alternative.
+> **Note**: Neither the `git` key nor the `path` key changes the meaning of the
+> `version` key: the `version` key always implies that the package is available
+> in a registry. `version`, `git`, and `path` keys are considered [separate
+> locations](#multiple-locations) for resolving the dependency.
+
+> **Note**: [crates.io] does not allow packages to be published with
+> dependencies on code published outside of [crates.io] itself
+> ([dev-dependencies] are ignored). See the [Multiple
+> locations](#multiple-locations) section for a fallback alternative for `git`
+> and `path` dependencies.
 
 ### Multiple locations
 
