@@ -123,11 +123,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
 
         if let Ok(url) = crate_name.into_url() {
-            return Err(anyhow!(
-                "invalid package name: `{url}`
+            if matches!(url.scheme(), "http" | "https") {
+                return Err(anyhow!(
+                    "invalid package name: `{url}`
     Use `cargo install --git {url}` if you meant to install from a git repository."
-            )
-            .into());
+                )
+                .into());
+            }
         }
     }
 
