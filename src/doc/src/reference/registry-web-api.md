@@ -1,5 +1,4 @@
-
-## Web API
+# Web API
 
 A registry may host a web API at the location defined in `config.json` to
 support any of the actions listed below.
@@ -47,7 +46,7 @@ Cargo sets the following headers for all requests:
   2019-01-02)`. This may be modified by the user in a configuration value.
   Added in 1.29.
 
-### Publish
+## Publish
 
 - Endpoint: `/api/v1/crates/new`
 - Method: PUT
@@ -184,7 +183,7 @@ A successful response includes the JSON object:
 }
 ```
 
-### Yank
+## Yank
 
 - Endpoint: `/api/v1/crates/{crate_name}/{version}/yank`
 - Method: DELETE
@@ -202,7 +201,7 @@ A successful response includes the JSON object:
 }
 ```
 
-### Unyank
+## Unyank
 
 - Endpoint: `/api/v1/crates/{crate_name}/{version}/unyank`
 - Method: PUT
@@ -220,7 +219,7 @@ A successful response includes the JSON object:
 }
 ```
 
-### Owners
+## Owners
 
 Cargo does not have an inherent notion of users and owners, but it does
 provide the `owner` command to assist managing who has authorization to
@@ -228,7 +227,7 @@ control a crate. It is up to the registry to decide exactly how users and
 owners are handled. See the [publishing documentation] for a description of
 how [crates.io] handles owners via GitHub users and teams.
 
-#### Owners: List
+### Owners: List
 
 - Endpoint: `/api/v1/crates/{crate_name}/owners`
 - Method: GET
@@ -255,7 +254,7 @@ A successful response includes the JSON object:
 }
 ```
 
-#### Owners: Add
+### Owners: Add
 
 - Endpoint: `/api/v1/crates/{crate_name}/owners`
 - Method: PUT
@@ -286,7 +285,7 @@ A successful response includes the JSON object:
 }
 ```
 
-#### Owners: Remove
+### Owners: Remove
 
 - Endpoint: `/api/v1/crates/{crate_name}/owners`
 - Method: DELETE
@@ -313,7 +312,7 @@ A successful response includes the JSON object:
 }
 ```
 
-### Search
+## Search
 
 - Endpoint: `/api/v1/crates`
 - Method: GET
@@ -346,7 +345,7 @@ A successful response includes the JSON object:
 }
 ```
 
-### Login
+## Login
 
 - Endpoint: `/me`
 

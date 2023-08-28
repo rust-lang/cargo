@@ -1,4 +1,4 @@
-## Build Script Examples
+# Build Script Examples
 
 The following sections illustrate some examples of writing build scripts.
 
@@ -22,7 +22,7 @@ available. The following is a sample of some popular crates[^†]:
 [^†]: This list is not an endorsement. Evaluate your dependencies to see which
 is right for your project.
 
-### Code generation
+## Code generation
 
 Some Cargo packages need to have code generated just before they are compiled
 for various reasons. Here we’ll walk through a simple example which generates a
@@ -120,7 +120,7 @@ from the build script itself.
 [concat-macro]: ../../std/macro.concat.html
 [env-macro]: ../../std/macro.env.html
 
-### Building a native library
+## Building a native library
 
 Sometimes it’s necessary to build some native C or C++ code as part of a
 package. This is another excellent use case of leveraging the build script to
@@ -268,7 +268,7 @@ dependency purely for the build process and not for the crate itself at runtime.
 
 [`cc` crate]: https://crates.io/crates/cc
 
-### Linking to system libraries
+## Linking to system libraries
 
 This example demonstrates how to link a system library and how the build
 script is used to support this use case.
@@ -363,7 +363,7 @@ source][libz-source] for a more complete example.
 [`pkg-config` crate]: https://crates.io/crates/pkg-config
 [libz-source]: https://github.com/rust-lang/libz-sys
 
-### Using another `sys` crate
+## Using another `sys` crate
 
 When using the `links` key, crates may set metadata that can be read by other
 crates that depend on it. This provides a mechanism to communicate information
@@ -424,7 +424,7 @@ already installed.
 // … rest of code that makes use of zlib.
 ```
 
-### Conditional compilation
+## Conditional compilation
 
 A build script may emit [`rustc-cfg` instructions] which can enable conditions
 that can be checked at compile time. In this example, we'll take a look at how

@@ -1,4 +1,4 @@
-## External tools
+# External tools
 
 One of the goals of Cargo is simple integration with third-party tools, like
 IDEs and other build systems. To make integration easier, Cargo has several
@@ -13,7 +13,7 @@ facilities:
 * support for custom subcommands.
 
 
-### Information about package structure
+## Information about package structure
 
 You can use [`cargo metadata`] command to get information about package
 structure and dependencies. See the [`cargo metadata`] documentation
@@ -29,7 +29,7 @@ output.
 [cargo_metadata]: https://crates.io/crates/cargo_metadata
 [`cargo metadata`]: ../commands/cargo-metadata.md
 
-### JSON messages
+## JSON messages
 
 When passing `--message-format=json`, Cargo will output the following
 information during the build:
@@ -54,7 +54,7 @@ messages.
 [build command documentation]: ../commands/cargo-build.md
 [cargo_metadata]: https://crates.io/crates/cargo_metadata
 
-#### Compiler messages
+### Compiler messages
 
 The "compiler-message" message includes output from the compiler, such as
 warnings and errors. See the [rustc JSON chapter](../../rustc/json.md) for
@@ -125,7 +125,7 @@ structure:
 }
 ```
 
-#### Artifact messages
+### Artifact messages
 
 For every compilation step, a "compiler-artifact" message is emitted with the
 following structure:
@@ -192,7 +192,7 @@ following structure:
 
 ```
 
-#### Build script output
+### Build script output
 
 The "build-script-executed" message includes the parsed output of a build
 script. Note that this is emitted even if the build script is not run; it will
@@ -233,7 +233,7 @@ may be found in [the chapter on build scripts](build-scripts.md).
 }
 ```
 
-#### Build finished
+### Build finished
 
 The "build-finished" message is emitted at the end of the build.
 
@@ -257,7 +257,7 @@ executed by `cargo run`).
 > so additional test-specific JSON messages may begin arriving after the
 > "build-finished" message if that is enabled.
 
-### Custom subcommands
+## Custom subcommands
 
 Cargo is designed to be extensible with new subcommands without having to modify
 Cargo itself. This is achieved by translating a cargo invocation of the form

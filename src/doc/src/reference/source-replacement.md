@@ -1,4 +1,4 @@
-## Source Replacement
+# Source Replacement
 
 This document is about replacing the crate index. You can read about overriding
 dependencies in the [overriding dependencies] section of this
@@ -34,7 +34,7 @@ token for the specified registry.
 [overriding dependencies]: overriding-dependencies.md
 [registries]: registries.md
 
-### Configuration
+## Configuration
 
 Configuration of replacement sources is done through [`.cargo/config.toml`][config]
 and the full set of available keys are:
@@ -82,7 +82,7 @@ git = "https://example.com/path/to/repo"
 
 [config]: config.md
 
-### Registry Sources
+## Registry Sources
 
 A "registry source" is one that is the same as crates.io itself. That is, it has
 an index served in a git repository which matches the format of the
@@ -92,7 +92,7 @@ then has configuration indicating where to download crates from.
 Currently there is not an already-available project for setting up a mirror of
 crates.io. Stay tuned though!
 
-### Local Registry Sources
+## Local Registry Sources
 
 A "local registry source" is intended to be a subset of another registry
 source, but available on the local filesystem (aka vendoring). Local registries
@@ -111,7 +111,7 @@ Local registries are contained within one directory and contain a number of
 the same format as the crates.io-index project (populated with just entries for
 the crates that are present).
 
-### Directory Sources
+## Directory Sources
 
 A "directory source" is similar to a local registry source where it contains a
 number of crates available on the local filesystem, suitable for vendoring

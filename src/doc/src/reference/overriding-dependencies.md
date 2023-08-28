@@ -1,4 +1,4 @@
-## Overriding Dependencies
+# Overriding Dependencies
 
 The desire to override a dependency can arise through a number of scenarios.
 Most of them, however, boil down to the ability to work with a crate before
@@ -37,7 +37,7 @@ on the different ways to override a dependency.
 > can be used to override the source for a single dependency declaration in a
 > local package.
 
-### Testing a bugfix
+## Testing a bugfix
 
 Let's say you're working with the [`uuid` crate] but while you're working on it
 you discover a bug. You are, however, quite enterprising so you decide to also
@@ -113,7 +113,7 @@ uuid = { git = 'https://github.com/uuid-rs/uuid.git' }
 
 [uuid-repository]: https://github.com/uuid-rs/uuid
 
-### Working with an unpublished minor version
+## Working with an unpublished minor version
 
 Let's now shift gears a bit from bug fixes to adding features. While working on
 `my-library` you discover that a whole new feature is needed in the `uuid`
@@ -171,7 +171,7 @@ if necessary. Here, though, the new `uuid` crate applies to *both* our dependenc
 one version for this entire crate graph, 1.0.1, and it'll be pulled from the git
 repository.
 
-#### Overriding repository URL
+### Overriding repository URL
 
 In case the dependency you want to override isn't loaded from `crates.io`,
 you'll have to change a bit how you use `[patch]`. For example, if the
@@ -184,7 +184,7 @@ my-library = { path = "../my-library/path" }
 
 And that's it!
 
-### Prepublishing a breaking change
+## Prepublishing a breaking change
 
 Let's take a look at working with a new major version of a crate, typically
 accompanied with breaking changes. Sticking with our previous crates, this
@@ -224,7 +224,7 @@ the `my-library` crate will use the `2.0.0` version of `uuid`. This will allow y
 to gradually roll out breaking changes to a crate through a dependency graph
 without being forced to update everything all at once.
 
-### Using `[patch]` with multiple versions
+## Using `[patch]` with multiple versions
 
 You can patch in multiple versions of the same crate with the `package` key
 used to rename dependencies. For example let's say that the `serde` crate has
@@ -248,7 +248,7 @@ Note that when using the `package` key the `serde2` identifier here is actually
 ignored. We simply need a unique name which doesn't conflict with other patched
 crates.
 
-### The `[patch]` section
+## The `[patch]` section
 
 The `[patch]` section of `Cargo.toml` can be used to override dependencies
 with other copies. The syntax is similar to the
@@ -295,7 +295,7 @@ Cargo only looks at the patch settings in the `Cargo.toml` manifest at the
 root of the workspace. Patch settings defined in dependencies will be
 ignored.
 
-### The `[replace]` section
+## The `[replace]` section
 
 > **Note**: `[replace]` is deprecated. You should use the
 > [`[patch]`](#the-patch-section) table instead.
@@ -321,7 +321,7 @@ Cargo only looks at the replace settings in the `Cargo.toml` manifest at the
 root of the workspace. Replace settings defined in dependencies will be
 ignored.
 
-### `paths` overrides
+## `paths` overrides
 
 Sometimes you're only temporarily working on a crate and you don't want to have
 to modify `Cargo.toml` like with the `[patch]` section above. For this use

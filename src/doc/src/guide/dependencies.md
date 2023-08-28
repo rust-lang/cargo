@@ -1,4 +1,4 @@
-## Dependencies
+# Dependencies
 
 [crates.io] is the Rust community's central [*package registry*][def-package-registry]
 that serves as a location to discover and download
@@ -9,7 +9,7 @@ To depend on a library hosted on [crates.io], add it to your `Cargo.toml`.
 
 [crates.io]: https://crates.io/
 
-### Adding a dependency
+## Adding a dependency
 
 If your `Cargo.toml` doesn't already have a `[dependencies]` section, add
 that, then list the [crate][def-crate] name and version that you would like to

@@ -1,4 +1,4 @@
-## Workspaces
+# Workspaces
 
 A *workspace* is a collection of one or more packages, called *workspace
 members*, that are managed together.
@@ -29,7 +29,7 @@ In the `Cargo.toml`, the `[workspace]` table supports the following sections:
 * [`[replace]`](overriding-dependencies.md#the-replace-section) --- Override dependencies (deprecated).
 * [`[profile]`](profiles.md) --- Compiler settings and optimizations.
 
-### The `[workspace]` section
+## The `[workspace]` section
 
 To create a workspace, you add the `[workspace]` table to a `Cargo.toml`:
 ```toml
@@ -40,7 +40,7 @@ To create a workspace, you add the `[workspace]` table to a `Cargo.toml`:
 At minimum, a workspace has to have a member, either with a root package or as
 a virtual manifest.
 
-#### Root package
+### Root package
 
 If the [`[workspace]` section](#the-workspace-section) is added to a
 `Cargo.toml` that already defines a `[package]`, the package is
@@ -56,7 +56,7 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
-#### Virtual workspace
+### Virtual workspace
 
 Alternatively, a `Cargo.toml` file can be created with a `[workspace]` section
 but without a [`[package]` section][package]. This is called a *virtual
@@ -84,7 +84,7 @@ should be specified manually. It is usually deduced from the [`package.edition`]
 field which is absent in virtual manifests and the edition field of a member
 won't affect the resolver used by the workspace.
 
-### The `members` and `exclude` fields 
+## The `members` and `exclude` fields 
 
 The `members` and `exclude` fields define which packages are members of
 the workspace:
@@ -114,7 +114,7 @@ manifest key can be used in member crates to point at a workspace's root to
 override this automatic search. The manual setting can be useful if the member
 is not inside a subdirectory of the workspace root.
 
-#### Package selection
+### Package selection
 
 In a workspace, package-related Cargo commands like [`cargo build`] can use
 the `-p` / `--package` or `--workspace` command-line flags to determine which
@@ -124,7 +124,7 @@ a [virtual workspace](#virtual-workspace), it will apply to all members (as if
 `--workspace` were specified on the command-line).  See also
 [`default-members`](#the-default-members-field).
 
-### The `default-members` field
+## The `default-members` field
 
 The optional `default-members` key can be specified to set the members to
 operate on when in the workspace root and the package selection flags are not
@@ -138,7 +138,7 @@ default-members = ["path/to/member2", "path/to/member3/foo"]
 
 When specified, `default-members` must expand to a subset of `members`.
 
-### The `package` table
+## The `package` table
 
 The `workspace.package` table is where you define keys that can be
 inherited by members of a workspace. These keys can be inherited by
@@ -183,7 +183,7 @@ description.workspace = true
 documentation.workspace = true
 ```
 
-### The `dependencies` table
+## The `dependencies` table
 
 The `workspace.dependencies` table is where you define dependencies to be
 inherited by members of a workspace.
@@ -222,7 +222,7 @@ cc.workspace = true
 rand.workspace = true
 ```
 
-### The `metadata` table
+## The `metadata` table
 
 The `workspace.metadata` table is ignored by Cargo and will not be warned
 about. This section can be used for tools that would like to store workspace

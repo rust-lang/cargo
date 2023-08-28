@@ -1,4 +1,4 @@
-## Cargo Guide
+# Cargo Guide
 
 This guide will give you all that you need to know about how to use Cargo to
 develop Rust packages.

@@ -1,4 +1,4 @@
-### Future incompat report
+# Future incompat report
 
 Cargo checks for future-incompatible warnings in all dependencies. These are warnings for
 changes that may become hard errors in the future, causing the dependency to

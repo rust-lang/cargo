@@ -1,4 +1,4 @@
-## Cargo Home
+# Cargo Home
 
 The "Cargo home" functions as a download and source cache.
 When building a [crate][def-crate], Cargo stores downloaded build dependencies in the Cargo home.
