@@ -121,6 +121,14 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             )
             .into());
         }
+
+        if let Ok(url) = crate_name.into_url() {
+            return Err(anyhow!(
+                "invalid package name: `{url}`
+    Use `cargo install --git {url}` if you meant to install from a git repository."
+            )
+            .into());
+        }
     }
 
     let mut from_cwd = false;
