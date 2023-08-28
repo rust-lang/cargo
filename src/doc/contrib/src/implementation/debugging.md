@@ -16,7 +16,7 @@ CARGO_LOG=debug cargo generate-lockfile
 CARGO_LOG=cargo::core::resolver=trace cargo generate-lockfile
 
 # This will print lots of info about the download process. `trace` prints even more.
-CARGO_HTTP_DEBUG=true CARGO_LOG=cargo::ops::registry=debug cargo fetch
+CARGO_HTTP_DEBUG=true CARGO_LOG=network=debug cargo fetch
 
 # This is an important command for diagnosing fingerprint issues.
 CARGO_LOG=cargo::core::compiler::fingerprint=trace cargo build

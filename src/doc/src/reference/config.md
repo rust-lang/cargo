@@ -622,8 +622,8 @@ crate dependencies and accessing remote git repositories.
 * Environment: `CARGO_HTTP_DEBUG`
 
 If `true`, enables debugging of HTTP requests. The debug information can be
-seen by setting the `CARGO_LOG=cargo::ops::registry=debug` environment
-variable (or use `trace` for even more information).
+seen by setting the `CARGO_LOG=network=debug` environment
+variable (or use `network=trace` for even more information).
 
 Be wary when posting logs from this output in a public location. The output
 may include headers with authentication tokens which you don't want to leak!
