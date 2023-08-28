@@ -9,7 +9,9 @@ pub fn cli() -> Command {
         .arg_quiet()
         .arg_target_triple("Fetch dependencies for the target triple")
         .arg_manifest_path()
-        .after_help("Run `cargo help fetch` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help fetch</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

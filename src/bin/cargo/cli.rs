@@ -513,10 +513,23 @@ impl GlobalArgs {
 
 pub fn cli() -> Command {
     let usage = if is_rustup() {
-        "cargo [+toolchain] [OPTIONS] [COMMAND]\n       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
+        color_print::cstr!("<cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>")
     } else {
-        "cargo [OPTIONS] [COMMAND]\n       cargo [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
+        color_print::cstr!("<cyan,bold>cargo</> <cyan>[OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>")
     };
+
+    let styles = {
+        use clap::builder::styling::*;
+        Styles::styled()
+            .header(AnsiColor::Green.on_default() | Effects::BOLD)
+            .usage(AnsiColor::Green.on_default() | Effects::BOLD)
+            .literal(AnsiColor::Cyan.on_default() | Effects::BOLD)
+            .placeholder(AnsiColor::Cyan.on_default())
+            .error(AnsiColor::Red.on_default() | Effects::BOLD)
+            .valid(AnsiColor::Cyan.on_default() | Effects::BOLD)
+            .invalid(AnsiColor::Yellow.on_default() | Effects::BOLD)
+    };
+
     Command::new("cargo")
         // Subcommands all count their args' display order independently (from 0),
         // which makes their args interspersed with global args. This puts global args last.
@@ -524,42 +537,40 @@ pub fn cli() -> Command {
         // We also want these to come before auto-generated `--help`
         .next_display_order(800)
         .allow_external_subcommands(true)
-        // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
-        // opening clap up to allow us to style our help template
-        .disable_colored_help(true)
+        .styles(styles)
         // Provide a custom help subcommand for calling into man pages
         .disable_help_subcommand(true)
         .override_usage(usage)
-        .help_template(
+        .help_template(color_print::cstr!(
             "\
 Rust's package manager
 
-Usage: {usage}
+<green,bold>Usage:</> {usage}
 
-Options:
+<green,bold>Options:</>
 {options}
 
-Commands:
-    build, b    Compile the current package
-    check, c    Analyze the current package and report errors, but don't build object files
-    clean       Remove the target directory
-    doc, d      Build this package's and its dependencies' documentation
-    new         Create a new cargo package
-    init        Create a new cargo package in an existing directory
-    add         Add dependencies to a manifest file
-    remove      Remove dependencies from a manifest file
-    run, r      Run a binary or example of the local package
-    test, t     Run the tests
-    bench       Run the benchmarks
-    update      Update dependencies listed in Cargo.lock
-    search      Search registry for crates
-    publish     Package and upload this package to the registry
-    install     Install a Rust binary. Default location is $HOME/.cargo/bin
-    uninstall   Uninstall a Rust binary
-    ...         See all commands with --list
+<green,bold>Commands:</>
+    <cyan,bold>build</>, <cyan,bold>b</>    Compile the current package
+    <cyan,bold>check</>, <cyan,bold>c</>    Analyze the current package and report errors, but don't build object files
+    <cyan,bold>clean</>       Remove the target directory
+    <cyan,bold>doc</>, <cyan,bold>d</>      Build this package's and its dependencies' documentation
+    <cyan,bold>new</>         Create a new cargo package
+    <cyan,bold>init</>        Create a new cargo package in an existing directory
+    <cyan,bold>add</>         Add dependencies to a manifest file
+    <cyan,bold>remove</>      Remove dependencies from a manifest file
+    <cyan,bold>run</>, <cyan,bold>r</>      Run a binary or example of the local package
+    <cyan,bold>test</>, <cyan,bold>t</>     Run the tests
+    <cyan,bold>bench</>       Run the benchmarks
+    <cyan,bold>update</>      Update dependencies listed in Cargo.lock
+    <cyan,bold>search</>      Search registry for crates
+    <cyan,bold>publish</>     Package and upload this package to the registry
+    <cyan,bold>install</>     Install a Rust binary. Default location is $HOME/.cargo/bin
+    <cyan,bold>uninstall</>   Uninstall a Rust binary
+    <cyan>...</>         See all commands with <cyan,bold>--list</>
 
-See 'cargo help <command>' for more information on a specific command.\n",
-        )
+See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a specific command.\n",
+        ))
         .arg(flag("version", "Print version info and exit").short('V'))
         .arg(flag("list", "List installed commands"))
         .arg(

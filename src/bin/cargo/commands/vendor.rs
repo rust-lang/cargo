@@ -38,7 +38,9 @@ pub fn cli() -> Command {
         .arg(unsupported("disallow-duplicates"))
         .arg_quiet()
         .arg_manifest_path()
-        .after_help("Run `cargo help vendor` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help vendor</>` for more detailed information.\n"
+        ))
 }
 
 fn unsupported(name: &'static str) -> Arg {

@@ -57,10 +57,10 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .arg_manifest_path()
-        .after_help(
-            "Run `cargo help test` for more detailed information.\n\
-             Run `cargo test -- --help` for test binary options.\n",
-        )
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help test</>` for more detailed information.\n\
+             Run `<cyan,bold>cargo test -- --help</>` for test binary options.\n",
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

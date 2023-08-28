@@ -18,7 +18,9 @@ pub fn cli() -> Command {
         .arg_index()
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .arg_quiet()
-        .after_help("Run `cargo help search` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help search</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

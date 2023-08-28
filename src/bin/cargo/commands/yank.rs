@@ -20,7 +20,9 @@ pub fn cli() -> Command {
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
         .arg_quiet()
-        .after_help("Run `cargo help yank` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help yank</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

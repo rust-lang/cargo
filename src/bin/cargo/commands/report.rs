@@ -5,7 +5,9 @@ use cargo::drop_println;
 pub fn cli() -> Command {
     subcommand("report")
         .about("Generate and display various kinds of reports")
-        .after_help("Run `cargo help report` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help report</>` for more detailed information.\n"
+        ))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(

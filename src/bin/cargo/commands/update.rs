@@ -42,7 +42,9 @@ pub fn cli() -> Command {
                 .help_heading(heading::PACKAGE_SELECTION),
         )
         .arg_manifest_path()
-        .after_help("Run `cargo help update` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help update</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
