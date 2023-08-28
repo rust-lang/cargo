@@ -197,6 +197,13 @@ varies by where the repo is hosted; GitHub in particular exposes a reference to
 the most recent commit of every pull request as shown, but other git hosts often
 provide something equivalent, possibly under a different naming scheme.
 
+Once a `git` dependency has been added, Cargo will lock that dependency to the
+latest commit at the time. New commits will not be pulled down automatically
+once the lock is in place. However, they can be pulled down manually with
+`cargo update`.
+
+See [Git Authentication] for help with git authentication for private repos.
+
 > **Note**: Neither the `git` key nor the `path` key changes the meaning of the
 > `version` key: the `version` key always implies that the package is available
 > in a registry. `version`, `git`, and `path` keys are considered [separate
@@ -205,13 +212,6 @@ provide something equivalent, possibly under a different naming scheme.
 > When the dependency is retrieved from `git`, the `version` key will _not_
 > affect which commit is used, but the version information in the dependency's
 > `Cargo.toml` file will still be validated against the `version` requirement.
-
-Once a `git` dependency has been added, Cargo will lock that dependency to the
-latest commit at the time. New commits will not be pulled down automatically
-once the lock is in place. However, they can be pulled down manually with
-`cargo update`.
-
-See [Git Authentication] for help with git authentication for private repos.
 
 > **Note**: [crates.io] does not allow packages to be published with
 > dependencies on code published outside of [crates.io] itself
