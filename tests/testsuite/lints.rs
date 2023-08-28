@@ -414,6 +414,47 @@ error: usage of an `unsafe` block
 }
 
 #[cargo_test]
+fn workspace_and_package_lints() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [lints]
+                workspace = true
+                [lints.rust]
+                "unsafe_code" = "allow"
+
+                [workspace.lints.rust]
+                "unsafe_code" = "deny"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+pub fn foo(num: i32) -> u32 {
+    unsafe { std::mem::transmute(num) }
+}
+",
+        )
+        .build();
+
+    foo.cargo("check -Zlints")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: usage of an `unsafe` block
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn attribute_has_precedence() {
     let foo = project()
         .file(
