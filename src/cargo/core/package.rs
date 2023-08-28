@@ -712,7 +712,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // happen during `wait_for_download`
         let token = self.next;
         self.next += 1;
-        debug!("downloading {} as {}", id, token);
+        debug!(target: "network", "downloading {} as {}", id, token);
         assert!(self.pending_ids.insert(id));
 
         let (mut handle, _timeout) = http_handle_and_timeout(self.set.config)?;
@@ -731,7 +731,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         crate::try_old_curl_http2_pipewait!(self.set.multiplexing, handle);
 
         handle.write_function(move |buf| {
-            debug!("{} - {} bytes of data", token, buf.len());
+            debug!(target: "network", "{} - {} bytes of data", token, buf.len());
             tls::with(|downloads| {
                 if let Some(downloads) = downloads {
                     downloads.pending[&token]
@@ -812,7 +812,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let (dl, data) = loop {
             assert_eq!(self.pending.len(), self.pending_ids.len());
             let (token, result) = self.wait_for_curl()?;
-            debug!("{} finished with {:?}", token, result);
+            debug!(target: "network", "{} finished with {:?}", token, result);
 
             let (mut dl, handle) = self
                 .pending
@@ -873,7 +873,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                     return Err(e.context(format!("failed to download from `{}`", dl.url)))
                 }
                 RetryResult::Retry(sleep) => {
-                    debug!("download retry {} for {sleep}ms", dl.url);
+                    debug!(target: "network", "download retry {} for {sleep}ms", dl.url);
                     self.sleeping.push(sleep, (dl, handle));
                 }
             }
@@ -969,7 +969,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                     .perform()
                     .with_context(|| "failed to perform http requests")
             })?;
-            debug!("handles remaining: {}", n);
+            debug!(target: "network", "handles remaining: {}", n);
             let results = &mut self.results;
             let pending = &self.pending;
             self.set.multi.messages(|msg| {
@@ -978,7 +978,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 if let Some(result) = msg.result_for(handle) {
                     results.push((token, result));
                 } else {
-                    debug!("message without a result (?)");
+                    debug!(target: "network", "message without a result (?)");
                 }
             });
 
@@ -988,7 +988,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             assert_ne!(self.remaining(), 0);
             if self.pending.is_empty() {
                 let delay = self.sleeping.time_to_next().unwrap();
-                debug!("sleeping main thread for {delay:?}");
+                debug!(target: "network", "sleeping main thread for {delay:?}");
                 std::thread::sleep(delay);
             } else {
                 let min_timeout = Duration::new(1, 0);

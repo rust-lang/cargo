@@ -335,7 +335,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                 }),
                 RetryResult::Err(e) => Err(e),
                 RetryResult::Retry(sleep) => {
-                    debug!("download retry {:?} for {sleep}ms", download.path);
+                    debug!(target: "network", "download retry {:?} for {sleep}ms", download.path);
                     self.downloads.sleeping.push(sleep, (download, handle));
                     continue;
                 }
@@ -551,7 +551,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         && path == Path::new(RegistryConfig::NAME)
                         && self.config.cli_unstable().registry_auth =>
                 {
-                    debug!("re-attempting request for config.json with authorization included.");
+                    debug!(target: "network", "re-attempting request for config.json with authorization included.");
                     self.fresh.remove(path);
                     self.auth_required = true;
 
@@ -568,9 +568,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                                     }
                                 }
                                 Ok(challenge) => {
-                                    debug!("ignoring non-Cargo challenge: {}", challenge.scheme)
+                                    debug!(target: "network", "ignoring non-Cargo challenge: {}", challenge.scheme)
                                 }
-                                Err(e) => debug!("failed to parse challenge: {}", e),
+                                Err(e) => {
+                                    debug!(target: "network", "failed to parse challenge: {}", e)
+                                }
                             }
                         }
                     }
@@ -618,7 +620,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         let mut handle = http_handle(self.config)?;
         let full_url = self.full_url(path);
-        debug!("fetch {}", full_url);
+        debug!(target: "network", "fetch {}", full_url);
         handle.get(true)?;
         handle.url(&full_url)?;
         handle.follow_location(true)?;
@@ -653,7 +655,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 self.auth_error_headers.clone(),
             )?;
             headers.append(&format!("Authorization: {}", authorization))?;
-            trace!("including authorization for {}", full_url);
+            trace!(target: "network", "including authorization for {}", full_url);
         }
         handle.http_headers(headers)?;
 
@@ -662,7 +664,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // We do that through this token. Each request (and associated response) gets one.
         let token = self.downloads.next;
         self.downloads.next += 1;
-        debug!("downloading {} as {}", path.display(), token);
+        debug!(target: "network", "downloading {} as {}", path.display(), token);
         let is_new = self.downloads.pending_paths.insert(path.to_path_buf());
         assert!(is_new, "path queued for download more than once");
 
@@ -671,7 +673,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // That thread-local is set up in `block_until_ready` when it calls self.multi.perform,
         // which is what ultimately calls this method.
         handle.write_function(move |buf| {
-            trace!("{} - {} bytes of data", token, buf.len());
+            trace!(target: "network", "{} - {} bytes of data", token, buf.len());
             tls::with(|downloads| {
                 if let Some(downloads) = downloads {
                     downloads.pending[&token]
@@ -772,7 +774,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        trace!(
+        trace!(target: "network",
             "block_until_ready: {} transfers pending",
             self.downloads.pending.len()
         );
@@ -787,7 +789,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     .perform()
                     .with_context(|| "failed to perform http requests")
             })?;
-            trace!("{} transfers remaining", remaining_in_multi);
+            trace!(target: "network", "{} transfers remaining", remaining_in_multi);
 
             if remaining_in_multi + self.downloads.sleeping.len() as u32 == 0 {
                 return Ok(());
@@ -795,7 +797,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
             if self.downloads.pending.is_empty() {
                 let delay = self.downloads.sleeping.time_to_next().unwrap();
-                debug!("sleeping main thread for {delay:?}");
+                debug!(target: "network", "sleeping main thread for {delay:?}");
                 std::thread::sleep(delay);
             } else {
                 // We have no more replies to provide the caller with,

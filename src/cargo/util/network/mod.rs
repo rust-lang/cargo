@@ -29,7 +29,7 @@ macro_rules! try_old_curl {
         let result = $e;
         if cfg!(target_os = "macos") {
             if let Err(e) = result {
-                ::tracing::warn!("ignoring libcurl {} error: {}", $msg, e);
+                ::tracing::warn!(target: "network", "ignoring libcurl {} error: {}", $msg, e);
             }
         } else {
             use ::anyhow::Context;
