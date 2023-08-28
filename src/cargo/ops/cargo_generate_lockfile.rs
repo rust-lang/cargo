@@ -21,6 +21,7 @@ pub struct UpdateOptions<'a> {
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
+    let max_rust_version = ws.rust_version();
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
@@ -30,6 +31,7 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
         None,
         &[],
         true,
+        max_rust_version,
     )?;
     ops::write_pkg_lockfile(ws, &mut resolve)?;
     Ok(())
@@ -47,6 +49,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     // Updates often require a lot of modifications to the registry, so ensure
     // that we're synchronized against other Cargos.
     let _lock = ws.config().acquire_package_cache_lock()?;
+
+    let max_rust_version = ws.rust_version();
 
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
@@ -67,6 +71,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         None,
                         &[],
                         true,
+                        max_rust_version,
                     )?
                 }
             }
@@ -125,6 +130,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         Some(&to_avoid),
         &[],
         true,
+        max_rust_version,
     )?;
 
     // Summarize what is changing for the user.

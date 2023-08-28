@@ -188,6 +188,7 @@ pub fn resolve_with_config_raw(
     .unwrap();
     let opts = ResolveOpts::everything();
     let start = Instant::now();
+    let max_rust_version = None;
     let resolve = resolver::resolve(
         &[(summary, opts)],
         &[],
@@ -195,6 +196,7 @@ pub fn resolve_with_config_raw(
         &VersionPreferences::default(),
         Some(config),
         true,
+        max_rust_version,
     );
 
     // The largest test in our suite takes less then 30 sec.

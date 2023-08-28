@@ -108,7 +108,7 @@ impl From<VersionReq> for OptVersionReq {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Debug)]
 pub struct PartialVersion {
     pub major: u64,
     pub minor: Option<u64>,
