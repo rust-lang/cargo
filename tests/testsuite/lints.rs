@@ -211,6 +211,38 @@ Caused by:
 }
 
 #[cargo_test]
+fn invalid_type_in_lint_value() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [workspace.lints.rust]
+                rust-2018-idioms = -1
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check -Zlints")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]/Cargo.toml`
+
+Caused by:
+  invalid type: integer `-1`, expected a string or map
+  in `rust.rust-2018-idioms`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn fail_on_tool_injection() {
     let foo = project()
         .file(

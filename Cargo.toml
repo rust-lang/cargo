@@ -77,6 +77,7 @@ same-file = "1.0.6"
 security-framework = "2.9.2"
 semver = { version = "1.0.18", features = ["serde"] }
 serde = "1.0.188"
+serde-untagged = "0.1.0"
 serde-value = "0.7.0"
 serde_ignored = "0.1.9"
 serde_json = "1.0.104"
@@ -163,6 +164,7 @@ rand.workspace = true
 rustfix.workspace = true
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
+serde-untagged.workspace = true
 serde-value.workspace = true
 serde_ignored.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }

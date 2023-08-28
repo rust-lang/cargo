@@ -1392,7 +1392,7 @@ Caused by:
     |
   6 |                 build = 3
     |                         ^
-  expected a boolean or a string
+  invalid type: integer `3`, expected a boolean or string
 ",
         )
         .run();
@@ -1417,6 +1417,117 @@ fn warn_semver_metadata() {
         .build();
     p.cargo("check")
         .with_stderr_contains("[WARNING] version requirement `1.0.0+1234` for dependency `bar`[..]")
+        .run();
+}
+
+#[cargo_test]
+fn bad_http_ssl_version() {
+    // Invalid type in SslVersionConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [http]
+            ssl-version = ["tlsv1.2", "tlsv1.3"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `http.ssl-version`
+
+Caused by:
+  invalid type: sequence, expected a string or map
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_http_ssl_version_range() {
+    // Invalid type in SslVersionConfigRange.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [http]
+            ssl-version.min = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `http.ssl-version`
+
+Caused by:
+  error in [..]/config.toml: `http.ssl-version.min` expected a string, but found a boolean
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_build_jobs() {
+    // Invalid type in JobsConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            jobs = { default = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `build.jobs`
+
+Caused by:
+  invalid type: map, expected an integer or string
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_build_target() {
+    // Invalid type in BuildTargetConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target.'cfg(unix)' = "x86_64"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `build.target`
+
+Caused by:
+  error in [..]/config.toml: could not load config key `build.target`
+
+Caused by:
+  invalid type: map, expected a string or array
+",
+        )
         .run();
 }
 
