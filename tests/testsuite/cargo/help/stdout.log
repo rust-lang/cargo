@@ -6,7 +6,7 @@ Usage: cargo [..][OPTIONS] [COMMAND]
 Options:
   -V, --version             Print version info and exit
       --list                List installed commands
-      --explain <CODE>      Run `rustc --explain CODE`
+      --explain <CODE>      Provide a detailed explanation of a rustc error message
   -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
   -q, --quiet               Do not print cargo log messages
       --color <WHEN>        Coloring: auto, always, never
