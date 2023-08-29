@@ -72,6 +72,18 @@ fn toolchain() {
 }
 
 #[cargo_test]
+fn url() {
+    pkg("foo", "0.0.1");
+    cargo_process("install https://github.com/bar/foo")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid package name: `https://github.com/bar/foo`
+    Use `cargo install --git https://github.com/bar/foo` if you meant to install from a git repository.")
+        .run();
+}
+
+#[cargo_test]
 fn simple_with_message_format() {
     pkg("foo", "0.0.1");
 
