@@ -542,7 +542,7 @@ Usage: {usage}
 Options:
 {options}
 
-Some common cargo commands are (see all commands with --list):
+Commands:
     build, b    Compile the current package
     check, c    Analyze the current package and report errors, but don't build object files
     clean       Remove the target directory
@@ -559,6 +559,7 @@ Some common cargo commands are (see all commands with --list):
     publish     Package and upload this package to the registry
     install     Install a Rust binary. Default location is $HOME/.cargo/bin
     uninstall   Uninstall a Rust binary
+    ...         See all commands with --list
 
 See 'cargo help <command>' for more information on a specific command.\n",
         )
