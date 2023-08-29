@@ -3499,7 +3499,7 @@ impl fmt::Debug for PathValue {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(expecting = "a map")]
+#[serde(expecting = "a lints table")]
 pub struct MaybeWorkspaceLints {
     #[serde(skip_serializing_if = "is_false")]
     #[serde(deserialize_with = "bool_no_false", default)]

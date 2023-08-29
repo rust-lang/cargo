@@ -172,7 +172,7 @@ fn malformed_on_nightly() {
 error: failed to parse manifest[..]
 
 Caused by:
-  invalid type: integer `20`, expected a map
+  invalid type: integer `20`, expected a lints table
 ",
         )
         .run();
