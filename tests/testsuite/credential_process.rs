@@ -656,3 +656,44 @@ CARGO_REGISTRY_INDEX_URL=Some([..])
         )
         .run();
 }
+
+#[cargo_test]
+fn unsupported_version() {
+    let cred_proj = project()
+        .at("new-vers")
+        .file("Cargo.toml", &basic_manifest("new-vers", "1.0.0"))
+        .file(
+            "src/main.rs",
+            &r####"
+                fn main() {
+                    println!(r#"{{"v":[998, 999]}}"#);
+                    assert_eq!(std::env::args().skip(1).next().unwrap(), "--cargo-plugin");
+                    let mut buffer = String::new();
+                    std::io::stdin().read_line(&mut buffer).unwrap();
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    panic!("child process should have been killed before getting here");
+                } "####,
+        )
+        .build();
+    cred_proj.cargo("build").run();
+    let provider = toml_bin(&cred_proj, "new-vers");
+
+    let registry = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .credential_provider(&[&provider])
+        .build();
+
+    cargo_process("login -Z credential-process abcdefg")
+        .masquerade_as_nightly_cargo(&["credential-process"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] [..]
+[ERROR] credential provider `[..]` failed action `login`
+
+Caused by:
+  credential provider supports protocol versions [998, 999], while Cargo supports [1]
+"#,
+        )
+        .run();
+}
