@@ -156,7 +156,7 @@ error: invalid package ID specification: `two-ver@0`
 <tab>Did you mean `two-ver`?
 
 Caused by:
-  cannot parse '0' as a semver
+  cannot parse '0' as a SemVer version
 ",
         )
         .run();
@@ -169,7 +169,7 @@ Caused by:
 error: invalid package ID specification: `two-ver@0.2`
 
 Caused by:
-  cannot parse '0.2' as a semver
+  cannot parse '0.2' as a SemVer version
 ",
         )
         .run();

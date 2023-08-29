@@ -15,7 +15,10 @@ impl<'a> ToSemver for &'a str {
     fn to_semver(self) -> CargoResult<Version> {
         match Version::parse(self.trim()) {
             Ok(v) => Ok(v),
-            Err(..) => Err(anyhow::format_err!("cannot parse '{}' as a semver", self)),
+            Err(..) => Err(anyhow::format_err!(
+                "cannot parse '{}' as a SemVer version",
+                self
+            )),
         }
     }
 }
