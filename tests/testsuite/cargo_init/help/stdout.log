@@ -6,10 +6,9 @@ Arguments:
   [path]  [default: .]
 
 Options:
-      --vcs <VCS>            Initialize a new repository for the given version control system (git,
-                             hg, pijul, or fossil) or do not initialize any version control at all
-                             (none), overriding a global configuration. [possible values: git, hg,
-                             pijul, fossil, none]
+      --vcs <VCS>            Initialize a new repository for the given version control system,
+                             overriding a global configuration. [possible values: git, hg, pijul,
+                             fossil, none]
       --bin                  Use a binary (application) template [default]
       --lib                  Use a library template
       --edition <YEAR>       Edition to set for the crate generated [possible values: 2015, 2018,
