@@ -4,8 +4,8 @@ Usage: cargo[EXE] update [OPTIONS] [SPEC]...
 
 Options:
       --dry-run             Don't actually write the lockfile
-      --aggressive          Force updating all dependencies of SPEC as well when used with -p
-      --precise <PRECISE>   Update a single dependency to exactly PRECISE when used with -p
+      --aggressive          Force updating all dependencies of [SPEC]... as well
+      --precise <PRECISE>   Update [SPEC] to exactly PRECISE
   -q, --quiet               Do not print cargo log messages
   -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
       --color <WHEN>        Coloring: auto, always, never

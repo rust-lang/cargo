@@ -25,17 +25,14 @@ pub fn cli() -> Command {
         .arg(
             flag(
                 "aggressive",
-                "Force updating all dependencies of SPEC as well when used with -p",
+                "Force updating all dependencies of [SPEC]... as well",
             )
             .conflicts_with("precise"),
         )
         .arg(
-            opt(
-                "precise",
-                "Update a single dependency to exactly PRECISE when used with -p",
-            )
-            .value_name("PRECISE")
-            .requires("package-group"),
+            opt("precise", "Update [SPEC] to exactly PRECISE")
+                .value_name("PRECISE")
+                .requires("package-group"),
         )
         .arg_quiet()
         .arg(
