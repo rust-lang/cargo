@@ -146,6 +146,34 @@ fn multiple_versions() {
         .with_stdout("https://github.com/rust-lang/crates.io-index#two-ver@0.2.0")
         .run();
 
+    // Incomplete version.
+    p.cargo("pkgid two-ver@0")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: invalid package ID specification: `two-ver@0`
+
+<tab>Did you mean `two-ver`?
+
+Caused by:
+  cannot parse '0' as a semver
+",
+        )
+        .run();
+
+    // Incomplete version.
+    p.cargo("pkgid two-ver@0.2")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: invalid package ID specification: `two-ver@0.2`
+
+Caused by:
+  cannot parse '0.2' as a semver
+",
+        )
+        .run();
+
     // Ambiguous.
     p.cargo("pkgid two-ver")
         .with_status(101)
