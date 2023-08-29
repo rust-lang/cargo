@@ -260,8 +260,7 @@ pub trait CommandExt: Sized {
             opt(
                 "vcs",
                 "Initialize a new repository for the given version \
-                 control system (git, hg, pijul, or fossil) or do not \
-                 initialize any version control at all (none), overriding \
+                 control system, overriding \
                  a global configuration.",
             )
             .value_name("VCS")
