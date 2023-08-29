@@ -105,7 +105,7 @@ fn transitive_minor_update() {
     //
     // Also note that this is probably counterintuitive and weird. We may wish
     // to change this one day.
-    p.cargo("update -p serde")
+    p.cargo("update serde")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -155,7 +155,7 @@ fn conservative() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
-    p.cargo("update -p serde")
+    p.cargo("update serde")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -381,7 +381,7 @@ fn update_precise() {
 
     Package::new("serde", "0.2.0").publish();
 
-    p.cargo("update -p serde:0.2.1 --precise 0.2.0")
+    p.cargo("update serde:0.2.1 --precise 0.2.0")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -417,7 +417,7 @@ fn update_precise_do_not_force_update_deps() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
-    p.cargo("update -p serde:0.2.1 --precise 0.2.2")
+    p.cargo("update serde:0.2.1 --precise 0.2.2")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -453,7 +453,7 @@ fn update_aggressive() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
-    p.cargo("update -p serde:0.2.1 --aggressive")
+    p.cargo("update serde:0.2.1 --aggressive")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -490,13 +490,13 @@ fn update_aggressive_conflicts_with_precise() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
-    p.cargo("update -p serde:0.2.1 --precise 0.2.2 --aggressive")
+    p.cargo("update serde:0.2.1 --precise 0.2.2 --aggressive")
         .with_status(1)
         .with_stderr(
             "\
 error: the argument '--precise <PRECISE>' cannot be used with '--aggressive'
 
-Usage: cargo[EXE] update --package [<SPEC>] --precise <PRECISE>
+Usage: cargo[EXE] update --precise <PRECISE> <SPEC|--package [<SPEC>]>
 
 For more information, try '--help'.
 ",
@@ -528,7 +528,7 @@ fn update_precise_first_run() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("update -p serde --precise 0.2.0")
+    p.cargo("update serde --precise 0.2.0")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -682,7 +682,7 @@ fn update_precise_first_run() {
         )
         .run();
 
-    p.cargo("update -p serde --precise 0.2.0")
+    p.cargo("update serde --precise 0.2.0")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -758,7 +758,7 @@ fn dry_run_update() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
-    p.cargo("update -p serde --dry-run")
+    p.cargo("update serde --dry-run")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -818,7 +818,7 @@ fn precise_with_build_metadata() {
     Package::new("bar", "0.1.1+extra-stuff.1").publish();
     Package::new("bar", "0.1.2+extra-stuff.2").publish();
 
-    p.cargo("update -p bar --precise 0.1")
+    p.cargo("update bar --precise 0.1")
         .with_status(101)
         .with_stderr(
             "\
@@ -830,7 +830,7 @@ Caused by:
         )
         .run();
 
-    p.cargo("update -p bar --precise 0.1.1+does-not-match")
+    p.cargo("update bar --precise 0.1.1+does-not-match")
         .with_status(101)
         .with_stderr(
             "\
@@ -842,7 +842,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         )
         .run();
 
-    p.cargo("update -p bar --precise 0.1.1")
+    p.cargo("update bar --precise 0.1.1")
         .with_stderr(
             "\
 [UPDATING] [..] index
@@ -852,7 +852,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .run();
 
     Package::new("bar", "0.1.3").publish();
-    p.cargo("update -p bar --precise 0.1.3+foo")
+    p.cargo("update bar --precise 0.1.3+foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -864,7 +864,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         )
         .run();
 
-    p.cargo("update -p bar --precise 0.1.3")
+    p.cargo("update bar --precise 0.1.3")
         .with_stderr(
             "\
 [UPDATING] [..] index

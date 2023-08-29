@@ -464,10 +464,10 @@ situations may require specifying unusual requirements.
   If you fail to do this, it may not be immediately obvious because Cargo can
   opportunistically choose the newest version when you run a blanket `cargo
   update`. However, if another user depends on your library, and runs `cargo
-  update -p your-library`, it will *not* automatically update "bar" if it is
+  update your-library`, it will *not* automatically update "bar" if it is
   locked in their `Cargo.lock`. It will only update "bar" in that situation if
   the dependency declaration is also updated. Failure to do so can cause
-  confusing build errors for the user using `cargo update -p`.
+  confusing build errors for the user using `cargo update your-library`.
 * If two packages are tightly coupled, then an `=` dependency requirement may
   help ensure that they stay in sync. For example, a library with a companion
   proc-macro library will sometimes make assumptions between the two libraries

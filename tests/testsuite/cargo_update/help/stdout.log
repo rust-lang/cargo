@@ -1,6 +1,6 @@
 Update dependencies as recorded in the local lock file
 
-Usage: cargo[EXE] update [OPTIONS]
+Usage: cargo[EXE] update [OPTIONS] [SPEC]...
 
 Options:
       --dry-run             Don't actually write the lockfile
@@ -14,8 +14,8 @@ Options:
   -h, --help                Print help
 
 Package Selection:
-  -w, --workspace         Only update the workspace packages
-  -p, --package [<SPEC>]  Package to update
+  -w, --workspace  Only update the workspace packages
+  [SPEC]...    Package to update
 
 Manifest Options:
       --manifest-path <PATH>  Path to Cargo.toml

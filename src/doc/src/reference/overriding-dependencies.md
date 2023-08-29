@@ -97,7 +97,7 @@ $ cargo build
 
 And that's it! You're now building with the local version of `uuid` (note the
 path in parentheses in the build output). If you don't see the local path version getting
-built then you may need to run `cargo update -p uuid --precise $version` where
+built then you may need to run `cargo update uuid --precise $version` where
 `$version` is the version of the locally checked out copy of `uuid`.
 
 Once you've fixed the bug you originally found the next thing you'll want to do

@@ -251,7 +251,7 @@ pub struct RegistrySource<'cfg> {
     /// yanked.
     ///
     /// This is populated from the entries in `Cargo.lock` to ensure that
-    /// `cargo update -p somepkg` won't unlock yanked entries in `Cargo.lock`.
+    /// `cargo update somepkg` won't unlock yanked entries in `Cargo.lock`.
     /// Otherwise, the resolver would think that those entries no longer
     /// exist, and it would trigger updates to unrelated packages.
     yanked_whitelist: HashSet<PackageId>,

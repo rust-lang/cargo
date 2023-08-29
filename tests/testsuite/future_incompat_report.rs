@@ -369,7 +369,7 @@ fn suggestions_for_updates() {
     // project or something). This could use some more consideration of how to
     // handle this better (maybe only trigger an update if it hasn't updated
     // in a long while?).
-    p.cargo("update -p without_updates").run();
+    p.cargo("update without_updates").run();
 
     let update_message = "\
 - Some affected dependencies have newer versions available.

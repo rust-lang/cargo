@@ -807,7 +807,7 @@ required by package `foo v0.0.1 ([..])`
         )
         .run();
 
-    p.cargo("update -p baz")
+    p.cargo("update baz")
         .with_stderr_contains(
             "\
 [UPDATING] `[..]` index
@@ -952,7 +952,7 @@ fn update_lockfile() {
     Package::new("bar", "0.0.3").publish();
     paths::home().join(".cargo/registry").rm_rf();
     println!("0.0.2 update");
-    p.cargo("update -p bar --precise 0.0.2")
+    p.cargo("update bar --precise 0.0.2")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -975,7 +975,7 @@ fn update_lockfile() {
         .run();
 
     println!("0.0.3 update");
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1000,7 +1000,7 @@ fn update_lockfile() {
     println!("new dependencies update");
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
     Package::new("spam", "0.2.5").publish();
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1012,7 +1012,7 @@ fn update_lockfile() {
 
     println!("new dependencies update");
     Package::new("bar", "0.0.5").publish();
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1433,7 +1433,7 @@ fn update_transitive_dependency() {
 
     Package::new("b", "0.1.1").publish();
 
-    p.cargo("update -pb")
+    p.cargo("update b")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1504,7 +1504,7 @@ fn update_backtracking_ok() {
         .dep("cookie", "0.1.0")
         .publish();
 
-    p.cargo("update -p hyper")
+    p.cargo("update hyper")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1555,7 +1555,7 @@ fn update_multiple_packages() {
     Package::new("b", "0.1.1").publish();
     Package::new("c", "0.1.1").publish();
 
-    p.cargo("update -pa -pb")
+    p.cargo("update a b")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1565,7 +1565,7 @@ fn update_multiple_packages() {
         )
         .run();
 
-    p.cargo("update -pb -pc")
+    p.cargo("update b c")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1671,7 +1671,7 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
         .publish();
 
     p.cargo("generate-lockfile").run();
-    p.cargo("update -pfoobar --precise=0.2.0").run();
+    p.cargo("update foobar --precise=0.2.0").run();
 }
 
 #[cargo_test]

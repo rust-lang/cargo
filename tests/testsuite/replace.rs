@@ -533,7 +533,7 @@ fn override_adds_some_deps() {
     p.cargo("check").with_stdout("").run();
 
     Package::new("baz", "0.1.2").publish();
-    p.cargo("update -p")
+    p.cargo("update")
         .arg(&format!("{}#bar", foo.url()))
         .with_stderr(
             "\
@@ -542,7 +542,7 @@ fn override_adds_some_deps() {
 ",
         )
         .run();
-    p.cargo("update -p https://github.com/rust-lang/crates.io-index#bar")
+    p.cargo("update  https://github.com/rust-lang/crates.io-index#bar")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index

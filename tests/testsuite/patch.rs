@@ -1965,8 +1965,8 @@ fn update_unused_new_version() {
     // Restore the lock file, and see if `update` will work, too.
     fs::copy(p.root().join("Cargo.lock.bak"), p.root().join("Cargo.lock")).unwrap();
 
-    // Try `update -p`.
-    p.cargo("update -p bar")
+    // Try `update <pkg>`.
+    p.cargo("update bar")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -2425,7 +2425,7 @@ fn can_update_with_alt_reg() {
     p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
     // This does nothing, due to `=` requirement.
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(
             "\
 [UPDATING] `alternative` index

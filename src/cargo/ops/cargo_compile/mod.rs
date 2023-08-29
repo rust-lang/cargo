@@ -508,7 +508,7 @@ pub fn create_bcx<'a, 'cfg>(
             } else if !unit.is_local() {
                 format!(
                     "Either upgrade to rustc {} or newer, or use\n\
-                     cargo update -p {}@{} --precise ver\n\
+                     cargo update {}@{} --precise ver\n\
                      where `ver` is the latest version of `{}` supporting rustc {}",
                     version,
                     unit.pkg.name(),

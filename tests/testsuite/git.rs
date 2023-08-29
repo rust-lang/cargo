@@ -742,11 +742,11 @@ fn update_with_shared_deps() {
 
     // By default, not transitive updates
     println!("dep1 update");
-    p.cargo("update -p dep1").with_stdout("").run();
+    p.cargo("update dep1").with_stdout("").run();
 
     // Don't do anything bad on a weird --precise argument
     println!("bar bad precise update");
-    p.cargo("update -p bar --precise 0.1.2")
+    p.cargo("update bar --precise 0.1.2")
         .with_status(101)
         .with_stderr(
             "\
@@ -764,14 +764,14 @@ Caused by:
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
     println!("bar precise update");
-    p.cargo("update -p bar --precise")
+    p.cargo("update bar --precise")
         .arg(&old_head.to_string())
         .with_stdout("")
         .run();
 
     // Updating aggressively should, however, update the repo.
     println!("dep1 aggressive update");
-    p.cargo("update -p dep1 --aggressive")
+    p.cargo("update dep1 --aggressive")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
@@ -795,7 +795,7 @@ Caused by:
         .run();
 
     // We should be able to update transitive deps
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`",
             git_project.url()
@@ -1183,7 +1183,7 @@ fn two_deps_only_update_one() {
     let oid = git::commit(&repo);
     println!("dep1 head sha: {}", oid_to_short_sha(oid));
 
-    p.cargo("update -p dep1")
+    p.cargo("update dep1")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
@@ -1881,7 +1881,7 @@ fn update_ambiguous() {
         .build();
 
     p.cargo("generate-lockfile").run();
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_status(101)
         .with_stderr(
             "\
@@ -1928,7 +1928,7 @@ fn update_one_dep_in_repo_with_many_deps() {
         .build();
 
     p.cargo("generate-lockfile").run();
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(&format!("[UPDATING] git repository `{}`", bar.url()))
         .run();
 }
@@ -2091,7 +2091,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
     git::add(&repo);
     git::commit(&repo);
 
-    p.cargo("update -p dep").run();
+    p.cargo("update dep").run();
     let lockfile = p.read_lockfile();
     assert!(
         !lockfile.contains(&rev1.to_string()),
