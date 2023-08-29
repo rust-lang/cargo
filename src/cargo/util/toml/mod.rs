@@ -2579,8 +2579,7 @@ impl TomlManifest {
                 .badges
                 .as_ref()
                 .map(|_| MaybeWorkspace::Defined(metadata.badges.clone())),
-            lints: lints
-                .map(|lints| toml::Value::try_from(MaybeWorkspaceLints::Defined(lints)).unwrap()),
+            lints: lints.map(|lints| toml::Value::try_from(lints).unwrap()),
         };
         let mut manifest = Manifest::new(
             summary,
