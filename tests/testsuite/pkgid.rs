@@ -84,6 +84,19 @@ error: package ID specification `crates_io` did not match any packages
         )
         .run();
 
+    // Ambiguous.
+    p.cargo("pkgid two-ver")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: There are multiple `two-ver` packages in your project, and the specification `two-ver` is ambiguous.
+Please re-run this command with `-p <spec>` where `<spec>` is one of the following:
+  two-ver@0.1.0
+  two-ver@0.2.0
+",
+        )
+        .run();
+
     // Bad version.
     p.cargo("pkgid two-ver:0.3.0")
         .with_status(101)
