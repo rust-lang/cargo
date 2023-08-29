@@ -102,3 +102,20 @@ fn default_registry_configured() {
         .with_stderr("[LOGOUT] not currently logged in to `dummy-registry`")
         .run();
 }
+
+#[cargo_test]
+fn logout_asymmetric() {
+    let _registry = registry::RegistryBuilder::new()
+        .token(cargo_test_support::registry::Token::rfc_key())
+        .build();
+
+    cargo_process("logout --registry crates-io -Zasymmetric-token")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
+        .with_stderr("[LOGOUT] secret-key for `crates-io` has been removed from local storage")
+        .run();
+
+    cargo_process("logout --registry crates-io -Zasymmetric-token")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
+        .with_stderr("[LOGOUT] not currently logged in to `crates-io`")
+        .run();
+}

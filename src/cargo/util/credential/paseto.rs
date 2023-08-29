@@ -200,8 +200,17 @@ impl<'a> Credential for PasetoCredential<'a> {
                 Ok(CredentialResponse::Login)
             }
             Action::Logout => {
-                config::save_credentials(self.config, None, &sid)?;
-                Ok(CredentialResponse::Logout)
+                if reg_cfg.and_then(|c| c.secret_key).is_some() {
+                    config::save_credentials(self.config, None, &sid)?;
+                    let reg_name = sid.display_registry_name();
+                    let _ = self.config.shell().status(
+                        "Logout",
+                        format!("secret-key for `{reg_name}` has been removed from local storage"),
+                    );
+                    Ok(CredentialResponse::Logout)
+                } else {
+                    Err(Error::NotFound)
+                }
             }
             _ => Err(Error::OperationNotSupported),
         }
