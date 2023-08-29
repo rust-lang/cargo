@@ -172,7 +172,7 @@ fn malformed_on_nightly() {
 error: failed to parse manifest[..]
 
 Caused by:
-  invalid type: integer `20`, expected a map
+  invalid type: integer `20`, expected a lints table
 ",
         )
         .run();
@@ -408,6 +408,50 @@ pub fn foo(num: i32) -> u32 {
         .with_stderr_contains(
             "\
 error: usage of an `unsafe` block
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_and_package_lints() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [lints]
+                workspace = true
+                [lints.rust]
+                "unsafe_code" = "allow"
+
+                [workspace.lints.rust]
+                "unsafe_code" = "deny"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+pub fn foo(num: i32) -> u32 {
+    unsafe { std::mem::transmute(num) }
+}
+",
+        )
+        .build();
+
+    foo.cargo("check -Zlints")
+        .masquerade_as_nightly_cargo(&["lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints
 ",
         )
         .run();
