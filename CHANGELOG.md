@@ -13,8 +13,8 @@
 
 ### Documentation
 
-- ❗ Policy change: always check `Cargo.lock` in verison control, even for
-  libraries. Lockfile and CI integration documentations are also expanded.
+- ❗ Policy change: Checking `Cargo.lock` into version control is now the default choice,
+  even for libraries. Lockfile and CI integration documentations are also expanded.
   [Policy docs](https://doc.rust-lang.org/nightly/cargo/faq.html#why-have-cargolock-in-version-control),
   [Lockfile docs](https://doc.rust-lang.org/nightly/cargo/guide/cargo-toml-vs-cargo-lock.html),
   [CI docs](https://doc.rust-lang.org/nightly/cargo/guide/continuous-integration.html),
