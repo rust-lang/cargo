@@ -85,7 +85,7 @@ Caused by:
     |
   6 |             rust-version = \"1.43.0-beta.1\"
     |                            ^^^^^^^^^^^^^^^
-  expected a version like \"1.32\"",
+  unexpected prerelease field, expected a version like \"1.32\"",
         )
         .run();
 }
