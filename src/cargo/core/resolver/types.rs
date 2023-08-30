@@ -285,7 +285,7 @@ pub enum ConflictReason {
     /// A dependency listed features that weren't actually available on the
     /// candidate. For example we tried to activate feature `foo` but the
     /// candidate we're activating didn't actually have the feature `foo`.
-    MissingFeatures(String),
+    MissingFeatures(InternedString),
 
     /// A dependency listed a feature that ended up being a required dependency.
     /// For example we tried to activate feature `foo` but the

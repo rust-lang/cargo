@@ -281,7 +281,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         .env("NUM_JOBS", &bcx.jobs().to_string())
         .env("TARGET", bcx.target_data.short_name(&unit.kind))
         .env("DEBUG", debug.to_string())
-        .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
+        .env("OPT_LEVEL", &unit.profile.opt_level)
         .env(
             "PROFILE",
             match unit.profile.root {
