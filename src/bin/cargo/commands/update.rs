@@ -24,9 +24,10 @@ pub fn cli() -> Command {
         .arg_dry_run("Don't actually write the lockfile")
         .arg(
             flag(
-                "aggressive",
+                "recursive",
                 "Force updating all dependencies of [SPEC]... as well",
             )
+            .alias("aggressive")
             .conflicts_with("precise"),
         )
         .arg(
@@ -68,7 +69,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 
     let update_opts = UpdateOptions {
-        aggressive: args.flag("aggressive"),
+        recursive: args.flag("recursive"),
         precise: args.get_one::<String>("precise").map(String::as_str),
         to_update,
         dry_run: args.dry_run(),

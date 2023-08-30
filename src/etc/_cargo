@@ -342,6 +342,7 @@ _cargo() {
                 update)
                     _arguments -s -S $common $manifest \
                         '--aggressive=[force dependency update]' \
+                        '--recursive=[force dependency update]' \
                         "--dry-run[don't actually write the lockfile]" \
                         '(-p --package)'{-p+,--package=}'[specify package to update]:package:_cargo_package_names' \
                         '--precise=[update single dependency to precise release]:release' \

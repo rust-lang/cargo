@@ -14,7 +14,7 @@ pub struct UpdateOptions<'a> {
     pub config: &'a Config,
     pub to_update: Vec<String>,
     pub precise: Option<&'a str>,
-    pub aggressive: bool,
+    pub recursive: bool,
     pub dry_run: bool,
     pub workspace: bool,
 }
@@ -38,8 +38,8 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
 }
 
 pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
-    if opts.aggressive && opts.precise.is_some() {
-        anyhow::bail!("cannot specify both aggressive and precise simultaneously")
+    if opts.recursive && opts.precise.is_some() {
+        anyhow::bail!("cannot specify both recursive and precise simultaneously")
     }
 
     if ws.members().count() == 0 {
@@ -89,7 +89,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         let mut sources = Vec::new();
         for name in opts.to_update.iter() {
             let dep = previous_resolve.query(name)?;
-            if opts.aggressive {
+            if opts.recursive {
                 fill_with_deps(&previous_resolve, dep, &mut to_avoid, &mut HashSet::new());
             } else {
                 to_avoid.insert(dep);

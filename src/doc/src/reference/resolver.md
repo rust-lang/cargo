@@ -342,7 +342,7 @@ instead.
 [`cargo update`] can be used to update the entries in `Cargo.lock` when new
 versions are published. Without any options, it will attempt to update all
 packages in the lock file. The `-p` flag can be used to target the update for
-a specific package, and other flags such as `--aggressive` or `--precise` can
+a specific package, and other flags such as `--recursive` or `--precise` can
 be used to control how versions are selected.
 
 [`cargo build`]: ../commands/cargo-build.md

@@ -769,9 +769,9 @@ Caused by:
         .with_stdout("")
         .run();
 
-    // Updating aggressively should, however, update the repo.
-    println!("dep1 aggressive update");
-    p.cargo("update dep1 --aggressive")
+    // Updating recursively should, however, update the repo.
+    println!("dep1 recursive update");
+    p.cargo("update dep1 --recursive")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
