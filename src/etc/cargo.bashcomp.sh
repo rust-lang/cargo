@@ -250,15 +250,11 @@ _get_examples(){
 }
 
 _get_targets(){
-	local result=()
-	local targets=$(rustup target list)
-	while read line
-	do
-		if [[ "$line" =~ default|installed ]]; then
-			result+=("${line%% *}")
-		fi
-	done <<< "$targets"
-	echo "${result[@]}"
+	if command -v rustup >/dev/null 2>/dev/null; then
+	  rustup target list --installed
+	else
+	  rustc --print target-list
+	fi
 }
 
 _toolchains(){
