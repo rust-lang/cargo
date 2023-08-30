@@ -50,6 +50,7 @@ pub fn cli() -> clap::Command {
         ])
         .arg_package("Package to remove from")
         .arg_manifest_path()
+        .after_help("Run `cargo help remove` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
