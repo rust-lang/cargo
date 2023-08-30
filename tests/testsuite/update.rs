@@ -1082,10 +1082,13 @@ rustdns.workspace = true
     p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
 
     p.cargo("update -p crate2")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
+[UPDATING] git repository `{}`
 [UPDATING] crate1 v2.29.8 ([CWD]/crate1) -> v2.29.81
-[UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81",
-        )
+[UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81
+[UPDATING] rustdns v0.5.0 ([..]) -> [..]",
+            git_project.url(),
+        ))
         .run();
 }
