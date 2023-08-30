@@ -338,7 +338,7 @@ pub struct Downloads<'a, 'cfg> {
     /// Total bytes for all successfully downloaded packages.
     downloaded_bytes: u64,
     /// Size (in bytes) and package name of the largest downloaded package.
-    largest: (u64, String),
+    largest: (u64, InternedString),
     /// Time when downloading started.
     start: Instant,
     /// Indicates *all* downloads were successful.
@@ -459,7 +459,7 @@ impl<'cfg> PackageSet<'cfg> {
             ))),
             downloads_finished: 0,
             downloaded_bytes: 0,
-            largest: (0, String::new()),
+            largest: (0, InternedString::new("")),
             success: false,
             updated_at: Cell::new(Instant::now()),
             timeout,
@@ -891,7 +891,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         self.downloads_finished += 1;
         self.downloaded_bytes += dl.total.get();
         if dl.total.get() > self.largest.0 {
-            self.largest = (dl.total.get(), dl.id.name().to_string());
+            self.largest = (dl.total.get(), dl.id.name());
         }
 
         // We're about to synchronously extract the crate below. While we're

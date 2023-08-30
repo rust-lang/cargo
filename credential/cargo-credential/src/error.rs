@@ -42,9 +42,9 @@ pub enum Error {
 }
 
 impl From<String> for Error {
-    fn from(err: String) -> Self {
+    fn from(message: String) -> Self {
         Box::new(StringTypedError {
-            message: err.to_string(),
+            message,
             source: None,
         })
         .into()

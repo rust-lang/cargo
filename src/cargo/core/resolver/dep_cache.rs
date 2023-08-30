@@ -531,10 +531,9 @@ impl RequirementError {
                             summary.package_id(),
                             feat
                         )),
-                        Some(p) => ActivateError::Conflict(
-                            p,
-                            ConflictReason::MissingFeatures(feat.to_string()),
-                        ),
+                        Some(p) => {
+                            ActivateError::Conflict(p, ConflictReason::MissingFeatures(feat))
+                        }
                     };
                 }
                 if deps.iter().any(|dep| dep.is_optional()) {
@@ -575,10 +574,9 @@ impl RequirementError {
                     )),
                     // This code path currently isn't used, since `foo/bar`
                     // and `dep:` syntax is not allowed in a dependency.
-                    Some(p) => ActivateError::Conflict(
-                        p,
-                        ConflictReason::MissingFeatures(dep_name.to_string()),
-                    ),
+                    Some(p) => {
+                        ActivateError::Conflict(p, ConflictReason::MissingFeatures(dep_name))
+                    }
                 }
             }
             RequirementError::Cycle(feat) => ActivateError::Fatal(anyhow::format_err!(
