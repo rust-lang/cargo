@@ -564,7 +564,13 @@ See 'cargo help <command>' for more information on a specific command.\n",
         )
         .arg(flag("version", "Print version info and exit").short('V'))
         .arg(flag("list", "List installed commands"))
-        .arg(opt("explain", "Run `rustc --explain CODE`").value_name("CODE"))
+        .arg(
+            opt(
+                "explain",
+                "Provide a detailed explanation of a rustc error message",
+            )
+            .value_name("CODE"),
+        )
         .arg(
             opt(
                 "verbose",
