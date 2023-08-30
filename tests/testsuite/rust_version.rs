@@ -58,6 +58,39 @@ Caused by:
 }
 
 #[cargo_test]
+fn rust_version_good_pre_release() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust-version = "1.43.0-beta.1"
+            [[bin]]
+            name = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build()
+        .cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  TOML parse error at line 6, column 28
+    |
+  6 |             rust-version = \"1.43.0-beta.1\"
+    |                            ^^^^^^^^^^^^^^^
+  expected a version like \"1.32\"",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rust_version_bad_pre_release() {
     project()
         .file(
