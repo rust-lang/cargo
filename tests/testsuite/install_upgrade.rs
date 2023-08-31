@@ -230,9 +230,9 @@ fn ambiguous_version_no_longer_allowed() {
     cargo_process("install foo --version=1.0")
         .with_stderr(
             "\
-[ERROR] invalid value '1.0' for '--version <VERSION>': cannot parse '1.0' as a semver
+[ERROR] invalid value '1.0' for '--version <VERSION>': cannot parse '1.0' as a SemVer version
 
-  tip: if you want to specify semver range, add an explicit qualifier, like '^1.0'
+  tip: if you want to specify SemVer range, add an explicit qualifier, like '^1.0'
 
 For more information, try '--help'.
 ",
