@@ -167,6 +167,8 @@ No tests available.
             .with_stderr(
                 "\
 error: \"--target\" takes an argument.
+
+Run `[..]` to see possible targets.
 ",
             )
             .with_status(101)

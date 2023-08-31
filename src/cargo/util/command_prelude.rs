@@ -4,6 +4,7 @@ use crate::core::{Edition, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
+use crate::util::is_rustup;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::toml::{StringOrVec, TomlProfile};
 use crate::util::validate_package_name;
@@ -445,7 +446,16 @@ pub trait ArgMatchesExt {
 
     fn targets(&self) -> CargoResult<Vec<String>> {
         if self.is_present_with_zero_values("target") {
-            bail!("\"--target\" takes an argument.");
+            let cmd = if is_rustup() {
+                "rustup target list"
+            } else {
+                "rustc --print target-list"
+            };
+            bail!(
+                "\"--target\" takes an argument.
+
+Run `{cmd}` to see possible targets."
+            );
         }
         Ok(self._values_of("target"))
     }
