@@ -1,4 +1,5 @@
 use semver::{Comparator, Op, Version, VersionReq};
+use serde_untagged::UntaggedEnumVisitor;
 use std::fmt::{self, Display};
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -198,25 +199,10 @@ impl<'de> serde::Deserialize<'de> for PartialVersion {
     where
         D: serde::Deserializer<'de>,
     {
-        struct VersionVisitor;
-
-        impl<'de> serde::de::Visitor<'de> for VersionVisitor {
-            type Value = PartialVersion;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("SemVer version")
-            }
-
-            fn visit_str<E>(self, string: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                string.parse().map_err(serde::de::Error::custom)
-            }
-        }
-
-        let s = String::deserialize(deserializer)?;
-        s.parse().map_err(serde::de::Error::custom)
+        UntaggedEnumVisitor::new()
+            .expecting("SemVer version")
+            .string(|value| value.parse().map_err(serde::de::Error::custom))
+            .deserialize(deserializer)
     }
 }
 

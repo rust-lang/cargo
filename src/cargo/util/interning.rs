@@ -1,4 +1,5 @@
 use serde::{Serialize, Serializer};
+use serde_untagged::UntaggedEnumVisitor;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -150,28 +151,14 @@ impl Serialize for InternedString {
     }
 }
 
-struct InternedStringVisitor;
-
 impl<'de> serde::Deserialize<'de> for InternedString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        deserializer.deserialize_str(InternedStringVisitor)
-    }
-}
-
-impl<'de> serde::de::Visitor<'de> for InternedStringVisitor {
-    type Value = InternedString;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("an String like thing")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        Ok(InternedString::new(v))
+        UntaggedEnumVisitor::new()
+            .expecting("an String like thing")
+            .string(|value| Ok(InternedString::new(value)))
+            .deserialize(deserializer)
     }
 }
