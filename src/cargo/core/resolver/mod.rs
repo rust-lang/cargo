@@ -71,7 +71,7 @@ use crate::util::config::Config;
 use crate::util::errors::CargoResult;
 use crate::util::network::PollExt;
 use crate::util::profile;
-use crate::util::PartialVersion;
+use crate::util::RustVersion;
 
 use self::context::Context;
 use self::dep_cache::RegistryQueryer;
@@ -139,7 +139,7 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
-    mut max_rust_version: Option<PartialVersion>,
+    mut max_rust_version: Option<RustVersion>,
 ) -> CargoResult<Resolve> {
     let _p = profile::start("resolving");
     let minimal_versions = match config {

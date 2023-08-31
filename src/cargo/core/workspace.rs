@@ -23,7 +23,7 @@ use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::toml::{read_manifest, InheritableFields, TomlDependency, TomlProfiles};
-use crate::util::PartialVersion;
+use crate::util::RustVersion;
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
@@ -598,7 +598,7 @@ impl<'cfg> Workspace<'cfg> {
 
     /// Get the lowest-common denominator `package.rust-version` within the workspace, if specified
     /// anywhere
-    pub fn rust_version(&self) -> Option<PartialVersion> {
+    pub fn rust_version(&self) -> Option<RustVersion> {
         self.members().filter_map(|pkg| pkg.rust_version()).min()
     }
 

@@ -110,13 +110,13 @@ impl From<VersionReq> for OptVersionReq {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Debug)]
-pub struct PartialVersion {
+pub struct RustVersion {
     pub major: u64,
     pub minor: Option<u64>,
     pub patch: Option<u64>,
 }
 
-impl PartialVersion {
+impl RustVersion {
     pub fn caret_req(&self) -> VersionReq {
         VersionReq {
             comparators: vec![Comparator {
@@ -130,11 +130,11 @@ impl PartialVersion {
     }
 }
 
-impl std::str::FromStr for PartialVersion {
+impl std::str::FromStr for RustVersion {
     type Err = anyhow::Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        // HACK: `PartialVersion` is a subset of the `VersionReq` syntax that only ever
+        // HACK: `RustVersion` is a subset of the `VersionReq` syntax that only ever
         // has one comparator with a required minor and optional patch, and uses no
         // other features.
         if is_req(value) {
@@ -163,7 +163,7 @@ impl std::str::FromStr for PartialVersion {
             semver::Prerelease::EMPTY,
             "guarenteed by character check"
         );
-        Ok(PartialVersion {
+        Ok(RustVersion {
             major: comp.major,
             minor: comp.minor,
             patch: comp.patch,
@@ -171,7 +171,7 @@ impl std::str::FromStr for PartialVersion {
     }
 }
 
-impl Display for PartialVersion {
+impl Display for RustVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let major = self.major;
         write!(f, "{major}")?;
@@ -185,7 +185,7 @@ impl Display for PartialVersion {
     }
 }
 
-impl serde::Serialize for PartialVersion {
+impl serde::Serialize for RustVersion {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -194,7 +194,7 @@ impl serde::Serialize for PartialVersion {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for PartialVersion {
+impl<'de> serde::Deserialize<'de> for RustVersion {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

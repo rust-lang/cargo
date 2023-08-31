@@ -20,7 +20,7 @@ use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, 
 use crate::sources::source::QueryKind;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::PartialVersion;
+use crate::util::RustVersion;
 
 use anyhow::Context as _;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -36,7 +36,7 @@ pub struct RegistryQueryer<'a> {
     /// versions first. That allows `cargo update -Z minimal-versions` which will
     /// specify minimum dependency versions to be used.
     minimal_versions: bool,
-    max_rust_version: Option<PartialVersion>,
+    max_rust_version: Option<RustVersion>,
     /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_minimal_version`)
     registry_cache: HashMap<(Dependency, bool), Poll<Rc<Vec<Summary>>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
@@ -58,7 +58,7 @@ impl<'a> RegistryQueryer<'a> {
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
         minimal_versions: bool,
-        max_rust_version: Option<PartialVersion>,
+        max_rust_version: Option<RustVersion>,
     ) -> Self {
         RegistryQueryer {
             registry,
