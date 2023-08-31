@@ -440,8 +440,8 @@ pub trait ArgMatchesExt {
         self.maybe_flag("keep-going")
     }
 
-    fn targets(&self) -> Vec<String> {
-        self._values_of("target")
+    fn targets(&self) -> CargoResult<Vec<String>> {
+        Ok(self._values_of("target"))
     }
 
     fn get_profile_name(
@@ -590,7 +590,7 @@ pub trait ArgMatchesExt {
             config,
             self.jobs()?,
             self.keep_going(),
-            &self.targets(),
+            &self.targets()?,
             mode,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);

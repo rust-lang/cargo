@@ -17,7 +17,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let opts = FetchOptions {
         config,
-        targets: args.targets(),
+        targets: args.targets()?,
     };
     let _ = ops::fetch(&ws, &opts)?;
     Ok(())
