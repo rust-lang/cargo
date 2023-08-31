@@ -452,7 +452,7 @@ pub trait ArgMatchesExt {
                 "rustc --print target-list"
             };
             bail!(
-                "\"--target\" takes an argument.
+                "\"--target\" takes a target architecture as an argument.
 
 Run `{cmd}` to see possible targets."
             );

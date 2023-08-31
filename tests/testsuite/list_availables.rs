@@ -166,7 +166,7 @@ No tests available.
             .cargo(&format!("{} --target", command))
             .with_stderr(
                 "\
-error: \"--target\" takes an argument.
+error: \"--target\" takes a target architecture as an argument.
 
 Run `[..]` to see possible targets.
 ",
