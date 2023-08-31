@@ -166,12 +166,10 @@ No tests available.
             .cargo(&format!("{} --target", command))
             .with_stderr(
                 "\
-error: a value is required for '--target <TRIPLE>' but none was supplied
-
-For more information, try '--help'.
+error: \"--target\" takes an argument.
 ",
             )
-            .with_status(1)
+            .with_status(101)
             .run();
     }
 }

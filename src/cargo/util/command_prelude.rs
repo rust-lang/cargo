@@ -218,7 +218,10 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(multi_opt("target", "TRIPLE", target).help_heading(heading::COMPILATION_OPTIONS))
+        self._arg(
+            optional_multi_opt("target", "TRIPLE", target)
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_target_dir(self) -> Self {
@@ -441,6 +444,9 @@ pub trait ArgMatchesExt {
     }
 
     fn targets(&self) -> CargoResult<Vec<String>> {
+        if self.is_present_with_zero_values("target") {
+            bail!("\"--target\" takes an argument.");
+        }
         Ok(self._values_of("target"))
     }
 

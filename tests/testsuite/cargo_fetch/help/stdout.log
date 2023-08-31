@@ -11,7 +11,7 @@ Options:
   -h, --help                Print help
 
 Compilation Options:
-      --target <TRIPLE>  Fetch dependencies for the target triple
+      --target [<TRIPLE>]  Fetch dependencies for the target triple
 
 Manifest Options:
       --manifest-path <PATH>  Path to Cargo.toml
