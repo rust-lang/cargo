@@ -17,7 +17,7 @@ Package Selection:
 Compilation Options:
   -r, --release                 Whether or not to clean release artifacts
       --profile <PROFILE-NAME>  Clean artifacts of the specified profile
-      --target <TRIPLE>         Target triple to clean output for
+      --target [<TRIPLE>]       Target triple to clean output for
       --target-dir <DIRECTORY>  Directory for all generated artifacts
 
 Manifest Options:

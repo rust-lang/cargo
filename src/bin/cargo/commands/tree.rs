@@ -136,7 +136,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             .warn("the --all-targets flag has been changed to --target=all")?;
         vec!["all".to_string()]
     } else {
-        args._values_of("target")
+        args.targets()?
     };
     let target = tree::Target::from_cli(targets);
 

@@ -48,7 +48,7 @@ Compilation Options:
   -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
   -r, --release                 Build artifacts in release mode, with optimizations
       --profile <PROFILE-NAME>  Build artifacts with the specified profile
-      --target <TRIPLE>         Build for the target triple
+      --target [<TRIPLE>]       Build for the target triple
       --target-dir <DIRECTORY>  Directory for all generated artifacts
       --unit-graph              Output build graph in JSON (unstable)
       --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json

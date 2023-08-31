@@ -66,6 +66,13 @@ pub mod toml_mut;
 mod vcs;
 mod workspace;
 
+pub fn is_rustup() -> bool {
+    // ALLOWED: `RUSTUP_HOME` should only be read from process env, otherwise
+    // other tools may point to executables from incompatible distributions.
+    #[allow(clippy::disallowed_methods)]
+    std::env::var_os("RUSTUP_HOME").is_some()
+}
+
 pub fn elapsed(duration: Duration) -> String {
     let secs = duration.as_secs();
 

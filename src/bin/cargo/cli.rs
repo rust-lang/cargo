@@ -12,6 +12,7 @@ use std::fmt::Write;
 use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
+use crate::util::is_rustup;
 use cargo::core::features::HIDDEN;
 
 pub fn main(config: &mut LazyConfig) -> CliResult {
@@ -511,11 +512,7 @@ impl GlobalArgs {
 }
 
 pub fn cli() -> Command {
-    // ALLOWED: `RUSTUP_HOME` should only be read from process env, otherwise
-    // other tools may point to executables from incompatible distributions.
-    #[allow(clippy::disallowed_methods)]
-    let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
-    let usage = if is_rustup {
+    let usage = if is_rustup() {
         "cargo [+toolchain] [OPTIONS] [COMMAND]\n       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."
     } else {
         "cargo [OPTIONS] [COMMAND]\n       cargo [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]..."

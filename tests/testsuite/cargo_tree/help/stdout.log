@@ -33,8 +33,8 @@ Feature Selection:
       --no-default-features  Do not activate the `default` feature
 
 Compilation Options:
-      --target <TRIPLE>  Filter dependencies matching the given target-triple (default host
-                         platform). Pass `all` to include all targets.
+      --target [<TRIPLE>]  Filter dependencies matching the given target-triple (default host
+                           platform). Pass `all` to include all targets.
 
 Manifest Options:
       --manifest-path <PATH>  Path to Cargo.toml

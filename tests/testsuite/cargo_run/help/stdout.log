@@ -33,7 +33,7 @@ Compilation Options:
       --keep-going              Do not abort the build as soon as there is an error
   -r, --release                 Build artifacts in release mode, with optimizations
       --profile <PROFILE-NAME>  Build artifacts with the specified profile
-      --target <TRIPLE>         Build for the target triple
+      --target [<TRIPLE>]       Build for the target triple
       --target-dir <DIRECTORY>  Directory for all generated artifacts
       --unit-graph              Output build graph in JSON (unstable)
       --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json

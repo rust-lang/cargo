@@ -27,7 +27,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let opts = CleanOptions {
         config,
         spec: values(args, "package"),
-        targets: args.targets(),
+        targets: args.targets()?,
         requested_profile: args.get_profile_name(config, "dev", ProfileChecking::Custom)?,
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),

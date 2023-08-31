@@ -4,6 +4,7 @@ use crate::core::{Edition, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
+use crate::util::is_rustup;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::toml::{StringOrVec, TomlProfile};
 use crate::util::validate_package_name;
@@ -218,7 +219,10 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(multi_opt("target", "TRIPLE", target).help_heading(heading::COMPILATION_OPTIONS))
+        self._arg(
+            optional_multi_opt("target", "TRIPLE", target)
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_target_dir(self) -> Self {
@@ -440,8 +444,20 @@ pub trait ArgMatchesExt {
         self.maybe_flag("keep-going")
     }
 
-    fn targets(&self) -> Vec<String> {
-        self._values_of("target")
+    fn targets(&self) -> CargoResult<Vec<String>> {
+        if self.is_present_with_zero_values("target") {
+            let cmd = if is_rustup() {
+                "rustup target list"
+            } else {
+                "rustc --print target-list"
+            };
+            bail!(
+                "\"--target\" takes a target architecture as an argument.
+
+Run `{cmd}` to see possible targets."
+            );
+        }
+        Ok(self._values_of("target"))
     }
 
     fn get_profile_name(
@@ -590,7 +606,7 @@ pub trait ArgMatchesExt {
             config,
             self.jobs()?,
             self.keep_going(),
-            &self.targets(),
+            &self.targets()?,
             mode,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
