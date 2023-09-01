@@ -744,7 +744,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "debug options stabilized in 1.70")]
+#[cargo_test]
 fn debug_options_valid() {
     let build = |option| {
         let p = project()
