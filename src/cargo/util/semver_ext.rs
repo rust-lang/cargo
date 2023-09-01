@@ -171,11 +171,11 @@ impl std::str::FromStr for PartialVersion {
         let version_req = match semver::VersionReq::parse(value) {
             // Exclude semver operators like `^` and pre-release identifiers
             Ok(req) if value.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
-            _ if value.contains('+') => {
-                anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
-            }
             _ if value.contains('-') => {
                 anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+            }
+            _ if value.contains('+') => {
+                anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
             }
             _ => anyhow::bail!("expected a version like \"1.32\""),
         };
