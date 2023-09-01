@@ -587,15 +587,13 @@ impl<'cfg> RegistryIndex<'cfg> {
         // `<pkg>=<p_req>o-><f_req>` where `<pkg>` is the name of a crate on
         // this source, `<p_req>` is the version installed and `<f_req> is the
         // version requested (argument to `--precise`).
-        let precise = match source_id.precise() {
-            Some(p) if p.starts_with(name) && p[name.len()..].starts_with('=') => {
-                let mut vers = p[name.len() + 1..].splitn(2, "->");
-                let current_vers = vers.next().unwrap().to_semver().unwrap();
-                let requested_vers = vers.next().unwrap().to_semver().unwrap();
-                Some((current_vers, requested_vers))
-            }
-            _ => None,
-        };
+        let precise = source_id
+            .precise()
+            .filter(|p| p.starts_with(name) && p[name.len()..].starts_with('='))
+            .map(|p| {
+                let (current, requested) = p[name.len() + 1..].split_once("->").unwrap();
+                (current.to_semver().unwrap(), requested.to_semver().unwrap())
+            });
         let summaries = summaries.filter(|s| match &precise {
             Some((current, requested)) => {
                 if req.matches(current) {

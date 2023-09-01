@@ -634,19 +634,9 @@ where
 {
     let mut search_path = vec![];
     for dir in paths {
-        let dir = match dir.to_str() {
-            Some(s) => {
-                let mut parts = s.splitn(2, '=');
-                match (parts.next(), parts.next()) {
-                    (Some("native"), Some(path))
-                    | (Some("crate"), Some(path))
-                    | (Some("dependency"), Some(path))
-                    | (Some("framework"), Some(path))
-                    | (Some("all"), Some(path)) => path.into(),
-                    _ => dir.clone(),
-                }
-            }
-            None => dir.clone(),
+        let dir = match dir.to_str().and_then(|s| s.split_once("=")) {
+            Some(("native" | "crate" | "dependency" | "framework" | "all", path)) => path.into(),
+            _ => dir.clone(),
         };
         if dir.starts_with(&root_output) {
             search_path.push(dir);
