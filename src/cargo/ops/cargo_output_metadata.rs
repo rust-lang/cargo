@@ -3,7 +3,7 @@ use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
 use crate::core::resolver::{features::CliFeatures, HasDevUnits, Resolve};
-use crate::core::{MaybePackage, Package, PackageId, Workspace};
+use crate::core::{Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
 use crate::util::toml::TomlProfiles;
@@ -41,11 +41,6 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
         (packages, Some(resolve))
     };
 
-    let workspace_profiles = match ws.root_maybe() {
-        MaybePackage::Virtual(vm) => vm.profiles().cloned(),
-        _ => None, // regular packages include the profile information under their package section
-    };
-
     Ok(ExportInfo {
         packages,
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
@@ -55,7 +50,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
         metadata: ws.custom_metadata().cloned(),
-        workspace_profiles,
+        profiles: ws.profiles().cloned(),
     })
 }
 
@@ -73,7 +68,7 @@ pub struct ExportInfo {
     workspace_root: PathBuf,
     metadata: Option<toml::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    workspace_profiles: Option<TomlProfiles>,
+    profiles: Option<TomlProfiles>,
 }
 
 #[derive(Serialize)]

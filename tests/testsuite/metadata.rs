@@ -4322,15 +4322,7 @@ lto = "thin"
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
-                "publish": null,
-                "profiles": {
-                  "custom-lto": {
-                    "lto": "thin"
-                  },
-                  "release": {
-                    "strip": "symbols"
-                  }
-                }
+                "publish": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -4349,7 +4341,15 @@ lto = "thin"
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
+        "metadata": null,
+        "profiles": {
+          "custom-lto": {
+            "lto": "thin"
+          },
+          "release": {
+            "strip": "symbols"
+          }
+        }
     }"#,
         )
         .run();
@@ -4484,7 +4484,7 @@ fn workspace_metadata_with_profiles() {
         "version": 1,
         "workspace_root": "[..]/foo",
         "metadata": null,
-        "workspace_profiles": {
+        "profiles": {
           "custom-lto": {
             "lto": "thin"
           },

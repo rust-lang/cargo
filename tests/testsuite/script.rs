@@ -1062,12 +1062,7 @@ fn cmd_metadata_with_embedded() {
                 "features": {},
                 "manifest_path": "[..]script.rs",
                 "metadata": null,
-                "publish": [],
-                "profiles": {
-                    "release": {
-                      "strip": true
-                    }
-                }
+                "publish": []
             }
         ],
         "workspace_members": ["script 0.0.0 (path+file:[..]foo)"],
@@ -1086,7 +1081,12 @@ fn cmd_metadata_with_embedded() {
         "target_directory": "[ROOT]/home/.cargo/target/[..]",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
+        "metadata": null,
+        "profiles": {
+            "release": {
+              "strip": true
+            }
+        }
     }"#,
         )
         .with_stderr(
@@ -1142,12 +1142,7 @@ fn cmd_read_manifest_with_embedded() {
     "features":{},
     "manifest_path":"[..]script.rs",
     "metadata": null,
-    "publish": [],
-    "profiles": {
-        "release": {
-          "strip": true
-        }
-    }
+    "publish": []
 }"#,
         )
         .with_stderr(
