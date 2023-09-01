@@ -109,9 +109,7 @@ impl From<VersionReq> for OptVersionReq {
     }
 }
 
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug, serde::Serialize, serde::Deserialize,
-)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug, serde::Serialize)]
 #[serde(transparent)]
 pub struct RustVersion(PartialVersion);
 
@@ -127,7 +125,26 @@ impl std::str::FromStr for RustVersion {
     type Err = anyhow::Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        value.parse::<PartialVersion>().map(Self)
+        let partial = value.parse::<PartialVersion>()?;
+        if partial.pre.is_some() {
+            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+        }
+        if partial.build.is_some() {
+            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+        }
+        Ok(Self(partial))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RustVersion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("SemVer version")
+            .string(|value| value.parse().map_err(serde::de::Error::custom))
+            .deserialize(deserializer)
     }
 }
 
@@ -142,6 +159,8 @@ pub struct PartialVersion {
     pub major: u64,
     pub minor: Option<u64>,
     pub patch: Option<u64>,
+    pub pre: Option<semver::Prerelease>,
+    pub build: Option<semver::BuildMetadata>,
 }
 
 impl PartialVersion {
@@ -152,26 +171,31 @@ impl PartialVersion {
                 major: self.major,
                 minor: self.minor,
                 patch: self.patch,
-                pre: Default::default(),
+                pre: self.pre.as_ref().cloned().unwrap_or_default(),
             }],
         }
     }
 }
 
-impl TryFrom<semver::Version> for PartialVersion {
-    type Error = anyhow::Error;
-    fn try_from(value: semver::Version) -> Result<Self, Self::Error> {
-        if !value.pre.is_empty() {
-            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+impl From<semver::Version> for PartialVersion {
+    fn from(ver: semver::Version) -> Self {
+        let pre = if ver.pre.is_empty() {
+            None
+        } else {
+            Some(ver.pre)
+        };
+        let build = if ver.build.is_empty() {
+            None
+        } else {
+            Some(ver.build)
+        };
+        Self {
+            major: ver.major,
+            minor: Some(ver.minor),
+            patch: Some(ver.patch),
+            pre,
+            build,
         }
-        if !value.build.is_empty() {
-            anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
-        }
-        Ok(Self {
-            major: value.major,
-            minor: Some(value.minor),
-            patch: Some(value.patch),
-        })
     }
 }
 
@@ -183,7 +207,7 @@ impl std::str::FromStr for PartialVersion {
             anyhow::bail!("unexpected version requirement, expected a version like \"1.32\"")
         }
         match semver::Version::parse(value) {
-            Ok(ver) => ver.try_into(),
+            Ok(ver) => Ok(ver.into()),
             Err(_) => {
                 // HACK: Leverage `VersionReq` for partial version parsing
                 let mut version_req = match semver::VersionReq::parse(value) {
@@ -201,15 +225,17 @@ impl std::str::FromStr for PartialVersion {
                 assert_eq!(version_req.comparators.len(), 1, "guarenteed by is_req");
                 let comp = version_req.comparators.pop().unwrap();
                 assert_eq!(comp.op, semver::Op::Caret, "guarenteed by is_req");
-                assert_eq!(
-                    comp.pre,
-                    semver::Prerelease::EMPTY,
-                    "guarenteed by `Version::parse` failing"
-                );
+                let pre = if comp.pre.is_empty() {
+                    None
+                } else {
+                    Some(comp.pre)
+                };
                 Ok(Self {
                     major: comp.major,
                     minor: comp.minor,
                     patch: comp.patch,
+                    pre,
+                    build: None,
                 })
             }
         }
@@ -225,6 +251,12 @@ impl Display for PartialVersion {
         }
         if let Some(patch) = self.patch {
             write!(f, ".{patch}")?;
+        }
+        if let Some(pre) = self.pre.as_ref() {
+            write!(f, "-{pre}")?;
+        }
+        if let Some(build) = self.build.as_ref() {
+            write!(f, "+{build}")?;
         }
         Ok(())
     }
