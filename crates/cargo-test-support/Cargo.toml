@@ -19,7 +19,6 @@ flate2.workspace = true
 git2.workspace = true
 glob.workspace = true
 itertools.workspace = true
-lazy_static.workspace = true
 pasetors.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

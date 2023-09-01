@@ -412,7 +412,6 @@ dependencies = [
  "git2",
  "glob",
  "itertools",
- "lazy_static",
  "pasetors",
  "serde",
  "serde_json",
@@ -2731,7 +2730,6 @@ version = "0.0.0"
 dependencies = [
  "cargo",
  "cargo-util",
- "lazy_static",
  "proptest",
  "varisat",
 ]
