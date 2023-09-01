@@ -1540,6 +1540,7 @@ fn all_profile_options() {
         package: None,
         build_override: None,
         rustflags: None,
+        trim_paths: None,
     };
     let mut overrides = BTreeMap::new();
     let key = cargo_toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());

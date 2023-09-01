@@ -26,6 +26,7 @@ use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
 use crate::core::{PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
 use crate::util::interning::InternedString;
+use crate::util::toml::TomlTrimPaths;
 use crate::util::toml::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
@@ -556,6 +557,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(flags) = &toml.rustflags {
         profile.rustflags = flags.iter().map(InternedString::from).collect();
     }
+    if let Some(trim_paths) = &toml.trim_paths {
+        profile.trim_paths = Some(trim_paths.clone());
+    }
     profile.strip = match toml.strip {
         Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
         None | Some(StringOrBool::Bool(false)) => Strip::None,
@@ -599,6 +603,9 @@ pub struct Profile {
     #[serde(skip_serializing_if = "Vec::is_empty")] // remove when `rustflags` is stablized
     // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
     pub rustflags: Vec<InternedString>,
+    // remove when `-Ztrim-paths` is stablized
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trim_paths: Option<TomlTrimPaths>,
 }
 
 impl Default for Profile {
@@ -619,6 +626,7 @@ impl Default for Profile {
             panic: PanicStrategy::Unwind,
             strip: Strip::None,
             rustflags: vec![],
+            trim_paths: None,
         }
     }
 }
@@ -647,6 +655,7 @@ compact_debug! {
                 panic
                 strip
                 rustflags
+                trim_paths
             )]
         }
     }
@@ -713,6 +722,7 @@ impl Profile {
             self.rpath,
             (self.incremental, self.panic, self.strip),
             &self.rustflags,
+            &self.trim_paths,
         )
     }
 }
