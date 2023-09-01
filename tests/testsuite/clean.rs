@@ -659,13 +659,21 @@ error: package ID specification `baz` did not match any packages
         .run();
 
     p.cargo("clean -p bar:0.1")
-        .with_status(101)
         .with_stderr(
-            "\
-error: cannot parse '0.1' as a SemVer version
-",
+            "warning: version qualifier in `-p bar:0.1` is ignored, \
+            cleaning all versions of `bar` found",
         )
         .run();
+    let mut walker = walkdir::WalkDir::new(p.build_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name().to_str().unwrap();
+            n.starts_with("bar") || n.starts_with("libbar")
+        });
+    if let Some(e) = walker.next() {
+        panic!("{:?} was not cleaned", e.path());
+    }
 }
 
 #[cargo_test]
@@ -705,13 +713,21 @@ error: package ID specification `baz` did not match any packages
         .run();
 
     p.cargo("clean -p bar:0")
-        .with_status(101)
         .with_stderr(
-            "\
-error: cannot parse '0' as a SemVer version
-",
+            "warning: version qualifier in `-p bar:0` is ignored, \
+            cleaning all versions of `bar` found",
         )
         .run();
+    let mut walker = walkdir::WalkDir::new(p.build_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name().to_str().unwrap();
+            n.starts_with("bar") || n.starts_with("libbar")
+        });
+    if let Some(e) = walker.next() {
+        panic!("{:?} was not cleaned", e.path());
+    }
 }
 
 #[cargo_test]

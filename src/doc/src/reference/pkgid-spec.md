@@ -24,6 +24,7 @@ The formal grammar for a Package Id Specification is:
 spec := pkgname
        | proto "://" hostname-and-path [ "#" ( pkgname | semver ) ]
 pkgname := name [ ("@" | ":" ) semver ]
+semver := digits [ "." digits [ "." digits [ "-" prerelease ] [ "+" build ]]]
 
 proto := "http" | "git" | ...
 ```
@@ -40,6 +41,7 @@ The following are references to the `regex` package on `crates.io`:
 | Spec                                                        | Name    | Version |
 |:------------------------------------------------------------|:-------:|:-------:|
 | `regex`                                                     | `regex` | `*`     |
+| `regex@1.4`                                                 | `regex` | `1.4.*` |
 | `regex@1.4.3`                                               | `regex` | `1.4.3` |
 | `https://github.com/rust-lang/crates.io-index#regex`        | `regex` | `*`     |
 | `https://github.com/rust-lang/crates.io-index#regex@1.4.3`  | `regex` | `1.4.3` |

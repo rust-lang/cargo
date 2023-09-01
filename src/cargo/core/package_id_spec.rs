@@ -10,7 +10,8 @@ use crate::core::PackageId;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{validate_package_name, IntoUrl, ToSemver};
+use crate::util::PartialVersion;
+use crate::util::{validate_package_name, IntoUrl};
 
 /// Some or all of the data required to identify a package:
 ///
@@ -24,7 +25,7 @@ use crate::util::{validate_package_name, IntoUrl, ToSemver};
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Ord, PartialOrd)]
 pub struct PackageIdSpec {
     name: InternedString,
-    version: Option<Version>,
+    version: Option<PartialVersion>,
     url: Option<Url>,
 }
 
@@ -70,7 +71,7 @@ impl PackageIdSpec {
         let mut parts = spec.splitn(2, [':', '@']);
         let name = parts.next().unwrap();
         let version = match parts.next() {
-            Some(version) => Some(version.to_semver()?),
+            Some(version) => Some(version.parse::<PartialVersion>()?),
             None => None,
         };
         validate_package_name(name, "pkgid", "")?;
@@ -94,12 +95,12 @@ impl PackageIdSpec {
         spec.query(i)
     }
 
-    /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `Version` and `Url`
+    /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `PartialVersion` and `Url`
     /// fields filled in.
     pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
         PackageIdSpec {
             name: package_id.name(),
-            version: Some(package_id.version().clone()),
+            version: Some(package_id.version().clone().into()),
             url: Some(package_id.source_id().url().clone()),
         }
     }
@@ -125,14 +126,14 @@ impl PackageIdSpec {
             match frag {
                 Some(fragment) => match fragment.split_once([':', '@']) {
                     Some((name, part)) => {
-                        let version = part.to_semver()?;
+                        let version = part.parse::<PartialVersion>()?;
                         (InternedString::new(name), Some(version))
                     }
                     None => {
                         if fragment.chars().next().unwrap().is_alphabetic() {
                             (InternedString::new(&fragment), None)
                         } else {
-                            let version = fragment.to_semver()?;
+                            let version = fragment.parse::<PartialVersion>()?;
                             (InternedString::new(path_name), Some(version))
                         }
                     }
@@ -151,7 +152,12 @@ impl PackageIdSpec {
         self.name
     }
 
-    pub fn version(&self) -> Option<&Version> {
+    /// Full `semver::Version`, if present
+    pub fn version(&self) -> Option<Version> {
+        self.version.as_ref().and_then(|v| v.version())
+    }
+
+    pub fn partial_version(&self) -> Option<&PartialVersion> {
         self.version.as_ref()
     }
 
@@ -170,7 +176,8 @@ impl PackageIdSpec {
         }
 
         if let Some(ref v) = self.version {
-            if v != package_id.version() {
+            let req = v.exact_req();
+            if !req.matches(package_id.version()) {
                 return false;
             }
         }
@@ -319,7 +326,6 @@ mod tests {
     use super::PackageIdSpec;
     use crate::core::{PackageId, SourceId};
     use crate::util::interning::InternedString;
-    use crate::util::ToSemver;
     use url::Url;
 
     #[test]
@@ -344,16 +350,25 @@ mod tests {
             "https://crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: InternedString::new("foo"),
-                version: Some("1.2.3".to_semver().unwrap()),
+                version: Some("1.2.3".parse().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
             },
             "https://crates.io/foo#1.2.3",
         );
         ok(
+            "https://crates.io/foo#1.2",
+            PackageIdSpec {
+                name: InternedString::new("foo"),
+                version: Some("1.2".parse().unwrap()),
+                url: Some(Url::parse("https://crates.io/foo").unwrap()),
+            },
+            "https://crates.io/foo#1.2",
+        );
+        ok(
             "https://crates.io/foo#bar:1.2.3",
             PackageIdSpec {
                 name: InternedString::new("bar"),
-                version: Some("1.2.3".to_semver().unwrap()),
+                version: Some("1.2.3".parse().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
             },
             "https://crates.io/foo#bar@1.2.3",
@@ -362,10 +377,19 @@ mod tests {
             "https://crates.io/foo#bar@1.2.3",
             PackageIdSpec {
                 name: InternedString::new("bar"),
-                version: Some("1.2.3".to_semver().unwrap()),
+                version: Some("1.2.3".parse().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
             },
             "https://crates.io/foo#bar@1.2.3",
+        );
+        ok(
+            "https://crates.io/foo#bar@1.2",
+            PackageIdSpec {
+                name: InternedString::new("bar"),
+                version: Some("1.2".parse().unwrap()),
+                url: Some(Url::parse("https://crates.io/foo").unwrap()),
+            },
+            "https://crates.io/foo#bar@1.2",
         );
         ok(
             "foo",
@@ -380,7 +404,7 @@ mod tests {
             "foo:1.2.3",
             PackageIdSpec {
                 name: InternedString::new("foo"),
-                version: Some("1.2.3".to_semver().unwrap()),
+                version: Some("1.2.3".parse().unwrap()),
                 url: None,
             },
             "foo@1.2.3",
@@ -389,10 +413,19 @@ mod tests {
             "foo@1.2.3",
             PackageIdSpec {
                 name: InternedString::new("foo"),
-                version: Some("1.2.3".to_semver().unwrap()),
+                version: Some("1.2.3".parse().unwrap()),
                 url: None,
             },
             "foo@1.2.3",
+        );
+        ok(
+            "foo@1.2",
+            PackageIdSpec {
+                name: InternedString::new("foo"),
+                version: Some("1.2".parse().unwrap()),
+                url: None,
+            },
+            "foo@1.2",
         );
     }
 
@@ -400,10 +433,9 @@ mod tests {
     fn bad_parsing() {
         assert!(PackageIdSpec::parse("baz:").is_err());
         assert!(PackageIdSpec::parse("baz:*").is_err());
-        assert!(PackageIdSpec::parse("baz:1.0").is_err());
         assert!(PackageIdSpec::parse("baz@").is_err());
         assert!(PackageIdSpec::parse("baz@*").is_err());
-        assert!(PackageIdSpec::parse("baz@1.0").is_err());
+        assert!(PackageIdSpec::parse("baz@^1.0").is_err());
         assert!(PackageIdSpec::parse("https://baz:1.0").is_err());
         assert!(PackageIdSpec::parse("https://#baz:1.0").is_err());
     }
@@ -421,5 +453,6 @@ mod tests {
         assert!(!PackageIdSpec::parse("foo:1.2.2").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo@1.2.3").unwrap().matches(foo));
         assert!(!PackageIdSpec::parse("foo@1.2.2").unwrap().matches(foo));
+        assert!(PackageIdSpec::parse("foo@1.2").unwrap().matches(foo));
     }
 }

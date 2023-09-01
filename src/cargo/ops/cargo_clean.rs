@@ -108,7 +108,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     for spec_str in opts.spec.iter() {
         // Translate the spec to a Package.
         let spec = PackageIdSpec::parse(spec_str)?;
-        if spec.version().is_some() {
+        if spec.partial_version().is_some() {
             config.shell().warn(&format!(
                 "version qualifier in `-p {}` is ignored, \
                 cleaning all versions of `{}` found",

@@ -317,19 +317,7 @@ fn profile_override_spec_with_partial_version() {
         .build();
 
     p.cargo("check -v")
-        .with_status(101)
-        .with_stderr_contains(
-            "\
-error: failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 9, column 34
-    |
-  9 |             [profile.dev.package.\"bar:0.5\"]
-    |                                  ^^^^^^^^^
-  cannot parse '0.5' as a SemVer version
-",
-        )
+        .with_stderr_contains("[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]")
         .run();
 }
 

@@ -164,10 +164,32 @@ pub struct PartialVersion {
 }
 
 impl PartialVersion {
+    pub fn version(&self) -> Option<Version> {
+        Some(Version {
+            major: self.major,
+            minor: self.minor?,
+            patch: self.patch?,
+            pre: self.pre.clone().unwrap_or_default(),
+            build: self.build.clone().unwrap_or_default(),
+        })
+    }
+
     pub fn caret_req(&self) -> VersionReq {
         VersionReq {
             comparators: vec![Comparator {
                 op: semver::Op::Caret,
+                major: self.major,
+                minor: self.minor,
+                patch: self.patch,
+                pre: self.pre.as_ref().cloned().unwrap_or_default(),
+            }],
+        }
+    }
+
+    pub fn exact_req(&self) -> VersionReq {
+        VersionReq {
+            comparators: vec![Comparator {
+                op: semver::Op::Exact,
                 major: self.major,
                 minor: self.minor,
                 patch: self.patch,
