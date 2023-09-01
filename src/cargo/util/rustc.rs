@@ -28,6 +28,8 @@ pub struct Rustc {
     pub version: semver::Version,
     /// The host triple (arch-platform-OS), this comes from verbose_version.
     pub host: InternedString,
+    /// The rustc full commit hash, this comes from `verbose_version`.
+    pub commit_hash: Option<String>,
     cache: Mutex<Cache>,
 }
 
@@ -80,6 +82,17 @@ impl Rustc {
                 verbose_version
             )
         })?;
+        let commit_hash = extract("commit-hash: ").ok().map(|hash| {
+            debug_assert!(
+                hash.chars().all(|ch| ch.is_ascii_hexdigit()),
+                "commit hash must be a hex string"
+            );
+            debug_assert!(
+                hash.len() == 40 || hash.len() == 64,
+                "hex string must be generated from sha1 or sha256"
+            );
+            hash.to_string()
+        });
 
         Ok(Rustc {
             path,
@@ -88,6 +101,7 @@ impl Rustc {
             verbose_version,
             version,
             host,
+            commit_hash,
             cache: Mutex::new(cache),
         })
     }
