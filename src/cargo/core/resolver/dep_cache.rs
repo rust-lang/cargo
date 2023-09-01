@@ -58,14 +58,14 @@ impl<'a> RegistryQueryer<'a> {
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
         minimal_versions: bool,
-        max_rust_version: Option<RustVersion>,
+        max_rust_version: Option<&RustVersion>,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
             version_prefs,
             minimal_versions,
-            max_rust_version,
+            max_rust_version: max_rust_version.cloned(),
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
@@ -115,7 +115,8 @@ impl<'a> RegistryQueryer<'a> {
 
         let mut ret = Vec::new();
         let ready = self.registry.query(dep, QueryKind::Exact, &mut |s| {
-            if self.max_rust_version.is_none() || s.rust_version() <= self.max_rust_version {
+            if self.max_rust_version.is_none() || s.rust_version() <= self.max_rust_version.as_ref()
+            {
                 ret.push(s);
             }
         })?;

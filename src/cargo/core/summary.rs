@@ -88,8 +88,8 @@ impl Summary {
         self.inner.links
     }
 
-    pub fn rust_version(&self) -> Option<RustVersion> {
-        self.inner.rust_version
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        self.inner.rust_version.as_ref()
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {

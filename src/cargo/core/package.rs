@@ -178,7 +178,7 @@ impl Package {
         self.targets().iter().any(|target| target.proc_macro())
     }
     /// Gets the package's minimum Rust version.
-    pub fn rust_version(&self) -> Option<RustVersion> {
+    pub fn rust_version(&self) -> Option<&RustVersion> {
         self.manifest().rust_version()
     }
 
@@ -263,7 +263,7 @@ impl Package {
             metabuild: self.manifest().metabuild().cloned(),
             publish: self.publish().as_ref().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
-            rust_version: self.rust_version(),
+            rust_version: self.rust_version().cloned(),
         }
     }
 }

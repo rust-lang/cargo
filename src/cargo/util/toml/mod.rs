@@ -1961,8 +1961,9 @@ impl TomlManifest {
         }
 
         let rust_version = if let Some(rust_version) = &package.rust_version {
-            let rust_version =
-                rust_version.resolve("rust_version", || inherit()?.rust_version())?;
+            let rust_version = rust_version
+                .clone()
+                .resolve("rust_version", || inherit()?.rust_version())?;
             let req = rust_version.caret_req();
             if let Some(first_version) = edition.first_version() {
                 let unsupported =
@@ -2244,7 +2245,7 @@ impl TomlManifest {
             deps,
             me.features.as_ref().unwrap_or(&empty_features),
             package.links.as_deref(),
-            rust_version,
+            rust_version.clone(),
         )?;
 
         let metadata = ManifestMetadata {
@@ -2357,7 +2358,7 @@ impl TomlManifest {
             .categories
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.categories.clone()));
-        package.rust_version = rust_version.map(|rv| MaybeWorkspace::Defined(rv));
+        package.rust_version = rust_version.clone().map(|rv| MaybeWorkspace::Defined(rv));
         package.exclude = package
             .exclude
             .as_ref()

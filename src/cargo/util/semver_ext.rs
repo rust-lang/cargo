@@ -110,7 +110,7 @@ impl From<VersionReq> for OptVersionReq {
 }
 
 #[derive(
-    PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Debug, serde::Serialize, serde::Deserialize,
+    PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug, serde::Serialize, serde::Deserialize,
 )]
 #[serde(transparent)]
 pub struct RustVersion(PartialVersion);
@@ -137,7 +137,7 @@ impl Display for RustVersion {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
 pub struct PartialVersion {
     pub major: u64,
     pub minor: Option<u64>,

@@ -570,8 +570,8 @@ impl Manifest {
         self.edition
     }
 
-    pub fn rust_version(&self) -> Option<RustVersion> {
-        self.rust_version
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        self.rust_version.as_ref()
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {

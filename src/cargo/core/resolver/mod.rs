@@ -139,7 +139,7 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
-    mut max_rust_version: Option<RustVersion>,
+    mut max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
     let _p = profile::start("resolving");
     let minimal_versions = match config {
