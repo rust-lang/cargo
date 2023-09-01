@@ -94,6 +94,7 @@ For the latest nightly, see the [nightly version] of this page.
     * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
     * [Edition 2024](#edition-2024) — Adds support for the 2024 Edition.
+    * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitisation of file paths in build outputs.
 * Information and metadata
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -1285,6 +1286,89 @@ experimentation. Future nightly releases may introduce changes for the 2024
 edition that may break your build.
 
 [edition]: ../../edition-guide/index.html
+
+## Profile `trim-paths` option
+
+* Tracking Issue: [rust-lang/cargo#12137](https://github.com/rust-lang/cargo/issues/12137)
+* Tracking Rustc Issue: [rust-lang/rust#111540](https://github.com/rust-lang/rust/issues/111540)
+
+This adds a new profile setting to control how paths are sanitised in the resulting binary.
+This can be enabled like so:
+
+```toml
+cargo-features = ["trim-paths"]
+
+[package]
+# ...
+
+[profile.release]
+trim-paths = ["diagnostics", "object"]
+```
+
+To set this in a profile in Cargo configuration,
+you need to use either `-Z trim-paths` or `[unstable]` table to enable it.
+For example,
+
+```toml
+# .cargo/config.toml
+[unstable]
+trim-paths = true
+
+[profile.release]
+trim-paths = ["diagnostics", "object"]
+```
+
+### Documentation updates
+
+#### trim-paths
+
+*as a new ["Profiles settings" entry](./profiles.html#profile-settings)*
+
+`trim-paths` is a profile setting which enables and controls the sanitization of file paths in build outputs.
+It takes the following values:
+
+- `"none"` and `false` --- disable path sanitization
+- `"macro"` --- sanitize paths in the expansion of `std::file!()` macro.
+    This is where paths in embedded panic messages come from
+- `"diagnostics"` --- sanitize paths in printed compiler diagnostics
+- `"object"` --- sanitize paths in compiled executables or libraries
+- `"all"` and `true` --- sanitize paths in all possible locations
+
+It also takes an array with the combinations of `"macro"`, `"diagnostics"`, and `"object"`.
+
+It is defaulted to `none` for the `dev` profile, and `object` for the `release` profile.
+You can manually override it by specifying this option in `Cargo.toml`:
+
+```toml
+[profile.dev]
+trim-paths = "all"
+
+[profile.release]
+trim-paths = ["object", "diagnostics"]
+```
+
+The default `release` profile setting (`object`) sanitizes only the paths in emitted executable or library files.
+It always affects paths from macros such as panic messages, and in debug information only if they will be embedded together with the binary
+(the default on platforms with ELF binaries, such as Linux and windows-gnu),
+but will not touch them if they are in separate files (the default on Windows MSVC and macOS).
+But the paths to these separate files are sanitized.
+
+If `trim-paths` is not `none` or `false`, then the following paths are sanitized if they appear in a selected scope:
+
+1. Path to the source files of the standard and core library (sysroot) will begin with `/rustc/[rustc commit hash]`,
+   e.g. `/home/username/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs` -> 
+   `/rustc/fe72845f7bb6a77b9e671e6a4f32fe714962cec4/library/core/src/result.rs`
+2. Path to the current package will be stripped, relatively to the current workspace root, e.g. `/home/username/crate/src/lib.rs` -> `src/lib.rs`.
+3. Path to dependency packages will be replaced with `[package name]-[version]`. E.g. `/home/username/deps/foo/src/lib.rs` -> `foo-0.1.0/src/lib.rs`
+
+When a path to the source files of the standard and core library is *not* in scope for sanitization,
+the emitted path will depend on if `rust-src` component is present.
+If it is, then some paths will point to the copy of the source files on your file system;
+if it isn't, then they will show up as `/rustc/[rustc commit hash]/library/...`
+(just like when it is selected for sanitization).
+Paths to all other source files will not be affected.
+
+This will not affect any hard-coded paths in the source code, such as in strings.
 
 # Stabilized and removed features
 
