@@ -1,8 +1,8 @@
-## Features Examples
+# Features Examples
 
 The following illustrates some real-world examples of features in action.
 
-### Minimizing build times and file sizes
+## Minimizing build times and file sizes
 
 Some packages use features so that if the features are not enabled, it reduces
 the size of the crate and reduces compile time. Some examples are:
@@ -30,7 +30,7 @@ the size of the crate and reduces compile time. Some examples are:
 [`web-sys`]: https://crates.io/crates/web-sys
 [web-sys-features]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/crates/web-sys/Cargo.toml#L32-L1395
 
-### Extending behavior
+## Extending behavior
 
 The [`serde_json`] package has a [`preserve_order` feature][serde_json-preserve_order]
 which [changes the behavior][serde_json-code] of JSON maps to preserve the
@@ -47,7 +47,7 @@ usually builds with the feature off.
 [serde_json-code]: https://github.com/serde-rs/json/blob/v1.0.60/src/map.rs#L23-L26
 [`indexmap`]: https://crates.io/crates/indexmap
 
-### `no_std` support
+## `no_std` support
 
 Some packages want to support both [`no_std`] and `std` environments. This is
 useful for supporting embedded and resource-constrained platforms, but still
@@ -71,7 +71,7 @@ to conditionally enable extra functionality that requires `std`.
 [wasm-bindgen-cfg1]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/src/lib.rs#L270-L273
 [wasm-bindgen-cfg2]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/src/lib.rs#L67-L75
 
-### Re-exporting dependency features
+## Re-exporting dependency features
 
 It can be convenient to re-export the features from a dependency. This allows
 the user depending on the crate to control those features without needing to
@@ -83,7 +83,7 @@ but they can still access the features it contains.
 [regex-re-export]: https://github.com/rust-lang/regex/blob/1.4.2/Cargo.toml#L65-L89
 [regex_syntax-features]: https://github.com/rust-lang/regex/blob/1.4.2/regex-syntax/Cargo.toml#L17-L32
 
-### Vendoring of C libraries
+## Vendoring of C libraries
 
 Some packages provide bindings to common C libraries (sometimes referred to as
 ["sys" crates][sys]). Sometimes these packages give you the choice to use the
@@ -111,7 +111,7 @@ static-curl setting.
 [curl-sys-macos]: https://github.com/alexcrichton/curl-rust/blob/0.4.34/curl-sys/Cargo.toml#L52
 [curl-sys-macos-code]: https://github.com/alexcrichton/curl-rust/blob/0.4.34/curl-sys/build.rs#L15-L20
 
-### Feature precedence
+## Feature precedence
 
 Some packages may have mutually-exclusive features. One option to handle this
 is to prefer one feature over another. The [`log`] package is an example. It
@@ -126,7 +126,7 @@ levels will be preferred over the lower levels.
 [log-cfg-if]: https://github.com/rust-lang/log/blob/0.4.11/src/lib.rs#L1422-L1448
 [`cfg-if`]: https://crates.io/crates/cfg-if
 
-### Proc-macro companion package
+## Proc-macro companion package
 
 Some packages have a proc-macro that is intimately tied with it. However, not
 all users will need to use the proc-macro. By making the proc-macro an
@@ -145,7 +145,7 @@ requirement][serde-equals] to ensure they stay in sync.
 [serde-derive]: https://github.com/serde-rs/serde/blob/v1.0.118/serde/Cargo.toml#L34-L35
 [serde-equals]: https://github.com/serde-rs/serde/blob/v1.0.118/serde/Cargo.toml#L17
 
-### Nightly-only features
+## Nightly-only features
 
 Some packages want to experiment with APIs or language features that are only
 available on the Rust [nightly channel]. However, they may not want to require
@@ -172,7 +172,7 @@ which relies on a dependency that only builds on the nightly channel.
 [`rand`]: https://crates.io/crates/rand
 [rand-simd_support]: https://github.com/rust-random/rand/blob/0.7.3/Cargo.toml#L40
 
-### Experimental features
+## Experimental features
 
 Some packages have new functionality that they may want to experiment with,
 without having to commit to the stability of those APIs. The features are

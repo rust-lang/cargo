@@ -1,6 +1,6 @@
-## Why Cargo Exists
+# Why Cargo Exists
 
-### Preliminaries
+## Preliminaries
 
 In Rust, as you may know, a library or executable program is called a
 [*crate*][def-crate]. Crates are compiled using the Rust compiler,
@@ -31,7 +31,7 @@ involved with performing the above tasks by introducing a higher-level
 ["*package*"][def-package] abstraction and by using a
 [*package manager*][def-package-manager].
 
-### Enter: Cargo
+## Enter: Cargo
 
 *Cargo* is the Rust package manager. It is a tool that allows Rust
 [*packages*][def-package] to declare their various dependencies and ensure

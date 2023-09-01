@@ -1,6 +1,6 @@
-## Frequently Asked Questions
+# Frequently Asked Questions
 
-### Is the plan to use GitHub as a package repository?
+## Is the plan to use GitHub as a package repository?
 
 No. The plan for Cargo is to use [crates.io], like npm or Rubygems do with
 [npmjs.com][1] and [rubygems.org][3].
@@ -9,7 +9,7 @@ We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
 even when people use the registry as the primary source of packages.
 
-### Why build crates.io rather than use GitHub as a registry?
+## Why build crates.io rather than use GitHub as a registry?
 
 We think that it’s very important to support multiple ways to download
 packages, including downloading from GitHub and copying packages into
@@ -43,7 +43,7 @@ languages include:
   down fast. Also remember that not everybody has a high-speed,
   low-latency Internet connection.
 
-### Will Cargo work with C code (or other languages)?
+## Will Cargo work with C code (or other languages)?
 
 Yes!
 
@@ -56,7 +56,7 @@ Our solution: Cargo allows a package to [specify a script](reference/build-scrip
 implement platform-specific configuration and refactor out common build
 functionality among packages.
 
-### Can Cargo be used inside of `make` (or `ninja`, or ...)
+## Can Cargo be used inside of `make` (or `ninja`, or ...)
 
 Indeed. While we intend Cargo to be useful as a standalone way to
 compile Rust packages at the top-level, we know that some people will
@@ -68,7 +68,7 @@ have some work to do on those fronts, but using Cargo in the context of
 conventional scripts is something we designed for from the beginning and
 will continue to prioritize.
 
-### Does Cargo handle multi-platform packages or cross-compilation?
+## Does Cargo handle multi-platform packages or cross-compilation?
 
 Rust itself provides facilities for configuring sections of code based
 on the platform. Cargo also supports [platform-specific
@@ -80,7 +80,7 @@ configuration in `Cargo.toml` in the future.
 In the longer-term, we’re looking at ways to conveniently cross-compile
 packages using Cargo.
 
-### Does Cargo support environments, like `production` or `test`?
+## Does Cargo support environments, like `production` or `test`?
 
 We support environments through the use of [profiles] to support:
 
@@ -92,7 +92,7 @@ We support environments through the use of [profiles] to support:
 * environment-specific `#[cfg]`
 * a `cargo test` command
 
-### Does Cargo work on Windows?
+## Does Cargo work on Windows?
 
 Yes!
 
@@ -102,7 +102,7 @@ issue][cargo-issues].
 
 [cargo-issues]: https://github.com/rust-lang/cargo/issues
 
-### Why have `Cargo.lock` in version control?
+## Why have `Cargo.lock` in version control?
 
 While [`cargo new`] defaults to tracking `Cargo.lock` in version control,
 whether you do is dependent on the needs of your package.
@@ -144,7 +144,7 @@ see [Verifying Latest Dependencies](guide/continuous-integration.md#verifying-la
 [`cargo add`]: commands/cargo-add.md
 [`cargo install`]: commands/cargo-install.md
 
-### Can libraries use `*` as a version for their dependencies?
+## Can libraries use `*` as a version for their dependencies?
 
 **As of January 22nd, 2016, [crates.io] rejects all packages (not just libraries)
 with wildcard dependency constraints.**
@@ -154,7 +154,7 @@ of `*` says “This will work with every version ever”, which is never going
 to be true. Libraries should always specify the range that they do work with,
 even if it’s something as general as “every 1.x.y version”.
 
-### Why `Cargo.toml`?
+## Why `Cargo.toml`?
 
 As one of the most frequent interactions with Cargo, the question of why the
 configuration file is named `Cargo.toml` arises from time to time. The leading
@@ -172,7 +172,7 @@ but others were accidentally forgotten.
 
 [crates.io]: https://crates.io/
 
-### How can Cargo work offline?
+## How can Cargo work offline?
 
 Cargo is often used in situations with limited or no network access such as
 airplanes, CI environments, or embedded in large production deployments. Users
@@ -216,7 +216,7 @@ replacement][replace].
 [`cargo fetch`]: commands/cargo-fetch.md
 [offline config]: reference/config.md#netoffline
 
-### Why is Cargo rebuilding my code?
+## Why is Cargo rebuilding my code?
 
 Cargo is responsible for incrementally compiling crates in your project. This
 means that if you type `cargo build` twice the second one shouldn't rebuild your
@@ -274,7 +274,7 @@ If after trying to debug your issue, however, you're still running into problems
 then feel free to [open an
 issue](https://github.com/rust-lang/cargo/issues/new)!
 
-### What does "version conflict" mean and how to resolve it?
+## What does "version conflict" mean and how to resolve it?
 
 > failed to select a version for `x` which could resolve this conflict
 

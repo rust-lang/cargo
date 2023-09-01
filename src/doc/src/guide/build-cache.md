@@ -1,4 +1,4 @@
-## Build cache
+# Build cache
 
 Cargo stores the output of a build into the "target" directory. By default,
 this is the directory named `target` in the root of your
@@ -63,7 +63,7 @@ Directory | Description
 <code style="white-space: nowrap">target/debug/incremental/</code> | `rustc` [incremental output], a cache used to speed up subsequent builds.
 <code style="white-space: nowrap">target/debug/build/</code> | Output from [build scripts].
 
-### Dep-info files
+## Dep-info files
 
 Next to each compiled artifact is a file called a "dep info" file with a `.d`
 suffix. This file is a Makefile-like syntax that indicates all of the file
@@ -77,7 +77,7 @@ re-executed. The paths in the file are absolute by default. See the
 /path/to/myproj/target/debug/foo: /path/to/myproj/src/lib.rs /path/to/myproj/src/main.rs
 ```
 
-### Shared cache
+## Shared cache
 
 A third party tool, [sccache], can be used to share built dependencies across
 different workspaces.

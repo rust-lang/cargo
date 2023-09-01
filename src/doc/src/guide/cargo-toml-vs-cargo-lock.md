@@ -1,4 +1,4 @@
-## Cargo.toml vs Cargo.lock
+# Cargo.toml vs Cargo.lock
 
 `Cargo.toml` and `Cargo.lock` serve two different purposes. Before we talk
 about them, here’s a summary:

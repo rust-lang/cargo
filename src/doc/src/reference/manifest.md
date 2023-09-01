@@ -1,4 +1,4 @@
-## The Manifest Format
+# The Manifest Format
 
 The `Cargo.toml` file for each package is called its *manifest*. It is written
 in the [TOML] format. It contains metadata that is needed to compile the package. Checkout
@@ -53,7 +53,7 @@ Every manifest file consists of the following sections:
 * [`[profile]`](profiles.md) --- Compiler settings and optimizations.
 * [`[workspace]`](workspaces.md) --- The workspace definition.
 
-### The `[package]` section
+## The `[package]` section
 
 The first section in a `Cargo.toml` is `[package]`.
 
@@ -69,7 +69,7 @@ The only fields required by Cargo are [`name`](#the-name-field) and
 require additional fields. See the notes below and [the publishing
 chapter][publishing] for requirements for publishing to [crates.io].
 
-#### The `name` field
+### The `name` field
 
 The package name is an identifier used to refer to the package. It is used
 when listed as a dependency in another package, and as the default name of
@@ -88,7 +88,7 @@ a keyword. [crates.io] imposes even more restrictions, such as:
 
 [alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
 
-#### The `version` field
+### The `version` field
 
 Cargo bakes in the concept of [Semantic
 Versioning](https://semver.org/), so make sure you follow some basic rules:
@@ -111,7 +111,7 @@ breaking change.
 [Resolver]: resolver.md
 [SemVer compatibility]: semver.md
 
-#### The `authors` field
+### The `authors` field
 
 The optional `authors` field lists in an array the people or organizations that are considered
 the "authors" of the package. The exact meaning is open to interpretation --- it
@@ -133,7 +133,7 @@ user interface.
 > field cannot be changed or removed in already-published versions of a
 > package.
 
-#### The `edition` field
+### The `edition` field
 
 The `edition` key is an optional key that affects which [Rust Edition] your package
 is compiled with. Setting the `edition` key in `[package]` will affect all
@@ -155,7 +155,7 @@ assumed for backwards compatibility. Note that all manifests
 created with [`cargo new`] will not use this historical fallback because they
 will have `edition` explicitly specified to a newer value.
 
-#### The `rust-version` field
+### The `rust-version` field
 
 The `rust-version` field is an optional key that tells cargo what version of the
 Rust language and compiler your package can be compiled with. If the currently
@@ -182,7 +182,7 @@ The `rust-version` may be ignored using the `--ignore-rust-version` option.
 Setting the `rust-version` key in `[package]` will affect all targets/crates in
 the package, including test suites, benchmarks, binaries, examples, etc.
 
-#### The `description` field
+### The `description` field
 
 The description is a short blurb about the package. [crates.io] will display
 this with your package. This should be plain text (not Markdown).
@@ -195,7 +195,7 @@ description = "A short description of my package"
 
 > **Note**: [crates.io] requires the `description` to be set.
 
-#### The `documentation` field
+### The `documentation` field
 
 The `documentation` field specifies a URL to a website hosting the crate's
 documentation. If no URL is specified in the manifest file, [crates.io] will
@@ -210,7 +210,7 @@ documentation = "https://docs.rs/bitflags"
 
 [docs.rs queue]: https://docs.rs/releases/queue
 
-#### The `readme` field
+### The `readme` field
 
 The `readme` field should be the path to a file in the package root (relative
 to this `Cargo.toml`) that contains general information about the package.
@@ -229,7 +229,7 @@ file will be used. You can suppress this behavior by setting this field to
 `false`. If the field is set to `true`, a default value of `README.md` will
 be assumed.
 
-#### The `homepage` field
+### The `homepage` field
 
 The `homepage` field should be a URL to a site that is the home page for your
 package.
@@ -240,7 +240,7 @@ package.
 homepage = "https://serde.rs/"
 ```
 
-#### The `repository` field
+### The `repository` field
 
 The `repository` field should be a URL to the source repository for your
 package.
@@ -251,7 +251,7 @@ package.
 repository = "https://github.com/rust-lang/cargo/"
 ```
 
-#### The `license` and `license-file` fields
+### The `license` and `license-file` fields
 
 The `license` field contains the name of the software license that the package
 is released under. The `license-file` field contains the path to a file
@@ -293,7 +293,7 @@ license-file = "LICENSE.txt"
 [^slash]: Previously multiple licenses could be separated with a `/`, but that
 usage is deprecated.
 
-#### The `keywords` field
+### The `keywords` field
 
 The `keywords` field is an array of strings that describe this package. This
 can help when searching for the package on a registry, and you may choose any
@@ -309,7 +309,7 @@ keywords = ["gamedev", "graphics"]
 > ASCII text, start with a letter, and only contain letters, numbers, `_` or
 > `-`, and have at most 20 characters.
 
-#### The `categories` field
+### The `categories` field
 
 The `categories` field is an array of strings of the categories this package
 belongs to.
@@ -322,7 +322,7 @@ categories = ["command-line-utilities", "development-tools::cargo-plugins"]
 > match one of the strings available at <https://crates.io/category_slugs>, and
 > must match exactly.
 
-#### The `workspace` field
+### The `workspace` field
 
 The `workspace` field can be used to configure the workspace that this package
 will be a member of. If not specified this will be inferred as the first
@@ -342,7 +342,7 @@ table defined. That is, a crate cannot both be a root crate in a workspace
 
 For more information, see the [workspaces chapter](workspaces.md).
 
-#### The `build` field
+### The `build` field
 
 The `build` field specifies a file in the package root which is a [build
 script] for building native code. More information can be found in the [build
@@ -361,7 +361,7 @@ The default is `"build.rs"`, which loads the script from a file named
 specify a path to a different file or `build = false` to disable automatic
 detection of the build script.
 
-#### The `links` field
+### The `links` field
 
 The `links` field specifies the name of a native library that is being linked
 to. More information can be found in the [`links`][links] section of the build
@@ -378,7 +378,7 @@ on Linux) may specify:
 links = "git2"
 ```
 
-#### The `exclude` and `include` fields
+### The `exclude` and `include` fields
 
 The `exclude` and `include` fields can be used to explicitly specify which
 files are included when packaging a project to be [published][publishing],
@@ -467,7 +467,7 @@ if any of those files change.
 
 [gitignore]: https://git-scm.com/docs/gitignore
 
-#### The `publish` field
+### The `publish` field
 
 The `publish` field can be used to prevent a package from being published to a
 package registry (like *crates.io*) by mistake, for instance to keep a package
@@ -491,7 +491,7 @@ publish = ["some-registry-name"]
 If publish array contains a single registry, `cargo publish` command will use
 it when `--registry` flag is not specified.
 
-#### The `metadata` table
+### The `metadata` table
 
 Cargo by default will warn about unused keys in `Cargo.toml` to assist in
 detecting typos and such. The `package.metadata` table, however, is completely
@@ -519,7 +519,7 @@ if that makes sense for the tool in question.
 
 [workspace-metadata]: workspaces.md#the-metadata-table
 
-#### The `default-run` field
+### The `default-run` field
 
 The `default-run` field in the `[package]` section of the manifest can be used
 to specify a default binary picked by [`cargo run`]. For example, when there is
@@ -530,7 +530,7 @@ both `src/bin/a.rs` and `src/bin/b.rs`:
 default-run = "a"
 ```
 
-### The `[badges]` section
+## The `[badges]` section
 
 The `[badges]` section is for specifying status badges that can be displayed
 on a registry website when the package is published.
@@ -565,13 +565,13 @@ on a registry website when the package is published.
 maintenance = { status = "..." }
 ```
 
-### Dependency sections
+## Dependency sections
 
 See the [specifying dependencies page](specifying-dependencies.md) for
 information on the `[dependencies]`, `[dev-dependencies]`,
 `[build-dependencies]`, and target-specific `[target.*.dependencies]` sections.
 
-### The `[profile.*]` sections
+## The `[profile.*]` sections
 
 The `[profile]` tables provide a way to customize compiler settings such as
 optimizations and debug settings. See [the Profiles chapter](profiles.md) for

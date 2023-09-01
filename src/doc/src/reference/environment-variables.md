@@ -1,10 +1,10 @@
-## Environment Variables
+# Environment Variables
 
 Cargo sets and reads a number of environment variables which your code can detect
 or override. Here is a list of the variables Cargo sets, organized by when it interacts
 with them:
 
-### Environment variables Cargo reads
+## Environment variables Cargo reads
 
 You can override these environment variables to change Cargo's behavior on your
 system:
@@ -79,7 +79,7 @@ system:
   [`cargo fmt`](https://github.com/rust-lang/rustfmt) will execute this specified
   `rustfmt` instance instead.
 
-#### Configuration environment variables
+### Configuration environment variables
 
 Cargo reads environment variables for some configuration values.
 See the [configuration chapter][config-env] for more details.
@@ -200,7 +200,7 @@ In summary, the supported environment variables are:
 [`term.progress.when`]: config.md#termprogresswhen
 [`term.progress.width`]: config.md#termprogresswidth
 
-### Environment variables Cargo sets for crates
+## Environment variables Cargo sets for crates
 
 Cargo exposes these environment variables to your crate when it is compiled.
 Note that this applies for running binaries with `cargo run` and `cargo test`
@@ -266,7 +266,7 @@ corresponding environment variable is set to the empty string, `""`.
 [integration test]: cargo-targets.md#integration-tests
 [`env` macro]: ../../std/macro.env.html
 
-#### Dynamic library paths
+### Dynamic library paths
 
 Cargo also sets the dynamic library path when compiling and running binaries
 with commands like `cargo run` and `cargo test`. This helps with locating
@@ -294,7 +294,7 @@ Cargo includes the following paths:
 * The rustc sysroot library path. This generally is not important to most
   users.
 
-### Environment variables Cargo sets for build scripts
+## Environment variables Cargo sets for build scripts
 
 Cargo sets several environment variables when build scripts are run. Because these variables
 are not yet set when the build script is compiled, the above example using `env!` won't work
@@ -411,7 +411,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [`dev`]: profiles.md#dev
 [`release`]: profiles.md#release
 
-### Environment variables Cargo sets for 3rd party subcommands
+## Environment variables Cargo sets for 3rd party subcommands
 
 Cargo exposes this environment variable to 3rd party subcommands
 (ie. programs named `cargo-foobar` placed in `$PATH`):

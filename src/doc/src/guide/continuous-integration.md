@@ -1,10 +1,10 @@
-## Continuous Integration
+# Continuous Integration
 
-### Getting Started
+## Getting Started
 
 A basic CI will build and test your projects:
 
-### GitHub Actions
+## GitHub Actions
 
 To test your package on GitHub Actions, here is a sample `.github/workflows/ci.yml` file:
 
@@ -38,7 +38,7 @@ jobs:
 
 This will test all three release channels (note a failure in any toolchain version will fail the entire job). You can also click `"Actions" > "new workflow"` in the GitHub UI and select Rust to add the [default configuration](https://github.com/actions/starter-workflows/blob/main/ci/rust.yml) to your repo. See [GitHub Actions documentation](https://docs.github.com/en/actions) for more information.
 
-### GitLab CI
+## GitLab CI
 
 To test your package on GitLab CI, here is a sample `.gitlab-ci.yml` file:
 
@@ -67,7 +67,7 @@ breakage in nightly will not fail your overall build. Please see the
 [GitLab CI documentation](https://docs.gitlab.com/ce/ci/yaml/index.html) for more
 information.
 
-### builds.sr.ht
+## builds.sr.ht
 
 To test your package on sr.ht, here is a sample `.build.yml` file.
 Be sure to change `<your repo>` and `<your project>` to the repo to clone and
@@ -105,7 +105,7 @@ channel, but any breakage in nightly will not fail your overall build. Please
 see the [builds.sr.ht documentation](https://man.sr.ht/builds.sr.ht/) for more
 information.
 
-### Verifying Latest Dependencies
+## Verifying Latest Dependencies
 
 When [specifying dependencies](../reference/specifying-dependencies.md) in
 `Cargo.toml`, they generally match a range of versions.
