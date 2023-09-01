@@ -158,44 +158,61 @@ impl PartialVersion {
     }
 }
 
+impl TryFrom<semver::Version> for PartialVersion {
+    type Error = anyhow::Error;
+    fn try_from(value: semver::Version) -> Result<Self, Self::Error> {
+        if !value.pre.is_empty() {
+            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+        }
+        if !value.build.is_empty() {
+            anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
+        }
+        Ok(Self {
+            major: value.major,
+            minor: Some(value.minor),
+            patch: Some(value.patch),
+        })
+    }
+}
+
 impl std::str::FromStr for PartialVersion {
     type Err = anyhow::Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        // HACK: `PartialVersion` is a subset of the `VersionReq` syntax that only ever
-        // has one comparator with a required minor and optional patch, and uses no
-        // other features.
         if is_req(value) {
             anyhow::bail!("unexpected version requirement, expected a version like \"1.32\"")
         }
-        let version_req = match semver::VersionReq::parse(value) {
-            // Exclude semver operators like `^` and pre-release identifiers
-            Ok(req) if value.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
-            _ if value.contains('-') => {
-                anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+        match semver::Version::parse(value) {
+            Ok(ver) => ver.try_into(),
+            Err(_) => {
+                // HACK: Leverage `VersionReq` for partial version parsing
+                let mut version_req = match semver::VersionReq::parse(value) {
+                    Ok(req) => req,
+                    Err(_) if value.contains('-') => {
+                        anyhow::bail!(
+                            "unexpected prerelease field, expected a version like \"1.32\""
+                        )
+                    }
+                    Err(_) if value.contains('+') => {
+                        anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
+                    }
+                    Err(_) => anyhow::bail!("expected a version like \"1.32\""),
+                };
+                assert_eq!(version_req.comparators.len(), 1, "guarenteed by is_req");
+                let comp = version_req.comparators.pop().unwrap();
+                assert_eq!(comp.op, semver::Op::Caret, "guarenteed by is_req");
+                assert_eq!(
+                    comp.pre,
+                    semver::Prerelease::EMPTY,
+                    "guarenteed by `Version::parse` failing"
+                );
+                Ok(Self {
+                    major: comp.major,
+                    minor: comp.minor,
+                    patch: comp.patch,
+                })
             }
-            _ if value.contains('+') => {
-                anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
-            }
-            _ => anyhow::bail!("expected a version like \"1.32\""),
-        };
-        assert_eq!(
-            version_req.comparators.len(),
-            1,
-            "guarenteed by character check"
-        );
-        let comp = &version_req.comparators[0];
-        assert_eq!(comp.op, semver::Op::Caret, "guarenteed by character check");
-        assert_eq!(
-            comp.pre,
-            semver::Prerelease::EMPTY,
-            "guarenteed by character check"
-        );
-        Ok(PartialVersion {
-            major: comp.major,
-            minor: comp.minor,
-            patch: comp.patch,
-        })
+        }
     }
 }
 
