@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::fmt::Write;
 use std::rc::Rc;
+use std::sync::OnceLock;
 use std::task::Poll;
 use std::time::Instant;
 
@@ -563,11 +564,11 @@ macro_rules! pkg {
 }
 
 fn registry_loc() -> SourceId {
-    lazy_static::lazy_static! {
-        static ref EXAMPLE_DOT_COM: SourceId =
-            SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap();
-    }
-    *EXAMPLE_DOT_COM
+    static EXAMPLE_DOT_COM: OnceLock<SourceId> = OnceLock::new();
+    let example_dot = EXAMPLE_DOT_COM.get_or_init(|| {
+        SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap()
+    });
+    *example_dot
 }
 
 pub fn pkg<T: ToPkgId>(name: T) -> Summary {

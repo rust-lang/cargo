@@ -12,6 +12,7 @@ use std::os;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::str;
+use std::sync::OnceLock;
 use std::time::{self, Duration};
 
 use anyhow::{bail, Result};
@@ -1157,13 +1158,14 @@ impl RustcInfo {
     }
 }
 
-lazy_static::lazy_static! {
-    static ref RUSTC_INFO: RustcInfo = RustcInfo::new();
+fn rustc_info() -> &'static RustcInfo {
+    static RUSTC_INFO: OnceLock<RustcInfo> = OnceLock::new();
+    RUSTC_INFO.get_or_init(RustcInfo::new)
 }
 
 /// The rustc host such as `x86_64-unknown-linux-gnu`.
 pub fn rustc_host() -> &'static str {
-    &RUSTC_INFO.host
+    &rustc_info().host
 }
 
 /// The host triple suitable for use in a cargo environment variable (uppercased).
@@ -1172,7 +1174,7 @@ pub fn rustc_host_env() -> String {
 }
 
 pub fn is_nightly() -> bool {
-    let vv = &RUSTC_INFO.verbose_version;
+    let vv = &rustc_info().verbose_version;
     // CARGO_TEST_DISABLE_NIGHTLY is set in rust-lang/rust's CI so that all
     // nightly-only tests are disabled there. Otherwise, it could make it
     // difficult to land changes which would need to be made simultaneously in
@@ -1225,28 +1227,27 @@ pub trait TestEnv: Sized {
         if env::var_os("RUSTUP_TOOLCHAIN").is_some() {
             // Override the PATH to avoid executing the rustup wrapper thousands
             // of times. This makes the testsuite run substantially faster.
-            lazy_static::lazy_static! {
-                static ref RUSTC_DIR: PathBuf = {
-                    match ProcessBuilder::new("rustup")
-                        .args(&["which", "rustc"])
-                        .exec_with_output()
-                    {
-                        Ok(output) => {
-                            let s = str::from_utf8(&output.stdout).expect("utf8").trim();
-                            let mut p = PathBuf::from(s);
-                            p.pop();
-                            p
-                        }
-                        Err(e) => {
-                            panic!("RUSTUP_TOOLCHAIN was set, but could not run rustup: {}", e);
-                        }
+            static RUSTC_DIR: OnceLock<PathBuf> = OnceLock::new();
+            let rustc_dir = RUSTC_DIR.get_or_init(|| {
+                match ProcessBuilder::new("rustup")
+                    .args(&["which", "rustc"])
+                    .exec_with_output()
+                {
+                    Ok(output) => {
+                        let s = str::from_utf8(&output.stdout).expect("utf8").trim();
+                        let mut p = PathBuf::from(s);
+                        p.pop();
+                        p
                     }
-                };
-            }
+                    Err(e) => {
+                        panic!("RUSTUP_TOOLCHAIN was set, but could not run rustup: {}", e);
+                    }
+                }
+            });
             let path = env::var_os("PATH").unwrap_or_default();
             let paths = env::split_paths(&path);
             let new_path =
-                env::join_paths(std::iter::once(RUSTC_DIR.clone()).chain(paths)).unwrap();
+                env::join_paths(std::iter::once(rustc_dir.clone()).chain(paths)).unwrap();
             self = self.env("PATH", new_path);
         }
 
@@ -1408,11 +1409,14 @@ pub fn is_coarse_mtime() -> bool {
 /// Architectures that do not have a modern processor, hardware emulation, etc.
 /// This provides a way for those setups to increase the cut off for all the time based test.
 pub fn slow_cpu_multiplier(main: u64) -> Duration {
-    lazy_static::lazy_static! {
-        static ref SLOW_CPU_MULTIPLIER: u64 =
-            env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER").ok().and_then(|m| m.parse().ok()).unwrap_or(1);
-    }
-    Duration::from_secs(*SLOW_CPU_MULTIPLIER * main)
+    static SLOW_CPU_MULTIPLIER: OnceLock<u64> = OnceLock::new();
+    let slow_cpu_multiplier = SLOW_CPU_MULTIPLIER.get_or_init(|| {
+        env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER")
+            .ok()
+            .and_then(|m| m.parse().ok())
+            .unwrap_or(1)
+    });
+    Duration::from_secs(slow_cpu_multiplier * main)
 }
 
 #[cfg(windows)]

@@ -8,6 +8,5 @@ publish = false
 [dependencies]
 cargo.workspace = true
 cargo-util.workspace = true
-lazy_static.workspace = true
 proptest.workspace = true
 varisat.workspace = true
