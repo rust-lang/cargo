@@ -138,6 +138,7 @@ mod profile_config;
 mod profile_custom;
 mod profile_overrides;
 mod profile_targets;
+mod profile_trim_paths;
 mod profiles;
 mod progress;
 mod pub_priv;
