@@ -148,10 +148,8 @@ impl SourceId {
     ///                     656c58fb7c5ef5f12bc747f");
     /// ```
     pub fn from_url(string: &str) -> CargoResult<SourceId> {
-        let mut parts = string.splitn(2, '+');
-        let kind = parts.next().unwrap();
-        let url = parts
-            .next()
+        let (kind, url) = string
+            .split_once('+')
             .ok_or_else(|| anyhow::format_err!("invalid source `{}`", string))?;
 
         match kind {

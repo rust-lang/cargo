@@ -98,15 +98,16 @@ fn process_args() -> Result<Options, Error> {
                 let man = args
                     .next()
                     .ok_or_else(|| format_err!("--man requires a value"))?;
-                let parts: Vec<_> = man.splitn(2, '=').collect();
-                let key_parts: Vec<_> = parts[0].splitn(2, ':').collect();
-                if parts.len() != 2 || key_parts.len() != 2 {
-                    bail!("--man expected value with form name:1=link");
-                }
-                let section: u8 = key_parts[1].parse().with_context(|| {
-                    format!("expected unsigned integer for section, got `{}`", parts[1])
+                let parts = man.split_once('=').ok_or_else(|| {
+                    anyhow::format_err!("--man expected value with form name:1=link")
                 })?;
-                man_map.insert((key_parts[0].to_string(), section), parts[1].to_string());
+                let key_parts = parts.0.split_once(':').ok_or_else(|| {
+                    anyhow::format_err!("--man expected value with form name:1=link")
+                })?;
+                let section: u8 = key_parts.1.parse().with_context(|| {
+                    format!("expected unsigned integer for section, got `{}`", parts.1)
+                })?;
+                man_map.insert((key_parts.0.to_string(), section), parts.1.to_string());
             }
             s => {
                 sources.push(PathBuf::from(s));

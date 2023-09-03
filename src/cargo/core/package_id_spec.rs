@@ -123,24 +123,20 @@ impl PackageIdSpec {
                 )
             })?;
             match frag {
-                Some(fragment) => {
-                    let mut parts = fragment.splitn(2, [':', '@']);
-                    let name_or_version = parts.next().unwrap();
-                    match parts.next() {
-                        Some(part) => {
-                            let version = part.to_semver()?;
-                            (InternedString::new(name_or_version), Some(version))
-                        }
-                        None => {
-                            if name_or_version.chars().next().unwrap().is_alphabetic() {
-                                (InternedString::new(name_or_version), None)
-                            } else {
-                                let version = name_or_version.to_semver()?;
-                                (InternedString::new(path_name), Some(version))
-                            }
+                Some(fragment) => match fragment.split_once([':', '@']) {
+                    Some((name, part)) => {
+                        let version = part.to_semver()?;
+                        (InternedString::new(name), Some(version))
+                    }
+                    None => {
+                        if fragment.chars().next().unwrap().is_alphabetic() {
+                            (InternedString::new(&fragment), None)
+                        } else {
+                            let version = fragment.to_semver()?;
+                            (InternedString::new(path_name), Some(version))
                         }
                     }
-                }
+                },
                 None => (InternedString::new(path_name), None),
             }
         };
