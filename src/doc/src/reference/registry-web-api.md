@@ -196,7 +196,7 @@ A successful response includes the JSON object:
 
 ```javascript
 {
-    // Indicates the delete succeeded, always true.
+    // Indicates the yank succeeded, always true.
     "ok": true,
 }
 ```
@@ -214,7 +214,7 @@ A successful response includes the JSON object:
 
 ```javascript
 {
-    // Indicates the delete succeeded, always true.
+    // Indicates the unyank succeeded, always true.
     "ok": true,
 }
 ```
