@@ -563,7 +563,7 @@ fn auth_token_optional(
     let token = Secret::from(token);
     tracing::trace!("found token");
     let expiration = match cache_control {
-        CacheControl::Expires(expiration) => Some(expiration),
+        CacheControl::Expires { expiration } => Some(expiration),
         CacheControl::Session => None,
         CacheControl::Never | _ => return Ok(Some(token)),
     };

@@ -520,13 +520,13 @@ fn token_caching() {
 
     // Token should not be re-used if it is expired
     let expired_provider = build_provider(
-        "test-cred",
-        r#"{"Ok":{"kind":"get","token":"sekrit","cache":{"expires":0},"operation_independent":true}}"#,
+        "expired_provider",
+        r#"{"Ok":{"kind":"get","token":"sekrit","cache":"expires","expiration":0,"operation_independent":true}}"#,
     );
 
     // Token should not be re-used for a different operation if it is not operation_independent
     let non_independent_provider = build_provider(
-        "test-cred",
+        "non_independent_provider",
         r#"{"Ok":{"kind":"get","token":"sekrit","cache":"session","operation_independent":false}}"#,
     );
 

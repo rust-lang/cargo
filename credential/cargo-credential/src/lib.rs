@@ -50,7 +50,7 @@ pub use secret::Secret;
 use stdio::stdin_stdout_to_console;
 
 /// Message sent by the credential helper on startup
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CredentialHello {
     // Protocol versions supported by the credential process.
     pub v: Vec<u32>,
@@ -70,7 +70,7 @@ impl Credential for UnsupportedCredential {
 }
 
 /// Message sent by Cargo to the credential helper after the hello
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CredentialRequest<'a> {
     // Cargo will respond with the highest common protocol supported by both.
@@ -84,7 +84,7 @@ pub struct CredentialRequest<'a> {
     pub args: Vec<&'a str>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct RegistryInfo<'a> {
     /// Registry index url
@@ -98,7 +98,7 @@ pub struct RegistryInfo<'a> {
     pub headers: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum Action<'a> {
@@ -121,7 +121,7 @@ impl<'a> Display for Action<'a> {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct LoginOptions<'a> {
     /// Token passed on the command line via --token or from stdin
@@ -133,7 +133,7 @@ pub struct LoginOptions<'a> {
 }
 
 /// A record of what kind of operation is happening that we should generate a token for.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 #[serde(tag = "operation", rename_all = "kebab-case")]
 pub enum Operation<'a> {
@@ -172,12 +172,13 @@ pub enum Operation<'a> {
 }
 
 /// Message sent by the credential helper
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum CredentialResponse {
     Get {
         token: Secret<String>,
+        #[serde(flatten)]
         cache: CacheControl,
         operation_independent: bool,
     },
@@ -187,14 +188,17 @@ pub enum CredentialResponse {
     Unknown,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(tag = "cache", rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum CacheControl {
     /// Do not cache this result.
     Never,
     /// Cache this result and use it for subsequent requests in the current Cargo invocation until the specified time.
-    Expires(#[serde(with = "time::serde::timestamp")] OffsetDateTime),
+    Expires {
+        #[serde(with = "time::serde::timestamp")]
+        expiration: OffsetDateTime,
+    },
     /// Cache this result and use it for all subsequent requests in the current Cargo invocation.
     Session,
     #[serde(other)]
@@ -242,11 +246,7 @@ fn doit(
         if len == 0 {
             return Ok(());
         }
-        let request: CredentialRequest = serde_json::from_str(&buffer)?;
-        if request.v != PROTOCOL_VERSION_1 {
-            return Err(format!("unsupported protocol version {}", request.v).into());
-        }
-
+        let request = deserialize_request(&buffer)?;
         let response = stdin_stdout_to_console(|| {
             credential.perform(&request.registry, &request.action, &request.args)
         })?;
@@ -254,6 +254,17 @@ fn doit(
         serde_json::to_writer(std::io::stdout(), &response)?;
         println!();
     }
+}
+
+/// Deserialize a request from Cargo.
+fn deserialize_request(
+    value: &str,
+) -> Result<CredentialRequest<'_>, Box<dyn std::error::Error + Send + Sync>> {
+    let request: CredentialRequest = serde_json::from_str(&value)?;
+    if request.v != PROTOCOL_VERSION_1 {
+        return Err(format!("unsupported protocol version {}", request.v).into());
+    }
+    Ok(request)
 }
 
 /// Read a line of text from stdin.
@@ -281,4 +292,143 @@ pub fn read_token(
     }
 
     Ok(Secret::from(read_line().map_err(Box::new)?))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unsupported_version() {
+        // This shouldn't ever happen in practice, since the credential provider signals to Cargo which
+        // protocol versions it supports, and Cargo should only attempt to use one of those.
+        let msg = r#"{"v":999, "registry": {"index-url":""}, "args":[], "kind": "unexpected"}"#;
+        assert_eq!(
+            "unsupported protocol version 999",
+            deserialize_request(msg).unwrap_err().to_string()
+        );
+    }
+
+    #[test]
+    fn cache_control() {
+        let cc = CacheControl::Expires {
+            expiration: OffsetDateTime::from_unix_timestamp(1693928537).unwrap(),
+        };
+        let json = serde_json::to_string(&cc).unwrap();
+        assert_eq!(json, r#"{"cache":"expires","expiration":1693928537}"#);
+
+        let cc = CacheControl::Session;
+        let json = serde_json::to_string(&cc).unwrap();
+        assert_eq!(json, r#"{"cache":"session"}"#);
+
+        let cc: CacheControl = serde_json::from_str(r#"{"cache":"unknown-kind"}"#).unwrap();
+        assert_eq!(cc, CacheControl::Unknown);
+
+        assert_eq!(
+            "missing field `expiration`",
+            serde_json::from_str::<CacheControl>(r#"{"cache":"expires"}"#)
+                .unwrap_err()
+                .to_string()
+        );
+    }
+
+    #[test]
+    fn credential_response() {
+        let cr = CredentialResponse::Get {
+            cache: CacheControl::Never,
+            operation_independent: true,
+            token: Secret::from("value".to_string()),
+        };
+        let json = serde_json::to_string(&cr).unwrap();
+        assert_eq!(
+            json,
+            r#"{"kind":"get","token":"value","cache":"never","operation_independent":true}"#
+        );
+
+        let cr = CredentialResponse::Login;
+        let json = serde_json::to_string(&cr).unwrap();
+        assert_eq!(json, r#"{"kind":"login"}"#);
+
+        let cr: CredentialResponse =
+            serde_json::from_str(r#"{"kind":"unknown-kind","extra-data":true}"#).unwrap();
+        assert_eq!(cr, CredentialResponse::Unknown);
+
+        let cr: CredentialResponse =
+            serde_json::from_str(r#"{"kind":"login","extra-data":true}"#).unwrap();
+        assert_eq!(cr, CredentialResponse::Login);
+
+        let cr: CredentialResponse = serde_json::from_str(r#"{"kind":"get","token":"value","cache":"never","operation_independent":true,"extra-field-ignored":123}"#).unwrap();
+        assert_eq!(
+            cr,
+            CredentialResponse::Get {
+                cache: CacheControl::Never,
+                operation_independent: true,
+                token: Secret::from("value".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn credential_request() {
+        let get_oweners = CredentialRequest {
+            v: PROTOCOL_VERSION_1,
+            args: vec![],
+            registry: RegistryInfo {
+                index_url: "url",
+                name: None,
+                headers: vec![],
+            },
+            action: Action::Get(Operation::Owners { name: "pkg" }),
+        };
+
+        let json = serde_json::to_string(&get_oweners).unwrap();
+        assert_eq!(
+            json,
+            r#"{"v":1,"registry":{"index-url":"url"},"kind":"get","operation":"owners","name":"pkg"}"#
+        );
+
+        let cr: CredentialRequest =
+            serde_json::from_str(r#"{"extra-1":true,"v":1,"registry":{"index-url":"url","extra-2":true},"kind":"get","operation":"owners","name":"pkg","args":[]}"#).unwrap();
+        assert_eq!(cr, get_oweners);
+    }
+
+    #[test]
+    fn credential_request_logout() {
+        let unknown = CredentialRequest {
+            v: PROTOCOL_VERSION_1,
+            args: vec![],
+            registry: RegistryInfo {
+                index_url: "url",
+                name: None,
+                headers: vec![],
+            },
+            action: Action::Logout,
+        };
+
+        let cr: CredentialRequest = serde_json::from_str(
+            r#"{"v":1,"registry":{"index-url":"url"},"kind":"logout","extra-1":true,"args":[]}"#,
+        )
+        .unwrap();
+        assert_eq!(cr, unknown);
+    }
+
+    #[test]
+    fn credential_request_unknown() {
+        let unknown = CredentialRequest {
+            v: PROTOCOL_VERSION_1,
+            args: vec![],
+            registry: RegistryInfo {
+                index_url: "",
+                name: None,
+                headers: vec![],
+            },
+            action: Action::Unknown,
+        };
+
+        let cr: CredentialRequest = serde_json::from_str(
+            r#"{"v":1,"registry":{"index-url":""},"kind":"unexpected-1","extra-1":true,"args":[]}"#,
+        )
+        .unwrap();
+        assert_eq!(cr, unknown);
+    }
 }
