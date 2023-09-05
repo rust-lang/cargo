@@ -1154,7 +1154,7 @@ Actual messages must not contain newlines.
     "operation":"read",
     // Registry information
     "registry":{"index-url":"sparse+https://registry-url/index/", "name": "my-registry"},
-    // Additional command-line args
+    // Additional command-line args (optional)
     "args":[]
 }
 ```
@@ -1178,7 +1178,7 @@ Actual messages must not contain newlines.
     "cksum":"...",
     // Registry information
     "registry":{"index-url":"sparse+https://registry-url/index/", "name": "my-registry"},
-    // Additional command-line args
+    // Additional command-line args (optional)
     "args":[]
 }
 ```
@@ -1195,8 +1195,10 @@ Actual messages must not contain newlines.
     // Cache control. Can be one of the following:
     // * "never"
     // * "session"
-    // * { "expires": UNIX timestamp }
-    "cache":{"expires":1684251794},
+    // * "expires"
+    "cache":"expires",
+    // Unix timestamp (only for "cache": "expires")
+    "expiration":1693942857,
     // Is the token operation independent?
     "operation_independent":true
 }}
