@@ -80,6 +80,7 @@ pub struct CredentialRequest<'a> {
     #[serde(borrow, flatten)]
     pub action: Action<'a>,
     /// Additional command-line arguments passed to the credential provider.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub args: Vec<&'a str>,
 }
 
@@ -90,6 +91,7 @@ pub struct RegistryInfo<'a> {
     pub index_url: &'a str,
     /// Name of the registry in configuration. May not be available.
     /// The crates.io registry will be `crates-io` (`CRATES_IO_REGISTRY`).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<&'a str>,
     /// Headers from attempting to access a registry that resulted in a HTTP 401.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -123,8 +125,10 @@ impl<'a> Display for Action<'a> {
 #[serde(rename_all = "kebab-case")]
 pub struct LoginOptions<'a> {
     /// Token passed on the command line via --token or from stdin
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<Secret<&'a str>>,
     /// Optional URL that the user can visit to log in to the registry
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub login_url: Option<&'a str>,
 }
 
