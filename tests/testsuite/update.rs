@@ -1,7 +1,7 @@
 //! Tests for the `cargo update` command.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
 
 #[cargo_test]
 fn minor_update_two_places() {
@@ -908,5 +908,187 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
 [UPDATING] bar v0.1.1+extra-stuff.1 -> v0.1.3
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn update_only_members_order_one() {
+    let git_project = git::new("rustdns", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("rustdns"))
+            .file("src/lib.rs", "pub fn bar() {}")
+    });
+
+    let workspace_toml = format!(
+        r#"
+[workspace.package]
+version = "2.29.8"
+edition = "2021"
+publish = false
+
+[workspace]
+members = [
+    "rootcrate",
+    "subcrate",
+]
+resolver = "2"
+
+[workspace.dependencies]
+# Internal crates
+subcrate = {{ version = "*", path = "./subcrate" }}
+
+# External dependencies
+rustdns = {{ version = "0.5.0", default-features = false, git = "{}" }}
+                "#,
+        git_project.url()
+    );
+    let p = project()
+        .file("Cargo.toml", &workspace_toml)
+        .file(
+            "rootcrate/Cargo.toml",
+            r#"
+[package]
+name = "rootcrate"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+subcrate.workspace = true
+"#,
+        )
+        .file("rootcrate/src/main.rs", "fn main() {}")
+        .file(
+            "subcrate/Cargo.toml",
+            r#"
+[package]
+name = "subcrate"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+rustdns.workspace = true
+"#,
+        )
+        .file("subcrate/src/lib.rs", "pub foo() {}")
+        .build();
+
+    // First time around we should compile both foo and bar
+    p.cargo("generate-lockfile")
+        .with_stderr(&format!(
+            "[UPDATING] git repository `{}`\n",
+            git_project.url(),
+        ))
+        .run();
+    // Modify a file manually, shouldn't trigger a recompile
+    git_project.change_file("src/lib.rs", r#"pub fn bar() { println!("hello!"); }"#);
+    // Commit the changes and make sure we don't trigger a recompile because the
+    // lock file says not to change
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    git::add(&repo);
+    git::commit(&repo);
+    p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
+
+    p.cargo("update -p rootcrate")
+        .with_stderr(&format!(
+            "\
+[UPDATING] git repository `{}`
+[UPDATING] rootcrate v2.29.8 ([CWD]/rootcrate) -> v2.29.81
+[UPDATING] rustdns v0.5.0 ([..]) -> [..]
+[UPDATING] subcrate v2.29.8 ([CWD]/subcrate) -> v2.29.81",
+            git_project.url(),
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn update_only_members_order_two() {
+    let git_project = git::new("rustdns", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("rustdns"))
+            .file("src/lib.rs", "pub fn bar() {}")
+    });
+
+    let workspace_toml = format!(
+        r#"
+[workspace.package]
+version = "2.29.8"
+edition = "2021"
+publish = false
+
+[workspace]
+members = [
+    "crate2",
+    "crate1",
+]
+resolver = "2"
+
+[workspace.dependencies]
+# Internal crates
+crate1 = {{ version = "*", path = "./crate1" }}
+
+# External dependencies
+rustdns = {{ version = "0.5.0", default-features = false, git = "{}" }}
+                "#,
+        git_project.url()
+    );
+    let p = project()
+        .file("Cargo.toml", &workspace_toml)
+        .file(
+            "crate2/Cargo.toml",
+            r#"
+[package]
+name = "crate2"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+crate1.workspace = true
+"#,
+        )
+        .file("crate2/src/main.rs", "fn main() {}")
+        .file(
+            "crate1/Cargo.toml",
+            r#"
+[package]
+name = "crate1"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+rustdns.workspace = true
+"#,
+        )
+        .file("crate1/src/lib.rs", "pub foo() {}")
+        .build();
+
+    // First time around we should compile both foo and bar
+    p.cargo("generate-lockfile")
+        .with_stderr(&format!(
+            "[UPDATING] git repository `{}`\n",
+            git_project.url(),
+        ))
+        .run();
+    // Modify a file manually, shouldn't trigger a recompile
+    git_project.change_file("src/lib.rs", r#"pub fn bar() { println!("hello!"); }"#);
+    // Commit the changes and make sure we don't trigger a recompile because the
+    // lock file says not to change
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    git::add(&repo);
+    git::commit(&repo);
+    p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
+
+    p.cargo("update -p crate2")
+        .with_stderr(&format!(
+            "\
+[UPDATING] git repository `{}`
+[UPDATING] crate1 v2.29.8 ([CWD]/crate1) -> v2.29.81
+[UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81
+[UPDATING] rustdns v0.5.0 ([..]) -> [..]",
+            git_project.url(),
+        ))
         .run();
 }
