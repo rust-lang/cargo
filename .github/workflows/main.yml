@@ -20,6 +20,7 @@ jobs:
     needs:
     - build_std
     - clippy
+    - credential_msrv
     - docs
     - lockfile
     - resolver
@@ -37,6 +38,7 @@ jobs:
     needs:
     - build_std
     - clippy
+    - credential_msrv
     - docs
     - lockfile
     - resolver
@@ -246,3 +248,10 @@ jobs:
         cd target
         curl -sSLO https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
         sh linkcheck.sh --all --path ../src/doc cargo
+
+  credential_msrv:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: rustup update 1.70 && rustup default 1.70
+    - run: cargo test -p cargo-credential
