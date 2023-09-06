@@ -139,7 +139,7 @@ Some potential solutions include:
   - Only uses the resources necessary
   - Can configure the frequency to balance CI resources and coverage of dependency versions
 
-An example CI job to verify latest dependencies, using Github Actions:
+An example CI job to verify latest dependencies, using GitHub Actions:
 ```yaml
 jobs:
   latest_deps:
