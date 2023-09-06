@@ -216,7 +216,6 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
     //
     // Example tables:
     // - profile.dev.package.foo
-    // - profile.release.package."*"
     // - profile.release.package."foo:2.1.0"
     if let Some(toml_edit::Item::Table(profile_section_table)) = manifest.get_mut("profile") {
         profile_section_table.set_implicit(true);
@@ -231,8 +230,14 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
                     package_table.set_implicit(true);
 
                     for (key, item) in package_table.iter_mut() {
+                        let key = key.get();
+                        // Skip globs. Can't do anything with them.
+                        // For example, profile.release.package."*".
+                        if crate::util::restricted_names::is_glob_pattern(key) {
+                            continue;
+                        }
                         if !spec_has_match(
-                            &PackageIdSpec::parse(key.get())?,
+                            &PackageIdSpec::parse(key)?,
                             &dependencies,
                             workspace.config(),
                         )? {

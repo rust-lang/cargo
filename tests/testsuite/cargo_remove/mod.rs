@@ -23,6 +23,7 @@ mod optional_dep_feature;
 mod optional_feature;
 mod package;
 mod remove_basic;
+mod skip_gc_glob_profile;
 mod target;
 mod target_build;
 mod target_dev;
