@@ -5,7 +5,6 @@ use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::util::config::Config;
 use crate::util::CargoResult;
-use anyhow::Context;
 use std::collections::{BTreeMap, HashSet};
 use termcolor::Color::{self, Cyan, Green, Red, Yellow};
 use tracing::debug;
@@ -88,27 +87,27 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     } else {
         let mut sources = Vec::new();
         for name in opts.to_update.iter() {
-            let dep = previous_resolve.query(name)?;
+            let pid = previous_resolve.query(name)?;
             if opts.recursive {
-                fill_with_deps(&previous_resolve, dep, &mut to_avoid, &mut HashSet::new());
+                fill_with_deps(&previous_resolve, pid, &mut to_avoid, &mut HashSet::new());
             } else {
-                to_avoid.insert(dep);
+                to_avoid.insert(pid);
                 sources.push(match opts.precise {
                     Some(precise) => {
                         // TODO: see comment in `resolve.rs` as well, but this
                         //       seems like a pretty hokey reason to single out
                         //       the registry as well.
-                        let precise = if dep.source_id().is_registry() {
-                            semver::Version::parse(precise).with_context(|| {
-                                format!("invalid version format for precise version `{}`", precise)
-                            })?;
-                            format!("{}={}->{}", dep.name(), dep.version(), precise)
+                        if pid.source_id().is_registry() {
+                            pid.source_id().with_precise_registry_version(
+                                pid.name(),
+                                pid.version(),
+                                precise,
+                            )?
                         } else {
-                            precise.to_string()
-                        };
-                        dep.source_id().with_precise(Some(precise))
+                            pid.source_id().with_precise(Some(precise.to_string()))
+                        }
                     }
-                    None => dep.source_id().with_precise(None),
+                    None => pid.source_id().with_precise(None),
                 });
             }
             if let Ok(unused_id) =

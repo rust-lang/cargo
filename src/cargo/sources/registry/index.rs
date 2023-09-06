@@ -91,9 +91,7 @@ use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::interning::InternedString;
 use crate::util::IntoUrl;
-use crate::util::{
-    internal, CargoResult, Config, Filesystem, OptVersionReq, PartialVersion, ToSemver,
-};
+use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, PartialVersion};
 use anyhow::bail;
 use cargo_util::{paths, registry::make_dep_path};
 use semver::Version;
@@ -582,18 +580,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             .filter(|s| !s.yanked || yanked_whitelist.contains(&s.summary.package_id()))
             .map(|s| s.summary.clone());
 
-        // Handle `cargo update --precise` here. If specified, our own source
-        // will have a precise version listed of the form
-        // `<pkg>=<p_req>o-><f_req>` where `<pkg>` is the name of a crate on
-        // this source, `<p_req>` is the version installed and `<f_req> is the
-        // version requested (argument to `--precise`).
-        let precise = source_id
-            .precise()
-            .filter(|p| p.starts_with(name) && p[name.len()..].starts_with('='))
-            .map(|p| {
-                let (current, requested) = p[name.len() + 1..].split_once("->").unwrap();
-                (current.to_semver().unwrap(), requested.to_semver().unwrap())
-            });
+        // Handle `cargo update --precise` here.
+        let precise = source_id.precise_registry_version(name);
         let summaries = summaries.filter(|s| match &precise {
             Some((current, requested)) => {
                 if req.matches(current) {
