@@ -108,21 +108,26 @@ fn credential_provider(config: &Config, sid: &SourceId) -> CargoResult<Vec<Vec<S
             secret_key,
             ..
         }) if config.cli_unstable().credential_process => {
+            let provider = resolve_credential_alias(config, provider);
             if let Some(token) = token {
-                config.shell().warn(format!(
-                    "{sid} has a token configured in {} that will be ignored \
-                    because a credential-provider is configured for this registry`",
-                    token.definition
-                ))?;
+                if provider[0] != "cargo:token" {
+                    config.shell().warn(format!(
+                        "{sid} has a token configured in {} that will be ignored \
+                        because this registry is configured to use credential-provider `{}`",
+                        token.definition, provider[0],
+                    ))?;
+                }
             }
             if let Some(secret_key) = secret_key {
-                config.shell().warn(format!(
-                    "{sid} has a secret-key configured in {} that will be ignored \
-                    because a credential-provider is configured for this registry`",
-                    secret_key.definition
-                ))?;
+                if provider[0] != "cargo:paseto" {
+                    config.shell().warn(format!(
+                        "{sid} has a secret-key configured in {} that will be ignored \
+                        because this registry is configured to use credential-provider `{}`",
+                        secret_key.definition, provider[0],
+                    ))?;
+                }
             }
-            vec![resolve_credential_alias(config, provider)]
+            vec![provider]
         }
 
         // Warning for both `token` and `secret-key`, stating which will be ignored
