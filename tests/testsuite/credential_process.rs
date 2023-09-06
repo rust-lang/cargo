@@ -447,13 +447,31 @@ fn multiple_providers() {
 
 #[cargo_test]
 fn both_token_and_provider() {
+    let server = registry::RegistryBuilder::new()
+        .credential_provider(&["cargo:paseto"])
+        .build();
+
+    cargo_process("login -Z credential-process -Z asymmetric-token")
+        .masquerade_as_nightly_cargo(&["credential-process", "asymmetric-token"])
+        .replace_crates_io(server.index_url())
+        .with_stderr(
+            r#"[UPDATING] [..]
+[WARNING] registry `crates-io` has a token configured in [..] that will be ignored because this registry is configured to use credential-provider `cargo:paseto`
+k3.public[..]
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn registry_provider_overrides_global() {
     let server = registry::RegistryBuilder::new().build();
     cargo_util::paths::append(
         &paths::home().join(".cargo/config"),
         format!(
             r#"
                 [registry]
-                credential-provider = ["cargo:token"]
+                global-credential-providers = ["should-not-be-called"]
             "#,
         )
         .as_bytes(),
@@ -462,10 +480,10 @@ fn both_token_and_provider() {
 
     cargo_process("login -Z credential-process -v abcdefg")
         .masquerade_as_nightly_cargo(&["credential-process"])
+        .env("CARGO_REGISTRY_CREDENTIAL_PROVIDER", "cargo:token")
         .replace_crates_io(server.index_url())
         .with_stderr(
             r#"[UPDATING] [..]
-[WARNING] registry `crates-io` has a token configured in [..]credentials.toml that will be ignored because a credential-provider is configured for this registry`
 [CREDENTIAL] cargo:token login crates-io
 [LOGIN] token for `crates-io` saved
 "#,
