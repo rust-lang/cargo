@@ -161,6 +161,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             None,
             operation,
             vec![],
+            false,
         )?));
     }
 

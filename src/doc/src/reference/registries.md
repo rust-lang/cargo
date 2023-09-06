@@ -11,6 +11,10 @@ support publishing new crates directly from Cargo.
 If you are implementing a registry server, see [Running a Registry] for more
 details about the protocol between Cargo and a registry.
 
+If you're using a registry that requires authentication, see [Registry Authentication].
+If you are implementing a credential provider, see [Credential Provider Protocol]
+for details.
+
 ## Using an Alternate Registry
 
 To use a registry other than [crates.io], the name and index URL of the
@@ -117,6 +121,8 @@ controlled via the [`registries.crates-io.protocol`] config key.
 
 [Source Replacement]: source-replacement.md
 [Running a Registry]: running-a-registry.md
+[Credential Provider Protocol]: credential-provider-protocol.md
+[Registry Authentication]: registry-authentication.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo login`]: ../commands/cargo-login.md

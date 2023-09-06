@@ -10,9 +10,15 @@ cargo-logout --- Remove an API token from the registry locally
 
 ## DESCRIPTION
 
-This command will remove the API token from the local credential storage.
-Credentials are stored in `$CARGO_HOME/credentials.toml` where `$CARGO_HOME`
-defaults to `.cargo` in your home directory.
+This command will run a credential provider to remove a saved token.
+
+For the default `cargo:token` credential provider, credentials are stored
+in `$CARGO_HOME/credentials.toml` where `$CARGO_HOME` defaults to `.cargo`
+in your home directory.
+
+If a registry has a credential-provider specified, it will be used. Otherwise,
+the providers from the config value `registry.global-credential-providers` will
+be attempted, starting from the end of the list.
 
 If `--registry` is not specified, then the credentials for the default
 registry will be removed (configured by

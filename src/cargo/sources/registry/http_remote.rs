@@ -547,9 +547,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     return Poll::Ready(Ok(LoadResponse::NotFound));
                 }
                 StatusCode::Unauthorized
-                    if !self.auth_required
-                        && path == Path::new(RegistryConfig::NAME)
-                        && self.config.cli_unstable().registry_auth =>
+                    if !self.auth_required && path == Path::new(RegistryConfig::NAME) =>
                 {
                     debug!(target: "network", "re-attempting request for config.json with authorization included.");
                     self.fresh.remove(path);
@@ -612,10 +610,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
 
-        if !self.config.cli_unstable().registry_auth {
-            self.auth_required = false;
-        }
-
         // Looks like we're going to have to do a network request.
         self.start_fetch()?;
 
@@ -654,6 +648,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 self.login_url.as_ref(),
                 Operation::Read,
                 self.auth_error_headers.clone(),
+                true,
             )?;
             headers.append(&format!("Authorization: {}", authorization))?;
             trace!(target: "network", "including authorization for {}", full_url);
@@ -724,10 +719,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 
     fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
-        let mut cfg = ready!(self.config()?).clone();
-        if !self.config.cli_unstable().registry_auth {
-            cfg.auth_required = false;
-        }
+        let cfg = ready!(self.config()?).clone();
         Poll::Ready(Ok(Some(cfg)))
     }
 

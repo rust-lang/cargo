@@ -85,6 +85,7 @@ pub(super) fn download(
             None,
             Operation::Read,
             vec![],
+            true,
         )?)
     } else {
         None

@@ -8,9 +8,15 @@ cargo\-logout \[em] Remove an API token from the registry locally
 .SH "SYNOPSIS"
 \fBcargo logout\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
-This command will remove the API token from the local credential storage.
-Credentials are stored in \fB$CARGO_HOME/credentials.toml\fR where \fB$CARGO_HOME\fR
-defaults to \fB\&.cargo\fR in your home directory.
+This command will run a credential provider to remove a saved token.
+.sp
+For the default \fBcargo:token\fR credential provider, credentials are stored
+in \fB$CARGO_HOME/credentials.toml\fR where \fB$CARGO_HOME\fR defaults to \fB\&.cargo\fR
+in your home directory.
+.sp
+If a registry has a credential\-provider specified, it will be used. Otherwise,
+the providers from the config value \fBregistry.global\-credential\-providers\fR will
+be attempted, starting from the end of the list.
 .sp
 If \fB\-\-registry\fR is not specified, then the credentials for the default
 registry will be removed (configured by

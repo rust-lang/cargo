@@ -1,7 +1,10 @@
 # cargo-credential-macos-keychain
 
 This is the implementation for the Cargo credential helper for [macOS Keychain].
-See the [credential-process] documentation for how to use this.
+See the [credential-provider] documentation for how to use this.
+
+This credential provider is built-in to cargo as `cargo:macos-keychain`.
 
 [macOS Keychain]: https://support.apple.com/guide/keychain-access/welcome/mac
-[credential-process]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process
+[credential-provider]: https://doc.rust-lang.org/nightly/cargo/reference/registry-authentication.html
+

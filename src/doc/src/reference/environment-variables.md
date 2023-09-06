@@ -124,9 +124,12 @@ In summary, the supported environment variables are:
 * `CARGO_PROFILE_<name>_RPATH` --- The rpath linking option, see [`profile.<name>.rpath`].
 * `CARGO_PROFILE_<name>_SPLIT_DEBUGINFO` --- Controls debug file output behavior, see [`profile.<name>.split-debuginfo`].
 * `CARGO_PROFILE_<name>_STRIP` --- Controls stripping of symbols and/or debuginfos, see [`profile.<name>.strip`].
+* `CARGO_REGISTRIES_<name>_CREDENTIAL_PROVIDER` --- Credential provider for a registry, see [`registries.<name>.credential-provider`].
 * `CARGO_REGISTRIES_<name>_INDEX` --- URL of a registry index, see [`registries.<name>.index`].
 * `CARGO_REGISTRIES_<name>_TOKEN` --- Authentication token of a registry, see [`registries.<name>.token`].
+* `CARGO_REGISTRY_CREDENTIAL_PROVIDER` --- Credential provider for [crates.io], see [`registry.credential-provider`].
 * `CARGO_REGISTRY_DEFAULT` --- Default registry for the `--registry` flag, see [`registry.default`].
+* `CARGO_REGISTRY_GLOBAL_CREDENTIAL_PROVIDERS` --- Credential providers for registries that do not have a specific provider defined. See [`registry.global-credential-providers`].
 * `CARGO_REGISTRY_TOKEN` --- Authentication token for [crates.io], see [`registry.token`].
 * `CARGO_TARGET_<triple>_LINKER` --- The linker to use, see [`target.<triple>.linker`]. The triple must be [converted to uppercase and underscores](config.md#environment-variables).
 * `CARGO_TARGET_<triple>_RUNNER` --- The executable runner, see [`target.<triple>.runner`].
@@ -187,9 +190,12 @@ In summary, the supported environment variables are:
 [`profile.<name>.rpath`]: config.md#profilenamerpath
 [`profile.<name>.split-debuginfo`]: config.md#profilenamesplit-debuginfo
 [`profile.<name>.strip`]: config.md#profilenamestrip
+[`registries.<name>.credential-provider`]: config.md#registriesnamecredential-provider
 [`registries.<name>.index`]: config.md#registriesnameindex
 [`registries.<name>.token`]: config.md#registriesnametoken
+[`registry.credential-provider`]: config.md#registrycredential-provider
 [`registry.default`]: config.md#registrydefault
+[`registry.global-credential-providers`]: config.md#registryglobal-credential-providers
 [`registry.token`]: config.md#registrytoken
 [`target.<triple>.linker`]: config.md#targettriplelinker
 [`target.<triple>.runner`]: config.md#targettriplerunner

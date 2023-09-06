@@ -35,6 +35,9 @@ The keys are:
 - `api`: This is the base URL for the web API. This key is optional, but if it
   is not specified, commands such as [`cargo publish`] will not work. The web
   API is described below.
+- `auth-required`: indicates whether this is a private registry that requires
+  all operations to be authenticated including API requests, crate downloads
+  and sparse index updates.
 
 
 ## Download Endpoint
@@ -43,6 +46,8 @@ Cargo supports https, http, and file URLs, HTTP redirects, HTTP1 and HTTP2.
 The exact specifics of TLS support depend on the platform that Cargo is
 running on, the version of Cargo, and how it was compiled.
 
+If `auth-required: true` is set in `config.json`, the `Authorization` header
+will be included with http(s) download requests.
 
 ## Index files
 The rest of the index repository contains one file for each package, where the
@@ -273,6 +278,18 @@ the sparse index URL for [crates.io] is `sparse+https://index.crates.io/`.
 The sparse protocol downloads each index file using an individual HTTP request. Since
 this results in a large number of small HTTP requests, performance is significantly
 improved with a server that supports pipelining and HTTP/2.
+
+#### Sparse authentication
+Cargo will attempt to fetch the `config.json` file before
+fetching any other files. If the server responds with an HTTP 401, then Cargo will assume
+that the registry requires authentication and re-attempt the request for `config.json`
+with the authentication token included.
+
+On authentication failure (or a missing authentication token) the server may include a
+`www-authenticate` header with a `Cargo login_url="<URL>"` challenge to indicate where the user
+can go to get a token.
+
+Registries that require authentication must set `auth-required: true` in `config.json`.
 
 #### Caching
 Cargo caches the crate metadata files, and captures the `ETag` or `Last-Modified` 

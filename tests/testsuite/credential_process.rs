@@ -7,63 +7,6 @@ fn toml_bin(proj: &Project, name: &str) -> String {
     proj.bin(name).display().to_string().replace('\\', "\\\\")
 }
 
-#[cargo_test]
-fn gated() {
-    let _alternative = registry::RegistryBuilder::new()
-        .alternative()
-        .no_configure_token()
-        .build();
-
-    let cratesio = registry::RegistryBuilder::new()
-        .no_configure_token()
-        .build();
-
-    let p = project()
-        .file(
-            ".cargo/config",
-            r#"
-                [registry]
-                credential-provider = ["false"]
-            "#,
-        )
-        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("publish --no-verify")
-        .replace_crates_io(cratesio.index_url())
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
-",
-        )
-        .run();
-
-    p.change_file(
-        ".cargo/config",
-        r#"
-            [registry.alternative]
-            credential-process = "false"
-        "#,
-    );
-
-    p.cargo("publish --no-verify --registry alternative")
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-",
-        )
-        .run();
-}
-
 /// Setup for a test that will issue a command that needs to fetch a token.
 ///
 /// This does the following:
@@ -125,8 +68,7 @@ fn publish() {
     // Checks that credential-process is used for `cargo publish`.
     let (p, _t) = get_token_test();
 
-    p.cargo("publish --no-verify --registry alternative -Z credential-process -Z registry-auth")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("publish --no-verify --registry alternative")
         .with_stderr(
             r#"[UPDATING] [..]
 {"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read"}
@@ -151,9 +93,8 @@ fn basic_unsupported() {
         .credential_provider(&["cargo:token-from-stdout", "false"])
         .build();
 
-    cargo_process("login -Z credential-process abcdefg")
+    cargo_process("login abcdefg")
         .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\
@@ -166,9 +107,8 @@ Caused by:
         )
         .run();
 
-    cargo_process("logout -Z credential-process")
+    cargo_process("logout")
         .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\
@@ -192,8 +132,7 @@ fn login() {
         ])
         .build();
 
-    cargo_process("login -Z credential-process abcdefg -- cmd3 --cmd4")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    cargo_process("login abcdefg -- cmd3 --cmd4")
         .replace_crates_io(registry.index_url())
         .with_stderr(
             r#"[UPDATING] [..]
@@ -213,8 +152,7 @@ fn logout() {
         )])
         .build();
 
-    cargo_process("logout -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    cargo_process("logout")
         .replace_crates_io(server.index_url())
         .with_stderr(
             r#"{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"logout"}
@@ -227,8 +165,7 @@ fn logout() {
 fn yank() {
     let (p, _t) = get_token_test();
 
-    p.cargo("yank --version 0.1.0 --registry alternative -Zcredential-process -Zregistry-auth")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("yank --version 0.1.0 --registry alternative")
         .with_stderr(
             r#"[UPDATING] [..]
 {"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read"}
@@ -243,8 +180,7 @@ fn yank() {
 fn owner() {
     let (p, _t) = get_token_test();
 
-    p.cargo("owner --add username --registry alternative -Zcredential-process -Zregistry-auth")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("owner --add username --registry alternative")
         .with_stderr(
             r#"[UPDATING] [..]
 {"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read"}
@@ -278,8 +214,7 @@ fn invalid_token_output() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("publish --no-verify --registry alternative")
         .with_status(101)
         .with_stderr(
             "\
@@ -333,8 +268,7 @@ fn not_found() {
         .build();
 
     // should not suggest a _TOKEN environment variable since the cargo:token provider isn't available.
-    cargo_process("install -v foo -Zcredential-process -Zregistry-auth")
-        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
+    cargo_process("install -v foo")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
@@ -373,8 +307,7 @@ fn all_not_found() {
     .unwrap();
 
     // should not suggest a _TOKEN environment variable since the cargo:token provider isn't available.
-    cargo_process("install -v foo -Zcredential-process -Zregistry-auth")
-        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
+    cargo_process("install -v foo")
         .replace_crates_io(server.index_url())
         .with_status(101)
         .with_stderr(
@@ -413,8 +346,7 @@ fn all_not_supported() {
     )
     .unwrap();
 
-    cargo_process("install -v foo -Zcredential-process -Zregistry-auth")
-        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
+    cargo_process("install -v foo")
         .replace_crates_io(server.index_url())
         .with_status(101)
         .with_stderr(
@@ -461,8 +393,7 @@ fn multiple_providers() {
     )
     .unwrap();
 
-    cargo_process("login -Z credential-process -v abcdefg")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    cargo_process("login -v abcdefg")
         .replace_crates_io(server.index_url())
         .with_stderr(
             r#"[UPDATING] [..]
@@ -481,8 +412,8 @@ fn both_token_and_provider() {
         .credential_provider(&["cargo:paseto"])
         .build();
 
-    cargo_process("login -Z credential-process -Z asymmetric-token")
-        .masquerade_as_nightly_cargo(&["credential-process", "asymmetric-token"])
+    cargo_process("login -Z asymmetric-token")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .replace_crates_io(server.index_url())
         .with_stderr(
             r#"[UPDATING] [..]
@@ -508,8 +439,7 @@ fn registry_provider_overrides_global() {
     )
     .unwrap();
 
-    cargo_process("login -Z credential-process -v abcdefg")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    cargo_process("login -v abcdefg")
         .env("CARGO_REGISTRY_CREDENTIAL_PROVIDER", "cargo:token")
         .replace_crates_io(server.index_url())
         .with_stderr(
@@ -619,8 +549,7 @@ You may press ctrl-c [..]
     // The output should contain two JSON messages from the provider in boths cases:
     // The first because the credential is expired, the second because the provider
     // indicated that the token was non-operation-independent.
-    p.cargo("publish -Z credential-process --registry alternative --no-verify")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("publish --registry alternative --no-verify")
         .with_stderr(output)
         .run();
 
@@ -636,8 +565,7 @@ You may press ctrl-c [..]
         ),
     );
 
-    p.cargo("publish -Z credential-process --registry alternative --no-verify")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("publish --registry alternative --no-verify")
         .with_stderr(output)
         .run();
 }
@@ -687,8 +615,7 @@ fn basic_provider() {
         .build();
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    p.cargo("check -Z credential-process -Z registry-auth")
-        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] `alternative` index
@@ -731,8 +658,7 @@ fn unsupported_version() {
         .credential_provider(&[&provider])
         .build();
 
-    cargo_process("login -Z credential-process abcdefg")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    cargo_process("login abcdefg")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
@@ -764,8 +690,7 @@ fn alias_builtin_warning() {
     )
     .unwrap();
 
-    cargo_process("login -Z credential-process abcdefg")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    cargo_process("login abcdefg")
         .replace_crates_io(registry.index_url())
         .with_stderr(
             r#"[UPDATING] [..]

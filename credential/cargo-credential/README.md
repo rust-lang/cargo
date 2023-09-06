@@ -5,7 +5,7 @@ provides an interface to store tokens for authorizing access to a registry
 such as https://crates.io/.
 
 Documentation about credential processes may be found at
-https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process
+https://doc.rust-lang.org/nightly/cargo/reference/credential-provider-protocol.html
 
 Example implementations may be found at
 https://github.com/rust-lang/cargo/tree/master/credential

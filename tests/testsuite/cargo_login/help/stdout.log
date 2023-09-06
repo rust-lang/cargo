@@ -4,7 +4,7 @@ Usage: cargo[EXE] login [OPTIONS] [token] [-- [args]...]
 
 Arguments:
   [token]    
-  [args]...  Arguments for the credential provider (unstable)
+  [args]...  Additional arguments for the credential provider
 
 Options:
       --registry <REGISTRY>  Registry to use

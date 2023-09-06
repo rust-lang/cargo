@@ -298,7 +298,9 @@ Cargo will search `PATH` for its executable.
 
 Configuration values with sensitive information are stored in the
 `$CARGO_HOME/credentials.toml` file. This file is automatically created and updated
-by [`cargo login`] and [`cargo logout`]. It follows the same format as Cargo config files.
+by [`cargo login`] and [`cargo logout`] when using the `cargo:token` credential provider.
+
+It follows the same format as Cargo config files.
 
 ```toml
 [registry]
@@ -536,6 +538,26 @@ directory.
 #### `build.pipelining`
 
 This option is deprecated and unused. Cargo always has pipelining enabled.
+
+### `[credential-alias]`
+* Type: string or array of strings
+* Default: empty
+* Environment: `CARGO_CREDENTIAL_ALIAS_<name>`
+
+The `[credential-alias]` table defines credential provider aliases.
+These aliases can be referenced as an element of the `registry.global-credential-providers`
+array, or as a credential provider for a specific registry
+under `registries.<NAME>.credential-provider`.
+
+If specified as a string, the value will be split on spaces into path and arguments.
+
+For example, to define an alias called `my-alias`:
+
+```toml
+[credential-alias]
+my-alias = ["/usr/bin/cargo-credential-example", "--argument", "value", "--flag"]
+```
+See [Registry Authentication](registry-authentication.md) for more information.
 
 ### `[doc]`
 
@@ -947,6 +969,22 @@ commands like [`cargo publish`] that require authentication.
 
 Can be overridden with the `--token` command-line option.
 
+#### `registries.<name>.credential-provider`
+* Type: string or array of path and arguments
+* Default: none
+* Environment: `CARGO_REGISTRIES_<name>_CREDENTIAL_PROVIDER`
+
+Specifies the credential provider for the given registry. If not set, the
+providers in [`registry.global-credential-providers`](#registryglobal-credential-providers)
+will be used.
+
+If specified as a string, path and arguments will be split on spaces. For
+paths or arguments that contain spaces, use an array.
+
+If the value exists in the [`[credential-alias]`](#credential-alias) table, the alias will be used.
+
+See [Registry Authentication](registry-authentication.md) for more information.
+
 #### `registries.crates-io.protocol`
 * Type: string
 * Default: `sparse`
@@ -980,6 +1018,22 @@ by default for registry commands like [`cargo publish`].
 
 Can be overridden with the `--registry` command-line option.
 
+#### `registry.credential-provider`
+* Type: string or array of path and arguments
+* Default: none
+* Environment: `CARGO_REGISTRY_CREDENTIAL_PROVIDER`
+
+Specifies the credential provider for [crates.io]. If not set, the
+providers in [`registry.global-credential-providers`](#registryglobal-credential-providers)
+will be used.
+
+If specified as a string, path and arguments will be split on spaces. For
+paths or arguments that contain spaces, use an array.
+
+If the value exists in the `[credential-alias]` table, the alias will be used.
+
+See [Registry Authentication](registry-authentication.md) for more information.
+
 #### `registry.token`
 * Type: string
 * Default: none
@@ -990,6 +1044,21 @@ appear in the [credentials](#credentials) file. This is used for registry
 commands like [`cargo publish`] that require authentication.
 
 Can be overridden with the `--token` command-line option.
+
+#### `registry.global-credential-providers`
+* Type: array
+* Default: `["cargo:token"]`
+* Environment: `CARGO_REGISTRY_GLOBAL_CREDENTIAL_PROVIDERS`
+
+Specifies the list of global credential providers. If credential provider is not set
+for a specific registry using `registries.<name>.credential-provider`, Cargo will use
+the credential providers in this list. Providers toward the end of the list have precedence.
+
+Path and arguments are split on spaces. If the path or arguments contains spaces, the credential
+provider should be defined in the [`[credential-alias]`](#credential-alias) table and
+referenced here by its alias.
+
+See [Registry Authentication](registry-authentication.md) for more information.
 
 ### `[source]`
 

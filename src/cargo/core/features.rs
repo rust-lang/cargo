@@ -728,7 +728,6 @@ unstable_cli_options!(
     check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
-    credential_process: bool = ("Add a config setting to fetch registry authentication tokens by calling an external process"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
@@ -744,7 +743,6 @@ unstable_cli_options!(
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
     publish_timeout: bool = ("Enable the `publish.timeout` key in .cargo/config.toml file"),
-    registry_auth: bool = ("Authentication for alternative registries"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
     script: bool = ("Enable support for single-file, `.rs` packages"),
@@ -817,6 +815,12 @@ const STABILIZED_TERMINAL_WIDTH: &str =
     "The -Zterminal-width option is now always enabled for terminal output.";
 
 const STABILISED_SPARSE_REGISTRY: &str = "The sparse protocol is now the default for crates.io";
+
+const STABILIZED_CREDENTIAL_PROCESS: &str =
+    "Authentication with a credential provider is always available.";
+
+const STABILIZED_REGISTRY_AUTH: &str =
+    "Authenticated registries are available if a credential provider is configured.";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -1081,6 +1085,8 @@ impl CliUnstable {
             "sparse-registry" => stabilized_warn(k, "1.68", STABILISED_SPARSE_REGISTRY),
             "terminal-width" => stabilized_warn(k, "1.68", STABILIZED_TERMINAL_WIDTH),
             "doctest-in-workspace" => stabilized_warn(k, "1.72", STABILIZED_DOCTEST_IN_WORKSPACE),
+            "credential-process" => stabilized_warn(k, "1.74", STABILIZED_CREDENTIAL_PROCESS),
+            "registry-auth" => stabilized_warn(k, "1.74", STABILIZED_REGISTRY_AUTH),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1098,7 +1104,6 @@ impl CliUnstable {
             }
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
-            "credential-process" => self.credential_process = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
@@ -1119,7 +1124,6 @@ impl CliUnstable {
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
             "publish-timeout" => self.publish_timeout = parse_empty(k, v)?,
-            "registry-auth" => self.registry_auth = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "rustdoc-scrape-examples" => self.rustdoc_scrape_examples = parse_empty(k, v)?,
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
