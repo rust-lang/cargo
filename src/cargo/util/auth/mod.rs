@@ -2,7 +2,7 @@
 
 use crate::{
     sources::CRATES_IO_REGISTRY,
-    util::{config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl},
+    util::{CanonicalUrl, CargoResult, Config, IntoUrl},
 };
 use anyhow::{bail, Context as _};
 use cargo_credential::{
@@ -372,19 +372,13 @@ impl fmt::Display for AuthorizationError {
             } else {
                 ""
             };
-            write!(
-                f,
-                "{}, please run `cargo login{args}`\nor use environment variable CARGO_REGISTRY_TOKEN",
-                self.reason
-            )
+            write!(f, "{}, please run `cargo login{args}`", self.reason)
         } else if let Some(name) = self.sid.alt_registry_key() {
-            let key = ConfigKey::from_str(&format!("registries.{name}.token"));
             write!(
                 f,
-                "{} for `{}`, please run `cargo login --registry {name}`\nor use environment variable {}",
+                "{} for `{}`, please run `cargo login --registry {name}`",
                 self.reason,
                 self.sid.display_registry_name(),
-                key.as_env_key(),
             )
         } else if self.reason == AuthorizationErrorReason::TokenMissing {
             write!(

@@ -432,8 +432,7 @@ fn block_publish_due_to_no_token() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-error: no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+error: no token found for `alternative`, please run `cargo login --registry alternative`",
         )
         .run();
 }
@@ -459,8 +458,7 @@ fn cargo_registries_crates_io_protocol() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-error: no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+error: no token found for `alternative`, please run `cargo login --registry alternative`",
         )
         .run();
 }
@@ -1531,8 +1529,7 @@ fn warn_for_unused_fields() {
             "\
 [UPDATING] `alternative` index
 [WARNING] unused config key `registries.alternative.unexpected-field` in `[..]config.toml`
-[ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+[ERROR] no token found for `alternative`, please run `cargo login --registry alternative`",
         )
         .run();
 
@@ -1542,8 +1539,7 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
             "\
 [UPDATING] crates.io index
 [WARNING] unused config key `registry.unexpected-field` in `[..]config.toml`
-[ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN",
+[ERROR] no token found, please run `cargo login`",
         )
         .run();
 }

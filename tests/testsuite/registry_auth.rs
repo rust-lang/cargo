@@ -247,8 +247,7 @@ fn missing_token() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
 
 Caused by:
-  no token found for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+  no token found for `alternative`, please run `cargo login --registry alternative`",
         )
         .run();
 }
@@ -273,8 +272,7 @@ Caused by:
   unable to get packages from source
 
 Caused by:
-  no token found for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+  no token found for `alternative`, please run `cargo login --registry alternative`",
         )
         .run();
 }
@@ -299,7 +297,6 @@ fn incorrect_token() {
 
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 Caused by:
   failed to get successful HTTP response from `http://[..]/index/config.json`, got 401

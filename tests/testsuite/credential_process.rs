@@ -38,7 +38,6 @@ fn gated() {
             "\
 [UPDATING] [..]
 [ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
 ",
         )
         .run();
@@ -58,7 +57,6 @@ or use environment variable CARGO_REGISTRY_TOKEN
             "\
 [UPDATING] [..]
 [ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 ",
         )
         .run();
@@ -354,7 +352,6 @@ fn all_not_found() {
 
 Caused by:
   no token found, please run `cargo login`
-  or use environment variable CARGO_REGISTRY_TOKEN
 "#,
         )
         .run();

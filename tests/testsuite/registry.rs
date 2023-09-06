@@ -3224,7 +3224,6 @@ fn default_auth_error() {
             "\
 [UPDATING] crates.io index
 error: no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
 ",
         )
         .with_status(101)
@@ -3236,7 +3235,6 @@ or use environment variable CARGO_REGISTRY_TOKEN
             "\
 [UPDATING] `alternative` index
 error: no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 ",
         )
         .with_status(101)
@@ -3258,7 +3256,6 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
             "\
 [UPDATING] `alternative` index
 error: no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 ",
         )
         .with_status(101)
@@ -3270,7 +3267,6 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
             "\
 [UPDATING] crates.io index
 error: no token found, please run `cargo login --registry crates-io`
-or use environment variable CARGO_REGISTRY_TOKEN
 ",
         )
         .with_status(101)
