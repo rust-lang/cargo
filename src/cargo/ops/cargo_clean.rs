@@ -5,7 +5,7 @@ use crate::ops;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{Config, Progress, ProgressStyle};
+use crate::util::{human_readable_bytes, Config, Progress, ProgressStyle};
 use anyhow::bail;
 use cargo_util::paths;
 use std::fs;
@@ -31,6 +31,8 @@ pub struct CleanContext<'cfg> {
     pub config: &'cfg Config,
     progress: Box<dyn CleaningProgressBar + 'cfg>,
     pub dry_run: bool,
+    num_files_folders_cleaned: u64,
+    total_bytes_removed: u64,
 }
 
 /// Cleans various caches.
@@ -76,6 +78,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         }
     }
 
+    ctx.display_summary()?;
     Ok(())
 }
 
@@ -267,6 +270,8 @@ impl<'cfg> CleanContext<'cfg> {
             config,
             progress: Box::new(progress),
             dry_run: false,
+            num_files_folders_cleaned: 0,
+            total_bytes_removed: 0,
         }
     }
 
@@ -340,7 +345,13 @@ impl<'cfg> CleanContext<'cfg> {
         }
         self.progress.display_now()?;
 
-        let rm_file = |path: &Path| {
+        let mut rm_file = |path: &Path, meta: Result<std::fs::Metadata, _>| {
+            if let Ok(meta) = meta {
+                // Note: This can over-count bytes removed for hard-linked
+                // files. It also under-counts since it only counts the exact
+                // byte sizes and not the block sizes.
+                self.total_bytes_removed += meta.len();
+            }
             if !self.dry_run {
                 paths::remove_file(path)?;
             }
@@ -348,12 +359,14 @@ impl<'cfg> CleanContext<'cfg> {
         };
 
         if !meta.is_dir() {
-            return rm_file(path);
+            self.num_files_folders_cleaned += 1;
+            return rm_file(path, Ok(meta));
         }
 
         for entry in walkdir::WalkDir::new(path).contents_first(true) {
             let entry = entry?;
             self.progress.on_clean()?;
+            self.num_files_folders_cleaned += 1;
             if self.dry_run {
                 self.config
                     .shell()
@@ -368,11 +381,33 @@ impl<'cfg> CleanContext<'cfg> {
                     paths::remove_dir_all(entry.path())?;
                 }
             } else {
-                rm_file(entry.path())?;
+                rm_file(entry.path(), entry.metadata())?;
             }
         }
 
         Ok(())
+    }
+
+    fn display_summary(&self) -> CargoResult<()> {
+        let status = if self.dry_run { "Summary" } else { "Removed" };
+        let byte_count = if self.total_bytes_removed == 0 {
+            String::new()
+        } else {
+            // Don't show a fractional number of bytes.
+            if self.total_bytes_removed < 1024 {
+                format!(", {}B total", self.total_bytes_removed)
+            } else {
+                let (bytes, unit) = human_readable_bytes(self.total_bytes_removed);
+                format!(", {bytes:.1}{unit} total")
+            }
+        };
+        self.config.shell().status(
+            status,
+            format!(
+                "{} files/directories{byte_count}",
+                self.num_files_folders_cleaned
+            ),
+        )
     }
 
     /// Deletes all of the given paths, showing a progress bar as it proceeds.

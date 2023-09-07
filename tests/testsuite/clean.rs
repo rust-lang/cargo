@@ -272,7 +272,7 @@ fn clean_doc() {
 
     assert!(doc_path.is_dir());
 
-    p.cargo("clean --doc").run();
+    p.cargo("clean --doc").with_stderr("[REMOVED] [..]").run();
 
     assert!(!doc_path.is_dir());
     assert!(p.build_dir().is_dir());
@@ -414,9 +414,10 @@ fn clean_verbose() {
     if cfg!(target_os = "macos") {
         // Rust 1.69 has changed so that split-debuginfo=unpacked includes unpacked for rlibs.
         for obj in p.glob("target/debug/deps/bar-*.o") {
-            expected.push_str(&format!("[REMOVING] [..]{}", obj.unwrap().display()));
+            expected.push_str(&format!("[REMOVING] [..]{}\n", obj.unwrap().display()));
         }
     }
+    expected.push_str("[REMOVED] [..] files/directories, [..] total\n");
     p.cargo("clean -p bar --verbose")
         .with_stderr_unordered(&expected)
         .run();
@@ -607,7 +608,8 @@ error: package ID specification `baz` did not match any packages
     p.cargo("clean -p bar:0.1.0")
         .with_stderr(
             "warning: version qualifier in `-p bar:0.1.0` is ignored, \
-            cleaning all versions of `bar` found",
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files/directories, [..] total",
         )
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
@@ -661,7 +663,8 @@ error: package ID specification `baz` did not match any packages
     p.cargo("clean -p bar:0.1")
         .with_stderr(
             "warning: version qualifier in `-p bar:0.1` is ignored, \
-            cleaning all versions of `bar` found",
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files/directories, [..] total",
         )
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
@@ -715,7 +718,8 @@ error: package ID specification `baz` did not match any packages
     p.cargo("clean -p bar:0")
         .with_stderr(
             "warning: version qualifier in `-p bar:0` is ignored, \
-            cleaning all versions of `bar` found",
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files/directories, [..] total",
         )
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
@@ -811,10 +815,16 @@ fn clean_dry_run() {
     };
 
     // Start with no files.
-    p.cargo("clean --dry-run").with_stdout("").run();
+    p.cargo("clean --dry-run")
+        .with_stdout("")
+        .with_stderr("[SUMMARY] 0 files/directories")
+        .run();
     p.cargo("check").run();
     let before = ls_r();
-    p.cargo("clean --dry-run").with_stdout("[CWD]/target").run();
+    p.cargo("clean --dry-run")
+        .with_stdout("[CWD]/target")
+        .with_stderr("[SUMMARY] [..] files/directories, [..] total")
+        .run();
     // Verify it didn't delete anything.
     let after = ls_r();
     assert_eq!(before, after);
@@ -823,6 +833,7 @@ fn clean_dry_run() {
     // Verify the verbose output.
     p.cargo("clean --dry-run -v")
         .with_stdout_unordered(expected)
+        .with_stderr("[SUMMARY] [..] files/directories, [..] total")
         .run();
 }
 

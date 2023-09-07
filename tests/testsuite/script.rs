@@ -980,6 +980,7 @@ fn cmd_clean_with_embedded() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
+[REMOVED] [..] files/directories, [..] total
 ",
         )
         .run();
