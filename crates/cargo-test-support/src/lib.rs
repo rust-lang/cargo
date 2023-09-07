@@ -570,6 +570,7 @@ pub struct Execs {
     expect_stdout_contains_n: Vec<(String, usize)>,
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
+    expect_stdout_unordered: Vec<String>,
     expect_stderr_unordered: Vec<String>,
     expect_stderr_with_without: Vec<(Vec<String>, Vec<String>)>,
     expect_json: Option<String>,
@@ -668,6 +669,15 @@ impl Execs {
     /// your fix/feature to make it pass.
     pub fn with_stderr_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_not_contains.push(expected.to_string());
+        self
+    }
+
+    /// Verifies that all of the stdout output is equal to the given lines,
+    /// ignoring the order of the lines.
+    ///
+    /// See [`Execs::with_stderr_unordered`] for more details.
+    pub fn with_stdout_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
+        self.expect_stdout_unordered.push(expected.to_string());
         self
     }
 
@@ -932,6 +942,7 @@ impl Execs {
             && self.expect_stdout_contains_n.is_empty()
             && self.expect_stdout_not_contains.is_empty()
             && self.expect_stderr_not_contains.is_empty()
+            && self.expect_stdout_unordered.is_empty()
             && self.expect_stderr_unordered.is_empty()
             && self.expect_stderr_with_without.is_empty()
             && self.expect_json.is_none()
@@ -1036,6 +1047,9 @@ impl Execs {
         for expect in self.expect_stderr_not_contains.iter() {
             compare::match_does_not_contain(expect, stderr, cwd)?;
         }
+        for expect in self.expect_stdout_unordered.iter() {
+            compare::match_unordered(expect, stdout, cwd)?;
+        }
         for expect in self.expect_stderr_unordered.iter() {
             compare::match_unordered(expect, stderr, cwd)?;
         }
@@ -1075,6 +1089,7 @@ pub fn execs() -> Execs {
         expect_stdout_contains_n: Vec::new(),
         expect_stdout_not_contains: Vec::new(),
         expect_stderr_not_contains: Vec::new(),
+        expect_stdout_unordered: Vec::new(),
         expect_stderr_unordered: Vec::new(),
         expect_stderr_with_without: Vec::new(),
         expect_json: None,
