@@ -129,8 +129,10 @@ name = "benchsuite"
 version = "0.0.0"
 dependencies = [
  "cargo",
+ "cargo-util",
  "criterion",
  "flate2",
+ "rand",
  "tar",
  "url",
 ]

@@ -9,7 +9,23 @@ cd benches/benchsuite
 cargo bench
 ```
 
-The tests involve downloading the index and benchmarking against some
+However, running all benchmarks would take many minutes, so in most cases it
+is recommended to just run the benchmarks relevant to whatever section of code
+you are working on.
+
+## Benchmarks
+
+There are several different kinds of benchmarks in the `benchsuite/benches` directory:
+
+* `global_cache_tracker` — Benchmarks saving data to the global cache tracker
+  database using samples of real-world data.
+* `resolve` — Benchmarks the resolver against simulations of real-world workspaces.
+* `workspace_initialization` — Benchmarks initialization of a workspace
+  against simulations of real-world workspaces.
+
+### Resolve benchmarks
+
+The resolve benchmarks involve downloading the index and benchmarking against some
 real-world and artificial workspaces located in the [`workspaces`](workspaces)
 directory.
 
@@ -21,7 +37,7 @@ faster. You can (and probably should) specify individual benchmarks to run to
 narrow it down to a more reasonable set, for example:
 
 ```sh
-cargo bench -- resolve_ws/rust
+cargo bench -p benchsuite --bench resolve -- resolve_ws/rust
 ```
 
 This will only download what's necessary for the rust-lang/rust workspace
@@ -29,7 +45,24 @@ This will only download what's necessary for the rust-lang/rust workspace
 about a minute). To get a list of all the benchmarks, run:
 
 ```sh
-cargo bench -- --list
+cargo bench -p benchsuite --bench resolve -- --list
+```
+
+### Global cache tracker
+
+The `global_cache_tracker` benchmark tests saving data to the global cache
+tracker database using samples of real-world data. This benchmark should run
+relatively quickly.
+
+The real-world data is based on a capture of my personal development
+environment which has accumulated a large cache. So it is somewhat arbitrary,
+but hopefully representative of a challenging environment. Capturing of the
+data is done with the `capture-last-use` binary, which you can run if you need
+to rebuild the database. Just try to run on a system with a relatively full
+cache in your cargo home directory.
+
+```sh
+cargo bench -p benchsuite --bench global_cache_tracker
 ```
 
 ## Viewing reports
