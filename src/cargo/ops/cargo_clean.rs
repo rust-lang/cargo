@@ -7,7 +7,7 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, Progress, ProgressStyle};
 
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 use cargo_util::paths;
 use std::fs;
 use std::path::Path;
@@ -33,6 +33,15 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
     // If the doc option is set, we just want to delete the doc directory.
     if opts.doc {
+        if !opts.spec.is_empty() {
+            // FIXME: https://github.com/rust-lang/cargo/issues/8790
+            // This should support the ability to clean specific packages
+            // within the doc directory. It's a little tricky since it
+            // needs to find all documentable targets, but also consider
+            // the fact that target names might overlap with dependency
+            // names and such.
+            bail!("--doc cannot be used with -p");
+        }
         target_dir = target_dir.join("doc");
         return clean_entire_folder(&target_dir.into_path_unlocked(), config);
     }
