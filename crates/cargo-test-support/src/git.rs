@@ -10,7 +10,7 @@ Example:
 ```
 let git_project = git::new("dep1", |project| {
     project
-        .file("Cargo.toml", &basic_manifest("dep1"))
+        .file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
         .file("src/lib.rs", r#"pub fn f() { println!("hi!"); } "#)
 });
 
