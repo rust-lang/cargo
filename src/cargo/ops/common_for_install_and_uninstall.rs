@@ -12,8 +12,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::{DirtyReason, Freshness};
 use crate::core::Target;
-use crate::core::{Dependency, FeatureValue, Package, PackageId, QueryKind, Source, SourceId};
+use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::Config;

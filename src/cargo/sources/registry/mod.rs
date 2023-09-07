@@ -201,8 +201,10 @@ use tar::Archive;
 use tracing::debug;
 
 use crate::core::dependency::Dependency;
-use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, QueryKind, Source, SourceId, Summary};
+use crate::core::{Package, PackageId, SourceId, Summary};
+use crate::sources::source::MaybePackage;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::network::PollExt;

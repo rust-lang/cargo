@@ -1,29 +1,13 @@
-//! Fundamental types and traits for sources of Cargo packages.
-//!
-//! A source is a provider that contains source files and metadata of packages.
-//! It provides a number of methods to fetch those package informations, for
-//! example, querying metadata or downloading files for a package. These
-//! informations then can be used as dependencies for other Cargo packages.
-//!
-//! Notably, this module contains
-//!
-//! * [`Source`] trait as an abstraction of different sources
-//! * [`SourceMap`] struct as a map of all available sources
-//! * [`SourceId`] struct as an unique identifier for a certain source
-//!
-//! For implementations of `Source` trait, see [`crate::sources`].
+//! [`Source`] trait for sources of Cargo packages.
 
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::task::Poll;
 
 use crate::core::package::PackageSet;
+use crate::core::SourceId;
 use crate::core::{Dependency, Package, PackageId, Summary};
 use crate::util::{CargoResult, Config};
-
-mod source_id;
-
-pub use self::source_id::{GitReference, SourceId};
 
 /// An abstraction of different sources of Cargo packages.
 ///

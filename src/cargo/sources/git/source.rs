@@ -1,9 +1,12 @@
 //! See [GitSource].
 
-use crate::core::source::{MaybePackage, QueryKind, Source, SourceId};
 use crate::core::GitReference;
+use crate::core::SourceId;
 use crate::core::{Dependency, Package, PackageId, Summary};
 use crate::sources::git::utils::GitRemote;
+use crate::sources::source::MaybePackage;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;

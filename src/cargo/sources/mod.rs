@@ -1,6 +1,14 @@
-//! Implementations of `Source` trait.
+//! The trait for sources of Cargo packages and its built-in implemetations.
 //!
-//! Cargo provides several built-in implementations of [`Source`] trait. Namely,
+//! A source is a provider that contains source files and metadata of packages.
+//! It provides a number of methods to fetch those package informations, for
+//! example, querying metadata or downloading files for a package. These
+//! informations then can be used as dependencies for other Cargo packages.
+//!
+//! This module provides [`Source`][source::Source] trait as an abstraction of different sources,
+//! as well as [`SourceMap`][source::SourceMap] struct as a map of all available sources.
+//!
+//! Several built-in implementations of `Source` trait are provided. Namely,
 //!
 //! * [`RegistrySource`] --- A source that provides an index for people to query
 //!   a crate's metadata, and fetch files for a certain crate. crates.io falls
@@ -16,7 +24,6 @@
 //! This module also contains [`SourceConfigMap`], which is effectively the
 //! representation of the `[source.*]` value in Cargo configuration.
 //!
-//! [`Source`]: crate::core::Source
 //! [source replacement]: https://doc.rust-lang.org/nightly/cargo/reference/source-replacement.html
 
 pub use self::config::SourceConfigMap;
@@ -32,3 +39,4 @@ pub mod git;
 pub mod path;
 pub mod registry;
 pub mod replaced;
+pub mod source;

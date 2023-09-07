@@ -2,8 +2,11 @@ use std::collections::{HashMap, HashSet};
 use std::task::{ready, Poll};
 
 use crate::core::PackageSet;
-use crate::core::{Dependency, PackageId, QueryKind, Source, SourceId, SourceMap, Summary};
+use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::sources::config::SourceConfigMap;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
+use crate::sources::source::SourceMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, Config};

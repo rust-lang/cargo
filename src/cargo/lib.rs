@@ -51,8 +51,8 @@
 //!   - [`core::compiler::fingerprint`]:
 //!     The `fingerprint` module contains all the code that handles detecting
 //!     if a crate needs to be recompiled.
-//! - [`core::source`]:
-//!   The [`core::Source`] trait is an abstraction over different sources of packages.
+//! - [`sources::source`]:
+//!   The [`sources::source::Source`] trait is an abstraction over different sources of packages.
 //!   Sources are uniquely identified by a [`core::SourceId`]. Sources are implemented in the [`sources`]
 //!   directory.
 //! - [`util`]:

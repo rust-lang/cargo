@@ -13,9 +13,10 @@ use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
 use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
-use cargo::core::source::{GitReference, QueryKind, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
+use cargo::core::{GitReference, SourceId};
+use cargo::sources::source::QueryKind;
 use cargo::util::{CargoResult, Config, Graph, IntoUrl, PartialVersion};
 
 use proptest::collection::{btree_map, vec};

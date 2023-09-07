@@ -1,5 +1,7 @@
-use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, QueryKind, Source, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, SourceId, Summary};
+use crate::sources::source::MaybePackage;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::util::errors::CargoResult;
 use std::task::Poll;
 

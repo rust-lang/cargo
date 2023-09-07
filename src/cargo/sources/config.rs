@@ -4,7 +4,8 @@
 //! structure usable by Cargo itself. Currently this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
-use crate::core::{GitReference, PackageId, Source, SourceId};
+use crate::core::{GitReference, PackageId, SourceId};
+use crate::sources::source::Source;
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::config::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;

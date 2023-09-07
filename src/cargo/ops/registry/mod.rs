@@ -17,8 +17,8 @@ use anyhow::{bail, format_err, Context as _};
 use cargo_credential::{Operation, Secret};
 use crates_io::{self, Registry};
 
-use crate::core::source::Source;
 use crate::core::SourceId;
+use crate::sources::source::Source;
 use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::auth;
 use crate::util::config::{Config, PathAndArgs};

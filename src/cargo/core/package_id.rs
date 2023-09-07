@@ -10,7 +10,7 @@ use std::sync::OnceLock;
 use serde::de;
 use serde::ser;
 
-use crate::core::source::SourceId;
+use crate::core::SourceId;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, ToSemver};
 
@@ -238,7 +238,7 @@ impl fmt::Debug for PackageId {
 #[cfg(test)]
 mod tests {
     use super::PackageId;
-    use crate::core::source::SourceId;
+    use crate::core::SourceId;
     use crate::sources::CRATES_IO_INDEX;
     use crate::util::IntoUrl;
 
