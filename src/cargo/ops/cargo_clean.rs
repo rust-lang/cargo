@@ -23,11 +23,14 @@ pub struct CleanOptions<'cfg> {
     pub requested_profile: InternedString,
     /// Whether to just clean the doc directory
     pub doc: bool,
+    /// If set, doesn't delete anything.
+    pub dry_run: bool,
 }
 
 pub struct CleanContext<'cfg> {
     pub config: &'cfg Config,
     progress: Box<dyn CleaningProgressBar + 'cfg>,
+    pub dry_run: bool,
 }
 
 /// Cleans various caches.
@@ -35,6 +38,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let mut target_dir = ws.target_dir();
     let config = opts.config;
     let mut ctx = CleanContext::new(config);
+    ctx.dry_run = opts.dry_run;
 
     if opts.doc {
         if !opts.spec.is_empty() {
@@ -262,6 +266,7 @@ impl<'cfg> CleanContext<'cfg> {
         CleanContext {
             config,
             progress: Box::new(progress),
+            dry_run: false,
         }
     }
 
@@ -322,26 +327,48 @@ impl<'cfg> CleanContext<'cfg> {
             }
         };
 
-        self.config
-            .shell()
-            .verbose(|shell| shell.status("Removing", path.display()))?;
+        if self.dry_run {
+            // Concise because if in verbose mode, the path will be written in
+            // the loop below.
+            self.config
+                .shell()
+                .concise(|shell| Ok(writeln!(shell.out(), "{}", path.display())?))?;
+        } else {
+            self.config
+                .shell()
+                .verbose(|shell| shell.status("Removing", path.display()))?;
+        }
         self.progress.display_now()?;
 
+        let rm_file = |path: &Path| {
+            if !self.dry_run {
+                paths::remove_file(path)?;
+            }
+            Ok(())
+        };
+
         if !meta.is_dir() {
-            return paths::remove_file(path);
+            return rm_file(path);
         }
 
         for entry in walkdir::WalkDir::new(path).contents_first(true) {
             let entry = entry?;
             self.progress.on_clean()?;
+            if self.dry_run {
+                self.config
+                    .shell()
+                    .verbose(|shell| Ok(writeln!(shell.out(), "{}", entry.path().display())?))?;
+            }
             if entry.file_type().is_dir() {
                 // The contents should have been removed by now, but sometimes a race condition is hit
                 // where other files have been added by the OS. `paths::remove_dir_all` also falls back
                 // to `std::fs::remove_dir_all`, which may be more reliable than a simple walk in
                 // platform-specific edge cases.
-                paths::remove_dir_all(entry.path())?;
+                if !self.dry_run {
+                    paths::remove_dir_all(entry.path())?;
+                }
             } else {
-                paths::remove_file(entry.path())?;
+                rm_file(entry.path())?;
             }
         }
 

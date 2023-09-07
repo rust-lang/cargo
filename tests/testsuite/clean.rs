@@ -783,6 +783,50 @@ fn clean_spec_reserved() {
 }
 
 #[cargo_test]
+fn clean_dry_run() {
+    // Basic `clean --dry-run` test.
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let ls_r = || -> Vec<_> {
+        let mut file_list: Vec<_> = walkdir::WalkDir::new(p.build_dir())
+            .into_iter()
+            .filter_map(|e| e.map(|e| e.path().to_owned()).ok())
+            .collect();
+        file_list.sort();
+        file_list
+    };
+
+    // Start with no files.
+    p.cargo("clean --dry-run").with_stdout("").run();
+    p.cargo("check").run();
+    let before = ls_r();
+    p.cargo("clean --dry-run").with_stdout("[CWD]/target").run();
+    // Verify it didn't delete anything.
+    let after = ls_r();
+    assert_eq!(before, after);
+    let expected = cargo::util::iter_join(before.iter().map(|p| p.to_str().unwrap()), "\n");
+    eprintln!("{expected}");
+    // Verify the verbose output.
+    p.cargo("clean --dry-run -v")
+        .with_stdout_unordered(expected)
+        .run();
+}
+
+#[cargo_test]
 fn doc_with_package_selection() {
     // --doc with -p
     let p = project().file("src/lib.rs", "").build();
