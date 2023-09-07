@@ -2292,9 +2292,9 @@ fn failed_install_retains_temp_directory() {
     .unwrap();
 
     // Find the path in the output.
-    let start = stderr.find("found at `").unwrap() + 10;
-    let end = stderr[start..].find('.').unwrap() - 1;
-    let path = Path::new(&stderr[start..(end + start)]);
+    let stderr = stderr.split_once("found at `").unwrap().1;
+    let end = stderr.find('.').unwrap() - 1;
+    let path = Path::new(&stderr[..end]);
     assert!(path.exists());
     assert!(path.join("release/deps").exists());
 }

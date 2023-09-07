@@ -338,7 +338,7 @@ impl EncodableResolve {
         let mut to_remove = Vec::new();
         for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
             to_remove.push(k.to_string());
-            let k = &k[prefix.len()..];
+            let k = k.strip_prefix(prefix).unwrap();
             let enc_id: EncodablePackageId = k
                 .parse()
                 .with_context(|| internal("invalid encoding of checksum in lockfile"))?;
@@ -601,8 +601,8 @@ impl FromStr for EncodablePackageId {
         let version = s.next();
         let source_id = match s.next() {
             Some(s) => {
-                if s.starts_with('(') && s.ends_with(')') {
-                    Some(SourceId::from_url(&s[1..s.len() - 1])?)
+                if let Some(s) = s.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
+                    Some(SourceId::from_url(s)?)
                 } else {
                     anyhow::bail!("invalid serialized PackageId")
                 }
