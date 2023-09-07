@@ -194,14 +194,15 @@ required-features = [] # Features required to build this target (N/A for lib).
 
 ### The `name` field
 
-The `name` field specifies the name of the target, which corresponds to the
-filename of the artifact that will be generated. For a library, this is the
-crate name that dependencies will use to reference it.
+The `name` field specifies the name of the target. For a binary it corresponds
+to the filename of the artifact that will be generated. For a library, with any
+dashes replaced with underscores, it corresponds to the stem used in the
+produced library artifact, as well as the name that dependencies will use to
+reference the library crate.
 
 For the `[lib]` and the default binary (`src/main.rs`), this defaults to the
-name of the package, with any dashes replaced with underscores. For other
-[auto discovered](#target-auto-discovery) targets, it defaults to the
-directory or file name.
+name of the package. For other [auto discovered](#target-auto-discovery)
+targets, it defaults to the directory or file name.
 
 This is required for all targets except `[lib]`.
 

@@ -3497,38 +3497,6 @@ fn dashes_to_underscores() {
 }
 
 #[cargo_test]
-fn dashes_in_crate_name_bad() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [lib]
-                name = "foo-bar"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file("src/main.rs", "extern crate foo_bar; fn main() {}")
-        .build();
-
-    p.cargo("build -v")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
-
-Caused by:
-  library target names cannot contain hyphens: foo-bar
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn rustc_env_var() {
     let p = project().file("src/lib.rs", "").build();
 
