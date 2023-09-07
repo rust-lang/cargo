@@ -262,7 +262,7 @@ fn escape_glob_path(pattern: &Path) -> CargoResult<String> {
 }
 
 impl<'cfg> CleanContext<'cfg> {
-    pub fn new(config: &'cfg Config) -> CleanContext<'cfg> {
+    pub fn new(config: &'cfg Config) -> Self {
         // This progress bar will get replaced, this is just here to avoid needing
         // an Option until the actual bar is created.
         let progress = CleaningFolderBar::new(config, 0);
