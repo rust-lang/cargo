@@ -1470,3 +1470,33 @@ pub fn symlink_supported() -> bool {
 pub fn no_such_file_err_msg() -> String {
     std::io::Error::from_raw_os_error(2).to_string()
 }
+
+/// Helper to retry a function `n` times.
+///
+/// The function should return `Some` when it is ready.
+pub fn retry<F, R>(n: u32, mut f: F) -> R
+where
+    F: FnMut() -> Option<R>,
+{
+    let mut count = 0;
+    let start = std::time::Instant::now();
+    loop {
+        if let Some(r) = f() {
+            return r;
+        }
+        count += 1;
+        if count > n {
+            panic!(
+                "test did not finish within {n} attempts ({:?} total)",
+                start.elapsed()
+            );
+        }
+        sleep_ms(100);
+    }
+}
+
+#[test]
+#[should_panic(expected = "test did not finish")]
+fn retry_fails() {
+    retry(2, || None::<()>);
+}
