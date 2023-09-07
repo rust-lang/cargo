@@ -62,6 +62,7 @@ mod queue;
 pub mod restricted_names;
 pub mod rustc;
 mod semver_ext;
+pub mod sqlite;
 pub mod style;
 pub mod toml;
 pub mod toml_mut;
