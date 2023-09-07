@@ -400,6 +400,7 @@ dependencies = [
  "core-foundation",
  "filetime",
  "hex",
+ "ignore",
  "jobserver",
  "libc",
  "miow",
