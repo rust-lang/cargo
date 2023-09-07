@@ -673,3 +673,13 @@ fn clean_spec_reserved() {
         )
         .run();
 }
+
+#[cargo_test]
+fn doc_with_package_selection() {
+    // --doc with -p
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("clean --doc -p foo")
+        .with_status(101)
+        .with_stderr("error: --doc cannot be used with -p")
+        .run();
+}
