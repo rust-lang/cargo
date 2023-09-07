@@ -172,10 +172,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 
     let unstable_gc = |opt| {
-        // TODO: issue number
-        config
-            .cli_unstable()
-            .fail_if_stable_opt_custom_z(opt, 0, "gc", config.cli_unstable().gc)
+        config.cli_unstable().fail_if_stable_opt_custom_z(
+            opt,
+            12633,
+            "gc",
+            config.cli_unstable().gc,
+        )
     };
     let unstable_cache_opt = |opt| -> CargoResult<Option<&str>> {
         let arg = args.get_one::<String>(opt).map(String::as_str);
