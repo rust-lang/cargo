@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use filetime::FileTime;
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File, Metadata, OpenOptions};
 use std::io;
 use std::io::prelude::*;
 use std::iter;
@@ -136,6 +136,24 @@ pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
     }
 }
 
+/// Returns metadata for a file (follows symlinks).
+///
+/// Equivalent to [`std::fs::metadata`] with better error messages.
+pub fn metadata<P: AsRef<Path>>(path: P) -> Result<Metadata> {
+    let path = path.as_ref();
+    std::fs::metadata(path)
+        .with_context(|| format!("failed to load metadata for path `{}`", path.display()))
+}
+
+/// Returns metadata for a file without following symlinks.
+///
+/// Equivalent to [`std::fs::metadata`] with better error messages.
+pub fn symlink_metadata<P: AsRef<Path>>(path: P) -> Result<Metadata> {
+    let path = path.as_ref();
+    std::fs::symlink_metadata(path)
+        .with_context(|| format!("failed to load metadata for path `{}`", path.display()))
+}
+
 /// Reads a file to a string.
 ///
 /// Equivalent to [`std::fs::read_to_string`] with better error messages.
@@ -216,16 +234,14 @@ pub fn open<P: AsRef<Path>>(path: P) -> Result<File> {
 
 /// Returns the last modification time of a file.
 pub fn mtime(path: &Path) -> Result<FileTime> {
-    let meta =
-        fs::metadata(path).with_context(|| format!("failed to stat `{}`", path.display()))?;
+    let meta = metadata(path)?;
     Ok(FileTime::from_last_modification_time(&meta))
 }
 
 /// Returns the maximum mtime of the given path, recursing into
 /// subdirectories, and following symlinks.
 pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
-    let meta =
-        fs::metadata(path).with_context(|| format!("failed to stat `{}`", path.display()))?;
+    let meta = metadata(path)?;
     if !meta.is_dir() {
         return Ok(FileTime::from_last_modification_time(&meta));
     }
@@ -432,10 +448,7 @@ pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> Result<()> {
 }
 
 fn _remove_dir_all(p: &Path) -> Result<()> {
-    if p.symlink_metadata()
-        .with_context(|| format!("could not get metadata for `{}` to remove", p.display()))?
-        .is_symlink()
-    {
+    if symlink_metadata(p)?.is_symlink() {
         return remove_file(p);
     }
     let entries = p
