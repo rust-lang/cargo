@@ -29,6 +29,7 @@ tar.workspace = true
 time.workspace = true
 toml.workspace = true
 url.workspace = true
+walkdir.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem"] }

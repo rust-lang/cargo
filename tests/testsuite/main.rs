@@ -98,6 +98,7 @@ mod git_auth;
 mod git_gc;
 mod git_shallow;
 mod glob_targets;
+mod global_cache_tracker;
 mod help;
 mod https;
 mod inheritable_workspace_fields;
