@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::str;
 use std::sync::OnceLock;
+use std::thread::JoinHandle;
 use std::time::{self, Duration};
 
 use anyhow::{bail, Result};
@@ -1499,4 +1500,21 @@ where
 #[should_panic(expected = "test did not finish")]
 fn retry_fails() {
     retry(2, || None::<()>);
+}
+
+/// Helper that waits for a thread to finish, up to `n` tenths of a second.
+pub fn thread_wait_timeout<T>(n: u32, thread: JoinHandle<T>) -> T {
+    retry(n, || thread.is_finished().then_some(()));
+    thread.join().unwrap()
+}
+
+/// Helper that runs some function, and waits up to `n` tenths of a second for
+/// it to finish.
+pub fn threaded_timeout<F, R>(n: u32, f: F) -> R
+where
+    F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
+{
+    let thread = std::thread::spawn(|| f());
+    thread_wait_timeout(n, thread)
 }
