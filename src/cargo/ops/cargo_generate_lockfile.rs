@@ -3,6 +3,7 @@ use crate::core::resolver::features::{CliFeatures, HasDevUnits};
 use crate::core::{PackageId, PackageIdSpec};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::config::Config;
 use crate::util::style;
 use crate::util::CargoResult;
@@ -48,7 +49,9 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
     // Updates often require a lot of modifications to the registry, so ensure
     // that we're synchronized against other Cargos.
-    let _lock = ws.config().acquire_package_cache_lock()?;
+    let _lock = ws
+        .config()
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     let max_rust_version = ws.rust_version();
 

@@ -17,6 +17,7 @@ use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::Config;
 use crate::util::{FileLock, Filesystem};
@@ -536,7 +537,7 @@ where
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
     // with other global Cargos
-    let _lock = config.acquire_package_cache_lock()?;
+    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     if needs_update {
         source.invalidate_cache();
@@ -604,7 +605,7 @@ where
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
     // with other global Cargos
-    let _lock = config.acquire_package_cache_lock()?;
+    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     source.invalidate_cache();
 

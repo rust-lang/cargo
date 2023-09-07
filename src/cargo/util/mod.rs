@@ -31,6 +31,7 @@ pub use self::workspace::{
 };
 
 pub mod auth;
+pub mod cache_lock;
 mod canonical_url;
 pub mod command_prelude;
 pub mod config;

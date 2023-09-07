@@ -37,6 +37,7 @@ use crate::core::compiler::BuildContext;
 use crate::core::{Dependency, PackageId, Workspace};
 use crate::sources::source::QueryKind;
 use crate::sources::SourceConfigMap;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::{iter_join, CargoResult};
 use anyhow::{bail, format_err, Context};
 use serde::{Deserialize, Serialize};
@@ -297,7 +298,10 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMa
 /// This is best-effort - if an error occurs, `None` will be returned.
 fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<String> {
     // This in general ignores all errors since this is opportunistic.
-    let _lock = ws.config().acquire_package_cache_lock().ok()?;
+    let _lock = ws
+        .config()
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
+        .ok()?;
     // Create a set of updated registry sources.
     let map = SourceConfigMap::new(ws.config()).ok()?;
     let mut package_ids: BTreeSet<_> = package_ids

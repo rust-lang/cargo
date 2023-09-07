@@ -6,6 +6,7 @@ use crate::sources::git::fetch::RemoteKind;
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Config, Filesystem};
@@ -104,7 +105,9 @@ impl<'cfg> RemoteRegistry<'cfg> {
     fn repo(&self) -> CargoResult<&git2::Repository> {
         self.repo.try_borrow_with(|| {
             trace!("acquiring registry index lock");
-            let path = self.config.assert_package_cache_locked(&self.index_path);
+            let path = self
+                .config
+                .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
 
             match git2::Repository::open(&path) {
                 Ok(repo) => Ok(repo),
@@ -216,7 +219,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
-        self.config.assert_package_cache_locked(path)
+        self.config
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, path)
     }
 
     /// Read the general concept for `load()` on [`RegistryData::load`].
@@ -302,7 +306,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         debug!("loading config");
         self.prepare()?;
-        self.config.assert_package_cache_locked(&self.index_path);
+        self.config
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
         match ready!(self.load(Path::new(""), Path::new(RegistryConfig::NAME), None)?) {
             LoadResponse::Data { raw_data, .. } => {
                 trace!("config loaded");
@@ -346,7 +351,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.head.set(None);
         *self.tree.borrow_mut() = None;
         self.current_sha.set(None);
-        let _path = self.config.assert_package_cache_locked(&self.index_path);
+        let _path = self
+            .config
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
         if !self.quiet {
             self.config
                 .shell()

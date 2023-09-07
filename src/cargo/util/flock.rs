@@ -14,14 +14,6 @@ use sys::*;
 pub struct FileLock {
     f: Option<File>,
     path: PathBuf,
-    state: State,
-}
-
-#[derive(PartialEq, Debug)]
-enum State {
-    Unlocked,
-    Shared,
-    Exclusive,
 }
 
 impl FileLock {
@@ -35,13 +27,11 @@ impl FileLock {
     /// Note that special care must be taken to ensure that the path is not
     /// referenced outside the lifetime of this lock.
     pub fn path(&self) -> &Path {
-        assert_ne!(self.state, State::Unlocked);
         &self.path
     }
 
     /// Returns the parent path containing this file
     pub fn parent(&self) -> &Path {
-        assert_ne!(self.state, State::Unlocked);
         self.path.parent().unwrap()
     }
 
@@ -91,9 +81,9 @@ impl Write for FileLock {
 
 impl Drop for FileLock {
     fn drop(&mut self) {
-        if self.state != State::Unlocked {
-            if let Some(f) = self.f.take() {
-                let _ = unlock(&f);
+        if let Some(f) = self.f.take() {
+            if let Err(e) = unlock(&f) {
+                tracing::warn!("failed to release lock: {e:?}");
             }
         }
     }
@@ -171,13 +161,25 @@ impl Filesystem {
     where
         P: AsRef<Path>,
     {
-        self.open(
-            path.as_ref(),
-            OpenOptions::new().read(true).write(true).create(true),
-            State::Exclusive,
-            config,
-            msg,
-        )
+        let mut opts = OpenOptions::new();
+        opts.read(true).write(true).create(true);
+        let (path, f) = self.open(path.as_ref(), &opts, true)?;
+        self.lock(path, f, config, msg, true)
+    }
+
+    /// A non-blocking version of [`Filesystem::open_rw`].
+    ///
+    /// Returns `None` if the operation would block due to another process
+    /// holding the lock.
+    pub fn try_open_rw<P: AsRef<Path>>(&self, path: P) -> CargoResult<Option<FileLock>> {
+        let mut opts = OpenOptions::new();
+        opts.read(true).write(true).create(true);
+        let (path, f) = self.open(path.as_ref(), &opts, true)?;
+        if try_acquire(&path, &|| try_lock_exclusive(&f))? {
+            Ok(Some(FileLock { f: Some(f), path }))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Opens shared access to a file, returning the locked version of a file.
@@ -193,32 +195,50 @@ impl Filesystem {
     where
         P: AsRef<Path>,
     {
-        self.open(
-            path.as_ref(),
-            OpenOptions::new().read(true),
-            State::Shared,
-            config,
-            msg,
-        )
+        let (path, f) = self.open(path.as_ref(), &OpenOptions::new().read(true), false)?;
+        self.lock(path, f, config, msg, false)
     }
 
-    fn open(
+    /// Opens shared access to a file, returning the locked version of a file.
+    ///
+    /// Compared to [`Filesystem::open_ro`], this will create the file (and
+    /// any directories in the parent) if the file does not already exist.
+    pub fn open_shared_create<P: AsRef<Path>>(
         &self,
-        path: &Path,
-        opts: &OpenOptions,
-        state: State,
+        path: P,
         config: &Config,
         msg: &str,
     ) -> CargoResult<FileLock> {
-        let path = self.root.join(path);
+        let mut opts = OpenOptions::new();
+        opts.read(true).write(true).create(true);
+        let (path, f) = self.open(path.as_ref(), &opts, true)?;
+        self.lock(path, f, config, msg, false)
+    }
 
-        // If we want an exclusive lock then if we fail because of NotFound it's
-        // likely because an intermediate directory didn't exist, so try to
-        // create the directory and then continue.
+    /// A non-blocking version of [`Filesystem::open_shared_create`].
+    ///
+    /// Returns `None` if the operation would block due to another process
+    /// holding the lock.
+    pub fn try_open_shared_create<P: AsRef<Path>>(&self, path: P) -> CargoResult<Option<FileLock>> {
+        let mut opts = OpenOptions::new();
+        opts.read(true).write(true).create(true);
+        let (path, f) = self.open(path.as_ref(), &opts, true)?;
+        if try_acquire(&path, &|| try_lock_shared(&f))? {
+            Ok(Some(FileLock { f: Some(f), path }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn open(&self, path: &Path, opts: &OpenOptions, create: bool) -> CargoResult<(PathBuf, File)> {
+        let path = self.root.join(path);
         let f = opts
             .open(&path)
             .or_else(|e| {
-                if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
+                // If we were requested to create this file, and there was a
+                // NotFound error, then that was likely due to missing
+                // intermediate directories. Try creating them and try again.
+                if e.kind() == io::ErrorKind::NotFound && create {
                     paths::create_dir_all(path.parent().unwrap())?;
                     Ok(opts.open(&path)?)
                 } else {
@@ -226,24 +246,27 @@ impl Filesystem {
                 }
             })
             .with_context(|| format!("failed to open: {}", path.display()))?;
-        match state {
-            State::Exclusive => {
-                acquire(config, msg, &path, &|| try_lock_exclusive(&f), &|| {
-                    lock_exclusive(&f)
-                })?;
-            }
-            State::Shared => {
-                acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
-                    lock_shared(&f)
-                })?;
-            }
-            State::Unlocked => {}
+        Ok((path, f))
+    }
+
+    fn lock(
+        &self,
+        path: PathBuf,
+        f: File,
+        config: &Config,
+        msg: &str,
+        exclusive: bool,
+    ) -> CargoResult<FileLock> {
+        if exclusive {
+            acquire(config, msg, &path, &|| try_lock_exclusive(&f), &|| {
+                lock_exclusive(&f)
+            })?;
+        } else {
+            acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
+                lock_shared(&f)
+            })?;
         }
-        Ok(FileLock {
-            f: Some(f),
-            path,
-            state,
-        })
+        Ok(FileLock { f: Some(f), path })
     }
 }
 
@@ -257,6 +280,41 @@ impl PartialEq<Filesystem> for Path {
     fn eq(&self, other: &Filesystem) -> bool {
         self == other.root
     }
+}
+
+fn try_acquire(path: &Path, lock_try: &dyn Fn() -> io::Result<()>) -> CargoResult<bool> {
+    // File locking on Unix is currently implemented via `flock`, which is known
+    // to be broken on NFS. We could in theory just ignore errors that happen on
+    // NFS, but apparently the failure mode [1] for `flock` on NFS is **blocking
+    // forever**, even if the "non-blocking" flag is passed!
+    //
+    // As a result, we just skip all file locks entirely on NFS mounts. That
+    // should avoid calling any `flock` functions at all, and it wouldn't work
+    // there anyway.
+    //
+    // [1]: https://github.com/rust-lang/cargo/issues/2615
+    if is_on_nfs_mount(path) {
+        tracing::debug!("{path:?} appears to be an NFS mount, not trying to lock");
+        return Ok(true);
+    }
+
+    match lock_try() {
+        Ok(()) => return Ok(true),
+
+        // In addition to ignoring NFS which is commonly not working we also
+        // just ignore locking on filesystems that look like they don't
+        // implement file locking.
+        Err(e) if error_unsupported(&e) => return Ok(true),
+
+        Err(e) => {
+            if !error_contended(&e) {
+                let e = anyhow::Error::from(e);
+                let cx = format!("failed to lock file: {}", path.display());
+                return Err(e.context(cx));
+            }
+        }
+    }
+    Ok(false)
 }
 
 /// Acquires a lock on a file in a "nice" manner.
@@ -281,35 +339,8 @@ fn acquire(
     lock_try: &dyn Fn() -> io::Result<()>,
     lock_block: &dyn Fn() -> io::Result<()>,
 ) -> CargoResult<()> {
-    // File locking on Unix is currently implemented via `flock`, which is known
-    // to be broken on NFS. We could in theory just ignore errors that happen on
-    // NFS, but apparently the failure mode [1] for `flock` on NFS is **blocking
-    // forever**, even if the "non-blocking" flag is passed!
-    //
-    // As a result, we just skip all file locks entirely on NFS mounts. That
-    // should avoid calling any `flock` functions at all, and it wouldn't work
-    // there anyway.
-    //
-    // [1]: https://github.com/rust-lang/cargo/issues/2615
-    if is_on_nfs_mount(path) {
+    if try_acquire(path, lock_try)? {
         return Ok(());
-    }
-
-    match lock_try() {
-        Ok(()) => return Ok(()),
-
-        // In addition to ignoring NFS which is commonly not working we also
-        // just ignore locking on filesystems that look like they don't
-        // implement file locking.
-        Err(e) if error_unsupported(&e) => return Ok(()),
-
-        Err(e) => {
-            if !error_contended(&e) {
-                let e = anyhow::Error::from(e);
-                let cx = format!("failed to lock file: {}", path.display());
-                return Err(e.context(cx));
-            }
-        }
     }
     let msg = format!("waiting for file lock on {}", msg);
     config
@@ -317,30 +348,30 @@ fn acquire(
         .status_with_color("Blocking", &msg, &style::NOTE)?;
 
     lock_block().with_context(|| format!("failed to lock file: {}", path.display()))?;
-    return Ok(());
+    Ok(())
+}
 
-    #[cfg(all(target_os = "linux", not(target_env = "musl")))]
-    fn is_on_nfs_mount(path: &Path) -> bool {
-        use std::ffi::CString;
-        use std::mem;
-        use std::os::unix::prelude::*;
+#[cfg(all(target_os = "linux", not(target_env = "musl")))]
+fn is_on_nfs_mount(path: &Path) -> bool {
+    use std::ffi::CString;
+    use std::mem;
+    use std::os::unix::prelude::*;
 
-        let Ok(path) = CString::new(path.as_os_str().as_bytes()) else {
-            return false;
-        };
+    let Ok(path) = CString::new(path.as_os_str().as_bytes()) else {
+        return false;
+    };
 
-        unsafe {
-            let mut buf: libc::statfs = mem::zeroed();
-            let r = libc::statfs(path.as_ptr(), &mut buf);
+    unsafe {
+        let mut buf: libc::statfs = mem::zeroed();
+        let r = libc::statfs(path.as_ptr(), &mut buf);
 
-            r == 0 && buf.f_type as u32 == libc::NFS_SUPER_MAGIC as u32
-        }
+        r == 0 && buf.f_type as u32 == libc::NFS_SUPER_MAGIC as u32
     }
+}
 
-    #[cfg(any(not(target_os = "linux"), target_env = "musl"))]
-    fn is_on_nfs_mount(_path: &Path) -> bool {
-        false
-    }
+#[cfg(any(not(target_os = "linux"), target_env = "musl"))]
+fn is_on_nfs_mount(_path: &Path) -> bool {
+    false
 }
 
 #[cfg(unix)]

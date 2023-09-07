@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use crate::core::compiler::compilation::{self, UnitOutput};
 use crate::core::compiler::{self, artifact, Unit};
 use crate::core::PackageId;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::profile;
 use anyhow::{bail, Context as _};
@@ -132,6 +133,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ///
     /// [`ops::cargo_compile`]: ../../../ops/cargo_compile/index.html
     pub fn compile(mut self, exec: &Arc<dyn Executor>) -> CargoResult<Compilation<'cfg>> {
+        // A shared lock is held during the duration of the build since rustc
+        // needs to read from the `src` cache, and we don't want other
+        // commands modifying the `src` cache while it is running.
+        let _lock = self
+            .bcx
+            .config
+            .acquire_package_cache_lock(CacheLockMode::Shared)?;
         let mut queue = JobQueue::new(self.bcx);
         let mut plan = BuildPlan::new();
         let build_plan = self.bcx.build_config.build_plan;

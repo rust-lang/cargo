@@ -68,6 +68,7 @@ use crate::core::Feature;
 use crate::core::{GitReference, PackageId, PackageIdSpec, PackageSet, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::RustVersion;
 use crate::util::{profile, CanonicalUrl};
@@ -289,7 +290,9 @@ pub fn resolve_with_previous<'cfg>(
 ) -> CargoResult<Resolve> {
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
-    let _lock = ws.config().acquire_package_cache_lock()?;
+    let _lock = ws
+        .config()
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a Git
