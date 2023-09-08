@@ -321,6 +321,36 @@ fn build_provider(name: &str, response: &str) -> String {
 }
 
 #[cargo_test]
+fn not_found() {
+    let registry = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .http_index()
+        .auth_required()
+        .credential_provider(&[&build_provider(
+            "not_found",
+            r#"{"Err": {"kind": "not-found"}}"#,
+        )])
+        .build();
+
+    // should not suggest a _TOKEN environment variable since the cargo:token provider isn't available.
+    cargo_process("install -v foo -Zcredential-process -Zregistry-auth")
+        .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] [..]
+[CREDENTIAL] [..]not_found[..] get crates-io
+{"v":1[..]
+[ERROR] failed to query replaced source registry `crates-io`
+
+Caused by:
+  no token found, please run `cargo login`
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn all_not_found() {
     let server = registry::RegistryBuilder::new()
         .no_configure_token()
@@ -342,6 +372,7 @@ fn all_not_found() {
     )
     .unwrap();
 
+    // should not suggest a _TOKEN environment variable since the cargo:token provider isn't available.
     cargo_process("install -v foo -Zcredential-process -Zregistry-auth")
         .masquerade_as_nightly_cargo(&["credential-process", "registry-auth"])
         .replace_crates_io(server.index_url())
@@ -354,7 +385,6 @@ fn all_not_found() {
 
 Caused by:
   no token found, please run `cargo login`
-  or use environment variable CARGO_REGISTRY_TOKEN
 "#,
         )
         .run();
