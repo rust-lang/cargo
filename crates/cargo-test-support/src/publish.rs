@@ -131,8 +131,11 @@ pub fn validate_crate_contents(
             (name, contents)
         })
         .collect();
-    assert!(expected_crate_name.ends_with(".crate"));
-    let base_crate_name = Path::new(&expected_crate_name[..expected_crate_name.len() - 6]);
+    let base_crate_name = Path::new(
+        expected_crate_name
+            .strip_suffix(".crate")
+            .expect("must end with .crate"),
+    );
     let actual_files: HashSet<PathBuf> = files.keys().cloned().collect();
     let expected_files: HashSet<PathBuf> = expected_files
         .iter()

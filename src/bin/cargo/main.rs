@@ -106,17 +106,18 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
         };
         for entry in entries.filter_map(|e| e.ok()) {
             let path = entry.path();
-            let filename = match path.file_name().and_then(|s| s.to_str()) {
-                Some(filename) => filename,
-                _ => continue,
-            };
-            if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
+            let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
                 continue;
-            }
+            };
+            let Some(name) = filename
+                .strip_prefix(prefix)
+                .and_then(|s| s.strip_suffix(suffix))
+            else {
+                continue;
+            };
             if is_executable(entry.path()) {
-                let end = filename.len() - suffix.len();
                 commands.insert(
-                    filename[prefix.len()..end].to_string(),
+                    name.to_string(),
                     CommandInfo::External { path: path.clone() },
                 );
             }

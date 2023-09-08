@@ -63,8 +63,7 @@ impl Rustc {
         let extract = |field: &str| -> CargoResult<&str> {
             verbose_version
                 .lines()
-                .find(|l| l.starts_with(field))
-                .map(|l| &l[field.len()..])
+                .find_map(|l| l.strip_prefix(field))
                 .ok_or_else(|| {
                     anyhow::format_err!(
                         "`rustc -vV` didn't have a line for `{}`, got:\n{}",
