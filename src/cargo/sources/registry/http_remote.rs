@@ -588,12 +588,13 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     }
                     .into());
                     if self.auth_required {
-                        return Poll::Ready(err.context(auth::AuthorizationError {
-                            sid: self.source_id.clone(),
-                            default_registry: self.config.default_registry()?,
-                            login_url: self.login_url.clone(),
-                            reason: auth::AuthorizationErrorReason::TokenRejected,
-                        }));
+                        let auth_error = auth::AuthorizationError::new(
+                            self.config,
+                            self.source_id,
+                            self.login_url.clone(),
+                            auth::AuthorizationErrorReason::TokenRejected,
+                        )?;
+                        return Poll::Ready(err.context(auth_error));
                     } else {
                         return Poll::Ready(err);
                     }
