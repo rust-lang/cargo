@@ -1,7 +1,6 @@
 use cargo_test_support::compare::assert_ui;
 use cargo_test_support::curr_dir;
 use cargo_test_support::CargoCommand;
-use cargo_test_support::ChannelChanger;
 use cargo_test_support::Project;
 
 #[cargo_test]
@@ -12,9 +11,8 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("new")
-        .args(["crates/foo", "-Zlints"])
+        .args(["crates/foo"])
         .current_dir(cwd)
-        .masquerade_as_nightly_cargo(&["lints"])
         .assert()
         .success()
         .stdout_matches_path(curr_dir!().join("stdout.log"))

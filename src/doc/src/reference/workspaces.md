@@ -24,6 +24,7 @@ In the `Cargo.toml`, the `[workspace]` table supports the following sections:
   * [`default-members`](#the-default-members-field) --- Packages to operate on when a specific package wasn't selected.
   * [`package`](#the-package-table) --- Keys for inheriting in packages.
   * [`dependencies`](#the-dependencies-table) --- Keys for inheriting in package dependencies.
+  * [`lints`](#the-lints-table) --- Keys for inheriting in package lints.
   * [`metadata`](#the-metadata-table) --- Extra settings for external tools.
 * [`[patch]`](overriding-dependencies.md#the-patch-section) --- Override dependencies.
 * [`[replace]`](overriding-dependencies.md#the-replace-section) --- Override dependencies (deprecated).
@@ -220,6 +221,33 @@ cc.workspace = true
 
 [dev-dependencies]
 rand.workspace = true
+```
+
+## The `lints` table
+
+The `workspace.lints` table is where you define lint configuration to be inherited by members of a workspace.
+
+Specifying a workspace lint configuration is similar to package lints.
+
+Example:
+
+```toml
+# [PROJECT_DIR]/Cargo.toml
+[workspace]
+members = ["crates/*"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+```
+
+```toml
+# [PROJECT_DIR]/crates/bar/Cargo.toml
+[package]
+name = "bar"
+version = "0.1.0"
+
+[lints]
+workspace = true
 ```
 
 ## The `metadata` table
