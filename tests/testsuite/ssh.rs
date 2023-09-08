@@ -184,7 +184,7 @@ fn known_host_works() {
     // Validate the fingerprint while we're here.
     let fingerprint = stderr
         .lines()
-        .find_map(|line| line.strip_prefix("  The ECDSA key fingerprint"))
+        .find_map(|line| line.strip_prefix("  The ECDSA key fingerprint is: "))
         .unwrap()
         .trim();
     let finger_out = sshd.exec(&["ssh-keygen", "-l", "-f", "/etc/ssh/ssh_host_ecdsa_key.pub"]);
