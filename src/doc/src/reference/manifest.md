@@ -48,6 +48,7 @@ Every manifest file consists of the following sections:
   * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) --- Platform-specific dependencies.
 * [`[badges]`](#the-badges-section) --- Badges to display on a registry.
 * [`[features]`](features.md) --- Conditional compilation features.
+* [`[lints]`](#the-lints-section) --- Configure linters for this package.
 * [`[patch]`](overriding-dependencies.md#the-patch-section) --- Override dependencies.
 * [`[replace]`](overriding-dependencies.md#the-replace-section) --- Override dependencies (deprecated).
 * [`[profile]`](profiles.md) --- Compiler settings and optimizations.
@@ -528,6 +529,46 @@ both `src/bin/a.rs` and `src/bin/b.rs`:
 ```toml
 [package]
 default-run = "a"
+```
+
+#### The `lints` section
+
+Override the default level of lints from different tools by assigning them to a new level in a
+table, for example:
+```toml
+[lints.rust]
+unsafe_code = "forbid"
+```
+
+This is short-hand for:
+```toml
+[lints.rust]
+unsafe_code = { level = "forbid", priority = 0 }
+```
+
+`level` corresponds to the lint levels in `rustc`:
+- `forbid`
+- `deny`
+- `warn`
+- `allow`
+
+`priority` is a signed integer that controls which lints or lint groups override other lint groups:
+- lower (particularly negative) numbers have lower priority, being overridden
+  by higher numbers, and show up first on the command-line to tools like
+  `rustc`
+
+To know which table under `[lints]` a particular lint belongs under, it is the part before `::` in the lint
+name.  If there isn't a `::`, then the tool is `rust`.  For example a warning
+about `unsafe_code` would be `lints.rust.unsafe_code` but a lint about
+`clippy::enum_glob_use` would be `lints.clippy.enum_glob_use`.
+
+For example:
+```toml
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+enum_glob_use = "deny"
 ```
 
 ## The `[badges]` section

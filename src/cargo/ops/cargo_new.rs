@@ -817,11 +817,10 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
             }
 
             // Try to inherit the workspace lints key if it exists.
-            if config.cli_unstable().lints
-                && workspace_document
-                    .get("workspace")
-                    .and_then(|workspace| workspace.get("lints"))
-                    .is_some()
+            if workspace_document
+                .get("workspace")
+                .and_then(|workspace| workspace.get("lints"))
+                .is_some()
             {
                 let mut table = toml_edit::Table::new();
                 table["workspace"] = toml_edit::value(true);

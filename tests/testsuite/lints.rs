@@ -4,72 +4,6 @@ use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 
 #[cargo_test]
-fn package_requires_option() {
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [lints.rust]
-                unsafe_code = "forbid"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    foo.cargo("check")
-        .with_stderr(
-            "\
-warning: unused manifest key `lints` (may be supported in a future version)
-
-this Cargo does not support nightly features, but if you
-switch to nightly channel you can pass
-`-Zlints` to enable this feature.
-[CHECKING] [..]
-[FINISHED] [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn workspace_requires_option() {
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [workspace.lints.rust]
-                unsafe_code = "forbid"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    foo.cargo("check")
-        .with_stderr(
-            "\
-warning: [CWD]/Cargo.toml: unused manifest key `lints` (may be supported in a future version)
-
-this Cargo does not support nightly features, but if you
-switch to nightly channel you can pass
-`-Zlints` to enable this feature.
-[CHECKING] [..]
-[FINISHED] [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn dependency_warning_ignored() {
     let foo = project()
         .file(
@@ -133,45 +67,16 @@ fn malformed_on_stable() {
         .build();
 
     foo.cargo("check")
-        .with_stderr(
-            "\
-warning: unused manifest key `lints` (may be supported in a future version)
-
-this Cargo does not support nightly features, but if you
-switch to nightly channel you can pass
-`-Zlints` to enable this feature.
-[CHECKING] [..]
-[FINISHED] [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn malformed_on_nightly() {
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                lints = 20
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
         .with_status(101)
         .with_stderr(
             "\
 error: failed to parse manifest[..]
 
 Caused by:
+  TOML parse error at line 2, column 25
+    |
+  2 |                 lints = 20
+    |                         ^^
   invalid type: integer `20`, expected a lints table
 ",
         )
@@ -196,8 +101,7 @@ fn fail_on_invalid_tool() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -227,16 +131,18 @@ fn invalid_type_in_lint_value() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
 error: failed to parse manifest at `[..]/Cargo.toml`
 
 Caused by:
+  TOML parse error at line 7, column 36
+    |
+  7 |                 rust-2018-idioms = -1
+    |                                    ^^
   invalid type: integer `-1`, expected a string or map
-  in `rust.rust-2018-idioms`
 ",
         )
         .run();
@@ -260,8 +166,7 @@ fn fail_on_tool_injection() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -292,8 +197,7 @@ fn fail_on_redundant_tool() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -324,8 +228,7 @@ fn fail_on_conflicting_tool() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -363,8 +266,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -402,8 +304,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -443,8 +344,7 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -484,9 +384,8 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
+    foo.cargo("check")
         .arg("-v") // Show order of rustflags on failure
-        .masquerade_as_nightly_cargo(&["lints"])
         .run();
 }
 
@@ -515,10 +414,9 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
+    foo.cargo("check")
         .arg("-v") // Show order of rustflags on failure
         .env("RUSTFLAGS", "-Aunsafe_code")
-        .masquerade_as_nightly_cargo(&["lints"])
         .run();
 }
 
@@ -551,9 +449,9 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
+    foo.cargo("check")
         .arg("-v") // Show order of rustflags on failure
-        .masquerade_as_nightly_cargo(&["lints", "profile-rustflags"])
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
         .run();
 }
 
@@ -588,9 +486,8 @@ pub fn foo(num: i32) -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
+    foo.cargo("check")
         .arg("-v") // Show order of rustflags on failure
-        .masquerade_as_nightly_cargo(&["lints"])
         .run();
 }
 
@@ -628,8 +525,7 @@ pub fn foo() -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -673,9 +569,7 @@ pub fn foo() -> u32 {
         )
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
-        .run();
+    foo.cargo("check").run();
 }
 
 #[cargo_test]
@@ -703,8 +597,7 @@ pub fn foo() -> u32 {
         )
         .build();
 
-    foo.cargo("doc -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("doc")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -747,8 +640,7 @@ pub const Ĕ: i32 = 2;
         )
         .build();
 
-    foo.cargo("check -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("check")
         .with_stderr(
             "\
 [CHECKING] foo v0.0.1 ([CWD])
@@ -757,8 +649,7 @@ pub const Ĕ: i32 = 2;
         )
         .run();
 
-    foo.cargo("test --doc -Zlints")
-        .masquerade_as_nightly_cargo(&["lints"])
+    foo.cargo("test --doc")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
