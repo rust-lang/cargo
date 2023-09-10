@@ -544,7 +544,7 @@ fn clean_custom_dirname() {
 
     // This should clean 'other'
     p.cargo("clean --profile=other")
-        .with_stderr("[REMOVED] [..] files/directories, [..] total")
+        .with_stderr("[REMOVED] [..] files, [..] total")
         .run();
     assert!(p.build_dir().join("debug").is_dir());
     assert!(!p.build_dir().join("other").is_dir());

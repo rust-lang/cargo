@@ -31,7 +31,8 @@ pub struct CleanContext<'cfg> {
     pub config: &'cfg Config,
     progress: Box<dyn CleaningProgressBar + 'cfg>,
     pub dry_run: bool,
-    num_files_folders_cleaned: u64,
+    num_files_removed: u64,
+    num_dirs_removed: u64,
     total_bytes_removed: u64,
 }
 
@@ -270,7 +271,8 @@ impl<'cfg> CleanContext<'cfg> {
             config,
             progress: Box::new(progress),
             dry_run: false,
-            num_files_folders_cleaned: 0,
+            num_files_removed: 0,
+            num_dirs_removed: 0,
             total_bytes_removed: 0,
         }
     }
@@ -352,6 +354,7 @@ impl<'cfg> CleanContext<'cfg> {
                 // byte sizes and not the block sizes.
                 self.total_bytes_removed += meta.len();
             }
+            self.num_files_removed += 1;
             if !self.dry_run {
                 paths::remove_file(path)?;
             }
@@ -359,20 +362,19 @@ impl<'cfg> CleanContext<'cfg> {
         };
 
         if !meta.is_dir() {
-            self.num_files_folders_cleaned += 1;
             return rm_file(path, Ok(meta));
         }
 
         for entry in walkdir::WalkDir::new(path).contents_first(true) {
             let entry = entry?;
             self.progress.on_clean()?;
-            self.num_files_folders_cleaned += 1;
             if self.dry_run {
                 self.config
                     .shell()
                     .verbose(|shell| Ok(writeln!(shell.out(), "{}", entry.path().display())?))?;
             }
             if entry.file_type().is_dir() {
+                self.num_dirs_removed += 1;
                 // The contents should have been removed by now, but sometimes a race condition is hit
                 // where other files have been added by the OS. `paths::remove_dir_all` also falls back
                 // to `std::fs::remove_dir_all`, which may be more reliable than a simple walk in
@@ -401,13 +403,21 @@ impl<'cfg> CleanContext<'cfg> {
                 format!(", {bytes:.1}{unit} total")
             }
         };
-        self.config.shell().status(
-            status,
-            format!(
-                "{} files/directories{byte_count}",
-                self.num_files_folders_cleaned
-            ),
-        )
+        // I think displaying the number of directories removed isn't
+        // particularly interesting to the user. However, if there are 0
+        // files, and a nonzero number of directories, cargo should indicate
+        // that it did *something*, so directory counts are only shown in that
+        // case.
+        let file_count = match (self.num_files_removed, self.num_dirs_removed) {
+            (0, 0) => format!("0 files"),
+            (0, 1) => format!("1 directory"),
+            (0, 2..) => format!("{} directories", self.num_dirs_removed),
+            (1, _) => format!("1 file"),
+            (2.., _) => format!("{} files", self.num_files_removed),
+        };
+        self.config
+            .shell()
+            .status(status, format!("{file_count}{byte_count}"))
     }
 
     /// Deletes all of the given paths, showing a progress bar as it proceeds.

@@ -417,7 +417,7 @@ fn clean_verbose() {
             expected.push_str(&format!("[REMOVING] [..]{}\n", obj.unwrap().display()));
         }
     }
-    expected.push_str("[REMOVED] [..] files/directories, [..] total\n");
+    expected.push_str("[REMOVED] [..] files, [..] total\n");
     p.cargo("clean -p bar --verbose")
         .with_stderr_unordered(&expected)
         .run();
@@ -609,7 +609,7 @@ error: package ID specification `baz` did not match any packages
         .with_stderr(
             "warning: version qualifier in `-p bar:0.1.0` is ignored, \
             cleaning all versions of `bar` found\n\
-            [REMOVED] [..] files/directories, [..] total",
+            [REMOVED] [..] files, [..] total",
         )
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
@@ -664,7 +664,7 @@ error: package ID specification `baz` did not match any packages
         .with_stderr(
             "warning: version qualifier in `-p bar:0.1` is ignored, \
             cleaning all versions of `bar` found\n\
-            [REMOVED] [..] files/directories, [..] total",
+            [REMOVED] [..] files, [..] total",
         )
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
@@ -719,7 +719,7 @@ error: package ID specification `baz` did not match any packages
         .with_stderr(
             "warning: version qualifier in `-p bar:0` is ignored, \
             cleaning all versions of `bar` found\n\
-            [REMOVED] [..] files/directories, [..] total",
+            [REMOVED] [..] files, [..] total",
         )
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
@@ -817,13 +817,13 @@ fn clean_dry_run() {
     // Start with no files.
     p.cargo("clean --dry-run")
         .with_stdout("")
-        .with_stderr("[SUMMARY] 0 files/directories")
+        .with_stderr("[SUMMARY] 0 files")
         .run();
     p.cargo("check").run();
     let before = ls_r();
     p.cargo("clean --dry-run")
         .with_stdout("[CWD]/target")
-        .with_stderr("[SUMMARY] [..] files/directories, [..] total")
+        .with_stderr("[SUMMARY] [..] files, [..] total")
         .run();
     // Verify it didn't delete anything.
     let after = ls_r();
@@ -833,7 +833,7 @@ fn clean_dry_run() {
     // Verify the verbose output.
     p.cargo("clean --dry-run -v")
         .with_stdout_unordered(expected)
-        .with_stderr("[SUMMARY] [..] files/directories, [..] total")
+        .with_stderr("[SUMMARY] [..] files, [..] total")
         .run();
 }
 
