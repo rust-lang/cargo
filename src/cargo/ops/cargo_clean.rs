@@ -417,7 +417,13 @@ impl<'cfg> CleanContext<'cfg> {
         };
         self.config
             .shell()
-            .status(status, format!("{file_count}{byte_count}"))
+            .status(status, format!("{file_count}{byte_count}"))?;
+        if self.dry_run {
+            self.config
+                .shell()
+                .warn("no files deleted due to --dry-run")?;
+        }
+        Ok(())
     }
 
     /// Deletes all of the given paths, showing a progress bar as it proceeds.

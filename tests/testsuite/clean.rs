@@ -817,13 +817,19 @@ fn clean_dry_run() {
     // Start with no files.
     p.cargo("clean --dry-run")
         .with_stdout("")
-        .with_stderr("[SUMMARY] 0 files")
+        .with_stderr(
+            "[SUMMARY] 0 files\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
         .run();
     p.cargo("check").run();
     let before = ls_r();
     p.cargo("clean --dry-run")
         .with_stdout("[CWD]/target")
-        .with_stderr("[SUMMARY] [..] files, [..] total")
+        .with_stderr(
+            "[SUMMARY] [..] files, [..] total\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
         .run();
     // Verify it didn't delete anything.
     let after = ls_r();
@@ -833,7 +839,10 @@ fn clean_dry_run() {
     // Verify the verbose output.
     p.cargo("clean --dry-run -v")
         .with_stdout_unordered(expected)
-        .with_stderr("[SUMMARY] [..] files, [..] total")
+        .with_stderr(
+            "[SUMMARY] [..] files, [..] total\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
         .run();
 }
 
