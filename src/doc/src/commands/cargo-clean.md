@@ -34,6 +34,11 @@ multiple times. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC f
 
 <dl>
 
+<dt class="option-term" id="option-cargo-clean---dry-run"><a class="option-anchor" href="#option-cargo-clean---dry-run"></a><code>--dry-run</code></dt>
+<dd class="option-desc">Displays a summary of what would be deleted without deleting anything.
+Use with <code>--verbose</code> to display the actual files that would be deleted.</dd>
+
+
 <dt class="option-term" id="option-cargo-clean---doc"><a class="option-anchor" href="#option-cargo-clean---doc"></a><code>--doc</code></dt>
 <dd class="option-desc">This option will cause <code>cargo clean</code> to remove only the <code>doc</code> directory in
 the target directory.</dd>
