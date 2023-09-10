@@ -334,13 +334,8 @@ impl<'cfg> CleanContext<'cfg> {
             }
         };
 
-        if self.dry_run {
-            // Concise because if in verbose mode, the path will be written in
-            // the loop below.
-            self.config
-                .shell()
-                .concise(|shell| Ok(writeln!(shell.out(), "{}", path.display())?))?;
-        } else {
+        // dry-run displays paths while walking, so don't print here.
+        if !self.dry_run {
             self.config
                 .shell()
                 .verbose(|shell| shell.status("Removing", path.display()))?;
@@ -369,6 +364,10 @@ impl<'cfg> CleanContext<'cfg> {
             let entry = entry?;
             self.progress.on_clean()?;
             if self.dry_run {
+                // This prints the path without the "Removing" status since I feel
+                // like it can be surprising or even frightening if cargo says it
+                // is removing something without actually removing it. And I can't
+                // come up with a different verb to use as the status.
                 self.config
                     .shell()
                     .verbose(|shell| Ok(writeln!(shell.out(), "{}", entry.path().display())?))?;

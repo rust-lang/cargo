@@ -825,7 +825,6 @@ fn clean_dry_run() {
     p.cargo("check").run();
     let before = ls_r();
     p.cargo("clean --dry-run")
-        .with_stdout("[CWD]/target")
         .with_stderr(
             "[SUMMARY] [..] files, [..] total\n\
              [WARNING] no files deleted due to --dry-run",
