@@ -408,7 +408,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// the index file, aka [`IndexSummary`].
     pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
         let req = OptVersionReq::exact(pkg.version());
-        let summary = self.summaries(&pkg.name(), &req, load)?;
+        let summary = self.summaries(pkg.name(), &req, load)?;
         let summary = ready!(summary)
             .filter(|s| s.package_id().version() == pkg.version())
             .next();
@@ -432,7 +432,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// though since this method is called quite a lot on null builds in Cargo.
     fn summaries<'a, 'b>(
         &'a mut self,
-        name: &str,
+        name: InternedString,
         req: &'b OptVersionReq,
         load: &mut dyn RegistryData,
     ) -> Poll<CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>>
@@ -444,7 +444,6 @@ impl<'cfg> RegistryIndex<'cfg> {
         let source_id = self.source_id;
 
         // First up parse what summaries we have available.
-        let name = InternedString::new(name);
         let summaries = ready!(self.load_summaries(name, load)?);
 
         // Iterate over our summaries, extract all relevant ones which match our
@@ -539,7 +538,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// This is primarily used by [`Source::query`](super::Source).
     pub fn query_inner(
         &mut self,
-        name: &str,
+        name: InternedString,
         req: &OptVersionReq,
         load: &mut dyn RegistryData,
         yanked_whitelist: &HashSet<PackageId>,
@@ -572,7 +571,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// The `online` controls whether Cargo can access the network when needed.
     fn query_inner_with_online(
         &mut self,
-        name: &str,
+        name: InternedString,
         req: &OptVersionReq,
         load: &mut dyn RegistryData,
         yanked_whitelist: &HashSet<PackageId>,
@@ -604,7 +603,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             .map(|s| s.clone());
 
         // Handle `cargo update --precise` here.
-        let precise = source_id.precise_registry_version(name);
+        let precise = source_id.precise_registry_version(name.as_str());
         let summaries = summaries.filter(|s| match &precise {
             Some((current, requested)) => {
                 if req.matches(current) {
@@ -647,7 +646,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         load: &mut dyn RegistryData,
     ) -> Poll<CargoResult<bool>> {
         let req = OptVersionReq::exact(pkg.version());
-        let found = ready!(self.summaries(&pkg.name(), &req, load))?
+        let found = ready!(self.summaries(pkg.name(), &req, load))?
             .filter(|s| s.package_id().version() == pkg.version())
             .any(|summary| matches!(summary, IndexSummary::Yanked(_)));
         Poll::Ready(Ok(found))

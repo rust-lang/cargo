@@ -207,6 +207,7 @@ use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::PathSource;
 use crate::util::hex;
+use crate::util::interning::InternedString;
 use crate::util::network::PollExt;
 use crate::util::{restricted_names, CargoResult, Config, Filesystem, LimitErrorReader};
 
@@ -717,7 +718,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             debug!("attempting query without update");
             let mut called = false;
             ready!(self.index.query_inner(
-                &dep.package_name(),
+                dep.package_name(),
                 dep.version_req(),
                 &mut *self.ops,
                 &self.yanked_whitelist,
@@ -738,7 +739,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         } else {
             let mut called = false;
             ready!(self.index.query_inner(
-                &dep.package_name(),
+                dep.package_name(),
                 dep.version_req(),
                 &mut *self.ops,
                 &self.yanked_whitelist,
@@ -768,13 +769,14 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                     dep.package_name().replace('-', "_"),
                     dep.package_name().replace('_', "-"),
                 ] {
-                    if name_permutation.as_str() == dep.package_name().as_str() {
+                    let name_permutation = InternedString::new(&name_permutation);
+                    if name_permutation == dep.package_name() {
                         continue;
                     }
                     any_pending |= self
                         .index
                         .query_inner(
-                            &name_permutation,
+                            name_permutation,
                             dep.version_req(),
                             &mut *self.ops,
                             &self.yanked_whitelist,
