@@ -189,11 +189,34 @@ enum MaybeIndexSummary {
 /// from a line from a raw index file, or a JSON blob from on-disk index cache.
 ///
 /// In addition to a full [`Summary`], we have information on whether it is `yanked`.
-pub struct IndexSummary {
-    pub summary: Summary,
-    pub yanked: bool,
-    /// Schema version, see [`IndexPackage::v`].
-    v: u32,
+#[derive(Clone, Debug)]
+pub enum IndexSummary {
+    /// Available for consideration
+    Candidate(Summary),
+    /// Yanked within its registry
+    Yanked(Summary),
+    /// From a newer schema version and is likely incomplete or inaccurate
+    Unsupported(Summary, u32),
+}
+
+impl IndexSummary {
+    /// Extract the summary from any variant
+    pub fn as_summary(&self) -> &Summary {
+        match self {
+            IndexSummary::Candidate(sum)
+            | IndexSummary::Yanked(sum)
+            | IndexSummary::Unsupported(sum, _) => sum,
+        }
+    }
+
+    /// Extract the package id from any variant
+    pub fn package_id(&self) -> PackageId {
+        match self {
+            IndexSummary::Candidate(sum)
+            | IndexSummary::Yanked(sum)
+            | IndexSummary::Unsupported(sum, _) => sum.package_id(),
+        }
+    }
 }
 
 /// A representation of the cache on disk that Cargo maintains of summaries.
@@ -387,11 +410,11 @@ impl<'cfg> RegistryIndex<'cfg> {
         let req = OptVersionReq::exact(pkg.version());
         let summary = self.summaries(&pkg.name(), &req, load)?;
         let summary = ready!(summary)
-            .filter(|s| s.summary.version() == pkg.version())
+            .filter(|s| s.package_id().version() == pkg.version())
             .next();
         Poll::Ready(Ok(summary
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
-            .summary
+            .as_summary()
             .checksum()
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?))
     }
@@ -435,26 +458,24 @@ impl<'cfg> RegistryIndex<'cfg> {
             .versions
             .iter_mut()
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
-            .filter_map(move |maybe| match maybe.parse(raw_data, source_id) {
-                Ok(summary) => Some(summary),
-                Err(e) => {
-                    info!("failed to parse `{}` registry package: {}", name, e);
-                    None
-                }
-            })
-            .filter(move |is| {
-                if is.v == 3 && bindeps {
-                    true
-                } else if is.v > INDEX_V_MAX {
-                    debug!(
-                        "unsupported schema version {} ({} {})",
-                        is.v,
-                        is.summary.name(),
-                        is.summary.version()
-                    );
-                    false
-                } else {
-                    true
+            .filter_map(move |maybe| {
+                match maybe.parse(raw_data, source_id, bindeps) {
+                    Ok(sum @ IndexSummary::Candidate(_) | sum @ IndexSummary::Yanked(_)) => {
+                        Some(sum)
+                    }
+                    Ok(IndexSummary::Unsupported(summary, v)) => {
+                        debug!(
+                            "unsupported schema version {} ({} {})",
+                            v,
+                            summary.name(),
+                            summary.version()
+                        );
+                        None
+                    }
+                    Err(e) => {
+                        info!("failed to parse `{}` registry package: {}", name, e);
+                        None
+                    }
                 }
             })))
     }
@@ -573,12 +594,14 @@ impl<'cfg> RegistryIndex<'cfg> {
             // does not satisfy the requirements, then resolution will
             // fail. Unfortunately, whether or not something is optional
             // is not known here.
-            .filter(|s| (online || load.is_crate_downloaded(s.summary.package_id())))
+            .filter(|s| (online || load.is_crate_downloaded(s.package_id())))
             // Next filter out all yanked packages. Some yanked packages may
             // leak through if they're in a whitelist (aka if they were
             // previously in `Cargo.lock`
-            .filter(|s| !s.yanked || yanked_whitelist.contains(&s.summary.package_id()))
-            .map(|s| s.summary.clone());
+            .filter(|s| {
+                !matches!(s, IndexSummary::Yanked(_)) || yanked_whitelist.contains(&s.package_id())
+            })
+            .map(|s| s.clone());
 
         // Handle `cargo update --precise` here.
         let precise = source_id.precise_registry_version(name);
@@ -589,7 +612,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                     // by build metadata. This shouldn't be allowed, but since
                     // it is, this will honor it if requested. However, if not
                     // specified, then ignore it.
-                    let s_vers = s.version();
+                    let s_vers = s.package_id().version();
                     match (s_vers.build.is_empty(), requested.build.is_empty()) {
                         (true, true) => s_vers == requested,
                         (true, false) => false,
@@ -611,7 +634,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
         let mut count = 0;
         for summary in summaries {
-            f(summary);
+            f(summary.as_summary().clone());
             count += 1;
         }
         Poll::Ready(Ok(count))
@@ -625,8 +648,8 @@ impl<'cfg> RegistryIndex<'cfg> {
     ) -> Poll<CargoResult<bool>> {
         let req = OptVersionReq::exact(pkg.version());
         let found = ready!(self.summaries(&pkg.name(), &req, load))?
-            .filter(|s| s.summary.version() == pkg.version())
-            .any(|summary| summary.yanked);
+            .filter(|s| s.package_id().version() == pkg.version())
+            .any(|summary| matches!(summary, IndexSummary::Yanked(_)));
         Poll::Ready(Ok(found))
     }
 }
@@ -682,6 +705,8 @@ impl Summaries {
 
         let response = ready!(load.load(root, relative, index_version.as_deref())?);
 
+        let bindeps = config.cli_unstable().bindeps;
+
         match response {
             LoadResponse::CacheValid => {
                 tracing::debug!("fast path for registry cache of {:?}", relative);
@@ -712,7 +737,7 @@ impl Summaries {
                     // allow future cargo implementations to break the
                     // interpretation of each line here and older cargo will simply
                     // ignore the new lines.
-                    let summary = match IndexSummary::parse(line, source_id) {
+                    let summary = match IndexSummary::parse(line, source_id, bindeps) {
                         Ok(summary) => summary,
                         Err(e) => {
                             // This should only happen when there is an index
@@ -731,7 +756,7 @@ impl Summaries {
                             continue;
                         }
                     };
-                    let version = summary.summary.package_id().version().clone();
+                    let version = summary.package_id().version().clone();
                     cache.versions.push((version.clone(), line));
                     ret.versions.insert(version, summary.into());
                 }
@@ -865,12 +890,17 @@ impl MaybeIndexSummary {
     /// Does nothing if this is already `Parsed`, and otherwise the `raw_data`
     /// passed in is sliced with the bounds in `Unparsed` and then actually
     /// parsed.
-    fn parse(&mut self, raw_data: &[u8], source_id: SourceId) -> CargoResult<&IndexSummary> {
+    fn parse(
+        &mut self,
+        raw_data: &[u8],
+        source_id: SourceId,
+        bindeps: bool,
+    ) -> CargoResult<&IndexSummary> {
         let (start, end) = match self {
             MaybeIndexSummary::Unparsed { start, end } => (*start, *end),
             MaybeIndexSummary::Parsed(summary) => return Ok(summary),
         };
-        let summary = IndexSummary::parse(&raw_data[start..end], source_id)?;
+        let summary = IndexSummary::parse(&raw_data[start..end], source_id, bindeps)?;
         *self = MaybeIndexSummary::Parsed(summary);
         match self {
             MaybeIndexSummary::Unparsed { .. } => unreachable!(),
@@ -891,7 +921,7 @@ impl IndexSummary {
     ///
     /// The `line` provided is expected to be valid JSON. It is supposed to be
     /// a [`IndexPackage`].
-    fn parse(line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
+    fn parse(line: &[u8], source_id: SourceId, bindeps: bool) -> CargoResult<IndexSummary> {
         // ****CAUTION**** Please be extremely careful with returning errors
         // from this function. Entries that error are not included in the
         // index cache, and can cause cargo to get confused when switching
@@ -924,11 +954,20 @@ impl IndexSummary {
         }
         let mut summary = Summary::new(pkgid, deps, &features, links, rust_version)?;
         summary.set_checksum(cksum);
-        Ok(IndexSummary {
-            summary,
-            yanked: yanked.unwrap_or(false),
-            v,
-        })
+
+        let v_max = if bindeps {
+            INDEX_V_MAX + 1
+        } else {
+            INDEX_V_MAX
+        };
+
+        if v_max < v {
+            return Ok(IndexSummary::Unsupported(summary, v));
+        }
+        if yanked.unwrap_or(false) {
+            return Ok(IndexSummary::Yanked(summary));
+        }
+        Ok(IndexSummary::Candidate(summary))
     }
 }
 
