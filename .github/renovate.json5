@@ -12,24 +12,25 @@
     {
       customType: 'regex',
       fileMatch: [
-        '^Cargo.toml$',
+        'Cargo.toml$',
       ],
       matchStrings: [
-        'rust-version.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
+        '\bMSRV:1\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
+        '(?<currentValue>\\d+\\.\\d+(\\.\\d+)?).*?\bMSRV:1\b',
       ],
-      depNameTemplate: 'latest-msrv',
+      depNameTemplate: 'MSRV:1',  // Support 1 version of rustc
       packageNameTemplate: 'rust-lang/rust',
       datasourceTemplate: 'github-releases',
     },
   ],
   packageRules: [
     {
-      commitMessageTopic: 'Latest MSRV',
+      commitMessageTopic: 'MSRV (1 version)',
       matchManagers: [
         'regex',
       ],
       matchPackageNames: [
-        'latest-msrv',
+        'MSRV:1',
       ],
       "extractVersion": "^(?<version>\\d+\\.\\d+)",  // Drop the patch version
       schedule: [
