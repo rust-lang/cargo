@@ -2604,7 +2604,9 @@ fn ignores_unknown_index_version_git() {
 fn ignores_unknown_index_version() {
     // If the version field is not understood, it is ignored.
     Package::new("bar", "1.0.0").publish();
-    Package::new("bar", "1.0.1").schema_version(9999).publish();
+    Package::new("bar", "1.0.1")
+        .schema_version(u32::MAX)
+        .publish();
 
     let p = project()
         .file(
