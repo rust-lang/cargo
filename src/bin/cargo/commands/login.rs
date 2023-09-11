@@ -14,7 +14,9 @@ pub fn cli() -> Command {
                 .last(true),
         )
         .arg_quiet()
-        .after_help("Run `cargo help login` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help login</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

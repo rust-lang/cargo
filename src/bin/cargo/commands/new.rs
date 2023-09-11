@@ -9,7 +9,9 @@ pub fn cli() -> Command {
         .arg_new_opts()
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .arg_quiet()
-        .after_help("Run `cargo help new` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help new</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

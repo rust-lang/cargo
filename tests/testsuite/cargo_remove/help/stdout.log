@@ -27,3 +27,5 @@ Manifest Options:
       --frozen                Require Cargo.lock and cache are up to date
       --locked                Require Cargo.lock is up to date
       --offline               Run without accessing the network
+
+Run `cargo help remove` for more detailed information.

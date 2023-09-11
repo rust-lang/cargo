@@ -10,7 +10,9 @@ pub fn cli() -> Command {
         .arg_quiet()
         .arg_package("Argument to get the package ID specifier for")
         .arg_manifest_path()
-        .after_help("Run `cargo help pkgid` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help pkgid</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
