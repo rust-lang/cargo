@@ -195,6 +195,8 @@ pub enum IndexSummary {
     Candidate(Summary),
     /// Yanked within its registry
     Yanked(Summary),
+    /// Not available as we are offline and create is not downloaded yet
+    Offline(Summary),
     /// From a newer schema version and is likely incomplete or inaccurate
     Unsupported(Summary, u32),
 }
@@ -205,6 +207,7 @@ impl IndexSummary {
         match self {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
+            | IndexSummary::Offline(sum)
             | IndexSummary::Unsupported(sum, _) => sum,
         }
     }
@@ -214,6 +217,7 @@ impl IndexSummary {
         match self {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
+            | IndexSummary::Offline(sum)
             | IndexSummary::Unsupported(sum, _) => sum.package_id(),
         }
     }
@@ -471,6 +475,9 @@ impl<'cfg> RegistryIndex<'cfg> {
                         );
                         None
                     }
+                    Ok(IndexSummary::Offline(_)) => {
+                        unreachable!("We do not check for off-line until later")
+                    }
                     Err(e) => {
                         info!("failed to parse `{}` registry package: {}", name, e);
                         None
@@ -555,14 +562,35 @@ impl<'cfg> RegistryIndex<'cfg> {
             // then cargo will fail to download and an error message
             // indicating that the required dependency is unavailable while
             // offline will be displayed.
-            if ready!(self.query_inner_with_online(name, req, load, yanked_whitelist, f, false)?)
-                > 0
-            {
+            let mut called = false;
+            let callback = &mut |s: IndexSummary| {
+                if !matches!(&s, &IndexSummary::Offline(_)) {
+                    called = true;
+                    f(s.as_summary().clone());
+                }
+            };
+            ready!(self.query_inner_with_online(
+                name,
+                req,
+                load,
+                yanked_whitelist,
+                callback,
+                false
+            )?);
+            if called {
                 return Poll::Ready(Ok(()));
             }
         }
-        self.query_inner_with_online(name, req, load, yanked_whitelist, f, true)
-            .map_ok(|_| ())
+        self.query_inner_with_online(
+            name,
+            req,
+            load,
+            yanked_whitelist,
+            &mut |s| {
+                f(s.as_summary().clone());
+            },
+            true,
+        )
     }
 
     /// Inner implementation of [`Self::query_inner`]. Returns the number of
@@ -575,9 +603,9 @@ impl<'cfg> RegistryIndex<'cfg> {
         req: &OptVersionReq,
         load: &mut dyn RegistryData,
         yanked_whitelist: &HashSet<PackageId>,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
         online: bool,
-    ) -> Poll<CargoResult<usize>> {
+    ) -> Poll<CargoResult<()>> {
         let source_id = self.source_id;
 
         let summaries = ready!(self.summaries(name, req, load))?;
@@ -593,14 +621,19 @@ impl<'cfg> RegistryIndex<'cfg> {
             // does not satisfy the requirements, then resolution will
             // fail. Unfortunately, whether or not something is optional
             // is not known here.
-            .filter(|s| (online || load.is_crate_downloaded(s.package_id())))
+            .map(|s| {
+                if online || load.is_crate_downloaded(s.package_id()) {
+                    s.clone()
+                } else {
+                    IndexSummary::Offline(s.as_summary().clone())
+                }
+            })
             // Next filter out all yanked packages. Some yanked packages may
             // leak through if they're in a whitelist (aka if they were
             // previously in `Cargo.lock`
             .filter(|s| {
                 !matches!(s, IndexSummary::Yanked(_)) || yanked_whitelist.contains(&s.package_id())
-            })
-            .map(|s| s.clone());
+            });
 
         // Handle `cargo update --precise` here.
         let precise = source_id.precise_registry_version(name.as_str());
@@ -631,12 +664,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             None => true,
         });
 
-        let mut count = 0;
-        for summary in summaries {
-            f(summary.as_summary().clone());
-            count += 1;
-        }
-        Poll::Ready(Ok(count))
+        summaries.for_each(f);
+        Poll::Ready(Ok(()))
     }
 
     /// Looks into the summaries to check if a package has been yanked.
