@@ -12,9 +12,6 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use indexmap::IndexSet;
 use itertools::Itertools;
-use termcolor::Color::Green;
-use termcolor::Color::Red;
-use termcolor::ColorSpec;
 use toml_edit::Item as TomlItem;
 
 use crate::core::dependency::DepKind;
@@ -26,6 +23,7 @@ use crate::core::Shell;
 use crate::core::Summary;
 use crate::core::Workspace;
 use crate::sources::source::QueryKind;
+use crate::util::style;
 use crate::util::toml_mut::dependency::Dependency;
 use crate::util::toml_mut::dependency::GitSource;
 use crate::util::toml_mut::dependency::MaybeWorkspace;
@@ -968,19 +966,16 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
         } else {
             "".to_owned()
         };
-        shell.write_stderr(
-            format_args!("{}Features{}:\n", prefix, suffix),
-            &ColorSpec::new(),
-        )?;
+        shell.write_stderr(format_args!("{}Features{}:\n", prefix, suffix), &style::NOP)?;
         for feat in activated {
-            shell.write_stderr(&prefix, &ColorSpec::new())?;
-            shell.write_stderr('+', &ColorSpec::new().set_bold(true).set_fg(Some(Green)))?;
-            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
+            shell.write_stderr(&prefix, &style::NOP)?;
+            shell.write_stderr('+', &style::GOOD)?;
+            shell.write_stderr(format_args!(" {}\n", feat), &style::NOP)?;
         }
         for feat in deactivated {
-            shell.write_stderr(&prefix, &ColorSpec::new())?;
-            shell.write_stderr('-', &ColorSpec::new().set_bold(true).set_fg(Some(Red)))?;
-            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
+            shell.write_stderr(&prefix, &style::NOP)?;
+            shell.write_stderr('-', &style::ERROR)?;
+            shell.write_stderr(format_args!(" {}\n", feat), &style::NOP)?;
         }
     }
 

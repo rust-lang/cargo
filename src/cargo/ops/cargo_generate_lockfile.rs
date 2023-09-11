@@ -4,9 +4,10 @@ use crate::core::{PackageId, PackageIdSpec};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::util::config::Config;
+use crate::util::style;
 use crate::util::CargoResult;
+use anstyle::Style;
 use std::collections::{BTreeMap, HashSet};
-use termcolor::Color::{self, Cyan, Green, Red, Yellow};
 use tracing::debug;
 
 pub struct UpdateOptions<'a> {
@@ -133,7 +134,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     )?;
 
     // Summarize what is changing for the user.
-    let print_change = |status: &str, msg: String, color: Color| {
+    let print_change = |status: &str, msg: String, color: &Style| {
         opts.config.shell().status_with_color(status, msg, color)
     };
     for (removed, added) in compare_dependency_graphs(&previous_resolve, &resolve) {
@@ -149,16 +150,16 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             };
 
             if removed[0].version() > added[0].version() {
-                print_change("Downgrading", msg, Yellow)?;
+                print_change("Downgrading", msg, &style::WARN)?;
             } else {
-                print_change("Updating", msg, Green)?;
+                print_change("Updating", msg, &style::GOOD)?;
             }
         } else {
             for package in removed.iter() {
-                print_change("Removing", format!("{}", package), Red)?;
+                print_change("Removing", format!("{}", package), &style::ERROR)?;
             }
             for package in added.iter() {
-                print_change("Adding", format!("{}", package), Cyan)?;
+                print_change("Adding", format!("{}", package), &style::NOTE)?;
             }
         }
     }

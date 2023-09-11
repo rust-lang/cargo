@@ -8,6 +8,7 @@ use crate::core::compiler::{BuildContext, Context, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
+use crate::util::style;
 use crate::util::{CargoResult, Config};
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -352,7 +353,7 @@ impl<'cfg> Timings<'cfg> {
         paths::link_or_copy(&filename, &unstamped_filename)?;
         self.config
             .shell()
-            .status_with_color("Timing", msg, termcolor::Color::Cyan)?;
+            .status_with_color("Timing", msg, &style::NOTE)?;
         Ok(())
     }
 
