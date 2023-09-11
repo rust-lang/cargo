@@ -189,11 +189,64 @@ enum MaybeIndexSummary {
 /// from a line from a raw index file, or a JSON blob from on-disk index cache.
 ///
 /// In addition to a full [`Summary`], we have information on whether it is `yanked`.
-pub struct IndexSummary {
-    pub summary: Summary,
-    pub yanked: bool,
-    /// Schema version, see [`IndexPackage::v`].
-    v: u32,
+#[derive(Clone, Debug)]
+pub enum IndexSummary {
+    /// Available for consideration
+    Candidate(Summary),
+    /// Yanked within its registry
+    Yanked(Summary),
+    /// Not available as we are offline and create is not downloaded yet
+    Offline(Summary),
+    /// From a newer schema version and is likely incomplete or inaccurate
+    Unsupported(Summary, u32),
+}
+
+impl IndexSummary {
+    /// Extract the summary from any variant
+    pub fn as_summary(&self) -> &Summary {
+        match self {
+            IndexSummary::Candidate(sum)
+            | IndexSummary::Yanked(sum)
+            | IndexSummary::Offline(sum)
+            | IndexSummary::Unsupported(sum, _) => sum,
+        }
+    }
+
+    /// Extract the summary from any variant
+    pub fn into_summary(self) -> Summary {
+        match self {
+            IndexSummary::Candidate(sum)
+            | IndexSummary::Yanked(sum)
+            | IndexSummary::Offline(sum)
+            | IndexSummary::Unsupported(sum, _) => sum,
+        }
+    }
+
+    /// Extract the package id from any variant
+    pub fn package_id(&self) -> PackageId {
+        match self {
+            IndexSummary::Candidate(sum)
+            | IndexSummary::Yanked(sum)
+            | IndexSummary::Offline(sum)
+            | IndexSummary::Unsupported(sum, _) => sum.package_id(),
+        }
+    }
+
+    /// Returns `true` if the index summary is [`Yanked`].
+    ///
+    /// [`Yanked`]: IndexSummary::Yanked
+    #[must_use]
+    pub fn is_yanked(&self) -> bool {
+        matches!(self, Self::Yanked(..))
+    }
+
+    /// Returns `true` if the index summary is [`Offline`].
+    ///
+    /// [`Offline`]: IndexSummary::Offline
+    #[must_use]
+    pub fn is_offline(&self) -> bool {
+        matches!(self, Self::Offline(..))
+    }
 }
 
 /// A representation of the cache on disk that Cargo maintains of summaries.
@@ -385,13 +438,13 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// the index file, aka [`IndexSummary`].
     pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
         let req = OptVersionReq::exact(pkg.version());
-        let summary = self.summaries(&pkg.name(), &req, load)?;
+        let summary = self.summaries(pkg.name(), &req, load)?;
         let summary = ready!(summary)
-            .filter(|s| s.summary.version() == pkg.version())
+            .filter(|s| s.package_id().version() == pkg.version())
             .next();
         Poll::Ready(Ok(summary
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
-            .summary
+            .as_summary()
             .checksum()
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?))
     }
@@ -407,9 +460,9 @@ impl<'cfg> RegistryIndex<'cfg> {
     ///
     /// Internally there's quite a few layer of caching to amortize this cost
     /// though since this method is called quite a lot on null builds in Cargo.
-    pub fn summaries<'a, 'b>(
+    fn summaries<'a, 'b>(
         &'a mut self,
-        name: &str,
+        name: InternedString,
         req: &'b OptVersionReq,
         load: &mut dyn RegistryData,
     ) -> Poll<CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>>
@@ -421,7 +474,6 @@ impl<'cfg> RegistryIndex<'cfg> {
         let source_id = self.source_id;
 
         // First up parse what summaries we have available.
-        let name = InternedString::new(name);
         let summaries = ready!(self.load_summaries(name, load)?);
 
         // Iterate over our summaries, extract all relevant ones which match our
@@ -435,26 +487,27 @@ impl<'cfg> RegistryIndex<'cfg> {
             .versions
             .iter_mut()
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
-            .filter_map(move |maybe| match maybe.parse(raw_data, source_id) {
-                Ok(summary) => Some(summary),
-                Err(e) => {
-                    info!("failed to parse `{}` registry package: {}", name, e);
-                    None
-                }
-            })
-            .filter(move |is| {
-                if is.v == 3 && bindeps {
-                    true
-                } else if is.v > INDEX_V_MAX {
-                    debug!(
-                        "unsupported schema version {} ({} {})",
-                        is.v,
-                        is.summary.name(),
-                        is.summary.version()
-                    );
-                    false
-                } else {
-                    true
+            .filter_map(move |maybe| {
+                match maybe.parse(raw_data, source_id, bindeps) {
+                    Ok(sum @ IndexSummary::Candidate(_) | sum @ IndexSummary::Yanked(_)) => {
+                        Some(sum)
+                    }
+                    Ok(IndexSummary::Unsupported(summary, v)) => {
+                        debug!(
+                            "unsupported schema version {} ({} {})",
+                            v,
+                            summary.name(),
+                            summary.version()
+                        );
+                        None
+                    }
+                    Ok(IndexSummary::Offline(_)) => {
+                        unreachable!("We do not check for off-line until later")
+                    }
+                    Err(e) => {
+                        info!("failed to parse `{}` registry package: {}", name, e);
+                        None
+                    }
                 }
             })))
     }
@@ -518,7 +571,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// This is primarily used by [`Source::query`](super::Source).
     pub fn query_inner(
         &mut self,
-        name: &str,
+        name: InternedString,
         req: &OptVersionReq,
         load: &mut dyn RegistryData,
         yanked_whitelist: &HashSet<PackageId>,
@@ -535,14 +588,35 @@ impl<'cfg> RegistryIndex<'cfg> {
             // then cargo will fail to download and an error message
             // indicating that the required dependency is unavailable while
             // offline will be displayed.
-            if ready!(self.query_inner_with_online(name, req, load, yanked_whitelist, f, false)?)
-                > 0
-            {
+            let mut called = false;
+            let callback = &mut |s: IndexSummary| {
+                if !s.is_offline() {
+                    called = true;
+                    f(s.into_summary());
+                }
+            };
+            ready!(self.query_inner_with_online(
+                name,
+                req,
+                load,
+                yanked_whitelist,
+                callback,
+                false
+            )?);
+            if called {
                 return Poll::Ready(Ok(()));
             }
         }
-        self.query_inner_with_online(name, req, load, yanked_whitelist, f, true)
-            .map_ok(|_| ())
+        self.query_inner_with_online(
+            name,
+            req,
+            load,
+            yanked_whitelist,
+            &mut |s| {
+                f(s.into_summary());
+            },
+            true,
+        )
     }
 
     /// Inner implementation of [`Self::query_inner`]. Returns the number of
@@ -551,13 +625,13 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// The `online` controls whether Cargo can access the network when needed.
     fn query_inner_with_online(
         &mut self,
-        name: &str,
+        name: InternedString,
         req: &OptVersionReq,
         load: &mut dyn RegistryData,
         yanked_whitelist: &HashSet<PackageId>,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
         online: bool,
-    ) -> Poll<CargoResult<usize>> {
+    ) -> Poll<CargoResult<()>> {
         let source_id = self.source_id;
 
         let summaries = ready!(self.summaries(name, req, load))?;
@@ -573,15 +647,20 @@ impl<'cfg> RegistryIndex<'cfg> {
             // does not satisfy the requirements, then resolution will
             // fail. Unfortunately, whether or not something is optional
             // is not known here.
-            .filter(|s| (online || load.is_crate_downloaded(s.summary.package_id())))
+            .map(|s| {
+                if online || load.is_crate_downloaded(s.package_id()) {
+                    s.clone()
+                } else {
+                    IndexSummary::Offline(s.as_summary().clone())
+                }
+            })
             // Next filter out all yanked packages. Some yanked packages may
             // leak through if they're in a whitelist (aka if they were
             // previously in `Cargo.lock`
-            .filter(|s| !s.yanked || yanked_whitelist.contains(&s.summary.package_id()))
-            .map(|s| s.summary.clone());
+            .filter(|s| !s.is_yanked() || yanked_whitelist.contains(&s.package_id()));
 
         // Handle `cargo update --precise` here.
-        let precise = source_id.precise_registry_version(name);
+        let precise = source_id.precise_registry_version(name.as_str());
         let summaries = summaries.filter(|s| match &precise {
             Some((current, requested)) => {
                 if req.matches(current) {
@@ -589,7 +668,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                     // by build metadata. This shouldn't be allowed, but since
                     // it is, this will honor it if requested. However, if not
                     // specified, then ignore it.
-                    let s_vers = s.version();
+                    let s_vers = s.package_id().version();
                     match (s_vers.build.is_empty(), requested.build.is_empty()) {
                         (true, true) => s_vers == requested,
                         (true, false) => false,
@@ -609,12 +688,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             None => true,
         });
 
-        let mut count = 0;
-        for summary in summaries {
-            f(summary);
-            count += 1;
-        }
-        Poll::Ready(Ok(count))
+        summaries.for_each(f);
+        Poll::Ready(Ok(()))
     }
 
     /// Looks into the summaries to check if a package has been yanked.
@@ -624,9 +699,9 @@ impl<'cfg> RegistryIndex<'cfg> {
         load: &mut dyn RegistryData,
     ) -> Poll<CargoResult<bool>> {
         let req = OptVersionReq::exact(pkg.version());
-        let found = ready!(self.summaries(&pkg.name(), &req, load))?
-            .filter(|s| s.summary.version() == pkg.version())
-            .any(|summary| summary.yanked);
+        let found = ready!(self.summaries(pkg.name(), &req, load))?
+            .filter(|s| s.package_id().version() == pkg.version())
+            .any(|s| s.is_yanked());
         Poll::Ready(Ok(found))
     }
 }
@@ -682,6 +757,8 @@ impl Summaries {
 
         let response = ready!(load.load(root, relative, index_version.as_deref())?);
 
+        let bindeps = config.cli_unstable().bindeps;
+
         match response {
             LoadResponse::CacheValid => {
                 tracing::debug!("fast path for registry cache of {:?}", relative);
@@ -712,7 +789,7 @@ impl Summaries {
                     // allow future cargo implementations to break the
                     // interpretation of each line here and older cargo will simply
                     // ignore the new lines.
-                    let summary = match IndexSummary::parse(line, source_id) {
+                    let summary = match IndexSummary::parse(line, source_id, bindeps) {
                         Ok(summary) => summary,
                         Err(e) => {
                             // This should only happen when there is an index
@@ -731,7 +808,7 @@ impl Summaries {
                             continue;
                         }
                     };
-                    let version = summary.summary.package_id().version().clone();
+                    let version = summary.package_id().version().clone();
                     cache.versions.push((version.clone(), line));
                     ret.versions.insert(version, summary.into());
                 }
@@ -865,12 +942,17 @@ impl MaybeIndexSummary {
     /// Does nothing if this is already `Parsed`, and otherwise the `raw_data`
     /// passed in is sliced with the bounds in `Unparsed` and then actually
     /// parsed.
-    fn parse(&mut self, raw_data: &[u8], source_id: SourceId) -> CargoResult<&IndexSummary> {
+    fn parse(
+        &mut self,
+        raw_data: &[u8],
+        source_id: SourceId,
+        bindeps: bool,
+    ) -> CargoResult<&IndexSummary> {
         let (start, end) = match self {
             MaybeIndexSummary::Unparsed { start, end } => (*start, *end),
             MaybeIndexSummary::Parsed(summary) => return Ok(summary),
         };
-        let summary = IndexSummary::parse(&raw_data[start..end], source_id)?;
+        let summary = IndexSummary::parse(&raw_data[start..end], source_id, bindeps)?;
         *self = MaybeIndexSummary::Parsed(summary);
         match self {
             MaybeIndexSummary::Unparsed { .. } => unreachable!(),
@@ -891,7 +973,7 @@ impl IndexSummary {
     ///
     /// The `line` provided is expected to be valid JSON. It is supposed to be
     /// a [`IndexPackage`].
-    fn parse(line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
+    fn parse(line: &[u8], source_id: SourceId, bindeps: bool) -> CargoResult<IndexSummary> {
         // ****CAUTION**** Please be extremely careful with returning errors
         // from this function. Entries that error are not included in the
         // index cache, and can cause cargo to get confused when switching
@@ -924,11 +1006,20 @@ impl IndexSummary {
         }
         let mut summary = Summary::new(pkgid, deps, &features, links, rust_version)?;
         summary.set_checksum(cksum);
-        Ok(IndexSummary {
-            summary,
-            yanked: yanked.unwrap_or(false),
-            v,
-        })
+
+        let v_max = if bindeps {
+            INDEX_V_MAX + 1
+        } else {
+            INDEX_V_MAX
+        };
+
+        if v_max < v {
+            Ok(IndexSummary::Unsupported(summary, v))
+        } else if yanked.unwrap_or(false) {
+            Ok(IndexSummary::Yanked(summary))
+        } else {
+            Ok(IndexSummary::Candidate(summary))
+        }
     }
 }
 
