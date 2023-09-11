@@ -208,9 +208,7 @@ use crate::sources::source::Source;
 use crate::sources::PathSource;
 use crate::util::hex;
 use crate::util::network::PollExt;
-use crate::util::{
-    restricted_names, CargoResult, Config, Filesystem, LimitErrorReader, OptVersionReq,
-};
+use crate::util::{restricted_names, CargoResult, Config, Filesystem, LimitErrorReader};
 
 /// The `.cargo-ok` file is used to track if the source is already unpacked.
 /// See [`RegistrySource::unpack_package`] for more.
@@ -690,19 +688,14 @@ impl<'cfg> RegistrySource<'cfg> {
 
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
-        let req = OptVersionReq::exact(package.version());
-        let summary_with_cksum = self
+        let cksum = self
             .index
-            .summaries(&package.name(), &req, &mut *self.ops)?
+            .hash(package, &mut *self.ops)
             .expect("a downloaded dep now pending!?")
-            .filter(|s| s.package_id().version() == package.version())
-            .next()
             .expect("summary not found");
-        if let Some(cksum) = summary_with_cksum.as_summary().checksum() {
-            pkg.manifest_mut()
-                .summary_mut()
-                .set_checksum(cksum.to_string());
-        }
+        pkg.manifest_mut()
+            .summary_mut()
+            .set_checksum(cksum.to_string());
 
         Ok(pkg)
     }

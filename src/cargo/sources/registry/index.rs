@@ -430,7 +430,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     ///
     /// Internally there's quite a few layer of caching to amortize this cost
     /// though since this method is called quite a lot on null builds in Cargo.
-    pub fn summaries<'a, 'b>(
+    fn summaries<'a, 'b>(
         &'a mut self,
         name: &str,
         req: &'b OptVersionReq,
