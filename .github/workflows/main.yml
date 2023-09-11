@@ -254,4 +254,4 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: taiki-e/install-action@cargo-hack
-    - run: cargo hack test --rust-version -p cargo-credential
+    - run: cargo hack check --all-targets --rust-version -p cargo-credential
