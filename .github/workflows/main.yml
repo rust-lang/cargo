@@ -253,5 +253,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - run: rustup update 1.70 && rustup default 1.70
-    - run: cargo test -p cargo-credential
+    - uses: taiki-e/install-action@cargo-hack
+    - run: cargo hack test --rust-version -p cargo-credential
