@@ -212,6 +212,16 @@ impl IndexSummary {
         }
     }
 
+    /// Extract the summary from any variant
+    pub fn into_summary(self) -> Summary {
+        match self {
+            IndexSummary::Candidate(sum)
+            | IndexSummary::Yanked(sum)
+            | IndexSummary::Offline(sum)
+            | IndexSummary::Unsupported(sum, _) => sum,
+        }
+    }
+
     /// Extract the package id from any variant
     pub fn package_id(&self) -> PackageId {
         match self {
@@ -220,6 +230,22 @@ impl IndexSummary {
             | IndexSummary::Offline(sum)
             | IndexSummary::Unsupported(sum, _) => sum.package_id(),
         }
+    }
+
+    /// Returns `true` if the index summary is [`Yanked`].
+    ///
+    /// [`Yanked`]: IndexSummary::Yanked
+    #[must_use]
+    pub fn is_yanked(&self) -> bool {
+        matches!(self, Self::Yanked(..))
+    }
+
+    /// Returns `true` if the index summary is [`Offline`].
+    ///
+    /// [`Offline`]: IndexSummary::Offline
+    #[must_use]
+    pub fn is_offline(&self) -> bool {
+        matches!(self, Self::Offline(..))
     }
 }
 
@@ -564,9 +590,9 @@ impl<'cfg> RegistryIndex<'cfg> {
             // offline will be displayed.
             let mut called = false;
             let callback = &mut |s: IndexSummary| {
-                if !matches!(&s, &IndexSummary::Offline(_)) {
+                if !s.is_offline() {
                     called = true;
-                    f(s.as_summary().clone());
+                    f(s.into_summary());
                 }
             };
             ready!(self.query_inner_with_online(
@@ -587,7 +613,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             load,
             yanked_whitelist,
             &mut |s| {
-                f(s.as_summary().clone());
+                f(s.into_summary());
             },
             true,
         )
@@ -631,9 +657,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             // Next filter out all yanked packages. Some yanked packages may
             // leak through if they're in a whitelist (aka if they were
             // previously in `Cargo.lock`
-            .filter(|s| {
-                !matches!(s, IndexSummary::Yanked(_)) || yanked_whitelist.contains(&s.package_id())
-            });
+            .filter(|s| !s.is_yanked() || yanked_whitelist.contains(&s.package_id()));
 
         // Handle `cargo update --precise` here.
         let precise = source_id.precise_registry_version(name.as_str());
@@ -677,7 +701,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         let req = OptVersionReq::exact(pkg.version());
         let found = ready!(self.summaries(pkg.name(), &req, load))?
             .filter(|s| s.package_id().version() == pkg.version())
-            .any(|summary| matches!(summary, IndexSummary::Yanked(_)));
+            .any(|s| s.is_yanked());
         Poll::Ready(Ok(found))
     }
 }
@@ -990,12 +1014,12 @@ impl IndexSummary {
         };
 
         if v_max < v {
-            return Ok(IndexSummary::Unsupported(summary, v));
+            Ok(IndexSummary::Unsupported(summary, v))
+        } else if yanked.unwrap_or(false) {
+            Ok(IndexSummary::Yanked(summary))
+        } else {
+            Ok(IndexSummary::Candidate(summary))
         }
-        if yanked.unwrap_or(false) {
-            return Ok(IndexSummary::Yanked(summary));
-        }
-        Ok(IndexSummary::Candidate(summary))
     }
 }
 
