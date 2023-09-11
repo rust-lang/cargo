@@ -2633,6 +2633,41 @@ fn ignores_unknown_index_version() {
 }
 
 #[cargo_test]
+fn unknown_index_version_error() {
+    // If the version field is not understood, it is ignored.
+    Package::new("bar", "1.0.1")
+        .schema_version(u32::MAX)
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[ERROR] no matching package named `bar` found
+location searched: registry `crates-io`
+required by package `foo v0.1.0 ([CWD])`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn protocol() {
     cargo_process("install bar")
         .with_status(101)
