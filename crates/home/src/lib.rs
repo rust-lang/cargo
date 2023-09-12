@@ -18,6 +18,8 @@
 //!
 //! [discussion]: https://github.com/rust-lang/rust/pull/46799#issuecomment-361156935
 
+#![allow(clippy::disallowed_methods)]
+
 pub mod env;
 
 #[cfg(target_os = "windows")]

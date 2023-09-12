@@ -4,6 +4,8 @@
 //! Use the `-f` flag to allow it to overwrite existing captures.
 //! The workspace will be saved in a `.tgz` file in the `../workspaces` directory.
 
+#![allow(clippy::disallowed_methods)]
+
 use flate2::{Compression, GzBuilder};
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -2,6 +2,8 @@
 //!
 //! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 
+#![allow(clippy::disallowed_methods)]
+
 use std::env;
 use std::ffi::OsStr;
 use std::fmt::Write;
