@@ -2694,6 +2694,8 @@ fn mismatched_version_with_prerelease() {
 candidate versions found which didn't match: 0.1.1-pre1, 0.0.1
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 [..]`
+if you are looking for the prerelease package it needs to be specified explicitly
+    prerelease-deps = { version = "0.1.1-pre1" }
 perhaps a crate was updated and forgotten to be re-vendored?"#,
         )
         .run();

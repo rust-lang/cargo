@@ -1760,6 +1760,8 @@ error: failed to select a version for the requirement `a = \"^0.1\"`
 candidate versions found which didn't match: 0.1.1-alpha.0
 location searched: [..]
 required by package `b v0.1.0 ([..])`
+if you are looking for the prerelease package it needs to be specified explicitly
+    a = { version = \"0.1.1-alpha.0\" }
 ",
         )
         .run();
