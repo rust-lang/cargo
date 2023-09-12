@@ -1,3 +1,5 @@
+#![allow(clippy::self_named_module_files)] // false positive in `commands/build.rs`
+
 use cargo::util::network::http::http_handle;
 use cargo::util::network::http::needs_custom_http_transport;
 use cargo::util::toml::schema::StringOrVec;
