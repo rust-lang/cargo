@@ -7,8 +7,8 @@ struct MyCredential;
 impl Credential for MyCredential {
     fn perform(
         &self,
-        _registry: &RegistryInfo,
-        _action: &Action,
+        _registry: &RegistryInfo<'_>,
+        _action: &Action<'_>,
         _args: &[&str],
     ) -> Result<CredentialResponse, Error> {
         // Informational messages should be sent on stderr.

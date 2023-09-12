@@ -64,7 +64,7 @@ pub fn convert(
 type EventIter<'a> = Box<dyn Iterator<Item = (Event<'a>, Range<usize>)> + 'a>;
 
 /// Creates a new markdown parser with the given input.
-pub(crate) fn md_parser(input: &str, url: Option<Url>) -> EventIter {
+pub(crate) fn md_parser(input: &str, url: Option<Url>) -> EventIter<'_> {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_FOOTNOTES);

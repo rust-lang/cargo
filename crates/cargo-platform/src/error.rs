@@ -21,7 +21,7 @@ pub enum ParseErrorKind {
 }
 
 impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "failed to parse `{}` as a cfg expression: {}",
@@ -31,7 +31,7 @@ impl fmt::Display for ParseError {
 }
 
 impl fmt::Display for ParseErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ParseErrorKind::*;
         match self {
             UnterminatedString => write!(f, "unterminated string in cfg"),

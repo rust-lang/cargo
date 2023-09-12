@@ -255,8 +255,8 @@ pub struct OnePasswordCredential {}
 impl Credential for OnePasswordCredential {
     fn perform(
         &self,
-        registry: &RegistryInfo,
-        action: &Action,
+        registry: &RegistryInfo<'_>,
+        action: &Action<'_>,
         args: &[&str],
     ) -> Result<CredentialResponse, Error> {
         let op = OnePasswordKeychain::new(args)?;

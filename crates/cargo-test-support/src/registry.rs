@@ -790,7 +790,7 @@ impl HttpServer {
         }
     }
 
-    fn check_authorized(&self, req: &Request, mutation: Option<Mutation>) -> bool {
+    fn check_authorized(&self, req: &Request, mutation: Option<Mutation<'_>>) -> bool {
         let (private_key, private_key_subject) = if mutation.is_some() || self.auth_required {
             match &self.token {
                 Token::Plaintext(token) => return Some(token) == req.authorization.as_ref(),
@@ -832,7 +832,8 @@ impl HttpServer {
             url: &'a str,
             kip: &'a str,
         }
-        let footer: Footer = t!(serde_json::from_slice(untrusted_token.untrusted_footer()).ok());
+        let footer: Footer<'_> =
+            t!(serde_json::from_slice(untrusted_token.untrusted_footer()).ok());
         if footer.kip != paserk_pub_key_id {
             return false;
         }
@@ -861,7 +862,7 @@ impl HttpServer {
             _challenge: Option<&'a str>, // todo: PASETO with challenges
             v: Option<u8>,
         }
-        let message: Message = t!(serde_json::from_str(trusted_token.payload()).ok());
+        let message: Message<'_> = t!(serde_json::from_str(trusted_token.payload()).ok());
         let token_time = t!(OffsetDateTime::parse(message.iat, &Rfc3339).ok());
         let now = OffsetDateTime::now_utc();
         if (now - token_time) > Duration::MINUTE {

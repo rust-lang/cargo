@@ -38,8 +38,8 @@ mod win {
     impl Credential for WindowsCredential {
         fn perform(
             &self,
-            registry: &RegistryInfo,
-            action: &Action,
+            registry: &RegistryInfo<'_>,
+            action: &Action<'_>,
             _args: &[&str],
         ) -> Result<CredentialResponse, Error> {
             match action {
