@@ -224,9 +224,8 @@ pub(super) fn activation_error(
     // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
     // was meant. So we re-query the registry with `dep="*"` so we can
     // list a few versions that were actually found.
-    let all_req = semver::VersionReq::parse("*").unwrap();
     let mut new_dep = dep.clone();
-    new_dep.set_version_req(all_req);
+    new_dep.set_version_req_as_any();
 
     let mut candidates = loop {
         match registry.query_vec(&new_dep, QueryKind::Exact) {

@@ -2691,7 +2691,7 @@ fn mismatched_version_with_prerelease() {
         .with_stderr(
             r#"[UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `prerelease-deps = "^0.1.0"`
-candidate versions found which didn't match: 0.0.1
+candidate versions found which didn't match: 0.1.1-pre1, 0.0.1
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 [..]`
 perhaps a crate was updated and forgotten to be re-vendored?"#,

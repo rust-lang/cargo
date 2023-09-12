@@ -323,6 +323,12 @@ impl Dependency {
         self
     }
 
+    /// Sets the version requirement as any for this dependency.
+    pub fn set_version_req_as_any(&mut self) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).req = OptVersionReq::Any;
+        self
+    }
+
     pub fn set_platform(&mut self, platform: Option<Platform>) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).platform = platform;
         self

@@ -1756,10 +1756,8 @@ fn use_semver_package_incorrectly() {
         .with_status(101)
         .with_stderr(
             "\
-error: no matching package found
-searched package name: `a`
-prerelease package needs to be specified explicitly
-a = { version = \"0.1.1-alpha.0\" }
+error: failed to select a version for the requirement `a = \"^0.1\"`
+candidate versions found which didn't match: 0.1.1-alpha.0
 location searched: [..]
 required by package `b v0.1.0 ([..])`
 ",
