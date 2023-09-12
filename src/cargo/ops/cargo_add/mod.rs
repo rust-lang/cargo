@@ -966,16 +966,45 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
         } else {
             "".to_owned()
         };
+
         shell.write_stderr(format_args!("{}Features{}:\n", prefix, suffix), &style::NOP)?;
+
+        const MAX_FEATURE_PRINTS: usize = 50;
+
+        let mut activated_printed = 0;
+        let total_activated = activated.len();
         for feat in activated {
+            if activated_printed >= MAX_FEATURE_PRINTS {
+                let remaining = total_activated - activated_printed;
+                shell.write_stderr(
+                    format_args!("{prefix}... {remaining} more activated features\n"),
+                    &style::NOP,
+                )?;
+                break;
+            }
+
             shell.write_stderr(&prefix, &style::NOP)?;
             shell.write_stderr('+', &style::GOOD)?;
             shell.write_stderr(format_args!(" {}\n", feat), &style::NOP)?;
+            activated_printed += 1;
         }
+
+        let mut deactivated_printed = 0;
+        let total_deactivated = deactivated.len();
         for feat in deactivated {
+            if activated_printed + deactivated_printed >= MAX_FEATURE_PRINTS {
+                let remaining = total_deactivated - deactivated_printed;
+                shell.write_stderr(
+                    format_args!("{prefix}... {remaining} more deactivated features\n"),
+                    &style::NOP,
+                )?;
+                break;
+            }
+
             shell.write_stderr(&prefix, &style::NOP)?;
             shell.write_stderr('-', &style::ERROR)?;
             shell.write_stderr(format_args!(" {}\n", feat), &style::NOP)?;
+            deactivated_printed += 1;
         }
     }
 
