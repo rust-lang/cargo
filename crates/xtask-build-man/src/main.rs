@@ -10,6 +10,8 @@
 //!         For more, read their doc comments.
 //! ```
 
+#![allow(clippy::print_stderr)]
+
 use std::fs;
 use std::io;
 use std::path::PathBuf;

@@ -1,4 +1,6 @@
 #![allow(clippy::disallowed_methods)]
+#![allow(clippy::print_stderr)]
+#![allow(clippy::print_stdout)]
 
 #[macro_use]
 extern crate cargo_test_macro;

@@ -1,3 +1,5 @@
+#![allow(clippy::print_stderr)]
+
 use std::cell::RefCell;
 use std::cmp::PartialEq;
 use std::cmp::{max, min};
