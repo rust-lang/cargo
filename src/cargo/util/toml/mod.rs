@@ -10,7 +10,6 @@ use cargo_platform::Platform;
 use cargo_util::paths;
 use itertools::Itertools;
 use lazycell::LazyCell;
-use semver::{self, VersionReq};
 use serde::de::{self, IntoDeserializer as _, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -30,8 +29,8 @@ use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::{
-    self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, PartialVersion,
-    VersionReqExt,
+    self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, OptVersionReq,
+    PartialVersion,
 };
 
 pub mod embedded;
@@ -2656,7 +2655,7 @@ impl TomlManifest {
                 replacement.unused_keys(),
                 &mut cx.warnings,
             );
-            dep.set_version_req(VersionReq::exact(version))
+            dep.set_version_req(OptVersionReq::exact(version))
                 .lock_version(version);
             replace.push((spec, dep));
         }

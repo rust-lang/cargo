@@ -4,7 +4,7 @@ use std::task::Poll;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::util::edit_distance::edit_distance;
-use crate::util::{Config, VersionExt};
+use crate::util::{Config, OptVersionReq, VersionExt};
 use anyhow::Error;
 
 use super::context::Context;
@@ -225,7 +225,7 @@ pub(super) fn activation_error(
     // was meant. So we re-query the registry with `dep="*"` so we can
     // list a few versions that were actually found.
     let mut new_dep = dep.clone();
-    new_dep.set_version_req_as_any();
+    new_dep.set_version_req(OptVersionReq::Any);
 
     let mut candidates = loop {
         match registry.query_vec(&new_dep, QueryKind::Exact) {
