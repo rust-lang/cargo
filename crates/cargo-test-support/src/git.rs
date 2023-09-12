@@ -177,25 +177,8 @@ where
 
 /// Add all files in the working directory to the git index.
 pub fn add(repo: &git2::Repository) {
-    // FIXME(libgit2/libgit2#2514): apparently, `add_all` will add all submodules
-    // as well, and then fail because they're directories. As a stop-gap, we just
-    // ignore all submodules.
-    let mut s = t!(repo.submodules());
-    for submodule in s.iter_mut() {
-        t!(submodule.add_to_index(false));
-    }
     let mut index = t!(repo.index());
-    t!(index.add_all(
-        ["*"].iter(),
-        git2::IndexAddOption::DEFAULT,
-        Some(
-            &mut (|a, _b| if s.iter().any(|s| a.starts_with(s.path())) {
-                1
-            } else {
-                0
-            })
-        )
-    ));
+    t!(index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None));
     t!(index.write());
 }
 
