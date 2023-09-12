@@ -3,7 +3,7 @@ Update dependencies as recorded in the local lock file
 Usage: cargo[EXE] update [OPTIONS] [SPEC]...
 
 Options:
-      --dry-run             Don't actually write the lockfile
+  -n, --dry-run             Don't actually write the lockfile
       --recursive           Force updating all dependencies of [SPEC]... as well
       --precise <PRECISE>   Update [SPEC] to exactly PRECISE
   -q, --quiet               Do not print cargo log messages
