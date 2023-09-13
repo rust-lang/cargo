@@ -493,7 +493,7 @@ fn credential_action(
         let args: Vec<&str> = provider
             .iter()
             .map(String::as_str)
-            .chain(args.iter().map(|s| *s))
+            .chain(args.iter().copied())
             .collect();
         let process = args[0];
         tracing::debug!("attempting credential provider: {args:?}");
