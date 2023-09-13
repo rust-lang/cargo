@@ -237,7 +237,7 @@ fn build_ar_list(
         let rel_str = rel_path.to_str().ok_or_else(|| {
             anyhow::format_err!("non-utf8 path in source directory: {}", rel_path.display())
         })?;
-        match rel_str.as_ref() {
+        match rel_str {
             "Cargo.lock" => continue,
             VCS_INFO_FILE | ORIGINAL_MANIFEST_FILE => anyhow::bail!(
                 "invalid inclusion of reserved file name {} in package source",
