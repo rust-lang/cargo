@@ -502,9 +502,7 @@ fn get_existing_dependency(
         })
         .collect();
     possible.sort_by_key(|(key, _)| *key);
-    let (key, dep) = if let Some(item) = possible.pop() {
-        item
-    } else {
+    let Some((key, dep)) = possible.pop() else {
         return Ok(None);
     };
     let mut dep = dep?;
@@ -984,9 +982,8 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 
 // Based on Iterator::is_sorted from nightly std; remove in favor of that when stabilized.
 fn is_sorted(mut it: impl Iterator<Item = impl PartialOrd>) -> bool {
-    let mut last = match it.next() {
-        Some(e) => e,
-        None => return true,
+    let Some(mut last) = it.next() else {
+        return true;
     };
 
     for curr in it {

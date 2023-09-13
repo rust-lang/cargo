@@ -481,9 +481,8 @@ impl Requirements<'_> {
             return Ok(());
         }
 
-        let fvs = match self.summary.features().get(&feat) {
-            Some(fvs) => fvs,
-            None => return Err(RequirementError::MissingFeature(feat)),
+        let Some(fvs) = self.summary.features().get(&feat) else {
+            return Err(RequirementError::MissingFeature(feat));
         };
 
         for fv in fvs {

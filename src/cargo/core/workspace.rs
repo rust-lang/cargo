@@ -663,18 +663,15 @@ impl<'cfg> Workspace<'cfg> {
     /// will transitively follow all `path` dependencies looking for members of
     /// the workspace.
     fn find_members(&mut self) -> CargoResult<()> {
-        let workspace_config = match self.load_workspace_config()? {
-            Some(workspace_config) => workspace_config,
-            None => {
-                debug!("find_members - only me as a member");
-                self.members.push(self.current_manifest.clone());
-                self.default_members.push(self.current_manifest.clone());
-                if let Ok(pkg) = self.current() {
-                    let id = pkg.package_id();
-                    self.member_ids.insert(id);
-                }
-                return Ok(());
+        let Some(workspace_config) = self.load_workspace_config()? else {
+            debug!("find_members - only me as a member");
+            self.members.push(self.current_manifest.clone());
+            self.default_members.push(self.current_manifest.clone());
+            if let Ok(pkg) = self.current() {
+                let id = pkg.package_id();
+                self.member_ids.insert(id);
             }
+            return Ok(());
         };
 
         // self.root_manifest must be Some to have retrieved workspace_config
@@ -1693,9 +1690,8 @@ impl WorkspaceRootConfig {
     }
 
     fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
-        let path = match path.to_str() {
-            Some(p) => p,
-            None => return Ok(Vec::new()),
+        let Some(path) = path.to_str() else {
+            return Ok(Vec::new());
         };
         let res = glob(path).with_context(|| format!("could not parse pattern `{}`", &path))?;
         let res = res

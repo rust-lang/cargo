@@ -941,9 +941,8 @@ impl<'cfg> DrainState<'cfg> {
         cx: &mut Context<'_, '_>,
     ) -> CargoResult<()> {
         let outputs = cx.build_script_outputs.lock().unwrap();
-        let metadata = match cx.find_build_script_metadata(unit) {
-            Some(metadata) => metadata,
-            None => return Ok(()),
+        let Some(metadata) = cx.find_build_script_metadata(unit) else {
+            return Ok(());
         };
         let bcx = &mut cx.bcx;
         if let Some(output) = outputs.get(metadata) {

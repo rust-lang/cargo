@@ -304,9 +304,8 @@ impl EncodableResolve {
         }
 
         for &(ref id, pkg) in live_pkgs.values() {
-            let deps = match pkg.dependencies {
-                Some(ref deps) => deps,
-                None => continue,
+            let Some(ref deps) = pkg.dependencies else {
+                continue;
             };
 
             for edge in deps.iter() {
@@ -342,9 +341,8 @@ impl EncodableResolve {
             let enc_id: EncodablePackageId = k
                 .parse()
                 .with_context(|| internal("invalid encoding of checksum in lockfile"))?;
-            let id = match lookup_id(&enc_id) {
-                Some(id) => id,
-                _ => continue,
+            let Some(id) = lookup_id(&enc_id) else {
+                continue;
             };
 
             let v = if v == "<none>" {
@@ -468,10 +466,7 @@ fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>>
             Ok(p) => p.join("Cargo.toml"),
             Err(_) => return,
         };
-        let pkg = match ws.load(&path) {
-            Ok(p) => p,
-            Err(_) => return,
-        };
+        let Ok(pkg) = ws.load(&path) else { return };
         ret.insert(pkg.name().to_string(), pkg.package_id().source_id());
         visited.insert(pkg.package_id().source_id());
         build_pkg(&pkg, ws, ret, visited);

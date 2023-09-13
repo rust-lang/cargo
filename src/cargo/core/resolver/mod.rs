@@ -1031,9 +1031,8 @@ fn find_candidate(
             &frame.dep,
             frame.parent.package_id(),
         );
-        let (candidate, has_another) = match next {
-            Some(pair) => pair,
-            None => continue,
+        let Some((candidate, has_another)) = next else {
+            continue;
         };
 
         // If all members of `conflicting_activations` are still

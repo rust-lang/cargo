@@ -610,19 +610,16 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         }
         let summary = self.resolve.summary(pkg_id);
         let feature_map = summary.features();
-        let fvs = match feature_map.get(&feature_to_enable) {
-            Some(fvs) => fvs,
-            None => {
-                // TODO: this should only happen for optional dependencies.
-                // Other cases should be validated by Summary's `build_feature_map`.
-                // Figure out some way to validate this assumption.
-                tracing::debug!(
-                    "pkg {:?} does not define feature {}",
-                    pkg_id,
-                    feature_to_enable
-                );
-                return Ok(());
-            }
+        let Some(fvs) = feature_map.get(&feature_to_enable) else {
+            // TODO: this should only happen for optional dependencies.
+            // Other cases should be validated by Summary's `build_feature_map`.
+            // Figure out some way to validate this assumption.
+            tracing::debug!(
+                "pkg {:?} does not define feature {}",
+                pkg_id,
+                feature_to_enable
+            );
+            return Ok(());
         };
         for fv in fvs {
             self.activate_fv(pkg_id, fk, fv)?;

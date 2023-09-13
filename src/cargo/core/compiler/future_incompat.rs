@@ -333,13 +333,11 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
     let mut summaries = Vec::new();
     while !package_ids.is_empty() {
         package_ids.retain(|&pkg_id| {
-            let source = match sources.get_mut(&pkg_id.source_id()) {
-                Some(s) => s,
-                None => return false,
+            let Some(source) = sources.get_mut(&pkg_id.source_id()) else {
+                return false;
             };
-            let dep = match Dependency::parse(pkg_id.name(), None, pkg_id.source_id()) {
-                Ok(dep) => dep,
-                Err(_) => return false,
+            let Ok(dep) = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()) else {
+                return false;
             };
             match source.query_vec(&dep, QueryKind::Exact) {
                 Poll::Ready(Ok(sum)) => {

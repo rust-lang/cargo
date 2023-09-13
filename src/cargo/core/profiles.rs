@@ -1205,9 +1205,8 @@ fn merge_config_profiles(
 fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<TomlProfile>> {
     let profile: Option<config::Value<TomlProfile>> =
         ws.config().get(&format!("profile.{}", name))?;
-    let profile = match profile {
-        Some(profile) => profile,
-        None => return Ok(None),
+    let Some(profile) = profile else {
+        return Ok(None);
     };
     let mut warnings = Vec::new();
     profile
@@ -1239,13 +1238,11 @@ fn validate_packages_unique(
     name: &str,
     toml: &Option<TomlProfile>,
 ) -> CargoResult<HashSet<PackageIdSpec>> {
-    let toml = match toml {
-        Some(ref toml) => toml,
-        None => return Ok(HashSet::new()),
+    let Some(toml) = toml else {
+        return Ok(HashSet::new());
     };
-    let overrides = match toml.package.as_ref() {
-        Some(overrides) => overrides,
-        None => return Ok(HashSet::new()),
+    let Some(overrides) = toml.package.as_ref() else {
+        return Ok(HashSet::new());
     };
     // Verify that a package doesn't match multiple spec overrides.
     let mut found = HashSet::new();
@@ -1297,9 +1294,8 @@ fn validate_packages_unmatched(
     toml: &TomlProfile,
     found: &HashSet<PackageIdSpec>,
 ) -> CargoResult<()> {
-    let overrides = match toml.package.as_ref() {
-        Some(overrides) => overrides,
-        None => return Ok(()),
+    let Some(overrides) = toml.package.as_ref() else {
+        return Ok(());
     };
 
     // Verify every override matches at least one package.

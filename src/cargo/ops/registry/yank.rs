@@ -30,9 +30,8 @@ pub fn yank(
             ws.current()?.package_id().name().to_string()
         }
     };
-    let version = match version {
-        Some(v) => v,
-        None => bail!("a version must be specified to yank"),
+    let Some(version) = version else {
+        bail!("a version must be specified to yank")
     };
 
     let message = if undo {

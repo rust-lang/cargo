@@ -543,12 +543,9 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
             if !src.exists() {
                 continue;
             }
-            let dst = match output.hardlink.as_ref() {
-                Some(dst) => dst,
-                None => {
-                    destinations.push(src.clone());
-                    continue;
-                }
+            let Some(dst) = output.hardlink.as_ref() else {
+                destinations.push(src.clone());
+                continue;
             };
             destinations.push(dst.clone());
             paths::link_or_copy(src, dst)?;

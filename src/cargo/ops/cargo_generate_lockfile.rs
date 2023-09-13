@@ -204,9 +204,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 .filter(|a| {
                     // If this package ID is not found in `b`, then it's definitely
                     // in the subtracted set.
-                    let i = match b.binary_search(a) {
-                        Ok(i) => i,
-                        Err(..) => return true,
+                    let Ok(i) = b.binary_search(a) else {
+                        return true;
                     };
 
                     // If we've found `a` in `b`, then we iterate over all instances

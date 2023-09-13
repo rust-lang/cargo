@@ -920,15 +920,12 @@ impl FixArgs {
     /// Validates the edition, and sends a message indicating what is being
     /// done. Returns a flag indicating whether this fix should be run.
     fn can_run_rustfix(&self, config: &Config) -> CargoResult<bool> {
-        let to_edition = match self.prepare_for_edition {
-            Some(s) => s,
-            None => {
-                return Message::Fixing {
-                    file: self.file.display().to_string(),
-                }
-                .post(config)
-                .and(Ok(true));
+        let Some(to_edition) = self.prepare_for_edition else {
+            return Message::Fixing {
+                file: self.file.display().to_string(),
             }
+            .post(config)
+            .and(Ok(true));
         };
         // Unfortunately determining which cargo targets are being built
         // isn't easy, and each target can be a different edition. The

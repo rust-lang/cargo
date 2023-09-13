@@ -181,9 +181,8 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     pub fn finish(&mut self, node: &N, edge: &E) -> Vec<&N> {
         // hashset<Node>
         let reverse_deps = self.reverse_dep_map.get(node).and_then(|map| map.get(edge));
-        let reverse_deps = match reverse_deps {
-            Some(deps) => deps,
-            None => return Vec::new(),
+        let Some(reverse_deps) = reverse_deps else {
+            return Vec::new();
         };
         let key = (node.clone(), edge.clone());
         let mut result = Vec::new();

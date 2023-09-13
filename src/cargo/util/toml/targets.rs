@@ -171,10 +171,7 @@ fn clean_lib(
         }),
     };
 
-    let lib = match lib {
-        Some(ref lib) => lib,
-        None => return Ok(None),
-    };
+    let Some(ref lib) = lib else { return Ok(None) };
     lib.validate_proc_macro(warnings);
     lib.validate_crate_types("library", warnings);
 

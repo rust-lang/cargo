@@ -189,55 +189,52 @@ impl PackageIdSpec {
     {
         let all_ids: Vec<_> = i.into_iter().collect();
         let mut ids = all_ids.iter().copied().filter(|&id| self.matches(id));
-        let ret = match ids.next() {
-            Some(id) => id,
-            None => {
-                let mut suggestion = String::new();
-                let try_spec = |spec: PackageIdSpec, suggestion: &mut String| {
-                    let try_matches: Vec<_> = all_ids
-                        .iter()
-                        .copied()
-                        .filter(|&id| spec.matches(id))
-                        .collect();
-                    if !try_matches.is_empty() {
-                        suggestion.push_str("\nDid you mean one of these?\n");
-                        minimize(suggestion, &try_matches, self);
-                    }
-                };
-                if self.url.is_some() {
-                    try_spec(
-                        PackageIdSpec {
-                            name: self.name,
-                            version: self.version.clone(),
-                            url: None,
-                        },
-                        &mut suggestion,
-                    );
+        let Some(ret) = ids.next() else {
+            let mut suggestion = String::new();
+            let try_spec = |spec: PackageIdSpec, suggestion: &mut String| {
+                let try_matches: Vec<_> = all_ids
+                    .iter()
+                    .copied()
+                    .filter(|&id| spec.matches(id))
+                    .collect();
+                if !try_matches.is_empty() {
+                    suggestion.push_str("\nDid you mean one of these?\n");
+                    minimize(suggestion, &try_matches, self);
                 }
-                if suggestion.is_empty() && self.version.is_some() {
-                    try_spec(
-                        PackageIdSpec {
-                            name: self.name,
-                            version: None,
-                            url: None,
-                        },
-                        &mut suggestion,
-                    );
-                }
-                if suggestion.is_empty() {
-                    suggestion.push_str(&edit_distance::closest_msg(
-                        &self.name,
-                        all_ids.iter(),
-                        |id| id.name().as_str(),
-                    ));
-                }
-
-                bail!(
-                    "package ID specification `{}` did not match any packages{}",
-                    self,
-                    suggestion
+            };
+            if self.url.is_some() {
+                try_spec(
+                    PackageIdSpec {
+                        name: self.name,
+                        version: self.version.clone(),
+                        url: None,
+                    },
+                    &mut suggestion,
                 );
             }
+            if suggestion.is_empty() && self.version.is_some() {
+                try_spec(
+                    PackageIdSpec {
+                        name: self.name,
+                        version: None,
+                        url: None,
+                    },
+                    &mut suggestion,
+                );
+            }
+            if suggestion.is_empty() {
+                suggestion.push_str(&edit_distance::closest_msg(
+                    &self.name,
+                    all_ids.iter(),
+                    |id| id.name().as_str(),
+                ));
+            }
+
+            bail!(
+                "package ID specification `{}` did not match any packages{}",
+                self,
+                suggestion
+            );
         };
         return match ids.next() {
             Some(other) => {

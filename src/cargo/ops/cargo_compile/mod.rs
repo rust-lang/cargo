@@ -489,9 +489,8 @@ pub fn create_bcx<'a, 'cfg>(
         );
 
         for unit in unit_graph.keys() {
-            let version = match unit.pkg.rust_version() {
-                Some(v) => v,
-                None => continue,
+            let Some(version) = unit.pkg.rust_version() else {
+                continue;
             };
 
             let req = version.caret_req();

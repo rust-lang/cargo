@@ -175,9 +175,8 @@ impl<'cfg> PathSource<'cfg> {
         };
 
         let filter = |path: &Path, is_dir: bool| {
-            let relative_path = match path.strip_prefix(root) {
-                Ok(p) => p,
-                Err(_) => return false,
+            let Ok(relative_path) = path.strip_prefix(root) else {
+                return false;
             };
 
             let rel = relative_path.as_os_str();

@@ -994,17 +994,15 @@ fn report_hash_difference(orig: &HashMap<PathBuf, u64>, after: &HashMap<PathBuf,
 // To help out in situations like this, issue about weird filenames when
 // packaging as a "heads up" that something may not work on other platforms.
 fn check_filename(file: &Path, shell: &mut Shell) -> CargoResult<()> {
-    let name = match file.file_name() {
-        Some(name) => name,
-        None => return Ok(()),
+    let Some(name) = file.file_name() else {
+        return Ok(());
     };
-    let name = match name.to_str() {
-        Some(name) => name,
-        None => anyhow::bail!(
+    let Some(name) = name.to_str() else {
+        anyhow::bail!(
             "path does not have a unicode filename which may not unpack \
              on all platforms: {}",
             file.display()
-        ),
+        )
     };
     let bad_chars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
     if let Some(c) = bad_chars.iter().find(|c| name.contains(**c)) {

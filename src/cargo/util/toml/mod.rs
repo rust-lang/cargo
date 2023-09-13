@@ -1760,10 +1760,7 @@ impl TomlManifest {
             deps: Option<&BTreeMap<String, MaybeWorkspaceDependency>>,
             filter: impl Fn(&TomlDependency) -> bool,
         ) -> CargoResult<Option<BTreeMap<String, MaybeWorkspaceDependency>>> {
-            let deps = match deps {
-                Some(deps) => deps,
-                None => return Ok(None),
-            };
+            let Some(deps) = deps else { return Ok(None) };
             let deps = deps
                 .iter()
                 .filter(|(_k, v)| {
@@ -2071,9 +2068,8 @@ impl TomlManifest {
             workspace_config: &WorkspaceConfig,
             inherit_cell: &LazyCell<InheritableFields>,
         ) -> CargoResult<Option<BTreeMap<String, MaybeWorkspaceDependency>>> {
-            let dependencies = match new_deps {
-                Some(dependencies) => dependencies,
-                None => return Ok(None),
+            let Some(dependencies) = new_deps else {
+                return Ok(None);
             };
 
             let inheritable = || {

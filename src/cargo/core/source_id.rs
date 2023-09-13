@@ -401,20 +401,22 @@ impl SourceId {
         match self.inner.kind {
             SourceKind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),
             SourceKind::Path => {
-                let path = match self.inner.url.to_file_path() {
-                    Ok(p) => p,
-                    Err(()) => panic!("path sources cannot be remote"),
-                };
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("path sources cannot be remote");
                 Ok(Box::new(PathSource::new(&path, self, config)))
             }
             SourceKind::Registry | SourceKind::SparseRegistry => Ok(Box::new(
                 RegistrySource::remote(self, yanked_whitelist, config)?,
             )),
             SourceKind::LocalRegistry => {
-                let path = match self.inner.url.to_file_path() {
-                    Ok(p) => p,
-                    Err(()) => panic!("path sources cannot be remote"),
-                };
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("path sources cannot be remote");
                 Ok(Box::new(RegistrySource::local(
                     self,
                     &path,
@@ -423,10 +425,11 @@ impl SourceId {
                 )))
             }
             SourceKind::Directory => {
-                let path = match self.inner.url.to_file_path() {
-                    Ok(p) => p,
-                    Err(()) => panic!("path sources cannot be remote"),
-                };
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("path sources cannot be remote");
                 Ok(Box::new(DirectorySource::new(&path, self, config)))
             }
         }
