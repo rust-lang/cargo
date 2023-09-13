@@ -123,7 +123,7 @@ impl<'cfg> GitSource<'cfg> {
     }
 
     /// Returns the packages discovered by this source. It may fetch the Git
-    /// repository as well as walk the filesystem if package informations
+    /// repository as well as walk the filesystem if package information
     /// haven't yet updated.
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {

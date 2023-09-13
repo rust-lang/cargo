@@ -63,7 +63,7 @@ pub struct LocalRegistry<'cfg> {
     /// Path where this local registry extract `.crate` tarballs to.
     src_path: Filesystem,
     config: &'cfg Config,
-    /// Whether this source has updated all package informations it may contain.
+    /// Whether this source has updated all package information it may contain.
     updated: bool,
     /// Disables status messages.
     quiet: bool,

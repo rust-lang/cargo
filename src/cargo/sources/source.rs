@@ -47,7 +47,7 @@ pub trait Source {
     /// Attempts to find the packages that match a dependency request.
     ///
     /// Usually you should call [`Source::block_until_ready`] somewhere and
-    /// wait until package informations become available. Otherwise any query
+    /// wait until package information become available. Otherwise any query
     /// may return a [`Poll::Pending`].
     ///
     /// The `f` argument is expected to get called when any [`Summary`] becomes available.

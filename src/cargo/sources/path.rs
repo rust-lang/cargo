@@ -30,7 +30,7 @@ pub struct PathSource<'cfg> {
     source_id: SourceId,
     /// The root path of this source.
     path: PathBuf,
-    /// Whether this source has updated all package informations it may contain.
+    /// Whether this source has updated all package information it may contain.
     updated: bool,
     /// Packages that this sources has discovered.
     packages: Vec<Package>,
@@ -97,7 +97,7 @@ impl<'cfg> PathSource<'cfg> {
     }
 
     /// Returns the packages discovered by this source. It may walk the
-    /// filesystem if package informations haven't yet updated.
+    /// filesystem if package information haven't yet updated.
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
