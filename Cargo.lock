@@ -60,9 +60,9 @@ dependencies = [
 
 [[package]]
 name = "anstyle"
-version = "1.0.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41ed9a86bf92ae6580e0a31281f65a1b1d867c0cc68d5346e2ae128dddfa6a7d"
+checksum = "b84bf0a05bbb2a83e5eb6fa36bb6e87baa08193c35ff52bbf6b38d8af2890e46"
 
 [[package]]
 name = "anstyle-parse"
@@ -80,6 +80,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ca11d4be1bab0c8bc8734a9aa7bf4ee8316d462a08c6ac5052f888fef5b494b"
 dependencies = [
  "windows-sys",
+]
+
+[[package]]
+name = "anstyle-termcolor"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11c3d1411f1f4c8a7b177caec3c71b51290f9e8ad9f99124fd3fe9aa96e56834"
+dependencies = [
+ "anstyle",
+ "termcolor",
 ]
 
 [[package]]
@@ -258,6 +268,8 @@ dependencies = [
 name = "cargo"
 version = "0.75.0"
 dependencies = [
+ "anstyle",
+ "anstyle-termcolor",
  "anyhow",
  "base64",
  "bytesize",

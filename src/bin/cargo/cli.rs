@@ -14,6 +14,7 @@ use super::list_commands;
 use crate::command_prelude::*;
 use crate::util::is_rustup;
 use cargo::core::features::HIDDEN;
+use cargo::util::style;
 
 pub fn main(config: &mut LazyConfig) -> CliResult {
     let args = cli().try_get_matches()?;
@@ -519,15 +520,14 @@ pub fn cli() -> Command {
     };
 
     let styles = {
-        use clap::builder::styling::*;
-        Styles::styled()
-            .header(AnsiColor::Green.on_default() | Effects::BOLD)
-            .usage(AnsiColor::Green.on_default() | Effects::BOLD)
-            .literal(AnsiColor::Cyan.on_default() | Effects::BOLD)
-            .placeholder(AnsiColor::Cyan.on_default())
-            .error(AnsiColor::Red.on_default() | Effects::BOLD)
-            .valid(AnsiColor::Cyan.on_default() | Effects::BOLD)
-            .invalid(AnsiColor::Yellow.on_default() | Effects::BOLD)
+        clap::builder::styling::Styles::styled()
+            .header(style::HEADER)
+            .usage(style::USAGE)
+            .literal(style::LITERAL)
+            .placeholder(style::PLACEHOLDER)
+            .error(style::ERROR)
+            .valid(style::VALID)
+            .invalid(style::INVALID)
     };
 
     Command::new("cargo")

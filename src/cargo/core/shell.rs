@@ -2,10 +2,12 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io::IsTerminal;
 
-use termcolor::Color::{Cyan, Green, Red, Yellow};
-use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
+use anstyle::Style;
+use anstyle_termcolor::to_termcolor_spec;
+use termcolor::{self, StandardStream, WriteColor};
 
 use crate::util::errors::CargoResult;
+use crate::util::style::*;
 
 pub enum TtyWidth {
     NoTty,
@@ -130,7 +132,7 @@ impl Shell {
         &mut self,
         status: &dyn fmt::Display,
         message: Option<&dyn fmt::Display>,
-        color: Color,
+        color: &Style,
         justified: bool,
     ) -> CargoResult<()> {
         match self.verbosity {
@@ -203,14 +205,14 @@ impl Shell {
         T: fmt::Display,
         U: fmt::Display,
     {
-        self.print(&status, Some(&message), Green, true)
+        self.print(&status, Some(&message), &HEADER, true)
     }
 
     pub fn status_header<T>(&mut self, status: T) -> CargoResult<()>
     where
         T: fmt::Display,
     {
-        self.print(&status, None, Cyan, true)
+        self.print(&status, None, &NOTE, true)
     }
 
     /// Shortcut to right-align a status message.
@@ -218,7 +220,7 @@ impl Shell {
         &mut self,
         status: T,
         message: U,
-        color: Color,
+        color: &Style,
     ) -> CargoResult<()>
     where
         T: fmt::Display,
@@ -255,20 +257,20 @@ impl Shell {
             self.err_erase_line();
         }
         self.output
-            .message_stderr(&"error", Some(&message), Red, false)
+            .message_stderr(&"error", Some(&message), &ERROR, false)
     }
 
     /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
-            _ => self.print(&"warning", Some(&message), Yellow, false),
+            _ => self.print(&"warning", Some(&message), &WARN, false),
         }
     }
 
     /// Prints a cyan 'note' message.
     pub fn note<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.print(&"note", Some(&message), Cyan, false)
+        self.print(&"note", Some(&message), &NOTE, false)
     }
 
     /// Updates the verbosity of the shell.
@@ -338,22 +340,14 @@ impl Shell {
     /// Write a styled fragment
     ///
     /// Caller is responsible for deciding whether [`Shell::verbosity`] is affects output.
-    pub fn write_stdout(
-        &mut self,
-        fragment: impl fmt::Display,
-        color: &ColorSpec,
-    ) -> CargoResult<()> {
+    pub fn write_stdout(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
         self.output.write_stdout(fragment, color)
     }
 
     /// Write a styled fragment
     ///
     /// Caller is responsible for deciding whether [`Shell::verbosity`] is affects output.
-    pub fn write_stderr(
-        &mut self,
-        fragment: impl fmt::Display,
-        color: &ColorSpec,
-    ) -> CargoResult<()> {
+    pub fn write_stderr(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
         self.output.write_stderr(fragment, color)
     }
 
@@ -412,18 +406,18 @@ impl ShellOut {
         &mut self,
         status: &dyn fmt::Display,
         message: Option<&dyn fmt::Display>,
-        color: Color,
+        style: &Style,
         justified: bool,
     ) -> CargoResult<()> {
         match *self {
             ShellOut::Stream { ref mut stderr, .. } => {
                 stderr.reset()?;
-                stderr.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
+                stderr.set_color(&to_termcolor_spec(*style))?;
                 if justified {
                     write!(stderr, "{:>12}", status)?;
                 } else {
                     write!(stderr, "{}", status)?;
-                    stderr.set_color(ColorSpec::new().set_bold(true))?;
+                    stderr.set_color(termcolor::ColorSpec::new().set_bold(true))?;
                     write!(stderr, ":")?;
                 }
                 stderr.reset()?;
@@ -448,11 +442,11 @@ impl ShellOut {
     }
 
     /// Write a styled fragment
-    fn write_stdout(&mut self, fragment: impl fmt::Display, color: &ColorSpec) -> CargoResult<()> {
+    fn write_stdout(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
         match *self {
             ShellOut::Stream { ref mut stdout, .. } => {
                 stdout.reset()?;
-                stdout.set_color(&color)?;
+                stdout.set_color(&to_termcolor_spec(*color))?;
                 write!(stdout, "{}", fragment)?;
                 stdout.reset()?;
             }
@@ -464,11 +458,11 @@ impl ShellOut {
     }
 
     /// Write a styled fragment
-    fn write_stderr(&mut self, fragment: impl fmt::Display, color: &ColorSpec) -> CargoResult<()> {
+    fn write_stderr(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
         match *self {
             ShellOut::Stream { ref mut stderr, .. } => {
                 stderr.reset()?;
-                stderr.set_color(&color)?;
+                stderr.set_color(&to_termcolor_spec(*color))?;
                 write!(stderr, "{}", fragment)?;
                 stderr.reset()?;
             }

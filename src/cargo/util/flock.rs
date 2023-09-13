@@ -4,11 +4,11 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Display, Path, PathBuf};
 
 use crate::util::errors::CargoResult;
+use crate::util::style;
 use crate::util::Config;
 use anyhow::Context as _;
 use cargo_util::paths;
 use sys::*;
-use termcolor::Color::Cyan;
 
 #[derive(Debug)]
 pub struct FileLock {
@@ -312,7 +312,9 @@ fn acquire(
         }
     }
     let msg = format!("waiting for file lock on {}", msg);
-    config.shell().status_with_color("Blocking", &msg, Cyan)?;
+    config
+        .shell()
+        .status_with_color("Blocking", &msg, &style::NOTE)?;
 
     lock_block().with_context(|| format!("failed to lock file: {}", path.display()))?;
     return Ok(());
