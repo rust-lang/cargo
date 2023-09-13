@@ -800,8 +800,8 @@ impl TomlProfile {
             self.codegen_units = Some(v);
         }
 
-        if let Some(v) = &profile.debug {
-            self.debug = Some(v.clone());
+        if let Some(v) = profile.debug {
+            self.debug = Some(v);
         }
 
         if let Some(v) = profile.debug_assertions {
@@ -1978,7 +1978,7 @@ impl TomlManifest {
                     )
                 }
             }
-            Some(rust_version.clone())
+            Some(rust_version)
         } else {
             None
         };
@@ -2358,7 +2358,7 @@ impl TomlManifest {
             .categories
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.categories.clone()));
-        package.rust_version = rust_version.clone().map(|rv| MaybeWorkspace::Defined(rv));
+        package.rust_version = rust_version.map(|rv| MaybeWorkspace::Defined(rv));
         package.exclude = package
             .exclude
             .as_ref()

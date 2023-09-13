@@ -1037,16 +1037,16 @@ impl Fingerprint {
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.name != b.name {
                 return DirtyReason::UnitDependencyNameChanged {
-                    old: b.name.clone(),
-                    new: a.name.clone(),
+                    old: b.name,
+                    new: a.name,
                 };
             }
 
             if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
                 return DirtyReason::UnitDependencyInfoChanged {
-                    new_name: a.name.clone(),
+                    new_name: a.name,
                     new_fingerprint: a.fingerprint.hash_u64(),
-                    old_name: b.name.clone(),
+                    old_name: b.name,
                     old_fingerprint: b.fingerprint.hash_u64(),
                 };
             }
@@ -1122,9 +1122,7 @@ impl Fingerprint {
                 | FsStatus::StaleItem(_)
                 | FsStatus::StaleDependency { .. }
                 | FsStatus::StaleDepFingerprint { .. } => {
-                    self.fs_status = FsStatus::StaleDepFingerprint {
-                        name: dep.name.clone(),
-                    };
+                    self.fs_status = FsStatus::StaleDepFingerprint { name: dep.name };
                     return Ok(());
                 }
             };
@@ -1166,7 +1164,7 @@ impl Fingerprint {
                 );
 
                 self.fs_status = FsStatus::StaleDependency {
-                    name: dep.name.clone(),
+                    name: dep.name,
                     dep_mtime: *dep_mtime,
                     max_mtime: *max_mtime,
                 };
