@@ -1,9 +1,9 @@
 //! The trait for sources of Cargo packages and its built-in implemetations.
 //!
 //! A source is a provider that contains source files and metadata of packages.
-//! It provides a number of methods to fetch those package informations, for
+//! It provides a number of methods to fetch those package information, for
 //! example, querying metadata or downloading files for a package. These
-//! informations then can be used as dependencies for other Cargo packages.
+//! information then can be used as dependencies for other Cargo packages.
 //!
 //! This module provides [`Source`][source::Source] trait as an abstraction of different sources,
 //! as well as [`SourceMap`][source::SourceMap] struct as a map of all available sources.
