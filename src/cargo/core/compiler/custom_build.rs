@@ -443,7 +443,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                     ))
                 })?;
                 let data = &script_output.metadata;
-                for &(ref key, ref value) in data.iter() {
+                for (key, value) in data.iter() {
                     cmd.env(
                         &format!("DEP_{}_{}", super::envify(&name), super::envify(key)),
                         value,

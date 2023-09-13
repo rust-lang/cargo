@@ -128,9 +128,9 @@ impl<'a> RegistryQueryer<'a> {
             let mut potential_matches = self
                 .replacements
                 .iter()
-                .filter(|&&(ref spec, _)| spec.matches(summary.package_id()));
+                .filter(|(spec, _)| spec.matches(summary.package_id()));
 
-            let &(ref spec, ref dep) = match potential_matches.next() {
+            let (spec, dep) = match potential_matches.next() {
                 None => continue,
                 Some(replacement) => replacement,
             };
@@ -188,7 +188,7 @@ impl<'a> RegistryQueryer<'a> {
             let matched_spec = spec.clone();
 
             // Make sure no duplicates
-            if let Some(&(ref spec, _)) = potential_matches.next() {
+            if let Some((spec, _)) = potential_matches.next() {
                 return Poll::Ready(Err(anyhow::anyhow!(
                     "overlapping replacement specifications found:\n\n  \
                      * {}\n  * {}\n\nboth specifications match: {}",
@@ -278,7 +278,7 @@ impl<'a> RegistryQueryer<'a> {
         // dependencies with more candidates. This way if the dependency with
         // only one candidate can't be resolved we don't have to do a bunch of
         // work before we figure that out.
-        deps.sort_by_key(|&(_, ref a, _)| a.len());
+        deps.sort_by_key(|(_, a, _)| a.len());
 
         let out = Rc::new((used_features, Rc::new(deps)));
 

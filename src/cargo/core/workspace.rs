@@ -510,7 +510,7 @@ impl<'cfg> Workspace<'cfg> {
         self.members
             .iter()
             .filter_map(move |path| match packages.get(path) {
-                &MaybePackage::Package(ref p) => Some(p),
+                MaybePackage::Package(p) => Some(p),
                 _ => None,
             })
     }
@@ -541,7 +541,7 @@ impl<'cfg> Workspace<'cfg> {
         self.default_members
             .iter()
             .filter_map(move |path| match packages.get(path) {
-                &MaybePackage::Package(ref p) => Some(p),
+                MaybePackage::Package(p) => Some(p),
                 _ => None,
             })
     }
@@ -1046,7 +1046,7 @@ impl<'cfg> Workspace<'cfg> {
 
     pub fn load(&self, manifest_path: &Path) -> CargoResult<Package> {
         match self.packages.maybe_get(manifest_path) {
-            Some(&MaybePackage::Package(ref p)) => return Ok(p.clone()),
+            Some(MaybePackage::Package(p)) => return Ok(p.clone()),
             Some(&MaybePackage::Virtual(_)) => bail!("cannot load workspace root"),
             None => {}
         }

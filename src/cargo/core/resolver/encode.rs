@@ -299,7 +299,7 @@ impl EncodableResolve {
 
         let mut g = Graph::new();
 
-        for &(ref id, _) in live_pkgs.values() {
+        for (id, _) in live_pkgs.values() {
             g.add(*id);
         }
 
@@ -435,7 +435,7 @@ fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>>
             build_dep(dep, ws, &mut ret, &mut visited);
         }
     }
-    for &(_, ref dep) in ws.root_replace() {
+    for (_, dep) in ws.root_replace() {
         build_dep(dep, ws, &mut ret, &mut visited);
     }
 

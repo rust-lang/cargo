@@ -744,7 +744,7 @@ https://github.com/rust-lang/cargo/issues/5330",
 fn inferred_to_toml_targets(inferred: &[(String, PathBuf)]) -> Vec<TomlTarget> {
     inferred
         .iter()
-        .map(|&(ref name, ref path)| TomlTarget {
+        .map(|(name, path)| TomlTarget {
             name: Some(name.clone()),
             path: Some(PathValue(path.clone())),
             ..TomlTarget::new()
@@ -926,8 +926,8 @@ fn target_path(
 
     let mut matching = inferred
         .iter()
-        .filter(|&&(ref n, _)| n == &name)
-        .map(|&(_, ref p)| p.clone());
+        .filter(|(n, _)| n == &name)
+        .map(|(_, p)| p.clone());
 
     let first = matching.next();
     let second = matching.next();

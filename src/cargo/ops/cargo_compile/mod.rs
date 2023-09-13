@@ -318,8 +318,8 @@ pub fn create_bcx<'a, 'cfg>(
     }
 
     let (extra_args, extra_args_name) = match (target_rustc_args, target_rustdoc_args) {
-        (&Some(ref args), _) => (Some(args.clone()), "rustc"),
-        (_, &Some(ref args)) => (Some(args.clone()), "rustdoc"),
+        (Some(args), _) => (Some(args.clone()), "rustc"),
+        (_, Some(args)) => (Some(args.clone()), "rustdoc"),
         _ => (None, ""),
     };
 

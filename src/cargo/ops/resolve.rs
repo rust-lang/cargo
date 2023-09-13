@@ -153,7 +153,7 @@ pub fn resolve_ws_with_opts<'cfg>(
 
         add_overrides(&mut registry, ws)?;
 
-        for &(ref replace_spec, ref dep) in ws.root_replace() {
+        for (replace_spec, dep) in ws.root_replace() {
             if !resolve
                 .iter()
                 .any(|r| replace_spec.matches(r) && !dep.matches_id(r))
@@ -486,7 +486,7 @@ pub fn resolve_with_previous<'cfg>(
     let replace = match previous {
         Some(r) => root_replace
             .iter()
-            .map(|&(ref spec, ref dep)| {
+            .map(|(spec, dep)| {
                 for (&key, &val) in r.replacements().iter() {
                     if spec.matches(key) && dep.matches_id(val) && keep(&val) {
                         let mut dep = dep.clone();

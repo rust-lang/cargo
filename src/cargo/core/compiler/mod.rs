@@ -1318,7 +1318,7 @@ fn add_custom_flags(
                     cmd.arg("--check-cfg").arg(check_cfg);
                 }
             }
-            for &(ref name, ref value) in output.env.iter() {
+            for (name, value) in output.env.iter() {
                 cmd.env(name, value);
             }
         }

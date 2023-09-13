@@ -234,7 +234,7 @@ fn activate_deps_loop(
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
 
     // Activate all the initial summaries to kick off some work.
-    for &(ref summary, ref opts) in summaries {
+    for (summary, opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
         let res = activate(
             &mut cx,
@@ -514,9 +514,7 @@ fn activate_deps_loop(
                             if let Some((other_parent, conflict)) = remaining_deps
                                 .iter()
                                 // for deps related to us
-                                .filter(|&(_, ref other_dep)| {
-                                    known_related_bad_deps.contains(other_dep)
-                                })
+                                .filter(|(_, other_dep)| known_related_bad_deps.contains(other_dep))
                                 .filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
                                         .find_conflicting(&cx, &other_dep, Some(pid))
