@@ -4,7 +4,7 @@ use std::task::Poll;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::util::edit_distance::edit_distance;
-use crate::util::{Config, VersionExt};
+use crate::util::{Config, OptVersionReq, VersionExt};
 use anyhow::Error;
 
 use super::context::Context;
@@ -224,9 +224,8 @@ pub(super) fn activation_error(
     // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
     // was meant. So we re-query the registry with `dep="*"` so we can
     // list a few versions that were actually found.
-    let all_req = semver::VersionReq::parse("*").unwrap();
     let mut new_dep = dep.clone();
-    new_dep.set_version_req(all_req);
+    new_dep.set_version_req(OptVersionReq::Any);
 
     let mut candidates = loop {
         match registry.query_vec(&new_dep, QueryKind::Exact) {
@@ -241,127 +240,122 @@ pub(super) fn activation_error(
 
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
 
-    let mut msg =
-        if !candidates.is_empty() {
-            let versions = {
-                let mut versions = candidates
-                    .iter()
-                    .take(3)
-                    .map(|cand| cand.version().to_string())
-                    .collect::<Vec<_>>();
-
-                if candidates.len() > 3 {
-                    versions.push("...".into());
-                }
-
-                versions.join(", ")
-            };
-
-            let locked_version = dep
-                .version_req()
-                .locked_version()
-                .map(|v| format!(" (locked to {})", v))
-                .unwrap_or_default();
-
-            let mut msg = format!(
-                "failed to select a version for the requirement `{} = \"{}\"`{}\n\
-                 candidate versions found which didn't match: {}\n\
-                 location searched: {}\n",
-                dep.package_name(),
-                dep.version_req(),
-                locked_version,
-                versions,
-                registry.describe_source(dep.source_id()),
-            );
-            msg.push_str("required by ");
-            msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
-
-            // If we have a path dependency with a locked version, then this may
-            // indicate that we updated a sub-package and forgot to run `cargo
-            // update`. In this case try to print a helpful error!
-            if dep.source_id().is_path() && dep.version_req().is_locked() {
-                msg.push_str(
-                    "\nconsider running `cargo update` to update \
-                     a path dependency's locked version",
-                );
-            }
-
-            if registry.is_replaced(dep.source_id()) {
-                msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
-            }
-
-            msg
-        } else {
-            // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
-            // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
-            let mut candidates = loop {
-                match registry.query_vec(&new_dep, QueryKind::Fuzzy) {
-                    Poll::Ready(Ok(candidates)) => break candidates,
-                    Poll::Ready(Err(e)) => return to_resolve_err(e),
-                    Poll::Pending => match registry.block_until_ready() {
-                        Ok(()) => continue,
-                        Err(e) => return to_resolve_err(e),
-                    },
-                }
-            };
-
-            candidates.sort_unstable_by_key(|a| a.name());
-            candidates.dedup_by(|a, b| a.name() == b.name());
-            let mut candidates: Vec<_> = candidates
+    let mut msg = if !candidates.is_empty() {
+        let versions = {
+            let mut versions = candidates
                 .iter()
-                .filter_map(|n| Some((edit_distance(&*new_dep.package_name(), &*n.name(), 3)?, n)))
-                .collect();
-            candidates.sort_by_key(|o| o.0);
-            let mut msg: String;
-            if candidates.is_empty() {
-                msg = format!("no matching package named `{}` found\n", dep.package_name());
-            } else {
-                msg = format!(
-                    "no matching package found\nsearched package name: `{}`\n",
-                    dep.package_name()
-                );
+                .take(3)
+                .map(|cand| cand.version().to_string())
+                .collect::<Vec<_>>();
 
-                // If dependency package name is equal to the name of the candidate here
-                // it may be a prerelease package which hasn't been specified correctly
-                if dep.package_name() == candidates[0].1.name()
-                    && candidates[0].1.package_id().version().is_prerelease()
-                {
-                    msg.push_str("prerelease package needs to be specified explicitly\n");
-                    msg.push_str(&format!(
-                        "{name} = {{ version = \"{version}\" }}",
-                        name = candidates[0].1.name(),
-                        version = candidates[0].1.package_id().version()
-                    ));
-                } else {
-                    let mut names = candidates
-                        .iter()
-                        .take(3)
-                        .map(|c| c.1.name().as_str())
-                        .collect::<Vec<_>>();
-
-                    if candidates.len() > 3 {
-                        names.push("...");
-                    }
-                    // Vertically align first suggestion with missing crate name
-                    // so a typo jumps out at you.
-                    msg.push_str("perhaps you meant:      ");
-                    msg.push_str(&names.iter().enumerate().fold(
-                        String::default(),
-                        |acc, (i, el)| match i {
-                            0 => acc + el,
-                            i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
-                            _ => acc + ", " + el,
-                        },
-                    ));
-                }
-                msg.push('\n');
+            if candidates.len() > 3 {
+                versions.push("...".into());
             }
-            msg.push_str(&format!("location searched: {}\n", dep.source_id()));
-            msg.push_str("required by ");
-            msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
 
-            msg
+            versions.join(", ")
         };
+
+        let locked_version = dep
+            .version_req()
+            .locked_version()
+            .map(|v| format!(" (locked to {})", v))
+            .unwrap_or_default();
+
+        let mut msg = format!(
+            "failed to select a version for the requirement `{} = \"{}\"`{}\n\
+             candidate versions found which didn't match: {}\n\
+             location searched: {}\n",
+            dep.package_name(),
+            dep.version_req(),
+            locked_version,
+            versions,
+            registry.describe_source(dep.source_id()),
+        );
+        msg.push_str("required by ");
+        msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
+
+        // If we have a pre-release candidate, then that may be what our user is looking for
+        if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
+            msg.push_str("\nif you are looking for the prerelease package it needs to be specified explicitly");
+            msg.push_str(&format!(
+                "\n    {} = {{ version = \"{}\" }}",
+                pre.name(),
+                pre.version()
+            ));
+        }
+
+        // If we have a path dependency with a locked version, then this may
+        // indicate that we updated a sub-package and forgot to run `cargo
+        // update`. In this case try to print a helpful error!
+        if dep.source_id().is_path() && dep.version_req().is_locked() {
+            msg.push_str(
+                "\nconsider running `cargo update` to update \
+                          a path dependency's locked version",
+            );
+        }
+
+        if registry.is_replaced(dep.source_id()) {
+            msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
+        }
+
+        msg
+    } else {
+        // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
+        // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
+        let mut candidates = loop {
+            match registry.query_vec(&new_dep, QueryKind::Fuzzy) {
+                Poll::Ready(Ok(candidates)) => break candidates,
+                Poll::Ready(Err(e)) => return to_resolve_err(e),
+                Poll::Pending => match registry.block_until_ready() {
+                    Ok(()) => continue,
+                    Err(e) => return to_resolve_err(e),
+                },
+            }
+        };
+
+        candidates.sort_unstable_by_key(|a| a.name());
+        candidates.dedup_by(|a, b| a.name() == b.name());
+        let mut candidates: Vec<_> = candidates
+            .iter()
+            .filter_map(|n| Some((edit_distance(&*new_dep.package_name(), &*n.name(), 3)?, n)))
+            .collect();
+        candidates.sort_by_key(|o| o.0);
+        let mut msg: String;
+        if candidates.is_empty() {
+            msg = format!("no matching package named `{}` found\n", dep.package_name());
+        } else {
+            msg = format!(
+                "no matching package found\nsearched package name: `{}`\n",
+                dep.package_name()
+            );
+            let mut names = candidates
+                .iter()
+                .take(3)
+                .map(|c| c.1.name().as_str())
+                .collect::<Vec<_>>();
+
+            if candidates.len() > 3 {
+                names.push("...");
+            }
+            // Vertically align first suggestion with missing crate name
+            // so a typo jumps out at you.
+            msg.push_str("perhaps you meant:      ");
+            msg.push_str(&names.iter().enumerate().fold(
+                String::default(),
+                |acc, (i, el)| match i {
+                    0 => acc + el,
+                    i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
+                    _ => acc + ", " + el,
+                },
+            ));
+            msg.push('\n');
+        }
+        msg.push_str(&format!("location searched: {}\n", dep.source_id()));
+        msg.push_str("required by ");
+        msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
+
+        msg
+    };
 
     if let Some(config) = config {
         if config.offline() {

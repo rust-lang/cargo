@@ -2658,3 +2658,45 @@ failed to select a version for `qux` which could resolve this conflict"#,
         )
         .run();
 }
+
+#[cargo_test]
+fn mismatched_version_with_prerelease() {
+    Package::new("prerelease-deps", "0.0.1").publish();
+    // A patch to a location that has an prerelease version
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                 [package]
+                 name = "foo"
+                 version = "0.1.0"
+
+                 [dependencies]
+                 prerelease-deps = "0.1.0"
+
+                 [patch.crates-io]
+                 prerelease-deps = { path = "./prerelease-deps" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "prerelease-deps/Cargo.toml",
+            &basic_manifest("prerelease-deps", "0.1.1-pre1"),
+        )
+        .file("prerelease-deps/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `prerelease-deps = "^0.1.0"`
+candidate versions found which didn't match: 0.1.1-pre1, 0.0.1
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.1.0 [..]`
+if you are looking for the prerelease package it needs to be specified explicitly
+    prerelease-deps = { version = "0.1.1-pre1" }
+perhaps a crate was updated and forgotten to be re-vendored?"#,
+        )
+        .run();
+}

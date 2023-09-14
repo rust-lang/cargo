@@ -318,8 +318,8 @@ impl Dependency {
     }
 
     /// Sets the version requirement for this dependency.
-    pub fn set_version_req(&mut self, req: VersionReq) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).req = OptVersionReq::Req(req);
+    pub fn set_version_req(&mut self, req: OptVersionReq) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).req = req;
         self
     }
 
