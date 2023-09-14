@@ -335,10 +335,19 @@ fn registry_credential_config_raw_uncached(
 /// Use the `[credential-alias]` table to see if the provider name has been aliased.
 fn resolve_credential_alias(config: &Config, mut provider: PathAndArgs) -> Vec<String> {
     if provider.args.is_empty() {
-        let key = format!("credential-alias.{}", provider.path.raw_value());
-        if let Ok(alias) = config.get::<PathAndArgs>(&key) {
+        let name = provider.path.raw_value();
+        let key = format!("credential-alias.{name}");
+        if let Ok(alias) = config.get::<Value<PathAndArgs>>(&key) {
             tracing::debug!("resolving credential alias '{key}' -> '{alias:?}'");
-            provider = alias;
+            if BUILT_IN_PROVIDERS.contains(&name) {
+                let _ = config.shell().warn(format!(
+                    "credential-alias `{name}` (defined in `{}`) will be \
+                    ignored because it would shadow a built-in credential-provider",
+                    alias.definition
+                ));
+            } else {
+                provider = alias.val;
+            }
         }
     }
     provider.args.insert(
@@ -470,6 +479,17 @@ pub fn cache_token_from_commandline(config: &Config, sid: &SourceId, token: Secr
     );
 }
 
+/// List of credential providers built-in to Cargo.
+/// Keep in sync with the `match` in `credential_action`.
+static BUILT_IN_PROVIDERS: &[&'static str] = &[
+    "cargo:token",
+    "cargo:paseto",
+    "cargo:token-from-stdout",
+    "cargo:wincred",
+    "cargo:macos-keychain",
+    "cargo:libsecret",
+];
+
 fn credential_action(
     config: &Config,
     sid: &SourceId,
@@ -497,6 +517,7 @@ fn credential_action(
             .collect();
         let process = args[0];
         tracing::debug!("attempting credential provider: {args:?}");
+        // If the available built-in providers are changed, update the `BUILT_IN_PROVIDERS` list.
         let provider: Box<dyn Credential> = match process {
             "cargo:token" => Box::new(TokenCredential::new(config)),
             "cargo:paseto" if config.cli_unstable().asymmetric_token => {

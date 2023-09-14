@@ -745,3 +745,33 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn alias_builtin_warning() {
+    let registry = registry::RegistryBuilder::new()
+        .credential_provider(&[&"cargo:token"])
+        .build();
+
+    cargo_util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [credential-alias]
+                "cargo:token" = ["ignored"]
+            "#,
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("login -Z credential-process abcdefg")
+        .masquerade_as_nightly_cargo(&["credential-process"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr(
+            r#"[UPDATING] [..]
+[WARNING] credential-alias `cargo:token` (defined in `[..]`) will be ignored because it would shadow a built-in credential-provider
+[LOGIN] token for `crates-io` saved
+"#,
+        )
+        .run();
+}
