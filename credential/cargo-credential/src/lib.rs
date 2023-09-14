@@ -61,8 +61,8 @@ pub struct UnsupportedCredential;
 impl Credential for UnsupportedCredential {
     fn perform(
         &self,
-        _registry: &RegistryInfo,
-        _action: &Action,
+        _registry: &RegistryInfo<'_>,
+        _action: &Action<'_>,
         _args: &[&str],
     ) -> Result<CredentialResponse, Error> {
         Err(Error::UrlNotSupported)
@@ -215,8 +215,8 @@ pub trait Credential {
     /// Retrieves a token for the given registry.
     fn perform(
         &self,
-        registry: &RegistryInfo,
-        action: &Action,
+        registry: &RegistryInfo<'_>,
+        action: &Action<'_>,
         args: &[&str],
     ) -> Result<CredentialResponse, Error>;
 }
@@ -260,7 +260,7 @@ fn doit(
 fn deserialize_request(
     value: &str,
 ) -> Result<CredentialRequest<'_>, Box<dyn std::error::Error + Send + Sync>> {
-    let request: CredentialRequest = serde_json::from_str(&value)?;
+    let request: CredentialRequest<'_> = serde_json::from_str(&value)?;
     if request.v != PROTOCOL_VERSION_1 {
         return Err(format!("unsupported protocol version {}", request.v).into());
     }
@@ -276,8 +276,8 @@ pub fn read_line() -> Result<String, io::Error> {
 
 /// Prompt the user for a token.
 pub fn read_token(
-    login_options: &LoginOptions,
-    registry: &RegistryInfo,
+    login_options: &LoginOptions<'_>,
+    registry: &RegistryInfo<'_>,
 ) -> Result<Secret<String>, Error> {
     if let Some(token) = &login_options.token {
         return Ok(token.to_owned());
@@ -387,7 +387,7 @@ mod tests {
             r#"{"v":1,"registry":{"index-url":"url"},"kind":"get","operation":"owners","name":"pkg"}"#
         );
 
-        let cr: CredentialRequest =
+        let cr: CredentialRequest<'_> =
             serde_json::from_str(r#"{"extra-1":true,"v":1,"registry":{"index-url":"url","extra-2":true},"kind":"get","operation":"owners","name":"pkg","args":[]}"#).unwrap();
         assert_eq!(cr, get_oweners);
     }
@@ -405,7 +405,7 @@ mod tests {
             action: Action::Logout,
         };
 
-        let cr: CredentialRequest = serde_json::from_str(
+        let cr: CredentialRequest<'_> = serde_json::from_str(
             r#"{"v":1,"registry":{"index-url":"url"},"kind":"logout","extra-1":true,"args":[]}"#,
         )
         .unwrap();
@@ -425,7 +425,7 @@ mod tests {
             action: Action::Unknown,
         };
 
-        let cr: CredentialRequest = serde_json::from_str(
+        let cr: CredentialRequest<'_> = serde_json::from_str(
             r#"{"v":1,"registry":{"index-url":""},"kind":"unexpected-1","extra-1":true,"args":[]}"#,
         )
         .unwrap();

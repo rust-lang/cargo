@@ -105,7 +105,7 @@ fn config_configure(config: &mut Config, args: &ArgMatches) -> CliResult {
 /// Main entry of `xtask-bump-check`.
 ///
 /// Assumption: version number are incremental. We never have point release for old versions.
-fn bump_check(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> CargoResult<()> {
+fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoResult<()> {
     let ws = args.workspace(config)?;
     let repo = git2::Repository::open(ws.root())?;
     let base_commit = get_base_commit(config, args, &repo)?;
@@ -184,7 +184,7 @@ fn bump_check(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> Carg
 
     status("no version bump needed for member crates.")?;
 
-    return Ok(());
+    Ok(())
 }
 
 /// Returns the commit of upstream `master` branch if `base-rev` is missing.
@@ -256,7 +256,7 @@ fn get_referenced_commit<'a>(
     repo: &'a git2::Repository,
     base: &git2::Commit<'a>,
 ) -> CargoResult<Option<git2::Commit<'a>>> {
-    let [beta, stable] = beta_and_stable_branch(&repo)?;
+    let [beta, stable] = beta_and_stable_branch(repo)?;
     let rev_id = base.id();
     let stable_commit = stable.get().peel_to_commit()?;
     let beta_commit = beta.get().peel_to_commit()?;

@@ -48,7 +48,7 @@ fn run() -> Result<(), Error> {
         if same_file::is_same_file(source, &out_path).unwrap_or(false) {
             bail!("cannot output to the same file as the source");
         }
-        println!("Converting {} -> {}", source.display(), out_path.display());
+        eprintln!("Converting {} -> {}", source.display(), out_path.display());
         let result = mdman::convert(&source, opts.format, opts.url.clone(), opts.man_map.clone())
             .with_context(|| format!("failed to translate {}", source.display()))?;
 

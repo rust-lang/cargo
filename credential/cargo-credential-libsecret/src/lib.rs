@@ -104,16 +104,16 @@ mod linux {
     impl Credential for LibSecretCredential {
         fn perform(
             &self,
-            registry: &RegistryInfo,
-            action: &Action,
+            registry: &RegistryInfo<'_>,
+            action: &Action<'_>,
             _args: &[&str],
         ) -> Result<CredentialResponse, Error> {
             // Dynamically load libsecret to avoid users needing to install
             // additional -dev packages when building this provider.
             let lib;
-            let secret_password_lookup_sync: Symbol<SecretPasswordLookupSync>;
-            let secret_password_store_sync: Symbol<SecretPasswordStoreSync>;
-            let secret_password_clear_sync: Symbol<SecretPasswordClearSync>;
+            let secret_password_lookup_sync: Symbol<'_, SecretPasswordLookupSync>;
+            let secret_password_store_sync: Symbol<'_, SecretPasswordStoreSync>;
+            let secret_password_clear_sync: Symbol<'_, SecretPasswordClearSync>;
             unsafe {
                 lib = Library::new("libsecret-1.so").context(
                     "failed to load libsecret: try installing the `libsecret` \

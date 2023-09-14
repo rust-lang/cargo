@@ -790,7 +790,7 @@ impl HttpServer {
         }
     }
 
-    fn check_authorized(&self, req: &Request, mutation: Option<Mutation>) -> bool {
+    fn check_authorized(&self, req: &Request, mutation: Option<Mutation<'_>>) -> bool {
         let (private_key, private_key_subject) = if mutation.is_some() || self.auth_required {
             match &self.token {
                 Token::Plaintext(token) => return Some(token) == req.authorization.as_ref(),
@@ -832,7 +832,8 @@ impl HttpServer {
             url: &'a str,
             kip: &'a str,
         }
-        let footer: Footer = t!(serde_json::from_slice(untrusted_token.untrusted_footer()).ok());
+        let footer: Footer<'_> =
+            t!(serde_json::from_slice(untrusted_token.untrusted_footer()).ok());
         if footer.kip != paserk_pub_key_id {
             return false;
         }
@@ -846,7 +847,6 @@ impl HttpServer {
         if footer.url != "https://github.com/rust-lang/crates.io-index"
             && footer.url != &format!("sparse+http://{}/index/", self.addr.to_string())
         {
-            dbg!(footer.url);
             return false;
         }
 
@@ -862,20 +862,18 @@ impl HttpServer {
             _challenge: Option<&'a str>, // todo: PASETO with challenges
             v: Option<u8>,
         }
-        let message: Message = t!(serde_json::from_str(trusted_token.payload()).ok());
+        let message: Message<'_> = t!(serde_json::from_str(trusted_token.payload()).ok());
         let token_time = t!(OffsetDateTime::parse(message.iat, &Rfc3339).ok());
         let now = OffsetDateTime::now_utc();
         if (now - token_time) > Duration::MINUTE {
             return false;
         }
         if private_key_subject.as_deref() != message.sub {
-            dbg!(message.sub);
             return false;
         }
         // - If the claim v is set, that it has the value of 1.
         if let Some(v) = message.v {
             if v != 1 {
-                dbg!(message.v);
                 return false;
             }
         }
@@ -885,22 +883,18 @@ impl HttpServer {
         if let Some(mutation) = mutation {
             //  - That the operation matches the mutation field and is one of publish, yank, or unyank.
             if message.mutation != Some(mutation.mutation) {
-                dbg!(message.mutation);
                 return false;
             }
             //  - That the package, and version match the request.
             if message.name != mutation.name {
-                dbg!(message.name);
                 return false;
             }
             if message.vers != mutation.vers {
-                dbg!(message.vers);
                 return false;
             }
             //  - If the mutation is publish, that the version has not already been published, and that the hash matches the request.
             if mutation.mutation == "publish" {
                 if message.cksum != mutation.cksum {
-                    dbg!(message.cksum);
                     return false;
                 }
             }

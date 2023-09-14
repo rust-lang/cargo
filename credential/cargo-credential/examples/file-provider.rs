@@ -12,8 +12,8 @@ struct FileCredential;
 impl Credential for FileCredential {
     fn perform(
         &self,
-        registry: &RegistryInfo,
-        action: &Action,
+        registry: &RegistryInfo<'_>,
+        action: &Action<'_>,
         _args: &[&str],
     ) -> Result<CredentialResponse, cargo_credential::Error> {
         if registry.index_url != "https://github.com/rust-lang/crates.io-index" {
