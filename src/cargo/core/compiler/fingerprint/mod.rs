@@ -811,9 +811,8 @@ impl LocalFingerprint {
             // rustc.
             LocalFingerprint::CheckDepInfo { dep_info } => {
                 let dep_info = target_root.join(dep_info);
-                let info = match parse_dep_info(pkg_root, target_root, &dep_info)? {
-                    Some(info) => info,
-                    None => return Ok(Some(StaleItem::MissingFile(dep_info))),
+                let Some(info) = parse_dep_info(pkg_root, target_root, &dep_info)? else {
+                    return Ok(Some(StaleItem::MissingFile(dep_info)));
                 };
                 for (key, previous) in info.env.iter() {
                     let current = if key == CARGO_ENV {
@@ -1038,16 +1037,16 @@ impl Fingerprint {
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.name != b.name {
                 return DirtyReason::UnitDependencyNameChanged {
-                    old: b.name.clone(),
-                    new: a.name.clone(),
+                    old: b.name,
+                    new: a.name,
                 };
             }
 
             if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
                 return DirtyReason::UnitDependencyInfoChanged {
-                    new_name: a.name.clone(),
+                    new_name: a.name,
                     new_fingerprint: a.fingerprint.hash_u64(),
-                    old_name: b.name.clone(),
+                    old_name: b.name,
                     old_fingerprint: b.fingerprint.hash_u64(),
                 };
             }
@@ -1103,16 +1102,12 @@ impl Fingerprint {
         }
 
         let opt_max = mtimes.iter().max_by_key(|kv| kv.1);
-        let (max_path, max_mtime) = match opt_max {
-            Some(mtime) => mtime,
-
+        let Some((max_path, max_mtime)) = opt_max else {
             // We had no output files. This means we're an overridden build
             // script and we're just always up to date because we aren't
             // watching the filesystem.
-            None => {
-                self.fs_status = FsStatus::UpToDate { mtimes };
-                return Ok(());
-            }
+            self.fs_status = FsStatus::UpToDate { mtimes };
+            return Ok(());
         };
         debug!(
             "max output mtime for {:?} is {:?} {}",
@@ -1127,9 +1122,7 @@ impl Fingerprint {
                 | FsStatus::StaleItem(_)
                 | FsStatus::StaleDependency { .. }
                 | FsStatus::StaleDepFingerprint { .. } => {
-                    self.fs_status = FsStatus::StaleDepFingerprint {
-                        name: dep.name.clone(),
-                    };
+                    self.fs_status = FsStatus::StaleDepFingerprint { name: dep.name };
                     return Ok(());
                 }
             };
@@ -1171,7 +1164,7 @@ impl Fingerprint {
                 );
 
                 self.fs_status = FsStatus::StaleDependency {
-                    name: dep.name.clone(),
+                    name: dep.name,
                     dep_mtime: *dep_mtime,
                     max_mtime: *max_mtime,
                 };
@@ -1808,16 +1801,12 @@ pub fn parse_dep_info(
     target_root: &Path,
     dep_info: &Path,
 ) -> CargoResult<Option<RustcDepInfo>> {
-    let data = match paths::read_bytes(dep_info) {
-        Ok(data) => data,
-        Err(_) => return Ok(None),
+    let Ok(data) = paths::read_bytes(dep_info) else {
+        return Ok(None);
     };
-    let info = match EncodedDepInfo::parse(&data) {
-        Some(info) => info,
-        None => {
-            tracing::warn!("failed to parse cargo's dep-info at {:?}", dep_info);
-            return Ok(None);
-        }
+    let Some(info) = EncodedDepInfo::parse(&data) else {
+        tracing::warn!("failed to parse cargo's dep-info at {:?}", dep_info);
+        return Ok(None);
     };
     let mut ret = RustcDepInfo::default();
     ret.env = info.env;
@@ -1852,9 +1841,8 @@ where
     I: IntoIterator,
     I::Item: AsRef<Path>,
 {
-    let reference_mtime = match paths::mtime(reference) {
-        Ok(mtime) => mtime,
-        Err(..) => return Some(StaleItem::MissingFile(reference.to_path_buf())),
+    let Ok(reference_mtime) = paths::mtime(reference) else {
+        return Some(StaleItem::MissingFile(reference.to_path_buf()));
     };
 
     let skipable_dirs = if let Ok(cargo_home) = home::cargo_home() {
@@ -1882,9 +1870,8 @@ where
         let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(v) => {
-                let mtime = match paths::mtime_recursive(path) {
-                    Ok(mtime) => mtime,
-                    Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
+                let Ok(mtime) = paths::mtime_recursive(path) else {
+                    return Some(StaleItem::MissingFile(path.to_path_buf()));
                 };
                 *v.insert(mtime)
             }
@@ -2156,9 +2143,8 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
     for line in contents.lines() {
         if let Some(rest) = line.strip_prefix("# env-dep:") {
             let mut parts = rest.splitn(2, '=');
-            let env_var = match parts.next() {
-                Some(s) => s,
-                None => continue,
+            let Some(env_var) = parts.next() else {
+                continue;
             };
             let env_val = match parts.next() {
                 Some(s) => Some(unescape_env(s)?),

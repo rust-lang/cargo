@@ -273,10 +273,9 @@ fn compute_deps(
     let mut ret = Vec::new();
     let mut dev_deps = Vec::new();
     for (dep_pkg_id, deps) in state.deps(unit, unit_for) {
-        let dep_lib = match calc_artifact_deps(unit, unit_for, dep_pkg_id, &deps, state, &mut ret)?
-        {
-            Some(lib) => lib,
-            None => continue,
+        let Some(dep_lib) = calc_artifact_deps(unit, unit_for, dep_pkg_id, &deps, state, &mut ret)?
+        else {
+            continue;
         };
         let dep_pkg = state.get(dep_pkg_id);
         let mode = check_or_build_mode(unit.mode, dep_lib);
@@ -412,12 +411,9 @@ fn calc_artifact_deps<'a>(
     let mut maybe_non_artifact_lib = false;
     let artifact_pkg = state.get(dep_id);
     for dep in deps {
-        let artifact = match dep.artifact() {
-            Some(a) => a,
-            None => {
-                maybe_non_artifact_lib = true;
-                continue;
-            }
+        let Some(artifact) = dep.artifact() else {
+            maybe_non_artifact_lib = true;
+            continue;
         };
         has_artifact_lib |= artifact.is_lib();
         // Custom build scripts (build/compile) never get artifact dependencies,
@@ -611,9 +607,8 @@ fn compute_deps_doc(
     // the documentation of the library being built.
     let mut ret = Vec::new();
     for (id, deps) in state.deps(unit, unit_for) {
-        let dep_lib = match calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? {
-            Some(lib) => lib,
-            None => continue,
+        let Some(dep_lib) = calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? else {
+            continue;
         };
         let dep_pkg = state.get(id);
         // Rustdoc only needs rmeta files for regular dependencies.
@@ -923,9 +918,8 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
         {
             // This list of dependencies all depend on `unit`, an execution of
             // the build script.
-            let reverse_deps = match reverse_deps_map.get(unit) {
-                Some(set) => set,
-                None => continue,
+            let Some(reverse_deps) = reverse_deps_map.get(unit) else {
+                continue;
             };
 
             let to_add = reverse_deps

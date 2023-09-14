@@ -598,9 +598,8 @@ fn add_feature_rec(
     package_index: usize,
 ) {
     let feature_map = resolve.summary(package_id).features();
-    let fvs = match feature_map.get(&feature_name) {
-        Some(fvs) => fvs,
-        None => return,
+    let Some(fvs) = feature_map.get(&feature_name) else {
+        return;
     };
     for fv in fvs {
         match fv {

@@ -135,30 +135,26 @@ impl<'cfg> SourceConfigMap<'cfg> {
     ) -> CargoResult<Box<dyn Source + 'cfg>> {
         debug!("loading: {}", id);
 
-        let mut name = match self.id2name.get(&id) {
-            Some(name) => name,
-            None => return id.load(self.config, yanked_whitelist),
+        let Some(mut name) = self.id2name.get(&id) else {
+            return id.load(self.config, yanked_whitelist);
         };
         let mut cfg_loc = "";
         let orig_name = name;
         let new_id = loop {
-            let cfg = match self.cfgs.get(name) {
-                Some(cfg) => cfg,
-                None => {
-                    // Attempt to interpret the source name as an alt registry name
-                    if let Ok(alt_id) = SourceId::alt_registry(self.config, name) {
-                        debug!("following pointer to registry {}", name);
-                        break alt_id.with_precise(id.precise().map(str::to_string));
-                    }
-                    bail!(
-                        "could not find a configured source with the \
+            let Some(cfg) = self.cfgs.get(name) else {
+                // Attempt to interpret the source name as an alt registry name
+                if let Ok(alt_id) = SourceId::alt_registry(self.config, name) {
+                    debug!("following pointer to registry {}", name);
+                    break alt_id.with_precise(id.precise().map(str::to_string));
+                }
+                bail!(
+                    "could not find a configured source with the \
                      name `{}` when attempting to lookup `{}` \
                      (configuration in `{}`)",
-                        name,
-                        orig_name,
-                        cfg_loc
-                    );
-                }
+                    name,
+                    orig_name,
+                    cfg_loc
+                );
             };
             match &cfg.replace_with {
                 Some((s, c)) => {

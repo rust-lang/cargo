@@ -325,9 +325,8 @@ fn acquire(
         use std::mem;
         use std::os::unix::prelude::*;
 
-        let path = match CString::new(path.as_os_str().as_bytes()) {
-            Ok(path) => path,
-            Err(_) => return false,
+        let Ok(path) = CString::new(path.as_os_str().as_bytes()) else {
+            return false;
         };
 
         unsafe {

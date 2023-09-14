@@ -622,9 +622,8 @@ impl Config {
             )));
         }
         let mut parts = key.parts().enumerate();
-        let mut val = match vals.get(parts.next().unwrap().1) {
-            Some(val) => val,
-            None => return Ok(None),
+        let Some(mut val) = vals.get(parts.next().unwrap().1) else {
+            return Ok(None);
         };
         for (i, part) in parts {
             match val {
@@ -906,12 +905,9 @@ impl Config {
         key: &ConfigKey,
         output: &mut Vec<(String, Definition)>,
     ) -> CargoResult<()> {
-        let env_val = match self.env.get_str(key.as_env_key()) {
-            Some(v) => v,
-            None => {
-                self.check_environment_key_case_mismatch(key);
-                return Ok(());
-            }
+        let Some(env_val) = self.env.get_str(key.as_env_key()) else {
+            self.check_environment_key_case_mismatch(key);
+            return Ok(());
         };
 
         let def = Definition::Environment(key.as_env_key().to_string());
@@ -1261,9 +1257,8 @@ impl Config {
             };
             (path.to_string(), abs_path, def.clone())
         };
-        let table = match cv {
-            CV::Table(table, _def) => table,
-            _ => unreachable!(),
+        let CV::Table(table, _def) = cv else {
+            unreachable!()
         };
         let owned;
         let include = if remove {
@@ -1302,9 +1297,8 @@ impl Config {
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_as_table(&self) -> CargoResult<ConfigValue> {
         let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli(None));
-        let cli_args = match &self.cli_config {
-            Some(cli_args) => cli_args,
-            None => return Ok(loaded_args),
+        let Some(cli_args) = &self.cli_config else {
+            return Ok(loaded_args);
         };
         let mut seen = HashSet::new();
         for arg in cli_args {
@@ -1450,9 +1444,8 @@ impl Config {
 
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
-        let loaded_map = match self.cli_args_as_table()? {
-            CV::Table(table, _def) => table,
-            _ => unreachable!(),
+        let CV::Table(loaded_map, _def) = self.cli_args_as_table()? else {
+            unreachable!()
         };
         let values = self.values_mut()?;
         for (key, value) in loaded_map.into_iter() {
@@ -1596,17 +1589,15 @@ impl Config {
         }
 
         let home_path = self.home_path.clone().into_path_unlocked();
-        let credentials = match self.get_file_path(&home_path, "credentials", true)? {
-            Some(credentials) => credentials,
-            None => return Ok(()),
+        let Some(credentials) = self.get_file_path(&home_path, "credentials", true)? else {
+            return Ok(());
         };
 
         let mut value = self.load_file(&credentials)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
-            let (value_map, def) = match value {
-                CV::Table(ref mut value, ref def) => (value, def),
-                _ => unreachable!(),
+            let CV::Table(ref mut value_map, ref def) = value else {
+                unreachable!();
             };
 
             if let Some(token) = value_map.remove("token") {

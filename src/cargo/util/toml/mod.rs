@@ -799,8 +799,8 @@ impl TomlProfile {
             self.codegen_units = Some(v);
         }
 
-        if let Some(v) = &profile.debug {
-            self.debug = Some(v.clone());
+        if let Some(v) = profile.debug {
+            self.debug = Some(v);
         }
 
         if let Some(v) = profile.debug_assertions {
@@ -1759,10 +1759,7 @@ impl TomlManifest {
             deps: Option<&BTreeMap<String, MaybeWorkspaceDependency>>,
             filter: impl Fn(&TomlDependency) -> bool,
         ) -> CargoResult<Option<BTreeMap<String, MaybeWorkspaceDependency>>> {
-            let deps = match deps {
-                Some(deps) => deps,
-                None => return Ok(None),
-            };
+            let Some(deps) = deps else { return Ok(None) };
             let deps = deps
                 .iter()
                 .filter(|(_k, v)| {
@@ -1980,7 +1977,7 @@ impl TomlManifest {
                     )
                 }
             }
-            Some(rust_version.clone())
+            Some(rust_version)
         } else {
             None
         };
@@ -2070,9 +2067,8 @@ impl TomlManifest {
             workspace_config: &WorkspaceConfig,
             inherit_cell: &LazyCell<InheritableFields>,
         ) -> CargoResult<Option<BTreeMap<String, MaybeWorkspaceDependency>>> {
-            let dependencies = match new_deps {
-                Some(dependencies) => dependencies,
-                None => return Ok(None),
+            let Some(dependencies) = new_deps else {
+                return Ok(None);
             };
 
             let inheritable = || {
@@ -2361,7 +2357,7 @@ impl TomlManifest {
             .categories
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.categories.clone()));
-        package.rust_version = rust_version.clone().map(|rv| MaybeWorkspace::Defined(rv));
+        package.rust_version = rust_version.map(|rv| MaybeWorkspace::Defined(rv));
         package.exclude = package
             .exclude
             .as_ref()

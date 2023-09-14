@@ -269,9 +269,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             }
 
             let object = entry.to_object(repo)?;
-            let blob = match object.as_blob() {
-                Some(blob) => blob,
-                None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
+            let Some(blob) = object.as_blob() else {
+                anyhow::bail!("path `{}` is not a blob in the git repo", path.display())
             };
 
             Ok(LoadResponse::Data {

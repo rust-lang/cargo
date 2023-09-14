@@ -367,9 +367,8 @@ impl TargetInfo {
                 &*v.insert(value)
             }
         };
-        let (prefix, suffix) = match *crate_type_info {
-            Some((ref prefix, ref suffix)) => (prefix, suffix),
-            None => return Ok(None),
+        let Some((prefix, suffix)) = crate_type_info else {
+            return Ok(None);
         };
         let mut ret = vec![FileType {
             suffix: suffix.clone(),
@@ -612,13 +611,12 @@ fn parse_crate_type(
     if not_supported {
         return Ok(None);
     }
-    let line = match lines.next() {
-        Some(line) => line,
-        None => anyhow::bail!(
+    let Some(line) = lines.next() else {
+        anyhow::bail!(
             "malformed output when learning about crate-type {} information\n{}",
             crate_type,
             output_err_info(cmd, output, error)
-        ),
+        )
     };
     let mut parts = line.trim().split("___");
     let prefix = parts.next().unwrap();
@@ -978,9 +976,8 @@ impl<'cfg> RustcTargetData<'cfg> {
     pub fn dep_platform_activated(&self, dep: &Dependency, kind: CompileKind) -> bool {
         // If this dependency is only available for certain platforms,
         // make sure we're only enabling it for that platform.
-        let platform = match dep.platform() {
-            Some(p) => p,
-            None => return true,
+        let Some(platform) = dep.platform() else {
+            return true;
         };
         let name = self.short_name(&kind);
         platform.matches(name, self.cfg(kind))
@@ -1058,13 +1055,12 @@ impl RustDocFingerprint {
                 serde_json::to_string(&actual_rustdoc_target_data)?,
             )
         };
-        let rustdoc_data = match paths::read(&fingerprint_path) {
-            Ok(rustdoc_data) => rustdoc_data,
+        let Ok(rustdoc_data) = paths::read(&fingerprint_path) else {
             // If the fingerprint does not exist, do not clear out the doc
             // directories. Otherwise this ran into problems where projects
             // like rustbuild were creating the doc directory before running
             // `cargo doc` in a way that deleting it would break it.
-            Err(_) => return write_fingerprint(),
+            return write_fingerprint();
         };
         match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
             Ok(fingerprint) => {

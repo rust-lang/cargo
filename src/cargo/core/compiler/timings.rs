@@ -194,9 +194,8 @@ impl<'cfg> Timings<'cfg> {
         // `id` may not always be active. "fresh" units unconditionally
         // generate `Message::Finish`, but this active map only tracks dirty
         // units.
-        let unit_time = match self.active.get_mut(&id) {
-            Some(ut) => ut,
-            None => return,
+        let Some(unit_time) = self.active.get_mut(&id) else {
+            return;
         };
         let t = self.start.elapsed().as_secs_f64();
         unit_time.rmeta_time = Some(t - unit_time.start);
@@ -212,9 +211,8 @@ impl<'cfg> Timings<'cfg> {
             return;
         }
         // See note above in `unit_rmeta_finished`, this may not always be active.
-        let mut unit_time = match self.active.remove(&id) {
-            Some(ut) => ut,
-            None => return,
+        let Some(mut unit_time) = self.active.remove(&id) else {
+            return;
         };
         let t = self.start.elapsed().as_secs_f64();
         unit_time.duration = t - unit_time.start;
@@ -265,9 +263,8 @@ impl<'cfg> Timings<'cfg> {
         if !self.enabled {
             return;
         }
-        let prev = match &mut self.last_cpu_state {
-            Some(state) => state,
-            None => return,
+        let Some(prev) = &mut self.last_cpu_state else {
+            return;
         };
         // Don't take samples too frequently, even if requested.
         let now = Instant::now();

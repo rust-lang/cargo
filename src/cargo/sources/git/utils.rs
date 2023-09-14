@@ -444,9 +444,8 @@ impl<'a> GitCheckout<'a> {
 
             // A submodule which is listed in .gitmodules but not actually
             // checked out will not have a head id, so we should ignore it.
-            let head = match child.head_id() {
-                Some(head) => head,
-                None => return Ok(()),
+            let Some(head) = child.head_id() else {
+                return Ok(());
             };
 
             // If the submodule hasn't been checked out yet, we need to
@@ -1313,16 +1312,12 @@ fn maybe_gc_repo(repo: &mut git2::Repository, config: &Config) -> CargoResult<()
 /// filenames, so they never get cleaned up.
 fn clean_repo_temp_files(repo: &git2::Repository) {
     let path = repo.path().join("objects/pack/pack_git2_*");
-    let pattern = match path.to_str() {
-        Some(p) => p,
-        None => {
-            tracing::warn!("cannot convert {path:?} to a string");
-            return;
-        }
+    let Some(pattern) = path.to_str() else {
+        tracing::warn!("cannot convert {path:?} to a string");
+        return;
     };
-    let paths = match glob::glob(pattern) {
-        Ok(paths) => paths,
-        Err(_) => return,
+    let Ok(paths) = glob::glob(pattern) else {
+        return;
     };
     for path in paths {
         if let Ok(path) = path {

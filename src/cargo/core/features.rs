@@ -518,9 +518,8 @@ impl Features {
     ) -> CargoResult<()> {
         let nightly_features_allowed = self.nightly_features_allowed;
         let is_local = self.is_local;
-        let (slot, feature) = match self.status(feature_name) {
-            Some(p) => p,
-            None => bail!("unknown cargo feature `{}`", feature_name),
+        let Some((slot, feature)) = self.status(feature_name) else {
+            bail!("unknown cargo feature `{}`", feature_name)
         };
 
         if *slot {
@@ -823,9 +822,8 @@ fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>,
 where
     D: serde::Deserializer<'de>,
 {
-    let crates = match <Option<Vec<String>>>::deserialize(deserializer)? {
-        Some(list) => list,
-        None => return Ok(None),
+    let Some(crates) = <Option<Vec<String>>>::deserialize(deserializer)? else {
+        return Ok(None);
     };
     let v = crates.join(",");
     Ok(Some(
@@ -840,9 +838,8 @@ where
     D: serde::Deserializer<'de>,
 {
     use serde::de::Error;
-    let crates = match <Option<Vec<String>>>::deserialize(deserializer)? {
-        Some(list) => list,
-        None => return Ok(None),
+    let Some(crates) = <Option<Vec<String>>>::deserialize(deserializer)? else {
+        return Ok(None);
     };
 
     parse_check_cfg(crates.into_iter()).map_err(D::Error::custom)

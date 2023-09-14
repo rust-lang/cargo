@@ -43,9 +43,8 @@ pub fn start<T: fmt::Display>(desc: T) -> Profiler {
 
 impl Drop for Profiler {
     fn drop(&mut self) {
-        let enabled = match enabled_level() {
-            Some(i) => i,
-            None => return,
+        let Some(enabled) = enabled_level() else {
+            return;
         };
 
         let (start, stack_len) = PROFILE_STACK.with(|stack| {
