@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-libsecret"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "cargo-credential",
@@ -376,7 +376,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-wincred"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "cargo-credential",
  "windows-sys",
