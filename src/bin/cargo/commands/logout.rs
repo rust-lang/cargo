@@ -4,7 +4,7 @@ use cargo::ops;
 pub fn cli() -> Command {
     subcommand("logout")
         .about("Remove an API token from the registry locally")
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_registry("Registry to use")
         .arg_quiet()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help logout</>` for more detailed information.\n"

@@ -16,8 +16,8 @@ pub fn cli() -> Command {
             "undo",
             "Undo a yank, putting a version back into the index",
         ))
-        .arg(opt("index", "Registry index to yank from").value_name("INDEX"))
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_index("Registry index URL to yank from")
+        .arg_registry("Registry to yank from")
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
         .arg_quiet()
         .after_help(color_print::cstr!(

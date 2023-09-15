@@ -6,7 +6,7 @@ pub fn cli() -> Command {
     subcommand("login")
         .about("Log in to a registry.")
         .arg(Arg::new("token").action(ArgAction::Set))
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_registry("Registry to use")
         .arg(
             Arg::new("args")
                 .help("Arguments for the credential provider (unstable)")

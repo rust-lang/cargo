@@ -8,8 +8,8 @@ Arguments:
 Options:
       --version <VERSION>    The version to yank or un-yank
       --undo                 Undo a yank, putting a version back into the index
-      --index <INDEX>        Registry index to yank from
-      --registry <REGISTRY>  Registry to use
+      --index <INDEX>        Registry index URL to yank from
+      --registry <REGISTRY>  Registry to yank from
       --token <TOKEN>        API token to use when authenticating
   -q, --quiet                Do not print cargo log messages
   -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)

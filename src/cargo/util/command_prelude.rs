@@ -286,8 +286,12 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_index(self) -> Self {
-        self._arg(opt("index", "Registry index URL to upload the package to").value_name("INDEX"))
+    fn arg_registry(self, help: &'static str) -> Self {
+        self._arg(opt("registry", help).value_name("REGISTRY"))
+    }
+
+    fn arg_index(self, help: &'static str) -> Self {
+        self._arg(opt("index", help).value_name("INDEX"))
     }
 
     fn arg_dry_run(self, dry_run: &'static str) -> Self {

@@ -24,9 +24,9 @@ pub fn cli() -> Command {
             .short('r'),
         )
         .arg(flag("list", "List owners of a crate").short('l'))
-        .arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
+        .arg_index("Registry index URL to modify owners for")
+        .arg_registry("Registry to modify owners for")
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .arg_quiet()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help owner</>` for more detailed information.\n"

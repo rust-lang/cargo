@@ -6,8 +6,8 @@ pub fn cli() -> Command {
     subcommand("publish")
         .about("Upload a package to the registry")
         .arg_dry_run("Perform all checks without uploading")
-        .arg_index()
-        .arg(opt("registry", "Registry to publish to").value_name("REGISTRY"))
+        .arg_index("Registry index URL to upload the package to")
+        .arg_registry("Registry to upload the package to")
         .arg(opt("token", "Token to use when uploading").value_name("TOKEN"))
         .arg(flag(
             "no-verify",

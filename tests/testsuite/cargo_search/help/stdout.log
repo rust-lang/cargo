@@ -7,8 +7,8 @@ Arguments:
 
 Options:
       --limit <LIMIT>        Limit the number of results (default: 10, max: 100)
-      --index <INDEX>        Registry index URL to upload the package to
-      --registry <REGISTRY>  Registry to use
+      --index <INDEX>        Registry index URL to search packages in
+      --registry <REGISTRY>  Registry to search packages in
   -q, --quiet                Do not print cargo log messages
   -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)
       --color <WHEN>         Coloring: auto, always, never

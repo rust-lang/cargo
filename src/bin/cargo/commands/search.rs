@@ -15,8 +15,8 @@ pub fn cli() -> Command {
             )
             .value_name("LIMIT"),
         )
-        .arg_index()
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_index("Registry index URL to search packages in")
+        .arg_registry("Registry to search packages in")
         .arg_quiet()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help search</>` for more detailed information.\n"
