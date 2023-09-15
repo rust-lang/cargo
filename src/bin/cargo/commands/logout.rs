@@ -1,5 +1,7 @@
-use crate::command_prelude::*;
 use cargo::ops;
+use cargo::ops::RegistryOrIndex;
+
+use crate::command_prelude::*;
 
 pub fn cli() -> Command {
     subcommand("logout")
@@ -12,7 +14,12 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let registry = args.registry(config)?;
-    ops::registry_logout(config, registry.as_deref())?;
+    let reg = args.registry_or_index(config)?;
+    assert!(
+        !matches!(reg, Some(RegistryOrIndex::Index(..))),
+        "must not be index URL"
+    );
+
+    ops::registry_logout(config, reg)?;
     Ok(())
 }

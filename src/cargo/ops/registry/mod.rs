@@ -16,6 +16,7 @@ use std::task::Poll;
 use anyhow::{bail, format_err, Context as _};
 use cargo_credential::{Operation, Secret};
 use crates_io::{self, Registry};
+use url::Url;
 
 use crate::core::SourceId;
 use crate::sources::source::Source;
@@ -24,7 +25,6 @@ use crate::util::auth;
 use crate::util::config::{Config, PathAndArgs};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::http_handle;
-use crate::util::IntoUrl;
 
 pub use self::login::registry_login;
 pub use self::logout::registry_logout;
@@ -34,6 +34,19 @@ pub use self::publish::publish;
 pub use self::publish::PublishOpts;
 pub use self::search::search;
 pub use self::yank::yank;
+
+/// Represents either `--registry` or `--index` argument, which is mutually exclusive.
+#[derive(Debug, Clone)]
+pub enum RegistryOrIndex {
+    Registry(String),
+    Index(Url),
+}
+
+impl RegistryOrIndex {
+    fn is_index(&self) -> bool {
+        matches!(self, RegistryOrIndex::Index(..))
+    }
+}
 
 /// Registry settings loaded from config files.
 ///
@@ -103,14 +116,14 @@ impl RegistryCredentialConfig {
 fn registry(
     config: &Config,
     token_from_cmdline: Option<Secret<&str>>,
-    index: Option<&str>,
-    registry: Option<&str>,
+    reg_or_index: Option<&RegistryOrIndex>,
     force_update: bool,
     token_required: Option<Operation<'_>>,
 ) -> CargoResult<(Registry, RegistrySourceIds)> {
-    let source_ids = get_source_id(config, index, registry)?;
+    let source_ids = get_source_id(config, reg_or_index)?;
 
-    if token_required.is_some() && index.is_some() && token_from_cmdline.is_none() {
+    let is_index = reg_or_index.map(|v| v.is_index()).unwrap_or_default();
+    if is_index && token_required.is_some() && token_from_cmdline.is_none() {
         bail!("command-line argument --index requires --token to be specified");
     }
     if let Some(token) = token_from_cmdline {
@@ -171,13 +184,12 @@ fn registry(
 /// crates.io (such as index.crates.io), while the second is always the original source.
 fn get_source_id(
     config: &Config,
-    index: Option<&str>,
-    reg: Option<&str>,
+    reg_or_index: Option<&RegistryOrIndex>,
 ) -> CargoResult<RegistrySourceIds> {
-    let sid = match (reg, index) {
-        (None, None) => SourceId::crates_io(config)?,
-        (_, Some(i)) => SourceId::for_registry(&i.into_url()?)?,
-        (Some(r), None) => SourceId::alt_registry(config, r)?,
+    let sid = match reg_or_index {
+        None => SourceId::crates_io(config)?,
+        Some(RegistryOrIndex::Index(url)) => SourceId::for_registry(url)?,
+        Some(RegistryOrIndex::Registry(r)) => SourceId::alt_registry(config, r)?,
     };
     // Load source replacements that are built-in to Cargo.
     let builtin_replacement_sid = SourceConfigMap::empty(config)?
@@ -186,7 +198,7 @@ fn get_source_id(
     let replacement_sid = SourceConfigMap::new(config)?
         .load(sid, &HashSet::new())?
         .replaced_source_id();
-    if reg.is_none() && index.is_none() && replacement_sid != builtin_replacement_sid {
+    if reg_or_index.is_none() && replacement_sid != builtin_replacement_sid {
         // Neither --registry nor --index was passed and the user has configured source-replacement.
         if let Some(replacement_name) = replacement_sid.alt_registry_key() {
             bail!("crates-io is replaced with remote registry {replacement_name};\ninclude `--registry {replacement_name}` or `--registry crates-io`");

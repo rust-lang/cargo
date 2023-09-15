@@ -34,11 +34,10 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let registry = args.registry(config)?;
     let opts = OwnersOptions {
         krate: args.get_one::<String>("crate").cloned(),
         token: args.get_one::<String>("token").cloned().map(Secret::from),
-        index: args.get_one::<String>("index").cloned(),
+        reg_or_index: args.registry_or_index(config)?,
         to_add: args
             .get_many::<String>("add")
             .map(|xs| xs.cloned().collect()),
@@ -46,7 +45,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             .get_many::<String>("remove")
             .map(|xs| xs.cloned().collect()),
         list: args.flag("list"),
-        registry,
     };
     ops::modify_owners(config, &opts)?;
     Ok(())

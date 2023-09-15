@@ -30,7 +30,7 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let registry = args.registry(config)?;
+    let reg_or_index = args.registry_or_index(config)?;
     let ws = args.workspace(config)?;
     if ws.root_maybe().is_embedded() {
         return Err(anyhow::format_err!(
@@ -39,7 +39,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         )
         .into());
     }
-    let index = args.index()?;
 
     ops::publish(
         &ws,
@@ -48,7 +47,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             token: args
                 .get_one::<String>("token")
                 .map(|s| s.to_string().into()),
-            index,
+            reg_or_index,
             verify: !args.flag("no-verify"),
             allow_dirty: args.flag("allow-dirty"),
             to_publish: args.packages_from_flags()?,
@@ -56,7 +55,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             jobs: args.jobs()?,
             keep_going: args.keep_going(),
             dry_run: args.dry_run(),
-            registry,
             cli_features: args.cli_features()?,
         },
     )?;

@@ -16,16 +16,23 @@ use cargo_credential::Secret;
 
 use super::get_source_id;
 use super::registry;
+use super::RegistryOrIndex;
 
 pub fn registry_login(
     config: &Config,
     token_from_cmdline: Option<Secret<&str>>,
-    reg: Option<&str>,
+    reg_or_index: Option<&RegistryOrIndex>,
     args: &[&str],
 ) -> CargoResult<()> {
-    let source_ids = get_source_id(config, None, reg)?;
+    let source_ids = get_source_id(config, reg_or_index)?;
 
-    let login_url = match registry(config, token_from_cmdline.clone(), None, reg, false, None) {
+    let login_url = match registry(
+        config,
+        token_from_cmdline.clone(),
+        reg_or_index,
+        false,
+        None,
+    ) {
         Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
             .downcast::<AuthorizationError>()

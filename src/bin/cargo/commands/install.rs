@@ -154,10 +154,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else if krates.is_empty() {
         from_cwd = true;
         SourceId::for_path(config.cwd())?
-    } else if let Some(index) = args.get_one::<String>("index") {
-        SourceId::for_registry(&index.into_url()?)?
-    } else if let Some(registry) = args.registry(config)? {
-        SourceId::alt_registry(config, &registry)?
+    } else if let Some(reg_or_index) = args.registry_or_index(config)? {
+        match reg_or_index {
+            ops::RegistryOrIndex::Registry(r) => SourceId::alt_registry(config, &r)?,
+            ops::RegistryOrIndex::Index(url) => SourceId::for_registry(&url)?,
+        }
     } else {
         SourceId::crates_io(config)?
     };

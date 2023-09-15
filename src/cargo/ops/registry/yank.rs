@@ -13,14 +13,15 @@ use crate::util::config::Config;
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 
+use super::RegistryOrIndex;
+
 pub fn yank(
     config: &Config,
     krate: Option<String>,
     version: Option<String>,
     token: Option<Secret<String>>,
-    index: Option<String>,
+    reg_or_index: Option<RegistryOrIndex>,
     undo: bool,
-    reg: Option<String>,
 ) -> CargoResult<()> {
     let name = match krate {
         Some(name) => name,
@@ -49,8 +50,7 @@ pub fn yank(
     let (mut registry, _) = super::registry(
         config,
         token.as_ref().map(Secret::as_deref),
-        index.as_deref(),
-        reg.as_deref(),
+        reg_or_index.as_ref(),
         true,
         Some(message),
     )?;

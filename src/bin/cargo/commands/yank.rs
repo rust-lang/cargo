@@ -26,8 +26,6 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let registry = args.registry(config)?;
-
     let (krate, version) = resolve_crate(
         args.get_one::<String>("crate").map(String::as_str),
         args.get_one::<String>("version").map(String::as_str),
@@ -41,9 +39,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         krate.map(|s| s.to_string()),
         version.map(|s| s.to_string()),
         args.get_one::<String>("token").cloned().map(Secret::from),
-        args.get_one::<String>("index").cloned(),
+        args.registry_or_index(config)?,
         args.flag("undo"),
-        registry,
     )?;
     Ok(())
 }
