@@ -291,7 +291,12 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_index(self, help: &'static str) -> Self {
-        self._arg(opt("index", help).value_name("INDEX"))
+        // Always conflicts with `--registry`.
+        self._arg(
+            opt("index", help)
+                .value_name("INDEX")
+                .conflicts_with("registry"),
+        )
     }
 
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
