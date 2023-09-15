@@ -70,6 +70,8 @@ use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
 use crate::ops::RegistryCredentialConfig;
+use crate::sources::CRATES_IO_INDEX;
+use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
@@ -1831,11 +1833,17 @@ impl Config {
         target::load_target_triple(self, target)
     }
 
-    pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
-    where
-        F: FnMut() -> CargoResult<SourceId>,
-    {
-        Ok(*(self.crates_io_source_id.try_borrow_with(f)?))
+    /// Returns the cached [`SourceId`] corresponding to the main repository.
+    ///
+    /// This is the main cargo registry by default, but it can be overridden in
+    /// a `.cargo/config.toml`.
+    pub fn crates_io_source_id(&self) -> CargoResult<SourceId> {
+        let source_id = self.crates_io_source_id.try_borrow_with(|| {
+            self.check_registry_index_not_set()?;
+            let url = CRATES_IO_INDEX.into_url().unwrap();
+            SourceId::for_alt_registry(&url, CRATES_IO_REGISTRY)
+        })?;
+        Ok(*source_id)
     }
 
     pub fn creation_time(&self) -> Instant {

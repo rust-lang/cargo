@@ -253,11 +253,7 @@ impl SourceId {
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config.toml`.
     pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
-        config.crates_io_source_id(|| {
-            config.check_registry_index_not_set()?;
-            let url = CRATES_IO_INDEX.into_url().unwrap();
-            SourceId::new(SourceKind::Registry, url, Some(CRATES_IO_REGISTRY))
-        })
+        config.crates_io_source_id()
     }
 
     /// Returns the `SourceId` corresponding to the main repository, using the
