@@ -15,14 +15,7 @@ pub fn expand_manifest(
     path: &std::path::Path,
     config: &Config,
 ) -> CargoResult<String> {
-    let comment = match extract_comment(content) {
-        Ok(comment) => comment,
-        Err(err) => {
-            tracing::trace!("failed to extract doc comment: {err}");
-            None
-        }
-    }
-    .unwrap_or_default();
+    let comment = extract_comment(content)?.unwrap_or_default();
     let manifest = match extract_manifest(&comment)? {
         Some(manifest) => Some(manifest),
         None => {
