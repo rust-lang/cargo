@@ -57,8 +57,17 @@ using special operators, though it shouldn't be necessary most of the time.
 
 ### Caret requirements
 
-**Caret requirements** are an alternative syntax for the default strategy,
-`^1.2.3` is exactly equivalent to `1.2.3`.
+**Caret requirements** are the default version requirement strategy. 
+This version strategy allows [SemVer] compatible updates.
+They are specified as version requirements with a leading caret (`^`).
+
+`^1.2.3` is an example of a caret requirement.
+
+Leaving off the caret is a simplified equivalent syntax to using caret requirements.
+While caret requirements are the default, it is recommended to use the
+simplified syntax when possible.
+
+`log = "^1.2.3"` is exactly equivalent to `log = "1.2.3"`.
 
 ### Tilde requirements
 
