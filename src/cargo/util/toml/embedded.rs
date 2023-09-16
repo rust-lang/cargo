@@ -16,7 +16,7 @@ pub fn expand_manifest(
     config: &Config,
 ) -> CargoResult<String> {
     let comment = match extract_comment(content) {
-        Ok(comment) => Some(comment),
+        Ok(comment) => comment,
         Err(err) => {
             tracing::trace!("failed to extract doc comment: {err}");
             None
@@ -160,7 +160,7 @@ fn sanitize_name(name: &str) -> String {
 }
 
 /// Locates a "code block manifest" in Rust source.
-fn extract_comment(input: &str) -> CargoResult<String> {
+fn extract_comment(input: &str) -> CargoResult<Option<String>> {
     let mut doc_fragments = Vec::new();
     let file = syn::parse_file(input)?;
     // HACK: `syn` doesn't tell us what kind of comment was used, so infer it from how many
@@ -181,7 +181,7 @@ fn extract_comment(input: &str) -> CargoResult<String> {
         }
     }
     if doc_fragments.is_empty() {
-        anyhow::bail!("no doc-comment found");
+        return Ok(None);
     }
     unindent_doc_fragments(&mut doc_fragments);
 
@@ -190,7 +190,7 @@ fn extract_comment(input: &str) -> CargoResult<String> {
         add_doc_fragment(&mut doc_comment, frag);
     }
 
-    Ok(doc_comment)
+    Ok(Some(doc_comment))
 }
 
 /// A `#[doc]`
@@ -561,29 +561,30 @@ mod test_comment {
 
     macro_rules! ec {
         ($s:expr) => {
-            extract_comment($s).unwrap_or_else(|err| panic!("{}", err))
+            extract_comment($s)
+                .unwrap_or_else(|err| panic!("{}", err))
+                .unwrap()
         };
     }
 
     #[test]
     fn test_no_comment() {
-        snapbox::assert_eq(
-            "no doc-comment found",
+        assert_eq!(
+            None,
             extract_comment(
                 r#"
 fn main () {
 }
 "#,
             )
-            .unwrap_err()
-            .to_string(),
+            .unwrap()
         );
     }
 
     #[test]
     fn test_no_comment_she_bang() {
-        snapbox::assert_eq(
-            "no doc-comment found",
+        assert_eq!(
+            None,
             extract_comment(
                 r#"#!/usr/bin/env cargo-eval
 
@@ -591,8 +592,7 @@ fn main () {
 }
 "#,
             )
-            .unwrap_err()
-            .to_string(),
+            .unwrap()
         );
     }
 
