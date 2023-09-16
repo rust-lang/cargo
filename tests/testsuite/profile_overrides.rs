@@ -268,6 +268,60 @@ found package specs: bar, bar@0.5.0",
 }
 
 #[cargo_test]
+fn profile_override_spec_with_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev.package."bar:0.5.0"]
+            codegen-units = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains("[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]")
+        .run();
+}
+
+#[cargo_test]
+fn profile_override_spec_with_partial_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev.package."bar:0.5"]
+            codegen-units = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains("[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]")
+        .run();
+}
+
+#[cargo_test]
 fn profile_override_spec() {
     let p = project()
         .file(

@@ -19,7 +19,7 @@ use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
-use crate::util::{short_hash, Config, Filesystem, PartialVersion};
+use crate::util::{short_hash, Config, Filesystem, RustVersion};
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -58,7 +58,7 @@ pub struct Manifest {
     original: Rc<TomlManifest>,
     unstable_features: Features,
     edition: Edition,
-    rust_version: Option<PartialVersion>,
+    rust_version: Option<RustVersion>,
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
@@ -112,7 +112,7 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>, // URL
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
-    pub rust_version: Option<PartialVersion>,
+    pub rust_version: Option<RustVersion>,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -401,7 +401,7 @@ impl Manifest {
         workspace: WorkspaceConfig,
         unstable_features: Features,
         edition: Edition,
-        rust_version: Option<PartialVersion>,
+        rust_version: Option<RustVersion>,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
         original: Rc<TomlManifest>,
@@ -570,8 +570,8 @@ impl Manifest {
         self.edition
     }
 
-    pub fn rust_version(&self) -> Option<PartialVersion> {
-        self.rust_version
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        self.rust_version.as_ref()
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {

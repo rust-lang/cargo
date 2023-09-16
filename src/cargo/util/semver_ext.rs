@@ -109,14 +109,71 @@ impl From<VersionReq> for OptVersionReq {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug, serde::Serialize)]
+#[serde(transparent)]
+pub struct RustVersion(PartialVersion);
+
+impl std::ops::Deref for RustVersion {
+    type Target = PartialVersion;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::str::FromStr for RustVersion {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let partial = value.parse::<PartialVersion>()?;
+        if partial.pre.is_some() {
+            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+        }
+        if partial.build.is_some() {
+            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+        }
+        Ok(Self(partial))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RustVersion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("SemVer version")
+            .string(|value| value.parse().map_err(serde::de::Error::custom))
+            .deserialize(deserializer)
+    }
+}
+
+impl Display for RustVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
 pub struct PartialVersion {
     pub major: u64,
     pub minor: Option<u64>,
     pub patch: Option<u64>,
+    pub pre: Option<semver::Prerelease>,
+    pub build: Option<semver::BuildMetadata>,
 }
 
 impl PartialVersion {
+    pub fn version(&self) -> Option<Version> {
+        Some(Version {
+            major: self.major,
+            minor: self.minor?,
+            patch: self.patch?,
+            pre: self.pre.clone().unwrap_or_default(),
+            build: self.build.clone().unwrap_or_default(),
+        })
+    }
+
     pub fn caret_req(&self) -> VersionReq {
         VersionReq {
             comparators: vec![Comparator {
@@ -124,8 +181,42 @@ impl PartialVersion {
                 major: self.major,
                 minor: self.minor,
                 patch: self.patch,
-                pre: Default::default(),
+                pre: self.pre.as_ref().cloned().unwrap_or_default(),
             }],
+        }
+    }
+
+    pub fn exact_req(&self) -> VersionReq {
+        VersionReq {
+            comparators: vec![Comparator {
+                op: semver::Op::Exact,
+                major: self.major,
+                minor: self.minor,
+                patch: self.patch,
+                pre: self.pre.as_ref().cloned().unwrap_or_default(),
+            }],
+        }
+    }
+}
+
+impl From<semver::Version> for PartialVersion {
+    fn from(ver: semver::Version) -> Self {
+        let pre = if ver.pre.is_empty() {
+            None
+        } else {
+            Some(ver.pre)
+        };
+        let build = if ver.build.is_empty() {
+            None
+        } else {
+            Some(ver.build)
+        };
+        Self {
+            major: ver.major,
+            minor: Some(ver.minor),
+            patch: Some(ver.patch),
+            pre,
+            build,
         }
     }
 }
@@ -134,40 +225,42 @@ impl std::str::FromStr for PartialVersion {
     type Err = anyhow::Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        // HACK: `PartialVersion` is a subset of the `VersionReq` syntax that only ever
-        // has one comparator with a required minor and optional patch, and uses no
-        // other features.
         if is_req(value) {
             anyhow::bail!("unexpected version requirement, expected a version like \"1.32\"")
         }
-        let version_req = match semver::VersionReq::parse(value) {
-            // Exclude semver operators like `^` and pre-release identifiers
-            Ok(req) if value.chars().all(|c| c.is_ascii_digit() || c == '.') => req,
-            _ if value.contains('+') => {
-                anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
+        match semver::Version::parse(value) {
+            Ok(ver) => Ok(ver.into()),
+            Err(_) => {
+                // HACK: Leverage `VersionReq` for partial version parsing
+                let mut version_req = match semver::VersionReq::parse(value) {
+                    Ok(req) => req,
+                    Err(_) if value.contains('-') => {
+                        anyhow::bail!(
+                            "unexpected prerelease field, expected a version like \"1.32\""
+                        )
+                    }
+                    Err(_) if value.contains('+') => {
+                        anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
+                    }
+                    Err(_) => anyhow::bail!("expected a version like \"1.32\""),
+                };
+                assert_eq!(version_req.comparators.len(), 1, "guarenteed by is_req");
+                let comp = version_req.comparators.pop().unwrap();
+                assert_eq!(comp.op, semver::Op::Caret, "guarenteed by is_req");
+                let pre = if comp.pre.is_empty() {
+                    None
+                } else {
+                    Some(comp.pre)
+                };
+                Ok(Self {
+                    major: comp.major,
+                    minor: comp.minor,
+                    patch: comp.patch,
+                    pre,
+                    build: None,
+                })
             }
-            _ if value.contains('-') => {
-                anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
-            }
-            _ => anyhow::bail!("expected a version like \"1.32\""),
-        };
-        assert_eq!(
-            version_req.comparators.len(),
-            1,
-            "guarenteed by character check"
-        );
-        let comp = &version_req.comparators[0];
-        assert_eq!(comp.op, semver::Op::Caret, "guarenteed by character check");
-        assert_eq!(
-            comp.pre,
-            semver::Prerelease::EMPTY,
-            "guarenteed by character check"
-        );
-        Ok(PartialVersion {
-            major: comp.major,
-            minor: comp.minor,
-            patch: comp.patch,
-        })
+        }
     }
 }
 
@@ -180,6 +273,12 @@ impl Display for PartialVersion {
         }
         if let Some(patch) = self.patch {
             write!(f, ".{patch}")?;
+        }
+        if let Some(pre) = self.pre.as_ref() {
+            write!(f, "-{pre}")?;
+        }
+        if let Some(build) = self.build.as_ref() {
+            write!(f, "+{build}")?;
         }
         Ok(())
     }

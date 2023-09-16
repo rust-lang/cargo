@@ -1,7 +1,7 @@
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
-use crate::util::PartialVersion;
+use crate::util::RustVersion;
 use anyhow::bail;
 use semver::Version;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -26,7 +26,7 @@ struct Inner {
     features: Rc<FeatureMap>,
     checksum: Option<String>,
     links: Option<InternedString>,
-    rust_version: Option<PartialVersion>,
+    rust_version: Option<RustVersion>,
 }
 
 impl Summary {
@@ -35,7 +35,7 @@ impl Summary {
         dependencies: Vec<Dependency>,
         features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
-        rust_version: Option<PartialVersion>,
+        rust_version: Option<RustVersion>,
     ) -> CargoResult<Summary> {
         // ****CAUTION**** If you change anything here that may raise a new
         // error, be sure to coordinate that change with either the index
@@ -88,8 +88,8 @@ impl Summary {
         self.inner.links
     }
 
-    pub fn rust_version(&self) -> Option<PartialVersion> {
-        self.inner.rust_version
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        self.inner.rust_version.as_ref()
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {

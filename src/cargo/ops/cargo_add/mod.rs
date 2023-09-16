@@ -32,7 +32,7 @@ use crate::util::toml_mut::dependency::Source;
 use crate::util::toml_mut::dependency::WorkspaceSource;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
-use crate::util::PartialVersion;
+use crate::util::RustVersion;
 use crate::CargoResult;
 use crate::Config;
 use crate_spec::CrateSpec;
@@ -564,7 +564,7 @@ fn get_latest_dependency(
             })?;
 
             if config.cli_unstable().msrv_policy && honor_rust_version {
-                fn parse_msrv(comp: PartialVersion) -> (u64, u64, u64) {
+                fn parse_msrv(comp: &RustVersion) -> (u64, u64, u64) {
                     (comp.major, comp.minor.unwrap_or(0), comp.patch.unwrap_or(0))
                 }
 
@@ -624,7 +624,7 @@ fn get_latest_dependency(
 
 fn rust_version_incompat_error(
     dep: &str,
-    rust_version: PartialVersion,
+    rust_version: &RustVersion,
     lowest_rust_version: Option<&Summary>,
 ) -> anyhow::Error {
     let mut error_msg = format!(

@@ -30,7 +30,7 @@ use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::{
     self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, OptVersionReq,
-    PartialVersion,
+    RustVersion,
 };
 
 pub mod embedded;
@@ -1182,8 +1182,8 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
     }
 }
 
-type MaybeWorkspacePartialVersion = MaybeWorkspace<PartialVersion, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspacePartialVersion {
+type MaybeWorkspaceRustVersion = MaybeWorkspace<RustVersion, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -1191,7 +1191,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspacePartialVersion {
         struct Visitor;
 
         impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspacePartialVersion;
+            type Value = MaybeWorkspaceRustVersion;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
                 f.write_str("a semver or workspace")
@@ -1201,8 +1201,8 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspacePartialVersion {
             where
                 E: de::Error,
             {
-                let value = value.parse::<PartialVersion>().map_err(|e| E::custom(e))?;
-                Ok(MaybeWorkspacePartialVersion::Defined(value))
+                let value = value.parse::<RustVersion>().map_err(|e| E::custom(e))?;
+                Ok(MaybeWorkspaceRustVersion::Defined(value))
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
@@ -1400,7 +1400,7 @@ impl WorkspaceInherit for TomlWorkspaceField {
 #[serde(rename_all = "kebab-case")]
 pub struct TomlPackage {
     edition: Option<MaybeWorkspaceString>,
-    rust_version: Option<MaybeWorkspacePartialVersion>,
+    rust_version: Option<MaybeWorkspaceRustVersion>,
     name: InternedString,
     #[serde(deserialize_with = "version_trim_whitespace")]
     version: MaybeWorkspaceSemverVersion,
@@ -1490,7 +1490,7 @@ pub struct InheritableFields {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     #[serde(rename = "rust-version")]
-    rust_version: Option<PartialVersion>,
+    rust_version: Option<RustVersion>,
     // We use skip here since it will never be present when deserializing
     // and we don't want it present when serializing
     #[serde(skip)]
@@ -1530,7 +1530,7 @@ impl InheritableFields {
         ("package.license",       license       -> String),
         ("package.publish",       publish       -> VecStringOrBool),
         ("package.repository",    repository    -> String),
-        ("package.rust-version",  rust_version  -> PartialVersion),
+        ("package.rust-version",  rust_version  -> RustVersion),
         ("package.version",       version       -> semver::Version),
     }
 
@@ -1961,8 +1961,9 @@ impl TomlManifest {
         }
 
         let rust_version = if let Some(rust_version) = &package.rust_version {
-            let rust_version =
-                rust_version.resolve("rust_version", || inherit()?.rust_version())?;
+            let rust_version = rust_version
+                .clone()
+                .resolve("rust_version", || inherit()?.rust_version())?;
             let req = rust_version.caret_req();
             if let Some(first_version) = edition.first_version() {
                 let unsupported =
@@ -2244,7 +2245,7 @@ impl TomlManifest {
             deps,
             me.features.as_ref().unwrap_or(&empty_features),
             package.links.as_deref(),
-            rust_version,
+            rust_version.clone(),
         )?;
 
         let metadata = ManifestMetadata {
@@ -2357,7 +2358,7 @@ impl TomlManifest {
             .categories
             .as_ref()
             .map(|_| MaybeWorkspace::Defined(metadata.categories.clone()));
-        package.rust_version = rust_version.map(|rv| MaybeWorkspace::Defined(rv));
+        package.rust_version = rust_version.clone().map(|rv| MaybeWorkspace::Defined(rv));
         package.exclude = package
             .exclude
             .as_ref()
@@ -2651,8 +2652,8 @@ impl TomlManifest {
                 replacement.unused_keys(),
                 &mut cx.warnings,
             );
-            dep.set_version_req(OptVersionReq::exact(version))
-                .lock_version(version);
+            dep.set_version_req(OptVersionReq::exact(&version))
+                .lock_version(&version);
             replace.push((spec, dep));
         }
         Ok(replace)

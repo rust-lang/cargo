@@ -288,7 +288,7 @@ fn spec_has_match(
         }
 
         let version_matches = match (spec.version(), dep.version()) {
-            (Some(v), Some(vq)) => semver::VersionReq::parse(vq)?.matches(v),
+            (Some(v), Some(vq)) => semver::VersionReq::parse(vq)?.matches(&v),
             (Some(_), None) => false,
             (None, None | Some(_)) => true,
         };

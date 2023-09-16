@@ -69,7 +69,7 @@ use crate::core::{GitReference, PackageId, PackageIdSpec, PackageSet, SourceId, 
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
-use crate::util::PartialVersion;
+use crate::util::RustVersion;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
 use std::collections::{HashMap, HashSet};
@@ -133,7 +133,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
-    max_rust_version: Option<PartialVersion>,
+    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<WorkspaceResolve<'cfg>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
@@ -240,7 +240,7 @@ pub fn resolve_ws_with_opts<'cfg>(
 fn resolve_with_registry<'cfg>(
     ws: &Workspace<'cfg>,
     registry: &mut PackageRegistry<'cfg>,
-    max_rust_version: Option<PartialVersion>,
+    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let mut resolve = resolve_with_previous(
@@ -285,7 +285,7 @@ pub fn resolve_with_previous<'cfg>(
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
-    max_rust_version: Option<PartialVersion>,
+    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.

@@ -569,10 +569,10 @@ fn assert_all_clean(build_dir: &Path) {
 }
 
 #[cargo_test]
-fn clean_spec_multiple() {
+fn clean_spec_version() {
     // clean -p foo where foo matches multiple versions
-    Package::new("bar", "1.0.0").publish();
-    Package::new("bar", "2.0.0").publish();
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
 
     let p = project()
         .file(
@@ -583,8 +583,8 @@ fn clean_spec_multiple() {
             version = "0.1.0"
 
             [dependencies]
-            bar1 = {version="1.0", package="bar"}
-            bar2 = {version="2.0", package="bar"}
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
             "#,
         )
         .file("src/lib.rs", "")
@@ -604,9 +604,117 @@ error: package ID specification `baz` did not match any packages
         )
         .run();
 
-    p.cargo("clean -p bar:1.0.0")
+    p.cargo("clean -p bar:0.1.0")
         .with_stderr(
-            "warning: version qualifier in `-p bar:1.0.0` is ignored, \
+            "warning: version qualifier in `-p bar:0.1.0` is ignored, \
+            cleaning all versions of `bar` found",
+        )
+        .run();
+    let mut walker = walkdir::WalkDir::new(p.build_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name().to_str().unwrap();
+            n.starts_with("bar") || n.starts_with("libbar")
+        });
+    if let Some(e) = walker.next() {
+        panic!("{:?} was not cleaned", e.path());
+    }
+}
+
+#[cargo_test]
+fn clean_spec_partial_version() {
+    // clean -p foo where foo matches multiple versions
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    // Check suggestion for bad pkgid.
+    p.cargo("clean -p baz")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `baz` did not match any packages
+
+<tab>Did you mean `bar`?
+",
+        )
+        .run();
+
+    p.cargo("clean -p bar:0.1")
+        .with_stderr(
+            "warning: version qualifier in `-p bar:0.1` is ignored, \
+            cleaning all versions of `bar` found",
+        )
+        .run();
+    let mut walker = walkdir::WalkDir::new(p.build_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name().to_str().unwrap();
+            n.starts_with("bar") || n.starts_with("libbar")
+        });
+    if let Some(e) = walker.next() {
+        panic!("{:?} was not cleaned", e.path());
+    }
+}
+
+#[cargo_test]
+fn clean_spec_partial_version_ambiguous() {
+    // clean -p foo where foo matches multiple versions
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    // Check suggestion for bad pkgid.
+    p.cargo("clean -p baz")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `baz` did not match any packages
+
+<tab>Did you mean `bar`?
+",
+        )
+        .run();
+
+    p.cargo("clean -p bar:0")
+        .with_stderr(
+            "warning: version qualifier in `-p bar:0` is ignored, \
             cleaning all versions of `bar` found",
         )
         .run();
