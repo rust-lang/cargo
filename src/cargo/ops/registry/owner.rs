@@ -13,14 +13,15 @@ use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::CargoResult;
 use crate::Config;
 
+use super::RegistryOrIndex;
+
 pub struct OwnersOptions {
     pub krate: Option<String>,
     pub token: Option<Secret<String>>,
-    pub index: Option<String>,
+    pub reg_or_index: Option<RegistryOrIndex>,
     pub to_add: Option<Vec<String>>,
     pub to_remove: Option<Vec<String>>,
     pub list: bool,
-    pub registry: Option<String>,
 }
 
 pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
@@ -38,8 +39,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     let (mut registry, _) = super::registry(
         config,
         opts.token.as_ref().map(Secret::as_deref),
-        opts.index.as_deref(),
-        opts.registry.as_deref(),
+        opts.reg_or_index.as_ref(),
         true,
         Some(operation),
     )?;

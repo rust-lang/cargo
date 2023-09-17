@@ -1,6 +1,7 @@
 use crate::core::compiler::{BuildConfig, MessageFormat, TimingOutput};
 use crate::core::resolver::CliFeatures;
 use crate::core::{Edition, Workspace};
+use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
@@ -27,6 +28,7 @@ pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
 pub use clap::Command;
 
 use super::config::JobsConfig;
+use super::IntoUrl;
 
 pub mod heading {
     pub const PACKAGE_SELECTION: &str = "Package Selection";
@@ -286,8 +288,17 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_index(self) -> Self {
-        self._arg(opt("index", "Registry index URL to upload the package to").value_name("INDEX"))
+    fn arg_registry(self, help: &'static str) -> Self {
+        self._arg(opt("registry", help).value_name("REGISTRY"))
+    }
+
+    fn arg_index(self, help: &'static str) -> Self {
+        // Always conflicts with `--registry`.
+        self._arg(
+            opt("index", help)
+                .value_name("INDEX")
+                .conflicts_with("registry"),
+        )
     }
 
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
@@ -735,29 +746,32 @@ Run `{cmd}` to see possible targets."
         )
     }
 
-    fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
+    fn registry_or_index(&self, config: &Config) -> CargoResult<Option<RegistryOrIndex>> {
         let registry = self._value_of("registry");
         let index = self._value_of("index");
         let result = match (registry, index) {
-            (None, None) => config.default_registry()?,
-            (None, Some(_)) => {
-                // If --index is set, then do not look at registry.default.
-                None
-            }
+            (None, None) => config.default_registry()?.map(RegistryOrIndex::Registry),
+            (None, Some(i)) => Some(RegistryOrIndex::Index(i.into_url()?)),
             (Some(r), None) => {
                 validate_package_name(r, "registry name", "")?;
-                Some(r.to_string())
+                Some(RegistryOrIndex::Registry(r.to_string()))
             }
             (Some(_), Some(_)) => {
-                bail!("both `--index` and `--registry` should not be set at the same time")
+                // Should be guarded by clap
+                unreachable!("both `--index` and `--registry` should not be set at the same time")
             }
         };
         Ok(result)
     }
 
-    fn index(&self) -> CargoResult<Option<String>> {
-        let index = self._value_of("index").map(|s| s.to_string());
-        Ok(index)
+    fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
+        match self._value_of("registry").map(|s| s.to_string()) {
+            None => config.default_registry(),
+            Some(registry) => {
+                validate_package_name(&registry, "registry name", "")?;
+                Ok(Some(registry))
+            }
+        }
     }
 
     fn check_optional_opts(

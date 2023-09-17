@@ -1389,10 +1389,9 @@ fn both_index_and_registry() {
         p.cargo(cmd)
             .arg("--registry=foo")
             .arg("--index=foo")
-            .with_status(101)
-            .with_stderr(
-                "[ERROR] both `--index` and `--registry` \
-                should not be set at the same time",
+            .with_status(1)
+            .with_stderr_contains(
+                "error: the argument '--registry <REGISTRY>' cannot be used with '--index <INDEX>'",
             )
             .run();
     }

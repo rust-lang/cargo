@@ -13,15 +13,16 @@ use crate::util::truncate_with_ellipsis;
 use crate::CargoResult;
 use crate::Config;
 
+use super::RegistryOrIndex;
+
 pub fn search(
     query: &str,
     config: &Config,
-    index: Option<String>,
+    reg_or_index: Option<RegistryOrIndex>,
     limit: u32,
-    reg: Option<String>,
 ) -> CargoResult<()> {
     let (mut registry, source_ids) =
-        super::registry(config, None, index.as_deref(), reg.as_deref(), false, None)?;
+        super::registry(config, None, reg_or_index.as_ref(), false, None)?;
     let (crates, total_crates) = registry.search(query, limit).with_context(|| {
         format!(
             "failed to retrieve search results from the registry at {}",

@@ -922,6 +922,48 @@ You may press ctrl-c [..]
 }
 
 #[cargo_test]
+fn publish_failed_with_index_and_only_allowed_registry() {
+    let registry = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project().build();
+
+    let _ = repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                publish = ["alternative"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .arg("--index")
+        .arg(registry.index_url().as_str())
+        .with_status(101)
+        .with_stderr(
+            "\
+[NOTE] Found `alternative` as only allowed registry. Publishing to it automatically.
+[ERROR] command-line argument --index requires --token to be specified
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn publish_fail_with_no_registry_specified() {
     let p = project().build();
 

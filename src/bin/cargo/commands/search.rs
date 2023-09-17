@@ -15,8 +15,8 @@ pub fn cli() -> Command {
             )
             .value_name("LIMIT"),
         )
-        .arg_index()
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_index("Registry index URL to search packages in")
+        .arg_registry("Registry to search packages in")
         .arg_quiet()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help search</>` for more detailed information.\n"
@@ -24,8 +24,7 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let registry = args.registry(config)?;
-    let index = args.index()?;
+    let reg_or_index = args.registry_or_index(config)?;
     let limit = args.value_of_u32("limit")?;
     let limit = min(100, limit.unwrap_or(10));
     let query: Vec<&str> = args
@@ -34,6 +33,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .map(String::as_str)
         .collect();
     let query: String = query.join("+");
-    ops::search(&query, config, index, limit, registry)?;
+    ops::search(&query, config, reg_or_index, limit)?;
     Ok(())
 }

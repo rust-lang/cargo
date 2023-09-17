@@ -30,6 +30,7 @@ pub use self::registry::yank;
 pub use self::registry::OwnersOptions;
 pub use self::registry::PublishOpts;
 pub use self::registry::RegistryCredentialConfig;
+pub use self::registry::RegistryOrIndex;
 pub use self::resolve::{
     add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws, resolve_ws_with_opts,
     WorkspaceResolve,

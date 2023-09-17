@@ -9,9 +9,9 @@ Options:
   -a, --add <LOGIN>          Name of a user or team to invite as an owner
   -r, --remove <LOGIN>       Name of a user or team to remove as an owner
   -l, --list                 List owners of a crate
-      --index <INDEX>        Registry index to modify owners for
+      --index <INDEX>        Registry index URL to modify owners for
+      --registry <REGISTRY>  Registry to modify owners for
       --token <TOKEN>        API token to use when authenticating
-      --registry <REGISTRY>  Registry to use
   -q, --quiet                Do not print cargo log messages
   -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)
       --color <WHEN>         Coloring: auto, always, never

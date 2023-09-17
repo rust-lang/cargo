@@ -7,7 +7,7 @@ pub fn cli() -> Command {
         .about("Create a new cargo package in an existing directory")
         .arg(Arg::new("path").action(ArgAction::Set).default_value("."))
         .arg_new_opts()
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg_registry("Registry to use")
         .arg_quiet()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help init</>` for more detailed information.\n"
