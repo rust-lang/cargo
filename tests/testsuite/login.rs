@@ -197,8 +197,8 @@ fn bad_asymmetric_token_args() {
         .build();
 
     // These cases are kept brief as the implementation is covered by clap, so this is only smoke testing that we have clap configured correctly.
-    cargo_process("login -Zcredential-process -Zasymmetric-token -- --key-subject")
-        .masquerade_as_nightly_cargo(&["credential-process", "asymmetric-token"])
+    cargo_process("login -Zasymmetric-token -- --key-subject")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .replace_crates_io(registry.index_url())
         .with_stderr_contains(
             "  error: a value is required for '--key-subject <SUBJECT>' but none was supplied",
@@ -228,8 +228,8 @@ fn login_with_asymmetric_token_and_subject_on_stdin() {
         .no_configure_token()
         .build();
     let credentials = credentials_toml();
-    cargo_process("login -v -Z credential-process -Z asymmetric-token -- --key-subject=foo")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    cargo_process("login -v -Z asymmetric-token -- --key-subject=foo")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .replace_crates_io(registry.index_url())
         .with_stderr_contains(
             "\
@@ -286,8 +286,8 @@ fn login_with_asymmetric_token_on_stdin() {
         .no_configure_token()
         .build();
     let credentials = credentials_toml();
-    cargo_process("login -vZ credential-process -Z asymmetric-token --registry alternative")
-        .masquerade_as_nightly_cargo(&["credential-process", "asymmetric-token"])
+    cargo_process("login -v -Z asymmetric-token --registry alternative")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -308,8 +308,8 @@ fn login_with_generate_asymmetric_token() {
         .no_configure_token()
         .build();
     let credentials = credentials_toml();
-    cargo_process("login -Z credential-process -Z asymmetric-token --registry alternative")
-        .masquerade_as_nightly_cargo(&["credential-process", "asymmetric-token"])
+    cargo_process("login -Z asymmetric-token --registry alternative")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .with_stderr("[UPDATING] `alternative` index\nk3.public.[..]")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();

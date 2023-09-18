@@ -101,9 +101,8 @@ For the latest nightly, see the [nightly version] of this page.
     * [config-include](#config-include) --- Adds the ability for config files to include other files.
     * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
 * Registries
-    * [credential-process](#credential-process) --- Adds support for fetching registry tokens from an external authentication program.
     * [publish-timeout](#publish-timeout) --- Controls the timeout between uploading the crate and being available in the index
-    * [registry-auth](#registry-auth) --- Adds support for authenticated registries, and generate registry authentication tokens using asymmetric cryptography.
+    * [asymmetric-token](#asymmetric-token) --- Adds support for authentication tokens using asymmetric cryptography (`cargo:paseto` provider).
 * Other
     * [gitoxide](#gitoxide) --- Use `gitoxide` instead of `git2` for a set of operations.
     * [script](#script) --- Enable support for single-file `.rs` packages.
@@ -933,30 +932,6 @@ It requires the `-Zpublish-timeout` command-line options to be set.
 timeout = 300  # in seconds
 ```
 
-## registry-auth
-* Tracking Issue: [10474](https://github.com/rust-lang/cargo/issues/10474)
-* RFC: [#3139](https://github.com/rust-lang/rfcs/pull/3139)
-
-Enables Cargo to include the authorization token for API requests, crate downloads
-and sparse index updates by adding a configuration option to config.json
-in the registry index.
-
-To use this feature, the registry server must include `"auth-required": true` in
-`config.json`, and you must pass the `-Z registry-auth` flag on the Cargo command line.
-
-When using the sparse protocol, Cargo will attempt to fetch the `config.json` file before
-fetching any other files. If the server responds with an HTTP 401, then Cargo will assume
-that the registry requires authentication and re-attempt the request for `config.json`
-with the authentication token included.
-
-On authentication failure (or missing authentication token) the server MAY include a
-`WWW-Authenticate` header with a `Cargo login_url` challenge to indicate where the user
-can go to get a token.
-
-```
-WWW-Authenticate: Cargo login_url="https://test-registry-login/me
-```
-
 ## asymmetric-token
 * Tracking Issue: [10519](https://github.com/rust-lang/cargo/issues/10519)
 * RFC: [#3231](https://github.com/rust-lang/rfcs/pull/3231)
@@ -996,267 +971,6 @@ The "footer" (which is part of the signature) will be a JSON string in UTF-8 and
 
 PASETO includes the message that was signed, so the server does not have to reconstruct the exact string from the request in order to check the signature. The server does need to check that the signature is valid for the string in the PASETO and that the contents of that string matches the request.
 If a claim should be expected for the request but is missing in the PASETO then the request must be rejected.
-
-## credential-process
-* Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
-* RFC: [#2730](https://github.com/rust-lang/rfcs/pull/2730)
-
-The `credential-process` feature adds a config setting to fetch registry
-authentication tokens by calling an external process.
-
-To use this feature, you must pass the `-Z credential-process` flag on the
-command-line.
-
-### `credential-process` Configuration
-
-To configure which process to run to fetch the token, specify the process in
-the `registry` table in a [config file] with spaces separating arguments. If the
-path to the provider or its arguments contain spaces, then it mused be defined in
-the `credential-alias` table and referenced instead.
-
-```toml
-[registry]
-global-credential-providers = ["/usr/bin/cargo-creds"]
-```
-
-The provider at the end of the list will be attempted first. This ensures
-that when config files are merged, files closer to the project (and ultimatly
-environment variables) have precedence.
-
-In this example, the `my-provider` provider will be attempted first, and if
-it cannot provide credentials, then the `cargo:token` provider will be used.
-
-```toml
-[registry]
-global-credential-providers = ['cargo:token', 'my-provider']
-```
-
-If you want to use a different provider for a specific registry, it can be
-specified in the `registries` table:
-
-```toml
-[registries.my-registry]
-credential-provider = "/usr/bin/cargo-creds"
-```
-
-The credential provider for crates.io can be specified as:
-
-```toml
-[registry]
-credential-provider = "/usr/bin/cargo-creds"
-```
-
-The value can be a string with spaces separating arguments or it can be a TOML
-array of strings.
-
-For commonly-used providers, or providers that need to contain spaces in the arguments
-or path, the `credential-alias` table can be used. These aliases can be referenced
-in `credential-provider` or `global-credential-providers`.
-
-```toml
-[credential-alias]
-my-alias = ["/usr/bin/cargo-creds", "--argument"]
-
-[registry]
-global-credential-providers = ["cargo:token", "my-alias"]
-```
-
-### Built-in providers
-
-Cargo now includes several built-in credential providers. These providers are
-executed within the Cargo process. They are identified with the `cargo:` prefix.
-
-* `cargo:token` - Uses Cargo's config and `credentials.toml` to store the token (default).
-* `cargo:wincred` - Uses the Windows Credential Manager to store the token.
-* `cargo:macos-keychain` - Uses the macOS Keychain to store the token.
-* `cargo:libsecret` - Uses [libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens on Linux systems.
-* `cargo:token-from-stdout <command>` - Launch a subprocess that returns a token
-  on stdout. Newlines will be trimmed. The process inherits the user's stdin and stderr.
-  It should exit 0 on success, and nonzero on error.
-  
-  With this form, [`cargo login`] and [`cargo logout`] are not supported and
-  return an error if used.
-  
-  The following environment variables will be provided to the executed command:
-  
-  * `CARGO` --- Path to the `cargo` binary executing the command.
-  * `CARGO_REGISTRY_INDEX_URL` --- The URL of the registry index.
-  * `CARGO_REGISTRY_NAME_OPT` --- Optional name of the registry. Should not be used as a storage key. Not always available.
-
-* `cargo:paseto` - implements asymmetric token support (RFC3231) as a credential provider. Requires `-Zasymmetric-token`.
-
-
-`cargo-credential-1password` uses the 1password `op` CLI to store the token. You must
-install the `op` CLI from the [1password
-website](https://1password.com/downloads/command-line/). You must run `op
-signin` at least once with the appropriate arguments (such as `op signin
-my.1password.com user@example.com`), unless you provide the sign-in-address
-and email arguments. The master password will be required on each request
-unless the appropriate `OP_SESSION` environment variable is set. It supports
-the following command-line arguments:
-* `--account`: The account shorthand name to use.
-* `--vault`: The vault name to use.
-* `--sign-in-address`: The sign-in-address, which is a web address such as `my.1password.com`.
-* `--email`: The email address to sign in with.
-
-Install the provider with `cargo install cargo-credential-1password`
-In the config, add it to `global-credential-providers`:
-```toml
-[registry]
-global-credential-providers = ["cargo-credential-1password"]
-```
-
-### JSON Interface
-When using an external credential provider, Cargo communicates with the credential
-provider using stdin/stdout messages passed as a single line of JSON.
-
-Cargo will always execute the credential provider with the `--cargo-plugin` argument.
-This enables a credential provider executable to have additional functionality beyond
-how Cargo uses it.
-
-The messages here have additional newlines added for readability.
-Actual messages must not contain newlines.
-
-#### Credential hello
-* Sent by: credential provider
-* Purpose: used to identify the supported protocols on process startup
-```javascript
-{
-    "v":[1]
-}
-```
-
-#### Login request
-* Sent by: Cargo
-* Purpose: collect and store credentials
-```javascript
-{
-    // Protocol version
-    "v":1,
-    // Action to perform: login
-    "kind":"login",
-    // Registry information
-    "registry":{"index-url":"sparse+https://registry-url/index/", "name": "my-registry"},
-}
-```
-
-#### Read request
-* Sent by: Cargo
-* Purpose: Get the credential for reading crate information
-```javascript
-{
-    // Protocol version
-    "v":1,
-    // Request kind: get credentials
-    "kind":"get",
-    // Action to perform: read crate information
-    "operation":"read",
-    // Registry information
-    "registry":{"index-url":"sparse+https://registry-url/index/", "name": "my-registry"},
-    // Additional command-line args (optional)
-    "args":[]
-}
-```
-
-#### Publish request
-* Sent by: Cargo
-* Purpose: Get the credential for publishing a crate
-```javascript
-{
-    // Protocol version
-    "v":1,
-    // Request kind: get credentials
-    "kind":"get",
-    // Action to perform: publish crate
-    "operation":"publish",
-    // Crate name
-    "name":"sample",
-    // Crate version
-    "vers":"0.1.0",
-    // Crate checksum
-    "cksum":"...",
-    // Registry information
-    "registry":{"index-url":"sparse+https://registry-url/index/", "name": "my-registry"},
-    // Additional command-line args (optional)
-    "args":[]
-}
-```
-
-#### Success response
-* Sent by: credential process
-* Purpose: Gives the credential to Cargo
-```javascript
-{"Ok":{
-    // Response kind: this was a get request kind
-    "kind":"get",
-    // Token to send to the registry
-    "token":"...",
-    // Cache control. Can be one of the following:
-    // * "never"
-    // * "session"
-    // * "expires"
-    "cache":"expires",
-    // Unix timestamp (only for "cache": "expires")
-    "expiration":1693942857,
-    // Is the token operation independent?
-    "operation_independent":true
-}}
-```
-
-#### Failure response
-* Sent by: credential process
-* Purpose: Gives error information to Cargo
-```javascript
-{"Err":{
-    // Error: the credential provider does not support the
-    // registry
-    "kind":"url-not-supported",
-    
-    // Error: The credential could not be found in the provider.
-    // using `cargo login --registry ...`.
-    "kind":"not-found",
-    
-    // Error: something else has failed
-    "kind":"other",
-    "detail": "free form string error message"
-}}
-```
-
-#### Example communication to request a token for reading:
-1. Cargo spawns the credential process, capturing stdin and stdout.
-2. Credential process sends the Hello message to Cargo
-    ```javascript
-    { "v": [1] }
-   ```
-3. Cargo sends the CredentialRequest message to the credential process (newlines added for readability).
-    ```javascript
-    {
-        "v": 1,
-        "kind": "get",
-        "operation": "read",
-        "registry":{"index-url":"sparse+https://registry-url/index/", "name":"ado2"},
-        "args":[]
-    }
-    ```
-4. Credential process sends the CredentialResponse to Cargo (newlines added for readability).
-    ```javascript
-    {
-        "token": "...",
-        "cache": "session",
-        "operation_independent": false
-    }
-    ```
-5. Credential process exits
-6. Cargo uses the token for the remainder of the session (until Cargo exits) when interacting with this registry.
-
-[`cargo login`]: ../commands/cargo-login.md
-[`cargo logout`]: ../commands/cargo-logout.md
-[`cargo publish`]: ../commands/cargo-publish.md
-[`cargo owner`]: ../commands/cargo-owner.md
-[`cargo yank`]: ../commands/cargo-yank.md
-[`credentials.toml` file]: config.md#credentials
-[crates.io]: https://crates.io/
-[config file]: config.md
 
 ## `cargo config`
 
@@ -1779,7 +1493,7 @@ See [Registry Protocols](registries.md#registry-protocols) for more information.
 The [`cargo logout`] command has been stabilized in the 1.70 release.
 
 [target triple]: ../appendix/glossary.md#target '"target" (glossary)'
-
+[`cargo logout`]: ../commands/cargo-logout.md
 
 ## `doctest-in-workspace`
 
@@ -1798,3 +1512,15 @@ in `cargo build` as an example for more details.
 
 [`[lints]`](manifest.html#the-lints-section) (enabled via `-Zlints`) has been stabilized in the 1.74 release.
 
+## credential-process
+
+The `-Z credential-process` feature has been stabilized in the 1.74 release.
+
+See [Registry Authentication](registry-authentication.md) documentation for details.
+
+## registry-auth
+
+The `-Z registry-auth` feature has been stabilized in the 1.74 release with the additional
+requirement that a credential-provider is configured.
+
+See [Registry Authentication](registry-authentication.md) documentation for details.

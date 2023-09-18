@@ -173,8 +173,7 @@ fn colored_results() {
 fn auth_required_failure() {
     let server = setup().auth_required().no_configure_token().build();
 
-    cargo_process("-Zregistry-auth search postgres")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
+    cargo_process("search postgres")
         .replace_crates_io(server.index_url())
         .with_status(101)
         .with_stderr_contains("[ERROR] no token found, please run `cargo login`")
@@ -185,8 +184,7 @@ fn auth_required_failure() {
 fn auth_required() {
     let server = setup().auth_required().build();
 
-    cargo_process("-Zregistry-auth search postgres")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
+    cargo_process("search postgres")
         .replace_crates_io(server.index_url())
         .with_stdout_contains(SEARCH_RESULTS)
         .run();

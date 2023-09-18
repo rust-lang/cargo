@@ -306,10 +306,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         match ready!(self.load(Path::new(""), Path::new(RegistryConfig::NAME), None)?) {
             LoadResponse::Data { raw_data, .. } => {
                 trace!("config loaded");
-                let mut cfg: RegistryConfig = serde_json::from_slice(&raw_data)?;
-                if !self.config.cli_unstable().registry_auth {
-                    cfg.auth_required = false;
-                }
+                let cfg: RegistryConfig = serde_json::from_slice(&raw_data)?;
                 Poll::Ready(Ok(Some(cfg)))
             }
             _ => Poll::Ready(Ok(None)),

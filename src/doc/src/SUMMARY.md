@@ -36,6 +36,8 @@
     * [Source Replacement](reference/source-replacement.md)
     * [External Tools](reference/external-tools.md)
     * [Registries](reference/registries.md)
+        * [Registry Authentication](reference/registry-authentication.md)
+            * [Credential Provider Protocol](reference/credential-provider-protocol.md)
         * [Running a Registry](reference/running-a-registry.md)
             * [Registry Index](reference/registry-index.md)
             * [Registry Web API](reference/registry-web-api.md)

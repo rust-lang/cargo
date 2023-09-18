@@ -78,9 +78,7 @@
 //!   This is the `#[cargo_test]` proc-macro used by the test suite to define tests.
 //! - [`credential`](https://github.com/rust-lang/cargo/tree/master/credential)
 //!   This subdirectory contains several packages for implementing the
-//!   experimental
-//!   [credential-process](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process)
-//!   feature.
+//!   [credential providers](https://doc.rust-lang.org/nightly/cargo/reference/registry-authentication.html).
 //! - [`mdman`](https://github.com/rust-lang/cargo/tree/master/crates/mdman)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/mdman/index.html)):
 //!   This is a utility for generating cargo's man pages. See [Building the man

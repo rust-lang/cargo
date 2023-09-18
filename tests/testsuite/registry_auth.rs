@@ -6,10 +6,12 @@ use cargo_test_support::{project, Execs, Project};
 
 fn cargo(p: &Project, s: &str) -> Execs {
     let mut e = p.cargo(s);
-    e.masquerade_as_nightly_cargo(&["registry-auth", "credential-process", "asymmetric-token"])
-        .arg("-Zregistry-auth")
-        .arg("-Zcredential-process")
+    e.masquerade_as_nightly_cargo(&["asymmetric-token"])
         .arg("-Zasymmetric-token");
+    e.env(
+        "CARGO_REGISTRY_GLOBAL_CREDENTIAL_PROVIDERS",
+        "cargo:paseto cargo:token",
+    );
     e
 }
 
@@ -44,7 +46,7 @@ static SUCCESS_OUTPUT: &'static str = "\
 ";
 
 #[cargo_test]
-fn requires_nightly() {
+fn requires_credential_provider() {
     let _registry = RegistryBuilder::new()
         .alternative()
         .auth_required()
@@ -56,14 +58,14 @@ fn requires_nightly() {
         .with_status(101)
         .with_stderr(
             r#"[UPDATING] `alternative` index
-[DOWNLOADING] crates ...
-error: failed to download from `[..]/dl/bar/0.0.1/download`
+error: failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:
-  failed to get successful HTTP response from `[..]` (127.0.0.1), got 401
-  body:
-  Unauthorized message from server.
-"#,
+  unable to get packages from source
+
+Caused by:
+  authenticated registries require a credential-provider to be configured
+  see https://doc.rust-lang.org/cargo/reference/registry-authentication.html for details"#,
         )
         .run();
 }

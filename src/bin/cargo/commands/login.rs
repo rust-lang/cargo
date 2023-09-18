@@ -10,7 +10,7 @@ pub fn cli() -> Command {
         .arg_registry("Registry to use")
         .arg(
             Arg::new("args")
-                .help("Arguments for the credential provider (unstable)")
+                .help("Additional arguments for the credential provider")
                 .num_args(0..)
                 .last(true),
         )

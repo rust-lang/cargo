@@ -2,18 +2,25 @@
 
 ## NAME
 
-cargo-login --- Save an API token from the registry locally
+cargo-login --- Log in to a registry
 
 ## SYNOPSIS
 
-`cargo login` [_options_] [_token_]
+`cargo login` [_options_] [_token_] -- [_args_]
 
 ## DESCRIPTION
 
-This command will save the API token to disk so that commands that require
-authentication, such as {{man "cargo-publish" 1}}, will be automatically
-authenticated. The token is saved in `$CARGO_HOME/credentials.toml`. `CARGO_HOME`
-defaults to `.cargo` in your home directory.
+This command will run a credential provider to save a token so that commands
+that require authentication, such as {{man "cargo-publish" 1}}, will be
+automatically authenticated.
+
+For the default `cargo:token` credential provider, the token is saved
+in `$CARGO_HOME/credentials.toml`. `CARGO_HOME` defaults to `.cargo`
+in your home directory.
+
+If a registry has a credential-provider specified, it will be used. Otherwise,
+the providers from the config value `registry.global-credential-providers` will
+be attempted, starting from the end of the list.
 
 If the _token_ argument is not specified, it will be read from stdin.
 
@@ -43,9 +50,13 @@ Take care to keep the token secret, it should not be shared with anyone else.
 
 ## EXAMPLES
 
-1. Save the API token to disk:
+1. Save the token for the default registry:
 
        cargo login
+
+2. Save the token for a specific registry:
+
+       cargo login --registry my-registry
 
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-logout" 1}}, {{man "cargo-publish" 1}}
