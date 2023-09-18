@@ -59,10 +59,11 @@ fn expand_manifest_(
             anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
         }
     }
-    let file_name = path
+    let bin_path = path
         .file_name()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
-        .to_string_lossy();
+        .to_string_lossy()
+        .into_owned();
     let file_stem = path
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
@@ -96,10 +97,7 @@ fn expand_manifest_(
 
     let mut bin = toml::Table::new();
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
-    bin.insert(
-        "path".to_owned(),
-        toml::Value::String(file_name.into_owned()),
-    );
+    bin.insert("path".to_owned(), toml::Value::String(bin_path));
     manifest.insert(
         "bin".to_owned(),
         toml::Value::Array(vec![toml::Value::Table(bin)]),
