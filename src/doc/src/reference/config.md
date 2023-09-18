@@ -1304,7 +1304,7 @@ Sets the width for progress bar.
 [libcurl format]: https://everything.curl.dev/libcurl/proxies#proxy-types
 [source replacement]: source-replacement.md
 [revision]: https://git-scm.com/docs/gitrevisions
-[registries]: registries.md
+[registries]: registries.md vercel 
 [crates.io]: https://crates.io/
 [target triple]: ../appendix/glossary.md#target '"target" (glossary)'
 [`<triple>`]: ../appendix/glossary.md#target '"target" (glossary)'
