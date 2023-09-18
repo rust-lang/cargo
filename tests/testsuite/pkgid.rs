@@ -152,7 +152,7 @@ fn multiple_versions() {
         .with_stderr(
             "\
 error: There are multiple `two-ver` packages in your project, and the specification `two-ver@0` is ambiguous.
-Please re-run this command with `-p <spec>` where `<spec>` is one of the following:
+Please re-run this command with one of the following specifications:
   two-ver@0.1.0
   two-ver@0.2.0
 ",
@@ -174,7 +174,7 @@ https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
         .with_stderr(
             "\
 error: There are multiple `two-ver` packages in your project, and the specification `two-ver` is ambiguous.
-Please re-run this command with `-p <spec>` where `<spec>` is one of the following:
+Please re-run this command with one of the following specifications:
   two-ver@0.1.0
   two-ver@0.2.0
 ",

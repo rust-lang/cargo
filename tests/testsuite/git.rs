@@ -1887,8 +1887,8 @@ fn update_ambiguous() {
             "\
 [ERROR] There are multiple `bar` packages in your project, and the specification `bar` \
 is ambiguous.
-Please re-run this command with `-p <spec>` where `<spec>` is one of the \
-following:
+Please re-run this command with one of the \
+following specifications:
   bar@0.[..].0
   bar@0.[..].0
 ",
