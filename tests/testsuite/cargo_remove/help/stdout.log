@@ -6,7 +6,7 @@ Arguments:
   <DEP_ID>...  Dependencies to be removed
 
 Options:
-      --dry-run             Don't actually write the manifest
+  -n, --dry-run             Don't actually write the manifest
   -q, --quiet               Do not print cargo log messages
   -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
       --color <WHEN>        Coloring: auto, always, never

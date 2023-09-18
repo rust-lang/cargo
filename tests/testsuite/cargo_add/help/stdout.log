@@ -42,7 +42,7 @@ Options:
       --ignore-rust-version
           Ignore `rust-version` specification in packages (unstable)
 
-      --dry-run
+  -n, --dry-run
           Don't actually write the manifest
 
   -q, --quiet

@@ -302,7 +302,7 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
-        self._arg(flag("dry-run", dry_run))
+        self._arg(flag("dry-run", dry_run).short('n'))
     }
 
     fn arg_ignore_rust_version(self) -> Self {

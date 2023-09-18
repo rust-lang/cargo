@@ -3,7 +3,7 @@ Upload a package to the registry
 Usage: cargo[EXE] publish [OPTIONS]
 
 Options:
-      --dry-run              Perform all checks without uploading
+  -n, --dry-run              Perform all checks without uploading
       --index <INDEX>        Registry index URL to upload the package to
       --registry <REGISTRY>  Registry to upload the package to
       --token <TOKEN>        Token to use when uploading
