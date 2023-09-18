@@ -1407,9 +1407,7 @@ pub struct TomlPackage {
     authors: Option<MaybeWorkspaceVecString>,
     build: Option<StringOrBool>,
     metabuild: Option<StringOrVec>,
-    #[serde(rename = "default-target")]
     default_target: Option<String>,
-    #[serde(rename = "forced-target")]
     forced_target: Option<String>,
     links: Option<String>,
     exclude: Option<MaybeWorkspaceVecString>,
