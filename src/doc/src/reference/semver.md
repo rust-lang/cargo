@@ -2135,8 +2135,15 @@ std = []
 
 #### Possibly-breaking: removing an optional dependency {#cargo-remove-opt-dep}
 
-Removing an optional dependency can break a project using your library because
+Removing an [optional dependency][opt-dep] can break a project using your library because
 another project may be enabling that dependency via [Cargo features].
+
+When there is an optional dependency, cargo implicitly defines a feature of
+the same name to provide a mechanism to enable the dependency and to check
+when it is enabled. This problem can be avoided by using the `dep:` syntax in
+the `[features]` table, which disables this implicit feature. Using `dep:`
+makes it possible to hide the existence of optional dependencies under more
+semantically-relevant names which can be more safely modified.
 
 ```toml
 # Breaking change example
@@ -2152,7 +2159,33 @@ curl = { version = "0.4.31", optional = true }
 # ..curl removed
 ```
 
+```toml
+# MINOR CHANGE
+#
+# This example shows how to avoid breaking changes with optional dependencies.
+
+###########################################################
+# Before
+[dependencies]
+curl = { version = "0.4.31", optional = true }
+
+[features]
+networking = ["dep:curl"]
+
+###########################################################
+# After
+[dependencies]
+# Here, one optional dependency was replaced with another.
+hyper = { version = "0.14.27", optional = true }
+
+[features]
+networking = ["dep:hyper"]
+```
+
 Mitigation strategies:
+* Use the `dep:` syntax in the `[features]` table to avoid exposing optional
+  dependencies in the first place. See [optional dependencies][opt-dep] for
+  more information.
 * Clearly document your features. If the optional dependency is not included
   in the documented list of features, then you may decide to consider it safe
   to change undocumented entries.
@@ -2165,6 +2198,8 @@ Mitigation strategies:
   "networking", create a generic feature name "networking" that enables the
   optional dependencies necessary to implement "networking". Then document the
   "networking" feature.
+
+[opt-dep]: features.md#optional-dependencies
 
 #### Minor: changing dependency features {#cargo-change-dep-feature}
 
