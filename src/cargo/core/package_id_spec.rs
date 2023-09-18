@@ -250,8 +250,8 @@ impl PackageIdSpec {
                      your project, and the specification \
                      `{}` is ambiguous.\n\
                      Please re-run this command \
-                     with `-p <spec>` where `<spec>` is one \
-                     of the following:",
+                     with one of the following \
+                     specifications:",
                     self.name(),
                     self
                 );
