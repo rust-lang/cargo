@@ -96,6 +96,10 @@ split-debuginfo` flag] and is platform-specific. Some options are only
 available on the [nightly channel]. The Cargo default may change in the future
 once more testing has been performed, and support for DWARF is stabilized.
 
+Be aware that Cargo and rustc have different defaults for this option. This
+option exists to allow Cargo to experiment on different combinations of flags
+thus providing better debugging and developer experience.
+
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [`-C split-debuginfo` flag]: ../../rustc/codegen-options/index.html#split-debuginfo
 
