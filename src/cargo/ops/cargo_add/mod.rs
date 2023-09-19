@@ -946,24 +946,7 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
     let (activated, deactivated) = dep.features();
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
-        let suffix = if let Some(version) = &dep.available_version {
-            let mut version = version.clone();
-            version.build = Default::default();
-            let version = version.to_string();
-            // Avoid displaying the version if it will visually look like the version req that we
-            // showed earlier
-            let version_req = dep
-                .version()
-                .and_then(|v| semver::VersionReq::parse(v).ok())
-                .and_then(|v| precise_version(&v));
-            if version_req.as_deref() != Some(version.as_str()) {
-                format!(" as of v{version}")
-            } else {
-                "".to_owned()
-            }
-        } else {
-            "".to_owned()
-        };
+        let suffix = format_feature_version_suffix(&dep);
 
         shell.write_stderr(format_args!("{}Features{}:\n", prefix, suffix), &style::NOP)?;
 
@@ -1007,6 +990,27 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
     }
 
     Ok(())
+}
+
+fn format_feature_version_suffix(dep: &DependencyUI) -> String {
+    if let Some(version) = &dep.available_version {
+        let mut version = version.clone();
+        version.build = Default::default();
+        let version = version.to_string();
+        // Avoid displaying the version if it will visually look like the version req that we
+        // showed earlier
+        let version_req = dep
+            .version()
+            .and_then(|v| semver::VersionReq::parse(v).ok())
+            .and_then(|v| precise_version(&v));
+        if version_req.as_deref() != Some(version.as_str()) {
+            format!(" as of v{version}")
+        } else {
+            "".to_owned()
+        }
+    } else {
+        "".to_owned()
+    }
 }
 
 // Based on Iterator::is_sorted from nightly std; remove in favor of that when stabilized.
