@@ -2453,9 +2453,9 @@ fn install_with_unsupported_mode() {
             "\
 error: unexpected argument '--release' found
 
-  tip: a similar argument exists: '--examples'
+  tip: There is no `--release` for `cargo install`. Only `--debug` is supported.
 
-Usage: cargo[EXE] install --examples [crate]...
+Usage: cargo[EXE] install [OPTIONS] [crate]...
 
 For more information, try '--help'.
 ",

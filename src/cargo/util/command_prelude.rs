@@ -525,7 +525,7 @@ Run `{cmd}` to see possible targets."
 
         let name = match (
             self.maybe_flag("release"),
-            self.flag("debug"),
+            self.maybe_flag("debug"),
             specified_profile,
         ) {
             (false, false, None) => default,
