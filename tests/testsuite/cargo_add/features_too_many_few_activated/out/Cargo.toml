@@ -1,8 +1,0 @@
-[workspace]
-
-[package]
-name = "cargo-list-test-fixture"
-version = "0.0.0"
-
-[dependencies]
-your-face = { version = "99999.0.0", features = ["eyes000", "eyes001", "eyes002", "eyes003", "eyes004", "eyes005", "eyes006", "eyes007", "eyes008", "eyes009"] }
