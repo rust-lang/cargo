@@ -943,70 +943,67 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
     if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
         return Ok(());
     }
+
     let (activated, deactivated) = dep.features();
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
-        let suffix = if let Some(version) = &dep.available_version {
-            let mut version = version.clone();
-            version.build = Default::default();
-            let version = version.to_string();
-            // Avoid displaying the version if it will visually look like the version req that we
-            // showed earlier
-            let version_req = dep
-                .version()
-                .and_then(|v| semver::VersionReq::parse(v).ok())
-                .and_then(|v| precise_version(&v));
-            if version_req.as_deref() != Some(version.as_str()) {
-                format!(" as of v{version}")
-            } else {
-                "".to_owned()
+        let suffix = format_features_version_suffix(&dep);
+
+        shell.write_stderr(format_args!("{prefix}Features{suffix}:\n"), &style::NOP)?;
+
+        const MAX_FEATURE_PRINTS: usize = 30;
+        let total_activated = activated.len();
+        let total_deactivated = deactivated.len();
+
+        if total_activated <= MAX_FEATURE_PRINTS {
+            for feat in activated {
+                shell.write_stderr(&prefix, &style::NOP)?;
+                shell.write_stderr('+', &style::GOOD)?;
+                shell.write_stderr(format_args!(" {feat}\n"), &style::NOP)?;
             }
         } else {
-            "".to_owned()
-        };
-
-        shell.write_stderr(format_args!("{}Features{}:\n", prefix, suffix), &style::NOP)?;
-
-        const MAX_FEATURE_PRINTS: usize = 50;
-
-        let mut activated_printed = 0;
-        let total_activated = activated.len();
-        for feat in activated {
-            if activated_printed >= MAX_FEATURE_PRINTS {
-                let remaining = total_activated - activated_printed;
-                shell.write_stderr(
-                    format_args!("{prefix}... {remaining} more activated features\n"),
-                    &style::NOP,
-                )?;
-                break;
-            }
-
-            shell.write_stderr(&prefix, &style::NOP)?;
-            shell.write_stderr('+', &style::GOOD)?;
-            shell.write_stderr(format_args!(" {}\n", feat), &style::NOP)?;
-            activated_printed += 1;
+            shell.write_stderr(
+                format_args!("{prefix}{total_activated} activated features\n"),
+                &style::NOP,
+            )?;
         }
 
-        let mut deactivated_printed = 0;
-        let total_deactivated = deactivated.len();
-        for feat in deactivated {
-            if activated_printed + deactivated_printed >= MAX_FEATURE_PRINTS {
-                let remaining = total_deactivated - deactivated_printed;
-                shell.write_stderr(
-                    format_args!("{prefix}... {remaining} more deactivated features\n"),
-                    &style::NOP,
-                )?;
-                break;
+        if total_activated + total_deactivated <= MAX_FEATURE_PRINTS {
+            for feat in deactivated {
+                shell.write_stderr(&prefix, &style::NOP)?;
+                shell.write_stderr('-', &style::ERROR)?;
+                shell.write_stderr(format_args!(" {feat}\n"), &style::NOP)?;
             }
-
-            shell.write_stderr(&prefix, &style::NOP)?;
-            shell.write_stderr('-', &style::ERROR)?;
-            shell.write_stderr(format_args!(" {}\n", feat), &style::NOP)?;
-            deactivated_printed += 1;
+        } else {
+            shell.write_stderr(
+                format_args!("{prefix}{total_deactivated} deactivated features\n"),
+                &style::NOP,
+            )?;
         }
     }
 
     Ok(())
+}
+
+fn format_features_version_suffix(dep: &DependencyUI) -> String {
+    if let Some(version) = &dep.available_version {
+        let mut version = version.clone();
+        version.build = Default::default();
+        let version = version.to_string();
+        // Avoid displaying the version if it will visually look like the version req that we
+        // showed earlier
+        let version_req = dep
+            .version()
+            .and_then(|v| semver::VersionReq::parse(v).ok())
+            .and_then(|v| precise_version(&v));
+        if version_req.as_deref() != Some(version.as_str()) {
+            format!(" as of v{version}")
+        } else {
+            "".to_owned()
+        }
+    } else {
+        "".to_owned()
+    }
 }
 
 // Based on Iterator::is_sorted from nightly std; remove in favor of that when stabilized.

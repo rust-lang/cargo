@@ -8,7 +8,7 @@ use cargo_test_support::curr_dir;
 #[cargo_test]
 fn case() {
     const MANY_FEATURES_COUNT: usize = 200;
-    const ACTIVATED_FEATURES_COUNT: usize = 10;
+    const ACTIVATED_FEATURES_COUNT: usize = 30;
 
     cargo_test_support::registry::init();
     let mut test_package =
