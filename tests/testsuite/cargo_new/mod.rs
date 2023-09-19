@@ -4,4 +4,4 @@ mod inherit_workspace_package_table;
 mod inherit_workspace_package_table_with_edition;
 mod inherit_workspace_package_table_with_registry;
 mod inherit_workspace_package_table_without_version;
-mod not_inherit_workspace_package_table_if_not_memebers;
+mod not_inherit_workspace_package_table_if_not_members;

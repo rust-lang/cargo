@@ -11,7 +11,7 @@
 //! like what rustc has done[^1]. Also, no one knows if Cargo really needs that.
 //! To be pragmatic, here we list a handful of items you may want to learn:
 //!
-//! * [`BuildContext`] is a static context containg all information you need
+//! * [`BuildContext`] is a static context containing all information you need
 //!   before a build gets started.
 //! * [`Context`] is the center of the world, coordinating a running build and
 //!   collecting information from it.
@@ -19,7 +19,7 @@
 //! * [`fingerprint`] not only defines but also executes a set of rules to
 //!   determine if a re-compile is needed.
 //! * [`job_queue`] is where the parallelism, job scheduling, and communication
-//!   machinary happen between Cargo and the compiler.
+//!   machinery happen between Cargo and the compiler.
 //! * [`layout`] defines and manages output artifacts of a build in the filesystem.
 //! * [`unit_dependencies`] is for building a dependency graph for compilation
 //!   from a result of dependency resolution.

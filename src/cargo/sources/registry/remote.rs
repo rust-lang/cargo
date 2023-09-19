@@ -59,7 +59,7 @@ pub struct RemoteRegistry<'cfg> {
     /// A Git [tree object] to help this registry find crate metadata from the
     /// underlying Git repository.
     ///
-    /// This is stored here to prevent Git from repeatly creating a tree object
+    /// This is stored here to prevent Git from repeatedly creating a tree object
     /// during each call into `load()`.
     ///
     /// [tree object]: https://git-scm.com/book/en/v2/Git-Internals-Git-Objects#_tree_objects

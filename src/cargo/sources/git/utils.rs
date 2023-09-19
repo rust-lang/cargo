@@ -264,7 +264,7 @@ impl<'a> GitCheckout<'a> {
     /// is done. Use [`GitCheckout::is_fresh`] to check.
     ///
     /// * The `database` is where this checkout is from.
-    /// * The `repo` will be the checked out Git repoistory.
+    /// * The `repo` will be the checked out Git repository.
     fn new(
         database: &'a GitDatabase,
         revision: git2::Oid,
@@ -394,7 +394,7 @@ impl<'a> GitCheckout<'a> {
     fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
         return update_submodules(&self.repo, cargo_config, self.remote_url().as_str());
 
-        /// Recusive helper for [`GitCheckout::update_submodules`].
+        /// Recursive helper for [`GitCheckout::update_submodules`].
         fn update_submodules(
             repo: &git2::Repository,
             cargo_config: &Config,
@@ -1086,7 +1086,7 @@ pub fn fetch(
                     debug!("fetch failed: {}", err);
 
                     if !repo_reinitialized.load(Ordering::Relaxed)
-                        // We check for errors that could occour if the configuration, refs or odb files are corrupted.
+                        // We check for errors that could occur if the configuration, refs or odb files are corrupted.
                         // We don't check for errors related to writing as `gitoxide` is expected to create missing leading
                         // folder before writing files into it, or else not even open a directory as git repository (which is
                         // also handled here).
@@ -1331,7 +1331,7 @@ fn clean_repo_temp_files(repo: &git2::Repository) {
     }
 }
 
-/// Reinitializes a given Git repository. This is useful when a Git repoistory
+/// Reinitializes a given Git repository. This is useful when a Git repository
 /// seems corrupted and we want to start over.
 fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
     // Here we want to drop the current repository object pointed to by `repo`,

@@ -370,7 +370,7 @@ fn profile_config_mixed_types() {
 
 #[cargo_test]
 fn named_config_profile() {
-    // Exercises config named profies.
+    // Exercises config named profiles.
     // foo -> middle -> bar -> dev
     // middle exists in Cargo.toml, the others in .cargo/config
     use super::config::ConfigBuilder;

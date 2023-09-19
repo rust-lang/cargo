@@ -142,7 +142,7 @@ pub enum Error {
     #[error(transparent)]
     Curl(#[from] curl::Error),
 
-    /// Error from seriailzing the request payload and deserialzing the
+    /// Error from seriailzing the request payload and deserializing the
     /// response body (like response body didn't match expected structure).
     #[error(transparent)]
     Json(#[from] serde_json::Error),

@@ -240,7 +240,7 @@ fn emit_build_output(
 ///
 /// The construction includes:
 ///
-/// * Set environment varibles for the build script run.
+/// * Set environment variables for the build script run.
 /// * Create the output dir (`OUT_DIR`) for the build script output.
 /// * Determine if the build script needs a re-run.
 /// * Run the build script and store its output.
@@ -827,7 +827,7 @@ impl BuildOutput {
                                 None => return false,
                                 Some(n) => n,
                             };
-                            // ALLOWED: the process of rustc boostrapping reads this through
+                            // ALLOWED: the process of rustc bootstrapping reads this through
                             // `std::env`. We should make the behavior consistent. Also, we
                             // don't advertise this for bypassing nightly.
                             #[allow(clippy::disallowed_methods)]

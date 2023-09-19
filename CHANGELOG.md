@@ -429,7 +429,7 @@
   [#10877](https://github.com/rust-lang/cargo/pull/10877)
 - SemVer: It is not a breaking change to make an unsafe function safe.
   [#12116](https://github.com/rust-lang/cargo/pull/12116)
-- SemVer: changeing MSRV is generally a minor change.
+- SemVer: changing MSRV is generally a minor change.
   [#12122](https://github.com/rust-lang/cargo/pull/12122)
 - Clarify when and how to `cargo yank`.
   [#11862](https://github.com/rust-lang/cargo/pull/11862)
@@ -728,9 +728,9 @@
 
 - Clarified the difference between `CARGO_CRATE_NAME` and `CARGO_PKG_NAME`.
   [#11576](https://github.com/rust-lang/cargo/pull/11576)
-- Added links to the Target section of the glossary for occurences of target triple.
+- Added links to the Target section of the glossary for occurrences of target triple.
   [#11603](https://github.com/rust-lang/cargo/pull/11603)
-- Described how the current resolver sometimes duplicates depenencies.
+- Described how the current resolver sometimes duplicates dependencies.
   [#11604](https://github.com/rust-lang/cargo/pull/11604)
 - Added a note about verifying your email address on crates.io.
   [#11620](https://github.com/rust-lang/cargo/pull/11620)
@@ -889,7 +889,7 @@
 
 ### Nightly only
 
-- Implemented a inital support of asymmetric token authentication for registries.
+- Implemented a initial support of asymmetric token authentication for registries.
   ([RFC 3231](https://github.com/rust-lang/rfcs/blob/master/text/3231-cargo-asymmetric-tokens.md))
   ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#registry-auth))
   [#10771](https://github.com/rust-lang/cargo/pull/10771)

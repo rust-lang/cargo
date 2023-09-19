@@ -547,7 +547,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
 /// Gets the metadata hash for the given [`Unit`].
 ///
-/// Whne a metadata hash doesn't exist for the given unit,
+/// When a metadata hash doesn't exist for the given unit,
 /// this calls itself recursively to compute metadata hashes of all its dependencies.
 /// See [`compute_metadata`] for how a single metadata hash is computed.
 fn metadata_of<'a>(

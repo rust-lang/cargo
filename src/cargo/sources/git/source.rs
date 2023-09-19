@@ -73,7 +73,7 @@ pub struct GitSource<'cfg> {
     source_id: SourceId,
     /// The underlying path source to discover packages inside the Git repository.
     path_source: Option<PathSource<'cfg>>,
-    /// The identifer of this source for Cargo's Git cache directory.
+    /// The identifier of this source for Cargo's Git cache directory.
     /// See [`ident`] for more.
     ident: String,
     config: &'cfg Config,

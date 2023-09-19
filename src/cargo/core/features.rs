@@ -1209,7 +1209,7 @@ pub fn channel() -> String {
     if let Ok(override_channel) = env::var("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS") {
         return override_channel;
     }
-    // ALLOWED: the process of rustc boostrapping reads this through
+    // ALLOWED: the process of rustc bootstrapping reads this through
     // `std::env`. We should make the behavior consistent. Also, we
     // don't advertise this for bypassing nightly.
     #[allow(clippy::disallowed_methods)]

@@ -546,7 +546,7 @@ You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.0 [..]
 "#;
 
-    // The output should contain two JSON messages from the provider in boths cases:
+    // The output should contain two JSON messages from the provider in both cases:
     // The first because the credential is expired, the second because the provider
     // indicated that the token was non-operation-independent.
     p.cargo("publish --registry alternative --no-verify")

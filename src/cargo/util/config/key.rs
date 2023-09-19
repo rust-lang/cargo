@@ -49,7 +49,7 @@ impl ConfigKey {
     /// equivalent to accessing a sub-table in TOML.
     ///
     /// Note that this considers `name` to be case-insensitive, meaning that the
-    /// corrseponding toml key is appended with this `name` as-is and the
+    /// corresponding toml key is appended with this `name` as-is and the
     /// corresponding env key is appended with `name` after transforming it to
     /// uppercase characters.
     pub fn push(&mut self, name: &str) {
