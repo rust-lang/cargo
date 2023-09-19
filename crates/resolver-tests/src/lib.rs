@@ -164,7 +164,7 @@ pub fn resolve_with_config_raw(
                 // we found a case that causes a panic and did not use all of the input.
                 // lets print the part of the input that was used for minimization.
                 eprintln!(
-                    "{:?}",
+                    "Part used befor drop: {:?}",
                     PrettyPrintRegistry(
                         self.list
                             .iter()

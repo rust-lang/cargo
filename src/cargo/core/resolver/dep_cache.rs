@@ -131,9 +131,8 @@ impl<'a> RegistryQueryer<'a> {
                 .iter()
                 .filter(|(spec, _)| spec.matches(summary.package_id()));
 
-            let (spec, dep) = match potential_matches.next() {
-                None => continue,
-                Some(replacement) => replacement,
+            let Some((spec, dep)) = potential_matches.next() else {
+                continue;
             };
             debug!(
                 "found an override for {} {}",
