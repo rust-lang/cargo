@@ -136,6 +136,27 @@ fn incremental_config() {
 }
 
 #[cargo_test]
+fn cargo_compile_with_unsupported_mode() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build --debug")
+        .with_stderr(
+            "\
+error: unexpected argument '--debug' found
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_with_workspace_excluded() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
