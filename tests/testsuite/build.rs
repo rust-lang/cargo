@@ -147,6 +147,8 @@ fn cargo_compile_with_unsupported_mode() {
             "\
 error: unexpected argument '--debug' found
 
+  tip: There is no `--debug` for `cargo build`. Only `--release` is supported.
+
 Usage: cargo[EXE] build [OPTIONS]
 
 For more information, try '--help'.

@@ -112,6 +112,19 @@ pub trait CommandExt: Sized {
         self._arg(flag("keep-going", "").value_parser(value_parser).hide(true))
     }
 
+    fn arg_unsupported_mode(
+        self,
+        want: &'static str,
+        command: &'static str,
+        actual: &'static str,
+    ) -> Self {
+        let msg = format!(
+            "There is no `--{want}` for `cargo {command}`. Only `--{actual}` is supported."
+        );
+        let value_parser = UnknownArgumentValueParser::suggest(msg);
+        self._arg(flag(want, "").value_parser(value_parser).hide(true))
+    }
+
     fn arg_targets_all(
         self,
         lib: &'static str,
@@ -486,7 +499,7 @@ Run `{cmd}` to see possible targets."
             (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
-                if self.flag("release") {
+                if self.maybe_flag("release") {
                     config.shell().warn(
                         "the `--release` flag should not be specified with the `--profile` flag\n\
                          The `--release` flag will be ignored.\n\
@@ -510,7 +523,11 @@ Run `{cmd}` to see possible targets."
             )
         };
 
-        let name = match (self.flag("release"), self.flag("debug"), specified_profile) {
+        let name = match (
+            self.maybe_flag("release"),
+            self.flag("debug"),
+            specified_profile,
+        ) {
             (false, false, None) => default,
             (true, _, None | Some("release")) => "release",
             (true, _, Some(name)) => return Err(conflict("release", "release", name)),
