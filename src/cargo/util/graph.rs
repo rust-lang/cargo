@@ -106,6 +106,18 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
             result.push(p);
             pkg = p.0;
         }
+        #[cfg(debug_assertions)]
+        {
+            for x in result.windows(2) {
+                let [(n1, _), (n2, Some(e12))] = x else {
+                    unreachable!()
+                };
+                assert!(std::ptr::eq(self.edge(n1, n2).unwrap(), *e12));
+            }
+            let last = result.last().unwrap().0;
+            // fixme: this may be wrong when there are cycles, but we dont have them in tests.
+            assert!(!self.nodes.contains_key(last));
+        }
         result
     }
 
@@ -133,6 +145,21 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
         while let Some(p) = first_pkg_depending_on(pkg, &result) {
             result.push(p);
             pkg = p.0;
+        }
+        #[cfg(debug_assertions)]
+        {
+            for x in result.windows(2) {
+                let [(n2, _), (n1, Some(e12))] = x else {
+                    unreachable!()
+                };
+                assert!(std::ptr::eq(self.edge(n1, n2).unwrap(), *e12));
+            }
+            let last = result.last().unwrap().0;
+            // fixme: this may be wrong when there are cycles, but we dont have them in tests.
+            assert!(!self
+                .nodes
+                .iter()
+                .any(|(_, adjacent)| adjacent.contains_key(last)));
         }
         result
     }
