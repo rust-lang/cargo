@@ -306,9 +306,9 @@ words that would help someone find this crate.
 keywords = ["gamedev", "graphics"]
 ```
 
-> **Note**: [crates.io] has a maximum of 5 keywords. Each keyword must be
-> ASCII text, start with a letter, and only contain letters, numbers, `_` or
-> `-`, and have at most 20 characters.
+> **Note**: [crates.io] allows a maximum of 5 keywords. Each keyword must be
+> ASCII text, have at most 20 characters, start with an alphanumeric character,
+> and only contain letters, numbers, `_`, `-` or `+`.
 
 ### The `categories` field
 
