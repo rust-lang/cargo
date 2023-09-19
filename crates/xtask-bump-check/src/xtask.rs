@@ -161,7 +161,7 @@ fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoRes
     ];
 
     // Even when we test against baseline-rev, we still need to make sure a
-    // change doesn't violate SemVer rules aginst crates.io releases. The
+    // change doesn't violate SemVer rules against crates.io releases. The
     // possibility of this happening is nearly zero but no harm to check twice.
     let mut cmd = ProcessBuilder::new("cargo");
     cmd.arg("semver-checks")
@@ -397,7 +397,7 @@ fn check_crates_io<'a>(
     Ok(())
 }
 
-/// Checkouts a temporary workspace to do further version comparsions.
+/// Checkouts a temporary workspace to do further version comparisons.
 fn checkout_ws<'cfg, 'a>(
     ws: &Workspace<'cfg>,
     repo: &'a git2::Repository,

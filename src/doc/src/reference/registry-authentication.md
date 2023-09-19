@@ -1,7 +1,7 @@
 # Registry Authentication
 Cargo authenticates to registries with through credential providers. These
 credential providers are external executables or built-in providers that Cargo
-uses to store and retreive credentials.
+uses to store and retrieve credentials.
 
 Using alternative registries with authentication *requires* a credential provider to be configured
 to avoid unknowningly storing unecrypted credentials on disk. For historical reasons, public
@@ -54,7 +54,7 @@ may change in future Cargo releases (though there are currently no plans to do s
 
 ### `cargo:token`
 Uses Cargo's [credentials](config.md#credentials) file to store tokens unencrypted in plain text.
-When retreiving tokens, checks the `CARGO_REGISTRIES_<NAME>_TOKEN` environment variable.
+When retrieving tokens, checks the `CARGO_REGISTRIES_<NAME>_TOKEN` environment variable.
 If this credential provider is not listed, then the `*_TOKEN` environment variables will not work.
 
 ### `cargo:wincred`

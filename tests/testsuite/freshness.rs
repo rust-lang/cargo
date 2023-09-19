@@ -2786,7 +2786,7 @@ fn verify_source_before_recompile() {
         "vendor/bar/src/lib.rs",
         r#"compile_error!("You shall not pass!");"#,
     );
-    // Should ignore modifed sources without any recompile.
+    // Should ignore modified sources without any recompile.
     p.cargo("check --verbose")
         .with_stderr(
             "\
@@ -2799,7 +2799,7 @@ fn verify_source_before_recompile() {
 
     // Add a `RUSTFLAGS` to trigger a recompile.
     //
-    // Cargo should refuse to build because of checksum verfication failure.
+    // Cargo should refuse to build because of checksum verification failure.
     // Cargo shouldn't recompile dependency `bar`.
     p.cargo("check --verbose")
         .env("RUSTFLAGS", "-W warnings")

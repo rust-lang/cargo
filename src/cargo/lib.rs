@@ -7,7 +7,7 @@
 //! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo>: targeted at cargo contributors
 //!   - Updated on each update of the `cargo` submodule in `rust-lang/rust`
 //!
-//! **WARNING:** Using Cargo as a library has drawbacks, particulary the API is unstable,
+//! **WARNING:** Using Cargo as a library has drawbacks, particularly the API is unstable,
 //! and there is no clear path to stabilize it soon at the time of writing.  See [The Cargo Book:
 //! External tools] for more on this topic.
 //!

@@ -316,7 +316,7 @@ fn build_resolve_graph_r(
                     dep_kinds,
                 },
                 // No lib or artifact dep exists.
-                // Ususally this mean parent depending on non-lib bin crate.
+                // Usually this mean parent depending on non-lib bin crate.
                 (None, _) => continue,
             };
 

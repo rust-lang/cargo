@@ -244,9 +244,9 @@ impl std::str::FromStr for PartialVersion {
                     }
                     Err(_) => anyhow::bail!("expected a version like \"1.32\""),
                 };
-                assert_eq!(version_req.comparators.len(), 1, "guarenteed by is_req");
+                assert_eq!(version_req.comparators.len(), 1, "guaranteed by is_req");
                 let comp = version_req.comparators.pop().unwrap();
-                assert_eq!(comp.op, semver::Op::Caret, "guarenteed by is_req");
+                assert_eq!(comp.op, semver::Op::Caret, "guaranteed by is_req");
                 let pre = if comp.pre.is_empty() {
                     None
                 } else {

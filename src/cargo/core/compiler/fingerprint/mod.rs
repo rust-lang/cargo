@@ -1764,7 +1764,7 @@ fn compare_old_fingerprint(
 
 /// Logs the result of fingerprint comparison.
 ///
-/// TODO: Obsolete and mostly superceded by [`DirtyReason`]. Could be removed.
+/// TODO: Obsolete and mostly superseded by [`DirtyReason`]. Could be removed.
 fn log_compare(unit: &Unit, compare: &CargoResult<Option<DirtyReason>>) {
     match compare {
         Ok(None) => {}
@@ -1820,7 +1820,7 @@ pub fn parse_dep_info(
     Ok(Some(ret))
 }
 
-/// Calcuates the fingerprint of a unit thats contains no dep-info files.
+/// Calculates the fingerprint of a unit thats contains no dep-info files.
 fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
     let sources = bcx.packages.sources();

@@ -162,7 +162,7 @@ fn warn_when_plugin_masks_manifest_on_stable() {
         .with_stdout("")
         .with_stderr(
             "\
-warning: external subcommand `echo.rs` has the appearance of a manfiest-command
+warning: external subcommand `echo.rs` has the appearance of a manifest-command
 This was previously accepted but will be phased out when `-Zscript` is stabilized.
 For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.
 ",

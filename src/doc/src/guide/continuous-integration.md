@@ -118,7 +118,7 @@ When testing the latest versions some considerations are:
 - Rate of new dependencies being published
 - Level of risk a project is willing to accept
 - CI costs, including indirect costs like if a CI service has a maximum for
-  parallel runners, causing new jobs to be serialized when at the maxium.
+  parallel runners, causing new jobs to be serialized when at the maximum.
 
 Some potential solutions include:
 - [Not checking in the `Cargo.lock`](../faq.md#why-have-cargolock-in-version-control)

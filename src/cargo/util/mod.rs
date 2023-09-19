@@ -161,7 +161,7 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
 
     // On Windows `canonicalize` may fail, so we fall back to getting an absolute path.
     std::fs::canonicalize(&path).or_else(|_| {
-        // Return an error if a file does not exist for better compatiblity with `canonicalize`
+        // Return an error if a file does not exist for better compatibility with `canonicalize`
         if !path.as_ref().try_exists()? {
             return Err(Error::new(ErrorKind::NotFound, "the path was not found"));
         }
@@ -224,7 +224,7 @@ pub fn get_umask() -> u32 {
     use std::sync::OnceLock;
     static UMASK: OnceLock<libc::mode_t> = OnceLock::new();
     // SAFETY: Syscalls are unsafe. Calling `umask` twice is even unsafer for
-    // multithreading program, since it doesn't provide a way to retrive the
+    // multithreading program, since it doesn't provide a way to retrieve the
     // value without modifications. We use a static `OnceLock` here to ensure
     // it only gets call once during the entire program lifetime.
     *UMASK.get_or_init(|| unsafe {

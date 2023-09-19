@@ -1,4 +1,4 @@
-//! The trait for sources of Cargo packages and its built-in implemetations.
+//! The trait for sources of Cargo packages and its built-in implementations.
 //!
 //! A source is a provider that contains source files and metadata of packages.
 //! It provides a number of methods to fetch those package information, for

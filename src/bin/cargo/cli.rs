@@ -314,7 +314,7 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     } else {
                         config.shell().warn(format_args!(
                             "\
-user-defined alias `{cmd}` has the appearance of a manfiest-command
+user-defined alias `{cmd}` has the appearance of a manifest-command
 This was previously accepted but will be phased out when `-Zscript` is stabilized.
 For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>."
                         ))?;
@@ -449,7 +449,7 @@ impl Exec {
                 if !config.cli_unstable().script && ext_path.is_some() {
                     config.shell().warn(format_args!(
                         "\
-external subcommand `{cmd}` has the appearance of a manfiest-command
+external subcommand `{cmd}` has the appearance of a manifest-command
 This was previously accepted but will be phased out when `-Zscript` is stabilized.
 For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.",
                     ))?;

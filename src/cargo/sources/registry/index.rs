@@ -323,7 +323,7 @@ struct SummariesCache<'a> {
 /// A single line in the index representing a single version of a package.
 #[derive(Deserialize)]
 pub struct IndexPackage<'a> {
-    /// Name of the pacakge.
+    /// Name of the package.
     name: InternedString,
     /// The version of this dependency.
     vers: Version,
@@ -522,7 +522,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     ///    The actual kind index file being parsed depends on which kind of
     ///    [`RegistryData`] the `load` argument is given. For example, a
     ///    Git-based [`RemoteRegistry`] will first try a on-disk index cache
-    ///    file, and then try parsing registry raw index fomr Git repository.
+    ///    file, and then try parsing registry raw index from Git repository.
     ///
     /// In effect, this is intended to be a quite cheap operation.
     ///
