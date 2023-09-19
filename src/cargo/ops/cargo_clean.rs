@@ -8,6 +8,7 @@ use crate::util::interning::InternedString;
 use crate::util::{human_readable_bytes, Config, Progress, ProgressStyle};
 use anyhow::bail;
 use cargo_util::paths;
+use indexmap::IndexSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -129,7 +130,7 @@ fn clean_specs(
     // Doc tests produce no output.
 
     // Get Packages for the specified specs.
-    let mut pkg_ids = Vec::new();
+    let mut pkg_ids = IndexSet::new();
     for spec_str in spec.iter() {
         // Translate the spec to a Package.
         let spec = PackageIdSpec::parse(spec_str)?;
