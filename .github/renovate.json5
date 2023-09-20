@@ -31,6 +31,7 @@
       matchPackageNames: [
         'latest-msrv',
       ],
+      "extractVersion": "^(?<version>\\d+\\.\\d+)",  // Drop the patch version
       schedule: [
         '* * * * *',
       ],
