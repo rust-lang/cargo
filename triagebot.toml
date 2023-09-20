@@ -86,6 +86,9 @@ trigger_files = ["src/cargo/core/dependency.rs"]
 [autolabel."A-crate-types"]
 trigger_files = ["src/cargo/core/compiler/crate_type.rs"]
 
+[autolabel."A-credential-provider"]
+trigger_files = ["credential/"]
+
 [autolabel."A-dep-info"]
 trigger_files = ["src/cargo/core/compiler/output_depinfo.rs"]
 
@@ -122,6 +125,9 @@ trigger_files = ["src/cargo/core/compiler/future_incompat.rs"]
 
 [autolabel."A-git"]
 trigger_files = ["src/cargo/sources/git/"]
+
+[autolabel."A-home"]
+trigger_files = ["crates/home/"]
 
 [autolabel."A-infrastructure"]
 trigger_files = [
@@ -180,7 +186,7 @@ trigger_files = ["src/cargo/core/compiler/fingerprint/"]
 trigger_files = ["src/cargo/sources/registry/", "src/cargo/core/registry.rs"]
 
 [autolabel."A-registry-authentication"]
-trigger_files = ["src/cargo/util/auth/", "credential/"]
+trigger_files = ["src/cargo/util/auth/"]
 
 [autolabel."A-semver"]
 trigger_files = [
