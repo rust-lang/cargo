@@ -112,17 +112,15 @@ pub trait CommandExt: Sized {
         self._arg(flag("keep-going", "").value_parser(value_parser).hide(true))
     }
 
-    fn arg_unsupported_mode(
+    fn arg_redundant_default_mode(
         self,
-        want: &'static str,
+        default_mode: &'static str,
         command: &'static str,
-        actual: &'static str,
+        supported_mode: &'static str,
     ) -> Self {
-        let msg = format!(
-            "There is no `--{want}` for `cargo {command}`. Only `--{actual}` is supported."
-        );
+        let msg = format!("`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported");
         let value_parser = UnknownArgumentValueParser::suggest(msg);
-        self._arg(flag(want, "").value_parser(value_parser).hide(true))
+        self._arg(flag(default_mode, "").value_parser(value_parser).hide(true))
     }
 
     fn arg_targets_all(

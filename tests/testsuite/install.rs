@@ -2445,7 +2445,7 @@ fn ambiguous_registry_vs_local_package() {
 }
 
 #[cargo_test]
-fn install_with_unsupported_mode() {
+fn install_with_redundant_default_mode() {
     pkg("foo", "0.0.1");
 
     cargo_process("install foo --release")
@@ -2453,7 +2453,7 @@ fn install_with_unsupported_mode() {
             "\
 error: unexpected argument '--release' found
 
-  tip: There is no `--release` for `cargo install`. Only `--debug` is supported.
+  tip: `--release` is the default for `cargo install`; instead `--debug` is supported
 
 Usage: cargo[EXE] install [OPTIONS] [crate]...
 

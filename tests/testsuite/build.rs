@@ -136,7 +136,7 @@ fn incremental_config() {
 }
 
 #[cargo_test]
-fn cargo_compile_with_unsupported_mode() {
+fn cargo_compile_with_redundant_default_mode() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
@@ -147,7 +147,7 @@ fn cargo_compile_with_unsupported_mode() {
             "\
 error: unexpected argument '--debug' found
 
-  tip: There is no `--debug` for `cargo build`. Only `--release` is supported.
+  tip: `--debug` is the default for `cargo build`; instead `--release` is supported
 
 Usage: cargo[EXE] build [OPTIONS]
 
