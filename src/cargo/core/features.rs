@@ -530,15 +530,9 @@ impl Features {
         }
 
         let see_docs = || {
-            let url_channel = match channel().as_str() {
-                "dev" | "nightly" => "nightly/",
-                "beta" => "beta/",
-                _ => "",
-            };
             format!(
-                "See https://doc.rust-lang.org/{}cargo/{} for more information \
-                about using this feature.",
-                url_channel, feature.docs
+                "See {} for more information about using this feature.",
+                cargo_docs_link(feature.docs)
             )
         };
 
@@ -1230,4 +1224,15 @@ pub fn channel() -> String {
 #[allow(clippy::disallowed_methods)]
 fn cargo_use_gitoxide_instead_of_git2() -> bool {
     std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2").map_or(false, |value| value == "1")
+}
+
+/// Generate a link to Cargo documentation for the current release channel
+/// `path` is the URL component after `https://doc.rust-lang.org/{channel}/cargo/`
+pub fn cargo_docs_link(path: &str) -> String {
+    let url_channel = match channel().as_str() {
+        "dev" | "nightly" => "nightly/",
+        "beta" => "beta/",
+        _ => "",
+    };
+    format!("https://doc.rust-lang.org/{url_channel}cargo/{path}")
 }

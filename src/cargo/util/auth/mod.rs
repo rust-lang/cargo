@@ -1,6 +1,7 @@
 //! Registry authentication support.
 
 use crate::{
+    core::features::cargo_docs_link,
     sources::CRATES_IO_REGISTRY,
     util::{config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl},
 };
@@ -219,7 +220,8 @@ fn credential_provider(
     if !global_provider_defined && require_cred_provider_config {
         bail!(
             "authenticated registries require a credential-provider to be configured\n\
-        see https://doc.rust-lang.org/cargo/reference/registry-authentication.html for details"
+        see {} for details",
+            cargo_docs_link("reference/registry-authentication.html")
         );
     }
     Ok(global_providers)
