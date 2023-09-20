@@ -56,13 +56,13 @@ fn cargo_test_tensorflow_not_failing_due_to_shared_library() {
 
     // git repo for cargo project containing doctests that require shared libraries
     let url = "https://github.com/tensorflow/rust";
-    
+
     // safe place to git clone into
     let path = tempfile::tempdir().unwrap();
 
     // do the git clone
     let _repo = RepoBuilder::new().clone(&url, &path.path()).unwrap();
-    
+
     // pathbuf to the resulting local cloned repo
     let path_copy = path.path().to_path_buf();
 
@@ -72,7 +72,7 @@ fn cargo_test_tensorflow_not_failing_due_to_shared_library() {
     // now we have a handle on a project we can use
     let project = Project::from_template(path_copy.clone());
 
-    // doctests are failing.. 
+    // doctests are failing..
     project
         .cargo("test --doc")
         .with_stdout_does_not_contain("error while loading shared libraries")
