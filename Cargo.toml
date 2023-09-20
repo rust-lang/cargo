@@ -37,7 +37,7 @@ core-foundation = { version = "0.9.3", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.39.0", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 curl = "0.4.44"
-curl-sys = "0.4.65"
+curl-sys = "0.4.66"
 filetime = "0.2.22"
 flate2 = { version = "1.0.27", default-features = false, features = ["zlib"] }
 fwdansi = "1.1.0"
