@@ -70,15 +70,6 @@ use std::io;
 /// The style of lock to acquire.
 #[derive(Copy, Clone, Debug)]
 pub enum CacheLockMode {
-    /// A `Shared` lock allows multiple cargos to read from the source files.
-    ///
-    /// If another cargo has a `MutateExclusive` lock, then an attempt to get
-    /// a `Shared` will block.
-    ///
-    /// If another cargo has a `DownloadExclusive` lock, then the both can
-    /// operate concurrently under the assumption that downloading does not
-    /// modify existing source files.
-    Shared,
     /// A `DownloadExclusive` lock ensures that only one cargo is downloading
     /// new packages.
     ///
@@ -88,6 +79,15 @@ pub enum CacheLockMode {
     /// If another cargo has a `Shared` lock, then both can operate
     /// concurrently.
     DownloadExclusive,
+    /// A `Shared` lock allows multiple cargos to read from the source files.
+    ///
+    /// If another cargo has a `MutateExclusive` lock, then an attempt to get
+    /// a `Shared` will block.
+    ///
+    /// If another cargo has a `DownloadExclusive` lock, then the both can
+    /// operate concurrently under the assumption that downloading does not
+    /// modify existing source files.
+    Shared,
     /// A `MutateExclusive` lock ensures no other cargo is reading or writing
     /// from the package caches.
     ///
