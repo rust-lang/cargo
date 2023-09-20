@@ -164,7 +164,10 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        self.lock(path, f, config, msg, true)
+        acquire(config, msg, &path, &|| try_lock_exclusive(&f), &|| {
+            lock_exclusive(&f)
+        })?;
+        Ok(FileLock { f: Some(f), path })
     }
 
     /// A non-blocking version of [`Filesystem::open_rw`].
@@ -196,7 +199,10 @@ impl Filesystem {
         P: AsRef<Path>,
     {
         let (path, f) = self.open(path.as_ref(), &OpenOptions::new().read(true), false)?;
-        self.lock(path, f, config, msg, false)
+        acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
+            lock_shared(&f)
+        })?;
+        Ok(FileLock { f: Some(f), path })
     }
 
     /// Opens shared access to a file, returning the locked version of a file.
@@ -212,7 +218,10 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        self.lock(path, f, config, msg, false)
+        acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
+            lock_shared(&f)
+        })?;
+        Ok(FileLock { f: Some(f), path })
     }
 
     /// A non-blocking version of [`Filesystem::open_shared_create`].
@@ -247,26 +256,6 @@ impl Filesystem {
             })
             .with_context(|| format!("failed to open: {}", path.display()))?;
         Ok((path, f))
-    }
-
-    fn lock(
-        &self,
-        path: PathBuf,
-        f: File,
-        config: &Config,
-        msg: &str,
-        exclusive: bool,
-    ) -> CargoResult<FileLock> {
-        if exclusive {
-            acquire(config, msg, &path, &|| try_lock_exclusive(&f), &|| {
-                lock_exclusive(&f)
-            })?;
-        } else {
-            acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
-                lock_shared(&f)
-            })?;
-        }
-        Ok(FileLock { f: Some(f), path })
     }
 }
 
