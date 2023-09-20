@@ -936,7 +936,7 @@ timeout = 300  # in seconds
 * Tracking Issue: [10519](https://github.com/rust-lang/cargo/issues/10519)
 * RFC: [#3231](https://github.com/rust-lang/rfcs/pull/3231)
 
-Add support for Cargo to authenticate the user to registries without sending secrets over the network.
+The `-Z asymmetric-token` flag enables the `cargo:paseto` credential provider which allows Cargo to authenticate to registries without sending secrets over the network.
 
 In [`config.toml`](config.md) and `credentials.toml` files there is a field called `private-key`, which is a private key formatted in the secret [subset of `PASERK`](https://github.com/paseto-standard/paserk/blob/master/types/secret.md) and is used to sign asymmetric tokens
 
