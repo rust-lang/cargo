@@ -274,6 +274,7 @@ impl<'cfg> Compilation<'cfg> {
         is_rustc_tool: bool,
     ) -> CargoResult<ProcessBuilder> {
         let mut search_path = Vec::new();
+        // this divides our path based on CompileKind: host vs target.
         if is_rustc_tool {
             search_path.extend(super::filter_dynamic_search_path(
                 self.native_dirs.iter(),
