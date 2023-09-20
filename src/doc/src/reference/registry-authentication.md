@@ -1,11 +1,11 @@
 # Registry Authentication
-Cargo authenticates to registries with through credential providers. These
+Cargo authenticates to registries with credential providers. These
 credential providers are external executables or built-in providers that Cargo
 uses to store and retrieve credentials.
 
 Using alternative registries with authentication *requires* a credential provider to be configured
-to avoid unknowningly storing unecrypted credentials on disk. For historical reasons, public
-(non-authenticated) registres do not require credential provider configuration and the `cargo:token`
+to avoid unknowingly storing unencrypted credentials on disk. For historical reasons, public
+(non-authenticated) registries do not require credential provider configuration, and the `cargo:token`
 provider is used if no providers are configured.
 
 Cargo also includes platform-specific providers that use the operating system to securely store
@@ -106,6 +106,6 @@ In the config, add to (or create) `registry.global-credential-providers`:
 global-credential-providers = ["cargo:token", "cargo-credential-1password --email you@example.com"]
 ```
 
-The values in `global-credential-providers` are split on spaces to into path and command-line arguments. To
+The values in `global-credential-providers` are split on spaces into path and command-line arguments. To
 define a global credential provider where the path or arguments contain spaces, use
 the [`[credential-alias]` table](config.md#credential-alias).
