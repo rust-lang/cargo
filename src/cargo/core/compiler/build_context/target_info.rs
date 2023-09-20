@@ -465,7 +465,7 @@ impl TargetInfo {
                     // the names to match.
                     should_replace_hyphens: false,
                 })
-            } else if target_triple.ends_with("-msvc") {
+            } else if target_triple.ends_with("-msvc") || target_triple.ends_with("-uefi") {
                 ret.push(FileType {
                     suffix: ".pdb".to_string(),
                     prefix: prefix.clone(),
