@@ -60,7 +60,7 @@ Not a message by itself. Included in all messages sent by Cargo as the `registry
 }
 ```
 
-If the `token` field is set, than the credential provider should use the token provided. If
+If the `token` field is set, then the credential provider should use the token provided. If
 the `token` is not set, then the credential provider should prompt the user for a token.
 
 In addition to the arguments that may be passed to the credential provider in
@@ -134,7 +134,7 @@ in the `args` field after any args from Cargo configuration.
 The `token` will be sent to the registry as the value of the `Authorization` HTTP header.
 
 `operation_independent` indicates whether the token can be cached across different
-operations (such as publishing or fetching). In general this should be `true` unless
+operations (such as publishing or fetching). In general, this should be `true` unless
 the provider wants to generate tokens that are scoped to specific operations.
 
 ### Login success response
@@ -166,7 +166,7 @@ the provider wants to generate tokens that are scoped to specific operations.
 }}
 ```
 Sent if the credential provider is designed
-to only handle specific registry URLs, and the given URL
+to only handle specific registry URLs and the given URL
 is not supported. Cargo will attempt another provider if
 available.
 
