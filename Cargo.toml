@@ -11,7 +11,7 @@ exclude = [
 ]
 
 [workspace.package]
-rust-version = "1.72.0"
+rust-version = "1.72.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
