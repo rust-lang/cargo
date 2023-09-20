@@ -14,6 +14,7 @@ pub fn cli() -> Command {
         .arg_target_triple("Target triple to clean output for")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_dry_run("Display what would be deleted without deleting anything")
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help clean</>` for more detailed information.\n"
         ))
@@ -33,6 +34,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         requested_profile: args.get_profile_name(config, "dev", ProfileChecking::Custom)?,
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),
+        dry_run: args.dry_run(),
     };
     ops::clean(&ws, &opts)?;
     Ok(())
