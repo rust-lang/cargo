@@ -30,6 +30,7 @@ pub fn cli() -> Command {
         )
         .arg_features()
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_redundant_default_mode("debug", "build", "release")
         .arg_profile("Build artifacts with the specified profile")
         .arg_parallel()
         .arg_target_triple("Build for the target triple")

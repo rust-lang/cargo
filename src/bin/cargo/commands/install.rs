@@ -83,6 +83,7 @@ pub fn cli() -> Command {
             "debug",
             "Build in debug mode (with the 'dev' profile) instead of release mode",
         ))
+        .arg_redundant_default_mode("release", "install", "debug")
         .arg_profile("Install artifacts with the specified profile")
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()

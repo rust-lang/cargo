@@ -2443,3 +2443,23 @@ fn ambiguous_registry_vs_local_package() {
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
 }
+
+#[cargo_test]
+fn install_with_redundant_default_mode() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo --release")
+        .with_stderr(
+            "\
+error: unexpected argument '--release' found
+
+  tip: `--release` is the default for `cargo install`; instead `--debug` is supported
+
+Usage: cargo[EXE] install [OPTIONS] [crate]...
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
