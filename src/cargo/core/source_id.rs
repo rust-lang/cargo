@@ -330,9 +330,7 @@ impl SourceId {
 
     /// Displays the name of a registry if it has one. Otherwise just the URL.
     pub fn display_registry_name(self) -> String {
-        if self.is_crates_io() {
-            CRATES_IO_REGISTRY.to_string()
-        } else if let Some(key) = self.inner.registry_key.as_ref().map(|k| k.key()) {
+        if let Some(key) = self.inner.registry_key.as_ref().map(|k| k.key()) {
             key.into()
         } else if self.precise().is_some() {
             // We remove `precise` here to retrieve an permissive version of

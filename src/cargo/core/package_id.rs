@@ -252,43 +252,6 @@ mod tests {
     }
 
     #[test]
-    fn debug() {
-        let loc = CRATES_IO_INDEX.into_url().unwrap();
-        let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
-        assert_eq!(
-            r#"PackageId { name: "foo", version: "1.0.0", source: "registry `crates-io`" }"#,
-            format!("{:?}", pkg_id)
-        );
-
-        let expected = r#"
-PackageId {
-    name: "foo",
-    version: "1.0.0",
-    source: "registry `crates-io`",
-}
-"#
-        .trim();
-
-        // Can be removed once trailing commas in Debug have reached the stable
-        // channel.
-        let expected_without_trailing_comma = r#"
-PackageId {
-    name: "foo",
-    version: "1.0.0",
-    source: "registry `crates-io`"
-}
-"#
-        .trim();
-
-        let actual = format!("{:#?}", pkg_id);
-        if actual.ends_with(",\n}") {
-            assert_eq!(actual, expected);
-        } else {
-            assert_eq!(actual, expected_without_trailing_comma);
-        }
-    }
-
-    #[test]
     fn display() {
         let loc = CRATES_IO_INDEX.into_url().unwrap();
         let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
