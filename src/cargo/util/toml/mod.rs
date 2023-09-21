@@ -1837,6 +1837,13 @@ impl TomlManifest {
             }
         }
 
+        if !package_root.is_dir() {
+            bail!(
+                "package root '{}' is not a directory",
+                package_root.display()
+            );
+        };
+
         let mut nested_paths = vec![];
         let mut warnings = vec![];
         let mut errors = vec![];
