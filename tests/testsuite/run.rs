@@ -46,9 +46,9 @@ fn unsupported_silent_arg() {
     p.cargo("run -s")
         .with_stderr(
             "\
-error: unexpected argument '-s' found
+error: unexpected argument '--silent' found
 
-  tip: to pass '-s' as a value, use '-- -s'
+  tip: a similar argument exists: '--quiet'
 
 Usage: cargo run [OPTIONS] [args]...
 
@@ -63,7 +63,7 @@ For more information, try '--help'.
             "\
 error: unexpected argument '--silent' found
 
-  tip: to pass '--silent' as a value, use '-- --silent'
+  tip: a similar argument exists: '--quiet'
 
 Usage: cargo run [OPTIONS] [args]...
 
