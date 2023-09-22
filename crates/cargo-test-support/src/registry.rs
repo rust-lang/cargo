@@ -781,6 +781,7 @@ impl HttpServer {
             let buf = buf.get_mut();
             write!(buf, "HTTP/1.1 {}\r\n", response.code).unwrap();
             write!(buf, "Content-Length: {}\r\n", response.body.len()).unwrap();
+            write!(buf, "Connection: close\r\n").unwrap();
             for header in response.headers {
                 write!(buf, "{}\r\n", header).unwrap();
             }

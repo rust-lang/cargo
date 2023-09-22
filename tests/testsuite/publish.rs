@@ -1965,6 +1965,7 @@ Caused by:
   headers:
   <tab>HTTP/1.1 400
   <tab>Content-Length: 7
+  <tab>Connection: close
   <tab>
   body:
   go away
