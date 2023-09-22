@@ -51,14 +51,11 @@ struct SourceIdInner {
     kind: SourceKind,
     /// For example, the exact Git revision of the specified branch for a Git Source.
     precise: Option<String>,
-    /// Name of the registry source for alternative registries
-    /// WARNING: this is not always set for alt-registries when the name is
-    /// not known.
-    name: Option<String>,
-    /// Name of the alt registry in the `[registries]` table.
-    /// WARNING: this is not always set for alt-registries when the name is
-    /// not known.
-    alt_registry_key: Option<String>,
+    /// Name of the remote registry.
+    ///
+    /// WARNING: this is not always set when the name is not known,
+    /// e.g. registry coming from `--index` or Cargo.lock
+    registry_key: Option<KeyOf>,
 }
 
 /// The possible kinds of code source.
@@ -93,11 +90,22 @@ pub enum GitReference {
     DefaultBranch,
 }
 
+/// Where the remote source key is defined.
+///
+/// The purpose of this is to provide better diagnostics for different sources of keys.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum KeyOf {
+    /// Defined in the `[registries]` table or the built-in `crates-io` key.
+    Registry(String),
+    /// Defined in the `[source]` replacement table.
+    Source(String),
+}
+
 impl SourceId {
     /// Creates a `SourceId` object from the kind and URL.
     ///
     /// The canonical url will be calculated, but the precise field will not
-    fn new(kind: SourceKind, url: Url, name: Option<&str>) -> CargoResult<SourceId> {
+    fn new(kind: SourceKind, url: Url, key: Option<KeyOf>) -> CargoResult<SourceId> {
         if kind == SourceKind::SparseRegistry {
             // Sparse URLs are different because they store the kind prefix (sparse+)
             // in the URL. This is because the prefix is necessary to differentiate
@@ -111,8 +119,7 @@ impl SourceId {
             canonical_url: CanonicalUrl::new(&url)?,
             url,
             precise: None,
-            name: name.map(|n| n.into()),
-            alt_registry_key: None,
+            registry_key: key,
         });
         Ok(source_id)
     }
@@ -230,10 +237,18 @@ impl SourceId {
         SourceId::new(kind, url.to_owned(), None)
     }
 
-    /// Creates a `SourceId` from a remote registry URL with given name.
-    pub fn for_alt_registry(url: &Url, name: &str) -> CargoResult<SourceId> {
+    /// Creates a `SourceId` for a remote registry from the `[registries]` table or crates.io.
+    pub fn for_alt_registry(url: &Url, key: &str) -> CargoResult<SourceId> {
         let kind = Self::remote_source_kind(url);
-        SourceId::new(kind, url.to_owned(), Some(name))
+        let key = KeyOf::Registry(key.into());
+        SourceId::new(kind, url.to_owned(), Some(key))
+    }
+
+    /// Creates a `SourceId` for a remote registry from the `[source]` replacement table.
+    pub fn for_source_replacement_registry(url: &Url, key: &str) -> CargoResult<SourceId> {
+        let kind = Self::remote_source_kind(url);
+        let key = KeyOf::Source(key.into());
+        SourceId::new(kind, url.to_owned(), Some(key))
     }
 
     /// Creates a `SourceId` from a local registry path.
@@ -262,7 +277,8 @@ impl SourceId {
         if Self::crates_io_is_sparse(config)? {
             config.check_registry_index_not_set()?;
             let url = CRATES_IO_HTTP_INDEX.into_url().unwrap();
-            SourceId::new(SourceKind::SparseRegistry, url, Some(CRATES_IO_REGISTRY))
+            let key = KeyOf::Registry(CRATES_IO_REGISTRY.into());
+            SourceId::new(SourceKind::SparseRegistry, url, Some(key))
         } else {
             Self::crates_io(config)
         }
@@ -289,15 +305,7 @@ impl SourceId {
             return Self::crates_io(config);
         }
         let url = config.get_registry_index(key)?;
-        let kind = Self::remote_source_kind(&url);
-        Ok(SourceId::wrap(SourceIdInner {
-            kind,
-            canonical_url: CanonicalUrl::new(&url)?,
-            url,
-            precise: None,
-            name: Some(key.to_string()),
-            alt_registry_key: Some(key.to_string()),
-        }))
+        Self::for_alt_registry(&url, key)
     }
 
     /// Gets this source URL.
@@ -322,10 +330,8 @@ impl SourceId {
 
     /// Displays the name of a registry if it has one. Otherwise just the URL.
     pub fn display_registry_name(self) -> String {
-        if self.is_crates_io() {
-            CRATES_IO_REGISTRY.to_string()
-        } else if let Some(name) = &self.inner.name {
-            name.clone()
+        if let Some(key) = self.inner.registry_key.as_ref().map(|k| k.key()) {
+            key.into()
         } else if self.precise().is_some() {
             // We remove `precise` here to retrieve an permissive version of
             // `SourceIdInner`, which may contain the registry name.
@@ -335,11 +341,10 @@ impl SourceId {
         }
     }
 
-    /// Gets the name of the remote registry as defined in the `[registries]` table.
-    /// WARNING: alt registries that come from Cargo.lock, or --index will
-    /// not have a name.
+    /// Gets the name of the remote registry as defined in the `[registries]` table,
+    /// or the built-in `crates-io` key.
     pub fn alt_registry_key(&self) -> Option<&str> {
-        self.inner.alt_registry_key.as_deref()
+        self.inner.registry_key.as_ref()?.alternative_registry()
     }
 
     /// Returns `true` if this source is from a filesystem path.
@@ -652,10 +657,9 @@ impl Hash for SourceId {
 /// The hash of `SourceIdInner` is used to retrieve its interned value from
 /// `SOURCE_ID_CACHE`. We only care about fields that make `SourceIdInner`
 /// unique. Optional fields not affecting the uniqueness must be excluded,
-/// such as [`name`] and [`alt_registry_key`]. That's why this is not derived.
+/// such as [`registry_key`]. That's why this is not derived.
 ///
-/// [`name`]: SourceIdInner::name
-/// [`alt_registry_key`]: SourceIdInner::alt_registry_key
+/// [`registry_key`]: SourceIdInner::registry_key
 impl Hash for SourceIdInner {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.kind.hash(into);
@@ -865,6 +869,23 @@ impl<'a> fmt::Display for PrettyRef<'a> {
             write!(f, "{value}")?;
         }
         Ok(())
+    }
+}
+
+impl KeyOf {
+    /// Gets the underlying key.
+    fn key(&self) -> &str {
+        match self {
+            KeyOf::Registry(k) | KeyOf::Source(k) => k,
+        }
+    }
+
+    /// Gets the key if it's from an alternative registry.
+    fn alternative_registry(&self) -> Option<&str> {
+        match self {
+            KeyOf::Registry(k) => Some(k),
+            _ => None,
+        }
     }
 }
 

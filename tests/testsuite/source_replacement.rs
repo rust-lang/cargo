@@ -248,3 +248,48 @@ fn undefined_default() {
         )
         .run();
 }
+
+#[cargo_test]
+fn source_replacement_with_registry_url() {
+    let alternative = RegistryBuilder::new().alternative().http_api().build();
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    let crates_io = setup_replacement(&format!(
+        r#"
+        [source.crates-io]
+        replace-with = 'using-registry-url'
+
+        [source.using-registry-url]
+        registry = '{}'
+        "#,
+        alternative.index_url()
+    ));
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                [dependencies.bar]
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] `using-registry-url` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `using-registry-url`)
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}

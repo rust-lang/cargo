@@ -2,7 +2,6 @@
 
 use crate::{
     core::features::cargo_docs_link,
-    sources::CRATES_IO_REGISTRY,
     util::{config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl},
 };
 use anyhow::{bail, Context as _};
@@ -506,11 +505,7 @@ fn credential_action(
     args: &[&str],
     require_cred_provider_config: bool,
 ) -> CargoResult<CredentialResponse> {
-    let name = if sid.is_crates_io() {
-        Some(CRATES_IO_REGISTRY)
-    } else {
-        sid.alt_registry_key()
-    };
+    let name = sid.alt_registry_key();
     let registry = RegistryInfo {
         index_url: sid.url().as_str(),
         name,
