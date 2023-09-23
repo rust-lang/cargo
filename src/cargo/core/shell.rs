@@ -4,7 +4,7 @@ use std::io::IsTerminal;
 
 use anstyle::Style;
 use anstyle_termcolor::to_termcolor_spec;
-use termcolor::{self, StandardStream, WriteColor};
+use termcolor::{self, BufferWriter, StandardStream, WriteColor};
 
 use crate::util::errors::CargoResult;
 use crate::util::style::*;
@@ -81,9 +81,15 @@ enum ShellOut {
     /// A plain write object without color support
     Write(Box<dyn Write>),
     /// Color-enabled stdio, with information on whether color should be used
+    ///
+    /// The separate buffered fields are used for buffered writing to the
+    /// corresponding stream. The non-buffered fields should be used when you
+    /// do not want content to be buffered.
     Stream {
         stdout: StandardStream,
+        buffered_stdout: BufferWriter,
         stderr: StandardStream,
+        buffered_stderr: BufferWriter,
         stderr_tty: bool,
         color_choice: ColorChoice,
     },
@@ -105,10 +111,14 @@ impl Shell {
     /// output.
     pub fn new() -> Shell {
         let auto_clr = ColorChoice::CargoAuto;
+        let stdout_choice = auto_clr.to_termcolor_color_choice(Stream::Stdout);
+        let stderr_choice = auto_clr.to_termcolor_color_choice(Stream::Stderr);
         Shell {
             output: ShellOut::Stream {
-                stdout: StandardStream::stdout(auto_clr.to_termcolor_color_choice(Stream::Stdout)),
-                stderr: StandardStream::stderr(auto_clr.to_termcolor_color_choice(Stream::Stderr)),
+                stdout: StandardStream::stdout(stdout_choice),
+                buffered_stdout: BufferWriter::stdout(stdout_choice),
+                stderr: StandardStream::stderr(stderr_choice),
+                buffered_stderr: BufferWriter::stderr(stderr_choice),
                 color_choice: ColorChoice::CargoAuto,
                 stderr_tty: std::io::stderr().is_terminal(),
             },
@@ -287,7 +297,9 @@ impl Shell {
     pub fn set_color_choice(&mut self, color: Option<&str>) -> CargoResult<()> {
         if let ShellOut::Stream {
             ref mut stdout,
+            ref mut buffered_stdout,
             ref mut stderr,
+            ref mut buffered_stderr,
             ref mut color_choice,
             ..
         } = self.output
@@ -305,8 +317,12 @@ impl Shell {
                 ),
             };
             *color_choice = cfg;
-            *stdout = StandardStream::stdout(cfg.to_termcolor_color_choice(Stream::Stdout));
-            *stderr = StandardStream::stderr(cfg.to_termcolor_color_choice(Stream::Stderr));
+            let stdout_choice = cfg.to_termcolor_color_choice(Stream::Stdout);
+            let stderr_choice = cfg.to_termcolor_color_choice(Stream::Stderr);
+            *stdout = StandardStream::stdout(stdout_choice);
+            *buffered_stdout = BufferWriter::stdout(stdout_choice);
+            *stderr = StandardStream::stderr(stderr_choice);
+            *buffered_stderr = BufferWriter::stderr(stderr_choice);
         }
         Ok(())
     }
@@ -410,21 +426,26 @@ impl ShellOut {
         justified: bool,
     ) -> CargoResult<()> {
         match *self {
-            ShellOut::Stream { ref mut stderr, .. } => {
-                stderr.reset()?;
-                stderr.set_color(&to_termcolor_spec(*style))?;
+            ShellOut::Stream {
+                ref mut buffered_stderr,
+                ..
+            } => {
+                let mut buffer = buffered_stderr.buffer();
+                buffer.reset()?;
+                buffer.set_color(&to_termcolor_spec(*style))?;
                 if justified {
-                    write!(stderr, "{:>12}", status)?;
+                    write!(buffer, "{:>12}", status)?;
                 } else {
-                    write!(stderr, "{}", status)?;
-                    stderr.set_color(termcolor::ColorSpec::new().set_bold(true))?;
-                    write!(stderr, ":")?;
+                    write!(buffer, "{}", status)?;
+                    buffer.set_color(termcolor::ColorSpec::new().set_bold(true))?;
+                    write!(buffer, ":")?;
                 }
-                stderr.reset()?;
+                buffer.reset()?;
                 match message {
-                    Some(message) => writeln!(stderr, " {}", message)?,
-                    None => write!(stderr, " ")?,
+                    Some(message) => writeln!(buffer, " {}", message)?,
+                    None => write!(buffer, " ")?,
                 }
+                buffered_stderr.print(&buffer)?;
             }
             ShellOut::Write(ref mut w) => {
                 if justified {
@@ -444,11 +465,16 @@ impl ShellOut {
     /// Write a styled fragment
     fn write_stdout(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
         match *self {
-            ShellOut::Stream { ref mut stdout, .. } => {
-                stdout.reset()?;
-                stdout.set_color(&to_termcolor_spec(*color))?;
-                write!(stdout, "{}", fragment)?;
-                stdout.reset()?;
+            ShellOut::Stream {
+                ref mut buffered_stdout,
+                ..
+            } => {
+                let mut buffer = buffered_stdout.buffer();
+                buffer.reset()?;
+                buffer.set_color(&to_termcolor_spec(*color))?;
+                write!(buffer, "{}", fragment)?;
+                buffer.reset()?;
+                buffered_stdout.print(&buffer)?;
             }
             ShellOut::Write(ref mut w) => {
                 write!(w, "{}", fragment)?;
@@ -460,11 +486,16 @@ impl ShellOut {
     /// Write a styled fragment
     fn write_stderr(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
         match *self {
-            ShellOut::Stream { ref mut stderr, .. } => {
-                stderr.reset()?;
-                stderr.set_color(&to_termcolor_spec(*color))?;
-                write!(stderr, "{}", fragment)?;
-                stderr.reset()?;
+            ShellOut::Stream {
+                ref mut buffered_stderr,
+                ..
+            } => {
+                let mut buffer = buffered_stderr.buffer();
+                buffer.reset()?;
+                buffer.set_color(&to_termcolor_spec(*color))?;
+                write!(buffer, "{}", fragment)?;
+                buffer.reset()?;
+                buffered_stderr.print(&buffer)?;
             }
             ShellOut::Write(ref mut w) => {
                 write!(w, "{}", fragment)?;
