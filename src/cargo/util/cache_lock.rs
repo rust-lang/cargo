@@ -68,10 +68,10 @@ use std::cell::RefCell;
 use std::io;
 
 /// The style of lock to acquire.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum CacheLockMode {
-    /// A `DownloadExclusive` lock ensures that only one cargo is downloading
-    /// new packages.
+    /// A `DownloadExclusive` lock ensures that only one cargo is doing
+    /// resolution and downloading new packages.
     ///
     /// If another cargo has a `MutateExclusive` lock, then an attempt to get
     /// a `DownloadExclusive` lock will block.
@@ -99,27 +99,229 @@ pub enum CacheLockMode {
 /// A locker that can be used to acquire locks.
 #[derive(Debug)]
 pub struct CacheLocker {
+    /// The state of the locker.
+    ///
+    /// [`CacheLocker`] uses interior mutability because it is stuffed inside
+    /// the global `Config`, which does not allow mutation.
     state: RefCell<CacheState>,
 }
 
+/// Whether or not a lock attempt should block.
+#[derive(Copy, Clone)]
+enum BlockingMode {
+    Blocking,
+    NonBlocking,
+}
+
+use BlockingMode::*;
+
+/// Whether or not a lock attempt blocked or succeeded.
+#[derive(PartialEq, Copy, Clone)]
+#[must_use]
+enum LockingResult {
+    LockAcquired,
+    WouldBlock,
+}
+
+use LockingResult::*;
+
+/// A file lock, with a counter to assist with recursive locking.
+#[derive(Debug)]
+struct RecursiveLock {
+    /// The file lock.
+    ///
+    /// An important note is that locks can be `None` even when they are held.
+    /// This can happen on things like old NFS mounts where locking isn't
+    /// supported. We otherwise pretend we have a lock via the lock count. See
+    /// [`FileLock`] for more detail on that.
+    lock: Option<FileLock>,
+    /// Number locks held, to support recursive locking.
+    count: u32,
+    /// If this is `true`, it is an exclusive lock, otherwise it is shared.
+    is_exclusive: bool,
+    /// The filename of the lock.
+    filename: &'static str,
+}
+
+impl RecursiveLock {
+    fn new(filename: &'static str) -> RecursiveLock {
+        RecursiveLock {
+            lock: None,
+            count: 0,
+            is_exclusive: false,
+            filename,
+        }
+    }
+
+    /// Low-level lock count increment routine.
+    fn increment(&mut self) {
+        self.count = self.count.checked_add(1).unwrap();
+    }
+
+    /// Unlocks a previously acquired lock.
+    fn decrement(&mut self) {
+        let new_cnt = self.count.checked_sub(1).unwrap();
+        self.count = new_cnt;
+        if new_cnt == 0 {
+            // This will drop, releasing the lock.
+            self.lock = None;
+        }
+    }
+
+    /// Acquires a shared lock.
+    fn lock_shared(
+        &mut self,
+        config: &Config,
+        description: &'static str,
+        blocking: BlockingMode,
+    ) -> LockingResult {
+        match blocking {
+            Blocking => {
+                self.lock_shared_blocking(config, description);
+                LockAcquired
+            }
+            NonBlocking => self.lock_shared_nonblocking(config),
+        }
+    }
+
+    /// Acquires a shared lock, blocking if held by another locker.
+    fn lock_shared_blocking(&mut self, config: &Config, description: &'static str) {
+        if self.count == 0 {
+            self.is_exclusive = false;
+            self.lock = match config
+                .home()
+                .open_shared_create(self.filename, config, description)
+            {
+                Ok(lock) => Some(lock),
+                Err(e) => {
+                    // There is no error here because locking is mostly a
+                    // best-effort attempt. If cargo home is read-only, we don't
+                    // want to fail just because we couldn't create the lock file.
+                    tracing::warn!("failed to acquire cache lock {}: {e:?}", self.filename);
+                    None
+                }
+            };
+        }
+        self.increment();
+    }
+
+    /// Acquires a shared lock, returns [`WouldBlock`] if held by another locker.
+    fn lock_shared_nonblocking(&mut self, config: &Config) -> LockingResult {
+        if self.count == 0 {
+            self.is_exclusive = false;
+            self.lock = match config.home().try_open_shared_create(self.filename) {
+                Ok(Some(lock)) => Some(lock),
+                Ok(None) => {
+                    return WouldBlock;
+                }
+                Err(e) => {
+                    // Pretend that the lock was acquired (see lock_shared_blocking).
+                    tracing::warn!("failed to acquire cache lock {}: {e:?}", self.filename);
+                    None
+                }
+            };
+        }
+        self.increment();
+        LockAcquired
+    }
+
+    /// Acquires an exclusive lock.
+    fn lock_exclusive(
+        &mut self,
+        config: &Config,
+        description: &'static str,
+        blocking: BlockingMode,
+    ) -> CargoResult<LockingResult> {
+        if self.count > 0 && !self.is_exclusive {
+            // Lock upgrades are dicey. It might be possible to support
+            // this but would take a bit of work, and so far it isn't
+            // needed.
+            panic!("lock upgrade from shared to exclusive not supported");
+        }
+        match blocking {
+            Blocking => {
+                self.lock_exclusive_blocking(config, description)?;
+                Ok(LockAcquired)
+            }
+            NonBlocking => self.lock_exclusive_nonblocking(config),
+        }
+    }
+
+    /// Acquires an exclusive lock, blocking if held by another locker.
+    fn lock_exclusive_blocking(
+        &mut self,
+        config: &Config,
+        description: &'static str,
+    ) -> CargoResult<()> {
+        if self.count == 0 {
+            self.is_exclusive = true;
+            match config.home().open_rw(self.filename, config, description) {
+                Ok(lock) => self.lock = Some(lock),
+                Err(e) => {
+                    if maybe_readonly(&e) {
+                        // This is a best-effort attempt to at least try to
+                        // acquire some sort of lock. This can help in the
+                        // situation where this cargo only has read-only access,
+                        // but maybe some other cargo has read-write. This will at
+                        // least attempt to coordinate with it.
+                        //
+                        // We don't want to fail on a read-only mount because
+                        // cargo grabs an exclusive lock in situations where it
+                        // may only be reading from the package cache. In that
+                        // case, cargo isn't writing anything, and we don't want
+                        // to fail on that.
+                        self.lock_shared_blocking(config, description);
+                        // This has to pretend it is exclusive for recursive locks to work.
+                        self.is_exclusive = true;
+                        return Ok(());
+                    } else {
+                        return Err(e).with_context(|| "failed to acquire package cache lock");
+                    }
+                }
+            }
+        }
+        self.increment();
+        Ok(())
+    }
+
+    /// Acquires an exclusive lock, returns [`WouldBlock`] if held by another locker.
+    fn lock_exclusive_nonblocking(&mut self, config: &Config) -> CargoResult<LockingResult> {
+        if self.count == 0 {
+            self.is_exclusive = true;
+            match config.home().try_open_rw(self.filename) {
+                Ok(Some(lock)) => self.lock = Some(lock),
+                Ok(None) => return Ok(WouldBlock),
+                Err(e) => {
+                    if maybe_readonly(&e) {
+                        let result = self.lock_shared_nonblocking(config);
+                        // This has to pretend it is exclusive for recursive locks to work.
+                        self.is_exclusive = true;
+                        return Ok(result);
+                    } else {
+                        return Err(e).with_context(|| "failed to acquire package cache lock");
+                    }
+                }
+            }
+        }
+        self.increment();
+        Ok(LockAcquired)
+    }
+}
+
 /// The state of the [`CacheLocker`].
-///
-/// [`CacheLocker`] uses interior mutability because it is stuffed inside the
-/// global `Config`, which does not allow mutation.
-///
-/// An important note is that locks can be `None` even when they are held.
-/// This can happen on things like old NFS mounts where locking isn't
-/// supported. We otherwise pretend we have a lock via the lock counts. See
-/// [`FileLock`] for more detail on that.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct CacheState {
-    cache_lock: Option<FileLock>,
-    cache_lock_count: u32,
-    mutate_lock: Option<FileLock>,
-    mutate_lock_count: u32,
-    /// Indicator of whether or not `mutate_lock` is currently a shared lock
-    /// or an exclusive one.
-    mutate_is_exclusive: bool,
+    /// The cache lock guards the package cache used for download and
+    /// resolution (append operations that should not interfere with reading
+    /// from existing src files).
+    cache_lock: RecursiveLock,
+    /// The mutate lock is used to either guard the entire package cache for
+    /// destructive modifications (in exclusive mode), or for reading the
+    /// package cache src files (in shared mode).
+    ///
+    /// Note that [`CacheLockMode::MutateExclusive`] holds both
+    /// [`CacheState::mutate_lock`] and [`CacheState::cache_lock`].
+    mutate_lock: RecursiveLock,
 }
 
 /// A held lock guard.
@@ -142,222 +344,14 @@ const SHARED_DESCR: &str = "shared package cache";
 const DOWNLOAD_EXCLUSIVE_DESCR: &str = "package cache";
 const MUTATE_EXCLUSIVE_DESCR: &str = "package cache mutation";
 
-/// Macro to unlock a previously acquired lock.
-macro_rules! decrement {
-    ($state:expr, $count:ident, $lock:ident) => {
-        let new_cnt = $state.$count.checked_sub(1).unwrap();
-        $state.$count = new_cnt;
-        if new_cnt == 0 {
-            // This will drop, releasing the lock.
-            $state.$lock = None;
-        }
-    };
-}
-
-/// Macro for acquiring a shared lock (can block).
-macro_rules! do_shared_lock {
-    ($self: ident, $config: expr, $to_set: ident, $lock_name: expr, $descr: expr) => {
-        $self.$to_set = match $config
-            .home()
-            .open_shared_create($lock_name, $config, $descr)
-        {
-            Ok(lock) => Some(lock),
-            Err(e) => {
-                // There is no error here because locking is mostly a
-                // best-effort attempt. If cargo home is read-only, we don't
-                // want to fail just because we couldn't create the lock file.
-                tracing::warn!("failed to acquire cache lock {}: {e:?}", $lock_name);
-                None
-            }
-        };
-    };
-}
-
-/// Macro for acquiring a shared lock without blocking.
-macro_rules! do_try_shared_lock {
-    ($self: ident, $config: expr, $to_set: ident, $lock_name: expr, $unused: expr) => {
-        $self.$to_set = match $config.home().try_open_shared_create($lock_name) {
-            Ok(Some(lock)) => Some(lock),
-            Ok(None) => {
-                return Ok(false);
-            }
-            Err(e) => {
-                tracing::warn!("failed to acquire cache lock {}: {e:?}", $lock_name);
-                None
-            }
-        };
-    };
-}
-
-/// Macro for acquiring an exclusive lock (can block).
-macro_rules! do_exclusive_lock {
-    ($self: ident, $config: expr, $to_set: ident, $lock_name: expr, $descr: expr) => {
-        match $config.home().open_rw($lock_name, $config, $descr) {
-            Ok(lock) => {
-                $self.$to_set = Some(lock);
-                Ok(())
-            }
-            Err(e) => {
-                if maybe_readonly(&e) {
-                    // This is a best-effort attempt to at least try to
-                    // acquire some sort of lock. This can help in the
-                    // situation where this cargo only has read-only access,
-                    // but maybe some other cargo has read-write. This will at
-                    // least attempt to coordinate with it.
-                    //
-                    // We don't want to fail on a read-only mount because
-                    // cargo grabs an exclusive lock in situations where it
-                    // may only be reading from the package cache. In that
-                    // case, cargo isn't writing anything, and we don't want
-                    // to fail on that.
-                    do_shared_lock!($self, $config, $to_set, $lock_name, $descr);
-                    Ok(())
-                } else {
-                    Err(e).with_context(|| "failed to acquire package cache lock")
-                }
-            }
-        }
-    };
-}
-
-/// Macro for acquiring an exclusive lock without blocking.
-macro_rules! do_try_exclusive_lock {
-    ($self: ident, $config: expr, $to_set: ident, $lock_name: expr, $unused: expr) => {
-        match $config.home().try_open_rw($lock_name) {
-            Ok(Some(lock)) => {
-                $self.$to_set = Some(lock);
-                Ok(())
-            }
-            Ok(None) => return Ok(false),
-            Err(e) => {
-                if maybe_readonly(&e) {
-                    do_try_shared_lock!($self, $config, $to_set, $lock_name, $unused);
-                    Ok(())
-                } else {
-                    Err(e).with_context(|| "failed to acquire package cache lock")
-                }
-            }
-        }
-    };
-}
-
-/// Macro to help with acquiring a lock.
-///
-/// `shared` and `exclusive` are inputs to the macro so that either the
-/// blocking or non-blocking implementations can be called based on what the
-/// caller wants.
-macro_rules! do_lock {
-    ($self: ident, $config: expr, $mode: expr, $shared: ident, $exclusive: ident) => {
-        use CacheLockMode::*;
-        match (
-            $mode,
-            &$self.cache_lock_count,
-            &$self.mutate_lock_count,
-            $self.mutate_is_exclusive,
-        ) {
-            (Shared, 0, 0, _) => {
-                // Shared lock, no locks currently held.
-                $shared!($self, $config, mutate_lock, MUTATE_NAME, SHARED_DESCR);
-                $self.mutate_lock_count += 1;
-                $self.mutate_is_exclusive = false;
-            }
-            (DownloadExclusive, 0, _, _) => {
-                // DownloadExclusive lock, no DownloadExclusive lock currently held.
-                $exclusive!(
-                    $self,
-                    $config,
-                    cache_lock,
-                    CACHE_LOCK_NAME,
-                    DOWNLOAD_EXCLUSIVE_DESCR
-                )?;
-                $self.cache_lock_count += 1;
-            }
-            (MutateExclusive, 0, 0, _) => {
-                // MutateExclusive lock, no locks currently held.
-                $exclusive!(
-                    $self,
-                    $config,
-                    mutate_lock,
-                    MUTATE_NAME,
-                    MUTATE_EXCLUSIVE_DESCR
-                )?;
-                $self.mutate_lock_count += 1;
-                $self.mutate_is_exclusive = true;
-
-                // Part of the contract of MutateExclusive is that it doesn't
-                // allow any processes to have a lock on the package cache, so
-                // this acquires both locks.
-                if let Err(e) = $exclusive!(
-                    $self,
-                    $config,
-                    cache_lock,
-                    CACHE_LOCK_NAME,
-                    DOWNLOAD_EXCLUSIVE_DESCR
-                ) {
-                    decrement!($self, mutate_lock_count, mutate_lock);
-                    return Err(e);
-                }
-                $self.cache_lock_count += 1;
-            }
-            (Shared, 1.., 0, _) => {
-                // Shared lock, when a DownloadExclusive is held.
-                //
-                // This isn't supported because it could cause a deadlock. If
-                // one cargo is attempting to acquire a MutateExclusive lock,
-                // and acquires the mutate lock, but is blocked on the
-                // download lock, and the cargo that holds the download lock
-                // attempts to get a shared lock, they would end up blocking
-                // each other.
-                panic!("shared lock while holding download lock is not allowed");
-            }
-            (MutateExclusive, _, 1.., false) => {
-                // MutateExclusive lock, when a Shared lock is held.
-                //
-                // Lock upgrades are dicey. It might be possible to support
-                // this but would take a bit of work, and so far it isn't
-                // needed.
-                panic!("lock upgrade from Shared to MutateExclusive not supported");
-            }
-            (Shared, _, 1.., _) => {
-                // Shared lock, when a Shared or MutateExclusive lock is held.
-                //
-                // MutateExclusive is more restrictive than Shared, so no need
-                // to do anything.
-                $self.mutate_lock_count = $self.mutate_lock_count.checked_add(1).unwrap();
-            }
-            (DownloadExclusive, 1.., _, _) => {
-                // DownloadExclusive lock, when another DownloadExclusive is held.
-                $self.cache_lock_count = $self.cache_lock_count.checked_add(1).unwrap();
-            }
-            (MutateExclusive, _, 1.., true) => {
-                // MutateExclusive lock, when another MutateExclusive is held.
-                $self.cache_lock_count += 1;
-                $self.mutate_lock_count += 1;
-            }
-            (MutateExclusive, 1.., 0, _) => {
-                // MutateExclusive lock, when only a DownloadExclusive is held.
-                $exclusive!(
-                    $self,
-                    $config,
-                    mutate_lock,
-                    MUTATE_NAME,
-                    MUTATE_EXCLUSIVE_DESCR
-                )?;
-                // Both of these need to be incremented to match the behavior
-                // in the drop impl.
-                $self.cache_lock_count += 1;
-                $self.mutate_lock_count += 1;
-                $self.mutate_is_exclusive = true;
-            }
-        }
-    };
-}
-
 impl CacheLocker {
     /// Creates a new `CacheLocker`.
     pub fn new() -> CacheLocker {
         CacheLocker {
-            state: RefCell::new(CacheState::default()),
+            state: RefCell::new(CacheState {
+                cache_lock: RecursiveLock::new(CACHE_LOCK_NAME),
+                mutate_lock: RecursiveLock::new(MUTATE_NAME),
+            }),
         }
     }
 
@@ -365,7 +359,7 @@ impl CacheLocker {
     /// cargo is holding the lock.
     pub fn lock(&self, config: &Config, mode: CacheLockMode) -> CargoResult<CacheLock<'_>> {
         let mut state = self.state.borrow_mut();
-        state.lock(config, mode)?;
+        let _ = state.lock(config, mode, Blocking)?;
         Ok(CacheLock { mode, locker: self })
     }
 
@@ -377,7 +371,7 @@ impl CacheLocker {
         mode: CacheLockMode,
     ) -> CargoResult<Option<CacheLock<'_>>> {
         let mut state = self.state.borrow_mut();
-        if state.try_lock(config, mode)? {
+        if state.lock(config, mode, NonBlocking)? == LockAcquired {
             Ok(Some(CacheLock { mode, locker: self }))
         } else {
             Ok(None)
@@ -397,9 +391,9 @@ impl CacheLocker {
         let state = self.state.borrow();
         match (
             mode,
-            state.cache_lock_count,
-            state.mutate_lock_count,
-            state.mutate_is_exclusive,
+            state.cache_lock.count,
+            state.mutate_lock.count,
+            state.mutate_lock.is_exclusive,
         ) {
             (CacheLockMode::Shared, _, 1.., _) => true,
             (CacheLockMode::MutateExclusive, _, 1.., true) => true,
@@ -410,20 +404,65 @@ impl CacheLocker {
 }
 
 impl CacheState {
-    fn lock(&mut self, config: &Config, mode: CacheLockMode) -> CargoResult<()> {
-        do_lock!(self, config, mode, do_shared_lock, do_exclusive_lock);
-        Ok(())
-    }
+    fn lock(
+        &mut self,
+        config: &Config,
+        mode: CacheLockMode,
+        blocking: BlockingMode,
+    ) -> CargoResult<LockingResult> {
+        use CacheLockMode::*;
+        if mode == Shared && self.cache_lock.count > 0 && self.mutate_lock.count == 0 {
+            // Shared lock, when a DownloadExclusive is held.
+            //
+            // This isn't supported because it could cause a deadlock. If
+            // one cargo is attempting to acquire a MutateExclusive lock,
+            // and acquires the mutate lock, but is blocked on the
+            // download lock, and the cargo that holds the download lock
+            // attempts to get a shared lock, they would end up blocking
+            // each other.
+            panic!("shared lock while holding download lock is not allowed");
+        }
+        match mode {
+            Shared => {
+                if self.mutate_lock.lock_shared(config, SHARED_DESCR, blocking) == WouldBlock {
+                    return Ok(WouldBlock);
+                }
+            }
+            DownloadExclusive => {
+                if self
+                    .cache_lock
+                    .lock_exclusive(config, DOWNLOAD_EXCLUSIVE_DESCR, blocking)?
+                    == WouldBlock
+                {
+                    return Ok(WouldBlock);
+                }
+            }
+            MutateExclusive => {
+                if self
+                    .mutate_lock
+                    .lock_exclusive(config, MUTATE_EXCLUSIVE_DESCR, blocking)?
+                    == WouldBlock
+                {
+                    return Ok(WouldBlock);
+                }
 
-    fn try_lock(&mut self, config: &Config, mode: CacheLockMode) -> CargoResult<bool> {
-        do_lock!(
-            self,
-            config,
-            mode,
-            do_try_shared_lock,
-            do_try_exclusive_lock
-        );
-        Ok(true)
+                // Part of the contract of MutateExclusive is that it doesn't
+                // allow any processes to have a lock on the package cache, so
+                // this acquires both locks.
+                match self
+                    .cache_lock
+                    .lock_exclusive(config, DOWNLOAD_EXCLUSIVE_DESCR, blocking)
+                {
+                    Ok(LockAcquired) => {}
+                    Ok(WouldBlock) => return Ok(WouldBlock),
+                    Err(e) => {
+                        self.mutate_lock.decrement();
+                        return Err(e);
+                    }
+                }
+            }
+        }
+        Ok(LockAcquired)
     }
 }
 
@@ -449,14 +488,14 @@ impl Drop for CacheLock<'_> {
         let mut state = self.locker.state.borrow_mut();
         match self.mode {
             Shared => {
-                decrement!(state, mutate_lock_count, mutate_lock);
+                state.mutate_lock.decrement();
             }
             DownloadExclusive => {
-                decrement!(state, cache_lock_count, cache_lock);
+                state.cache_lock.decrement();
             }
             MutateExclusive => {
-                decrement!(state, cache_lock_count, cache_lock);
-                decrement!(state, mutate_lock_count, mutate_lock);
+                state.cache_lock.decrement();
+                state.mutate_lock.decrement();
             }
         }
     }

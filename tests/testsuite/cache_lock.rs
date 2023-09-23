@@ -145,7 +145,7 @@ fn download_then_shared() {
 }
 
 #[cargo_test]
-#[should_panic(expected = "Shared to MutateExclusive not supported")]
+#[should_panic(expected = "lock upgrade from shared to exclusive not supported")]
 fn shared_then_mutate() {
     // This sequence is not supported.
     a_b_nested(CacheLockMode::Shared, CacheLockMode::MutateExclusive);
@@ -204,7 +204,9 @@ fn readonly() {
         CacheLockMode::DownloadExclusive,
         CacheLockMode::MutateExclusive,
     ] {
-        let _lock = locker.lock(&config, mode).unwrap();
+        let _lock1 = locker.lock(&config, mode).unwrap();
+        // Make sure it can recursively acquire the lock, too.
+        let _lock2 = locker.lock(&config, mode).unwrap();
     }
 }
 
