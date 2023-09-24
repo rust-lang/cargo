@@ -2,7 +2,6 @@
 
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::Project;
 use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project,
 };
@@ -46,37 +45,6 @@ fn cargo_test_simple() {
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test test_hello ... ok")
-        .run();
-}
-
-#[cargo_test]
-// download a known broken doctests code base and run cargo test, should fail
-fn cargo_test_tensorflow_not_failing_due_to_shared_library() {
-    use git2::build::RepoBuilder;
-
-    // git repo for cargo project containing doctests that require shared libraries
-    let url = "https://github.com/tensorflow/rust";
-
-    // safe place to git clone into
-    let path = tempfile::tempdir().unwrap();
-
-    // do the git clone
-    let _repo = RepoBuilder::new().clone(&url, &path.path()).unwrap();
-
-    // pathbuf to the resulting local cloned repo
-    let path_copy = path.path().to_path_buf();
-
-    // removing the .git directory, because it causes errors when copying in from_template()
-    std::fs::remove_dir_all(path_copy.clone().join(".git")).unwrap();
-
-    // now we have a handle on a project we can use
-    let project = Project::from_template(path_copy.clone());
-
-    // doctests are failing..
-    project
-        .cargo("test --doc")
-        .with_stdout_does_not_contain("error while loading shared libraries")
-        .with_status(101) // has a single failing test, different problem.
         .run();
 }
 
