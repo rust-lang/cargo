@@ -849,7 +849,7 @@ impl Execs {
     /// Enables nightly features for testing
     ///
     /// The list of reasons should be why nightly cargo is needed. If it is
-    /// becuase of an unstable feature put the name of the feature as the reason,
+    /// because of an unstable feature put the name of the feature as the reason,
     /// e.g. `&["print-im-a-teapot"]`
     pub fn masquerade_as_nightly_cargo(&mut self, reasons: &[&str]) -> &mut Self {
         if let Some(ref mut p) = self.process_builder {
@@ -1211,7 +1211,7 @@ fn _process(t: &OsStr) -> ProcessBuilder {
 /// Enable nightly features for testing
 pub trait ChannelChanger {
     /// The list of reasons should be why nightly cargo is needed. If it is
-    /// becuase of an unstable feature put the name of the feature as the reason,
+    /// because of an unstable feature put the name of the feature as the reason,
     /// e.g. `&["print-im-a-teapot"]`.
     fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self;
 }
