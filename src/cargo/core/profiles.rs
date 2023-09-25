@@ -356,7 +356,7 @@ fn create_profile_maker(
                 name
             );
         }
-        // Already inserted from `add_root_profiles`, no need to do anything.
+        // Already created in `root_profiles`, ignore them to prevent overwrites.
         return Ok(None);
     }
 
