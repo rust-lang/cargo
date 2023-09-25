@@ -8,8 +8,8 @@
 //!
 //! - Create a `Profiles` by merging profiles from configs onto the profile
 //!   from root manifest (see [`merge_config_profiles`]).
-//! - Add built-in profiles onto it (see [`Profiles::add_root_profiles`]).
-//! - Process profile inheritance for each profiles. (see [`Profiles::add_maker`]).
+//! - Add built-in profiles onto it (see [`root_profiles`]).
+//! - Process profile inheritance for each profiles. (see [`create_profile_maker`]).
 //!
 //! Then you can query a [`Profile`] via [`Profiles::get_profile`], which respects
 //! the profile overridden hierarchy described in below. The [`Profile`] you get
@@ -31,6 +31,7 @@ use crate::util::toml::{
 };
 use crate::util::{closest_msg, config, CargoResult, Config};
 use anyhow::{bail, Context as _};
+use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
 use std::{cmp, fmt, hash};
@@ -62,194 +63,82 @@ pub struct Profiles {
 }
 
 impl Profiles {
+    /// Returns all the profiles defined in a workspace, including root and predefined profiles.
+    /// This function resolves inheritances between profiles.
+    pub fn all(ws: &Workspace<'_>) -> CargoResult<HashMap<InternedString, Profile>> {
+        let mut definitions = merge_config_profiles(ws, None)?;
+
+        merge_predefined_profiles(&mut definitions);
+
+        let mut makers = HashMap::new();
+        for (name, profile) in root_profiles(&definitions) {
+            makers.insert(name, profile);
+        }
+
+        for (name, profile) in &definitions {
+            let name = *name;
+            if let Some(maker) = create_profile_maker(name, profile, &makers, &definitions)? {
+                makers.insert(name, maker);
+            }
+        }
+
+        for (name, profile) in &definitions {
+            let name = *name;
+            if let Some(maker) = create_profile_maker(name, profile, &makers, &definitions)? {
+                makers.insert(name, maker);
+            }
+        }
+
+        let mut profiles = HashMap::new();
+        for (name, maker) in makers {
+            profiles.insert(name, maker.get_profile(name, None, true, false));
+        }
+
+        Ok(profiles)
+    }
+
+    /// Returns all the profiles defined in a workspace, verifying that
+    /// the requested profile exists in the workspace.
     pub fn new(ws: &Workspace<'_>, requested_profile: InternedString) -> CargoResult<Profiles> {
         let config = ws.config();
         let incremental = match config.get_env_os("CARGO_INCREMENTAL") {
             Some(v) => Some(v == "1"),
             None => config.build_config()?.incremental,
         };
-        let mut profiles = merge_config_profiles(ws, requested_profile)?;
+        let mut profiles = merge_config_profiles(ws, Some(requested_profile))?;
         let rustc_host = ws.config().load_global_rustc(Some(ws))?.host;
 
         let mut profile_makers = Profiles {
             incremental,
-            dir_names: Self::predefined_dir_names(),
+            dir_names: predefined_dir_names(),
             by_name: HashMap::new(),
             original_profiles: profiles.clone(),
             requested_profile,
             rustc_host,
         };
 
-        Self::add_root_profiles(&mut profile_makers, &profiles);
-
-        // Merge with predefined profiles.
-        use std::collections::btree_map::Entry;
-        for (predef_name, mut predef_prof) in Self::predefined_profiles().into_iter() {
-            match profiles.entry(InternedString::new(predef_name)) {
-                Entry::Vacant(vac) => {
-                    vac.insert(predef_prof);
-                }
-                Entry::Occupied(mut oc) => {
-                    // Override predefined with the user-provided Toml.
-                    let r = oc.get_mut();
-                    predef_prof.merge(r);
-                    *r = predef_prof;
-                }
-            }
+        for (name, profile) in root_profiles(&profiles) {
+            profile_makers.by_name.insert(name, profile);
         }
 
+        merge_predefined_profiles(&mut profiles);
+
         for (name, profile) in &profiles {
-            profile_makers.add_maker(*name, profile, &profiles)?;
+            let name = *name;
+            if let Some(dir_name) = profile.dir_name {
+                profile_makers.dir_names.insert(name, dir_name.to_owned());
+            }
+            if let Some(maker) =
+                create_profile_maker(name, profile, &profile_makers.by_name, &profiles)?
+            {
+                profile_makers.by_name.insert(name, maker);
+            }
         }
         // Verify that the requested profile is defined *somewhere*.
         // This simplifies the API (no need for CargoResult), and enforces
         // assumptions about how config profiles are loaded.
-        profile_makers.get_profile_maker(requested_profile)?;
+        get_profile_maker(&profile_makers.by_name, requested_profile)?;
         Ok(profile_makers)
-    }
-
-    /// Returns the hard-coded directory names for built-in profiles.
-    fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
-        [
-            (InternedString::new("dev"), InternedString::new("debug")),
-            (InternedString::new("test"), InternedString::new("debug")),
-            (InternedString::new("bench"), InternedString::new("release")),
-        ]
-        .into()
-    }
-
-    /// Initialize `by_name` with the two "root" profiles, `dev`, and
-    /// `release` given the user's definition.
-    fn add_root_profiles(
-        profile_makers: &mut Profiles,
-        profiles: &BTreeMap<InternedString, TomlProfile>,
-    ) {
-        profile_makers.by_name.insert(
-            InternedString::new("dev"),
-            ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),
-        );
-
-        profile_makers.by_name.insert(
-            InternedString::new("release"),
-            ProfileMaker::new(Profile::default_release(), profiles.get("release").cloned()),
-        );
-    }
-
-    /// Returns the built-in profiles (not including dev/release, which are
-    /// "root" profiles).
-    fn predefined_profiles() -> Vec<(&'static str, TomlProfile)> {
-        vec![
-            (
-                "bench",
-                TomlProfile {
-                    inherits: Some(InternedString::new("release")),
-                    ..TomlProfile::default()
-                },
-            ),
-            (
-                "test",
-                TomlProfile {
-                    inherits: Some(InternedString::new("dev")),
-                    ..TomlProfile::default()
-                },
-            ),
-            (
-                "doc",
-                TomlProfile {
-                    inherits: Some(InternedString::new("dev")),
-                    ..TomlProfile::default()
-                },
-            ),
-        ]
-    }
-
-    /// Creates a `ProfileMaker`, and inserts it into `self.by_name`.
-    fn add_maker(
-        &mut self,
-        name: InternedString,
-        profile: &TomlProfile,
-        profiles: &BTreeMap<InternedString, TomlProfile>,
-    ) -> CargoResult<()> {
-        match &profile.dir_name {
-            None => {}
-            Some(dir_name) => {
-                self.dir_names.insert(name, dir_name.to_owned());
-            }
-        }
-
-        // dev/release are "roots" and don't inherit.
-        if name == "dev" || name == "release" {
-            if profile.inherits.is_some() {
-                bail!(
-                    "`inherits` must not be specified in root profile `{}`",
-                    name
-                );
-            }
-            // Already inserted from `add_root_profiles`, no need to do anything.
-            return Ok(());
-        }
-
-        // Keep track for inherits cycles.
-        let mut set = HashSet::new();
-        set.insert(name);
-        let maker = self.process_chain(name, profile, &mut set, profiles)?;
-        self.by_name.insert(name, maker);
-        Ok(())
-    }
-
-    /// Build a `ProfileMaker` by recursively following the `inherits` setting.
-    ///
-    /// * `name`: The name of the profile being processed.
-    /// * `profile`: The TOML profile being processed.
-    /// * `set`: Set of profiles that have been visited, used to detect cycles.
-    /// * `profiles`: Map of all TOML profiles.
-    ///
-    /// Returns a `ProfileMaker` to be used for the given named profile.
-    fn process_chain(
-        &mut self,
-        name: InternedString,
-        profile: &TomlProfile,
-        set: &mut HashSet<InternedString>,
-        profiles: &BTreeMap<InternedString, TomlProfile>,
-    ) -> CargoResult<ProfileMaker> {
-        let mut maker = match profile.inherits {
-            Some(inherits_name) if inherits_name == "dev" || inherits_name == "release" => {
-                // These are the root profiles added in `add_root_profiles`.
-                self.get_profile_maker(inherits_name).unwrap().clone()
-            }
-            Some(inherits_name) => {
-                if !set.insert(inherits_name) {
-                    bail!(
-                        "profile inheritance loop detected with profile `{}` inheriting `{}`",
-                        name,
-                        inherits_name
-                    );
-                }
-
-                match profiles.get(&inherits_name) {
-                    None => {
-                        bail!(
-                            "profile `{}` inherits from `{}`, but that profile is not defined",
-                            name,
-                            inherits_name
-                        );
-                    }
-                    Some(parent) => self.process_chain(inherits_name, parent, set, profiles)?,
-                }
-            }
-            None => {
-                bail!(
-                    "profile `{}` is missing an `inherits` directive \
-                     (`inherits` is required for all profiles except `dev` or `release`)",
-                    name
-                );
-            }
-        };
-        match &mut maker.toml {
-            Some(toml) => toml.merge(profile),
-            None => maker.toml = Some(profile.clone()),
-        };
-        Ok(maker)
     }
 
     /// Retrieves the profile for a target.
@@ -263,8 +152,13 @@ impl Profiles {
         unit_for: UnitFor,
         kind: CompileKind,
     ) -> Profile {
-        let maker = self.get_profile_maker(self.requested_profile).unwrap();
-        let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for.is_for_host());
+        let maker = get_profile_maker(&self.by_name, self.requested_profile).unwrap();
+        let mut profile = maker.get_profile(
+            self.requested_profile,
+            Some(pkg_id),
+            is_member,
+            unit_for.is_for_host(),
+        );
 
         // Dealing with `panic=abort` and `panic=unwind` requires some special
         // treatment. Be sure to process all the various options here.
@@ -302,7 +196,6 @@ impl Profiles {
         if !is_local {
             profile.incremental = false;
         }
-        profile.name = self.requested_profile;
         profile
     }
 
@@ -325,8 +218,13 @@ impl Profiles {
     /// select for the package that was actually built.
     pub fn base_profile(&self) -> Profile {
         let profile_name = self.requested_profile;
-        let maker = self.get_profile_maker(profile_name).unwrap();
-        maker.get_profile(None, /*is_member*/ true, /*is_for_host*/ false)
+        let maker = get_profile_maker(&self.by_name, profile_name).unwrap();
+        maker.get_profile(
+            profile_name,
+            None,
+            /*is_member*/ true,
+            /*is_for_host*/ false,
+        )
     }
 
     /// Gets the directory name for a profile, like `debug` or `release`.
@@ -370,13 +268,170 @@ impl Profiles {
         }
         Ok(())
     }
+}
 
-    /// Returns the profile maker for the given profile name.
-    fn get_profile_maker(&self, name: InternedString) -> CargoResult<&ProfileMaker> {
-        self.by_name
-            .get(&name)
-            .ok_or_else(|| anyhow::format_err!("profile `{}` is not defined", name))
+/// Returns the hard-coded directory names for built-in profiles.
+fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
+    [
+        (InternedString::new("dev"), InternedString::new("debug")),
+        (InternedString::new("test"), InternedString::new("debug")),
+        (InternedString::new("bench"), InternedString::new("release")),
+    ]
+    .into()
+}
+
+/// Returns the "root" profiles (dev/release)
+fn root_profiles(
+    profiles: &BTreeMap<InternedString, TomlProfile>,
+) -> Vec<(InternedString, ProfileMaker)> {
+    vec![
+        (
+            InternedString::new("dev"),
+            ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),
+        ),
+        (
+            InternedString::new("release"),
+            ProfileMaker::new(Profile::default_release(), profiles.get("release").cloned()),
+        ),
+    ]
+}
+
+/// Returns the built-in profiles (not including dev/release, which are
+/// "root" profiles).
+fn predefined_profiles() -> Vec<(&'static str, TomlProfile)> {
+    vec![
+        (
+            "bench",
+            TomlProfile {
+                inherits: Some(InternedString::new("release")),
+                ..TomlProfile::default()
+            },
+        ),
+        (
+            "test",
+            TomlProfile {
+                inherits: Some(InternedString::new("dev")),
+                ..TomlProfile::default()
+            },
+        ),
+        (
+            "doc",
+            TomlProfile {
+                inherits: Some(InternedString::new("dev")),
+                ..TomlProfile::default()
+            },
+        ),
+    ]
+}
+
+/// Merge a list of TOML profile definitions with the predefined list from Cargo.
+fn merge_predefined_profiles(definitions: &mut BTreeMap<InternedString, TomlProfile>) {
+    for (predef_name, mut predef_prof) in predefined_profiles().into_iter() {
+        match definitions.entry(InternedString::new(predef_name)) {
+            Entry::Vacant(vac) => {
+                vac.insert(predef_prof);
+            }
+            Entry::Occupied(mut oc) => {
+                // Override predefined with the user-provided Toml.
+                let r = oc.get_mut();
+                predef_prof.merge(r);
+                *r = predef_prof;
+            }
+        }
     }
+}
+
+/// Creates a `ProfileMaker`.
+fn create_profile_maker(
+    name: InternedString,
+    profile: &TomlProfile,
+    makers: &HashMap<InternedString, ProfileMaker>,
+    definitions: &BTreeMap<InternedString, TomlProfile>,
+) -> CargoResult<Option<ProfileMaker>> {
+    // dev/release are "roots" and don't inherit.
+    if name == "dev" || name == "release" {
+        if profile.inherits.is_some() {
+            bail!(
+                "`inherits` must not be specified in root profile `{}`",
+                name
+            );
+        }
+        // Already inserted from `add_root_profiles`, no need to do anything.
+        return Ok(None);
+    }
+
+    // Keep track for inherits cycles.
+    let mut set = HashSet::new();
+    set.insert(name);
+    let maker = process_chain(name, profile, &mut set, makers, definitions)?;
+    Ok(Some(maker))
+}
+
+/// Build a `ProfileMaker` by recursively following the `inherits` setting.
+///
+/// * `name`: The name of the profile being processed.
+/// * `profile`: The TOML profile being processed.
+/// * `set`: Set of profiles that have been visited, used to detect cycles.
+/// * `makers`: Map of all `ProfileMaker` already defined in the workspace.
+/// * `definitions`: Map of all TOML profiles.
+///
+/// Returns a `ProfileMaker` to be used for the given named profile.
+fn process_chain(
+    name: InternedString,
+    profile: &TomlProfile,
+    set: &mut HashSet<InternedString>,
+    makers: &HashMap<InternedString, ProfileMaker>,
+    definitions: &BTreeMap<InternedString, TomlProfile>,
+) -> CargoResult<ProfileMaker> {
+    let mut maker = match profile.inherits {
+        Some(inherits_name) if inherits_name == "dev" || inherits_name == "release" => {
+            // These are the root profiles. They must exist in the list of makers
+            // before calling `process_chain`.
+            get_profile_maker(makers, inherits_name)?.clone()
+        }
+        Some(inherits_name) => {
+            if !set.insert(inherits_name) {
+                bail!(
+                    "profile inheritance loop detected with profile `{}` inheriting `{}`",
+                    name,
+                    inherits_name
+                );
+            }
+
+            match definitions.get(&inherits_name) {
+                None => {
+                    bail!(
+                        "profile `{}` inherits from `{}`, but that profile is not defined",
+                        name,
+                        inherits_name
+                    );
+                }
+                Some(parent) => process_chain(inherits_name, parent, set, makers, definitions)?,
+            }
+        }
+        None => {
+            bail!(
+                "profile `{}` is missing an `inherits` directive \
+                     (`inherits` is required for all profiles except `dev` or `release`)",
+                name
+            );
+        }
+    };
+    match &mut maker.toml {
+        Some(toml) => toml.merge(profile),
+        None => maker.toml = Some(profile.clone()),
+    };
+    Ok(maker)
+}
+
+/// Returns the profile maker for the given profile name.
+fn get_profile_maker(
+    profiles: &HashMap<InternedString, ProfileMaker>,
+    name: InternedString,
+) -> CargoResult<&ProfileMaker> {
+    profiles
+        .get(&name)
+        .ok_or_else(|| anyhow::format_err!("profile `{}` is not defined", name))
 }
 
 /// An object used for handling the profile hierarchy.
@@ -413,6 +468,7 @@ impl ProfileMaker {
     /// Generates a new `Profile`.
     fn get_profile(
         &self,
+        name: InternedString,
         pkg_id: Option<PackageId>,
         is_member: bool,
         is_for_host: bool,
@@ -457,6 +513,7 @@ impl ProfileMaker {
         if let Some(toml) = &self.toml {
             merge_toml_overrides(pkg_id, is_member, is_for_host, &mut profile, toml);
         }
+        profile.name = name;
         profile
     }
 }
@@ -849,9 +906,7 @@ impl fmt::Display for PanicStrategy {
 }
 
 /// The setting for choosing which symbols to strip
-#[derive(
-    Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Strip {
     /// Don't remove any symbols
@@ -867,6 +922,18 @@ impl fmt::Display for Strip {
             Strip::Named(s) => s.as_str(),
         }
         .fmt(f)
+    }
+}
+
+impl serde::ser::Serialize for Strip {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        match self {
+            Strip::None => "none".serialize(s),
+            Strip::Named(n) => n.serialize(s),
+        }
     }
 }
 
@@ -1159,7 +1226,7 @@ impl UnitFor {
 /// Returns a new copy of the profile map with all the mergers complete.
 fn merge_config_profiles(
     ws: &Workspace<'_>,
-    requested_profile: InternedString,
+    requested_profile: Option<InternedString>,
 ) -> CargoResult<BTreeMap<InternedString, TomlProfile>> {
     let mut profiles = match ws.profiles() {
         Some(profiles) => profiles.get_all().clone(),
@@ -1167,7 +1234,9 @@ fn merge_config_profiles(
     };
     // Set of profile names to check if defined in config only.
     let mut check_to_add = HashSet::new();
-    check_to_add.insert(requested_profile);
+    if let Some(requested_profile) = requested_profile {
+        check_to_add.insert(requested_profile);
+    }
     // Merge config onto manifest profiles.
     for (name, profile) in &mut profiles {
         if let Some(config_profile) = get_config_profile(ws, name)? {

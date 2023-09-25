@@ -1,5 +1,7 @@
 //! Tests for namespaced features.
 
+use crate::metadata::DEFAULT_PROFILES;
+
 use super::features2::switch_to_resolver_2;
 use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
 use cargo_test_support::{project, publish};
@@ -576,7 +578,7 @@ fn json_exposed() {
 
     p.cargo("metadata --no-deps")
         .with_json(
-            r#"
+            &r#"
                 {
                   "packages": [
                     {
@@ -614,9 +616,11 @@ fn json_exposed() {
                   "target_directory": "[..]foo/target",
                   "version": 1,
                   "workspace_root": "[..]foo",
-                  "metadata": null
+                  "metadata": null,
+                  "profiles": $PROFILES
                 }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }

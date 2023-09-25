@@ -2,15 +2,15 @@ use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
+use crate::core::profiles::{Profile, Profiles};
 use crate::core::resolver::{features::CliFeatures, HasDevUnits, Resolve};
 use crate::core::{Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::interning::InternedString;
-use crate::util::toml::TomlProfiles;
 use crate::util::CargoResult;
 use cargo_platform::Platform;
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
 const VERSION: u32 = 1;
@@ -50,7 +50,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
         metadata: ws.custom_metadata().cloned(),
-        profiles: ws.profiles().cloned(),
+        profiles: Profiles::all(ws)?,
     })
 }
 
@@ -67,8 +67,7 @@ pub struct ExportInfo {
     version: u32,
     workspace_root: PathBuf,
     metadata: Option<toml::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    profiles: Option<TomlProfiles>,
+    profiles: HashMap<InternedString, Profile>,
 }
 
 #[derive(Serialize)]

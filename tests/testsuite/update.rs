@@ -3,6 +3,8 @@
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
 
+use crate::metadata::DEFAULT_PROFILES;
+
 #[cargo_test]
 fn minor_update_two_places() {
     Package::new("log", "0.1.0").publish();
@@ -577,7 +579,7 @@ fn update_precise_first_run() {
     // Assert `cargo metadata` shows serde 0.2.0
     p.cargo("metadata")
         .with_json(
-            r#"{
+            &r#"{
   "packages": [
     {
       "authors": [],
@@ -714,8 +716,10 @@ fn update_precise_first_run() {
     "bar 0.0.1 (path+file://[..]/foo)"
   ],
   "workspace_root": "[..]/foo",
-  "metadata": null
-}"#,
+  "metadata": null,
+  "profiles": $PROFILES
+}"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 

@@ -6,6 +6,8 @@ use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::{basic_manifest, paths, project};
 use std::fs;
 
+use crate::metadata::DEFAULT_PROFILES;
+
 #[cargo_test]
 fn depend_on_alt_registry() {
     registry::alt_init();
@@ -844,7 +846,7 @@ fn alt_reg_metadata() {
     // iodep -> altdep2: alternative-registry
     p.cargo("metadata --format-version=1 --no-deps")
         .with_json(
-            r#"
+            &r#"
             {
                 "packages": [
                     {
@@ -909,15 +911,17 @@ fn alt_reg_metadata() {
                 "target_directory": "[..]/foo/target",
                 "version": 1,
                 "workspace_root": "[..]/foo",
-                "metadata": null
-            }"#,
+                "metadata": null,
+                "profiles": $PROFILES
+            }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 
     // --no-deps uses a different code path, make sure both work.
     p.cargo("metadata --format-version=1")
         .with_json(
-            r#"
+            &r#"
              {
                 "packages": [
                     {
@@ -1112,8 +1116,10 @@ fn alt_reg_metadata() {
                 "target_directory": "[..]/foo/target",
                 "version": 1,
                 "workspace_root": "[..]/foo",
-                "metadata": null
-            }"#,
+                "metadata": null,
+                "profiles": $PROFILES
+            }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -1160,7 +1166,7 @@ fn unknown_registry() {
     // bar -> baz registry = alternate
     p.cargo("metadata --format-version=1")
         .with_json(
-            r#"
+            &r#"
             {
               "packages": [
                 {
@@ -1278,9 +1284,11 @@ fn unknown_registry() {
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_root": "[..]/foo",
-              "metadata": null
+              "metadata": null,
+              "profiles": $PROFILES
             }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }

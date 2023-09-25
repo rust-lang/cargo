@@ -6,6 +6,84 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};
 use serde_json::json;
 
+pub(crate) const DEFAULT_PROFILES: &str = r#"{
+  "bench": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": false,
+    "debuginfo": 0,
+    "incremental": false,
+    "lto": "false",
+    "name": "bench",
+    "opt_level": "3",
+    "overflow_checks": false,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "none"
+  },
+  "dev": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": true,
+    "debuginfo": 2,
+    "incremental": true,
+    "lto": "false",
+    "name": "dev",
+    "opt_level": "0",
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "none"
+  },
+  "doc": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": true,
+    "debuginfo": 2,
+    "incremental": true,
+    "lto": "false",
+    "name": "doc",
+    "opt_level": "0",
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "none"
+  },
+  "release": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": false,
+    "debuginfo": 0,
+    "incremental": false,
+    "lto": "false",
+    "name": "release",
+    "opt_level": "3",
+    "overflow_checks": false,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "none"
+  },
+  "test": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": true,
+    "debuginfo": 2,
+    "incremental": true,
+    "lto": "false",
+    "name": "test",
+    "opt_level": "0",
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "none"
+  }
+}"#;
+
 #[cargo_test]
 fn cargo_metadata_simple() {
     let p = project()
@@ -15,7 +93,7 @@ fn cargo_metadata_simple() {
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -80,8 +158,10 @@ fn cargo_metadata_simple() {
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -117,7 +197,7 @@ crate-type = ["lib", "staticlib"]
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -180,8 +260,10 @@ crate-type = ["lib", "staticlib"]
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -207,7 +289,7 @@ optional_feat = []
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -277,8 +359,10 @@ optional_feat = []
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -313,7 +397,7 @@ fn cargo_metadata_with_deps_and_version() {
 
     p.cargo("metadata -q --format-version 1")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -594,8 +678,10 @@ fn cargo_metadata_with_deps_and_version() {
             "foo 0.5.0 (path+file:[..]foo)"
         ],
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+    .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -620,7 +706,7 @@ name = "ex"
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -691,8 +777,10 @@ name = "ex"
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -718,7 +806,7 @@ crate-type = ["rlib", "dylib"]
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -789,8 +877,10 @@ crate-type = ["rlib", "dylib"]
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -821,7 +911,7 @@ fn workspace_metadata() {
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -931,8 +1021,10 @@ fn workspace_metadata() {
             "foo": {
               "bar": 3
             }
-        }
-    }"#,
+        },
+        "profiles": $PROFILES
+    }"#
+    .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -972,7 +1064,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
     p.cargo("metadata --no-deps -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -1145,8 +1237,10 @@ fn workspace_metadata_with_dependencies_no_deps() {
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -1240,7 +1334,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
     p.cargo("metadata -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_json(
-            r#"
+            &r#"
             {
               "metadata": null,
               "packages": [
@@ -1779,9 +1873,11 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
                 "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
               ],
-              "workspace_root": "[..]/foo"
+              "workspace_root": "[..]/foo",
+              "profiles": $PROFILES
             }
-    "#,
+    "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -1991,7 +2087,8 @@ const MANIFEST_OUTPUT: &str = r#"
     "target_directory": "[..]foo/target",
     "version": 1,
     "workspace_root": "[..]/foo",
-    "metadata": null
+    "metadata": null,
+    "profiles": $PROFILES
 }"#;
 
 #[cargo_test]
@@ -2003,7 +2100,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
 
     p.cargo("metadata --no-deps --manifest-path foo/Cargo.toml")
         .cwd(p.root().parent().unwrap())
-        .with_json(MANIFEST_OUTPUT)
+        .with_json(&MANIFEST_OUTPUT.replace("$PROFILES", DEFAULT_PROFILES))
         .run();
 }
 
@@ -2017,7 +2114,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
     p.cargo("metadata --no-deps --manifest-path")
         .arg(p.root().join("Cargo.toml"))
         .cwd(p.root().parent().unwrap())
-        .with_json(MANIFEST_OUTPUT)
+        .with_json(&MANIFEST_OUTPUT.replace("$PROFILES", DEFAULT_PROFILES))
         .run();
 }
 
@@ -2064,7 +2161,7 @@ fn cargo_metadata_no_deps_cwd() {
         .build();
 
     p.cargo("metadata --no-deps")
-        .with_json(MANIFEST_OUTPUT)
+        .with_json(&MANIFEST_OUTPUT.replace("$PROFILES", DEFAULT_PROFILES))
         .run();
 }
 
@@ -2135,7 +2232,7 @@ fn package_metadata() {
 
     p.cargo("metadata --no-deps")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -2186,8 +2283,10 @@ fn package_metadata() {
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -2215,7 +2314,7 @@ fn package_publish() {
 
     p.cargo("metadata --no-deps")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -2262,8 +2361,10 @@ fn package_publish() {
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+        "metadata": null,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -2290,7 +2391,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
     p.cargo("metadata --manifest-path")
         .arg(p.root().join("target/package/bar-0.5.0/Cargo.toml"))
         .with_json(
-            r#"
+            &r#"
             {
                 "packages": [
                 {
@@ -2357,9 +2458,11 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                     "bar 0.5.0 (path+file:[..])"
                 ],
                 "workspace_root": "[..]",
-                "metadata": null
+                "metadata": null,
+                "profiles": $PROFILES
             }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -2381,7 +2484,7 @@ fn package_edition_2018() {
         .build();
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
             {
                 "packages": [
                     {
@@ -2448,9 +2551,11 @@ fn package_edition_2018() {
                     "foo 0.1.0 (path+file:[..])"
                 ],
                 "workspace_root": "[..]",
-                "metadata": null
+                "metadata": null,
+                "profiles": $PROFILES
             }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -2518,7 +2623,7 @@ fn target_edition_2018() {
         .build();
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
             {
                 "packages": [
                     {
@@ -2599,9 +2704,11 @@ fn target_edition_2018() {
                     "foo 0.1.0 (path+file:[..])"
                 ],
                 "workspace_root": "[..]",
-                "metadata": null
+                "metadata": null,
+                "profiles": $PROFILES
             }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -2630,7 +2737,7 @@ fn rename_dependency() {
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
 {
     "packages": [
         {
@@ -2838,8 +2945,10 @@ fn rename_dependency() {
         "foo 0.0.1[..]"
     ],
     "workspace_root": "[..]",
-    "metadata": null
-}"#,
+    "metadata": null,
+    "profiles": $PROFILES
+}"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -2862,7 +2971,7 @@ fn metadata_links() {
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
             {
               "packages": [
                 {
@@ -2941,9 +3050,11 @@ fn metadata_links() {
                 "foo 0.5.0 [..]"
               ],
               "workspace_root": "[..]/foo",
-              "metadata": null
+              "metadata": null,
+              "profiles": $PROFILES
             }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run()
 }
@@ -2968,7 +3079,7 @@ fn deps_with_bin_only() {
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
             {
               "packages": [
                 {
@@ -3047,9 +3158,11 @@ fn deps_with_bin_only() {
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_root": "[..]foo",
-              "metadata": null
+              "metadata": null,
+              "profiles": $PROFILES
             }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -3499,7 +3612,8 @@ fn filter_platform() {
   "target_directory": "[..]/foo/target",
   "version": 1,
   "workspace_root": "[..]/foo",
-  "metadata": null
+  "metadata": null,
+  "profiles": $PROFILES
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
@@ -3508,7 +3622,8 @@ fn filter_platform() {
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
-            .replace("$FOO", &foo),
+            .replace("$FOO", &foo)
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
     clear();
@@ -3585,13 +3700,15 @@ fn filter_platform() {
   "target_directory": "[..]foo/target",
   "version": 1,
   "workspace_root": "[..]foo",
-  "metadata": null
+  "metadata": null,
+  "profiles": $PROFILES
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
             .replace("$ALT_DEP", alt_dep)
             .replace("$NORMAL_DEP", normal_dep)
-            .replace("$FOO", &foo),
+            .replace("$FOO", &foo)
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
     clear();
@@ -3667,13 +3784,15 @@ fn filter_platform() {
   "target_directory": "[..]foo/target",
   "version": 1,
   "workspace_root": "[..]foo",
-  "metadata": null
+  "metadata": null,
+  "profiles": $PROFILES
 }
 "#
             .replace("$HOST_TRIPLE", host_target)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
-            .replace("$FOO", &foo),
+            .replace("$FOO", &foo)
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
     clear();
@@ -3769,14 +3888,16 @@ fn filter_platform() {
   "target_directory": "[..]/foo/target",
   "version": 1,
   "workspace_root": "[..]/foo",
-  "metadata": null
+  "metadata": null,
+  "profiles": $PROFILES
 }
 "#
             .replace("$HOST_TRIPLE", host_target)
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
-            .replace("$FOO", &foo),
+            .replace("$FOO", &foo)
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -3812,7 +3933,7 @@ fn dep_kinds() {
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
             {
               "packages": "{...}",
               "workspace_members": "{...}",
@@ -3821,6 +3942,7 @@ fn dep_kinds() {
               "version": 1,
               "workspace_root": "{...}",
               "metadata": null,
+              "profiles": $PROFILES,
               "resolve": {
                 "nodes": [
                   {
@@ -3877,7 +3999,8 @@ fn dep_kinds() {
                 "root": "foo 0.1.0 [..]"
               }
             }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -3928,7 +4051,7 @@ fn dep_kinds_workspace() {
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
             {
               "packages": "{...}",
               "workspace_members": "{...}",
@@ -3937,6 +4060,7 @@ fn dep_kinds_workspace() {
               "version": 1,
               "workspace_root": "[..]/foo",
               "metadata": null,
+              "profiles": $PROFILES,
               "resolve": {
                 "nodes": [
                   {
@@ -3989,7 +4113,8 @@ fn dep_kinds_workspace() {
                 "root": "foo 0.1.0 (path+file://[..]/foo)"
               }
             }
-            "#,
+            "#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
@@ -4057,9 +4182,10 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
     p.cargo("metadata --no-deps -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_json(
-            r#"
+            &r#"
             {
               "metadata": null,
+              "profiles": $PROFILES,
               "packages": [
                 {
                   "authors": [
@@ -4253,10 +4379,104 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
               ],
               "workspace_root": "[..]/foo"
             }
-"#,
+"#
+            .replace("$PROFILES", DEFAULT_PROFILES),
         )
         .run();
 }
+
+const CUSTOM_PROFILES: &str = r#"{
+  "bench": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": false,
+    "debuginfo": 0,
+    "incremental": false,
+    "lto": "false",
+    "name": "bench",
+    "opt_level": "3",
+    "overflow_checks": false,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "symbols"
+  },
+  "custom-lto": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": false,
+    "debuginfo": 0,
+    "incremental": false,
+    "lto": "thin",
+    "name": "custom-lto",
+    "opt_level": "3",
+    "overflow_checks": false,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "symbols"
+  },
+  "dev": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": true,
+    "debuginfo": 2,
+    "incremental": true,
+    "lto": "false",
+    "name": "dev",
+    "opt_level": "0",
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "none"
+  },
+  "doc": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": true,
+    "debuginfo": 2,
+    "incremental": true,
+    "lto": "false",
+    "name": "doc",
+    "opt_level": "0",
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "none"
+  },
+  "release": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": false,
+    "debuginfo": 0,
+    "incremental": false,
+    "lto": "false",
+    "name": "release",
+    "opt_level": "3",
+    "overflow_checks": false,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "symbols"
+  },
+  "test": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": true,
+    "debuginfo": 2,
+    "incremental": true,
+    "lto": "false",
+    "name": "test",
+    "opt_level": "0",
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}",
+    "strip": "none"
+  }
+}"#;
 
 #[cargo_test]
 fn library_metadata_with_profiles() {
@@ -4273,6 +4493,7 @@ version = "0.5.0"
 strip = "symbols"
 
 [profile.custom-lto]
+inherits = "release"
 lto = "thin"
             "#,
         )
@@ -4280,7 +4501,7 @@ lto = "thin"
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -4342,15 +4563,9 @@ lto = "thin"
         "version": 1,
         "workspace_root": "[..]/foo",
         "metadata": null,
-        "profiles": {
-          "custom-lto": {
-            "lto": "thin"
-          },
-          "release": {
-            "strip": "symbols"
-          }
-        }
-    }"#,
+        "profiles": $PROFILES
+    }"#
+            .replace("$PROFILES", CUSTOM_PROFILES),
         )
         .run();
 }
@@ -4368,6 +4583,7 @@ fn workspace_metadata_with_profiles() {
                 strip = "symbols"
                 
                 [profile.custom-lto]
+                inherits = "release"
                 lto = "thin"
             "#,
         )
@@ -4379,7 +4595,7 @@ fn workspace_metadata_with_profiles() {
 
     p.cargo("metadata")
         .with_json(
-            r#"
+            &r#"
     {
         "packages": [
             {
@@ -4484,15 +4700,8 @@ fn workspace_metadata_with_profiles() {
         "version": 1,
         "workspace_root": "[..]/foo",
         "metadata": null,
-        "profiles": {
-          "custom-lto": {
-            "lto": "thin"
-          },
-          "release": {
-            "strip": "symbols"
-          }
-        }
-    }"#,
+        "profiles": $PROFILES
+    }"#.replace("$PROFILES", CUSTOM_PROFILES)
         )
         .run();
 }

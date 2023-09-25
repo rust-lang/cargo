@@ -15,6 +15,8 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 use cargo_test_support::{sleep_ms, t, Project};
 
+use crate::metadata::DEFAULT_PROFILES;
+
 #[cargo_test]
 fn cargo_compile_simple_git_dep() {
     let project = project();
@@ -3370,11 +3372,13 @@ fn metadata_master_consistency() {
               "target_directory": "[..]",
               "version": 1,
               "workspace_root": "[..]",
-              "metadata": null
+              "metadata": null,
+              "profiles": $PROFILES
             }
         "#
         .replace("__BAR_SOURCE__", bar_source)
         .replace("__BAR_HASH__", &bar_hash)
+        .replace("$PROFILES", DEFAULT_PROFILES)
     };
 
     let bar_source = format!("git+{}?branch=master", git_project.url());
