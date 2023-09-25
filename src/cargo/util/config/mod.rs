@@ -1548,7 +1548,10 @@ impl Config {
                 )
             })
         } else {
-            bail!("no index found for registry: `{}`", registry);
+            bail!(
+                "registry index was not found in any configuration: `{}`",
+                registry
+            );
         }
     }
 

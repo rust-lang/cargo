@@ -243,7 +243,7 @@ fn undefined_default() {
         .replace_crates_io(crates_io.index_url())
         .with_status(101)
         .with_stderr(
-            "[ERROR] no index found for registry: `undefined`
+            "[ERROR] registry index was not found in any configuration: `undefined`
 ",
         )
         .run();
