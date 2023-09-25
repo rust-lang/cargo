@@ -498,42 +498,25 @@ impl Display for TomlDebugInfo {
 #[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct TomlProfile {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub opt_level: Option<TomlOptLevel>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub lto: Option<StringOrBool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub codegen_backend: Option<InternedString>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub codegen_units: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub debug: Option<TomlDebugInfo>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub split_debuginfo: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub debug_assertions: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub rpath: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub panic: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub overflow_checks: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub incremental: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub dir_name: Option<InternedString>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub inherits: Option<InternedString>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub strip: Option<StringOrBool>,
     // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub rustflags: Option<Vec<InternedString>>,
     // These two fields must be last because they are sub-tables, and TOML
     // requires all non-tables to be listed first.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub build_override: Option<Box<TomlProfile>>,
 }
 
