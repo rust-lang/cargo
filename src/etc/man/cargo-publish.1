@@ -27,8 +27,14 @@ which registries you are allowed to publish to.
 .RE
 .sp
 .RS 4
-\h'-04' 3.\h'+01'Upload the crate to the registry. Note that the server will perform
-additional checks on the crate.
+\h'-04' 3.\h'+01'Upload the crate to the registry. The server will perform additional
+checks on the crate. 
+.RE
+.sp
+.RS 4
+\h'-04' 4.\h'+01'The client will poll waiting for the package to appear in the index,
+and may timeout. In that case, you will need to check for completion
+manually. This timeout does not affect the upload.
 .RE
 .sp
 This command requires you to be authenticated with either the \fB\-\-token\fR option
