@@ -136,6 +136,19 @@ In order to release a new version, change [the `version` value](manifest.md#the-
 Keep in mind [the SemVer rules](semver.md) which provide guidelines on what is a compatible change.
 Then run [`cargo publish`] as described above to upload the new version.
 
+> **Recommendation:** Consider the full release process and automate what you can.
+>
+> Each version should include:
+> - A changelog entry, preferrably [manually curated](https://keepachangelog.com/en/1.0.0/) though a generated one is better than nothing
+> - A [git tag](https://git-scm.com/book/en/v2/Git-Basics-Tagging) pointing to the published commit
+>
+> Examples of third-party tools that are representative of different workflows include (in alphabetical order):
+> - [cargo-release](https://crates.io/crates/cargo-release)
+> - [cargo-smart-release](https://crates.io/crates/cargo-smart-release)
+> - [release-plz](https://crates.io/crates/release-plz)
+>
+> For more, see [crates.io](https://crates.io/search?q=cargo%20release).
+
 ## Managing a crates.io-based crate
 
 Management of crates is primarily done through the command line `cargo` tool
