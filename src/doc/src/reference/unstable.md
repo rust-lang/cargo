@@ -1191,13 +1191,12 @@ fn main() {}
 ```
 
 A user may optionally specify a manifest in a `cargo` code fence in a module-level comment, like:
-```rust
+````rust
 #!/usr/bin/env -S cargo +nightly -Zscript
-
-//! ```cargo
-//! [dependencies]
-//! clap = { version = "4.2", features = ["derive"] }
-//! ```
+```cargo
+[dependencies]
+clap = { version = "4.2", features = ["derive"] }
+```
 
 use clap::Parser;
 
@@ -1212,7 +1211,7 @@ fn main() {
     let args = Args::parse();
     println!("{:?}", args);
 }
-```
+````
 
 ### Single-file packages
 
@@ -1225,22 +1224,8 @@ Single-file packages may be selected via `--manifest-path`, like
 `cargo test --manifest-path foo.rs`. Unlike `Cargo.toml`, these files cannot be auto-discovered.
 
 A single-file package may contain an embedded manifest.  An embedded manifest
-is stored using `TOML` in a markdown code-fence with `cargo` at the start of the
-infostring inside a target-level doc-comment.  It is an error to have multiple
-`cargo` code fences in the target-level doc-comment.  We can relax this later,
-either merging the code fences or ignoring later code fences.
-
-Supported forms of embedded manifest are:
-``````rust
-//! ```cargo
-//! ```
-``````
-``````rust
-/*!
- * ```cargo
- * ```
- */
-``````
+is stored using `TOML` in rust "frontmatter", a markdown code-fence with `cargo`
+at the start of the infostring at the top of the file.
 
 Inferred / defaulted manifest fields:
 - `package.name = <slugified file stem>`

@@ -15,26 +15,72 @@ pub fn expand_manifest(
     path: &std::path::Path,
     config: &Config,
 ) -> CargoResult<String> {
-    let comment = match extract_comment(content) {
-        Ok(comment) => Some(comment),
-        Err(err) => {
-            tracing::trace!("failed to extract doc comment: {err}");
-            None
+    let source = split_source(content)?;
+    if let Some(frontmatter) = source.frontmatter {
+        match source.info {
+            Some("cargo") => {}
+            None => {
+                anyhow::bail!("frontmatter is missing an infostring; specify `cargo` for embedding a manifest");
+            }
+            Some(other) => {
+                if let Some(remainder) = other.strip_prefix("cargo,") {
+                    anyhow::bail!("cargo does not support frontmatter infostring attributes like `{remainder}` at this time")
+                } else {
+                    anyhow::bail!("frontmatter infostring `{other}` is unsupported by cargo; specify `cargo` for embedding a manifest")
+                }
+            }
         }
-    }
-    .unwrap_or_default();
-    let manifest = match extract_manifest(&comment)? {
-        Some(manifest) => Some(manifest),
-        None => {
-            tracing::trace!("failed to extract manifest");
-            None
+
+        // HACK: until rustc has native support for this syntax, we have to remove it from the
+        // source file
+        use std::fmt::Write as _;
+        let hash = crate::util::hex::short_hash(&path.to_string_lossy());
+        let mut rel_path = std::path::PathBuf::new();
+        rel_path.push("target");
+        rel_path.push(&hash[0..2]);
+        rel_path.push(&hash[2..]);
+        let target_dir = config.home().join(rel_path);
+        let hacked_path = target_dir
+            .join(
+                path.file_name()
+                    .expect("always a name for embedded manifests"),
+            )
+            .into_path_unlocked();
+        let mut hacked_source = String::new();
+        if let Some(shebang) = source.shebang {
+            writeln!(hacked_source, "{shebang}")?;
         }
+        writeln!(hacked_source)?; // open
+        for _ in 0..frontmatter.lines().count() {
+            writeln!(hacked_source)?;
+        }
+        writeln!(hacked_source)?; // close
+        writeln!(hacked_source, "{}", source.content)?;
+        if let Some(parent) = hacked_path.parent() {
+            cargo_util::paths::create_dir_all(parent)?;
+        }
+        cargo_util::paths::write_if_changed(&hacked_path, hacked_source)?;
+
+        let manifest = expand_manifest_(&frontmatter, &hacked_path, config)
+            .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
+        let manifest = toml::to_string_pretty(&manifest)?;
+        Ok(manifest)
+    } else {
+        // Legacy doc-comment support; here only for transitional purposes
+        let comment = extract_comment(content)?.unwrap_or_default();
+        let manifest = match extract_manifest(&comment)? {
+            Some(manifest) => Some(manifest),
+            None => {
+                tracing::trace!("failed to extract manifest");
+                None
+            }
+        }
+        .unwrap_or_default();
+        let manifest = expand_manifest_(&manifest, path, config)
+            .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
+        let manifest = toml::to_string_pretty(&manifest)?;
+        Ok(manifest)
     }
-    .unwrap_or_default();
-    let manifest = expand_manifest_(&manifest, path, config)
-        .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
-    let manifest = toml::to_string_pretty(&manifest)?;
-    Ok(manifest)
 }
 
 fn expand_manifest_(
@@ -66,10 +112,8 @@ fn expand_manifest_(
             anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
         }
     }
-    let file_name = path
-        .file_name()
-        .ok_or_else(|| anyhow::format_err!("no file name"))?
-        .to_string_lossy();
+    // HACK: Using an absolute path while `hacked_path` is in use
+    let bin_path = path.to_string_lossy().into_owned();
     let file_stem = path
         .file_stem()
         .ok_or_else(|| anyhow::format_err!("no file name"))?
@@ -103,10 +147,7 @@ fn expand_manifest_(
 
     let mut bin = toml::Table::new();
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
-    bin.insert(
-        "path".to_owned(),
-        toml::Value::String(file_name.into_owned()),
-    );
+    bin.insert("path".to_owned(), toml::Value::String(bin_path));
     manifest.insert(
         "bin".to_owned(),
         toml::Value::Array(vec![toml::Value::Table(bin)]),
@@ -159,8 +200,82 @@ fn sanitize_name(name: &str) -> String {
     name
 }
 
+struct Source<'s> {
+    shebang: Option<&'s str>,
+    info: Option<&'s str>,
+    frontmatter: Option<&'s str>,
+    content: &'s str,
+}
+
+fn split_source(input: &str) -> CargoResult<Source<'_>> {
+    let mut source = Source {
+        shebang: None,
+        info: None,
+        frontmatter: None,
+        content: input,
+    };
+
+    // See rust-lang/rust's compiler/rustc_lexer/src/lib.rs's `strip_shebang`
+    // Shebang must start with `#!` literally, without any preceding whitespace.
+    // For simplicity we consider any line starting with `#!` a shebang,
+    // regardless of restrictions put on shebangs by specific platforms.
+    if let Some(rest) = source.content.strip_prefix("#!") {
+        // Ok, this is a shebang but if the next non-whitespace token is `[`,
+        // then it may be valid Rust code, so consider it Rust code.
+        if rest.trim_start().starts_with('[') {
+            return Ok(source);
+        }
+
+        // No other choice than to consider this a shebang.
+        let (shebang, content) = source
+            .content
+            .split_once('\n')
+            .unwrap_or((source.content, ""));
+        source.shebang = Some(shebang);
+        source.content = content;
+    }
+
+    let tick_end = source
+        .content
+        .char_indices()
+        .find_map(|(i, c)| (c != '`').then_some(i))
+        .unwrap_or(source.content.len());
+    let (fence_pattern, rest) = match tick_end {
+        0 => {
+            return Ok(source);
+        }
+        1 | 2 => {
+            anyhow::bail!("found {tick_end} backticks in rust frontmatter, expected at least 3")
+        }
+        _ => source.content.split_at(tick_end),
+    };
+    let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
+    if !info.is_empty() {
+        source.info = Some(info.trim_end());
+    }
+    source.content = content;
+
+    let Some((frontmatter, content)) = source.content.split_once(fence_pattern) else {
+        anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
+    };
+    source.frontmatter = Some(frontmatter);
+    source.content = content;
+
+    let (line, content) = source
+        .content
+        .split_once("\n")
+        .unwrap_or((source.content, ""));
+    let line = line.trim();
+    if !line.is_empty() {
+        anyhow::bail!("unexpected trailing content on closing fence: `{line}`");
+    }
+    source.content = content;
+
+    Ok(source)
+}
+
 /// Locates a "code block manifest" in Rust source.
-fn extract_comment(input: &str) -> CargoResult<String> {
+fn extract_comment(input: &str) -> CargoResult<Option<String>> {
     let mut doc_fragments = Vec::new();
     let file = syn::parse_file(input)?;
     // HACK: `syn` doesn't tell us what kind of comment was used, so infer it from how many
@@ -181,7 +296,7 @@ fn extract_comment(input: &str) -> CargoResult<String> {
         }
     }
     if doc_fragments.is_empty() {
-        anyhow::bail!("no doc-comment found");
+        return Ok(None);
     }
     unindent_doc_fragments(&mut doc_fragments);
 
@@ -190,7 +305,7 @@ fn extract_comment(input: &str) -> CargoResult<String> {
         add_doc_fragment(&mut doc_comment, frag);
     }
 
-    Ok(doc_comment)
+    Ok(Some(doc_comment))
 }
 
 /// A `#[doc]`
@@ -496,7 +611,7 @@ mod test_expand {
         snapbox::assert_eq(
             r#"[[bin]]
 name = "test-"
-path = "test.rs"
+path = "/home/me/test.rs"
 
 [package]
 autobenches = false
@@ -523,7 +638,7 @@ strip = true
         snapbox::assert_eq(
             r#"[[bin]]
 name = "test-"
-path = "test.rs"
+path = "/home/me/test.rs"
 
 [dependencies]
 time = "0.1.25"
@@ -561,29 +676,30 @@ mod test_comment {
 
     macro_rules! ec {
         ($s:expr) => {
-            extract_comment($s).unwrap_or_else(|err| panic!("{}", err))
+            extract_comment($s)
+                .unwrap_or_else(|err| panic!("{}", err))
+                .unwrap()
         };
     }
 
     #[test]
     fn test_no_comment() {
-        snapbox::assert_eq(
-            "no doc-comment found",
+        assert_eq!(
+            None,
             extract_comment(
                 r#"
 fn main () {
 }
 "#,
             )
-            .unwrap_err()
-            .to_string(),
+            .unwrap()
         );
     }
 
     #[test]
     fn test_no_comment_she_bang() {
-        snapbox::assert_eq(
-            "no doc-comment found",
+        assert_eq!(
+            None,
             extract_comment(
                 r#"#!/usr/bin/env cargo-eval
 
@@ -591,8 +707,7 @@ fn main () {
 }
 "#,
             )
-            .unwrap_err()
-            .to_string(),
+            .unwrap()
         );
     }
 
