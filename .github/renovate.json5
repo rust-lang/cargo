@@ -8,7 +8,7 @@
   ignorePaths: [
     "**/tests/**",
   ],
-  regexManagers: [
+  customManagers: [
     {
       customType: 'regex',
       fileMatch: [
