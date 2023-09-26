@@ -184,7 +184,7 @@ pub fn print<'a>(
             process.args(args);
         }
         if let CompileKind::Target(t) = kind {
-            process.arg("--target").arg(t.short_name());
+            process.arg("--target").arg(t.rustc_target());
         }
         process.arg("--print").arg(print_opt_value);
         process.exec()?;
