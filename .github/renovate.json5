@@ -6,9 +6,9 @@
   configMigration: true,
   dependencyDashboard: false,
   ignorePaths: [
-    "**/tests/**",
+    '**/tests/**',
   ],
-  regexManagers: [
+  customManagers: [
     {
       customType: 'regex',
       fileMatch: [
@@ -31,14 +31,11 @@
       matchPackageNames: [
         'latest-msrv',
       ],
-      "extractVersion": "^(?<version>\\d+\\.\\d+)",  // Drop the patch version
+      extractVersion: '^(?<version>\\d+\\.\\d+)',
       schedule: [
         '* * * * *',
       ],
     },
-    // Goals:
-    // - Rollup safe upgrades to reduce CI runner load
-    // - Have lockfile and manifest in-sync (implicit rules)
     {
       matchManagers: [
         'cargo',
