@@ -296,7 +296,7 @@ impl LocalManifest {
         let s = self.manifest.data.to_string();
         let new_contents_bytes = s.as_bytes();
 
-        cargo_util::paths::write(&self.path, new_contents_bytes)
+        cargo_util::paths::write_atomic(&self.path, new_contents_bytes)
     }
 
     /// Lookup a dependency.

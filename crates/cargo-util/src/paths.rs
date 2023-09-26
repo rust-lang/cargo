@@ -180,6 +180,19 @@ pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()>
         .with_context(|| format!("failed to write `{}`", path.display()))
 }
 
+/// Writes a file to disk atomically.
+///
+/// write_atomic uses tempfile::persist to accomplish atomic writes.
+pub fn write_atomic<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
+    let path = path.as_ref();
+    let mut tmp = TempFileBuilder::new()
+        .prefix(path.file_name().unwrap())
+        .tempfile_in(path.parent().unwrap())?;
+    tmp.write_all(contents.as_ref())?;
+    tmp.persist(path)?;
+    Ok(())
+}
+
 /// Equivalent to [`write()`], but does not write anything if the file contents
 /// are identical to the given contents.
 pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
@@ -775,6 +788,29 @@ fn exclude_from_time_machine(path: &Path) {
 #[cfg(test)]
 mod tests {
     use super::join_paths;
+    use super::write;
+    use super::write_atomic;
+
+    #[test]
+    fn write_works() {
+        let original_contents = "[dependencies]\nfoo = 0.1.0";
+
+        let tmpdir = tempfile::tempdir().unwrap();
+        let path = tmpdir.path().join("Cargo.toml");
+        write(&path, original_contents).unwrap();
+        let contents = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(contents, original_contents);
+    }
+    #[test]
+    fn write_atomic_works() {
+        let original_contents = "[dependencies]\nfoo = 0.1.0";
+
+        let tmpdir = tempfile::tempdir().unwrap();
+        let path = tmpdir.path().join("Cargo.toml");
+        write_atomic(&path, original_contents).unwrap();
+        let contents = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(contents, original_contents);
+    }
 
     #[test]
     fn join_paths_lists_paths_on_error() {
