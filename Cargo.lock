@@ -62,16 +62,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anstyle-termcolor"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11c3d1411f1f4c8a7b177caec3c71b51290f9e8ad9f99124fd3fe9aa96e56834"
-dependencies = [
- "anstyle",
- "termcolor",
-]
-
-[[package]]
 name = "anstyle-wincon"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -248,7 +238,6 @@ version = "0.75.0"
 dependencies = [
  "anstream",
  "anstyle",
- "anstyle-termcolor",
  "anyhow",
  "base64",
  "bytesize",
@@ -267,7 +256,6 @@ dependencies = [
  "curl-sys",
  "filetime",
  "flate2",
- "fwdansi",
  "git2",
  "git2-curl",
  "gix",
@@ -308,7 +296,6 @@ dependencies = [
  "syn 2.0.29",
  "tar",
  "tempfile",
- "termcolor",
  "time",
  "toml",
  "toml_edit",
@@ -991,16 +978,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a62bc1cf6f830c2ec14a513a9fb124d0a213a629668a4186f329db21fe045652"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "fwdansi"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08c1f5787fe85505d1f7777268db5103d80a7a374d2316a7ce262e57baf8f208"
-dependencies = [
- "memchr",
- "termcolor",
 ]
 
 [[package]]
@@ -3179,15 +3156,6 @@ dependencies = [
  "redox_syscall",
  "rustix",
  "windows-sys",
-]
-
-[[package]]
-name = "termcolor"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be55cf8942feac5c765c2c993422806843c9a9a45d4d5c407ad6dd2ea95eb9b6"
-dependencies = [
- "winapi-util",
 ]
 
 [[package]]
