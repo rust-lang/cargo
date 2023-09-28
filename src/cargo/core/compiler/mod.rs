@@ -1591,9 +1591,7 @@ fn on_stderr_line_inner(
                 } else {
                     // Strip only fails if the Writer fails, which is Cursor
                     // on a Vec, which should never fail.
-                    strip_ansi_escapes::strip(&msg.rendered)
-                        .map(|v| String::from_utf8(v).expect("utf8"))
-                        .expect("strip should never fail")
+                    anstream::adapter::strip_str(&msg.rendered).to_string()
                 };
                 if options.show_diagnostics {
                     let machine_applicable: bool = msg
@@ -1625,9 +1623,7 @@ fn on_stderr_line_inner(
                 other: std::collections::BTreeMap<String, serde_json::Value>,
             }
             if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
-                error.rendered = strip_ansi_escapes::strip(&error.rendered)
-                    .map(|v| String::from_utf8(v).expect("utf8"))
-                    .unwrap_or(error.rendered);
+                error.rendered = anstream::adapter::strip_str(&error.rendered).to_string();
                 let new_line = serde_json::to_string(&error)?;
                 let new_msg: Box<serde_json::value::RawValue> = serde_json::from_str(&new_line)?;
                 compiler_message = new_msg;

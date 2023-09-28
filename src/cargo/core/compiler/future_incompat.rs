@@ -272,9 +272,7 @@ impl OnDiskReports {
         let to_display = if shell.err_supports_color() && shell.out_supports_color() {
             to_display
         } else {
-            strip_ansi_escapes::strip(&to_display)
-                .map(|v| String::from_utf8(v).expect("utf8"))
-                .expect("strip should never fail")
+            anstream::adapter::strip_str(&to_display).to_string()
         };
         Ok(to_display)
     }
