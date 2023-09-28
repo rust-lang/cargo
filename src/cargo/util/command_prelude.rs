@@ -331,6 +331,18 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_quiet(self) -> Self {
+        let unsupported_silent_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--quiet");
+            flag("silent", "")
+                .short('s')
+                .value_parser(value_parser)
+                .hide(true)
+        };
+        self._arg(flag("quiet", "Do not print cargo log messages").short('q'))
+            ._arg(unsupported_silent_arg)
+    }
+
+    fn arg_quiet_without_unknown_silent_arg_tip(self) -> Self {
         self._arg(flag("quiet", "Do not print cargo log messages").short('q'))
     }
 

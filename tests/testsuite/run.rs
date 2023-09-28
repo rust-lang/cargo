@@ -38,6 +38,43 @@ fn quiet_arg() {
 }
 
 #[cargo_test]
+fn unsupported_silent_arg() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run -s")
+        .with_stderr(
+            "\
+error: unexpected argument '--silent' found
+
+  tip: a similar argument exists: '--quiet'
+
+Usage: cargo[EXE] run [OPTIONS] [args]...
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+
+    p.cargo("run --silent")
+        .with_stderr(
+            "\
+error: unexpected argument '--silent' found
+
+  tip: a similar argument exists: '--quiet'
+
+Usage: cargo[EXE] run [OPTIONS] [args]...
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
 fn quiet_arg_and_verbose_arg() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
