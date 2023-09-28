@@ -10,6 +10,8 @@ publish = false
 doctest = false
 
 [dependencies]
+anstream.workspace = true
+anstyle.workspace = true
 anyhow.workspace = true
 cargo-test-macro.workspace = true
 cargo-util.workspace = true
@@ -24,7 +26,6 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 snapbox.workspace = true
 tar.workspace = true
-termcolor.workspace = true
 time.workspace = true
 toml.workspace = true
 url.workspace = true

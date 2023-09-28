@@ -16,8 +16,8 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-anstream = { version = "0.6.3", default-features = false }
-anstyle = "1.0.3"
+anstream = "0.6.3"
+anstyle = "1.0.4"
 anstyle-termcolor = "1.1.0"
 anyhow = "1.0.75"
 base64 = "0.21.3"
