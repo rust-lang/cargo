@@ -31,7 +31,7 @@ cargo-test-macro = { path = "crates/cargo-test-macro" }
 cargo-test-support = { path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.6", path = "crates/cargo-util" }
 cargo_metadata = "0.17.0"
-clap = "4.4.4"
+clap = "4.4.6"
 color-print = "0.3.4"
 core-foundation = { version = "0.9.3", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.39.0", path = "crates/crates-io" }
@@ -86,7 +86,7 @@ serde_json = "1.0.105"
 sha1 = "0.10.5"
 sha2 = "0.10.7"
 shell-escape = "0.1.5"
-snapbox = { version = "0.4.12", features = ["diff", "path"] }
+snapbox = { version = "0.4.13", features = ["diff", "path"] }
 strip-ansi-escapes = "0.1.1"
 syn = { version = "2.0.29", features = ["extra-traits", "full"] }
 tar = { version = "0.4.40", default-features = false }
