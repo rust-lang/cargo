@@ -233,6 +233,7 @@ The default settings for the `dev` profile are:
 opt-level = 0
 debug = true
 split-debuginfo = '...'  # Platform-specific.
+strip = false
 debug-assertions = true
 overflow-checks = true
 lto = false
@@ -255,6 +256,7 @@ The default settings for the `release` profile are:
 opt-level = 3
 debug = false
 split-debuginfo = '...'  # Platform-specific.
+strip = false
 debug-assertions = false
 overflow-checks = false
 lto = false
