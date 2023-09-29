@@ -37,7 +37,7 @@ use crate::core::compiler::BuildContext;
 use crate::core::{Dependency, PackageId, Workspace};
 use crate::sources::source::QueryKind;
 use crate::sources::SourceConfigMap;
-use crate::util::{iter_join, CargoResult, Config};
+use crate::util::{iter_join, CargoResult};
 use anyhow::{bail, format_err, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -224,12 +224,8 @@ impl OnDiskReports {
         self.reports.last().map(|r| r.id).unwrap()
     }
 
-    pub fn get_report(
-        &self,
-        id: u32,
-        config: &Config,
-        package: Option<&str>,
-    ) -> CargoResult<String> {
+    /// Returns an ANSI-styled report
+    pub fn get_report(&self, id: u32, package: Option<&str>) -> CargoResult<String> {
         let report = self.reports.iter().find(|r| r.id == id).ok_or_else(|| {
             let available = iter_join(self.reports.iter().map(|r| r.id.to_string()), ", ");
             format_err!(
@@ -267,15 +263,6 @@ impl OnDiskReports {
         };
         to_display += &package_report;
 
-        let shell = config.shell();
-
-        let to_display = if shell.err_supports_color() && shell.out_supports_color() {
-            to_display
-        } else {
-            strip_ansi_escapes::strip(&to_display)
-                .map(|v| String::from_utf8(v).expect("utf8"))
-                .expect("strip should never fail")
-        };
         Ok(to_display)
     }
 }

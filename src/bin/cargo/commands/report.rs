@@ -44,7 +44,7 @@ fn report_future_incompatibilities(config: &Config, args: &ArgMatches) -> CliRes
         .value_of_u32("id")?
         .unwrap_or_else(|| reports.last_id());
     let krate = args.get_one::<String>("package").map(String::as_str);
-    let report = reports.get_report(id, config, krate)?;
+    let report = reports.get_report(id, krate)?;
     drop_println!(config, "{}", REPORT_PREAMBLE);
     drop(config.shell().print_ansi_stdout(report.as_bytes()));
     Ok(())

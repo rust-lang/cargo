@@ -2,9 +2,8 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io::IsTerminal;
 
+use anstream::AutoStream;
 use anstyle::Style;
-use anstyle_termcolor::to_termcolor_spec;
-use termcolor::{self, BufferWriter, StandardStream, WriteColor};
 
 use crate::util::errors::CargoResult;
 use crate::util::style::*;
@@ -79,17 +78,11 @@ impl fmt::Debug for Shell {
 /// A `Write`able object, either with or without color support
 enum ShellOut {
     /// A plain write object without color support
-    Write(Box<dyn Write>),
+    Write(AutoStream<Box<dyn Write>>),
     /// Color-enabled stdio, with information on whether color should be used
-    ///
-    /// The separate buffered fields are used for buffered writing to the
-    /// corresponding stream. The non-buffered fields should be used when you
-    /// do not want content to be buffered.
     Stream {
-        stdout: StandardStream,
-        buffered_stdout: BufferWriter,
-        stderr: StandardStream,
-        buffered_stderr: BufferWriter,
+        stdout: AutoStream<std::io::Stdout>,
+        stderr: AutoStream<std::io::Stderr>,
         stderr_tty: bool,
         color_choice: ColorChoice,
     },
@@ -111,15 +104,13 @@ impl Shell {
     /// output.
     pub fn new() -> Shell {
         let auto_clr = ColorChoice::CargoAuto;
-        let stdout_choice = auto_clr.to_termcolor_color_choice(Stream::Stdout);
-        let stderr_choice = auto_clr.to_termcolor_color_choice(Stream::Stderr);
+        let stdout_choice = auto_clr.to_anstream_color_choice();
+        let stderr_choice = auto_clr.to_anstream_color_choice();
         Shell {
             output: ShellOut::Stream {
-                stdout: StandardStream::stdout(stdout_choice),
-                buffered_stdout: BufferWriter::stdout(stdout_choice),
-                stderr: StandardStream::stderr(stderr_choice),
-                buffered_stderr: BufferWriter::stderr(stderr_choice),
-                color_choice: ColorChoice::CargoAuto,
+                stdout: AutoStream::new(std::io::stdout(), stdout_choice),
+                stderr: AutoStream::new(std::io::stderr(), stderr_choice),
+                color_choice: auto_clr,
                 stderr_tty: std::io::stderr().is_terminal(),
             },
             verbosity: Verbosity::Verbose,
@@ -130,7 +121,7 @@ impl Shell {
     /// Creates a shell from a plain writable object, with no color, and max verbosity.
     pub fn from_write(out: Box<dyn Write>) -> Shell {
         Shell {
-            output: ShellOut::Write(out),
+            output: ShellOut::Write(AutoStream::never(out)), // strip all formatting on write
             verbosity: Verbosity::Verbose,
             needs_clear: false,
         }
@@ -297,9 +288,7 @@ impl Shell {
     pub fn set_color_choice(&mut self, color: Option<&str>) -> CargoResult<()> {
         if let ShellOut::Stream {
             ref mut stdout,
-            ref mut buffered_stdout,
             ref mut stderr,
-            ref mut buffered_stderr,
             ref mut color_choice,
             ..
         } = self.output
@@ -317,12 +306,10 @@ impl Shell {
                 ),
             };
             *color_choice = cfg;
-            let stdout_choice = cfg.to_termcolor_color_choice(Stream::Stdout);
-            let stderr_choice = cfg.to_termcolor_color_choice(Stream::Stderr);
-            *stdout = StandardStream::stdout(stdout_choice);
-            *buffered_stdout = BufferWriter::stdout(stdout_choice);
-            *stderr = StandardStream::stderr(stderr_choice);
-            *buffered_stderr = BufferWriter::stderr(stderr_choice);
+            let stdout_choice = cfg.to_anstream_color_choice();
+            let stderr_choice = cfg.to_anstream_color_choice();
+            *stdout = AutoStream::new(std::io::stdout(), stdout_choice);
+            *stderr = AutoStream::new(std::io::stderr(), stderr_choice);
         }
         Ok(())
     }
@@ -342,14 +329,14 @@ impl Shell {
     pub fn err_supports_color(&self) -> bool {
         match &self.output {
             ShellOut::Write(_) => false,
-            ShellOut::Stream { stderr, .. } => stderr.supports_color(),
+            ShellOut::Stream { stderr, .. } => supports_color(stderr.current_choice()),
         }
     }
 
     pub fn out_supports_color(&self) -> bool {
         match &self.output {
             ShellOut::Write(_) => false,
-            ShellOut::Stream { stdout, .. } => stdout.supports_color(),
+            ShellOut::Stream { stdout, .. } => supports_color(stdout.current_choice()),
         }
     }
 
@@ -372,13 +359,6 @@ impl Shell {
         if self.needs_clear {
             self.err_erase_line();
         }
-        #[cfg(windows)]
-        {
-            if let ShellOut::Stream { stderr, .. } = &mut self.output {
-                ::fwdansi::write_ansi(stderr, message)?;
-                return Ok(());
-            }
-        }
         self.err().write_all(message)?;
         Ok(())
     }
@@ -387,13 +367,6 @@ impl Shell {
     pub fn print_ansi_stdout(&mut self, message: &[u8]) -> CargoResult<()> {
         if self.needs_clear {
             self.err_erase_line();
-        }
-        #[cfg(windows)]
-        {
-            if let ShellOut::Stream { stdout, .. } = &mut self.output {
-                ::fwdansi::write_ansi(stdout, message)?;
-                return Ok(());
-            }
         }
         self.out().write_all(message)?;
         Ok(())
@@ -425,82 +398,43 @@ impl ShellOut {
         style: &Style,
         justified: bool,
     ) -> CargoResult<()> {
-        match *self {
-            ShellOut::Stream {
-                ref mut buffered_stderr,
-                ..
-            } => {
-                let mut buffer = buffered_stderr.buffer();
-                buffer.reset()?;
-                buffer.set_color(&to_termcolor_spec(*style))?;
-                if justified {
-                    write!(buffer, "{:>12}", status)?;
-                } else {
-                    write!(buffer, "{}", status)?;
-                    buffer.set_color(termcolor::ColorSpec::new().set_bold(true))?;
-                    write!(buffer, ":")?;
-                }
-                buffer.reset()?;
-                match message {
-                    Some(message) => writeln!(buffer, " {}", message)?,
-                    None => write!(buffer, " ")?,
-                }
-                buffered_stderr.print(&buffer)?;
-            }
-            ShellOut::Write(ref mut w) => {
-                if justified {
-                    write!(w, "{:>12}", status)?;
-                } else {
-                    write!(w, "{}:", status)?;
-                }
-                match message {
-                    Some(message) => writeln!(w, " {}", message)?,
-                    None => write!(w, " ")?,
-                }
-            }
+        let style = style.render();
+        let bold = (anstyle::Style::new() | anstyle::Effects::BOLD).render();
+        let reset = anstyle::Reset.render();
+
+        let mut buffer = Vec::new();
+        if justified {
+            write!(&mut buffer, "{style}{status:>12}{reset}")?;
+        } else {
+            write!(&mut buffer, "{style}{status}{reset}{bold}:{reset}")?;
         }
+        match message {
+            Some(message) => writeln!(buffer, " {message}")?,
+            None => write!(buffer, " ")?,
+        }
+        self.stderr().write_all(&buffer)?;
         Ok(())
     }
 
     /// Write a styled fragment
-    fn write_stdout(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
-        match *self {
-            ShellOut::Stream {
-                ref mut buffered_stdout,
-                ..
-            } => {
-                let mut buffer = buffered_stdout.buffer();
-                buffer.reset()?;
-                buffer.set_color(&to_termcolor_spec(*color))?;
-                write!(buffer, "{}", fragment)?;
-                buffer.reset()?;
-                buffered_stdout.print(&buffer)?;
-            }
-            ShellOut::Write(ref mut w) => {
-                write!(w, "{}", fragment)?;
-            }
-        }
+    fn write_stdout(&mut self, fragment: impl fmt::Display, style: &Style) -> CargoResult<()> {
+        let style = style.render();
+        let reset = anstyle::Reset.render();
+
+        let mut buffer = Vec::new();
+        write!(buffer, "{style}{}{reset}", fragment)?;
+        self.stdout().write_all(&buffer)?;
         Ok(())
     }
 
     /// Write a styled fragment
-    fn write_stderr(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
-        match *self {
-            ShellOut::Stream {
-                ref mut buffered_stderr,
-                ..
-            } => {
-                let mut buffer = buffered_stderr.buffer();
-                buffer.reset()?;
-                buffer.set_color(&to_termcolor_spec(*color))?;
-                write!(buffer, "{}", fragment)?;
-                buffer.reset()?;
-                buffered_stderr.print(&buffer)?;
-            }
-            ShellOut::Write(ref mut w) => {
-                write!(w, "{}", fragment)?;
-            }
-        }
+    fn write_stderr(&mut self, fragment: impl fmt::Display, style: &Style) -> CargoResult<()> {
+        let style = style.render();
+        let reset = anstyle::Reset.render();
+
+        let mut buffer = Vec::new();
+        write!(buffer, "{style}{}{reset}", fragment)?;
+        self.stderr().write_all(&buffer)?;
         Ok(())
     }
 
@@ -522,33 +456,22 @@ impl ShellOut {
 }
 
 impl ColorChoice {
-    /// Converts our color choice to termcolor's version.
-    fn to_termcolor_color_choice(self, stream: Stream) -> termcolor::ColorChoice {
+    /// Converts our color choice to anstream's version.
+    fn to_anstream_color_choice(self) -> anstream::ColorChoice {
         match self {
-            ColorChoice::Always => termcolor::ColorChoice::Always,
-            ColorChoice::Never => termcolor::ColorChoice::Never,
-            ColorChoice::CargoAuto => {
-                if stream.is_terminal() {
-                    termcolor::ColorChoice::Auto
-                } else {
-                    termcolor::ColorChoice::Never
-                }
-            }
+            ColorChoice::Always => anstream::ColorChoice::Always,
+            ColorChoice::Never => anstream::ColorChoice::Never,
+            ColorChoice::CargoAuto => anstream::ColorChoice::Auto,
         }
     }
 }
 
-enum Stream {
-    Stdout,
-    Stderr,
-}
-
-impl Stream {
-    fn is_terminal(self) -> bool {
-        match self {
-            Self::Stdout => std::io::stdout().is_terminal(),
-            Self::Stderr => std::io::stderr().is_terminal(),
-        }
+fn supports_color(choice: anstream::ColorChoice) -> bool {
+    match choice {
+        anstream::ColorChoice::Always
+        | anstream::ColorChoice::AlwaysAnsi
+        | anstream::ColorChoice::Auto => true,
+        anstream::ColorChoice::Never => false,
     }
 }
 
