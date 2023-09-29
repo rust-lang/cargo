@@ -202,7 +202,6 @@ fn compile<'cfg>(
                 &unit.target,
                 cx.files().message_cache_path(unit),
                 cx.bcx.build_config.message_format,
-                cx.bcx.config.shell().err_supports_color(),
                 unit.show_warnings(bcx.config),
             );
             // Need to link targets on both the dirty and fresh.
@@ -1416,8 +1415,6 @@ fn envify(s: &str) -> String {
 struct OutputOptions {
     /// What format we're emitting from Cargo itself.
     format: MessageFormat,
-    /// Whether or not to display messages in color.
-    color: bool,
     /// Where to write the JSON messages to support playback later if the unit
     /// is fresh. The file is created lazily so that in the normal case, lots
     /// of empty files are not created. If this is None, the output will not
@@ -1439,14 +1436,12 @@ struct OutputOptions {
 
 impl OutputOptions {
     fn new(cx: &Context<'_, '_>, unit: &Unit) -> OutputOptions {
-        let color = cx.bcx.config.shell().err_supports_color();
         let path = cx.files().message_cache_path(unit);
         // Remove old cache, ignore ENOENT, which is the common case.
         drop(fs::remove_file(&path));
         let cache_cell = Some((path, LazyCell::new()));
         OutputOptions {
             format: cx.bcx.build_config.message_format,
-            color,
             cache_cell,
             show_diagnostics: true,
             warnings_seen: 0,
@@ -1586,13 +1581,7 @@ fn on_stderr_line_inner(
                 if msg.rendered.ends_with('\n') {
                     msg.rendered.pop();
                 }
-                let rendered = if options.color {
-                    msg.rendered
-                } else {
-                    // Strip only fails if the Writer fails, which is Cursor
-                    // on a Vec, which should never fail.
-                    anstream::adapter::strip_str(&msg.rendered).to_string()
-                };
+                let rendered = msg.rendered;
                 if options.show_diagnostics {
                     let machine_applicable: bool = msg
                         .children
@@ -1695,13 +1684,11 @@ fn replay_output_cache(
     target: &Target,
     path: PathBuf,
     format: MessageFormat,
-    color: bool,
     show_diagnostics: bool,
 ) -> Work {
     let target = target.clone();
     let mut options = OutputOptions {
         format,
-        color,
         cache_cell: None,
         show_diagnostics,
         warnings_seen: 0,
