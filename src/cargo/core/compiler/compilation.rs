@@ -183,7 +183,7 @@ impl<'cfg> Compilation<'cfg> {
             self.rustc_process.clone()
         };
 
-        let cmd = fill_rustc_tool_env(rustc, unit);
+        let cmd = fill_rustc_tool_env(rustc, unit, &self.host);
         self.fill_env(cmd, &unit.pkg, None, unit.kind, true)
     }
 
@@ -194,7 +194,7 @@ impl<'cfg> Compilation<'cfg> {
         script_meta: Option<Metadata>,
     ) -> CargoResult<ProcessBuilder> {
         let rustdoc = ProcessBuilder::new(&*self.config.rustdoc()?);
-        let cmd = fill_rustc_tool_env(rustdoc, unit);
+        let cmd = fill_rustc_tool_env(rustdoc, unit, &self.host);
         let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
         cmd.retry_with_argfile(true);
         unit.target.edition().cmd_edition_arg(&mut cmd);
@@ -373,7 +373,7 @@ impl<'cfg> Compilation<'cfg> {
 
 /// Prepares a rustc_tool process with additional environment variables
 /// that are only relevant in a context that has a unit
-fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
+fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit, host_triple: &str) -> ProcessBuilder {
     if unit.target.is_executable() {
         let name = unit
             .target
@@ -383,6 +383,11 @@ fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
         cmd.env("CARGO_BIN_NAME", name);
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
+    let target_triple = match &unit.kind {
+        CompileKind::Host => host_triple,
+        CompileKind::Target(t) => t.short_name(),
+    };
+    cmd.env("TARGET", target_triple);
     cmd
 }
 

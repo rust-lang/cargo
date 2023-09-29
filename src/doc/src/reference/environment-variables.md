@@ -247,6 +247,9 @@ corresponding environment variable is set to the empty string, `""`.
 * `OUT_DIR` --- If the package has a build script, this is set to the folder where the build
               script should place its output. See below for more information.
               (Only set during compilation.)
+* `TARGET` --- the target triple that is being compiled for. Native code should be
+             compiled for this triple. See the [Target Triple] description
+             for more information. (Only set during compilation.)
 * `CARGO_BIN_EXE_<name>` --- The absolute path to a binary target's executable.
   This is only set when building an [integration test] or benchmark. This may
   be used with the [`env` macro] to find the executable to run for testing

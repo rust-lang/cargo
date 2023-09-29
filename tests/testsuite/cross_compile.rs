@@ -30,7 +30,7 @@ fn simple_cross() {
                         assert_eq!(std::env::var("TARGET").unwrap(), "{}");
                     }}
                 "#,
-                cross_compile::alternate()
+                cross_compile::alternate(),
             ),
         )
         .file(
@@ -40,9 +40,11 @@ fn simple_cross() {
                     use std::env;
                     fn main() {{
                         assert_eq!(env::consts::ARCH, "{}");
+                        assert_eq!(env!("TARGET"), "{}");
                     }}
                 "#,
-                cross_compile::alternate_arch()
+                cross_compile::alternate_arch(),
+                cross_compile::alternate()
             ),
         )
         .build();
@@ -101,9 +103,11 @@ fn simple_cross_config() {
                     use std::env;
                     fn main() {{
                         assert_eq!(env::consts::ARCH, "{}");
+                        assert_eq!(env!("TARGET"), "{}");
                     }}
                 "#,
-                cross_compile::alternate_arch()
+                cross_compile::alternate_arch(),
+                cross_compile::alternate()
             ),
         )
         .build();

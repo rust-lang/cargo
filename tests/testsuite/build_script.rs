@@ -5101,6 +5101,7 @@ fn duplicate_script_with_extra_env() {
                     compile_error!{"expected mycfg set"}
                     // Compile-time assertion.
                     assert_eq!(env!("CRATE_TARGET"), "{target}");
+                    assert_eq!(env!("TARGET"), "{target}");
                     // Run-time assertion.
                     assert_eq!(std::env::var("CRATE_TARGET").unwrap(), "{target}");
                 }
