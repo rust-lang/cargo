@@ -78,7 +78,7 @@ impl fmt::Debug for Shell {
 /// A `Write`able object, either with or without color support
 enum ShellOut {
     /// A plain write object without color support
-    Write(Box<dyn Write>),
+    Write(AutoStream<Box<dyn Write>>),
     /// Color-enabled stdio, with information on whether color should be used
     Stream {
         stdout: AutoStream<std::io::Stdout>,
@@ -121,7 +121,7 @@ impl Shell {
     /// Creates a shell from a plain writable object, with no color, and max verbosity.
     pub fn from_write(out: Box<dyn Write>) -> Shell {
         Shell {
-            output: ShellOut::Write(out),
+            output: ShellOut::Write(AutoStream::never(out)), // strip all formatting on write
             verbosity: Verbosity::Verbose,
             needs_clear: false,
         }
@@ -398,72 +398,43 @@ impl ShellOut {
         style: &Style,
         justified: bool,
     ) -> CargoResult<()> {
-        match *self {
-            ShellOut::Stream { ref mut stderr, .. } => {
-                let style = style.render();
-                let bold = (anstyle::Style::new() | anstyle::Effects::BOLD).render();
-                let reset = anstyle::Reset.render();
+        let style = style.render();
+        let bold = (anstyle::Style::new() | anstyle::Effects::BOLD).render();
+        let reset = anstyle::Reset.render();
 
-                let mut buffer = Vec::new();
-                if justified {
-                    write!(&mut buffer, "{style}{status:>12}{reset}")?;
-                } else {
-                    write!(&mut buffer, "{style}{status}{reset}{bold}:{reset}")?;
-                }
-                match message {
-                    Some(message) => writeln!(buffer, " {message}")?,
-                    None => write!(buffer, " ")?,
-                }
-                stderr.write_all(&buffer)?;
-            }
-            ShellOut::Write(ref mut w) => {
-                if justified {
-                    write!(w, "{:>12}", status)?;
-                } else {
-                    write!(w, "{}:", status)?;
-                }
-                match message {
-                    Some(message) => writeln!(w, " {}", message)?,
-                    None => write!(w, " ")?,
-                }
-            }
+        let mut buffer = Vec::new();
+        if justified {
+            write!(&mut buffer, "{style}{status:>12}{reset}")?;
+        } else {
+            write!(&mut buffer, "{style}{status}{reset}{bold}:{reset}")?;
         }
+        match message {
+            Some(message) => writeln!(buffer, " {message}")?,
+            None => write!(buffer, " ")?,
+        }
+        self.stderr().write_all(&buffer)?;
         Ok(())
     }
 
     /// Write a styled fragment
     fn write_stdout(&mut self, fragment: impl fmt::Display, style: &Style) -> CargoResult<()> {
-        match *self {
-            ShellOut::Stream { ref mut stdout, .. } => {
-                let style = style.render();
-                let reset = anstyle::Reset.render();
+        let style = style.render();
+        let reset = anstyle::Reset.render();
 
-                let mut buffer = Vec::new();
-                write!(buffer, "{style}{}{reset}", fragment)?;
-                stdout.write_all(&buffer)?;
-            }
-            ShellOut::Write(ref mut w) => {
-                write!(w, "{}", fragment)?;
-            }
-        }
+        let mut buffer = Vec::new();
+        write!(buffer, "{style}{}{reset}", fragment)?;
+        self.stdout().write_all(&buffer)?;
         Ok(())
     }
 
     /// Write a styled fragment
     fn write_stderr(&mut self, fragment: impl fmt::Display, style: &Style) -> CargoResult<()> {
-        match *self {
-            ShellOut::Stream { ref mut stderr, .. } => {
-                let style = style.render();
-                let reset = anstyle::Reset.render();
+        let style = style.render();
+        let reset = anstyle::Reset.render();
 
-                let mut buffer = Vec::new();
-                write!(buffer, "{style}{}{reset}", fragment)?;
-                stderr.write_all(&buffer)?;
-            }
-            ShellOut::Write(ref mut w) => {
-                write!(w, "{}", fragment)?;
-            }
-        }
+        let mut buffer = Vec::new();
+        write!(buffer, "{style}{}{reset}", fragment)?;
+        self.stderr().write_all(&buffer)?;
         Ok(())
     }
 
