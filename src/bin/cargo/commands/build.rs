@@ -35,14 +35,7 @@ pub fn cli() -> Command {
         .arg_parallel()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg(
-            opt(
-                "out-dir",
-                "Copy final artifacts to this directory (unstable)",
-            )
-            .value_name("PATH")
-            .help_heading(heading::COMPILATION_OPTIONS),
-        )
+        .arg_out_dir()
         .arg_build_plan()
         .arg_unit_graph()
         .arg_timings()

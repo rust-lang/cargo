@@ -293,6 +293,8 @@ fn unsupported_short_out_dir_flag() {
             "\
 error: unexpected argument '-O' found
 
+  tip: a similar argument exists: '--out-dir'
+
 Usage: cargo[EXE] build [OPTIONS]
 
 For more information, try '--help'.
