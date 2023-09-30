@@ -258,6 +258,12 @@ fn check_name(
             name
         ))?;
     }
+    let name_in_lowercase = name.to_lowercase();
+    if name != name_in_lowercase {
+        shell.warn(format!(
+            "the name `{name}` is not snake_case or kebab-case which is recommended for package names, consider `{name_in_lowercase}`"
+        ))?;
+    }
 
     Ok(())
 }
