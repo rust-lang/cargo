@@ -132,7 +132,7 @@ pub fn render_colored_changes<T: fmt::Display>(changes: &[Change<T>]) -> String 
             Change::Remove(i, s) => (format!("{:<4}     ", i), '-', red, s),
             Change::Keep(x, y, s) => (format!("{:<4}{:<4} ", x, y), ' ', dim, s),
         };
-        write!(
+        writeln!(
             buffer,
             "{dim}{nums}{reset}{bold}{sign}{reset}{color}{text}{reset}"
         )
