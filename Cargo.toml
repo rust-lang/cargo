@@ -30,7 +30,7 @@ cargo-platform = { path = "crates/cargo-platform", version = "0.1.4" }
 cargo-test-macro = { path = "crates/cargo-test-macro" }
 cargo-test-support = { path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.6", path = "crates/cargo-util" }
-cargo_metadata = "0.17.0"
+cargo_metadata = "0.18.0"
 clap = "4.4.6"
 color-print = "0.3.4"
 core-foundation = { version = "0.9.3", features = ["mac_os_10_7_support"] }
