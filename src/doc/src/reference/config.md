@@ -933,21 +933,21 @@ See [opt-level](profiles.md#opt-level).
 
 #### `profile.<name>.panic`
 * Type: string
-* default: See profile docs.
+* Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_PANIC`
 
 See [panic](profiles.md#panic).
 
 #### `profile.<name>.rpath`
 * Type: boolean
-* default: See profile docs.
+* Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_RPATH`
 
 See [rpath](profiles.md#rpath).
 
 #### `profile.<name>.strip`
 * Type: string
-* default: See profile docs.
+* Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_STRIP`
 
 See [strip](profiles.md#strip).
