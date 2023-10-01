@@ -126,6 +126,7 @@ inherits = "dev"         # Inherits settings from [profile.dev].
 opt-level = 0            # Optimization level.
 debug = true             # Include debug info.
 split-debuginfo = '...'  # Debug info splitting behavior.
+strip = "none"           # Removes symbols or debuginfo.
 debug-assertions = true  # Enables debug assertions.
 overflow-checks = true   # Enables runtime integer overflow checks.
 lto = false              # Sets link-time optimization.
@@ -133,7 +134,6 @@ panic = 'unwind'         # The panic strategy.
 incremental = true       # Incremental compilation.
 codegen-units = 16       # Number of code generation units.
 rpath = false            # Sets the rpath linking option.
-strip = "none"           # Removes symbols or debuginfo.
 [profile.<name>.build-override]  # Overrides build-script settings.
 # Same keys for a normal profile.
 [profile.<name>.package.<name>]  # Override profile for a package.
@@ -889,6 +889,13 @@ See [debug](profiles.md#debug).
 
 See [split-debuginfo](profiles.md#split-debuginfo).
 
+#### `profile.<name>.strip`
+* Type: string or boolean
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_STRIP`
+
+See [strip](profiles.md#strip).
+
 #### `profile.<name>.debug-assertions`
 * Type: boolean
 * Default: See profile docs.
@@ -926,21 +933,21 @@ See [opt-level](profiles.md#opt-level).
 
 #### `profile.<name>.panic`
 * Type: string
-* default: See profile docs.
+* Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_PANIC`
 
 See [panic](profiles.md#panic).
 
 #### `profile.<name>.rpath`
 * Type: boolean
-* default: See profile docs.
+* Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_RPATH`
 
 See [rpath](profiles.md#rpath).
 
 #### `profile.<name>.strip`
 * Type: string
-* default: See profile docs.
+* Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_STRIP`
 
 See [strip](profiles.md#strip).
