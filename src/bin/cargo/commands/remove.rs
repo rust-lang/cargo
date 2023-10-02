@@ -270,7 +270,10 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
     }
 
     if is_modified {
-        cargo_util::paths::write(workspace.root_manifest(), manifest.to_string().as_bytes())?;
+        cargo_util::paths::write_atomic(
+            workspace.root_manifest(),
+            manifest.to_string().as_bytes(),
+        )?;
     }
 
     Ok(())
