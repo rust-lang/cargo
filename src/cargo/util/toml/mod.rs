@@ -373,6 +373,18 @@ impl TomlProfiles {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TomlOptLevel(pub String);
 
+impl ser::Serialize for TomlOptLevel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        match self.0.parse::<u32>() {
+            Ok(n) => n.serialize(serializer),
+            Err(_) => self.0.serialize(serializer),
+        }
+    }
+}
+
 impl<'de> de::Deserialize<'de> for TomlOptLevel {
     fn deserialize<D>(d: D) -> Result<TomlOptLevel, D::Error>
     where
@@ -397,18 +409,6 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
     }
 }
 
-impl ser::Serialize for TomlOptLevel {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match self.0.parse::<u32>() {
-            Ok(n) => n.serialize(serializer),
-            Err(_) => self.0.serialize(serializer),
-        }
-    }
-}
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub enum TomlDebugInfo {
     None,
@@ -416,6 +416,18 @@ pub enum TomlDebugInfo {
     LineTablesOnly,
     Limited,
     Full,
+}
+
+impl Display for TomlDebugInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TomlDebugInfo::None => f.write_char('0'),
+            TomlDebugInfo::Limited => f.write_char('1'),
+            TomlDebugInfo::Full => f.write_char('2'),
+            TomlDebugInfo::LineDirectivesOnly => f.write_str("line-directives-only"),
+            TomlDebugInfo::LineTablesOnly => f.write_str("line-tables-only"),
+        }
+    }
 }
 
 impl ser::Serialize for TomlDebugInfo {
@@ -483,18 +495,6 @@ impl<'de> de::Deserialize<'de> for TomlDebugInfo {
     }
 }
 
-impl Display for TomlDebugInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TomlDebugInfo::None => f.write_char('0'),
-            TomlDebugInfo::Limited => f.write_char('1'),
-            TomlDebugInfo::Full => f.write_char('2'),
-            TomlDebugInfo::LineDirectivesOnly => f.write_str("line-directives-only"),
-            TomlDebugInfo::LineTablesOnly => f.write_str("line-tables-only"),
-        }
-    }
-}
-
 #[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct TomlProfile {
@@ -526,6 +526,15 @@ pub enum ProfilePackageSpec {
     All,
 }
 
+impl fmt::Display for ProfilePackageSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ProfilePackageSpec::Spec(spec) => spec.fmt(f),
+            ProfilePackageSpec::All => f.write_str("*"),
+        }
+    }
+}
+
 impl ser::Serialize for ProfilePackageSpec {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
@@ -547,15 +556,6 @@ impl<'de> de::Deserialize<'de> for ProfilePackageSpec {
             PackageIdSpec::parse(&string)
                 .map_err(de::Error::custom)
                 .map(ProfilePackageSpec::Spec)
-        }
-    }
-}
-
-impl fmt::Display for ProfilePackageSpec {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProfilePackageSpec::Spec(spec) => spec.fmt(f),
-            ProfilePackageSpec::All => f.write_str("*"),
         }
     }
 }
@@ -3255,21 +3255,21 @@ struct TomlTarget {
 #[derive(Clone)]
 struct PathValue(PathBuf);
 
-impl<'de> de::Deserialize<'de> for PathValue {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        Ok(PathValue(String::deserialize(deserializer)?.into()))
-    }
-}
-
 impl ser::Serialize for PathValue {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
         self.0.serialize(serializer)
+    }
+}
+
+impl<'de> de::Deserialize<'de> for PathValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        Ok(PathValue(String::deserialize(deserializer)?.into()))
     }
 }
 
