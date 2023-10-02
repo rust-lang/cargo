@@ -206,6 +206,75 @@ pub enum TomlDependency<P: Clone = String> {
     Detailed(DetailedTomlDependency<P>),
 }
 
+impl TomlDependency {
+    fn unused_keys(&self) -> Vec<String> {
+        match self {
+            TomlDependency::Simple(_) => vec![],
+            TomlDependency::Detailed(detailed) => detailed.other.keys().cloned().collect(),
+        }
+    }
+}
+
+impl<P: ResolveToPath + Clone> TomlDependency<P> {
+    pub(crate) fn to_dependency_split(
+        &self,
+        name: &str,
+        source_id: SourceId,
+        nested_paths: &mut Vec<PathBuf>,
+        config: &Config,
+        warnings: &mut Vec<String>,
+        platform: Option<Platform>,
+        root: &Path,
+        features: &Features,
+        kind: Option<DepKind>,
+    ) -> CargoResult<Dependency> {
+        self.to_dependency(
+            name,
+            &mut Context {
+                deps: &mut Vec::new(),
+                source_id,
+                nested_paths,
+                config,
+                warnings,
+                platform,
+                root,
+                features,
+            },
+            kind,
+        )
+    }
+
+    fn to_dependency(
+        &self,
+        name: &str,
+        cx: &mut Context<'_, '_>,
+        kind: Option<DepKind>,
+    ) -> CargoResult<Dependency> {
+        match *self {
+            TomlDependency::Simple(ref version) => DetailedTomlDependency::<P> {
+                version: Some(version.clone()),
+                ..Default::default()
+            }
+            .to_dependency(name, cx, kind),
+            TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
+        }
+    }
+
+    fn is_version_specified(&self) -> bool {
+        match self {
+            TomlDependency::Detailed(d) => d.version.is_some(),
+            TomlDependency::Simple(..) => true,
+        }
+    }
+
+    fn is_optional(&self) -> bool {
+        match self {
+            TomlDependency::Detailed(d) => d.optional.unwrap_or(false),
+            TomlDependency::Simple(..) => false,
+        }
+    }
+}
+
 impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -219,15 +288,6 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
             .string(|value| Ok(TomlDependency::Simple(value.to_owned())))
             .map(|value| value.deserialize().map(TomlDependency::Detailed))
             .deserialize(deserializer)
-    }
-}
-
-impl TomlDependency {
-    fn unused_keys(&self) -> Vec<String> {
-        match self {
-            TomlDependency::Simple(_) => vec![],
-            TomlDependency::Detailed(detailed) => detailed.other.keys().cloned().collect(),
-        }
     }
 }
 
@@ -286,6 +346,288 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     other: BTreeMap<String, toml::Value>,
 }
 
+impl DetailedTomlDependency {
+    fn add_features(&mut self, features: Option<Vec<String>>) {
+        self.features = match (self.features.clone(), features.clone()) {
+            (Some(dep_feat), Some(inherit_feat)) => Some(
+                dep_feat
+                    .into_iter()
+                    .chain(inherit_feat)
+                    .collect::<Vec<String>>(),
+            ),
+            (Some(dep_fet), None) => Some(dep_fet),
+            (None, Some(inherit_feat)) => Some(inherit_feat),
+            (None, None) => None,
+        };
+    }
+
+    fn update_optional(&mut self, optional: Option<bool>) {
+        self.optional = optional;
+    }
+
+    fn resolve_path(
+        &mut self,
+        name: &str,
+        root_path: &Path,
+        package_root: &Path,
+    ) -> CargoResult<()> {
+        if let Some(rel_path) = &self.path {
+            self.path = Some(resolve_relative_path(
+                name,
+                root_path,
+                package_root,
+                rel_path,
+            )?)
+        }
+        Ok(())
+    }
+}
+
+impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
+    fn to_dependency(
+        &self,
+        name_in_toml: &str,
+        cx: &mut Context<'_, '_>,
+        kind: Option<DepKind>,
+    ) -> CargoResult<Dependency> {
+        if self.version.is_none() && self.path.is_none() && self.git.is_none() {
+            let msg = format!(
+                "dependency ({}) specified without \
+                 providing a local path, Git repository, version, or \
+                 workspace dependency to use. This will be considered an \
+                 error in future versions",
+                name_in_toml
+            );
+            cx.warnings.push(msg);
+        }
+
+        if let Some(version) = &self.version {
+            if version.contains('+') {
+                cx.warnings.push(format!(
+                    "version requirement `{}` for dependency `{}` \
+                     includes semver metadata which will be ignored, removing the \
+                     metadata is recommended to avoid confusion",
+                    version, name_in_toml
+                ));
+            }
+        }
+
+        if self.git.is_none() {
+            let git_only_keys = [
+                (&self.branch, "branch"),
+                (&self.tag, "tag"),
+                (&self.rev, "rev"),
+            ];
+
+            for &(key, key_name) in &git_only_keys {
+                if key.is_some() {
+                    bail!(
+                        "key `{}` is ignored for dependency ({}).",
+                        key_name,
+                        name_in_toml
+                    );
+                }
+            }
+        }
+
+        // Early detection of potentially misused feature syntax
+        // instead of generating a "feature not found" error.
+        if let Some(features) = &self.features {
+            for feature in features {
+                if feature.contains('/') {
+                    bail!(
+                        "feature `{}` in dependency `{}` is not allowed to contain slashes\n\
+                         If you want to enable features of a transitive dependency, \
+                         the direct dependency needs to re-export those features from \
+                         the `[features]` table.",
+                        feature,
+                        name_in_toml
+                    );
+                }
+                if feature.starts_with("dep:") {
+                    bail!(
+                        "feature `{}` in dependency `{}` is not allowed to use explicit \
+                        `dep:` syntax\n\
+                         If you want to enable an optional dependency, specify the name \
+                         of the optional dependency without the `dep:` prefix, or specify \
+                         a feature from the dependency's `[features]` table that enables \
+                         the optional dependency.",
+                        feature,
+                        name_in_toml
+                    );
+                }
+            }
+        }
+
+        let new_source_id = match (
+            self.git.as_ref(),
+            self.path.as_ref(),
+            self.registry.as_ref(),
+            self.registry_index.as_ref(),
+        ) {
+            (Some(_), _, Some(_), _) | (Some(_), _, _, Some(_)) => bail!(
+                "dependency ({}) specification is ambiguous. \
+                 Only one of `git` or `registry` is allowed.",
+                name_in_toml
+            ),
+            (_, _, Some(_), Some(_)) => bail!(
+                "dependency ({}) specification is ambiguous. \
+                 Only one of `registry` or `registry-index` is allowed.",
+                name_in_toml
+            ),
+            (Some(git), maybe_path, _, _) => {
+                if maybe_path.is_some() {
+                    bail!(
+                        "dependency ({}) specification is ambiguous. \
+                         Only one of `git` or `path` is allowed.",
+                        name_in_toml
+                    );
+                }
+
+                let n_details = [&self.branch, &self.tag, &self.rev]
+                    .iter()
+                    .filter(|d| d.is_some())
+                    .count();
+
+                if n_details > 1 {
+                    bail!(
+                        "dependency ({}) specification is ambiguous. \
+                         Only one of `branch`, `tag` or `rev` is allowed.",
+                        name_in_toml
+                    );
+                }
+
+                let reference = self
+                    .branch
+                    .clone()
+                    .map(GitReference::Branch)
+                    .or_else(|| self.tag.clone().map(GitReference::Tag))
+                    .or_else(|| self.rev.clone().map(GitReference::Rev))
+                    .unwrap_or(GitReference::DefaultBranch);
+                let loc = git.into_url()?;
+
+                if let Some(fragment) = loc.fragment() {
+                    let msg = format!(
+                        "URL fragment `#{}` in git URL is ignored for dependency ({}). \
+                        If you were trying to specify a specific git revision, \
+                        use `rev = \"{}\"` in the dependency declaration.",
+                        fragment, name_in_toml, fragment
+                    );
+                    cx.warnings.push(msg)
+                }
+
+                SourceId::for_git(&loc, reference)?
+            }
+            (None, Some(path), _, _) => {
+                let path = path.resolve(cx.config);
+                cx.nested_paths.push(path.clone());
+                // If the source ID for the package we're parsing is a path
+                // source, then we normalize the path here to get rid of
+                // components like `..`.
+                //
+                // The purpose of this is to get a canonical ID for the package
+                // that we're depending on to ensure that builds of this package
+                // always end up hashing to the same value no matter where it's
+                // built from.
+                if cx.source_id.is_path() {
+                    let path = cx.root.join(path);
+                    let path = paths::normalize_path(&path);
+                    SourceId::for_path(&path)?
+                } else {
+                    cx.source_id
+                }
+            }
+            (None, None, Some(registry), None) => SourceId::alt_registry(cx.config, registry)?,
+            (None, None, None, Some(registry_index)) => {
+                let url = registry_index.into_url()?;
+                SourceId::for_registry(&url)?
+            }
+            (None, None, None, None) => SourceId::crates_io(cx.config)?,
+        };
+
+        let (pkg_name, explicit_name_in_toml) = match self.package {
+            Some(ref s) => (&s[..], Some(name_in_toml)),
+            None => (name_in_toml, None),
+        };
+
+        let version = self.version.as_deref();
+        let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
+        if self.default_features.is_some() && self.default_features2.is_some() {
+            warn_on_deprecated("default-features", name_in_toml, "dependency", cx.warnings);
+        }
+        dep.set_features(self.features.iter().flatten())
+            .set_default_features(
+                self.default_features
+                    .or(self.default_features2)
+                    .unwrap_or(true),
+            )
+            .set_optional(self.optional.unwrap_or(false))
+            .set_platform(cx.platform.clone());
+        if let Some(registry) = &self.registry {
+            let registry_id = SourceId::alt_registry(cx.config, registry)?;
+            dep.set_registry_id(registry_id);
+        }
+        if let Some(registry_index) = &self.registry_index {
+            let url = registry_index.into_url()?;
+            let registry_id = SourceId::for_registry(&url)?;
+            dep.set_registry_id(registry_id);
+        }
+
+        if let Some(kind) = kind {
+            dep.set_kind(kind);
+        }
+        if let Some(name_in_toml) = explicit_name_in_toml {
+            dep.set_explicit_name_in_toml(name_in_toml);
+        }
+
+        if let Some(p) = self.public {
+            cx.features.require(Feature::public_dependency())?;
+
+            if dep.kind() != DepKind::Normal {
+                bail!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind());
+            }
+
+            dep.set_public(p);
+        }
+
+        if let (Some(artifact), is_lib, target) = (
+            self.artifact.as_ref(),
+            self.lib.unwrap_or(false),
+            self.target.as_deref(),
+        ) {
+            if cx.config.cli_unstable().bindeps {
+                let artifact = Artifact::parse(&artifact.0, is_lib, target)?;
+                if dep.kind() != DepKind::Build
+                    && artifact.target() == Some(ArtifactTarget::BuildDependencyAssumeTarget)
+                {
+                    bail!(
+                        r#"`target = "target"` in normal- or dev-dependencies has no effect ({})"#,
+                        name_in_toml
+                    );
+                }
+                dep.set_artifact(artifact)
+            } else {
+                bail!("`artifact = …` requires `-Z bindeps` ({})", name_in_toml);
+            }
+        } else if self.lib.is_some() || self.target.is_some() {
+            for (is_set, specifier) in [
+                (self.lib.is_some(), "lib"),
+                (self.target.is_some(), "target"),
+            ] {
+                if !is_set {
+                    continue;
+                }
+                bail!(
+                    "'{}' specifier cannot be used without an 'artifact = …' value ({})",
+                    specifier,
+                    name_in_toml
+                )
+            }
+        }
+        Ok(dep)
+    }
+}
+
 // Explicit implementation so we avoid pulling in P: Default
 impl<P: Clone> Default for DetailedTomlDependency<P> {
     fn default() -> Self {
@@ -339,1267 +681,6 @@ pub struct TomlManifest {
     workspace: Option<TomlWorkspace>,
     badges: Option<MaybeWorkspaceBtreeMap>,
     lints: Option<MaybeWorkspaceLints>,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles(BTreeMap<InternedString, TomlProfile>);
-
-impl TomlProfiles {
-    pub fn get_all(&self) -> &BTreeMap<InternedString, TomlProfile> {
-        &self.0
-    }
-
-    pub fn get(&self, name: &str) -> Option<&TomlProfile> {
-        self.0.get(name)
-    }
-
-    /// Checks syntax validity and unstable feature gate for each profile.
-    ///
-    /// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
-    /// because profiles can now be set in either `Cargo.toml` or `config.toml`.
-    pub fn validate(
-        &self,
-        cli_unstable: &CliUnstable,
-        features: &Features,
-        warnings: &mut Vec<String>,
-    ) -> CargoResult<()> {
-        for (name, profile) in &self.0 {
-            profile.validate(name, cli_unstable, features, warnings)?;
-        }
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TomlOptLevel(pub String);
-
-impl ser::Serialize for TomlOptLevel {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match self.0.parse::<u32>() {
-            Ok(n) => n.serialize(serializer),
-            Err(_) => self.0.serialize(serializer),
-        }
-    }
-}
-
-impl<'de> de::Deserialize<'de> for TomlOptLevel {
-    fn deserialize<D>(d: D) -> Result<TomlOptLevel, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        use serde::de::Error as _;
-        UntaggedEnumVisitor::new()
-            .expecting("an optimization level")
-            .i64(|value| Ok(TomlOptLevel(value.to_string())))
-            .string(|value| {
-                if value == "s" || value == "z" {
-                    Ok(TomlOptLevel(value.to_string()))
-                } else {
-                    Err(serde_untagged::de::Error::custom(format!(
-                        "must be `0`, `1`, `2`, `3`, `s` or `z`, \
-                         but found the string: \"{}\"",
-                        value
-                    )))
-                }
-            })
-            .deserialize(d)
-    }
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
-pub enum TomlDebugInfo {
-    None,
-    LineDirectivesOnly,
-    LineTablesOnly,
-    Limited,
-    Full,
-}
-
-impl Display for TomlDebugInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TomlDebugInfo::None => f.write_char('0'),
-            TomlDebugInfo::Limited => f.write_char('1'),
-            TomlDebugInfo::Full => f.write_char('2'),
-            TomlDebugInfo::LineDirectivesOnly => f.write_str("line-directives-only"),
-            TomlDebugInfo::LineTablesOnly => f.write_str("line-tables-only"),
-        }
-    }
-}
-
-impl ser::Serialize for TomlDebugInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match self {
-            Self::None => 0.serialize(serializer),
-            Self::LineDirectivesOnly => "line-directives-only".serialize(serializer),
-            Self::LineTablesOnly => "line-tables-only".serialize(serializer),
-            Self::Limited => 1.serialize(serializer),
-            Self::Full => 2.serialize(serializer),
-        }
-    }
-}
-
-impl<'de> de::Deserialize<'de> for TomlDebugInfo {
-    fn deserialize<D>(d: D) -> Result<TomlDebugInfo, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        use serde::de::Error as _;
-        let expecting = "a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"";
-        UntaggedEnumVisitor::new()
-            .expecting(expecting)
-            .bool(|value| {
-                Ok(if value {
-                    TomlDebugInfo::Full
-                } else {
-                    TomlDebugInfo::None
-                })
-            })
-            .i64(|value| {
-                let debuginfo = match value {
-                    0 => TomlDebugInfo::None,
-                    1 => TomlDebugInfo::Limited,
-                    2 => TomlDebugInfo::Full,
-                    _ => {
-                        return Err(serde_untagged::de::Error::invalid_value(
-                            Unexpected::Signed(value),
-                            &expecting,
-                        ))
-                    }
-                };
-                Ok(debuginfo)
-            })
-            .string(|value| {
-                let debuginfo = match value {
-                    "none" => TomlDebugInfo::None,
-                    "limited" => TomlDebugInfo::Limited,
-                    "full" => TomlDebugInfo::Full,
-                    "line-directives-only" => TomlDebugInfo::LineDirectivesOnly,
-                    "line-tables-only" => TomlDebugInfo::LineTablesOnly,
-                    _ => {
-                        return Err(serde_untagged::de::Error::invalid_value(
-                            Unexpected::Str(value),
-                            &expecting,
-                        ))
-                    }
-                };
-                Ok(debuginfo)
-            })
-            .deserialize(d)
-    }
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct TomlProfile {
-    pub opt_level: Option<TomlOptLevel>,
-    pub lto: Option<StringOrBool>,
-    pub codegen_backend: Option<InternedString>,
-    pub codegen_units: Option<u32>,
-    pub debug: Option<TomlDebugInfo>,
-    pub split_debuginfo: Option<String>,
-    pub debug_assertions: Option<bool>,
-    pub rpath: Option<bool>,
-    pub panic: Option<String>,
-    pub overflow_checks: Option<bool>,
-    pub incremental: Option<bool>,
-    pub dir_name: Option<InternedString>,
-    pub inherits: Option<InternedString>,
-    pub strip: Option<StringOrBool>,
-    // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
-    pub rustflags: Option<Vec<InternedString>>,
-    // These two fields must be last because they are sub-tables, and TOML
-    // requires all non-tables to be listed first.
-    pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
-    pub build_override: Option<Box<TomlProfile>>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
-pub enum ProfilePackageSpec {
-    Spec(PackageIdSpec),
-    All,
-}
-
-impl fmt::Display for ProfilePackageSpec {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProfilePackageSpec::Spec(spec) => spec.fmt(f),
-            ProfilePackageSpec::All => f.write_str("*"),
-        }
-    }
-}
-
-impl ser::Serialize for ProfilePackageSpec {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        self.to_string().serialize(s)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for ProfilePackageSpec {
-    fn deserialize<D>(d: D) -> Result<ProfilePackageSpec, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let string = String::deserialize(d)?;
-        if string == "*" {
-            Ok(ProfilePackageSpec::All)
-        } else {
-            PackageIdSpec::parse(&string)
-                .map_err(de::Error::custom)
-                .map(ProfilePackageSpec::Spec)
-        }
-    }
-}
-
-impl TomlProfile {
-    /// Checks stytax validity and unstable feature gate for a given profile.
-    pub fn validate(
-        &self,
-        name: &str,
-        cli_unstable: &CliUnstable,
-        features: &Features,
-        warnings: &mut Vec<String>,
-    ) -> CargoResult<()> {
-        self.validate_profile(name, cli_unstable, features)?;
-        if let Some(ref profile) = self.build_override {
-            profile.validate_override("build-override")?;
-            profile.validate_profile(&format!("{name}.build-override"), cli_unstable, features)?;
-        }
-        if let Some(ref packages) = self.package {
-            for (override_name, profile) in packages {
-                profile.validate_override("package")?;
-                profile.validate_profile(
-                    &format!("{name}.package.{override_name}"),
-                    cli_unstable,
-                    features,
-                )?;
-            }
-        }
-
-        // Profile name validation
-        Self::validate_name(name)?;
-
-        if let Some(dir_name) = self.dir_name {
-            // This is disabled for now, as we would like to stabilize named
-            // profiles without this, and then decide in the future if it is
-            // needed. This helps simplify the UI a little.
-            bail!(
-                "dir-name=\"{}\" in profile `{}` is not currently allowed, \
-                 directory names are tied to the profile name for custom profiles",
-                dir_name,
-                name
-            );
-        }
-
-        // `inherits` validation
-        if matches!(self.inherits.map(|s| s.as_str()), Some("debug")) {
-            bail!(
-                "profile.{}.inherits=\"debug\" should be profile.{}.inherits=\"dev\"",
-                name,
-                name
-            );
-        }
-
-        match name {
-            "doc" => {
-                warnings.push("profile `doc` is deprecated and has no effect".to_string());
-            }
-            "test" | "bench" => {
-                if self.panic.is_some() {
-                    warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
-                }
-            }
-            _ => {}
-        }
-
-        if let Some(panic) = &self.panic {
-            if panic != "unwind" && panic != "abort" {
-                bail!(
-                    "`panic` setting of `{}` is not a valid setting, \
-                     must be `unwind` or `abort`",
-                    panic
-                );
-            }
-        }
-
-        if let Some(StringOrBool::String(arg)) = &self.lto {
-            if arg == "true" || arg == "false" {
-                bail!(
-                    "`lto` setting of string `\"{arg}\"` for `{name}` profile is not \
-                     a valid setting, must be a boolean (`true`/`false`) or a string \
-                    (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.",
-                );
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Validate dir-names and profile names according to RFC 2678.
-    pub fn validate_name(name: &str) -> CargoResult<()> {
-        if let Some(ch) = name
-            .chars()
-            .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
-        {
-            bail!(
-                "invalid character `{}` in profile name `{}`\n\
-                Allowed characters are letters, numbers, underscore, and hyphen.",
-                ch,
-                name
-            );
-        }
-
-        const SEE_DOCS: &str = "See https://doc.rust-lang.org/cargo/reference/profiles.html \
-            for more on configuring profiles.";
-
-        let lower_name = name.to_lowercase();
-        if lower_name == "debug" {
-            bail!(
-                "profile name `{}` is reserved\n\
-                 To configure the default development profile, use the name `dev` \
-                 as in [profile.dev]\n\
-                {}",
-                name,
-                SEE_DOCS
-            );
-        }
-        if lower_name == "build-override" {
-            bail!(
-                "profile name `{}` is reserved\n\
-                 To configure build dependency settings, use [profile.dev.build-override] \
-                 and [profile.release.build-override]\n\
-                 {}",
-                name,
-                SEE_DOCS
-            );
-        }
-
-        // These are some arbitrary reservations. We have no plans to use
-        // these, but it seems safer to reserve a few just in case we want to
-        // add more built-in profiles in the future. We can also uses special
-        // syntax like cargo:foo if needed. But it is unlikely these will ever
-        // be used.
-        if matches!(
-            lower_name.as_str(),
-            "build"
-                | "check"
-                | "clean"
-                | "config"
-                | "fetch"
-                | "fix"
-                | "install"
-                | "metadata"
-                | "package"
-                | "publish"
-                | "report"
-                | "root"
-                | "run"
-                | "rust"
-                | "rustc"
-                | "rustdoc"
-                | "target"
-                | "tmp"
-                | "uninstall"
-        ) || lower_name.starts_with("cargo")
-        {
-            bail!(
-                "profile name `{}` is reserved\n\
-                 Please choose a different name.\n\
-                 {}",
-                name,
-                SEE_DOCS
-            );
-        }
-
-        Ok(())
-    }
-
-    /// Validates a profile.
-    ///
-    /// This is a shallow check, which is reused for the profile itself and any overrides.
-    fn validate_profile(
-        &self,
-        name: &str,
-        cli_unstable: &CliUnstable,
-        features: &Features,
-    ) -> CargoResult<()> {
-        if let Some(codegen_backend) = &self.codegen_backend {
-            match (
-                features.require(Feature::codegen_backend()),
-                cli_unstable.codegen_backend,
-            ) {
-                (Err(e), false) => return Err(e),
-                _ => {}
-            }
-
-            if codegen_backend.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
-                bail!(
-                    "`profile.{}.codegen-backend` setting of `{}` is not a valid backend name.",
-                    name,
-                    codegen_backend,
-                );
-            }
-        }
-        if self.rustflags.is_some() {
-            match (
-                features.require(Feature::profile_rustflags()),
-                cli_unstable.profile_rustflags,
-            ) {
-                (Err(e), false) => return Err(e),
-                _ => {}
-            }
-        }
-        Ok(())
-    }
-
-    /// Validation that is specific to an override.
-    fn validate_override(&self, which: &str) -> CargoResult<()> {
-        if self.package.is_some() {
-            bail!("package-specific profiles cannot be nested");
-        }
-        if self.build_override.is_some() {
-            bail!("build-override profiles cannot be nested");
-        }
-        if self.panic.is_some() {
-            bail!("`panic` may not be specified in a `{}` profile", which)
-        }
-        if self.lto.is_some() {
-            bail!("`lto` may not be specified in a `{}` profile", which)
-        }
-        if self.rpath.is_some() {
-            bail!("`rpath` may not be specified in a `{}` profile", which)
-        }
-        Ok(())
-    }
-
-    /// Overwrite self's values with the given profile.
-    pub fn merge(&mut self, profile: &TomlProfile) {
-        if let Some(v) = &profile.opt_level {
-            self.opt_level = Some(v.clone());
-        }
-
-        if let Some(v) = &profile.lto {
-            self.lto = Some(v.clone());
-        }
-
-        if let Some(v) = profile.codegen_backend {
-            self.codegen_backend = Some(v);
-        }
-
-        if let Some(v) = profile.codegen_units {
-            self.codegen_units = Some(v);
-        }
-
-        if let Some(v) = profile.debug {
-            self.debug = Some(v);
-        }
-
-        if let Some(v) = profile.debug_assertions {
-            self.debug_assertions = Some(v);
-        }
-
-        if let Some(v) = &profile.split_debuginfo {
-            self.split_debuginfo = Some(v.clone());
-        }
-
-        if let Some(v) = profile.rpath {
-            self.rpath = Some(v);
-        }
-
-        if let Some(v) = &profile.panic {
-            self.panic = Some(v.clone());
-        }
-
-        if let Some(v) = profile.overflow_checks {
-            self.overflow_checks = Some(v);
-        }
-
-        if let Some(v) = profile.incremental {
-            self.incremental = Some(v);
-        }
-
-        if let Some(v) = &profile.rustflags {
-            self.rustflags = Some(v.clone());
-        }
-
-        if let Some(other_package) = &profile.package {
-            match &mut self.package {
-                Some(self_package) => {
-                    for (spec, other_pkg_profile) in other_package {
-                        match self_package.get_mut(spec) {
-                            Some(p) => p.merge(other_pkg_profile),
-                            None => {
-                                self_package.insert(spec.clone(), other_pkg_profile.clone());
-                            }
-                        }
-                    }
-                }
-                None => self.package = Some(other_package.clone()),
-            }
-        }
-
-        if let Some(other_bo) = &profile.build_override {
-            match &mut self.build_override {
-                Some(self_bo) => self_bo.merge(other_bo),
-                None => self.build_override = Some(other_bo.clone()),
-            }
-        }
-
-        if let Some(v) = &profile.inherits {
-            self.inherits = Some(*v);
-        }
-
-        if let Some(v) = &profile.dir_name {
-            self.dir_name = Some(*v);
-        }
-
-        if let Some(v) = &profile.strip {
-            self.strip = Some(v.clone());
-        }
-    }
-}
-
-/// A StringOrVec can be parsed from either a TOML string or array,
-/// but is always stored as a vector.
-#[derive(Clone, Debug, Serialize, Eq, PartialEq, PartialOrd, Ord)]
-pub struct StringOrVec(Vec<String>);
-
-impl<'de> de::Deserialize<'de> for StringOrVec {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        UntaggedEnumVisitor::new()
-            .expecting("string or list of strings")
-            .string(|value| Ok(StringOrVec(vec![value.to_owned()])))
-            .seq(|value| value.deserialize().map(StringOrVec))
-            .deserialize(deserializer)
-    }
-}
-
-impl StringOrVec {
-    pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, String> {
-        self.0.iter()
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
-#[serde(untagged)]
-pub enum StringOrBool {
-    String(String),
-    Bool(bool),
-}
-
-impl<'de> Deserialize<'de> for StringOrBool {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        UntaggedEnumVisitor::new()
-            .bool(|b| Ok(StringOrBool::Bool(b)))
-            .string(|s| Ok(StringOrBool::String(s.to_owned())))
-            .deserialize(deserializer)
-    }
-}
-
-#[derive(PartialEq, Clone, Debug, Serialize)]
-#[serde(untagged)]
-pub enum VecStringOrBool {
-    VecString(Vec<String>),
-    Bool(bool),
-}
-
-impl<'de> de::Deserialize<'de> for VecStringOrBool {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        UntaggedEnumVisitor::new()
-            .expecting("a boolean or vector of strings")
-            .bool(|value| Ok(VecStringOrBool::Bool(value)))
-            .seq(|value| value.deserialize().map(VecStringOrBool::VecString))
-            .deserialize(deserializer)
-    }
-}
-
-fn version_trim_whitespace<'de, D>(deserializer: D) -> Result<MaybeWorkspaceSemverVersion, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    UntaggedEnumVisitor::new()
-        .expecting("SemVer version")
-        .string(
-            |value| match value.trim().parse().map_err(de::Error::custom) {
-                Ok(parsed) => Ok(MaybeWorkspace::Defined(parsed)),
-                Err(e) => Err(e),
-            },
-        )
-        .map(|value| value.deserialize().map(MaybeWorkspace::Workspace))
-        .deserialize(deserializer)
-}
-
-/// This Trait exists to make [`MaybeWorkspace::Workspace`] generic. It makes deserialization of
-/// [`MaybeWorkspace`] much easier, as well as making error messages for
-/// [`MaybeWorkspace::resolve`] much nicer
-///
-/// Implementors should have a field `workspace` with the type of `bool`. It is used to ensure
-/// `workspace` is not `false` in a `Cargo.toml`
-pub trait WorkspaceInherit {
-    /// This is the workspace table that is being inherited from.
-    /// For example `[workspace.dependencies]` would be the table "dependencies"
-    fn inherit_toml_table(&self) -> &str;
-
-    /// This is used to output the value of the implementors `workspace` field
-    fn workspace(&self) -> bool;
-}
-
-/// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
-#[derive(Serialize, Copy, Clone, Debug)]
-#[serde(untagged)]
-pub enum MaybeWorkspace<T, W: WorkspaceInherit> {
-    /// The "defined" type, or the type that that is used when not inheriting from a workspace.
-    Defined(T),
-    /// The type when inheriting from a workspace.
-    Workspace(W),
-}
-
-impl<T, W: WorkspaceInherit> MaybeWorkspace<T, W> {
-    fn resolve<'a>(
-        self,
-        label: &str,
-        get_ws_inheritable: impl FnOnce() -> CargoResult<T>,
-    ) -> CargoResult<T> {
-        match self {
-            MaybeWorkspace::Defined(value) => Ok(value),
-            MaybeWorkspace::Workspace(w) => get_ws_inheritable().with_context(|| {
-                format!(
-                "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
-                w.inherit_toml_table(),
-            )
-            }),
-        }
-    }
-
-    fn resolve_with_self<'a>(
-        self,
-        label: &str,
-        get_ws_inheritable: impl FnOnce(&W) -> CargoResult<T>,
-    ) -> CargoResult<T> {
-        match self {
-            MaybeWorkspace::Defined(value) => Ok(value),
-            MaybeWorkspace::Workspace(w) => get_ws_inheritable(&w).with_context(|| {
-                format!(
-                "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
-                w.inherit_toml_table(),
-            )
-            }),
-        }
-    }
-
-    fn as_defined(&self) -> Option<&T> {
-        match self {
-            MaybeWorkspace::Workspace(_) => None,
-            MaybeWorkspace::Defined(defined) => Some(defined),
-        }
-    }
-}
-
-type MaybeWorkspaceDependency = MaybeWorkspace<TomlDependency, TomlWorkspaceDependency>;
-
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceDependency {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let value = serde_value::Value::deserialize(deserializer)?;
-
-        if let Ok(w) = TomlWorkspaceDependency::deserialize(serde_value::ValueDeserializer::<
-            D::Error,
-        >::new(value.clone()))
-        {
-            return if w.workspace() {
-                Ok(MaybeWorkspace::Workspace(w))
-            } else {
-                Err(de::Error::custom("`workspace` cannot be false"))
-            };
-        }
-        TomlDependency::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
-            .map(MaybeWorkspace::Defined)
-    }
-}
-
-impl MaybeWorkspaceDependency {
-    fn unused_keys(&self) -> Vec<String> {
-        match self {
-            MaybeWorkspaceDependency::Defined(d) => d.unused_keys(),
-            MaybeWorkspaceDependency::Workspace(w) => w.other.keys().cloned().collect(),
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug)]
-#[serde(rename_all = "kebab-case")]
-pub struct TomlWorkspaceDependency {
-    workspace: bool,
-    features: Option<Vec<String>>,
-    default_features: Option<bool>,
-    #[serde(rename = "default_features")]
-    default_features2: Option<bool>,
-    optional: Option<bool>,
-    /// This is here to provide a way to see the "unused manifest keys" when deserializing
-    #[serde(skip_serializing)]
-    #[serde(flatten)]
-    other: BTreeMap<String, toml::Value>,
-}
-
-impl WorkspaceInherit for TomlWorkspaceDependency {
-    fn inherit_toml_table(&self) -> &str {
-        "dependencies"
-    }
-
-    fn workspace(&self) -> bool {
-        self.workspace
-    }
-}
-
-impl TomlWorkspaceDependency {
-    fn resolve<'a>(
-        &self,
-        name: &str,
-        inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
-        cx: &mut Context<'_, '_>,
-    ) -> CargoResult<TomlDependency> {
-        fn default_features_msg(label: &str, ws_def_feat: Option<bool>, cx: &mut Context<'_, '_>) {
-            let ws_def_feat = match ws_def_feat {
-                Some(true) => "true",
-                Some(false) => "false",
-                None => "not specified",
-            };
-            cx.warnings.push(format!(
-                "`default-features` is ignored for {label}, since `default-features` was \
-                {ws_def_feat} for `workspace.dependencies.{label}`, \
-                this could become a hard error in the future"
-            ))
-        }
-        if self.default_features.is_some() && self.default_features2.is_some() {
-            warn_on_deprecated("default-features", name, "dependency", cx.warnings);
-        }
-        inheritable()?.get_dependency(name, cx.root).map(|d| {
-            match d {
-                TomlDependency::Simple(s) => {
-                    if let Some(false) = self.default_features.or(self.default_features2) {
-                        default_features_msg(name, None, cx);
-                    }
-                    if self.optional.is_some() || self.features.is_some() {
-                        TomlDependency::Detailed(DetailedTomlDependency {
-                            version: Some(s),
-                            optional: self.optional,
-                            features: self.features.clone(),
-                            ..Default::default()
-                        })
-                    } else {
-                        TomlDependency::Simple(s)
-                    }
-                }
-                TomlDependency::Detailed(d) => {
-                    let mut d = d.clone();
-                    match (
-                        self.default_features.or(self.default_features2),
-                        d.default_features.or(d.default_features2),
-                    ) {
-                        // member: default-features = true and
-                        // workspace: default-features = false should turn on
-                        // default-features
-                        (Some(true), Some(false)) => {
-                            d.default_features = Some(true);
-                        }
-                        // member: default-features = false and
-                        // workspace: default-features = true should ignore member
-                        // default-features
-                        (Some(false), Some(true)) => {
-                            default_features_msg(name, Some(true), cx);
-                        }
-                        // member: default-features = false and
-                        // workspace: dep = "1.0" should ignore member default-features
-                        (Some(false), None) => {
-                            default_features_msg(name, None, cx);
-                        }
-                        _ => {}
-                    }
-                    d.add_features(self.features.clone());
-                    d.update_optional(self.optional);
-                    TomlDependency::Detailed(d)
-                }
-            }
-        })
-    }
-}
-
-//. This already has a `Deserialize` impl from version_trim_whitespace
-type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
-
-type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
-    fn deserialize<D>(d: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceString;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                f.write_str("a string or workspace")
-            }
-
-            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(MaybeWorkspaceString::Defined(value))
-            }
-
-            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
-            where
-                V: de::MapAccess<'de>,
-            {
-                let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
-            }
-        }
-
-        d.deserialize_any(Visitor)
-    }
-}
-
-type MaybeWorkspaceRustVersion = MaybeWorkspace<RustVersion, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
-    fn deserialize<D>(d: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceRustVersion;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                f.write_str("a semver or workspace")
-            }
-
-            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                let value = value.parse::<RustVersion>().map_err(|e| E::custom(e))?;
-                Ok(MaybeWorkspaceRustVersion::Defined(value))
-            }
-
-            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
-            where
-                V: de::MapAccess<'de>,
-            {
-                let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
-            }
-        }
-
-        d.deserialize_any(Visitor)
-    }
-}
-
-type MaybeWorkspaceVecString = MaybeWorkspace<Vec<String>, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
-    fn deserialize<D>(d: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceVecString;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-                f.write_str("a vector of strings or workspace")
-            }
-            fn visit_seq<A>(self, v: A) -> Result<Self::Value, A::Error>
-            where
-                A: de::SeqAccess<'de>,
-            {
-                let seq = de::value::SeqAccessDeserializer::new(v);
-                Vec::deserialize(seq).map(MaybeWorkspace::Defined)
-            }
-
-            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
-            where
-                V: de::MapAccess<'de>,
-            {
-                let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
-            }
-        }
-
-        d.deserialize_any(Visitor)
-    }
-}
-
-type MaybeWorkspaceStringOrBool = MaybeWorkspace<StringOrBool, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
-    fn deserialize<D>(d: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceStringOrBool;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-                f.write_str("a string, a bool, or workspace")
-            }
-
-            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                let b = de::value::BoolDeserializer::new(v);
-                StringOrBool::deserialize(b).map(MaybeWorkspace::Defined)
-            }
-
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                let string = de::value::StringDeserializer::new(v);
-                StringOrBool::deserialize(string).map(MaybeWorkspace::Defined)
-            }
-
-            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
-            where
-                V: de::MapAccess<'de>,
-            {
-                let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
-            }
-        }
-
-        d.deserialize_any(Visitor)
-    }
-}
-
-type MaybeWorkspaceVecStringOrBool = MaybeWorkspace<VecStringOrBool, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
-    fn deserialize<D>(d: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceVecStringOrBool;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-                f.write_str("a boolean, a vector of strings, or workspace")
-            }
-
-            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                let b = de::value::BoolDeserializer::new(v);
-                VecStringOrBool::deserialize(b).map(MaybeWorkspace::Defined)
-            }
-
-            fn visit_seq<A>(self, v: A) -> Result<Self::Value, A::Error>
-            where
-                A: de::SeqAccess<'de>,
-            {
-                let seq = de::value::SeqAccessDeserializer::new(v);
-                VecStringOrBool::deserialize(seq).map(MaybeWorkspace::Defined)
-            }
-
-            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
-            where
-                V: de::MapAccess<'de>,
-            {
-                let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
-            }
-        }
-
-        d.deserialize_any(Visitor)
-    }
-}
-
-type MaybeWorkspaceBtreeMap =
-    MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>, TomlWorkspaceField>;
-
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let value = serde_value::Value::deserialize(deserializer)?;
-
-        if let Ok(w) = TomlWorkspaceField::deserialize(
-            serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
-        ) {
-            return if w.workspace() {
-                Ok(MaybeWorkspace::Workspace(w))
-            } else {
-                Err(de::Error::custom("`workspace` cannot be false"))
-            };
-        }
-        BTreeMap::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
-            .map(MaybeWorkspace::Defined)
-    }
-}
-
-#[derive(Deserialize, Serialize, Copy, Clone, Debug)]
-pub struct TomlWorkspaceField {
-    #[serde(deserialize_with = "bool_no_false")]
-    workspace: bool,
-}
-
-fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
-    let b: bool = Deserialize::deserialize(deserializer)?;
-    if b {
-        Ok(b)
-    } else {
-        Err(de::Error::custom("`workspace` cannot be false"))
-    }
-}
-
-impl WorkspaceInherit for TomlWorkspaceField {
-    fn inherit_toml_table(&self) -> &str {
-        "package"
-    }
-
-    fn workspace(&self) -> bool {
-        self.workspace
-    }
-}
-
-/// Represents the `package`/`project` sections of a `Cargo.toml`.
-///
-/// Note that the order of the fields matters, since this is the order they
-/// are serialized to a TOML file. For example, you cannot have values after
-/// the field `metadata`, since it is a table and values cannot appear after
-/// tables.
-#[derive(Deserialize, Serialize, Clone, Debug)]
-#[serde(rename_all = "kebab-case")]
-pub struct TomlPackage {
-    edition: Option<MaybeWorkspaceString>,
-    rust_version: Option<MaybeWorkspaceRustVersion>,
-    name: InternedString,
-    #[serde(deserialize_with = "version_trim_whitespace")]
-    version: MaybeWorkspaceSemverVersion,
-    authors: Option<MaybeWorkspaceVecString>,
-    build: Option<StringOrBool>,
-    metabuild: Option<StringOrVec>,
-    default_target: Option<String>,
-    forced_target: Option<String>,
-    links: Option<String>,
-    exclude: Option<MaybeWorkspaceVecString>,
-    include: Option<MaybeWorkspaceVecString>,
-    publish: Option<MaybeWorkspaceVecStringOrBool>,
-    workspace: Option<String>,
-    im_a_teapot: Option<bool>,
-    autobins: Option<bool>,
-    autoexamples: Option<bool>,
-    autotests: Option<bool>,
-    autobenches: Option<bool>,
-    default_run: Option<String>,
-
-    // Package metadata.
-    description: Option<MaybeWorkspaceString>,
-    homepage: Option<MaybeWorkspaceString>,
-    documentation: Option<MaybeWorkspaceString>,
-    readme: Option<MaybeWorkspaceStringOrBool>,
-    keywords: Option<MaybeWorkspaceVecString>,
-    categories: Option<MaybeWorkspaceVecString>,
-    license: Option<MaybeWorkspaceString>,
-    license_file: Option<MaybeWorkspaceString>,
-    repository: Option<MaybeWorkspaceString>,
-    resolver: Option<String>,
-
-    // Provide a helpful error message for a common user error.
-    #[serde(rename = "cargo-features", skip_serializing)]
-    _invalid_cargo_features: Option<InvalidCargoFeatures>,
-
-    // Note that this field must come last due to the way toml serialization
-    // works which requires tables to be emitted after all values.
-    metadata: Option<toml::Value>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct TomlWorkspace {
-    members: Option<Vec<String>>,
-    #[serde(rename = "default-members")]
-    default_members: Option<Vec<String>>,
-    exclude: Option<Vec<String>>,
-    resolver: Option<String>,
-
-    // Properties that can be inherited by members.
-    package: Option<InheritableFields>,
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
-    lints: Option<TomlLints>,
-
-    // Note that this field must come last due to the way toml serialization
-    // works which requires tables to be emitted after all values.
-    metadata: Option<toml::Value>,
-}
-
-/// A group of fields that are inheritable by members of the workspace
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct InheritableFields {
-    // We use skip here since it will never be present when deserializing
-    // and we don't want it present when serializing
-    #[serde(skip)]
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
-    #[serde(skip)]
-    lints: Option<TomlLints>,
-
-    version: Option<semver::Version>,
-    authors: Option<Vec<String>>,
-    description: Option<String>,
-    homepage: Option<String>,
-    documentation: Option<String>,
-    readme: Option<StringOrBool>,
-    keywords: Option<Vec<String>>,
-    categories: Option<Vec<String>>,
-    license: Option<String>,
-    #[serde(rename = "license-file")]
-    license_file: Option<String>,
-    repository: Option<String>,
-    publish: Option<VecStringOrBool>,
-    edition: Option<String>,
-    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
-    exclude: Option<Vec<String>>,
-    include: Option<Vec<String>>,
-    #[serde(rename = "rust-version")]
-    rust_version: Option<RustVersion>,
-    // We use skip here since it will never be present when deserializing
-    // and we don't want it present when serializing
-    #[serde(skip)]
-    ws_root: PathBuf,
-}
-
-/// Defines simple getter methods for inheritable fields.
-macro_rules! inheritable_field_getter {
-    ( $(($key:literal, $field:ident -> $ret:ty),)* ) => (
-        $(
-            #[doc = concat!("Gets the field `workspace.", $key, "`.")]
-            pub fn $field(&self) -> CargoResult<$ret> {
-                let Some(val) = &self.$field else  {
-                    bail!("`workspace.{}` was not defined", $key);
-                };
-                Ok(val.clone())
-            }
-        )*
-    )
-}
-
-impl InheritableFields {
-    inheritable_field_getter! {
-        // Please keep this list lexicographically ordered.
-        ("dependencies",          dependencies  -> BTreeMap<String, TomlDependency>),
-        ("lints",                 lints         -> TomlLints),
-        ("package.authors",       authors       -> Vec<String>),
-        ("package.badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
-        ("package.categories",    categories    -> Vec<String>),
-        ("package.description",   description   -> String),
-        ("package.documentation", documentation -> String),
-        ("package.edition",       edition       -> String),
-        ("package.exclude",       exclude       -> Vec<String>),
-        ("package.homepage",      homepage      -> String),
-        ("package.include",       include       -> Vec<String>),
-        ("package.keywords",      keywords      -> Vec<String>),
-        ("package.license",       license       -> String),
-        ("package.publish",       publish       -> VecStringOrBool),
-        ("package.repository",    repository    -> String),
-        ("package.rust-version",  rust_version  -> RustVersion),
-        ("package.version",       version       -> semver::Version),
-    }
-
-    /// Gets a workspace dependency with the `name`.
-    pub fn get_dependency(&self, name: &str, package_root: &Path) -> CargoResult<TomlDependency> {
-        let Some(deps) = &self.dependencies else {
-            bail!("`workspace.dependencies` was not defined");
-        };
-        let Some(dep) = deps.get(name) else {
-            bail!("`dependency.{name}` was not found in `workspace.dependencies`");
-        };
-        let mut dep = dep.clone();
-        if let TomlDependency::Detailed(detailed) = &mut dep {
-            detailed.resolve_path(name, self.ws_root(), package_root)?;
-        }
-        Ok(dep)
-    }
-
-    /// Gets the field `workspace.package.license-file`.
-    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
-        let Some(license_file) = &self.license_file else {
-            bail!("`workspace.package.license-file` was not defined");
-        };
-        resolve_relative_path("license-file", &self.ws_root, package_root, license_file)
-    }
-
-    /// Gets the field `workspace.package.readme`.
-    pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
-        let Some(readme) = readme_for_package(self.ws_root.as_path(), self.readme.as_ref()) else {
-            bail!("`workspace.package.readme` was not defined");
-        };
-        resolve_relative_path("readme", &self.ws_root, package_root, &readme)
-            .map(StringOrBool::String)
-    }
-
-    pub fn ws_root(&self) -> &PathBuf {
-        &self.ws_root
-    }
-
-    pub fn update_deps(&mut self, deps: Option<BTreeMap<String, TomlDependency>>) {
-        self.dependencies = deps;
-    }
-
-    pub fn update_lints(&mut self, lints: Option<TomlLints>) {
-        self.lints = lints;
-    }
-
-    pub fn update_ws_path(&mut self, ws_root: PathBuf) {
-        self.ws_root = ws_root;
-    }
-}
-
-impl TomlPackage {
-    pub fn to_package_id(
-        &self,
-        source_id: SourceId,
-        version: semver::Version,
-    ) -> CargoResult<PackageId> {
-        PackageId::new(self.name, version, source_id)
-    }
-}
-
-struct Context<'a, 'b> {
-    deps: &'a mut Vec<Dependency>,
-    source_id: SourceId,
-    nested_paths: &'a mut Vec<PathBuf>,
-    config: &'b Config,
-    warnings: &'a mut Vec<String>,
-    platform: Option<Platform>,
-    root: &'a Path,
-    features: &'a Features,
 }
 
 impl TomlManifest {
@@ -2731,6 +1812,17 @@ impl TomlManifest {
     }
 }
 
+struct Context<'a, 'b> {
+    deps: &'a mut Vec<Dependency>,
+    source_id: SourceId,
+    nested_paths: &'a mut Vec<PathBuf>,
+    config: &'b Config,
+    warnings: &'a mut Vec<String>,
+    platform: Option<Platform>,
+    root: &'a Path,
+    features: &'a Features,
+}
+
 fn verify_lints(lints: Option<TomlLints>) -> CargoResult<Option<TomlLints>> {
     let Some(lints) = lints else {
         return Ok(None);
@@ -2881,345 +1973,1253 @@ fn unique_build_targets(
     Ok(())
 }
 
-impl<P: ResolveToPath + Clone> TomlDependency<P> {
-    pub(crate) fn to_dependency_split(
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
+pub struct TomlProfiles(BTreeMap<InternedString, TomlProfile>);
+
+impl TomlProfiles {
+    pub fn get_all(&self) -> &BTreeMap<InternedString, TomlProfile> {
+        &self.0
+    }
+
+    pub fn get(&self, name: &str) -> Option<&TomlProfile> {
+        self.0.get(name)
+    }
+
+    /// Checks syntax validity and unstable feature gate for each profile.
+    ///
+    /// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
+    /// because profiles can now be set in either `Cargo.toml` or `config.toml`.
+    pub fn validate(
         &self,
-        name: &str,
-        source_id: SourceId,
-        nested_paths: &mut Vec<PathBuf>,
-        config: &Config,
-        warnings: &mut Vec<String>,
-        platform: Option<Platform>,
-        root: &Path,
+        cli_unstable: &CliUnstable,
         features: &Features,
-        kind: Option<DepKind>,
-    ) -> CargoResult<Dependency> {
-        self.to_dependency(
-            name,
-            &mut Context {
-                deps: &mut Vec::new(),
-                source_id,
-                nested_paths,
-                config,
-                warnings,
-                platform,
-                root,
-                features,
-            },
-            kind,
-        )
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<()> {
+        for (name, profile) in &self.0 {
+            profile.validate(name, cli_unstable, features, warnings)?;
+        }
+        Ok(())
     }
+}
 
-    fn to_dependency(
+#[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct TomlProfile {
+    pub opt_level: Option<TomlOptLevel>,
+    pub lto: Option<StringOrBool>,
+    pub codegen_backend: Option<InternedString>,
+    pub codegen_units: Option<u32>,
+    pub debug: Option<TomlDebugInfo>,
+    pub split_debuginfo: Option<String>,
+    pub debug_assertions: Option<bool>,
+    pub rpath: Option<bool>,
+    pub panic: Option<String>,
+    pub overflow_checks: Option<bool>,
+    pub incremental: Option<bool>,
+    pub dir_name: Option<InternedString>,
+    pub inherits: Option<InternedString>,
+    pub strip: Option<StringOrBool>,
+    // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
+    pub rustflags: Option<Vec<InternedString>>,
+    // These two fields must be last because they are sub-tables, and TOML
+    // requires all non-tables to be listed first.
+    pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
+    pub build_override: Option<Box<TomlProfile>>,
+}
+
+impl TomlProfile {
+    /// Checks stytax validity and unstable feature gate for a given profile.
+    pub fn validate(
         &self,
         name: &str,
-        cx: &mut Context<'_, '_>,
-        kind: Option<DepKind>,
-    ) -> CargoResult<Dependency> {
-        match *self {
-            TomlDependency::Simple(ref version) => DetailedTomlDependency::<P> {
-                version: Some(version.clone()),
-                ..Default::default()
+        cli_unstable: &CliUnstable,
+        features: &Features,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<()> {
+        self.validate_profile(name, cli_unstable, features)?;
+        if let Some(ref profile) = self.build_override {
+            profile.validate_override("build-override")?;
+            profile.validate_profile(&format!("{name}.build-override"), cli_unstable, features)?;
+        }
+        if let Some(ref packages) = self.package {
+            for (override_name, profile) in packages {
+                profile.validate_override("package")?;
+                profile.validate_profile(
+                    &format!("{name}.package.{override_name}"),
+                    cli_unstable,
+                    features,
+                )?;
             }
-            .to_dependency(name, cx, kind),
-            TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
         }
+
+        // Profile name validation
+        Self::validate_name(name)?;
+
+        if let Some(dir_name) = self.dir_name {
+            // This is disabled for now, as we would like to stabilize named
+            // profiles without this, and then decide in the future if it is
+            // needed. This helps simplify the UI a little.
+            bail!(
+                "dir-name=\"{}\" in profile `{}` is not currently allowed, \
+                 directory names are tied to the profile name for custom profiles",
+                dir_name,
+                name
+            );
+        }
+
+        // `inherits` validation
+        if matches!(self.inherits.map(|s| s.as_str()), Some("debug")) {
+            bail!(
+                "profile.{}.inherits=\"debug\" should be profile.{}.inherits=\"dev\"",
+                name,
+                name
+            );
+        }
+
+        match name {
+            "doc" => {
+                warnings.push("profile `doc` is deprecated and has no effect".to_string());
+            }
+            "test" | "bench" => {
+                if self.panic.is_some() {
+                    warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
+                }
+            }
+            _ => {}
+        }
+
+        if let Some(panic) = &self.panic {
+            if panic != "unwind" && panic != "abort" {
+                bail!(
+                    "`panic` setting of `{}` is not a valid setting, \
+                     must be `unwind` or `abort`",
+                    panic
+                );
+            }
+        }
+
+        if let Some(StringOrBool::String(arg)) = &self.lto {
+            if arg == "true" || arg == "false" {
+                bail!(
+                    "`lto` setting of string `\"{arg}\"` for `{name}` profile is not \
+                     a valid setting, must be a boolean (`true`/`false`) or a string \
+                    (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.",
+                );
+            }
+        }
+
+        Ok(())
     }
 
-    fn is_version_specified(&self) -> bool {
-        match self {
-            TomlDependency::Detailed(d) => d.version.is_some(),
-            TomlDependency::Simple(..) => true,
+    /// Validate dir-names and profile names according to RFC 2678.
+    pub fn validate_name(name: &str) -> CargoResult<()> {
+        if let Some(ch) = name
+            .chars()
+            .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
+        {
+            bail!(
+                "invalid character `{}` in profile name `{}`\n\
+                Allowed characters are letters, numbers, underscore, and hyphen.",
+                ch,
+                name
+            );
         }
+
+        const SEE_DOCS: &str = "See https://doc.rust-lang.org/cargo/reference/profiles.html \
+            for more on configuring profiles.";
+
+        let lower_name = name.to_lowercase();
+        if lower_name == "debug" {
+            bail!(
+                "profile name `{}` is reserved\n\
+                 To configure the default development profile, use the name `dev` \
+                 as in [profile.dev]\n\
+                {}",
+                name,
+                SEE_DOCS
+            );
+        }
+        if lower_name == "build-override" {
+            bail!(
+                "profile name `{}` is reserved\n\
+                 To configure build dependency settings, use [profile.dev.build-override] \
+                 and [profile.release.build-override]\n\
+                 {}",
+                name,
+                SEE_DOCS
+            );
+        }
+
+        // These are some arbitrary reservations. We have no plans to use
+        // these, but it seems safer to reserve a few just in case we want to
+        // add more built-in profiles in the future. We can also uses special
+        // syntax like cargo:foo if needed. But it is unlikely these will ever
+        // be used.
+        if matches!(
+            lower_name.as_str(),
+            "build"
+                | "check"
+                | "clean"
+                | "config"
+                | "fetch"
+                | "fix"
+                | "install"
+                | "metadata"
+                | "package"
+                | "publish"
+                | "report"
+                | "root"
+                | "run"
+                | "rust"
+                | "rustc"
+                | "rustdoc"
+                | "target"
+                | "tmp"
+                | "uninstall"
+        ) || lower_name.starts_with("cargo")
+        {
+            bail!(
+                "profile name `{}` is reserved\n\
+                 Please choose a different name.\n\
+                 {}",
+                name,
+                SEE_DOCS
+            );
+        }
+
+        Ok(())
     }
 
-    fn is_optional(&self) -> bool {
-        match self {
-            TomlDependency::Detailed(d) => d.optional.unwrap_or(false),
-            TomlDependency::Simple(..) => false,
+    /// Validates a profile.
+    ///
+    /// This is a shallow check, which is reused for the profile itself and any overrides.
+    fn validate_profile(
+        &self,
+        name: &str,
+        cli_unstable: &CliUnstable,
+        features: &Features,
+    ) -> CargoResult<()> {
+        if let Some(codegen_backend) = &self.codegen_backend {
+            match (
+                features.require(Feature::codegen_backend()),
+                cli_unstable.codegen_backend,
+            ) {
+                (Err(e), false) => return Err(e),
+                _ => {}
+            }
+
+            if codegen_backend.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
+                bail!(
+                    "`profile.{}.codegen-backend` setting of `{}` is not a valid backend name.",
+                    name,
+                    codegen_backend,
+                );
+            }
+        }
+        if self.rustflags.is_some() {
+            match (
+                features.require(Feature::profile_rustflags()),
+                cli_unstable.profile_rustflags,
+            ) {
+                (Err(e), false) => return Err(e),
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    /// Validation that is specific to an override.
+    fn validate_override(&self, which: &str) -> CargoResult<()> {
+        if self.package.is_some() {
+            bail!("package-specific profiles cannot be nested");
+        }
+        if self.build_override.is_some() {
+            bail!("build-override profiles cannot be nested");
+        }
+        if self.panic.is_some() {
+            bail!("`panic` may not be specified in a `{}` profile", which)
+        }
+        if self.lto.is_some() {
+            bail!("`lto` may not be specified in a `{}` profile", which)
+        }
+        if self.rpath.is_some() {
+            bail!("`rpath` may not be specified in a `{}` profile", which)
+        }
+        Ok(())
+    }
+
+    /// Overwrite self's values with the given profile.
+    pub fn merge(&mut self, profile: &TomlProfile) {
+        if let Some(v) = &profile.opt_level {
+            self.opt_level = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.lto {
+            self.lto = Some(v.clone());
+        }
+
+        if let Some(v) = profile.codegen_backend {
+            self.codegen_backend = Some(v);
+        }
+
+        if let Some(v) = profile.codegen_units {
+            self.codegen_units = Some(v);
+        }
+
+        if let Some(v) = profile.debug {
+            self.debug = Some(v);
+        }
+
+        if let Some(v) = profile.debug_assertions {
+            self.debug_assertions = Some(v);
+        }
+
+        if let Some(v) = &profile.split_debuginfo {
+            self.split_debuginfo = Some(v.clone());
+        }
+
+        if let Some(v) = profile.rpath {
+            self.rpath = Some(v);
+        }
+
+        if let Some(v) = &profile.panic {
+            self.panic = Some(v.clone());
+        }
+
+        if let Some(v) = profile.overflow_checks {
+            self.overflow_checks = Some(v);
+        }
+
+        if let Some(v) = profile.incremental {
+            self.incremental = Some(v);
+        }
+
+        if let Some(v) = &profile.rustflags {
+            self.rustflags = Some(v.clone());
+        }
+
+        if let Some(other_package) = &profile.package {
+            match &mut self.package {
+                Some(self_package) => {
+                    for (spec, other_pkg_profile) in other_package {
+                        match self_package.get_mut(spec) {
+                            Some(p) => p.merge(other_pkg_profile),
+                            None => {
+                                self_package.insert(spec.clone(), other_pkg_profile.clone());
+                            }
+                        }
+                    }
+                }
+                None => self.package = Some(other_package.clone()),
+            }
+        }
+
+        if let Some(other_bo) = &profile.build_override {
+            match &mut self.build_override {
+                Some(self_bo) => self_bo.merge(other_bo),
+                None => self.build_override = Some(other_bo.clone()),
+            }
+        }
+
+        if let Some(v) = &profile.inherits {
+            self.inherits = Some(*v);
+        }
+
+        if let Some(v) = &profile.dir_name {
+            self.dir_name = Some(*v);
+        }
+
+        if let Some(v) = &profile.strip {
+            self.strip = Some(v.clone());
         }
     }
 }
 
-impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
-    fn to_dependency(
-        &self,
-        name_in_toml: &str,
-        cx: &mut Context<'_, '_>,
-        kind: Option<DepKind>,
-    ) -> CargoResult<Dependency> {
-        if self.version.is_none() && self.path.is_none() && self.git.is_none() {
-            let msg = format!(
-                "dependency ({}) specified without \
-                 providing a local path, Git repository, version, or \
-                 workspace dependency to use. This will be considered an \
-                 error in future versions",
-                name_in_toml
-            );
-            cx.warnings.push(msg);
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
+pub enum ProfilePackageSpec {
+    Spec(PackageIdSpec),
+    All,
+}
+
+impl fmt::Display for ProfilePackageSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ProfilePackageSpec::Spec(spec) => spec.fmt(f),
+            ProfilePackageSpec::All => f.write_str("*"),
         }
+    }
+}
 
-        if let Some(version) = &self.version {
-            if version.contains('+') {
-                cx.warnings.push(format!(
-                    "version requirement `{}` for dependency `{}` \
-                     includes semver metadata which will be ignored, removing the \
-                     metadata is recommended to avoid confusion",
-                    version, name_in_toml
-                ));
-            }
+impl ser::Serialize for ProfilePackageSpec {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        self.to_string().serialize(s)
+    }
+}
+
+impl<'de> de::Deserialize<'de> for ProfilePackageSpec {
+    fn deserialize<D>(d: D) -> Result<ProfilePackageSpec, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let string = String::deserialize(d)?;
+        if string == "*" {
+            Ok(ProfilePackageSpec::All)
+        } else {
+            PackageIdSpec::parse(&string)
+                .map_err(de::Error::custom)
+                .map(ProfilePackageSpec::Spec)
         }
+    }
+}
 
-        if self.git.is_none() {
-            let git_only_keys = [
-                (&self.branch, "branch"),
-                (&self.tag, "tag"),
-                (&self.rev, "rev"),
-            ];
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TomlOptLevel(pub String);
 
-            for &(key, key_name) in &git_only_keys {
-                if key.is_some() {
-                    bail!(
-                        "key `{}` is ignored for dependency ({}).",
-                        key_name,
-                        name_in_toml
-                    );
-                }
-            }
+impl ser::Serialize for TomlOptLevel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        match self.0.parse::<u32>() {
+            Ok(n) => n.serialize(serializer),
+            Err(_) => self.0.serialize(serializer),
         }
+    }
+}
 
-        // Early detection of potentially misused feature syntax
-        // instead of generating a "feature not found" error.
-        if let Some(features) = &self.features {
-            for feature in features {
-                if feature.contains('/') {
-                    bail!(
-                        "feature `{}` in dependency `{}` is not allowed to contain slashes\n\
-                         If you want to enable features of a transitive dependency, \
-                         the direct dependency needs to re-export those features from \
-                         the `[features]` table.",
-                        feature,
-                        name_in_toml
-                    );
-                }
-                if feature.starts_with("dep:") {
-                    bail!(
-                        "feature `{}` in dependency `{}` is not allowed to use explicit \
-                        `dep:` syntax\n\
-                         If you want to enable an optional dependency, specify the name \
-                         of the optional dependency without the `dep:` prefix, or specify \
-                         a feature from the dependency's `[features]` table that enables \
-                         the optional dependency.",
-                        feature,
-                        name_in_toml
-                    );
-                }
-            }
-        }
-
-        let new_source_id = match (
-            self.git.as_ref(),
-            self.path.as_ref(),
-            self.registry.as_ref(),
-            self.registry_index.as_ref(),
-        ) {
-            (Some(_), _, Some(_), _) | (Some(_), _, _, Some(_)) => bail!(
-                "dependency ({}) specification is ambiguous. \
-                 Only one of `git` or `registry` is allowed.",
-                name_in_toml
-            ),
-            (_, _, Some(_), Some(_)) => bail!(
-                "dependency ({}) specification is ambiguous. \
-                 Only one of `registry` or `registry-index` is allowed.",
-                name_in_toml
-            ),
-            (Some(git), maybe_path, _, _) => {
-                if maybe_path.is_some() {
-                    bail!(
-                        "dependency ({}) specification is ambiguous. \
-                         Only one of `git` or `path` is allowed.",
-                        name_in_toml
-                    );
-                }
-
-                let n_details = [&self.branch, &self.tag, &self.rev]
-                    .iter()
-                    .filter(|d| d.is_some())
-                    .count();
-
-                if n_details > 1 {
-                    bail!(
-                        "dependency ({}) specification is ambiguous. \
-                         Only one of `branch`, `tag` or `rev` is allowed.",
-                        name_in_toml
-                    );
-                }
-
-                let reference = self
-                    .branch
-                    .clone()
-                    .map(GitReference::Branch)
-                    .or_else(|| self.tag.clone().map(GitReference::Tag))
-                    .or_else(|| self.rev.clone().map(GitReference::Rev))
-                    .unwrap_or(GitReference::DefaultBranch);
-                let loc = git.into_url()?;
-
-                if let Some(fragment) = loc.fragment() {
-                    let msg = format!(
-                        "URL fragment `#{}` in git URL is ignored for dependency ({}). \
-                        If you were trying to specify a specific git revision, \
-                        use `rev = \"{}\"` in the dependency declaration.",
-                        fragment, name_in_toml, fragment
-                    );
-                    cx.warnings.push(msg)
-                }
-
-                SourceId::for_git(&loc, reference)?
-            }
-            (None, Some(path), _, _) => {
-                let path = path.resolve(cx.config);
-                cx.nested_paths.push(path.clone());
-                // If the source ID for the package we're parsing is a path
-                // source, then we normalize the path here to get rid of
-                // components like `..`.
-                //
-                // The purpose of this is to get a canonical ID for the package
-                // that we're depending on to ensure that builds of this package
-                // always end up hashing to the same value no matter where it's
-                // built from.
-                if cx.source_id.is_path() {
-                    let path = cx.root.join(path);
-                    let path = paths::normalize_path(&path);
-                    SourceId::for_path(&path)?
+impl<'de> de::Deserialize<'de> for TomlOptLevel {
+    fn deserialize<D>(d: D) -> Result<TomlOptLevel, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        use serde::de::Error as _;
+        UntaggedEnumVisitor::new()
+            .expecting("an optimization level")
+            .i64(|value| Ok(TomlOptLevel(value.to_string())))
+            .string(|value| {
+                if value == "s" || value == "z" {
+                    Ok(TomlOptLevel(value.to_string()))
                 } else {
-                    cx.source_id
+                    Err(serde_untagged::de::Error::custom(format!(
+                        "must be `0`, `1`, `2`, `3`, `s` or `z`, \
+                         but found the string: \"{}\"",
+                        value
+                    )))
                 }
-            }
-            (None, None, Some(registry), None) => SourceId::alt_registry(cx.config, registry)?,
-            (None, None, None, Some(registry_index)) => {
-                let url = registry_index.into_url()?;
-                SourceId::for_registry(&url)?
-            }
-            (None, None, None, None) => SourceId::crates_io(cx.config)?,
-        };
+            })
+            .deserialize(d)
+    }
+}
 
-        let (pkg_name, explicit_name_in_toml) = match self.package {
-            Some(ref s) => (&s[..], Some(name_in_toml)),
-            None => (name_in_toml, None),
-        };
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub enum TomlDebugInfo {
+    None,
+    LineDirectivesOnly,
+    LineTablesOnly,
+    Limited,
+    Full,
+}
 
-        let version = self.version.as_deref();
-        let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
-        if self.default_features.is_some() && self.default_features2.is_some() {
-            warn_on_deprecated("default-features", name_in_toml, "dependency", cx.warnings);
+impl Display for TomlDebugInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TomlDebugInfo::None => f.write_char('0'),
+            TomlDebugInfo::Limited => f.write_char('1'),
+            TomlDebugInfo::Full => f.write_char('2'),
+            TomlDebugInfo::LineDirectivesOnly => f.write_str("line-directives-only"),
+            TomlDebugInfo::LineTablesOnly => f.write_str("line-tables-only"),
         }
-        dep.set_features(self.features.iter().flatten())
-            .set_default_features(
-                self.default_features
-                    .or(self.default_features2)
-                    .unwrap_or(true),
+    }
+}
+
+impl ser::Serialize for TomlDebugInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        match self {
+            Self::None => 0.serialize(serializer),
+            Self::LineDirectivesOnly => "line-directives-only".serialize(serializer),
+            Self::LineTablesOnly => "line-tables-only".serialize(serializer),
+            Self::Limited => 1.serialize(serializer),
+            Self::Full => 2.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for TomlDebugInfo {
+    fn deserialize<D>(d: D) -> Result<TomlDebugInfo, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        use serde::de::Error as _;
+        let expecting = "a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"";
+        UntaggedEnumVisitor::new()
+            .expecting(expecting)
+            .bool(|value| {
+                Ok(if value {
+                    TomlDebugInfo::Full
+                } else {
+                    TomlDebugInfo::None
+                })
+            })
+            .i64(|value| {
+                let debuginfo = match value {
+                    0 => TomlDebugInfo::None,
+                    1 => TomlDebugInfo::Limited,
+                    2 => TomlDebugInfo::Full,
+                    _ => {
+                        return Err(serde_untagged::de::Error::invalid_value(
+                            Unexpected::Signed(value),
+                            &expecting,
+                        ))
+                    }
+                };
+                Ok(debuginfo)
+            })
+            .string(|value| {
+                let debuginfo = match value {
+                    "none" => TomlDebugInfo::None,
+                    "limited" => TomlDebugInfo::Limited,
+                    "full" => TomlDebugInfo::Full,
+                    "line-directives-only" => TomlDebugInfo::LineDirectivesOnly,
+                    "line-tables-only" => TomlDebugInfo::LineTablesOnly,
+                    _ => {
+                        return Err(serde_untagged::de::Error::invalid_value(
+                            Unexpected::Str(value),
+                            &expecting,
+                        ))
+                    }
+                };
+                Ok(debuginfo)
+            })
+            .deserialize(d)
+    }
+}
+
+/// A StringOrVec can be parsed from either a TOML string or array,
+/// but is always stored as a vector.
+#[derive(Clone, Debug, Serialize, Eq, PartialEq, PartialOrd, Ord)]
+pub struct StringOrVec(Vec<String>);
+
+impl StringOrVec {
+    pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, String> {
+        self.0.iter()
+    }
+}
+
+impl<'de> de::Deserialize<'de> for StringOrVec {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("string or list of strings")
+            .string(|value| Ok(StringOrVec(vec![value.to_owned()])))
+            .seq(|value| value.deserialize().map(StringOrVec))
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+#[serde(untagged)]
+pub enum StringOrBool {
+    String(String),
+    Bool(bool),
+}
+
+impl<'de> Deserialize<'de> for StringOrBool {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .bool(|b| Ok(StringOrBool::Bool(b)))
+            .string(|s| Ok(StringOrBool::String(s.to_owned())))
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(PartialEq, Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum VecStringOrBool {
+    VecString(Vec<String>),
+    Bool(bool),
+}
+
+impl<'de> de::Deserialize<'de> for VecStringOrBool {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("a boolean or vector of strings")
+            .bool(|value| Ok(VecStringOrBool::Bool(value)))
+            .seq(|value| value.deserialize().map(VecStringOrBool::VecString))
+            .deserialize(deserializer)
+    }
+}
+
+/// This Trait exists to make [`MaybeWorkspace::Workspace`] generic. It makes deserialization of
+/// [`MaybeWorkspace`] much easier, as well as making error messages for
+/// [`MaybeWorkspace::resolve`] much nicer
+///
+/// Implementors should have a field `workspace` with the type of `bool`. It is used to ensure
+/// `workspace` is not `false` in a `Cargo.toml`
+pub trait WorkspaceInherit {
+    /// This is the workspace table that is being inherited from.
+    /// For example `[workspace.dependencies]` would be the table "dependencies"
+    fn inherit_toml_table(&self) -> &str;
+
+    /// This is used to output the value of the implementors `workspace` field
+    fn workspace(&self) -> bool;
+}
+
+/// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
+#[derive(Serialize, Copy, Clone, Debug)]
+#[serde(untagged)]
+pub enum MaybeWorkspace<T, W: WorkspaceInherit> {
+    /// The "defined" type, or the type that that is used when not inheriting from a workspace.
+    Defined(T),
+    /// The type when inheriting from a workspace.
+    Workspace(W),
+}
+
+impl<T, W: WorkspaceInherit> MaybeWorkspace<T, W> {
+    fn resolve<'a>(
+        self,
+        label: &str,
+        get_ws_inheritable: impl FnOnce() -> CargoResult<T>,
+    ) -> CargoResult<T> {
+        match self {
+            MaybeWorkspace::Defined(value) => Ok(value),
+            MaybeWorkspace::Workspace(w) => get_ws_inheritable().with_context(|| {
+                format!(
+                "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
+                w.inherit_toml_table(),
             )
-            .set_optional(self.optional.unwrap_or(false))
-            .set_platform(cx.platform.clone());
-        if let Some(registry) = &self.registry {
-            let registry_id = SourceId::alt_registry(cx.config, registry)?;
-            dep.set_registry_id(registry_id);
+            }),
         }
-        if let Some(registry_index) = &self.registry_index {
-            let url = registry_index.into_url()?;
-            let registry_id = SourceId::for_registry(&url)?;
-            dep.set_registry_id(registry_id);
+    }
+
+    fn resolve_with_self<'a>(
+        self,
+        label: &str,
+        get_ws_inheritable: impl FnOnce(&W) -> CargoResult<T>,
+    ) -> CargoResult<T> {
+        match self {
+            MaybeWorkspace::Defined(value) => Ok(value),
+            MaybeWorkspace::Workspace(w) => get_ws_inheritable(&w).with_context(|| {
+                format!(
+                "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
+                w.inherit_toml_table(),
+            )
+            }),
         }
+    }
 
-        if let Some(kind) = kind {
-            dep.set_kind(kind);
+    fn as_defined(&self) -> Option<&T> {
+        match self {
+            MaybeWorkspace::Workspace(_) => None,
+            MaybeWorkspace::Defined(defined) => Some(defined),
         }
-        if let Some(name_in_toml) = explicit_name_in_toml {
-            dep.set_explicit_name_in_toml(name_in_toml);
+    }
+}
+
+type MaybeWorkspaceDependency = MaybeWorkspace<TomlDependency, TomlWorkspaceDependency>;
+
+impl MaybeWorkspaceDependency {
+    fn unused_keys(&self) -> Vec<String> {
+        match self {
+            MaybeWorkspaceDependency::Defined(d) => d.unused_keys(),
+            MaybeWorkspaceDependency::Workspace(w) => w.other.keys().cloned().collect(),
         }
+    }
+}
 
-        if let Some(p) = self.public {
-            cx.features.require(Feature::public_dependency())?;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceDependency {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = serde_value::Value::deserialize(deserializer)?;
 
-            if dep.kind() != DepKind::Normal {
-                bail!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind());
-            }
-
-            dep.set_public(p);
-        }
-
-        if let (Some(artifact), is_lib, target) = (
-            self.artifact.as_ref(),
-            self.lib.unwrap_or(false),
-            self.target.as_deref(),
-        ) {
-            if cx.config.cli_unstable().bindeps {
-                let artifact = Artifact::parse(&artifact.0, is_lib, target)?;
-                if dep.kind() != DepKind::Build
-                    && artifact.target() == Some(ArtifactTarget::BuildDependencyAssumeTarget)
-                {
-                    bail!(
-                        r#"`target = "target"` in normal- or dev-dependencies has no effect ({})"#,
-                        name_in_toml
-                    );
-                }
-                dep.set_artifact(artifact)
+        if let Ok(w) = TomlWorkspaceDependency::deserialize(serde_value::ValueDeserializer::<
+            D::Error,
+        >::new(value.clone()))
+        {
+            return if w.workspace() {
+                Ok(MaybeWorkspace::Workspace(w))
             } else {
-                bail!("`artifact = …` requires `-Z bindeps` ({})", name_in_toml);
-            }
-        } else if self.lib.is_some() || self.target.is_some() {
-            for (is_set, specifier) in [
-                (self.lib.is_some(), "lib"),
-                (self.target.is_some(), "target"),
-            ] {
-                if !is_set {
-                    continue;
+                Err(de::Error::custom("`workspace` cannot be false"))
+            };
+        }
+        TomlDependency::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+            .map(MaybeWorkspace::Defined)
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct TomlWorkspaceDependency {
+    workspace: bool,
+    features: Option<Vec<String>>,
+    default_features: Option<bool>,
+    #[serde(rename = "default_features")]
+    default_features2: Option<bool>,
+    optional: Option<bool>,
+    /// This is here to provide a way to see the "unused manifest keys" when deserializing
+    #[serde(skip_serializing)]
+    #[serde(flatten)]
+    other: BTreeMap<String, toml::Value>,
+}
+
+impl TomlWorkspaceDependency {
+    fn resolve<'a>(
+        &self,
+        name: &str,
+        inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
+        cx: &mut Context<'_, '_>,
+    ) -> CargoResult<TomlDependency> {
+        fn default_features_msg(label: &str, ws_def_feat: Option<bool>, cx: &mut Context<'_, '_>) {
+            let ws_def_feat = match ws_def_feat {
+                Some(true) => "true",
+                Some(false) => "false",
+                None => "not specified",
+            };
+            cx.warnings.push(format!(
+                "`default-features` is ignored for {label}, since `default-features` was \
+                {ws_def_feat} for `workspace.dependencies.{label}`, \
+                this could become a hard error in the future"
+            ))
+        }
+        if self.default_features.is_some() && self.default_features2.is_some() {
+            warn_on_deprecated("default-features", name, "dependency", cx.warnings);
+        }
+        inheritable()?.get_dependency(name, cx.root).map(|d| {
+            match d {
+                TomlDependency::Simple(s) => {
+                    if let Some(false) = self.default_features.or(self.default_features2) {
+                        default_features_msg(name, None, cx);
+                    }
+                    if self.optional.is_some() || self.features.is_some() {
+                        TomlDependency::Detailed(DetailedTomlDependency {
+                            version: Some(s),
+                            optional: self.optional,
+                            features: self.features.clone(),
+                            ..Default::default()
+                        })
+                    } else {
+                        TomlDependency::Simple(s)
+                    }
                 }
-                bail!(
-                    "'{}' specifier cannot be used without an 'artifact = …' value ({})",
-                    specifier,
-                    name_in_toml
-                )
+                TomlDependency::Detailed(d) => {
+                    let mut d = d.clone();
+                    match (
+                        self.default_features.or(self.default_features2),
+                        d.default_features.or(d.default_features2),
+                    ) {
+                        // member: default-features = true and
+                        // workspace: default-features = false should turn on
+                        // default-features
+                        (Some(true), Some(false)) => {
+                            d.default_features = Some(true);
+                        }
+                        // member: default-features = false and
+                        // workspace: default-features = true should ignore member
+                        // default-features
+                        (Some(false), Some(true)) => {
+                            default_features_msg(name, Some(true), cx);
+                        }
+                        // member: default-features = false and
+                        // workspace: dep = "1.0" should ignore member default-features
+                        (Some(false), None) => {
+                            default_features_msg(name, None, cx);
+                        }
+                        _ => {}
+                    }
+                    d.add_features(self.features.clone());
+                    d.update_optional(self.optional);
+                    TomlDependency::Detailed(d)
+                }
             }
+        })
+    }
+}
+
+impl WorkspaceInherit for TomlWorkspaceDependency {
+    fn inherit_toml_table(&self) -> &str {
+        "dependencies"
+    }
+
+    fn workspace(&self) -> bool {
+        self.workspace
+    }
+}
+
+//. This already has a `Deserialize` impl from version_trim_whitespace
+type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
+
+type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceString;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                f.write_str("a string or workspace")
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(MaybeWorkspaceString::Defined(value))
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceRustVersion = MaybeWorkspace<RustVersion, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceRustVersion;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                f.write_str("a semver or workspace")
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let value = value.parse::<RustVersion>().map_err(|e| E::custom(e))?;
+                Ok(MaybeWorkspaceRustVersion::Defined(value))
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceVecString = MaybeWorkspace<Vec<String>, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceVecString;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+                f.write_str("a vector of strings or workspace")
+            }
+            fn visit_seq<A>(self, v: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                let seq = de::value::SeqAccessDeserializer::new(v);
+                Vec::deserialize(seq).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceStringOrBool = MaybeWorkspace<StringOrBool, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceStringOrBool;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+                f.write_str("a string, a bool, or workspace")
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let b = de::value::BoolDeserializer::new(v);
+                StringOrBool::deserialize(b).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let string = de::value::StringDeserializer::new(v);
+                StringOrBool::deserialize(string).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceVecStringOrBool = MaybeWorkspace<VecStringOrBool, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = MaybeWorkspaceVecStringOrBool;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+                f.write_str("a boolean, a vector of strings, or workspace")
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let b = de::value::BoolDeserializer::new(v);
+                VecStringOrBool::deserialize(b).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_seq<A>(self, v: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                let seq = de::value::SeqAccessDeserializer::new(v);
+                VecStringOrBool::deserialize(seq).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+            }
+        }
+
+        d.deserialize_any(Visitor)
+    }
+}
+
+type MaybeWorkspaceBtreeMap =
+    MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>, TomlWorkspaceField>;
+
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = serde_value::Value::deserialize(deserializer)?;
+
+        if let Ok(w) = TomlWorkspaceField::deserialize(
+            serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
+        ) {
+            return if w.workspace() {
+                Ok(MaybeWorkspace::Workspace(w))
+            } else {
+                Err(de::Error::custom("`workspace` cannot be false"))
+            };
+        }
+        BTreeMap::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
+            .map(MaybeWorkspace::Defined)
+    }
+}
+
+#[derive(Deserialize, Serialize, Copy, Clone, Debug)]
+pub struct TomlWorkspaceField {
+    #[serde(deserialize_with = "bool_no_false")]
+    workspace: bool,
+}
+
+impl WorkspaceInherit for TomlWorkspaceField {
+    fn inherit_toml_table(&self) -> &str {
+        "package"
+    }
+
+    fn workspace(&self) -> bool {
+        self.workspace
+    }
+}
+
+fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
+    let b: bool = Deserialize::deserialize(deserializer)?;
+    if b {
+        Ok(b)
+    } else {
+        Err(de::Error::custom("`workspace` cannot be false"))
+    }
+}
+
+/// Represents the `package`/`project` sections of a `Cargo.toml`.
+///
+/// Note that the order of the fields matters, since this is the order they
+/// are serialized to a TOML file. For example, you cannot have values after
+/// the field `metadata`, since it is a table and values cannot appear after
+/// tables.
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct TomlPackage {
+    edition: Option<MaybeWorkspaceString>,
+    rust_version: Option<MaybeWorkspaceRustVersion>,
+    name: InternedString,
+    #[serde(deserialize_with = "version_trim_whitespace")]
+    version: MaybeWorkspaceSemverVersion,
+    authors: Option<MaybeWorkspaceVecString>,
+    build: Option<StringOrBool>,
+    metabuild: Option<StringOrVec>,
+    default_target: Option<String>,
+    forced_target: Option<String>,
+    links: Option<String>,
+    exclude: Option<MaybeWorkspaceVecString>,
+    include: Option<MaybeWorkspaceVecString>,
+    publish: Option<MaybeWorkspaceVecStringOrBool>,
+    workspace: Option<String>,
+    im_a_teapot: Option<bool>,
+    autobins: Option<bool>,
+    autoexamples: Option<bool>,
+    autotests: Option<bool>,
+    autobenches: Option<bool>,
+    default_run: Option<String>,
+
+    // Package metadata.
+    description: Option<MaybeWorkspaceString>,
+    homepage: Option<MaybeWorkspaceString>,
+    documentation: Option<MaybeWorkspaceString>,
+    readme: Option<MaybeWorkspaceStringOrBool>,
+    keywords: Option<MaybeWorkspaceVecString>,
+    categories: Option<MaybeWorkspaceVecString>,
+    license: Option<MaybeWorkspaceString>,
+    license_file: Option<MaybeWorkspaceString>,
+    repository: Option<MaybeWorkspaceString>,
+    resolver: Option<String>,
+
+    // Provide a helpful error message for a common user error.
+    #[serde(rename = "cargo-features", skip_serializing)]
+    _invalid_cargo_features: Option<InvalidCargoFeatures>,
+
+    // Note that this field must come last due to the way toml serialization
+    // works which requires tables to be emitted after all values.
+    metadata: Option<toml::Value>,
+}
+
+impl TomlPackage {
+    pub fn to_package_id(
+        &self,
+        source_id: SourceId,
+        version: semver::Version,
+    ) -> CargoResult<PackageId> {
+        PackageId::new(self.name, version, source_id)
+    }
+}
+
+fn version_trim_whitespace<'de, D>(deserializer: D) -> Result<MaybeWorkspaceSemverVersion, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    UntaggedEnumVisitor::new()
+        .expecting("SemVer version")
+        .string(
+            |value| match value.trim().parse().map_err(de::Error::custom) {
+                Ok(parsed) => Ok(MaybeWorkspace::Defined(parsed)),
+                Err(e) => Err(e),
+            },
+        )
+        .map(|value| value.deserialize().map(MaybeWorkspace::Workspace))
+        .deserialize(deserializer)
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TomlWorkspace {
+    members: Option<Vec<String>>,
+    #[serde(rename = "default-members")]
+    default_members: Option<Vec<String>>,
+    exclude: Option<Vec<String>>,
+    resolver: Option<String>,
+
+    // Properties that can be inherited by members.
+    package: Option<InheritableFields>,
+    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    lints: Option<TomlLints>,
+
+    // Note that this field must come last due to the way toml serialization
+    // works which requires tables to be emitted after all values.
+    metadata: Option<toml::Value>,
+}
+
+/// A group of fields that are inheritable by members of the workspace
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct InheritableFields {
+    // We use skip here since it will never be present when deserializing
+    // and we don't want it present when serializing
+    #[serde(skip)]
+    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    #[serde(skip)]
+    lints: Option<TomlLints>,
+
+    version: Option<semver::Version>,
+    authors: Option<Vec<String>>,
+    description: Option<String>,
+    homepage: Option<String>,
+    documentation: Option<String>,
+    readme: Option<StringOrBool>,
+    keywords: Option<Vec<String>>,
+    categories: Option<Vec<String>>,
+    license: Option<String>,
+    #[serde(rename = "license-file")]
+    license_file: Option<String>,
+    repository: Option<String>,
+    publish: Option<VecStringOrBool>,
+    edition: Option<String>,
+    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    exclude: Option<Vec<String>>,
+    include: Option<Vec<String>>,
+    #[serde(rename = "rust-version")]
+    rust_version: Option<RustVersion>,
+    // We use skip here since it will never be present when deserializing
+    // and we don't want it present when serializing
+    #[serde(skip)]
+    ws_root: PathBuf,
+}
+
+/// Defines simple getter methods for inheritable fields.
+macro_rules! inheritable_field_getter {
+    ( $(($key:literal, $field:ident -> $ret:ty),)* ) => (
+        $(
+            #[doc = concat!("Gets the field `workspace.", $key, "`.")]
+            pub fn $field(&self) -> CargoResult<$ret> {
+                let Some(val) = &self.$field else  {
+                    bail!("`workspace.{}` was not defined", $key);
+                };
+                Ok(val.clone())
+            }
+        )*
+    )
+}
+
+impl InheritableFields {
+    inheritable_field_getter! {
+        // Please keep this list lexicographically ordered.
+        ("dependencies",          dependencies  -> BTreeMap<String, TomlDependency>),
+        ("lints",                 lints         -> TomlLints),
+        ("package.authors",       authors       -> Vec<String>),
+        ("package.badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
+        ("package.categories",    categories    -> Vec<String>),
+        ("package.description",   description   -> String),
+        ("package.documentation", documentation -> String),
+        ("package.edition",       edition       -> String),
+        ("package.exclude",       exclude       -> Vec<String>),
+        ("package.homepage",      homepage      -> String),
+        ("package.include",       include       -> Vec<String>),
+        ("package.keywords",      keywords      -> Vec<String>),
+        ("package.license",       license       -> String),
+        ("package.publish",       publish       -> VecStringOrBool),
+        ("package.repository",    repository    -> String),
+        ("package.rust-version",  rust_version  -> RustVersion),
+        ("package.version",       version       -> semver::Version),
+    }
+
+    /// Gets a workspace dependency with the `name`.
+    pub fn get_dependency(&self, name: &str, package_root: &Path) -> CargoResult<TomlDependency> {
+        let Some(deps) = &self.dependencies else {
+            bail!("`workspace.dependencies` was not defined");
+        };
+        let Some(dep) = deps.get(name) else {
+            bail!("`dependency.{name}` was not found in `workspace.dependencies`");
+        };
+        let mut dep = dep.clone();
+        if let TomlDependency::Detailed(detailed) = &mut dep {
+            detailed.resolve_path(name, self.ws_root(), package_root)?;
         }
         Ok(dep)
     }
-}
 
-impl DetailedTomlDependency {
-    fn add_features(&mut self, features: Option<Vec<String>>) {
-        self.features = match (self.features.clone(), features.clone()) {
-            (Some(dep_feat), Some(inherit_feat)) => Some(
-                dep_feat
-                    .into_iter()
-                    .chain(inherit_feat)
-                    .collect::<Vec<String>>(),
-            ),
-            (Some(dep_fet), None) => Some(dep_fet),
-            (None, Some(inherit_feat)) => Some(inherit_feat),
-            (None, None) => None,
+    /// Gets the field `workspace.package.license-file`.
+    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
+        let Some(license_file) = &self.license_file else {
+            bail!("`workspace.package.license-file` was not defined");
         };
+        resolve_relative_path("license-file", &self.ws_root, package_root, license_file)
     }
 
-    fn update_optional(&mut self, optional: Option<bool>) {
-        self.optional = optional;
+    /// Gets the field `workspace.package.readme`.
+    pub fn readme(&self, package_root: &Path) -> CargoResult<StringOrBool> {
+        let Some(readme) = readme_for_package(self.ws_root.as_path(), self.readme.as_ref()) else {
+            bail!("`workspace.package.readme` was not defined");
+        };
+        resolve_relative_path("readme", &self.ws_root, package_root, &readme)
+            .map(StringOrBool::String)
     }
 
-    fn resolve_path(
-        &mut self,
-        name: &str,
-        root_path: &Path,
-        package_root: &Path,
-    ) -> CargoResult<()> {
-        if let Some(rel_path) = &self.path {
-            self.path = Some(resolve_relative_path(
-                name,
-                root_path,
-                package_root,
-                rel_path,
-            )?)
-        }
-        Ok(())
+    pub fn ws_root(&self) -> &PathBuf {
+        &self.ws_root
+    }
+
+    pub fn update_deps(&mut self, deps: Option<BTreeMap<String, TomlDependency>>) {
+        self.dependencies = deps;
+    }
+
+    pub fn update_lints(&mut self, lints: Option<TomlLints>) {
+        self.lints = lints;
+    }
+
+    pub fn update_ws_path(&mut self, ws_root: PathBuf) {
+        self.ws_root = ws_root;
     }
 }
 
@@ -3250,41 +3250,6 @@ struct TomlTarget {
     harness: Option<bool>,
     required_features: Option<Vec<String>>,
     edition: Option<String>,
-}
-
-#[derive(Clone)]
-struct PathValue(PathBuf);
-
-impl ser::Serialize for PathValue {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for PathValue {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        Ok(PathValue(String::deserialize(deserializer)?.into()))
-    }
-}
-
-/// Corresponds to a `target` entry, but `TomlTarget` is already used.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct TomlPlatform {
-    dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    #[serde(rename = "build-dependencies")]
-    build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    #[serde(rename = "dev-dependencies")]
-    dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
 }
 
 impl TomlTarget {
@@ -3339,10 +3304,45 @@ impl TomlTarget {
     }
 }
 
+#[derive(Clone)]
+struct PathValue(PathBuf);
+
 impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
+}
+
+impl ser::Serialize for PathValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> de::Deserialize<'de> for PathValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        Ok(PathValue(String::deserialize(deserializer)?.into()))
+    }
+}
+
+/// Corresponds to a `target` entry, but `TomlTarget` is already used.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct TomlPlatform {
+    dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    #[serde(rename = "build-dependencies")]
+    build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    #[serde(rename = "build_dependencies")]
+    build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    #[serde(rename = "dev-dependencies")]
+    dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    #[serde(rename = "dev_dependencies")]
+    dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
