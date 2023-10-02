@@ -116,6 +116,8 @@ fn custom_target_dependency() {
 }
 
 #[cargo_test(nightly, reason = "requires features no_core, lang_items")]
+// This is randomly crashing in lld. See https://github.com/rust-lang/rust/issues/115985
+#[cfg_attr(all(windows, target_env = "gnu"), ignore = "windows-gnu lld crashing")]
 fn custom_bin_target() {
     let p = project()
         .file(
