@@ -18,7 +18,6 @@
 //!
 //! [discussion]: https://github.com/rust-lang/rust/pull/46799#issuecomment-361156935
 
-#![doc(html_root_url = "https://docs.rs/home/0.5.6")]
 #![deny(rust_2018_idioms)]
 
 pub mod env;
