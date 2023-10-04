@@ -1,5 +1,33 @@
 # Changelog
 
+## Cargo 1.75 (2023-12-28)
+[59596f0f...HEAD](https://github.com/rust-lang/cargo/compare/59596f0f...HEAD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed corruption when cargo was killed while writing to files.
+  [#12744](https://github.com/rust-lang/cargo/pull/12744)
+
+### Nightly only
+
+### Documentation
+
+- profile: add missing `strip` info.
+  [#12754](https://github.com/rust-lang/cargo/pull/12754)
+
+### Internal
+
+- Updated to `itertools` 0.11.0.
+  [#12759](https://github.com/rust-lang/cargo/pull/12759)
+- Updated to `cargo_metadata` 0.18.0.
+  [#12758](https://github.com/rust-lang/cargo/pull/12758)
+- Disabled the `custom_target::custom_bin_target` test on windows-gnu.
+  [#12763](https://github.com/rust-lang/cargo/pull/12763)
+
 ## Cargo 1.74 (2023-11-16)
 [80eca0e5...rust-1.74.0](https://github.com/rust-lang/cargo/compare/80eca0e5...rust-1.74.0)
 
