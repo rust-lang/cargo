@@ -3105,6 +3105,7 @@ fn versionless_package() {
                 [package]
                 name = "foo"
                 description = "foo"
+                publish = false
             "#,
         )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -3112,16 +3113,23 @@ fn versionless_package() {
 
     p.cargo("package")
         .with_stderr(
-            r#"error: failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 2, column 17
-    |
-  2 |                 [package]
-    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
-  missing field `version`
-"#,
+            "\
+warning: manifest has no license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+   Packaging foo v0.0.0 ([CWD])
+   Verifying foo v0.0.0 ([CWD])
+   Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
+    Finished dev [unoptimized + debuginfo] target(s) in [..]s
+    Packaged 4 files, [..]B ([..]B compressed)
+",
         )
-        .with_status(101)
         .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.0.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
 }

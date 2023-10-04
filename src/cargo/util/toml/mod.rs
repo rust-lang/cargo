@@ -550,11 +550,17 @@ impl TomlManifest {
         let version = package
             .version
             .clone()
-            .resolve("version", || inherit()?.version())?;
+            .map(|version| version.resolve("version", || inherit()?.version()))
+            .transpose()?;
 
-        package.version = MaybeWorkspace::Defined(version.clone());
+        package.version = version.clone().map(MaybeWorkspace::Defined);
 
-        let pkgid = package.to_package_id(source_id, version)?;
+        let pkgid = package.to_package_id(
+            source_id,
+            version
+                .clone()
+                .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
+        )?;
 
         let edition = if let Some(edition) = package.edition.clone() {
             let edition: Edition = edition
@@ -1008,6 +1014,10 @@ impl TomlManifest {
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
+
+        if version.is_none() && publish != Some(vec![]) {
+            bail!("`package.publish` requires `package.version` be specified");
+        }
 
         if summary.features().contains_key("default-features") {
             warnings.push(
@@ -1659,7 +1669,7 @@ pub struct TomlPackage {
     edition: Option<MaybeWorkspaceString>,
     rust_version: Option<MaybeWorkspaceRustVersion>,
     name: InternedString,
-    version: MaybeWorkspaceSemverVersion,
+    version: Option<MaybeWorkspaceSemverVersion>,
     authors: Option<MaybeWorkspaceVecString>,
     build: Option<StringOrBool>,
     metabuild: Option<StringOrVec>,

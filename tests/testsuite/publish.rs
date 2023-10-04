@@ -3007,6 +3007,9 @@ Caused by:
 
 #[cargo_test]
 fn versionless_package() {
+    // Use local registry for faster test times since no publish will occur
+    let registry = registry::init();
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -3020,17 +3023,15 @@ fn versionless_package() {
         .build();
 
     p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
         .with_stderr(
-            r#"error: failed to parse manifest at `[CWD]/Cargo.toml`
+            "\
+error: failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  TOML parse error at line 2, column 17
-    |
-  2 |                 [package]
-    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
-  missing field `version`
-"#,
+  `package.publish` requires `package.version` be specified
+",
         )
-        .with_status(101)
         .run();
 }

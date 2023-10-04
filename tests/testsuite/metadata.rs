@@ -4273,6 +4273,7 @@ fn versionless_packages() {
             r#"
                 [package]
                 name = "bar"
+                publish = false
 
                 [dependencies]
                 foobar = "0.0.1"
@@ -4285,6 +4286,7 @@ fn versionless_packages() {
             r#"
                 [package]
                 name = "baz"
+                publish = false
 
                 [dependencies]
                 foobar = "0.0.1"
@@ -4295,20 +4297,247 @@ fn versionless_packages() {
     Package::new("foobar", "0.0.1").publish();
 
     p.cargo("metadata -q --format-version 1")
-        .with_stderr(
-            r#"error: failed to load manifest for workspace member `[CWD]/bar`
-
-Caused by:
-  failed to parse manifest at `[CWD]/bar/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 2, column 17
-    |
-  2 |                 [package]
-    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
-  missing field `version`
+        .with_json(
+            r#"
+{
+  "packages": [
+    {
+      "name": "bar",
+      "version": "0.0.0",
+      "id": "bar 0.0.0 [..]",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "baz",
+          "source": null,
+          "req": "*",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null,
+          "path": "[..]/baz"
+        },
+        {
+          "name": "foobar",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^0.0.1",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "bar",
+          "src_path": "[..]/bar/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/bar/Cargo.toml",
+      "metadata": null,
+      "publish": [],
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "baz",
+      "version": "0.0.0",
+      "id": "baz 0.0.0 [..]",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "foobar",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^0.0.1",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "baz",
+          "src_path": "[..]/baz/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/baz/Cargo.toml",
+      "metadata": null,
+      "publish": [],
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "foobar",
+      "version": "0.0.1",
+      "id": "foobar 0.0.1 [..]",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "dependencies": [],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "foobar",
+          "src_path": "[..]/foobar-0.0.1/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/foobar-0.0.1/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    }
+  ],
+  "workspace_members": [
+    "bar 0.0.0 [..]",
+    "baz 0.0.0 [..]"
+  ],
+  "workspace_default_members": [
+    "bar 0.0.0 [..]",
+    "baz 0.0.0 [..]"
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "bar 0.0.0 [..]",
+        "dependencies": [
+          "baz 0.0.0 [..]",
+          "foobar 0.0.1 [..]"
+        ],
+        "deps": [
+          {
+            "name": "baz",
+            "pkg": "baz 0.0.0 [..]",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          },
+          {
+            "name": "foobar",
+            "pkg": "foobar 0.0.1 [..]",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "baz 0.0.0 [..]",
+        "dependencies": [
+          "foobar 0.0.1 [..]"
+        ],
+        "deps": [
+          {
+            "name": "foobar",
+            "pkg": "foobar 0.0.1 [..]",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "foobar 0.0.1 [..]",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": null
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_root": "[..]",
+  "metadata": null
+}
 "#,
         )
-        .with_status(101)
         .run();
 }

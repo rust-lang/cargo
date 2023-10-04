@@ -109,6 +109,8 @@ resolve dependencies, and for guidelines on setting your own version. See the
 [SemVer compatibility] chapter for more details on exactly what constitutes a
 breaking change.
 
+This field is optional and defaults to `0.0.0`.
+
 [Resolver]: resolver.md
 [SemVer compatibility]: semver.md
 

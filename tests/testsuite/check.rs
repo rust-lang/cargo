@@ -1506,22 +1506,17 @@ fn versionless_package() {
                 [package]
                 name = "foo"
                 description = "foo"
+                publish = false
             "#,
         )
         .file("src/lib.rs", "")
         .build();
     p.cargo("check")
         .with_stderr(
-            r#"error: failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 2, column 17
-    |
-  2 |                 [package]
-    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
-  missing field `version`
-"#,
+            "\
+[CHECKING] foo v0.0.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
-        .with_status(101)
         .run();
 }
