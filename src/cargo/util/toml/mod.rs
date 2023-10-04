@@ -1659,7 +1659,6 @@ pub struct TomlPackage {
     edition: Option<MaybeWorkspaceString>,
     rust_version: Option<MaybeWorkspaceRustVersion>,
     name: InternedString,
-    #[serde(deserialize_with = "version_trim_whitespace")]
     version: MaybeWorkspaceSemverVersion,
     authors: Option<MaybeWorkspaceVecString>,
     build: Option<StringOrBool>,
@@ -1707,22 +1706,6 @@ impl TomlPackage {
     ) -> CargoResult<PackageId> {
         PackageId::new(self.name, version, source_id)
     }
-}
-
-fn version_trim_whitespace<'de, D>(deserializer: D) -> Result<MaybeWorkspaceSemverVersion, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    UntaggedEnumVisitor::new()
-        .expecting("SemVer version")
-        .string(
-            |value| match value.trim().parse().map_err(de::Error::custom) {
-                Ok(parsed) => Ok(MaybeWorkspace::Defined(parsed)),
-                Err(e) => Err(e),
-            },
-        )
-        .map(|value| value.deserialize().map(MaybeWorkspace::Workspace))
-        .deserialize(deserializer)
 }
 
 /// This Trait exists to make [`MaybeWorkspace::Workspace`] generic. It makes deserialization of
@@ -1793,6 +1776,23 @@ impl<T, W: WorkspaceInherit> MaybeWorkspace<T, W> {
 
 //. This already has a `Deserialize` impl from version_trim_whitespace
 type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceSemverVersion {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("SemVer version")
+            .string(
+                |value| match value.trim().parse().map_err(de::Error::custom) {
+                    Ok(parsed) => Ok(MaybeWorkspace::Defined(parsed)),
+                    Err(e) => Err(e),
+                },
+            )
+            .map(|value| value.deserialize().map(MaybeWorkspace::Workspace))
+            .deserialize(d)
+    }
+}
 
 type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
