@@ -1359,7 +1359,7 @@ Caused by:
   failed to parse the `edition` key
 
 Caused by:
-  supported edition values are `2015`, `2018`, or `2021`, but `chicken` is unknown
+  supported edition values are `2015`, `2018`, `2021`, or `2024`, but `chicken` is unknown
 "
             .to_string(),
         )
@@ -1391,7 +1391,7 @@ Caused by:
   failed to parse the `edition` key
 
 Caused by:
-  this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, and `2021` editions.
+  this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, `2021`, and `2024` editions.
 "
             .to_string(),
         )

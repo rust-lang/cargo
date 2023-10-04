@@ -205,20 +205,22 @@ pub enum Edition {
     Edition2018,
     /// The 2021 edition
     Edition2021,
+    /// The 2024 edition
+    Edition2024,
 }
 
 impl Edition {
     /// The latest edition that is unstable.
     ///
     /// This is `None` if there is no next unstable edition.
-    pub const LATEST_UNSTABLE: Option<Edition> = None;
+    pub const LATEST_UNSTABLE: Option<Edition> = Some(Edition::Edition2024);
     /// The latest stable edition.
     pub const LATEST_STABLE: Edition = Edition::Edition2021;
     /// Possible values allowed for the `--edition` CLI flag.
     ///
     /// This requires a static value due to the way clap works, otherwise I
     /// would have built this dynamically.
-    pub const CLI_VALUES: [&'static str; 3] = ["2015", "2018", "2021"];
+    pub const CLI_VALUES: [&'static str; 4] = ["2015", "2018", "2021", "2024"];
 
     /// Returns the first version that a particular edition was released on
     /// stable.
@@ -228,6 +230,7 @@ impl Edition {
             Edition2015 => None,
             Edition2018 => Some(semver::Version::new(1, 31, 0)),
             Edition2021 => Some(semver::Version::new(1, 56, 0)),
+            Edition2024 => None,
         }
     }
 
@@ -238,6 +241,7 @@ impl Edition {
             Edition2015 => true,
             Edition2018 => true,
             Edition2021 => true,
+            Edition2024 => false,
         }
     }
 
@@ -250,6 +254,7 @@ impl Edition {
             Edition2015 => None,
             Edition2018 => Some(Edition2015),
             Edition2021 => Some(Edition2018),
+            Edition2024 => Some(Edition2021),
         }
     }
 
@@ -260,7 +265,8 @@ impl Edition {
         match self {
             Edition2015 => Edition2018,
             Edition2018 => Edition2021,
-            Edition2021 => Edition2021,
+            Edition2021 => Edition2024,
+            Edition2024 => Edition2024,
         }
     }
 
@@ -286,6 +292,7 @@ impl Edition {
             Edition2015 => false,
             Edition2018 => true,
             Edition2021 => true,
+            Edition2024 => false,
         }
     }
 
@@ -298,6 +305,7 @@ impl Edition {
             Edition2015 => false,
             Edition2018 => true,
             Edition2021 => false,
+            Edition2024 => false,
         }
     }
 
@@ -316,6 +324,7 @@ impl fmt::Display for Edition {
             Edition::Edition2015 => f.write_str("2015"),
             Edition::Edition2018 => f.write_str("2018"),
             Edition::Edition2021 => f.write_str("2021"),
+            Edition::Edition2024 => f.write_str("2024"),
         }
     }
 }
@@ -326,13 +335,14 @@ impl FromStr for Edition {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
             "2021" => Ok(Edition::Edition2021),
-            s if s.parse().map_or(false, |y: u16| y > 2021 && y < 2050) => bail!(
+            "2024" => Ok(Edition::Edition2024),
+            s if s.parse().map_or(false, |y: u16| y > 2024 && y < 2050) => bail!(
                 "this version of Cargo is older than the `{}` edition, \
-                 and only supports `2015`, `2018`, and `2021` editions.",
+                 and only supports `2015`, `2018`, `2021`, and `2024` editions.",
                 s
             ),
             s => bail!(
-                "supported edition values are `2015`, `2018`, or `2021`, \
+                "supported edition values are `2015`, `2018`, `2021`, or `2024`, \
                  but `{}` is unknown",
                 s
             ),
@@ -483,6 +493,9 @@ features! {
 
     // Allow specifying rustflags directly in a profile
     (stable, workspace_inheritance, "1.64", "reference/unstable.html#workspace-inheritance"),
+
+     // Support for 2024 edition.
+    (unstable, edition2024, "", "reference/unstable.html#edition-2024"),
 }
 
 pub struct Feature {
