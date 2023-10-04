@@ -569,10 +569,12 @@ impl TomlManifest {
         // Add these lines if start a new unstable edition.
         // ```
         // if edition == Edition::Edition20xx {
-        //     features.require(Feature::edition20xx))?;
+        //     features.require(Feature::edition20xx())?;
         // }
         // ```
-        if !edition.is_stable() {
+        if edition == Edition::Edition2024 {
+            features.require(Feature::edition2024())?;
+        } else if !edition.is_stable() {
             // Guard in case someone forgets to add .require()
             return Err(util::errors::internal(format!(
                 "edition {} should be gated",
