@@ -203,10 +203,14 @@ always uses `"abort"`.
 
 Tests, benchmarks, build scripts, and proc macros ignore the `panic` setting.
 The `rustc` test harness currently requires `unwind` behavior. See the
-[`panic-abort-tests`] unstable flag which enables `abort` behavior.
+[`panic-abort-tests`] unstable flag which enables `abort` behavior. 
 
 Additionally, when using the `abort` strategy and building a test, all of the
 dependencies will also be forced to build with the `unwind` strategy.
+
+One exception is that when a test or benchmark target is driven by a custom harness,
+panic setting will be applied since the custom harness may not have the same limitation
+as the `rustc` test harness requires.
 
 [`-C panic` flag]: ../../rustc/codegen-options/index.html#panic
 [`panic-abort-tests`]: unstable.md#panic-abort-tests

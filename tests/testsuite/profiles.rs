@@ -353,8 +353,9 @@ must be a boolean (`true`/`false`) or a string (`\"thin\"`/`\"fat\"`/`\"off\"`) 
         .run();
 }
 
+/// Custom harness can have `-C panic="…"` passed in.
 #[cargo_test]
-fn profile_panic_test_bench() {
+fn profile_panic_test_with_custom_harness() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -362,6 +363,20 @@ fn profile_panic_test_bench() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+
+                [[test]]
+                name = "custom"
+                harness = false
+
+                [[test]]
+                name = "libtest"
+
+                [[bench]]
+                name = "custom"
+                harness = false
+
+                [[bench]]
+                name = "libtest"
 
                 [profile.test]
                 panic = "abort"
@@ -371,15 +386,43 @@ fn profile_panic_test_bench() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file("tests/custom.rs", r#"fn main() { panic!("abort!"); }"#)
+        .file("tests/libtest.rs", "")
+        .file("benches/custom.rs", r#"fn main() { panic!("abort!"); }"#)
+        .file("benches/libtest.rs", "")
         .build();
 
-    p.cargo("build")
+    #[cfg(not(windows))]
+    let exit_code = 101;
+    #[cfg(windows)]
+    let exit_code = winapi::shared::ntstatus::STATUS_STACK_BUFFER_OVERRUN;
+
+    // panic abort on custom harness
+    p.cargo("test --test custom --verbose")
+        .with_stderr_contains("[RUNNING] `rustc --crate-name custom [..]-C panic=abort [..]")
+        .with_stderr_contains("[..]panicked at 'abort!', [..]")
         .with_stderr_contains(
-            "\
-[WARNING] `panic` setting is ignored for `bench` profile
-[WARNING] `panic` setting is ignored for `test` profile
-",
+            "[..]process didn't exit successfully: `[..]/target/debug/deps/custom-[..]",
         )
+        .with_status(exit_code)
+        .run();
+    p.cargo("bench --bench custom --verbose")
+        .with_stderr_contains("[RUNNING] `rustc --crate-name custom [..]-C panic=abort [..]")
+        .with_stderr_contains("[..]panicked at 'abort!', [..]")
+        .with_stderr_contains(
+            "[..]process didn't exit successfully: `[..]/target/release/deps/custom-[..]",
+        )
+        .with_status(exit_code)
+        .run();
+
+    // panic behaviour of libtest cannot be set as `abort` as of now.
+    p.cargo("test --test libtest --verbose")
+        .with_stderr_does_not_contain("panic=abort")
+        .with_stdout_contains("running 0 tests")
+        .run();
+    p.cargo("bench --bench libtest --verbose")
+        .with_stderr_does_not_contain("panic=abort")
+        .with_stdout_contains("running 0 tests")
         .run();
 }
 
