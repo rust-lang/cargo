@@ -3004,3 +3004,33 @@ Caused by:
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn versionless_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("publish")
+        .with_stderr(
+            r#"error: failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  TOML parse error at line 2, column 17
+    |
+  2 |                 [package]
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+  missing field `version`
+"#,
+        )
+        .with_status(101)
+        .run();
+}

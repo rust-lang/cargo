@@ -4257,3 +4257,58 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
         )
         .run();
 }
+
+#[cargo_test]
+fn versionless_packages() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+
+                [dependencies]
+                foobar = "0.0.1"
+                baz = { path = "../baz/" }
+           "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+
+                [dependencies]
+                foobar = "0.0.1"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+    Package::new("foobar", "0.0.1").publish();
+
+    p.cargo("metadata -q --format-version 1")
+        .with_stderr(
+            r#"error: failed to load manifest for workspace member `[CWD]/bar`
+
+Caused by:
+  failed to parse manifest at `[CWD]/bar/Cargo.toml`
+
+Caused by:
+  TOML parse error at line 2, column 17
+    |
+  2 |                 [package]
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+  missing field `version`
+"#,
+        )
+        .with_status(101)
+        .run();
+}
