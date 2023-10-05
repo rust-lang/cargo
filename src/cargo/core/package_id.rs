@@ -82,25 +82,29 @@ impl<'de> de::Deserialize<'de> for PackageId {
         D: de::Deserializer<'de>,
     {
         let string = String::deserialize(d)?;
-        let mut s = string.splitn(3, ' ');
-        let name = s.next().unwrap();
-        let name = InternedString::new(name);
-        let Some(version) = s.next() else {
-            return Err(de::Error::custom("invalid serialized PackageId"));
-        };
-        let version = version.to_semver().map_err(de::Error::custom)?;
-        let Some(url) = s.next() else {
-            return Err(de::Error::custom("invalid serialized PackageId"));
-        };
-        let url = if url.starts_with('(') && url.ends_with(')') {
-            &url[1..url.len() - 1]
-        } else {
-            return Err(de::Error::custom("invalid serialized PackageId"));
-        };
+
+        let (field, rest) = string
+            .split_once(' ')
+            .ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
+        let name = InternedString::new(field);
+
+        let (field, rest) = rest
+            .split_once(' ')
+            .ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
+        let version = field.to_semver().map_err(de::Error::custom)?;
+
+        let url =
+            strip_parens(rest).ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
         Ok(PackageId::pure(name, version, source_id))
     }
+}
+
+fn strip_parens(value: &str) -> Option<&str> {
+    let value = value.strip_prefix('(')?;
+    let value = value.strip_suffix(')')?;
+    Some(value)
 }
 
 impl PartialEq for PackageId {
