@@ -257,7 +257,13 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             ProcessBuilder::new(cmd)
         };
-        self.fill_env(builder, pkg, script_meta, kind, false)
+        let mut builder = self.fill_env(builder, pkg, script_meta, kind, false)?;
+
+        if let Some(client) = self.config.jobserver_from_env() {
+            builder.inherit_jobserver(client);
+        }
+
+        Ok(builder)
     }
 
     /// Prepares a new process with an appropriate environment to run against

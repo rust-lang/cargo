@@ -192,33 +192,25 @@ test-runner:
         .env("CARGO", cargo_exe())
         .arg("run")
         .arg("-j2")
-        .with_status(2)
-        .with_stderr_contains("[..]no jobserver from env[..]")
         .run();
     p.process(make)
         .env("PATH", path)
         .env("CARGO", cargo_exe())
         .arg("run-runner")
         .arg("-j2")
-        .with_status(2)
         .with_stderr_contains("[..]this is a runner[..]")
-        .with_stderr_contains("[..]no jobserver from env[..]")
         .run();
     p.process(make)
         .env("CARGO", cargo_exe())
         .arg("test")
         .arg("-j2")
-        .with_status(2)
-        .with_stdout_contains("[..]no jobserver from env[..]")
         .run();
     p.process(make)
         .env("PATH", path)
         .env("CARGO", cargo_exe())
         .arg("test-runner")
         .arg("-j2")
-        .with_status(2)
         .with_stderr_contains("[..]this is a runner[..]")
-        .with_stdout_contains("[..]no jobserver from env[..]")
         .run();
 
     // but not from `-j` flag
