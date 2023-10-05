@@ -23,6 +23,7 @@ fn cargo_metadata_simple() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "foo",
                 "version": "0.5.0",
@@ -123,6 +124,7 @@ crate-type = ["lib", "staticlib"]
             {
                 "authors": [],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "foo",
                 "readme": null,
@@ -213,6 +215,7 @@ optional_feat = []
             {
                 "authors": [],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "foo",
                 "readme": null,
@@ -319,6 +322,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "checksum": "bafd35fbc129bd5494b0dda08bc9e65089f0c3a30d7d1f182873715af50446cf",
                 "default_run": null,
                 "dependencies": [
                     {
@@ -373,6 +377,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "checksum": "dcf9015812c4ce362059fe47142a3bac5b01e13470f216db14ddc6d890797624",
                 "default_run": null,
                 "dependencies": [],
                 "description": null,
@@ -414,6 +419,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "dependencies": [
                     {
@@ -480,6 +486,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "checksum": "76e9c22baa05c51c696e2339899d9148929bf313fe6742d62f59c3c1ec7d88fe",
                 "default_run": null,
                 "dependencies": [],
                 "description": null,
@@ -626,6 +633,7 @@ name = "ex"
             {
                 "authors": [],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "foo",
                 "readme": null,
@@ -724,6 +732,7 @@ crate-type = ["rlib", "dylib"]
             {
                 "authors": [],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "foo",
                 "readme": null,
@@ -829,6 +838,7 @@ fn workspace_metadata() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "bar",
                 "version": "0.5.0",
@@ -868,6 +878,7 @@ fn workspace_metadata() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "baz",
                 "readme": null,
@@ -980,6 +991,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "bar",
                 "readme": null,
@@ -1053,6 +1065,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                 "wycats@example.com"
               ],
               "categories": [],
+              "checksum": null,
               "default_run": null,
               "dependencies": [],
               "description": null,
@@ -1096,6 +1109,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "checksum": null,
                 "default_run": null,
                 "name": "baz",
                 "readme": null,
@@ -1247,6 +1261,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 {
                   "authors": [],
                   "categories": [],
+                  "checksum": null,
                   "default_run": null,
                   "dependencies": [],
                   "description": null,
@@ -1320,6 +1335,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 {
                   "authors": [],
                   "categories": [],
+                  "checksum": null,
                   "default_run": null,
                   "dependencies": [
                     {
@@ -1530,6 +1546,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 {
                   "authors": [],
                   "categories": [],
+                  "checksum": null,
                   "default_run": null,
                   "dependencies": [],
                   "description": null,
@@ -1585,6 +1602,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 {
                   "authors": [],
                   "categories": [],
+                  "checksum": null,
                   "default_run": null,
                   "dependencies": [],
                   "description": null,
@@ -1953,6 +1971,7 @@ const MANIFEST_OUTPUT: &str = r#"
             "wycats@example.com"
         ],
         "categories": [],
+        "checksum": null,
         "default_run": null,
         "name":"foo",
         "version":"0.5.0",
@@ -2141,6 +2160,7 @@ fn package_metadata() {
             {
                 "authors": ["wycats@example.com"],
                 "categories": ["database"],
+                "checksum": null,
                 "default_run": null,
                 "name": "foo",
                 "readme": "README.md",
@@ -2221,6 +2241,7 @@ fn package_publish() {
             {
                 "authors": ["wycats@example.com"],
                 "categories": ["database"],
+                "checksum": null,
                 "default_run": null,
                 "name": "foo",
                 "readme": "README.md",
@@ -2298,6 +2319,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "wycats@example.com"
                     ],
                     "categories": [],
+                    "checksum": null,
                     "default_run": null,
                     "dependencies": [],
                     "description": null,
@@ -2389,6 +2411,7 @@ fn package_edition_2018() {
                             "wycats@example.com"
                         ],
                         "categories": [],
+                        "checksum": null,
                         "default_run": null,
                         "dependencies": [],
                         "description": null,
@@ -2526,6 +2549,7 @@ fn target_edition_2018() {
                             "wycats@example.com"
                         ],
                         "categories": [],
+                        "checksum": null,
                         "default_run": null,
                         "dependencies": [],
                         "description": null,
@@ -2636,6 +2660,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "checksum": "91fa936c400bb4e0f3666cf49506f41c3b637cea1b8816ae661bbfca9ef13fd5",
             "default_run": null,
             "dependencies": [],
             "description": null,
@@ -2677,6 +2702,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "checksum": "df6ecb8eff4d252f7b08e97e6545f886517d03ca6e6acf12485660a759d2e6ba",
             "default_run": null,
             "dependencies": [],
             "description": null,
@@ -2718,6 +2744,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "checksum": null,
             "default_run": null,
             "dependencies": [
                 {
@@ -2868,6 +2895,7 @@ fn metadata_links() {
                 {
                   "authors": [],
                   "categories": [],
+                  "checksum": null,
                   "default_run": null,
                   "dependencies": [],
                   "description": null,
@@ -2975,6 +3003,7 @@ fn deps_with_bin_only() {
                   "name": "foo",
                   "version": "0.1.0",
                   "id": "foo 0.1.0 ([..])",
+                  "checksum": null,
                   "license": null,
                   "license_file": null,
                   "description": null,
@@ -3097,6 +3126,7 @@ fn filter_platform() {
       "name": "alt-dep",
       "version": "0.0.1",
       "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "checksum": "d0cb634c298bccc100e17ce515c0700f6d4e62b97db406030989304929298c09",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3141,6 +3171,7 @@ fn filter_platform() {
       "name": "cfg-dep",
       "version": "0.0.1",
       "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "checksum": "b0ee94084ea7bc5472fe5a136d668518e33fdb3cb9fd8fcd8afd3984a3917d3c",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3185,6 +3216,7 @@ fn filter_platform() {
       "name": "host-dep",
       "version": "0.0.1",
       "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "checksum": "f0173a393676667e6e592e973c93c7c7c3d752897f8068332adfb1890e7db73d",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3229,6 +3261,7 @@ fn filter_platform() {
       "name": "normal-dep",
       "version": "0.0.1",
       "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "checksum": "ab69e5935dc5e33f24abe2311a98a753ff61351b78618a38284ec3ec1c456214",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3335,6 +3368,7 @@ fn filter_platform() {
       "name": "foo",
       "version": "0.1.0",
       "id": "foo 0.1.0 (path+file:[..]foo)",
+      "checksum": null,
       "license": null,
       "license_file": null,
       "description": null,
@@ -4066,6 +4100,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                     "wycats@example.com"
                   ],
                   "categories": [],
+                  "checksum": null,
                   "default_run": null,
                   "dependencies": [
                     {
@@ -4156,6 +4191,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                     "wycats@example.com"
                   ],
                   "categories": [],
+                  "checksum": null,
                   "default_run": null,
                   "dependencies": [],
                   "description": null,
@@ -4199,6 +4235,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                     "wycats@example.com"
                   ],
                   "categories": [],
+                  "checksum": null,
                   "default_run": null,
                   "dependencies": [],
                   "description": null,

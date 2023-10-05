@@ -19,6 +19,7 @@ fn manifest_output(readme_value: &str) -> String {
     "rust_version": null,
     "version":"0.5.0",
     "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
+    "checksum": null,
     "keywords": [],
     "license": null,
     "license_file": null,

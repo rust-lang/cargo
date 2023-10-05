@@ -583,6 +583,7 @@ fn json_exposed() {
                       "name": "foo",
                       "version": "0.1.0",
                       "id": "foo 0.1.0 [..]",
+                      "checksum": null,
                       "license": null,
                       "license_file": null,
                       "description": null,

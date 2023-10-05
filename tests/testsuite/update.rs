@@ -626,6 +626,7 @@ fn update_precise_first_run() {
     {
       "authors": [],
       "categories": [],
+      "checksum": null,
       "default_run": null,
       "dependencies": [
         {
@@ -680,6 +681,7 @@ fn update_precise_first_run() {
     {
       "authors": [],
       "categories": [],
+      "checksum": "08433e98ba7c29a2450491d1be89088ca1b571bff5b8c936a4538547bfa5064a",
       "default_run": null,
       "dependencies": [],
       "description": null,
