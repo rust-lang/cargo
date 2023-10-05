@@ -243,7 +243,7 @@
 
 ### Changed
 
-- Cargo now bails out when using `cargo::` in custom build scripts. This is
+- ❗️ Cargo now bails out when using `cargo::` in custom build scripts. This is
   a preparation for an upcoming change in build script invocations.
   [#12332](https://github.com/rust-lang/cargo/pull/12332)
 - Make Cargo `--help` easier to browse.
