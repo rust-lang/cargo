@@ -49,6 +49,14 @@ fn validate(_: &str) {
 }
 "#;
 
+fn make_exe() -> &'static str {
+    if cfg!(windows) {
+        "mingw32-make"
+    } else {
+        "make"
+    }
+}
+
 #[cargo_test]
 fn jobserver_exists() {
     let p = project()
@@ -64,11 +72,7 @@ fn jobserver_exists() {
 
 #[cargo_test]
 fn external_subcommand_inherits_jobserver() {
-    let make = if cfg!(windows) {
-        "mingw32-make"
-    } else {
-        "make"
-    };
+    let make = make_exe();
     if Command::new(make).arg("--version").output().is_err() {
         return;
     }
@@ -103,11 +107,7 @@ all:
 
 #[cargo_test]
 fn makes_jobserver_used() {
-    let make = if cfg!(windows) {
-        "mingw32-make"
-    } else {
-        "make"
-    };
+    let make = make_exe();
     if !is_ci() && Command::new(make).arg("--version").output().is_err() {
         return;
     }
@@ -215,11 +215,7 @@ all:
 
 #[cargo_test]
 fn jobserver_and_j() {
-    let make = if cfg!(windows) {
-        "mingw32-make"
-    } else {
-        "make"
-    };
+    let make = make_exe();
     if !is_ci() && Command::new(make).arg("--version").output().is_err() {
         return;
     }
