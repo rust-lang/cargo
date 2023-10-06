@@ -170,6 +170,8 @@ fn cargo_compile_with_unsupported_short_config_flag() {
             "\
 error: unexpected argument '-c' found
 
+  tip: a similar argument exists: '--config'
+
 Usage: cargo[EXE] build [OPTIONS]
 
 For more information, try '--help'.
