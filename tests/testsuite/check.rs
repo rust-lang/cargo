@@ -1506,7 +1506,6 @@ fn versionless_package() {
                 [package]
                 name = "foo"
                 description = "foo"
-                publish = false
             "#,
         )
         .file("src/lib.rs", "")

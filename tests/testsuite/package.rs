@@ -3105,7 +3105,6 @@ fn versionless_package() {
                 [package]
                 name = "foo"
                 description = "foo"
-                publish = false
             "#,
         )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)

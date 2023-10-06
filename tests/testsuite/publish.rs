@@ -420,7 +420,7 @@ fn unpublishable_crate() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -794,7 +794,7 @@ fn publish_empty_list() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -1020,7 +1020,7 @@ fn block_publish_no_registry() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -3027,10 +3027,8 @@ fn versionless_package() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  `package.publish` requires `package.version` be specified
+error: `foo` cannot be published.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();

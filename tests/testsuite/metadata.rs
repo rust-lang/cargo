@@ -4273,7 +4273,6 @@ fn versionless_packages() {
             r#"
                 [package]
                 name = "bar"
-                publish = false
 
                 [dependencies]
                 foobar = "0.0.1"
@@ -4286,7 +4285,6 @@ fn versionless_packages() {
             r#"
                 [package]
                 name = "baz"
-                publish = false
 
                 [dependencies]
                 foobar = "0.0.1"

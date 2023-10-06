@@ -1012,7 +1012,8 @@ impl TomlManifest {
         let publish = match publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
-            None | Some(VecStringOrBool::Bool(true)) => None,
+            Some(VecStringOrBool::Bool(true)) => None,
+            None => version.is_none().then_some(vec![]),
         };
 
         if version.is_none() && publish != Some(vec![]) {

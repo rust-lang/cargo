@@ -103,7 +103,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         if allowed_registries.is_empty() {
             bail!(
                 "`{}` cannot be published.\n\
-                 `package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.",
+                 `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.",
                 pkg.name(),
             );
         } else if !allowed_registries.contains(&reg_name) {
