@@ -618,7 +618,7 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 .help_heading(heading::MANIFEST_OPTIONS)
                 .global(true),
         )
-        .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
+        .arg_config()
         .arg(
             Arg::new("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
