@@ -38,6 +38,10 @@ pub struct Crate {
     pub max_version: String,
 }
 
+/// This struct is serialized as JSON and sent as metadata ahead of the crate
+/// tarball when publishing crates to a crate registry like crates.io.
+///
+/// see <https://doc.rust-lang.org/cargo/reference/registry-web-api.html#publish>
 #[derive(Serialize, Deserialize)]
 pub struct NewCrate {
     pub name: String,
