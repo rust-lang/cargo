@@ -6,7 +6,6 @@ use crate::Config;
 
 const DEFAULT_EDITION: crate::core::features::Edition =
     crate::core::features::Edition::LATEST_STABLE;
-const DEFAULT_VERSION: &str = "0.0.0";
 const DEFAULT_PUBLISH: bool = false;
 const AUTO_FIELDS: &[&str] = &["autobins", "autoexamples", "autotests", "autobenches"];
 
@@ -123,9 +122,6 @@ fn expand_manifest_(
     package
         .entry("name".to_owned())
         .or_insert(toml::Value::String(name));
-    package
-        .entry("version".to_owned())
-        .or_insert_with(|| toml::Value::String(DEFAULT_VERSION.to_owned()));
     package.entry("edition".to_owned()).or_insert_with(|| {
         let _ = config.shell().warn(format_args!(
             "`package.edition` is unspecified, defaulting to `{}`",
@@ -622,7 +618,6 @@ build = false
 edition = "2021"
 name = "test-"
 publish = false
-version = "0.0.0"
 
 [profile.release]
 strip = true
@@ -652,7 +647,6 @@ build = false
 edition = "2021"
 name = "test-"
 publish = false
-version = "0.0.0"
 
 [profile.release]
 strip = true
