@@ -1,6 +1,6 @@
 [package]
 name = "crates-io"
-version = "0.39.0"
+version = "0.39.1"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true

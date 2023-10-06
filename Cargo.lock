@@ -582,7 +582,7 @@ dependencies = [
 
 [[package]]
 name = "crates-io"
-version = "0.39.0"
+version = "0.39.1"
 dependencies = [
  "curl",
  "percent-encoding",
