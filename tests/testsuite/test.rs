@@ -4671,9 +4671,9 @@ fn test_workspaces_cwd() {
         .build();
 
     p.cargo("test --workspace --all")
-        .with_stderr_contains("[DOCTEST] root-crate")
-        .with_stderr_contains("[DOCTEST] nested-crate")
-        .with_stderr_contains("[DOCTEST] deep-crate")
+        .with_stderr_contains("[DOCTEST] root_crate")
+        .with_stderr_contains("[DOCTEST] nested_crate")
+        .with_stderr_contains("[DOCTEST] deep_crate")
         .with_stdout_contains("test test_unit_root_cwd ... ok")
         .with_stdout_contains("test test_unit_nested_cwd ... ok")
         .with_stdout_contains("test test_unit_deep_cwd ... ok")
@@ -4683,33 +4683,33 @@ fn test_workspaces_cwd() {
         .run();
 
     p.cargo("test -p root-crate --all")
-        .with_stderr_contains("[DOCTEST] root-crate")
+        .with_stderr_contains("[DOCTEST] root_crate")
         .with_stdout_contains("test test_unit_root_cwd ... ok")
         .with_stdout_contains("test test_integration_root_cwd ... ok")
         .run();
 
     p.cargo("test -p nested-crate --all")
-        .with_stderr_contains("[DOCTEST] nested-crate")
+        .with_stderr_contains("[DOCTEST] nested_crate")
         .with_stdout_contains("test test_unit_nested_cwd ... ok")
         .with_stdout_contains("test test_integration_nested_cwd ... ok")
         .run();
 
     p.cargo("test -p deep-crate --all")
-        .with_stderr_contains("[DOCTEST] deep-crate")
+        .with_stderr_contains("[DOCTEST] deep_crate")
         .with_stdout_contains("test test_unit_deep_cwd ... ok")
         .with_stdout_contains("test test_integration_deep_cwd ... ok")
         .run();
 
     p.cargo("test --all")
         .cwd("nested-crate")
-        .with_stderr_contains("[DOCTEST] nested-crate")
+        .with_stderr_contains("[DOCTEST] nested_crate")
         .with_stdout_contains("test test_unit_nested_cwd ... ok")
         .with_stdout_contains("test test_integration_nested_cwd ... ok")
         .run();
 
     p.cargo("test --all")
         .cwd("very/deeply/nested/deep-crate")
-        .with_stderr_contains("[DOCTEST] deep-crate")
+        .with_stderr_contains("[DOCTEST] deep_crate")
         .with_stdout_contains("test test_unit_deep_cwd ... ok")
         .with_stdout_contains("test test_integration_deep_cwd ... ok")
         .run();

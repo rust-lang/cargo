@@ -817,8 +817,10 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
                 let _b = include_bytes!(env!("CARGO_BIN_FILE_BAR_BAZ_baz-suffix"));
                 let _b = include_bytes!(env!("CARGO_STATICLIB_FILE_BAR_BAZ"));
                 let _b = include_bytes!(env!("CARGO_STATICLIB_FILE_BAR_BAZ_bar-baz"));
+                let _b = include_bytes!(env!("CARGO_STATICLIB_FILE_BAR_BAZ_bar_baz"));
                 let _b = include_bytes!(env!("CARGO_CDYLIB_FILE_BAR_BAZ"));
                 let _b = include_bytes!(env!("CARGO_CDYLIB_FILE_BAR_BAZ_bar-baz"));
+                let _b = include_bytes!(env!("CARGO_CDYLIB_FILE_BAR_BAZ_bar_baz"));
             }
         "#,
         )

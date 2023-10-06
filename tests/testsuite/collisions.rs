@@ -534,7 +534,7 @@ fn collision_with_root() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo-macro v1.0.0 [..]
 warning: output filename collision.
-The lib target `foo-macro` in package `foo-macro v1.0.0` has the same output filename as the lib target `foo-macro` in package `foo-macro v1.0.0 [..]`.
+The lib target `foo_macro` in package `foo-macro v1.0.0` has the same output filename as the lib target `foo_macro` in package `foo-macro v1.0.0 [..]`.
 Colliding filename is: [CWD]/target/doc/foo_macro/index.html
 The targets should have unique names.
 This is a known bug where multiple crates with the same name use

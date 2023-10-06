@@ -2089,7 +2089,7 @@ fn doc_test_in_workspace() {
         )
         .build();
     p.cargo("test --doc -vv")
-        .with_stderr_contains("[DOCTEST] crate-a")
+        .with_stderr_contains("[DOCTEST] crate_a")
         .with_stdout_contains(
             "
 running 1 test
@@ -2098,7 +2098,7 @@ test crate-a/src/lib.rs - (line 1) ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 ",
         )
-        .with_stderr_contains("[DOCTEST] crate-b")
+        .with_stderr_contains("[DOCTEST] crate_b")
         .with_stdout_contains(
             "
 running 1 test
