@@ -1221,8 +1221,6 @@ at the start of the infostring at the top of the file.
 
 Inferred / defaulted manifest fields:
 - `package.name = <slugified file stem>`
-- `package.publish = false` to avoid accidental publishes, particularly if we
-  later add support for including them in a workspace.
 - `package.edition = <current>` to avoid always having to add an embedded
   manifest at the cost of potentially breaking scripts on rust upgrades
   - Warn when `edition` is unspecified to raise awareness of this

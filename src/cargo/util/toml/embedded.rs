@@ -6,7 +6,6 @@ use crate::Config;
 
 const DEFAULT_EDITION: crate::core::features::Edition =
     crate::core::features::Edition::LATEST_STABLE;
-const DEFAULT_PUBLISH: bool = false;
 const AUTO_FIELDS: &[&str] = &["autobins", "autoexamples", "autotests", "autobenches"];
 
 pub fn expand_manifest(
@@ -132,9 +131,6 @@ fn expand_manifest_(
     package
         .entry("build".to_owned())
         .or_insert_with(|| toml::Value::Boolean(false));
-    package
-        .entry("publish".to_owned())
-        .or_insert_with(|| toml::Value::Boolean(DEFAULT_PUBLISH));
     for field in AUTO_FIELDS {
         package
             .entry(field.to_owned())
@@ -617,7 +613,6 @@ autotests = false
 build = false
 edition = "2021"
 name = "test-"
-publish = false
 
 [profile.release]
 strip = true
@@ -646,7 +641,6 @@ autotests = false
 build = false
 edition = "2021"
 name = "test-"
-publish = false
 
 [profile.release]
 strip = true
