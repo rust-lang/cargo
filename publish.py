@@ -17,6 +17,11 @@ from urllib.error import HTTPError
 
 
 TO_PUBLISH = [
+    'credential/cargo-credential',
+    'credential/cargo-credential-libsecret',
+    'credential/cargo-credential-wincred',
+    'credential/cargo-credential-1password',
+    'credential/cargo-credential-macos-keychain',
     'crates/cargo-platform',
     'crates/cargo-util',
     'crates/crates-io',
