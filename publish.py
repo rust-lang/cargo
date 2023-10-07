@@ -11,12 +11,16 @@
 import os
 import re
 import subprocess
-import time
 import urllib.request
 from urllib.error import HTTPError
 
 
 TO_PUBLISH = [
+    'credential/cargo-credential',
+    'credential/cargo-credential-libsecret',
+    'credential/cargo-credential-wincred',
+    'credential/cargo-credential-1password',
+    'credential/cargo-credential-macos-keychain',
     'crates/cargo-platform',
     'crates/cargo-util',
     'crates/crates-io',
@@ -47,13 +51,9 @@ def maybe_publish(path):
 
 def main():
     print('Starting publish...')
-    for i, path in enumerate(TO_PUBLISH):
-        if maybe_publish(path):
-            if i < len(TO_PUBLISH)-1:
-                # Sleep to allow the index to update. This should probably
-                # check that the index is updated, or use a retry loop
-                # instead.
-                time.sleep(5)
+    for path in TO_PUBLISH:
+        maybe_publish(path)
+
     print('Publish complete!')
 
 
