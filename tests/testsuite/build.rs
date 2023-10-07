@@ -259,6 +259,8 @@ fn cargo_compile_with_unsupported_short_unstable_feature_flag() {
             "\
 error: unexpected argument '-z' found
 
+  tip: a similar argument exists: '-Z'
+
 Usage: cargo [+toolchain] [OPTIONS] [COMMAND]
        cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
 

@@ -619,14 +619,7 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 .global(true),
         )
         .arg_config()
-        .arg(
-            Arg::new("unstable-features")
-                .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
-                .short('Z')
-                .value_name("FLAG")
-                .action(ArgAction::Append)
-                .global(true),
-        )
+        .arg_unstable_feature()
         .subcommands(commands::builtin())
 }
 
