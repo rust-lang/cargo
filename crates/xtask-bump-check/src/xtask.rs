@@ -148,26 +148,13 @@ fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoRes
         anyhow::bail!(msg)
     }
 
-    // Tracked by https://github.com/obi1kenobi/cargo-semver-checks/issues/511
-    let exclude_args = [
-        "--exclude",
-        "cargo-credential-1password",
-        "--exclude",
-        "cargo-credential-libsecret",
-        "--exclude",
-        "cargo-credential-macos-keychain",
-        "--exclude",
-        "cargo-credential-wincred",
-    ];
-
     // Even when we test against baseline-rev, we still need to make sure a
     // change doesn't violate SemVer rules against crates.io releases. The
     // possibility of this happening is nearly zero but no harm to check twice.
     let mut cmd = ProcessBuilder::new("cargo");
     cmd.arg("semver-checks")
         .arg("check-release")
-        .arg("--workspace")
-        .args(&exclude_args);
+        .arg("--workspace");
     config.shell().status("Running", &cmd)?;
     cmd.exec()?;
 
@@ -176,8 +163,7 @@ fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoRes
         cmd.arg("semver-checks")
             .arg("--workspace")
             .arg("--baseline-rev")
-            .arg(referenced_commit.id().to_string())
-            .args(&exclude_args);
+            .arg(referenced_commit.id().to_string());
         config.shell().status("Running", &cmd)?;
         cmd.exec()?;
     }
