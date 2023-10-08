@@ -20,7 +20,7 @@ jobs:
     needs:
     - build_std
     - clippy
-    - credential_msrv
+    - msrv
     - docs
     - lockfile
     - resolver
@@ -38,7 +38,7 @@ jobs:
     needs:
     - build_std
     - clippy
-    - credential_msrv
+    - msrv
     - docs
     - lockfile
     - resolver
@@ -249,9 +249,9 @@ jobs:
         curl -sSLO https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
         sh linkcheck.sh --all --path ../src/doc cargo
 
-  credential_msrv:
+  msrv:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: taiki-e/install-action@cargo-hack
-    - run: cargo hack check --all-targets --rust-version -p cargo-credential
+    - run: cargo hack check --all-targets --rust-version --workspace --ignore-private

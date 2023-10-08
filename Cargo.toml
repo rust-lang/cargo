@@ -11,7 +11,7 @@ exclude = [
 ]
 
 [workspace.package]
-rust-version = "1.73"
+rust-version = "1.73"  # MSRV:1
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
@@ -108,6 +108,7 @@ name = "cargo"
 version = "0.76.0"
 edition.workspace = true
 license.workspace = true
+rust-version.workspace = true
 homepage = "https://crates.io"
 repository = "https://github.com/rust-lang/cargo"
 documentation = "https://docs.rs/cargo"
