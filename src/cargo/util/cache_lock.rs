@@ -2,7 +2,29 @@
 //!
 //! This implements locking on the package and index caches (source files,
 //! `.crate` files, and index caches) to coordinate when multiple cargos are
-//! running at the same time. There are three styles of locks:
+//! running at the same time.
+//!
+//! ## Usage
+//!
+//! There is a global [`CacheLocker`] held inside cargo's venerable
+//! [`Config`]. The `CacheLocker` manages creating and tracking the locks
+//! being held. There are methods on `Config` for managing the locks:
+//!
+//! - [`Config::acquire_package_cache_lock`] --- Acquires a lock. May block if
+//!   another process holds a lock.
+//! - [`Config::try_acquire_package_cache_lock`] --- Acquires a lock, returning
+//!   immediately if it would block.
+//! - [`Config::assert_package_cache_locked`] --- This is used to ensure the
+//!   proper lock is being held.
+//!
+//! Lower-level code that accesses the package cache typically just use
+//! `assert_package_cache_locked` to ensure that the correct lock is being
+//! held. Higher-level code is responsible for acquiring the appropriate lock,
+//! and holding it during the duration that it is performing its operation.
+//!
+//! ## Types of locking
+//!
+//! There are three styles of locks:
 //!
 //! * [`CacheLockMode::DownloadExclusive`] -- This is an exclusive lock
 //!   acquired while downloading packages and doing resolution.
@@ -17,9 +39,14 @@
 //!   cargo is reading from the cache.
 //!
 //! Importantly, a `DownloadExclusive` lock does *not* interfere with a
-//! `Shared` lock. The download process generally does not modify source
-//! files, so other cargos should be able to safely proceed in reading source
-//! files[^1].
+//! `Shared` lock. The download process generally does not modify source files
+//! (it only adds new ones), so other cargos should be able to safely proceed
+//! in reading source files[^1].
+//!
+//! See the [`CacheLockMode`] enum docs for more details on when the different
+//! modes should be used.
+//!
+//! ## Locking implementation details
 //!
 //! This is implemented by two separate lock files, the "download" one and the
 //! "mutate" one. The `MutateExclusive` lock acquired both the "mutate" and
@@ -73,6 +100,8 @@ pub enum CacheLockMode {
     /// A `DownloadExclusive` lock ensures that only one cargo is doing
     /// resolution and downloading new packages.
     ///
+    /// You should use this when downloading new packages or doing resolution.
+    ///
     /// If another cargo has a `MutateExclusive` lock, then an attempt to get
     /// a `DownloadExclusive` lock will block.
     ///
@@ -81,22 +110,36 @@ pub enum CacheLockMode {
     DownloadExclusive,
     /// A `Shared` lock allows multiple cargos to read from the source files.
     ///
+    /// You should use this when cargo is reading source files from the
+    /// package cache. This is typically done during the build phase, since
+    /// cargo only needs to read files during that time. This allows multiple
+    /// cargo processes to build concurrently without interfering with one
+    /// another, while guarding against other cargos using `MutateExclusive`.
+    ///
     /// If another cargo has a `MutateExclusive` lock, then an attempt to get
     /// a `Shared` will block.
     ///
-    /// If another cargo has a `DownloadExclusive` lock, then the both can
+    /// If another cargo has a `DownloadExclusive` lock, then they both can
     /// operate concurrently under the assumption that downloading does not
     /// modify existing source files.
     Shared,
     /// A `MutateExclusive` lock ensures no other cargo is reading or writing
     /// from the package caches.
     ///
-    /// This is used for things like garbage collection to avoid modifying
-    /// caches while other cargos are running.
+    /// You should use this when modifying existing files in the package
+    /// cache. For example, things like garbage collection want to avoid
+    /// deleting files while other cargos are trying to read (`Shared`) or
+    /// resolve or download (`DownloadExclusive`).
+    ///
+    /// If another cargo has a `DownloadExclusive` or `Shared` lock, then this
+    /// will block until they all release their locks.
     MutateExclusive,
 }
 
 /// A locker that can be used to acquire locks.
+///
+/// See the [`crate::util::cache_lock`] module documentation for an overview
+/// of how cache locking works.
 #[derive(Debug)]
 pub struct CacheLocker {
     /// The state of the locker.
