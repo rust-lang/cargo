@@ -2463,3 +2463,30 @@ For more information, try '--help'.
         .with_status(1)
         .run();
 }
+
+#[cargo_test]
+fn install_incompat_msrv() {
+    Package::new("foo", "0.1.0")
+        .file("src/main.rs", "fn main() {}")
+        .rust_version("1.30")
+        .publish();
+    Package::new("foo", "0.2.0")
+        .file("src/main.rs", "fn main() {}")
+        .rust_version("1.9876.0")
+        .publish();
+
+    cargo_process("install foo")
+        .with_stderr("\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.2.0 (registry `[..]`)
+[INSTALLING] foo v0.2.0
+[ERROR] failed to compile `foo v0.2.0`, intermediate artifacts can be found at `[..]`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+
+Caused by:
+  package `foo v0.2.0` cannot be built because it requires rustc 1.9876.0 or newer, while the currently active rustc version is [..]
+  Try re-running cargo install with `--locked`
+")
+        .with_status(101).run();
+}
