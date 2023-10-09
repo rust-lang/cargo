@@ -1,5 +1,6 @@
 //! Tests for the `cargo search` command.
 
+use cargo::util::cache_lock::CacheLockMode;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{RegistryBuilder, Response};
@@ -100,7 +101,9 @@ fn not_update() {
         paths::root(),
         paths::home().join(".cargo"),
     );
-    let lock = cfg.acquire_package_cache_lock().unwrap();
+    let lock = cfg
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
+        .unwrap();
     let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg).unwrap();
     regsrc.invalidate_cache();
     regsrc.block_until_ready().unwrap();

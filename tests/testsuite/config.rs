@@ -21,6 +21,7 @@ pub struct ConfigBuilder {
     unstable: Vec<String>,
     config_args: Vec<String>,
     cwd: Option<PathBuf>,
+    root: Option<PathBuf>,
     enable_nightly_features: bool,
 }
 
@@ -30,6 +31,7 @@ impl ConfigBuilder {
             env: HashMap::new(),
             unstable: Vec::new(),
             config_args: Vec::new(),
+            root: None,
             cwd: None,
             enable_nightly_features: false,
         }
@@ -60,8 +62,28 @@ impl ConfigBuilder {
     }
 
     /// Sets the current working directory where config files will be loaded.
+    ///
+    /// Default is the root from [`ConfigBuilder::root`] or [`paths::root`].
     pub fn cwd(&mut self, path: impl AsRef<Path>) -> &mut Self {
-        self.cwd = Some(paths::root().join(path.as_ref()));
+        let path = path.as_ref();
+        let cwd = self
+            .root
+            .as_ref()
+            .map_or_else(|| paths::root().join(path), |r| r.join(path));
+        self.cwd = Some(cwd);
+        self
+    }
+
+    /// Sets the test root directory.
+    ///
+    /// This generally should not be necessary. It is only useful if you want
+    /// to create a `Config` from within a thread. Since Cargo's testsuite
+    /// uses thread-local storage, this can be used to avoid accessing that
+    /// thread-local storage.
+    ///
+    /// Default is [`paths::root`].
+    pub fn root(&mut self, path: impl Into<PathBuf>) -> &mut Self {
+        self.root = Some(path.into());
         self
     }
 
@@ -72,14 +94,15 @@ impl ConfigBuilder {
 
     /// Creates the `Config`, returning a Result.
     pub fn build_err(&self) -> CargoResult<Config> {
-        let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
+        let root = self.root.clone().unwrap_or_else(|| paths::root());
+        let output = Box::new(fs::File::create(root.join("shell.out")).unwrap());
         let shell = Shell::from_write(output);
-        let cwd = self.cwd.clone().unwrap_or_else(|| paths::root());
-        let homedir = paths::home();
+        let cwd = self.cwd.clone().unwrap_or_else(|| root.clone());
+        let homedir = root.join("home").join(".cargo");
         let mut config = Config::new(shell, cwd, homedir);
         config.nightly_features_allowed = self.enable_nightly_features || !self.unstable.is_empty();
         config.set_env(self.env.clone());
-        config.set_search_stop_path(paths::root());
+        config.set_search_stop_path(&root);
         config.configure(
             0,
             false,

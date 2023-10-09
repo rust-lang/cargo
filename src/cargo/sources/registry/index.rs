@@ -89,6 +89,7 @@ use crate::core::dependency::{Artifact, DepKind};
 use crate::core::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::IntoUrl;
 use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, RustVersion};
@@ -823,7 +824,7 @@ impl Summaries {
                     // something in case of error.
                     if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
                         let path = Filesystem::new(cache_path.clone());
-                        config.assert_package_cache_locked(&path);
+                        config.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
                         if let Err(e) = fs::write(cache_path, &cache_bytes) {
                             tracing::info!("failed to write cache: {}", e);
                         }

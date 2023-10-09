@@ -13,6 +13,7 @@ use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::config::JobsConfig;
 use crate::util::errors::CargoResult;
 use crate::util::toml::TomlManifest;
@@ -132,7 +133,7 @@ pub fn package_one(
     let dir = ws.target_dir().join("package");
     let mut dst = {
         let tmp = format!(".{}", filename);
-        dir.open_rw(&tmp, config, "package scratch space")?
+        dir.open_rw_exclusive_create(&tmp, config, "package scratch space")?
     };
 
     // Package up and test a temporary tarball and only move it to the final
@@ -806,7 +807,7 @@ pub fn check_yanked(
 ) -> CargoResult<()> {
     // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
-    let _lock = config.acquire_package_cache_lock()?;
+    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     let mut sources = pkg_set.sources_mut();
     let mut pending: Vec<PackageId> = resolve.iter().collect();

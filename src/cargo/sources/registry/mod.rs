@@ -206,6 +206,7 @@ use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::hex;
 use crate::util::interning::InternedString;
 use crate::util::network::PollExt;
@@ -581,7 +582,9 @@ impl<'cfg> RegistrySource<'cfg> {
         let package_dir = format!("{}-{}", pkg.name(), pkg.version());
         let dst = self.src_path.join(&package_dir);
         let path = dst.join(PACKAGE_SOURCE_LOCK);
-        let path = self.config.assert_package_cache_locked(&path);
+        let path = self
+            .config
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
         let unpack_dir = path.parent().unwrap();
         match fs::read_to_string(path) {
             Ok(ok) => match serde_json::from_str::<LockMetadata>(&ok) {

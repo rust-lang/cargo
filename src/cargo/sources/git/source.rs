@@ -8,6 +8,7 @@ use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::Config;
@@ -212,7 +213,9 @@ impl<'cfg> Source for GitSource<'cfg> {
         // Ignore errors creating it, in case this is a read-only filesystem:
         // perhaps the later operations can succeed anyhow.
         let _ = git_fs.create_dir();
-        let git_path = self.config.assert_package_cache_locked(&git_fs);
+        let git_path = self
+            .config
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &git_fs);
 
         // Before getting a checkout, make sure that `<cargo_home>/git` is
         // marked as excluded from indexing and backups. Older versions of Cargo

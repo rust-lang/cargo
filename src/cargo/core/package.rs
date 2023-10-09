@@ -24,7 +24,7 @@ use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{Summary, Workspace};
 use crate::sources::source::{MaybePackage, SourceMap};
-use crate::util::config::PackageCacheLock;
+use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::interning::InternedString;
 use crate::util::network::http::http_handle_and_timeout;
@@ -367,7 +367,7 @@ pub struct Downloads<'a, 'cfg> {
     next_speed_check_bytes_threshold: Cell<u64>,
     /// Global filesystem lock to ensure only one Cargo is downloading at a
     /// time.
-    _lock: PackageCacheLock<'cfg>,
+    _lock: CacheLock<'cfg>,
 }
 
 struct Download<'cfg> {
@@ -465,7 +465,9 @@ impl<'cfg> PackageSet<'cfg> {
             timeout,
             next_speed_check: Cell::new(Instant::now()),
             next_speed_check_bytes_threshold: Cell::new(0),
-            _lock: self.config.acquire_package_cache_lock()?,
+            _lock: self
+                .config
+                .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?,
         })
     }
 
@@ -478,6 +480,9 @@ impl<'cfg> PackageSet<'cfg> {
 
     pub fn get_many(&self, ids: impl IntoIterator<Item = PackageId>) -> CargoResult<Vec<&Package>> {
         let mut pkgs = Vec::new();
+        let _lock = self
+            .config
+            .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
         let mut downloads = self.enable_download()?;
         for id in ids {
             pkgs.extend(downloads.start(id)?);

@@ -1,3 +1,12 @@
+//! File-locking support.
+//!
+//! This module defines the [`Filesystem`] type which is an abstraction over a
+//! filesystem, ensuring that access to the filesystem is only done through
+//! coordinated locks.
+//!
+//! The [`FileLock`] type represents a locked file, and provides access to the
+//! file.
+
 use std::fs::{File, OpenOptions};
 use std::io;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -10,18 +19,22 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use sys::*;
 
+/// A locked file.
+///
+/// This provides access to file while holding a lock on the file. This type
+/// implements the [`Read`], [`Write`], and [`Seek`] traits to provide access
+/// to the underlying file.
+///
+/// Locks are either shared (multiple processes can access the file) or
+/// exclusive (only one process can access the file).
+///
+/// This type is created via methods on the [`Filesystem`] type.
+///
+/// When this value is dropped, the lock will be released.
 #[derive(Debug)]
 pub struct FileLock {
     f: Option<File>,
     path: PathBuf,
-    state: State,
-}
-
-#[derive(PartialEq, Debug)]
-enum State {
-    Unlocked,
-    Shared,
-    Exclusive,
 }
 
 impl FileLock {
@@ -35,13 +48,11 @@ impl FileLock {
     /// Note that special care must be taken to ensure that the path is not
     /// referenced outside the lifetime of this lock.
     pub fn path(&self) -> &Path {
-        assert_ne!(self.state, State::Unlocked);
         &self.path
     }
 
     /// Returns the parent path containing this file
     pub fn parent(&self) -> &Path {
-        assert_ne!(self.state, State::Unlocked);
         self.path.parent().unwrap()
     }
 
@@ -91,9 +102,9 @@ impl Write for FileLock {
 
 impl Drop for FileLock {
     fn drop(&mut self) {
-        if self.state != State::Unlocked {
-            if let Some(f) = self.f.take() {
-                let _ = unlock(&f);
+        if let Some(f) = self.f.take() {
+            if let Err(e) = unlock(&f) {
+                tracing::warn!("failed to release lock: {e:?}");
             }
         }
     }
@@ -105,6 +116,32 @@ impl Drop for FileLock {
 /// The `Path` of a filesystem cannot be learned unless it's done in a locked
 /// fashion, and otherwise functions on this structure are prepared to handle
 /// concurrent invocations across multiple instances of Cargo.
+///
+/// The methods on `Filesystem` that open files return a [`FileLock`] which
+/// holds the lock, and that type provides methods for accessing the
+/// underlying file.
+///
+/// If the blocking methods (like [`Filesystem::open_ro_shared`]) detect that
+/// they will block, then they will display a message to the user letting them
+/// know it is blocked. There are non-blocking variants starting with the
+/// `try_` prefix like [`Filesystem::try_open_ro_shared_create`].
+///
+/// The behavior of locks acquired by the `Filesystem` depend on the operating
+/// system. On unix-like system, they are advisory using [`flock`], and thus
+/// not enforced against processes which do not try to acquire the lock. On
+/// Windows, they are mandatory using [`LockFileEx`], enforced against all
+/// processes.
+///
+/// This **does not** guarantee that a lock is acquired. In some cases, for
+/// example on filesystems that don't support locking, it will return a
+/// [`FileLock`] even though the filesystem lock was not acquired. This is
+/// intended to provide a graceful fallback instead of refusing to work.
+/// Usually there aren't multiple processes accessing the same resource. In
+/// that case, it is the user's responsibility to not run concurrent
+/// processes.
+///
+/// [`flock`]: https://linux.die.net/man/2/flock
+/// [`LockFileEx`]: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex
 #[derive(Clone, Debug)]
 pub struct Filesystem {
     root: PathBuf,
@@ -157,68 +194,119 @@ impl Filesystem {
         self.root.display()
     }
 
-    /// Opens exclusive access to a file, returning the locked version of a
-    /// file.
+    /// Opens read-write exclusive access to a file, returning the locked
+    /// version of a file.
     ///
     /// This function will create a file at `path` if it doesn't already exist
     /// (including intermediate directories), and then it will acquire an
     /// exclusive lock on `path`. If the process must block waiting for the
-    /// lock, the `msg` is printed to `config`.
+    /// lock, the `msg` is printed to [`Config`].
     ///
     /// The returned file can be accessed to look at the path and also has
     /// read/write access to the underlying file.
-    pub fn open_rw<P>(&self, path: P, config: &Config, msg: &str) -> CargoResult<FileLock>
+    pub fn open_rw_exclusive_create<P>(
+        &self,
+        path: P,
+        config: &Config,
+        msg: &str,
+    ) -> CargoResult<FileLock>
     where
         P: AsRef<Path>,
     {
-        self.open(
-            path.as_ref(),
-            OpenOptions::new().read(true).write(true).create(true),
-            State::Exclusive,
-            config,
-            msg,
-        )
+        let mut opts = OpenOptions::new();
+        opts.read(true).write(true).create(true);
+        let (path, f) = self.open(path.as_ref(), &opts, true)?;
+        acquire(config, msg, &path, &|| try_lock_exclusive(&f), &|| {
+            lock_exclusive(&f)
+        })?;
+        Ok(FileLock { f: Some(f), path })
     }
 
-    /// Opens shared access to a file, returning the locked version of a file.
+    /// A non-blocking version of [`Filesystem::open_rw_exclusive_create`].
+    ///
+    /// Returns `None` if the operation would block due to another process
+    /// holding the lock.
+    pub fn try_open_rw_exclusive_create<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> CargoResult<Option<FileLock>> {
+        let mut opts = OpenOptions::new();
+        opts.read(true).write(true).create(true);
+        let (path, f) = self.open(path.as_ref(), &opts, true)?;
+        if try_acquire(&path, &|| try_lock_exclusive(&f))? {
+            Ok(Some(FileLock { f: Some(f), path }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Opens read-only shared access to a file, returning the locked version of a file.
     ///
     /// This function will fail if `path` doesn't already exist, but if it does
     /// then it will acquire a shared lock on `path`. If the process must block
-    /// waiting for the lock, the `msg` is printed to `config`.
+    /// waiting for the lock, the `msg` is printed to [`Config`].
     ///
     /// The returned file can be accessed to look at the path and also has read
     /// access to the underlying file. Any writes to the file will return an
     /// error.
-    pub fn open_ro<P>(&self, path: P, config: &Config, msg: &str) -> CargoResult<FileLock>
+    pub fn open_ro_shared<P>(&self, path: P, config: &Config, msg: &str) -> CargoResult<FileLock>
     where
         P: AsRef<Path>,
     {
-        self.open(
-            path.as_ref(),
-            OpenOptions::new().read(true),
-            State::Shared,
-            config,
-            msg,
-        )
+        let (path, f) = self.open(path.as_ref(), &OpenOptions::new().read(true), false)?;
+        acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
+            lock_shared(&f)
+        })?;
+        Ok(FileLock { f: Some(f), path })
     }
 
-    fn open(
+    /// Opens read-only shared access to a file, returning the locked version of a file.
+    ///
+    /// Compared to [`Filesystem::open_ro_shared`], this will create the file
+    /// (and any directories in the parent) if the file does not already
+    /// exist.
+    pub fn open_ro_shared_create<P: AsRef<Path>>(
         &self,
-        path: &Path,
-        opts: &OpenOptions,
-        state: State,
+        path: P,
         config: &Config,
         msg: &str,
     ) -> CargoResult<FileLock> {
-        let path = self.root.join(path);
+        let mut opts = OpenOptions::new();
+        opts.read(true).write(true).create(true);
+        let (path, f) = self.open(path.as_ref(), &opts, true)?;
+        acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
+            lock_shared(&f)
+        })?;
+        Ok(FileLock { f: Some(f), path })
+    }
 
-        // If we want an exclusive lock then if we fail because of NotFound it's
-        // likely because an intermediate directory didn't exist, so try to
-        // create the directory and then continue.
+    /// A non-blocking version of [`Filesystem::open_ro_shared_create`].
+    ///
+    /// Returns `None` if the operation would block due to another process
+    /// holding the lock.
+    pub fn try_open_ro_shared_create<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> CargoResult<Option<FileLock>> {
+        let mut opts = OpenOptions::new();
+        opts.read(true).write(true).create(true);
+        let (path, f) = self.open(path.as_ref(), &opts, true)?;
+        if try_acquire(&path, &|| try_lock_shared(&f))? {
+            Ok(Some(FileLock { f: Some(f), path }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn open(&self, path: &Path, opts: &OpenOptions, create: bool) -> CargoResult<(PathBuf, File)> {
+        let path = self.root.join(path);
         let f = opts
             .open(&path)
             .or_else(|e| {
-                if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
+                // If we were requested to create this file, and there was a
+                // NotFound error, then that was likely due to missing
+                // intermediate directories. Try creating them and try again.
+                if e.kind() == io::ErrorKind::NotFound && create {
                     paths::create_dir_all(path.parent().unwrap())?;
                     Ok(opts.open(&path)?)
                 } else {
@@ -226,24 +314,7 @@ impl Filesystem {
                 }
             })
             .with_context(|| format!("failed to open: {}", path.display()))?;
-        match state {
-            State::Exclusive => {
-                acquire(config, msg, &path, &|| try_lock_exclusive(&f), &|| {
-                    lock_exclusive(&f)
-                })?;
-            }
-            State::Shared => {
-                acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
-                    lock_shared(&f)
-                })?;
-            }
-            State::Unlocked => {}
-        }
-        Ok(FileLock {
-            f: Some(f),
-            path,
-            state,
-        })
+        Ok((path, f))
     }
 }
 
@@ -259,28 +330,7 @@ impl PartialEq<Filesystem> for Path {
     }
 }
 
-/// Acquires a lock on a file in a "nice" manner.
-///
-/// Almost all long-running blocking actions in Cargo have a status message
-/// associated with them as we're not sure how long they'll take. Whenever a
-/// conflicted file lock happens, this is the case (we're not sure when the lock
-/// will be released).
-///
-/// This function will acquire the lock on a `path`, printing out a nice message
-/// to the console if we have to wait for it. It will first attempt to use `try`
-/// to acquire a lock on the crate, and in the case of contention it will emit a
-/// status message based on `msg` to `config`'s shell, and then use `block` to
-/// block waiting to acquire a lock.
-///
-/// Returns an error if the lock could not be acquired or if any error other
-/// than a contention error happens.
-fn acquire(
-    config: &Config,
-    msg: &str,
-    path: &Path,
-    lock_try: &dyn Fn() -> io::Result<()>,
-    lock_block: &dyn Fn() -> io::Result<()>,
-) -> CargoResult<()> {
+fn try_acquire(path: &Path, lock_try: &dyn Fn() -> io::Result<()>) -> CargoResult<bool> {
     // File locking on Unix is currently implemented via `flock`, which is known
     // to be broken on NFS. We could in theory just ignore errors that happen on
     // NFS, but apparently the failure mode [1] for `flock` on NFS is **blocking
@@ -292,16 +342,17 @@ fn acquire(
     //
     // [1]: https://github.com/rust-lang/cargo/issues/2615
     if is_on_nfs_mount(path) {
-        return Ok(());
+        tracing::debug!("{path:?} appears to be an NFS mount, not trying to lock");
+        return Ok(true);
     }
 
     match lock_try() {
-        Ok(()) => return Ok(()),
+        Ok(()) => return Ok(true),
 
         // In addition to ignoring NFS which is commonly not working we also
         // just ignore locking on filesystems that look like they don't
         // implement file locking.
-        Err(e) if error_unsupported(&e) => return Ok(()),
+        Err(e) if error_unsupported(&e) => return Ok(true),
 
         Err(e) => {
             if !error_contended(&e) {
@@ -311,36 +362,64 @@ fn acquire(
             }
         }
     }
+    Ok(false)
+}
+
+/// Acquires a lock on a file in a "nice" manner.
+///
+/// Almost all long-running blocking actions in Cargo have a status message
+/// associated with them as we're not sure how long they'll take. Whenever a
+/// conflicted file lock happens, this is the case (we're not sure when the lock
+/// will be released).
+///
+/// This function will acquire the lock on a `path`, printing out a nice message
+/// to the console if we have to wait for it. It will first attempt to use `try`
+/// to acquire a lock on the crate, and in the case of contention it will emit a
+/// status message based on `msg` to [`Config`]'s shell, and then use `block` to
+/// block waiting to acquire a lock.
+///
+/// Returns an error if the lock could not be acquired or if any error other
+/// than a contention error happens.
+fn acquire(
+    config: &Config,
+    msg: &str,
+    path: &Path,
+    lock_try: &dyn Fn() -> io::Result<()>,
+    lock_block: &dyn Fn() -> io::Result<()>,
+) -> CargoResult<()> {
+    if try_acquire(path, lock_try)? {
+        return Ok(());
+    }
     let msg = format!("waiting for file lock on {}", msg);
     config
         .shell()
         .status_with_color("Blocking", &msg, &style::NOTE)?;
 
     lock_block().with_context(|| format!("failed to lock file: {}", path.display()))?;
-    return Ok(());
+    Ok(())
+}
 
-    #[cfg(all(target_os = "linux", not(target_env = "musl")))]
-    fn is_on_nfs_mount(path: &Path) -> bool {
-        use std::ffi::CString;
-        use std::mem;
-        use std::os::unix::prelude::*;
+#[cfg(all(target_os = "linux", not(target_env = "musl")))]
+fn is_on_nfs_mount(path: &Path) -> bool {
+    use std::ffi::CString;
+    use std::mem;
+    use std::os::unix::prelude::*;
 
-        let Ok(path) = CString::new(path.as_os_str().as_bytes()) else {
-            return false;
-        };
+    let Ok(path) = CString::new(path.as_os_str().as_bytes()) else {
+        return false;
+    };
 
-        unsafe {
-            let mut buf: libc::statfs = mem::zeroed();
-            let r = libc::statfs(path.as_ptr(), &mut buf);
+    unsafe {
+        let mut buf: libc::statfs = mem::zeroed();
+        let r = libc::statfs(path.as_ptr(), &mut buf);
 
-            r == 0 && buf.f_type as u32 == libc::NFS_SUPER_MAGIC as u32
-        }
+        r == 0 && buf.f_type as u32 == libc::NFS_SUPER_MAGIC as u32
     }
+}
 
-    #[cfg(any(not(target_os = "linux"), target_env = "musl"))]
-    fn is_on_nfs_mount(_path: &Path) -> bool {
-        false
-    }
+#[cfg(any(not(target_os = "linux"), target_env = "musl"))]
+fn is_on_nfs_mount(_path: &Path) -> bool {
+    false
 }
 
 #[cfg(unix)]

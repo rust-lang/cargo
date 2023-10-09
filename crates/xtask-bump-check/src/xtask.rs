@@ -22,6 +22,7 @@ use cargo::core::Registry;
 use cargo::core::SourceId;
 use cargo::core::Workspace;
 use cargo::sources::source::QueryKind;
+use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::command_prelude::*;
 use cargo::util::ToSemver;
 use cargo::CargoResult;
@@ -347,7 +348,7 @@ fn check_crates_io<'a>(
 ) -> CargoResult<()> {
     let source_id = SourceId::crates_io(config)?;
     let mut registry = PackageRegistry::new(config)?;
-    let _lock = config.acquire_package_cache_lock()?;
+    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
     registry.lock_patches();
     config.shell().status(
         STATUS,

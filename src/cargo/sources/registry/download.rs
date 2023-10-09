@@ -12,6 +12,7 @@ use crate::core::PackageId;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::RegistryConfig;
 use crate::util::auth;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::{Config, Filesystem};
 use std::fmt::Write as FmtWrite;
@@ -38,7 +39,7 @@ pub(super) fn download(
     registry_config: RegistryConfig,
 ) -> CargoResult<MaybeLock> {
     let path = cache_path.join(&pkg.tarball_name());
-    let path = config.assert_package_cache_locked(&path);
+    let path = config.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
 
     // Attempt to open a read-only copy first to avoid an exclusive write
     // lock and also work with read-only filesystems. Note that we check the
@@ -117,7 +118,7 @@ pub(super) fn finish_download(
 
     cache_path.create_dir()?;
     let path = cache_path.join(&pkg.tarball_name());
-    let path = config.assert_package_cache_locked(&path);
+    let path = config.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
     let mut dst = OpenOptions::new()
         .create(true)
         .read(true)
@@ -144,7 +145,7 @@ pub(super) fn is_crate_downloaded(
     pkg: PackageId,
 ) -> bool {
     let path = cache_path.join(pkg.tarball_name());
-    let path = config.assert_package_cache_locked(&path);
+    let path = config.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
     if let Ok(meta) = fs::metadata(path) {
         return meta.len() > 0;
     }

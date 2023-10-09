@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::str;
 use std::sync::OnceLock;
+use std::thread::JoinHandle;
 use std::time::{self, Duration};
 
 use anyhow::{bail, Result};
@@ -1469,4 +1470,51 @@ pub fn symlink_supported() -> bool {
 /// The error message for ENOENT.
 pub fn no_such_file_err_msg() -> String {
     std::io::Error::from_raw_os_error(2).to_string()
+}
+
+/// Helper to retry a function `n` times.
+///
+/// The function should return `Some` when it is ready.
+pub fn retry<F, R>(n: u32, mut f: F) -> R
+where
+    F: FnMut() -> Option<R>,
+{
+    let mut count = 0;
+    let start = std::time::Instant::now();
+    loop {
+        if let Some(r) = f() {
+            return r;
+        }
+        count += 1;
+        if count > n {
+            panic!(
+                "test did not finish within {n} attempts ({:?} total)",
+                start.elapsed()
+            );
+        }
+        sleep_ms(100);
+    }
+}
+
+#[test]
+#[should_panic(expected = "test did not finish")]
+fn retry_fails() {
+    retry(2, || None::<()>);
+}
+
+/// Helper that waits for a thread to finish, up to `n` tenths of a second.
+pub fn thread_wait_timeout<T>(n: u32, thread: JoinHandle<T>) -> T {
+    retry(n, || thread.is_finished().then_some(()));
+    thread.join().unwrap()
+}
+
+/// Helper that runs some function, and waits up to `n` tenths of a second for
+/// it to finish.
+pub fn threaded_timeout<F, R>(n: u32, f: F) -> R
+where
+    F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
+{
+    let thread = std::thread::spawn(|| f());
+    thread_wait_timeout(n, thread)
 }
