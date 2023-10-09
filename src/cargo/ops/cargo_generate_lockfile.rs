@@ -8,6 +8,7 @@ use crate::util::config::Config;
 use crate::util::style;
 use crate::util::CargoResult;
 use anstyle::Style;
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet};
 use tracing::debug;
 
@@ -156,11 +157,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             // regardless of whether the build metadata has gone up or down.
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
-            let removed = removed[0].version();
-            let added = added[0].version();
-            if (removed.major, removed.minor, removed.patch, &removed.pre)
-                > (added.major, added.minor, added.patch, &added.pre)
-            {
+            if removed[0].version().cmp_precedence(added[0].version()) == Ordering::Greater {
                 print_change("Downgrading", msg, &style::WARN)?;
             } else {
                 print_change("Updating", msg, &style::GOOD)?;
