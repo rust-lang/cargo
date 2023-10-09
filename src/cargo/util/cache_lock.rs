@@ -136,19 +136,6 @@ pub enum CacheLockMode {
     MutateExclusive,
 }
 
-/// A locker that can be used to acquire locks.
-///
-/// See the [`crate::util::cache_lock`] module documentation for an overview
-/// of how cache locking works.
-#[derive(Debug)]
-pub struct CacheLocker {
-    /// The state of the locker.
-    ///
-    /// [`CacheLocker`] uses interior mutability because it is stuffed inside
-    /// the global `Config`, which does not allow mutation.
-    state: RefCell<CacheState>,
-}
-
 /// Whether or not a lock attempt should block.
 #[derive(Copy, Clone)]
 enum BlockingMode {
@@ -371,85 +358,6 @@ struct CacheState {
     mutate_lock: RecursiveLock,
 }
 
-/// A held lock guard.
-///
-/// When this is dropped, the lock will be released.
-#[must_use]
-pub struct CacheLock<'lock> {
-    mode: CacheLockMode,
-    locker: &'lock CacheLocker,
-}
-
-/// The filename for the [`CacheLockMode::DownloadExclusive`] lock.
-const CACHE_LOCK_NAME: &str = ".package-cache";
-/// The filename for the [`CacheLockMode::MutateExclusive`] and
-/// [`CacheLockMode::Shared`] lock.
-const MUTATE_NAME: &str = ".package-cache-mutate";
-
-// Descriptions that are displayed in the "Blocking" message shown to the user.
-const SHARED_DESCR: &str = "shared package cache";
-const DOWNLOAD_EXCLUSIVE_DESCR: &str = "package cache";
-const MUTATE_EXCLUSIVE_DESCR: &str = "package cache mutation";
-
-impl CacheLocker {
-    /// Creates a new `CacheLocker`.
-    pub fn new() -> CacheLocker {
-        CacheLocker {
-            state: RefCell::new(CacheState {
-                cache_lock: RecursiveLock::new(CACHE_LOCK_NAME),
-                mutate_lock: RecursiveLock::new(MUTATE_NAME),
-            }),
-        }
-    }
-
-    /// Acquires a lock with the given mode, possibly blocking if another
-    /// cargo is holding the lock.
-    pub fn lock(&self, config: &Config, mode: CacheLockMode) -> CargoResult<CacheLock<'_>> {
-        let mut state = self.state.borrow_mut();
-        let _ = state.lock(config, mode, Blocking)?;
-        Ok(CacheLock { mode, locker: self })
-    }
-
-    /// Acquires a lock with the given mode, returning `None` if another cargo
-    /// is holding the lock.
-    pub fn try_lock(
-        &self,
-        config: &Config,
-        mode: CacheLockMode,
-    ) -> CargoResult<Option<CacheLock<'_>>> {
-        let mut state = self.state.borrow_mut();
-        if state.lock(config, mode, NonBlocking)? == LockAcquired {
-            Ok(Some(CacheLock { mode, locker: self }))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Returns whether or not a lock is held for the given mode in this locker.
-    ///
-    /// This does not tell you whether or not it is locked in some other
-    /// locker (such as in another process).
-    ///
-    /// Note that `Shared` will return true if a `MutateExclusive` lock is
-    /// held, since `MutateExclusive` is just an upgraded `Shared`. Likewise,
-    /// `DownlaodExclusive` will return true if a `MutateExclusive` lock is
-    /// held since they overlap.
-    pub fn is_locked(&self, mode: CacheLockMode) -> bool {
-        let state = self.state.borrow();
-        match (
-            mode,
-            state.cache_lock.count,
-            state.mutate_lock.count,
-            state.mutate_lock.is_exclusive,
-        ) {
-            (CacheLockMode::Shared, _, 1.., _) => true,
-            (CacheLockMode::MutateExclusive, _, 1.., true) => true,
-            (CacheLockMode::DownloadExclusive, 1.., _, _) => true,
-            _ => false,
-        }
-    }
-}
-
 impl CacheState {
     fn lock(
         &mut self,
@@ -513,20 +421,13 @@ impl CacheState {
     }
 }
 
-/// Returns whether or not the error appears to be from a read-only filesystem.
-fn maybe_readonly(err: &anyhow::Error) -> bool {
-    err.chain().any(|err| {
-        if let Some(io) = err.downcast_ref::<io::Error>() {
-            if io.kind() == io::ErrorKind::PermissionDenied {
-                return true;
-            }
-
-            #[cfg(unix)]
-            return io.raw_os_error() == Some(libc::EROFS);
-        }
-
-        false
-    })
+/// A held lock guard.
+///
+/// When this is dropped, the lock will be released.
+#[must_use]
+pub struct CacheLock<'lock> {
+    mode: CacheLockMode,
+    locker: &'lock CacheLocker,
 }
 
 impl Drop for CacheLock<'_> {
@@ -546,4 +447,103 @@ impl Drop for CacheLock<'_> {
             }
         }
     }
+}
+
+/// The filename for the [`CacheLockMode::DownloadExclusive`] lock.
+const CACHE_LOCK_NAME: &str = ".package-cache";
+/// The filename for the [`CacheLockMode::MutateExclusive`] and
+/// [`CacheLockMode::Shared`] lock.
+const MUTATE_NAME: &str = ".package-cache-mutate";
+
+// Descriptions that are displayed in the "Blocking" message shown to the user.
+const SHARED_DESCR: &str = "shared package cache";
+const DOWNLOAD_EXCLUSIVE_DESCR: &str = "package cache";
+const MUTATE_EXCLUSIVE_DESCR: &str = "package cache mutation";
+
+/// A locker that can be used to acquire locks.
+///
+/// See the [`crate::util::cache_lock`] module documentation for an overview
+/// of how cache locking works.
+#[derive(Debug)]
+pub struct CacheLocker {
+    /// The state of the locker.
+    ///
+    /// [`CacheLocker`] uses interior mutability because it is stuffed inside
+    /// the global `Config`, which does not allow mutation.
+    state: RefCell<CacheState>,
+}
+
+impl CacheLocker {
+    /// Creates a new `CacheLocker`.
+    pub fn new() -> CacheLocker {
+        CacheLocker {
+            state: RefCell::new(CacheState {
+                cache_lock: RecursiveLock::new(CACHE_LOCK_NAME),
+                mutate_lock: RecursiveLock::new(MUTATE_NAME),
+            }),
+        }
+    }
+
+    /// Acquires a lock with the given mode, possibly blocking if another
+    /// cargo is holding the lock.
+    pub fn lock(&self, config: &Config, mode: CacheLockMode) -> CargoResult<CacheLock<'_>> {
+        let mut state = self.state.borrow_mut();
+        let _ = state.lock(config, mode, Blocking)?;
+        Ok(CacheLock { mode, locker: self })
+    }
+
+    /// Acquires a lock with the given mode, returning `None` if another cargo
+    /// is holding the lock.
+    pub fn try_lock(
+        &self,
+        config: &Config,
+        mode: CacheLockMode,
+    ) -> CargoResult<Option<CacheLock<'_>>> {
+        let mut state = self.state.borrow_mut();
+        if state.lock(config, mode, NonBlocking)? == LockAcquired {
+            Ok(Some(CacheLock { mode, locker: self }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Returns whether or not a lock is held for the given mode in this locker.
+    ///
+    /// This does not tell you whether or not it is locked in some other
+    /// locker (such as in another process).
+    ///
+    /// Note that `Shared` will return true if a `MutateExclusive` lock is
+    /// held, since `MutateExclusive` is just an upgraded `Shared`. Likewise,
+    /// `DownlaodExclusive` will return true if a `MutateExclusive` lock is
+    /// held since they overlap.
+    pub fn is_locked(&self, mode: CacheLockMode) -> bool {
+        let state = self.state.borrow();
+        match (
+            mode,
+            state.cache_lock.count,
+            state.mutate_lock.count,
+            state.mutate_lock.is_exclusive,
+        ) {
+            (CacheLockMode::Shared, _, 1.., _) => true,
+            (CacheLockMode::MutateExclusive, _, 1.., true) => true,
+            (CacheLockMode::DownloadExclusive, 1.., _, _) => true,
+            _ => false,
+        }
+    }
+}
+
+/// Returns whether or not the error appears to be from a read-only filesystem.
+fn maybe_readonly(err: &anyhow::Error) -> bool {
+    err.chain().any(|err| {
+        if let Some(io) = err.downcast_ref::<io::Error>() {
+            if io.kind() == io::ErrorKind::PermissionDenied {
+                return true;
+            }
+
+            #[cfg(unix)]
+            return io.raw_os_error() == Some(libc::EROFS);
+        }
+
+        false
+    })
 }
