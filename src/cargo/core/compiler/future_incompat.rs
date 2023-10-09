@@ -167,7 +167,7 @@ impl OnDiskReports {
         let on_disk = serde_json::to_vec(&self).unwrap();
         if let Err(e) = ws
             .target_dir()
-            .open_rw(
+            .open_rw_exclusive_create(
                 FUTURE_INCOMPAT_FILE,
                 ws.config(),
                 "Future incompatibility report",
@@ -191,7 +191,7 @@ impl OnDiskReports {
 
     /// Loads the on-disk reports.
     pub fn load(ws: &Workspace<'_>) -> CargoResult<OnDiskReports> {
-        let report_file = match ws.target_dir().open_ro(
+        let report_file = match ws.target_dir().open_ro_shared(
             FUTURE_INCOMPAT_FILE,
             ws.config(),
             "Future incompatible report",

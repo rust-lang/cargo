@@ -2235,7 +2235,7 @@ pub fn save_credentials(
     let mut file = {
         cfg.home_path.create_dir()?;
         cfg.home_path
-            .open_rw(filename, cfg, "credentials' config file")?
+            .open_rw_exclusive_create(filename, cfg, "credentials' config file")?
     };
 
     let mut contents = String::new();

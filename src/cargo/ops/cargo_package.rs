@@ -133,7 +133,7 @@ pub fn package_one(
     let dir = ws.target_dir().join("package");
     let mut dst = {
         let tmp = format!(".{}", filename);
-        dir.open_rw(&tmp, config, "package scratch space")?
+        dir.open_rw_exclusive_create(&tmp, config, "package scratch space")?
     };
 
     // Package up and test a temporary tarball and only move it to the final

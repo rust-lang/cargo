@@ -188,19 +188,20 @@ impl RecursiveLock {
     fn lock_shared_blocking(&mut self, config: &Config, description: &'static str) {
         if self.count == 0 {
             self.is_exclusive = false;
-            self.lock = match config
-                .home()
-                .open_shared_create(self.filename, config, description)
-            {
-                Ok(lock) => Some(lock),
-                Err(e) => {
-                    // There is no error here because locking is mostly a
-                    // best-effort attempt. If cargo home is read-only, we don't
-                    // want to fail just because we couldn't create the lock file.
-                    tracing::warn!("failed to acquire cache lock {}: {e:?}", self.filename);
-                    None
-                }
-            };
+            self.lock =
+                match config
+                    .home()
+                    .open_ro_shared_create(self.filename, config, description)
+                {
+                    Ok(lock) => Some(lock),
+                    Err(e) => {
+                        // There is no error here because locking is mostly a
+                        // best-effort attempt. If cargo home is read-only, we don't
+                        // want to fail just because we couldn't create the lock file.
+                        tracing::warn!("failed to acquire cache lock {}: {e:?}", self.filename);
+                        None
+                    }
+                };
         }
         self.increment();
     }
@@ -209,7 +210,7 @@ impl RecursiveLock {
     fn lock_shared_nonblocking(&mut self, config: &Config) -> LockingResult {
         if self.count == 0 {
             self.is_exclusive = false;
-            self.lock = match config.home().try_open_shared_create(self.filename) {
+            self.lock = match config.home().try_open_ro_shared_create(self.filename) {
                 Ok(Some(lock)) => Some(lock),
                 Ok(None) => {
                     return WouldBlock;
@@ -255,7 +256,10 @@ impl RecursiveLock {
     ) -> CargoResult<()> {
         if self.count == 0 {
             self.is_exclusive = true;
-            match config.home().open_rw(self.filename, config, description) {
+            match config
+                .home()
+                .open_rw_exclusive_create(self.filename, config, description)
+            {
                 Ok(lock) => self.lock = Some(lock),
                 Err(e) => {
                     if maybe_readonly(&e) {
@@ -288,7 +292,7 @@ impl RecursiveLock {
     fn lock_exclusive_nonblocking(&mut self, config: &Config) -> CargoResult<LockingResult> {
         if self.count == 0 {
             self.is_exclusive = true;
-            match config.home().try_open_rw(self.filename) {
+            match config.home().try_open_rw_exclusive_create(self.filename) {
                 Ok(Some(lock)) => self.lock = Some(lock),
                 Ok(None) => return Ok(WouldBlock),
                 Err(e) => {
