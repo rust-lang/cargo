@@ -423,11 +423,13 @@ fn update_precise_build_metadata() {
         )
         .run();
 
+    // This is not considered "Downgrading". Build metadata are not assumed to
+    // be ordered.
     p.cargo("update serde --precise 0.0.1+first")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNGRADING] serde v0.0.1+second -> v0.0.1+first
+[UPDATING] serde v0.0.1+second -> v0.0.1+first
 ",
         )
         .run();
