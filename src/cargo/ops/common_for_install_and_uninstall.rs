@@ -532,6 +532,7 @@ pub fn select_dep_pkg<T>(
     dep: Dependency,
     config: &Config,
     needs_update: bool,
+    current_rust_version: Option<&semver::Version>,
 ) -> CargoResult<Package>
 where
     T: Source,
@@ -551,9 +552,19 @@ where
             Poll::Pending => source.block_until_ready()?,
         }
     };
-    match deps.iter().map(|p| p.package_id()).max() {
-        Some(pkgid) => {
-            let pkg = Box::new(source).download_now(pkgid, config)?;
+    match deps.iter().max_by_key(|p| p.package_id()) {
+        Some(summary) => {
+            if let (Some(current), Some(msrv)) = (current_rust_version, summary.rust_version()) {
+                let msrv_req = msrv.caret_req();
+                if !msrv_req.matches(current) {
+                    let name = summary.name();
+                    let ver = summary.version();
+                    bail!("\
+cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while the currently active rustc version is {current}"
+)
+                }
+            }
+            let pkg = Box::new(source).download_now(summary.package_id(), config)?;
             Ok(pkg)
         }
         None => {
@@ -599,6 +610,7 @@ pub fn select_pkg<T, F>(
     dep: Option<Dependency>,
     mut list_all: F,
     config: &Config,
+    current_rust_version: Option<&semver::Version>,
 ) -> CargoResult<Package>
 where
     T: Source,
@@ -612,7 +624,7 @@ where
     source.invalidate_cache();
 
     return if let Some(dep) = dep {
-        select_dep_pkg(source, dep, config, false)
+        select_dep_pkg(source, dep, config, false, current_rust_version)
     } else {
         let candidates = list_all(source)?;
         let binaries = candidates
