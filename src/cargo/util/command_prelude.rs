@@ -378,43 +378,6 @@ pub trait CommandExt: Sized {
         )
         ._arg(unsupported_short_arg)
     }
-
-    fn arg_config(self) -> Self {
-        let unsupported_short_arg = {
-            let value_parser = UnknownArgumentValueParser::suggest_arg("--config");
-            Arg::new("unsupported-short-config-flag")
-                .help("")
-                .short('c')
-                .value_parser(value_parser)
-                .action(ArgAction::SetTrue)
-                .global(true)
-                .hide(true)
-        };
-        self._arg(unsupported_short_arg)
-            ._arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
-    }
-
-    fn arg_unstable_feature(self) -> Self {
-        let unsupported_short_arg = {
-            let value_parser = UnknownArgumentValueParser::suggest_arg("-Z");
-            Arg::new("unsupported-lowercase-unstable-feature-flag")
-                .help("")
-                .short('z')
-                .value_parser(value_parser)
-                .action(ArgAction::SetTrue)
-                .global(true)
-                .hide(true)
-        };
-        self._arg(
-            Arg::new("unstable-features")
-                .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
-                .short('Z')
-                .value_name("FLAG")
-                .action(ArgAction::Append)
-                .global(true),
-        )
-        ._arg(unsupported_short_arg)
-    }
 }
 
 impl CommandExt for Command {
