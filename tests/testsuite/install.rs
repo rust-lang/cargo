@@ -2463,3 +2463,23 @@ For more information, try '--help'.
         .with_status(1)
         .run();
 }
+
+#[cargo_test]
+fn install_incompat_msrv() {
+    Package::new("foo", "0.1.0")
+        .file("src/main.rs", "fn main() {}")
+        .rust_version("1.30")
+        .publish();
+    Package::new("foo", "0.2.0")
+        .file("src/main.rs", "fn main() {}")
+        .rust_version("1.9876.0")
+        .publish();
+
+    cargo_process("install foo")
+        .with_stderr("\
+[UPDATING] `dummy-registry` index
+[ERROR] cannot install package `foo 0.2.0`, it requires rustc 1.9876.0 or newer, while the currently active rustc version is [..]
+`foo 0.1.0` supports rustc 1.30
+")
+        .with_status(101).run();
+}

@@ -90,6 +90,7 @@ fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoRe
         None,
         |path: &mut PathSource<'_>| path.read_packages(),
         config,
+        None,
     )?;
     let pkgid = pkg.package_id();
     uninstall_pkgid(root, tracker, pkgid, bins, config)

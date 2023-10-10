@@ -68,6 +68,7 @@ impl<'cfg> InstallablePackage<'cfg> {
         force: bool,
         no_track: bool,
         needs_update_if_source_is_index: bool,
+        current_rust_version: Option<&semver::Version>,
     ) -> CargoResult<Option<Self>> {
         if let Some(name) = krate {
             if name == "." {
@@ -105,6 +106,7 @@ impl<'cfg> InstallablePackage<'cfg> {
                     dep,
                     |git: &mut GitSource<'_>| git.read_packages(),
                     config,
+                    current_rust_version,
                 )?
             } else if source_id.is_path() {
                 let mut src = path_source(source_id, config)?;
@@ -142,6 +144,7 @@ impl<'cfg> InstallablePackage<'cfg> {
                     dep,
                     |path: &mut PathSource<'_>| path.read_packages(),
                     config,
+                    current_rust_version,
                 )?
             } else if let Some(dep) = dep {
                 let mut source = map.load(source_id, &HashSet::new())?;
@@ -161,7 +164,13 @@ impl<'cfg> InstallablePackage<'cfg> {
                     config.shell().status("Ignored", &msg)?;
                     return Ok(None);
                 }
-                select_dep_pkg(&mut source, dep, config, needs_update_if_source_is_index)?
+                select_dep_pkg(
+                    &mut source,
+                    dep,
+                    config,
+                    needs_update_if_source_is_index,
+                    current_rust_version,
+                )?
             } else {
                 bail!(
                     "must specify a crate to install from \
@@ -616,6 +625,21 @@ pub fn install(
     let dst = root.join("bin").into_path_unlocked();
     let map = SourceConfigMap::new(config)?;
 
+    let current_rust_version = if opts.honor_rust_version {
+        let rustc = config.load_global_rustc(None)?;
+
+        // Remove any pre-release identifiers for easier comparison
+        let current_version = &rustc.version;
+        let untagged_version = semver::Version::new(
+            current_version.major,
+            current_version.minor,
+            current_version.patch,
+        );
+        Some(untagged_version)
+    } else {
+        None
+    };
+
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
         let (krate, vers) = krates
             .iter()
@@ -623,7 +647,18 @@ pub fn install(
             .map(|(k, v)| (Some(k.as_str()), v.as_ref()))
             .unwrap_or((None, None));
         let installable_pkg = InstallablePackage::new(
-            config, root, map, krate, source_id, from_cwd, vers, opts, force, no_track, true,
+            config,
+            root,
+            map,
+            krate,
+            source_id,
+            from_cwd,
+            vers,
+            opts,
+            force,
+            no_track,
+            true,
+            current_rust_version.as_ref(),
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
@@ -654,6 +689,7 @@ pub fn install(
                     force,
                     no_track,
                     !did_update,
+                    current_rust_version.as_ref(),
                 ) {
                     Ok(Some(installable_pkg)) => {
                         did_update = true;
@@ -773,7 +809,7 @@ where
     // expensive network call in the case that the package is already installed.
     // If this fails, the caller will possibly do an index update and try again, this is just a
     // best-effort check to see if we can avoid hitting the network.
-    if let Ok(pkg) = select_dep_pkg(source, dep, config, false) {
+    if let Ok(pkg) = select_dep_pkg(source, dep, config, false, None) {
         let (_ws, rustc, target) =
             make_ws_rustc_target(config, opts, &source.source_id(), pkg.clone())?;
         if let Ok(true) = is_installed(&pkg, config, opts, &rustc, &target, root, dst, force) {
