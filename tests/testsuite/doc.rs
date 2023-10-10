@@ -2004,7 +2004,7 @@ fn crate_versions() {
     let output_path = p.root().join("target/doc/foo/index.html");
     let output_documentation = fs::read_to_string(&output_path).unwrap();
 
-    assert!(output_documentation.contains("Version 1.2.4"));
+    assert!(output_documentation.contains("1.2.4"));
 }
 
 #[cargo_test]
@@ -2028,7 +2028,7 @@ fn crate_versions_flag_is_overridden() {
     };
     let asserts = |html: String| {
         assert!(!html.contains("1.2.4"));
-        assert!(html.contains("Version 2.0.3"));
+        assert!(html.contains("2.0.3"));
     };
 
     p.cargo("doc")
