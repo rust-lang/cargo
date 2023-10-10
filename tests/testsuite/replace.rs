@@ -1298,3 +1298,147 @@ fn override_plus_dep() {
         .with_stderr_contains("error: cyclic package dependency: [..]")
         .run();
 }
+
+#[cargo_test]
+fn override_different_metadata() {
+    Package::new("bar", "0.1.0+a").publish();
+
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    bar = "0.1.0"
+
+                    [replace]
+                    "bar:0.1.0" = {{ git = '{}' }}
+                "#,
+                bar.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[..]`
+thread 'main' panicked at src/cargo/core/resolver/dep_cache.rs:179:13:
+assertion `left == right` failed
+  left: Version { major: 0, minor: 1, patch: 0 }
+ right: Version { major: 0, minor: 1, patch: 0, build: BuildMetadata(\"a\") }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn override_different_metadata_2() {
+    Package::new("bar", "0.1.0+a").publish();
+
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0+a"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    bar = "0.1.0"
+
+                    [replace]
+                    "bar:0.1.0+notTheBuild" = {{ git = '{}' }}
+                "#,
+                bar.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[..]`
+[CHECKING] bar v0.1.0+a (file://[..])
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn override_different_metadata_3() {
+    Package::new("bar", "0.1.0+a").publish();
+
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0+a"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    bar = "0.1.0"
+
+                    [replace]
+                    "bar:0.1.0" = {{ git = '{}' }}
+                "#,
+                bar.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[..]`
+[CHECKING] bar v0.1.0+a (file://[..])
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
