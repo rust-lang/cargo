@@ -559,8 +559,45 @@ where
                 if !msrv_req.matches(current) {
                     let name = summary.name();
                     let ver = summary.version();
+                    let extra = if dep.source_id().is_registry() {
+                        // Match any version, not just the selected
+                        let msrv_dep =
+                            Dependency::parse(dep.package_name(), None, dep.source_id())?;
+                        let msrv_deps = loop {
+                            match source.query_vec(&msrv_dep, QueryKind::Exact)? {
+                                Poll::Ready(deps) => break deps,
+                                Poll::Pending => source.block_until_ready()?,
+                            }
+                        };
+                        if let Some(alt) = msrv_deps
+                            .iter()
+                            .filter(|summary| {
+                                summary
+                                    .rust_version()
+                                    .map(|msrv| msrv.caret_req().matches(current))
+                                    .unwrap_or(true)
+                            })
+                            .max_by_key(|s| s.package_id())
+                        {
+                            if let Some(rust_version) = alt.rust_version() {
+                                format!(
+                                    "\n`{name} {}` supports rustc {rust_version}",
+                                    alt.version()
+                                )
+                            } else {
+                                format!(
+                                    "\n`{name} {}` has an unspecified minimum rustc version",
+                                    alt.version()
+                                )
+                            }
+                        } else {
+                            String::new()
+                        }
+                    } else {
+                        String::new()
+                    };
                     bail!("\
-cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while the currently active rustc version is {current}"
+cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while the currently active rustc version is {current}{extra}"
 )
                 }
             }

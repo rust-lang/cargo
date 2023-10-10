@@ -2479,6 +2479,7 @@ fn install_incompat_msrv() {
         .with_stderr("\
 [UPDATING] `dummy-registry` index
 [ERROR] cannot install package `foo 0.2.0`, it requires rustc 1.9876.0 or newer, while the currently active rustc version is [..]
+`foo 0.1.0` supports rustc 1.30
 ")
         .with_status(101).run();
 }
