@@ -952,7 +952,10 @@ impl<'cfg> DrainState<'cfg> {
                 }
 
                 for warning in output.warnings.iter() {
-                    bcx.config.shell().warn(warning)?;
+                    let warning_with_package =
+                        format!("{}@{}: {}", unit.pkg.name(), unit.pkg.version(), warning);
+
+                    bcx.config.shell().warn(warning_with_package)?;
                 }
 
                 if msg.is_some() {

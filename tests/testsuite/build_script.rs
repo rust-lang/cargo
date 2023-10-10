@@ -3778,8 +3778,8 @@ fn warnings_emitted() {
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
-warning: foo
-warning: bar
+warning: foo@0.5.0: foo
+warning: foo@0.5.0: bar
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -3816,7 +3816,7 @@ fn warnings_emitted_when_build_script_panics() {
     p.cargo("build")
         .with_status(101)
         .with_stdout("")
-        .with_stderr_contains("warning: foo\nwarning: bar")
+        .with_stderr_contains("warning: foo@0.5.0: foo\nwarning: foo@0.5.0: bar")
         .run();
 }
 
@@ -3929,8 +3929,8 @@ fn warnings_printed_on_vv() {
 [COMPILING] bar v0.1.0
 [RUNNING] `[..] rustc [..]`
 [RUNNING] `[..]`
-warning: foo
-warning: bar
+warning: bar@0.1.0: foo
+warning: bar@0.1.0: bar
 [RUNNING] `[..] rustc [..]`
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..] rustc [..]`

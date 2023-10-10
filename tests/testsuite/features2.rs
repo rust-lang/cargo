@@ -1807,7 +1807,7 @@ fn shared_dep_same_but_dependencies() {
 [COMPILING] dep [..]
 [COMPILING] bin2 [..]
 [COMPILING] bin1 [..]
-warning: feat: enabled
+warning: bin2@0.1.0: feat: enabled
 [FINISHED] [..]
 ",
         )
@@ -1823,7 +1823,7 @@ warning: feat: enabled
 [FRESH] subdep [..]
 [FRESH] dep [..]
 [FRESH] bin1 [..]
-warning: feat: enabled
+warning: bin2@0.1.0: feat: enabled
 [FRESH] bin2 [..]
 [FINISHED] [..]
 ",
