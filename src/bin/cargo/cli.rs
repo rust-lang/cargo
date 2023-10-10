@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context as _};
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
 use cargo::{self, drop_print, drop_println, CargoResult, CliResult, Config};
-use clap::{Arg, ArgMatches};
+use clap::{builder::UnknownArgumentValueParser, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -618,15 +618,29 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 .help_heading(heading::MANIFEST_OPTIONS)
                 .global(true),
         )
-        .arg_config()
-        .arg(
-            Arg::new("unstable-features")
-                .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
-                .short('Z')
-                .value_name("FLAG")
-                .action(ArgAction::Append)
-                .global(true),
-        )
+        // Better suggestion for the unsupported short config flag.
+        .arg( Arg::new("unsupported-short-config-flag")
+            .help("")
+            .short('c')
+            .value_parser(UnknownArgumentValueParser::suggest_arg("--config"))
+            .action(ArgAction::SetTrue)
+            .global(true)
+            .hide(true))
+        .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
+        // Better suggestion for the unsupported lowercase unstable feature flag.
+        .arg( Arg::new("unsupported-lowercase-unstable-feature-flag")
+            .help("")
+            .short('z')
+            .value_parser(UnknownArgumentValueParser::suggest_arg("-Z"))
+            .action(ArgAction::SetTrue)
+            .global(true)
+            .hide(true))
+        .arg(Arg::new("unstable-features")
+            .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
+            .short('Z')
+            .value_name("FLAG")
+            .action(ArgAction::Append)
+            .global(true))
         .subcommands(commands::builtin())
 }
 

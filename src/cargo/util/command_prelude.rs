@@ -378,21 +378,6 @@ pub trait CommandExt: Sized {
         )
         ._arg(unsupported_short_arg)
     }
-
-    fn arg_config(self) -> Self {
-        let unsupported_short_arg = {
-            let value_parser = UnknownArgumentValueParser::suggest_arg("--config");
-            Arg::new("unsupported-short-config-flag")
-                .help("")
-                .short('c')
-                .value_parser(value_parser)
-                .action(ArgAction::SetTrue)
-                .global(true)
-                .hide(true)
-        };
-        self._arg(unsupported_short_arg)
-            ._arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
-    }
 }
 
 impl CommandExt for Command {

@@ -245,6 +245,33 @@ fn cargo_compile_directory_not_cwd() {
 }
 
 #[cargo_test]
+fn cargo_compile_with_unsupported_short_unstable_feature_flag() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file(".cargo/config.toml", &"")
+        .build();
+
+    p.cargo("-zunstable-options -C foo build")
+        .masquerade_as_nightly_cargo(&["chdir"])
+        .cwd(p.root().parent().unwrap())
+        .with_stderr(
+            "\
+error: unexpected argument '-z' found
+
+  tip: a similar argument exists: '-Z'
+
+Usage: cargo [+toolchain] [OPTIONS] [COMMAND]
+       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_directory_not_cwd_with_invalid_config() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
