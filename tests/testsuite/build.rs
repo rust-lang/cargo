@@ -261,8 +261,8 @@ error: unexpected argument '-z' found
 
   tip: a similar argument exists: '-Z'
 
-Usage: cargo [+toolchain] [OPTIONS] [COMMAND]
-       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
+Usage: cargo [..][OPTIONS] [COMMAND]
+       cargo [..][OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
 
 For more information, try '--help'.
 ",
