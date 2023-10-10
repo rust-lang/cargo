@@ -1350,7 +1350,7 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 }
 
 #[cargo_test]
-fn override_different_metadata_2() {
+fn override_respects_spec_metadata() {
     Package::new("bar", "0.1.0+a").publish();
 
     let bar = git::repo(&paths::root().join("override"))
@@ -1387,12 +1387,22 @@ fn override_different_metadata_2() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[UPDATING] git repository `[..]`
-[CHECKING] bar v0.1.0+a (file://[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[WARNING] package replacement is not used: https://github.com/rust-lang/crates.io-index#bar@0.1.0+notTheBuild
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0+a (registry `dummy-registry`)
+[CHECKING] bar v0.1.0+a
+[CHECKING] foo v0.0.1 ([..]/foo)
+[..]
+[..]
+[..]
+[..]
+[..]
+[..]
+[..]
+error: could not compile `foo` (lib) due to previous error
 ",
         )
+        .with_status(101)
         .run();
 }
 
