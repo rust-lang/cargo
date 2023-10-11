@@ -64,9 +64,19 @@ pub trait CommandExt: Sized {
         all: &'static str,
         exclude: &'static str,
     ) -> Self {
+        let unsupported_short_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--exclude");
+            Arg::new("unsupported-short-exclude-flag")
+                .help("")
+                .short('x')
+                .value_parser(value_parser)
+                .action(ArgAction::SetTrue)
+                .hide(true)
+        };
         self.arg_package_spec_simple(package)
             ._arg(flag("workspace", all).help_heading(heading::PACKAGE_SELECTION))
             ._arg(multi_opt("exclude", "SPEC", exclude).help_heading(heading::PACKAGE_SELECTION))
+            ._arg(unsupported_short_arg)
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
@@ -232,10 +242,20 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
+        let unsupported_short_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--target");
+            Arg::new("unsupported-short-target-flag")
+                .help("")
+                .short('t')
+                .value_parser(value_parser)
+                .action(ArgAction::SetTrue)
+                .hide(true)
+        };
         self._arg(
             optional_multi_opt("target", "TRIPLE", target)
                 .help_heading(heading::COMPILATION_OPTIONS),
         )
+        ._arg(unsupported_short_arg)
     }
 
     fn arg_target_dir(self) -> Self {
