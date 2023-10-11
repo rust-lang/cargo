@@ -2523,8 +2523,19 @@ impl<P: ResolveToPath + Clone> DetailedTomlDependency<P> {
             .set_optional(self.optional.unwrap_or(false))
             .set_platform(cx.platform.clone());
         if let Some(registry) = &self.registry {
-            let registry_id = SourceId::alt_registry(cx.config, registry)?;
-            dep.set_registry_id(registry_id);
+            let registry_id = SourceId::alt_registry(cx.config, registry);
+
+            match registry_id {
+                Ok(registry_id) => {
+                    dep.set_registry_id(registry_id);
+                }
+                Err(_) if cx.source_id.is_git() && self.path.is_some() => {
+                    // if the crate `cx` depended on us via git and we're
+                    // resolving a path dependency, ignore any errors for
+                    // the registry being unknown.
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
         if let Some(registry_index) = &self.registry_index {
             let url = registry_index.into_url()?;
