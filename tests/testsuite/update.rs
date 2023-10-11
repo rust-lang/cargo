@@ -392,6 +392,50 @@ fn update_precise() {
 }
 
 #[cargo_test]
+fn update_precise_build_metadata() {
+    Package::new("serde", "0.0.1+first").publish();
+    Package::new("serde", "0.0.1+second").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [dependencies]
+                serde = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    p.cargo("update serde --precise 0.0.1+first").run();
+
+    p.cargo("update serde --precise 0.0.1+second")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.0.1+first -> v0.0.1+second
+",
+        )
+        .run();
+
+    // This is not considered "Downgrading". Build metadata are not assumed to
+    // be ordered.
+    p.cargo("update serde --precise 0.0.1+first")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.0.1+second -> v0.0.1+first
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn update_precise_do_not_force_update_deps() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.2.1").dep("log", "0.1").publish();

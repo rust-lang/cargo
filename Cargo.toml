@@ -76,7 +76,7 @@ rand = "0.8.5"
 rustfix = "0.6.1"
 same-file = "1.0.6"
 security-framework = "2.9.2"
-semver = { version = "1.0.19", features = ["serde"] }
+semver = { version = "1.0.20", features = ["serde"] }
 serde = "1.0.188"
 serde-untagged = "0.1.1"
 serde-value = "0.7.0"

@@ -98,6 +98,7 @@ use cargo_util::{paths, registry::make_dep_path};
 use semver::Version;
 use serde::Deserialize;
 use std::borrow::Cow;
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -674,11 +675,8 @@ impl<'cfg> RegistryIndex<'cfg> {
                         (true, true) => s_vers == requested,
                         (true, false) => false,
                         (false, true) => {
-                            // Strip out the metadata.
-                            s_vers.major == requested.major
-                                && s_vers.minor == requested.minor
-                                && s_vers.patch == requested.patch
-                                && s_vers.pre == requested.pre
+                            // Compare disregarding the metadata.
+                            s_vers.cmp_precedence(requested) == Ordering::Equal
                         }
                         (false, false) => s_vers == requested,
                     }
