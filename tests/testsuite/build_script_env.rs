@@ -137,12 +137,12 @@ fn rustc_bootstrap() {
         // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")
-        .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .with_stderr_contains("warning: has-dashes@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
     // RUSTC_BOOTSTRAP set to the name of the library should warn
     p.cargo("check")
         .env("RUSTC_BOOTSTRAP", "has_dashes")
-        .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .with_stderr_contains("warning: has-dashes@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
     // RUSTC_BOOTSTRAP set to some random value should error
     p.cargo("check")
@@ -169,7 +169,7 @@ fn rustc_bootstrap() {
         // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")
-        .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .with_stderr_contains("warning: foo@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
     // RUSTC_BOOTSTRAP conditionally set when there's no library should error (regardless of the value)
     p.cargo("check")
