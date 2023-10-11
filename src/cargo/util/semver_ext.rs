@@ -1,5 +1,6 @@
 use semver::{Comparator, Op, Version, VersionReq};
 use serde_untagged::UntaggedEnumVisitor;
+use std::cmp::Ordering;
 use std::fmt::{self, Display};
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -83,12 +84,7 @@ impl OptVersionReq {
         match self {
             OptVersionReq::Any => true,
             OptVersionReq::Req(req) => req.matches(version),
-            OptVersionReq::Locked(v, _) => {
-                v.major == version.major
-                    && v.minor == version.minor
-                    && v.patch == version.patch
-                    && v.pre == version.pre
-            }
+            OptVersionReq::Locked(v, _) => v.cmp_precedence(version) == Ordering::Equal,
         }
     }
 }
