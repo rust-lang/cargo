@@ -4354,6 +4354,8 @@ fn cargo_build_with_unsupported_short_exclude_flag() {
             "\
 error: unexpected argument '-x' found
 
+  tip: a similar argument exists: '--exclude'
+
 Usage: cargo[EXE] build [OPTIONS]
 
 For more information, try '--help'.
