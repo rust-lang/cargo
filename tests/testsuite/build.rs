@@ -4329,6 +4329,41 @@ fn build_all_exclude() {
 }
 
 #[cargo_test]
+fn cargo_build_with_unsupported_short_exclude_flag() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("build --workspace -x baz")
+        .with_stderr(
+            "\
+error: unexpected argument '-x' found
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
 fn build_all_exclude_not_found() {
     let p = project()
         .file(
