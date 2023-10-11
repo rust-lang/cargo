@@ -1300,7 +1300,7 @@ fn override_plus_dep() {
 }
 
 #[cargo_test]
-fn override_different_metadata() {
+fn override_generic_matching_other_versions() {
     Package::new("bar", "0.1.0+a").publish();
 
     let bar = git::repo(&paths::root().join("override"))
@@ -1338,11 +1338,11 @@ fn override_different_metadata() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
-thread 'main' panicked at src/cargo/core/resolver/dep_cache.rs:179:13:
-assertion `left == right` failed
-  left: Version { major: 0, minor: 1, patch: 0 }
- right: Version { major: 0, minor: 1, patch: 0, build: BuildMetadata(\"a\") }
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..]/foo)`
+
+Caused by:
+  replacement specification `https://github.com/rust-lang/crates.io-index#bar@0.1.0` matched 0.1.0+a and tried to override it with 0.1.0
+  avoid matching unrelated packages by being more specific
 ",
         )
         .with_status(101)
