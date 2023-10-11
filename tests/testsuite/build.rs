@@ -4252,6 +4252,8 @@ fn cargo_build_with_unsupported_short_target_flag() {
             "\
 error: unexpected argument '-t' found
 
+  tip: a similar argument exists: '--target'
+
 Usage: cargo[EXE] build [OPTIONS]
 
 For more information, try '--help'.

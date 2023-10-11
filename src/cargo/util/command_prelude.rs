@@ -232,10 +232,20 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
+        let unsupported_short_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--target");
+            Arg::new("unsupported-short-target-flag")
+                .help("")
+                .short('t')
+                .value_parser(value_parser)
+                .action(ArgAction::SetTrue)
+                .hide(true)
+        };
         self._arg(
             optional_multi_opt("target", "TRIPLE", target)
                 .help_heading(heading::COMPILATION_OPTIONS),
         )
+        ._arg(unsupported_short_arg)
     }
 
     fn arg_target_dir(self) -> Self {
