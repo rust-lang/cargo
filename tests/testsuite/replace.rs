@@ -1407,7 +1407,7 @@ error: could not compile `foo` (lib) due to previous error
 }
 
 #[cargo_test]
-fn override_different_metadata_3() {
+fn override_spec_metadata_is_optional() {
     Package::new("bar", "0.1.0+a").publish();
 
     let bar = git::repo(&paths::root().join("override"))
