@@ -218,6 +218,8 @@ fn cargo_compile_with_wrong_manifest_path_flag() {
             "\
 error: unexpected argument '--path' found
 
+  tip: a similar argument exists: '--manifest-path'
+
 Usage: cargo[EXE] build [OPTIONS]
 
 For more information, try '--help'.
