@@ -372,7 +372,7 @@ pub trait CommandExt: Sized {
                 .value_parser(value_parser)
                 .hide(true)
         };
-        self._arg(flag("quiet", "Do not print cargo log messages").short('q'))
+        self.arg_quiet_without_unknown_silent_arg_tip()
             ._arg(unsupported_silent_arg)
     }
 
