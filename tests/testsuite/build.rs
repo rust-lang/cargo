@@ -206,6 +206,28 @@ fn cargo_compile_manifest_path() {
 }
 
 #[cargo_test]
+fn cargo_compile_with_wrong_manifest_path_flag() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build --path foo/Cargo.toml")
+        .cwd(p.root().parent().unwrap())
+        .with_stderr(
+            "\
+error: unexpected argument '--path' found
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
 fn chdir_gated() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
