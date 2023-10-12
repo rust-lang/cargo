@@ -267,6 +267,20 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_manifest_path(self) -> Self {
+        // We use `--manifest-path` instead of `--path`.
+        let unsupported_path_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--manifest-path");
+            flag("unsupported-path-flag", "")
+                .long("path")
+                .value_parser(value_parser)
+                .hide(true)
+        };
+        self.arg_manifest_path_without_unsupported_path_tip()
+            ._arg(unsupported_path_arg)
+    }
+
+    // `cargo add` has a `--path` flag to install a crate from a local path.
+    fn arg_manifest_path_without_unsupported_path_tip(self) -> Self {
         self._arg(
             opt("manifest-path", "Path to Cargo.toml")
                 .value_name("PATH")
@@ -358,7 +372,7 @@ pub trait CommandExt: Sized {
                 .value_parser(value_parser)
                 .hide(true)
         };
-        self._arg(flag("quiet", "Do not print cargo log messages").short('q'))
+        self.arg_quiet_without_unknown_silent_arg_tip()
             ._arg(unsupported_silent_arg)
     }
 

@@ -77,7 +77,7 @@ Example uses:
                 "Ignore `rust-version` specification in packages (unstable)"
             ),
         ])
-        .arg_manifest_path()
+        .arg_manifest_path_without_unsupported_path_tip()
         .arg_package("Package to modify")
         .arg_dry_run("Don't actually write the manifest")
         .arg_quiet()
