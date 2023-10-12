@@ -30,8 +30,8 @@ an overview of the things the team is interested in and thinking about.
 The [RFC Project Board] is used for tracking [RFCs].
 
 [the 2020 roadmap]: https://blog.rust-lang.org/inside-rust/2020/01/10/cargo-in-2020.html
-[Roadmap Project Board]: https://github.com/rust-lang/cargo/projects/1
-[RFC Project Board]: https://github.com/rust-lang/cargo/projects/2
+[Roadmap Project Board]: https://github.com/orgs/rust-lang/projects/37
+[RFC Project Board]: https://github.com/orgs/rust-lang/projects/36
 [RFCs]: https://github.com/rust-lang/rfcs/
 
 ## Working on issues
