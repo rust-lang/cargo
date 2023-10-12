@@ -20,7 +20,7 @@ we even find a way to solve the problem without coding! Typically, you
 pull request. Please read [the process] of how features and bugs are managed in
 Cargo.
 
-## Checkout out the source
+## Checkout the source
 
 We use the "fork and pull" model [described here][development-models], where
 contributors push changes to their personal fork and [create pull requests] to
