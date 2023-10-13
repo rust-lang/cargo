@@ -247,6 +247,7 @@ fn clean_lib(
 
     let mut target = Target::lib_target(&lib.name(), crate_types, path, edition);
     configure(lib, &mut target)?;
+    target.set_name_inferred(toml_lib.map_or(true, |v| v.name.is_none()));
     Ok(Some(target))
 }
 
