@@ -2080,6 +2080,7 @@ pub struct TomlWorkspaceDependency {
     #[serde(rename = "default_features")]
     default_features2: Option<bool>,
     optional: Option<bool>,
+    public: Option<bool>,
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
@@ -2114,11 +2115,12 @@ impl TomlWorkspaceDependency {
                     if let Some(false) = self.default_features.or(self.default_features2) {
                         default_features_msg(name, None, cx);
                     }
-                    if self.optional.is_some() || self.features.is_some() {
+                    if self.optional.is_some() || self.features.is_some() || self.public.is_some() {
                         TomlDependency::Detailed(DetailedTomlDependency {
                             version: Some(s),
                             optional: self.optional,
                             features: self.features.clone(),
+                            public: self.public,
                             ..Default::default()
                         })
                     } else {
@@ -2149,6 +2151,11 @@ impl TomlWorkspaceDependency {
                             default_features_msg(name, None, cx);
                         }
                         _ => {}
+                    }
+                    // Inherit the workspace configuration for `public` unless
+                    // it's explicitly specified for this dependency.
+                    if let Some(public) = self.public {
+                        d.public = Some(public);
                     }
                     d.add_features(self.features.clone());
                     d.update_optional(self.optional);
