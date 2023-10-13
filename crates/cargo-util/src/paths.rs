@@ -694,7 +694,8 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     // we can infer from it's another cargo process doing work.
     if let Err(e) = fs::rename(tempdir.path(), path) {
         if !path.exists() {
-            return Err(anyhow::Error::from(e));
+            return Err(anyhow::Error::from(e))
+                .with_context(|| format!("failed to create directory `{}`", path.display()));
         }
     }
     Ok(())
