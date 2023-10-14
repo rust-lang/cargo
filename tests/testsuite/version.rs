@@ -13,6 +13,10 @@ fn simple() {
     p.cargo("--version")
         .with_stdout(&format!("cargo {}\n", cargo::version()))
         .run();
+
+    p.cargo("-V")
+        .with_stdout(&format!("cargo {}\n", cargo::version()))
+        .run();
 }
 
 #[cargo_test]
