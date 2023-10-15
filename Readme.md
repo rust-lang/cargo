@@ -1,23 +1,30 @@
 # rustfix
 
-The goal of this tool is to read and apply the suggestions made by rustc.
+[![Latest Version](https://img.shields.io/crates/v/rustfix.svg)](https://crates.io/crates/rustfix)
+[![Rust Documentation](https://docs.rs/rustfix/badge.svg)](https://docs.rs/rustfix)
+
+Rustfix is a library defining useful structures that represent fix suggestions from rustc
 
 ## Current status
 
 Currently, rustfix is split into two crates:
 
-- `rustfix`, a library for consuming and applying suggestions in the format that `rustc` outputs
-- and `cargo-fix`, a binary that works as cargo subcommand and that end users will use to fix their code.
+- `rustfix`, a library for consuming and applying suggestions in the format that `rustc` outputs (this crate)
+- `cargo-fix`, a binary that works as cargo subcommand and that end users will use to fix their code (maintained in the [cargo](https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/fix.rs) repo).
 
-The magic of rustfix is entirely dependent on the diagnostics implemented in the Rust compiler (and external lints, like [clippy]).
+
+The library (and therefore this repo) is considered largely feature-complete. This is because:
+* There is no compiler or even rust-specific logic here
+* New lints and suggestions come from the Rust compiler (and external lints, like [clippy]).
+* `rustfix` doesn't touch the filesystem to implement fixes, or read from disk
 
 [clippy]: https://github.com/rust-lang-nursery/rust-clippy
 
 ## Installation
 
-To use the rustfix library, add it to your `Cargo.toml`.
-
 To get the tool to automatically fix warnings in, run `cargo install cargo-fix`. This will give you `cargo fix`.
+
+To use the rustfix library for use in your own fix project, add it to your `Cargo.toml`.
 
 ## Using `cargo fix --edition` to transition to Rust 2021
 
