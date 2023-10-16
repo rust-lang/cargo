@@ -444,11 +444,10 @@ mod tests {
     fn matching() {
         let url = Url::parse("https://example.com").unwrap();
         let sid = SourceId::for_registry(&url).unwrap();
-        let foo = PackageId::new("foo", "1.2.3", sid).unwrap();
-        let bar = PackageId::new("bar", "1.2.3", sid).unwrap();
 
+        let foo = PackageId::new("foo", "1.2.3", sid).unwrap();
         assert!(PackageIdSpec::parse("foo").unwrap().matches(foo));
-        assert!(!PackageIdSpec::parse("foo").unwrap().matches(bar));
+        assert!(!PackageIdSpec::parse("bar").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo:1.2.3").unwrap().matches(foo));
         assert!(!PackageIdSpec::parse("foo:1.2.2").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo@1.2.3").unwrap().matches(foo));
