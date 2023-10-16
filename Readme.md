@@ -3,7 +3,7 @@
 [![Latest Version](https://img.shields.io/crates/v/rustfix.svg)](https://crates.io/crates/rustfix)
 [![Rust Documentation](https://docs.rs/rustfix/badge.svg)](https://docs.rs/rustfix)
 
-Rustfix is a library defining useful structures that represent fix suggestions from rustc
+Rustfix is a library defining useful structures that represent fix suggestions from rustc.
 
 ## Current status
 
