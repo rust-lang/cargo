@@ -246,6 +246,10 @@
 - ❗️ Cargo now bails out when using `cargo::` in custom build scripts. This is
   a preparation for an upcoming change in build script invocations.
   [#12332](https://github.com/rust-lang/cargo/pull/12332)
+- ❗️ `cargo login` no longer accept any token after the `--` syntax.
+  Arguments after `--` are now reserved in the preparation of the new credential provider feature.
+  This introduces a regression that overlooks the `cargo login -- <token>` support in preivous versions.
+  [#12499](https://github.com/rust-lang/cargo/pull/12499)
 - Make Cargo `--help` easier to browse.
   [#11905](https://github.com/rust-lang/cargo/pull/11905)
 - Prompt the use of `--nocapture` flag if `cargo test` process is terminated via a signal.
