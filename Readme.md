@@ -22,7 +22,7 @@ The library (and therefore this repo) is considered largely feature-complete. Th
 
 ## Installation
 
-To get the tool to automatically fix warnings in, run `cargo install cargo-fix`. This will give you `cargo fix`.
+`cargo fix` is a built-in command in Cargo since Rust 1.29. There is no need to install it separately from crates.io.
 
 To use the rustfix library for use in your own fix project, add it to your `Cargo.toml`.
 
