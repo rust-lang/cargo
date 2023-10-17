@@ -10,7 +10,7 @@ Rustfix is a library defining useful structures that represent fix suggestions f
 Currently, rustfix is split into two crates:
 
 - `rustfix`, a library for consuming and applying suggestions in the format that `rustc` outputs (this crate)
-- `cargo-fix`, a binary that works as cargo subcommand and that end users will use to fix their code (maintained in the [cargo](https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/fix.rs) repo).
+- `cargo-fix`, a binary that works as cargo subcommand and that end users will use to fix their code (maintained in the [cargo](https://github.com/rust-lang/cargo/blob/master/src/bin/cargo/commands/fix.rs) repo).
 
 
 The library (and therefore this repo) is considered largely feature-complete. This is because:
