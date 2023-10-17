@@ -21,7 +21,10 @@ serde = "1.0.90"
 [features]
 std = [
   # Leading clippy
-  "dep:clippy",  # trailing docopt
+  "dep:clippy",  # trailing clippy
+
+  # Leading docopt
+  # trailing docopt
 
   # Leading rustc-serialize
   "dep:rustc-serialize",  # trailing rustc-serialize
@@ -30,5 +33,8 @@ std = [
   "serde/std",  # trailing serde/std
 
   # Leading semver/std
-  "semver/std",  # trailing toml
+  "semver/std",  # trailing semver/std
+
+  # Leading toml
+  # trailing toml
 ]
