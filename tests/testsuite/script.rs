@@ -108,6 +108,7 @@ error: no such command: `echo`
 <tab>Did you mean `bench`?
 
 <tab>View all installed commands with `cargo --list`
+<tab>Find a package to install `echo` with `cargo search cargo-echo`
 ",
         )
         .run();
