@@ -494,7 +494,7 @@ fn fix_feature_activations(
 
     // Remove found idx in revers order so we don't invalidate the idx.
     for idx in remove_list.iter().rev() {
-        feature_values.remove(*idx);
+        remove_array_index(feature_values, *idx);
     }
 
     if status == DependencyStatus::Required {
@@ -537,4 +537,8 @@ fn non_existent_dependency_err(
     table: impl std::fmt::Display,
 ) -> anyhow::Error {
     anyhow::format_err!("the dependency `{name}` could not be found in `{table}`.")
+}
+
+fn remove_array_index(array: &mut toml_edit::Array, index: usize) {
+    array.remove(index);
 }
