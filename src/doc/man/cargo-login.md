@@ -6,13 +6,15 @@ cargo-login --- Log in to a registry
 
 ## SYNOPSIS
 
-`cargo login` [_options_] [_token_] -- [_args_]
+`cargo login` [_options_] [_token_] [`--` _args_]
 
 ## DESCRIPTION
 
 This command will run a credential provider to save a token so that commands
 that require authentication, such as {{man "cargo-publish" 1}}, will be
 automatically authenticated.
+
+All the arguments following the two dashes (`--`) are passed to the credential provider.
 
 For the default `cargo:token` credential provider, the token is saved
 in `$CARGO_HOME/credentials.toml`. `CARGO_HOME` defaults to `.cargo`

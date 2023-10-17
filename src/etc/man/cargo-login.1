@@ -6,11 +6,13 @@
 .SH "NAME"
 cargo\-login \[em] Log in to a registry
 .SH "SYNOPSIS"
-\fBcargo login\fR [\fIoptions\fR] [\fItoken\fR] \[en] [\fIargs\fR]
+\fBcargo login\fR [\fIoptions\fR] [\fItoken\fR] [\fB\-\-\fR \fIargs\fR]
 .SH "DESCRIPTION"
 This command will run a credential provider to save a token so that commands
 that require authentication, such as \fBcargo\-publish\fR(1), will be
 automatically authenticated.
+.sp
+All the arguments following the two dashes (\fB\-\-\fR) are passed to the credential provider.
 .sp
 For the default \fBcargo:token\fR credential provider, the token is saved
 in \fB$CARGO_HOME/credentials.toml\fR\&. \fBCARGO_HOME\fR defaults to \fB\&.cargo\fR
