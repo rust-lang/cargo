@@ -24,7 +24,7 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("remove")
-        .args(["--dev", "serde"])
+        .args(["docopt", "toml"])
         .current_dir(cwd)
         .assert()
         .success()

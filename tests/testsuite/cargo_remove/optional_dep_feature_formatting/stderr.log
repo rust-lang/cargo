@@ -1,1 +1,2 @@
-    Removing serde from dev-dependencies
+    Removing docopt from dependencies
+    Removing toml from dependencies

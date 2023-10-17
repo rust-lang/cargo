@@ -1,0 +1,42 @@
+[package]
+name = "cargo-remove-test-fixture"
+version = "0.1.0"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[build-dependencies]
+semver = "0.1.0"
+
+[dependencies]
+docopt = { version = "0.6", optional = true }
+rustc-serialize = { version = "0.4", optional = true }
+semver = "0.1"
+toml = { version = "0.1", optional = true }
+clippy = { version = "0.4", optional = true }
+
+[dev-dependencies]
+regex = "0.1.1"
+serde = "1.0.90"
+
+[features]
+std = [
+  # Leading clippy
+  "dep:clippy",  # trailing clippy
+
+  # Leading docopt
+  "dep:docopt",  # trailing docopt
+
+  # Leading rustc-serialize
+  "dep:rustc-serialize",  # trailing rustc-serialize
+
+  # Leading serde/std
+  "serde/std",  # trailing serde/std
+
+  # Leading semver/std
+  "semver/std",  # trailing semver/std
+
+  # Leading toml
+  "dep:toml",  # trailing toml
+]

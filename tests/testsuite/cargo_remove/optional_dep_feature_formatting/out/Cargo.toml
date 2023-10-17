@@ -10,14 +10,13 @@ path = "src/main.rs"
 semver = "0.1.0"
 
 [dependencies]
-docopt = "0.6"
-rustc-serialize = "0.4"
+rustc-serialize = { version = "0.4", optional = true }
 semver = "0.1"
-toml = "0.1"
-clippy = "0.4"
+clippy = { version = "0.4", optional = true }
 
 [dev-dependencies]
 regex = "0.1.1"
+serde = "1.0.90"
 
 [features]
-std = ["semver/std"]
+std = ["dep:clippy", "dep:rustc-serialize", "serde/std", "semver/std"]
