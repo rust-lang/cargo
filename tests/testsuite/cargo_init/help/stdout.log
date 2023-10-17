@@ -1,9 +1,9 @@
 Create a new cargo package in an existing directory
 
-Usage: cargo[EXE] init [OPTIONS] [path]
+Usage: cargo[EXE] init [OPTIONS] [PATH]
 
 Arguments:
-  [path]  [default: .]
+  [PATH]  [default: .]
 
 Options:
       --vcs <VCS>            Initialize a new repository for the given version control system,

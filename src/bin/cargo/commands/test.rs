@@ -13,6 +13,7 @@ pub fn cli() -> Command {
         )
         .arg(
             Arg::new("args")
+                .value_name("ARGS")
                 .help("Arguments for the test binary")
                 .num_args(0..)
                 .last(true),

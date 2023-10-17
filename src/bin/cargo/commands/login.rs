@@ -6,7 +6,7 @@ use crate::command_prelude::*;
 pub fn cli() -> Command {
     subcommand("login")
         .about("Log in to a registry.")
-        .arg(Arg::new("token").action(ArgAction::Set))
+        .arg(Arg::new("token").value_name("TOKEN").action(ArgAction::Set))
         .arg_registry("Registry to use")
         .arg(
             Arg::new("args")

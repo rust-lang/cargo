@@ -10,6 +10,7 @@ pub fn cli() -> Command {
         .about("Compile a package, and pass extra options to the compiler")
         .arg(
             Arg::new("args")
+                .value_name("ARGS")
                 .num_args(0..)
                 .help("Extra rustc flags")
                 .trailing_var_arg(true),

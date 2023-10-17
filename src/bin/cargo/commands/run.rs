@@ -16,6 +16,7 @@ pub fn cli() -> Command {
         .about("Run a binary or example of the local package")
         .arg(
             Arg::new("args")
+                .value_name("ARGS")
                 .help("Arguments for the binary or example to run")
                 .value_parser(value_parser!(OsString))
                 .num_args(0..)

@@ -6,7 +6,7 @@ use cargo_credential::Secret;
 pub fn cli() -> Command {
     subcommand("yank")
         .about("Remove a pushed crate from the index")
-        .arg(Arg::new("crate").action(ArgAction::Set))
+        .arg(Arg::new("crate").value_name("CRATE").action(ArgAction::Set))
         .arg(
             opt("version", "The version to yank or un-yank")
                 .alias("vers")

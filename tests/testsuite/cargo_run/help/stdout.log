@@ -1,9 +1,9 @@
 Run a binary or example of the local package
 
-Usage: cargo[EXE] run [OPTIONS] [args]...
+Usage: cargo[EXE] run [OPTIONS] [ARGS]...
 
 Arguments:
-  [args]...  Arguments for the binary or example to run
+  [ARGS]...  Arguments for the binary or example to run
 
 Options:
       --ignore-rust-version   Ignore `rust-version` specification in packages

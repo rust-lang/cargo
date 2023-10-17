@@ -1,9 +1,9 @@
 Compile a package, and pass extra options to the compiler
 
-Usage: cargo[EXE] rustc [OPTIONS] [args]...
+Usage: cargo[EXE] rustc [OPTIONS] [ARGS]...
 
 Arguments:
-  [args]...  Extra rustc flags
+  [ARGS]...  Extra rustc flags
 
 Options:
       --print <INFO>             Output compiler information without compiling

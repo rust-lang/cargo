@@ -1,9 +1,9 @@
 Log in to a registry.
 
-Usage: cargo[EXE] login [OPTIONS] [token] [-- [args]...]
+Usage: cargo[EXE] login [OPTIONS] [TOKEN] [-- [args]...]
 
 Arguments:
-  [token]    
+  [TOKEN]    
   [args]...  Additional arguments for the credential provider
 
 Options:
