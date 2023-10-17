@@ -14,6 +14,7 @@
     - [New subcommands](./implementation/subcommands.md)
     - [Console Output](./implementation/console.md)
     - [Filesystem](./implementation/filesystem.md)
+    - [Formatting](./implementation/formatting.md)
     - [Debugging](./implementation/debugging.md)
 - [Tests](./tests/index.md)
     - [Running Tests](./tests/running.md)
