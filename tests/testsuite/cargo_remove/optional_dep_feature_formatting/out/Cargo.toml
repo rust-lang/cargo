@@ -19,4 +19,16 @@ regex = "0.1.1"
 serde = "1.0.90"
 
 [features]
-std = ["dep:clippy", "dep:rustc-serialize", "serde/std", "semver/std"]
+std = [
+  # Leading clippy
+  "dep:clippy",  # trailing docopt
+
+  # Leading rustc-serialize
+  "dep:rustc-serialize",  # trailing rustc-serialize
+
+  # Leading serde/std
+  "serde/std",  # trailing serde/std
+
+  # Leading semver/std
+  "semver/std",  # trailing toml
+]
