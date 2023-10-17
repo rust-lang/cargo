@@ -15,9 +15,9 @@ Options:
   -h, --help                Print help
 
 Section:
-      --dev              Remove as development dependency
-      --build            Remove as build dependency
-      --target <TARGET>  Remove as dependency from the given target platform
+      --dev              Remove from dev-dependencies
+      --build            Remove from build-dependencies
+      --target <TARGET>  Remove from target-dependencies
 
 Package Selection:
   -p, --package [<SPEC>]  Package to remove from
