@@ -349,12 +349,15 @@ impl LocalManifest {
             .get_key_value_mut(dep_key)
         {
             dep.update_toml(&crate_root, &mut dep_key, dep_item);
+            if let Some(table) = dep_item.as_inline_table_mut() {
+                // So long as we don't have `Cargo.toml` auto-formatting and inline-tables can only
+                // be on one line, there isn't really much in the way of interesting formatting to
+                // include (no comments), so let's just wipe it clean
+                table.fmt();
+            }
         } else {
             let new_dependency = dep.to_toml(&crate_root);
             table[dep_key] = new_dependency;
-        }
-        if let Some(t) = table.as_inline_table_mut() {
-            t.fmt()
         }
 
         Ok(())
