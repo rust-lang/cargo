@@ -99,6 +99,7 @@ mod path_dev;
 mod path_inferred_name;
 mod path_inferred_name_conflicts_full_feature;
 mod path_normalized_name;
+mod preserve_dep_std_table;
 mod preserve_features_table;
 mod preserve_sorted;
 mod preserve_unsorted;
