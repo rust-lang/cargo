@@ -187,6 +187,11 @@ impl PartialVersion {
     /// Build metadata does not affect version precedence but may be necessary for uniquely
     /// identifying a package.
     pub fn matches(&self, version: &Version) -> bool {
+        if !version.pre.is_empty() && self.pre.is_none() {
+            // Pre-release versions must be explicitly opted into, if for no other reason than to
+            // give us room to figure out and define the semantics
+            return false;
+        }
         self.major == version.major
             && self.minor.map(|f| f == version.minor).unwrap_or(true)
             && self.patch.map(|f| f == version.patch).unwrap_or(true)

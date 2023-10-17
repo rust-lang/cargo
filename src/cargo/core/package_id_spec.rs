@@ -470,9 +470,9 @@ mod tests {
 
         let pre = PackageId::new("pre", "1.2.3-alpha.0", sid).unwrap();
         assert!(PackageIdSpec::parse("pre").unwrap().matches(pre));
-        assert!(PackageIdSpec::parse("pre@1").unwrap().matches(pre));
-        assert!(PackageIdSpec::parse("pre@1.2").unwrap().matches(pre));
-        assert!(PackageIdSpec::parse("pre@1.2.3").unwrap().matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1").unwrap().matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1.2").unwrap().matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1.2.3").unwrap().matches(pre));
         assert!(PackageIdSpec::parse("pre@1.2.3-alpha.0")
             .unwrap()
             .matches(pre));
