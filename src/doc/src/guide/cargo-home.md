@@ -1,4 +1,4 @@
-## Cargo Home
+# Cargo Home
 
 The "Cargo home" functions as a download and source cache.
 When building a [crate][def-crate], Cargo stores downloaded build dependencies in the Cargo home.
@@ -18,8 +18,8 @@ The Cargo home consists of following components:
 * `credentials.toml`
  	Private login credentials from [`cargo login`] in order to log in to a [registry][def-registry].
 
-* `.crates.toml`
-	This hidden file contains [package][def-package] information of crates installed via [`cargo install`]. Do NOT edit by hand!
+* `.crates.toml`, `.crates2.json`
+	These hidden files contain [package][def-package] information of crates installed via [`cargo install`]. Do NOT edit by hand!
 
 ## Directories:
 
@@ -58,8 +58,12 @@ However, caching the entire directory is often inefficient as it will contain do
 If we depend on a crate such as `serde 1.0.92` and cache the entire `$CARGO_HOME` we would actually cache the sources twice, the `serde-1.0.92.crate` inside `registry/cache` and the extracted `.rs` files of serde inside `registry/src`.
 That can unnecessarily slow down the build as downloading, extracting, recompressing and reuploading the cache to the CI servers can take some time.
 
-It should be sufficient to only cache the following directories across builds:
+If you wish to cache binaries installed with [`cargo install`], you need to cache the `bin/` folder and the `.crates.toml` and `.crates2.json` files.
 
+It should be sufficient to cache the following files and directories across builds:
+
+* `.crates.toml`
+* `.crates2.json`
 * `bin/`
 * `registry/index/`
 * `registry/cache/`

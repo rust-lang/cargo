@@ -1,4 +1,4 @@
-## Publishing on crates.io
+# Publishing on crates.io
 
 Once you've got a library that you'd like to share with the world, it's time to
 publish it on [crates.io]! Publishing a crate is when a specific
@@ -8,16 +8,25 @@ Take care when publishing a crate, because a publish is **permanent**. The
 version can never be overwritten, and the code cannot be deleted. There is no
 limit to the number of versions which can be published, however.
 
-### Before your first publish
+## Before your first publish
 
 First things first, you’ll need an account on [crates.io] to acquire
 an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
-account (required for now). After this, visit your [Account
-Settings](https://crates.io/me) page and run the [`cargo login`] command
-specified.
+account (required for now). You will also need to provide and verify your email
+address on the [Account Settings](https://crates.io/settings/profile) page. Once
+that is done [create an API token](https://crates.io/settings/tokens), make sure
+you copy it. Once you leave the page you will not be able to see it again.
+
+Then run the [`cargo login`] command.
 
 ```console
-$ cargo login abcdefghijklmnopqrstuvwxyz012345
+$ cargo login
+```
+
+Then at the prompt put in the token specified.
+```console
+please paste the API Token found on https://crates.io/me below
+abcdefghijklmnopqrstuvwxyz012345
 ```
 
 This command will inform Cargo of your API token and store it locally in your
@@ -25,16 +34,19 @@ This command will inform Cargo of your API token and store it locally in your
 shared with anyone else. If it leaks for any reason, you should revoke it
 immediately.
 
-### Before publishing a new crate
+> **Note**: The [`cargo logout`] command can be used to remove the token from
+> `credentials.toml`. This can be useful if you no longer need it stored on
+> the local machine.
 
-Keep in mind that crate names on [crates.io] are allocated on a first-come-first-
-serve basis. Once a crate name is taken, it cannot be used for another crate.
+## Before publishing a new crate
+
+Keep in mind that crate names on [crates.io] are allocated on a first-come-first-serve
+basis. Once a crate name is taken, it cannot be used for another crate.
 
 Check out the [metadata you can specify](manifest.md) in `Cargo.toml` to
 ensure your crate can be discovered more easily! Before publishing, make sure
 you have filled out the following fields:
 
-- [`authors`]
 - [`license` or `license-file`]
 - [`description`]
 - [`homepage`]
@@ -48,7 +60,7 @@ though they are not required.
 If you are publishing a library, you may also want to consult the [Rust API
 Guidelines].
 
-#### Packaging a crate
+### Packaging a crate
 
 The next step is to package up your crate and upload it to [crates.io]. For
 this we’ll use the [`cargo publish`] subcommand. This command performs the following
@@ -107,7 +119,7 @@ include = [
 ]
 ```
 
-### Uploading the crate
+## Uploading the crate
 
 When you are ready to publish, use the [`cargo publish`] command
 to upload to [crates.io]:
@@ -118,21 +130,32 @@ $ cargo publish
 
 And that’s it, you’ve now published your first crate!
 
-### Publishing a new version of an existing crate
+## Publishing a new version of an existing crate
 
-In order to release a new version, change the `version` value specified in
-your `Cargo.toml` manifest. Keep in mind [the semver
-rules](manifest.md#the-version-field), and consult [RFC 1105] for
-what constitutes a semver-breaking change. Then run [`cargo publish`] as
-described above to upload the new version.
+In order to release a new version, change [the `version` value](manifest.md#the-version-field) specified in your `Cargo.toml` manifest.
+Keep in mind [the SemVer rules](semver.md) which provide guidelines on what is a compatible change.
+Then run [`cargo publish`] as described above to upload the new version.
 
-### Managing a crates.io-based crate
+> **Recommendation:** Consider the full release process and automate what you can.
+>
+> Each version should include:
+> - A changelog entry, preferably [manually curated](https://keepachangelog.com/en/1.0.0/) though a generated one is better than nothing
+> - A [git tag](https://git-scm.com/book/en/v2/Git-Basics-Tagging) pointing to the published commit
+>
+> Examples of third-party tools that are representative of different workflows include (in alphabetical order):
+> - [cargo-release](https://crates.io/crates/cargo-release)
+> - [cargo-smart-release](https://crates.io/crates/cargo-smart-release)
+> - [release-plz](https://crates.io/crates/release-plz)
+>
+> For more, see [crates.io](https://crates.io/search?q=cargo%20release).
+
+## Managing a crates.io-based crate
 
 Management of crates is primarily done through the command line `cargo` tool
 rather than the [crates.io] web interface. For this, there are a few subcommands
 to manage a crate.
 
-#### `cargo yank`
+### `cargo yank`
 
 Occasions may arise where you publish a version of a crate that actually ends up
 being broken for one reason or another (syntax error, forgot to include a file,
@@ -140,8 +163,8 @@ etc.). For situations such as this, Cargo supports a “yank” of a version of 
 crate.
 
 ```console
-$ cargo yank --vers 1.0.1
-$ cargo yank --vers 1.0.1 --undo
+$ cargo yank --version 1.0.1
+$ cargo yank --version 1.0.1 --undo
 ```
 
 A yank **does not** delete any code. This feature is not intended for deleting
@@ -156,7 +179,7 @@ goal. Essentially a yank means that all packages with a `Cargo.lock` will not
 break, while any future `Cargo.lock` files generated will not list the yanked
 version.
 
-#### `cargo owner`
+### `cargo owner`
 
 A crate is often developed by more than one person, or the primary maintainer
 may change over time! The owner of a crate is the only person allowed to publish
@@ -188,15 +211,14 @@ The syntax for teams is currently `github:org:team` (see examples above).
 In order to invite a team as an owner one must be a member of that team. No
 such restriction applies to removing a team as an owner.
 
-### GitHub permissions
+## GitHub permissions
 
 Team membership is not something GitHub provides simple public access to, and it
 is likely for you to encounter the following message when working with them:
 
 > It looks like you don’t have permission to query a necessary property from
 GitHub to complete this request. You may need to re-authenticate on [crates.io]
-to grant permission to read GitHub org memberships. Just go to
-<https://crates.io/login>.
+to grant permission to read GitHub org memberships.
 
 This is basically a catch-all for “you tried to query a team, and one of the
 five levels of membership access control denied this”. That is not an
@@ -215,8 +237,9 @@ you will get the error above. You may also see this error if you ever try to
 publish a crate that you don’t own at all, but otherwise happens to have a team.
 
 If you ever change your mind, or just aren’t sure if [crates.io] has sufficient
-permission, you can always go to <https://crates.io/login>, which will prompt you
-for permission if [crates.io] doesn’t have all the scopes it would like to.
+permission, you can always go to <https://crates.io/> and re-authenticate,
+which will prompt you for permission if [crates.io] doesn’t have all the scopes
+it would like to.
 
 An additional barrier to querying GitHub is that the organization may be
 actively denying third party access. To check this, you can go to:
@@ -240,10 +263,25 @@ the “Grant Access” button next to its name:
 
 ![Authentication Access Control](../images/auth-level-acl.png)
 
-[RFC 1105]: https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md
-[Rust API Guidelines]: https://rust-lang-nursery.github.io/api-guidelines/
-[`authors`]: manifest.md#the-authors-field
+### Troubleshooting GitHub team access errors
+
+When trying to add a GitHub team as crate owner, you may see an error like:
+
+```text
+error: failed to invite owners to crate <crate_name>: api errors (status 200 OK): could not find the github team org/repo
+```
+In that case, you should go to [the GitHub Application settings page] and
+check if crates.io is listed in the `Authorized OAuth Apps` tab.
+If it isn't, you should go to <https://crates.io/> and authorize it.
+Then go back to the Application Settings page on GitHub, click on the
+crates.io application in the list, and make sure you or your organization is
+listed in the "Organization access" list with a green check mark. If there's
+a button labeled `Grant` or `Request`, you should grant the access or
+request the org owner to do so.
+
+[Rust API Guidelines]: https://rust-lang.github.io/api-guidelines/
 [`cargo login`]: ../commands/cargo-login.md
+[`cargo logout`]: ../commands/cargo-logout.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`categories`]: manifest.md#the-categories-field
@@ -256,3 +294,4 @@ the “Grant Access” button next to its name:
 [`repository`]: manifest.md#the-repository-field
 [crates.io]: https://crates.io/
 [oauth-scopes]: https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/
+[the GitHub Application settings page]: https://github.com/settings/applications

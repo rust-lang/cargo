@@ -22,17 +22,22 @@ fn metabuild_gated() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   feature `metabuild` is required
 
-  consider adding `cargo-features = [\"metabuild\"]` to the manifest
+  The package requires the Cargo feature called `metabuild`, \
+  but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"metabuild\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild \
+  for more information about the status of this feature.
 ",
         )
         .run();
@@ -78,8 +83,8 @@ fn basic_project() -> Project {
 #[cargo_test]
 fn metabuild_basic() {
     let p = basic_project();
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .with_stdout_contains("[foo 0.0.1] Hello mb-other")
         .run();
@@ -110,8 +115,8 @@ fn metabuild_error_both() {
         )
         .build();
 
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -140,8 +145,8 @@ fn metabuild_missing_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -177,13 +182,13 @@ fn metabuild_optional_dep() {
         )
         .build();
 
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_does_not_contain("[foo 0.0.1] Hello mb")
         .run();
 
-    p.cargo("build -vv --features mb")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv --features mb")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
@@ -222,8 +227,8 @@ fn metabuild_lib_name() {
         )
         .build();
 
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
@@ -261,13 +266,13 @@ fn metabuild_fresh() {
         )
         .build();
 
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_does_not_contain("[foo 0.0.1] Hello mb")
         .with_stderr(
             "\
@@ -310,8 +315,8 @@ fn metabuild_links() {
         )
         .build();
 
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
@@ -351,7 +356,9 @@ fn metabuild_override() {
         )
         .build();
 
-    p.cargo("build -vv").masquerade_as_nightly_cargo().run();
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
+        .run();
 }
 
 #[cargo_test]
@@ -413,8 +420,8 @@ fn metabuild_workspace() {
         )
         .build();
 
-    p.cargo("build -vv --workspace")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv --workspace")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
         .with_stdout_contains("[member1 0.0.1] Hello mb2 [..]member1")
         .with_stdout_contains("[member2 0.0.1] Hello mb1 [..]member2")
@@ -427,13 +434,10 @@ fn metabuild_metadata() {
     // The metabuild Target is filtered out of the `metadata` results.
     let p = basic_project();
 
-    let output = p
+    let meta = p
         .cargo("metadata --format-version=1")
-        .masquerade_as_nightly_cargo()
-        .exec_with_output()
-        .expect("cargo metadata failed");
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    let meta: serde_json::Value = serde_json::from_str(stdout).expect("failed to parse json");
+        .masquerade_as_nightly_cargo(&["metabuild"])
+        .run_json();
     let mb_info: Vec<&str> = meta["packages"]
         .as_array()
         .unwrap()
@@ -453,7 +457,7 @@ fn metabuild_build_plan() {
     let p = basic_project();
 
     p.cargo("build --build-plan -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["metabuild", "build-plan"])
         .with_json(
             r#"
             {
@@ -617,8 +621,8 @@ fn metabuild_two_versions() {
         )
         .build();
 
-    p.cargo("build -vv --workspace")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv --workspace")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
         .with_stdout_contains("[member2 0.0.1] Hello mb2 [..]member2")
         .run();
@@ -670,8 +674,8 @@ fn metabuild_external_dependency() {
         .file("src/lib.rs", "extern crate dep;")
         .build();
 
-    p.cargo("build -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_stdout_contains("[dep 1.0.0] Hello mb")
         .run();
 
@@ -681,8 +685,8 @@ fn metabuild_external_dependency() {
 #[cargo_test]
 fn metabuild_json_artifact() {
     let p = basic_project();
-    p.cargo("build --message-format=json")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --message-format=json")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_json_contains_unordered(
             r#"
             {
@@ -691,6 +695,7 @@ fn metabuild_json_artifact() {
               "filenames": "{...}",
               "fresh": false,
               "package_id": "foo [..]",
+              "manifest_path": "[..]",
               "profile": "{...}",
               "reason": "compiler-artifact",
               "target": {
@@ -728,8 +733,8 @@ fn metabuild_failed_build_json() {
     let p = basic_project();
     // Modify the metabuild dep so that it fails to compile.
     p.change_file("mb/src/lib.rs", "");
-    p.cargo("build --message-format=json")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check --message-format=json")
+        .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
         .with_json_contains_unordered(
             r#"
@@ -739,10 +744,11 @@ fn metabuild_failed_build_json() {
                 "code": "{...}",
                 "level": "error",
                 "message": "cannot find function `metabuild` in [..] `mb`",
-                "rendered": "[..]",
+                "rendered": "{...}",
                 "spans": "{...}"
               },
               "package_id": "foo [..]",
+              "manifest_path": "[..]",
               "reason": "compiler-message",
               "target": {
                 "crate_types": [

@@ -1,17 +1,17 @@
-## Tests
+# Tests
 
 Cargo can run your tests with the `cargo test` command. Cargo looks for tests
 to run in two places: in each of your `src` files and any tests in `tests/`.
-Tests in your `src` files should be unit tests, and tests in `tests/` should be
-integration-style tests. As such, you’ll need to import your crates into
-the files in `tests`.
+Tests in your `src` files should be unit tests and [documentation tests].
+Tests in `tests/` should be integration-style tests. As such, you’ll need to
+import your crates into the files in `tests`.
 
 Here's an example of running `cargo test` in our [package][def-package], which
 currently has no tests:
 
 ```console
 $ cargo test
-   Compiling rand v0.1.0 (https://github.com/rust-lang-nursery/rand.git#9f35b8e)
+   Compiling regex v1.5.0 (https://github.com/rust-lang/regex.git#9f9f693)
    Compiling hello_world v0.1.0 (file:///path/to/package/hello_world)
      Running target/test/hello_world-9c2b65bbb79eabce
 
@@ -31,10 +31,14 @@ $ cargo test foo
 
 This will run any test with `foo` in its name.
 
-`cargo test` runs additional checks as well.  It will compile any
-examples you’ve included and will also test the examples in your
-documentation. Please see the [testing guide][testing] in the Rust
-documentation for more details.
+`cargo test` runs additional checks as well. It will compile any examples
+you’ve included to ensure they still compile. It also runs documentation
+tests to ensure your code samples from documentation comments compile.
+Please see the [testing guide][testing] in the Rust documentation for a general
+view of writing and organizing tests. See [Cargo Targets: Tests] to learn more
+about different styles of tests in Cargo.
 
+[documentation tests]: ../../rustdoc/write-documentation/documentation-tests.html
 [def-package]:  ../appendix/glossary.md#package  '"package" (glossary entry)'
 [testing]: ../../book/ch11-00-testing.html
+[Cargo Targets: Tests]: ../reference/cargo-targets.html#tests

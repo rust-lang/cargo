@@ -62,12 +62,12 @@ fn cargo_verify_project_honours_unstable_features() {
         .build();
 
     p.cargo("verify-project")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stdout(verify_project_success_output())
         .run();
 
     p.cargo("verify-project")
         .with_status(1)
-        .with_stdout(r#"{"invalid":"failed to parse manifest at `[CWD]/Cargo.toml`"}"#)
+        .with_json(r#"{"invalid":"failed to parse manifest at `[CWD]/Cargo.toml`"}"#)
         .run();
 }

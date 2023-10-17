@@ -1,0 +1,6 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

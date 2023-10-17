@@ -1,0 +1,8 @@
+error: invalid character `.` in package name: `foo.bar`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+If you need a package name to not match the directory name, consider using --name flag.
+If you need a binary with the name "foo.bar", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/foo.bar.rs` or change the name in Cargo.toml with:
+
+    [[bin]]
+    name = "foo.bar"
+    path = "src/main.rs"
+

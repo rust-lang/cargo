@@ -1,9 +1,8 @@
 # cargo-publish(1)
 
-
 ## NAME
 
-cargo-publish - Upload a package to the registry
+cargo-publish --- Upload a package to the registry
 
 ## SYNOPSIS
 
@@ -20,8 +19,11 @@ following steps:
    - Checks the `package.publish` key in the manifest for restrictions on
      which registries you are allowed to publish to.
 2. Create a `.crate` file by following the steps in [cargo-package(1)](cargo-package.html).
-3. Upload the crate to the registry. Note that the server will perform
-   additional checks on the crate.
+3. Upload the crate to the registry. The server will perform additional
+   checks on the crate. 
+4. The client will poll waiting for the package to appear in the index,
+   and may timeout. In that case, you will need to check for completion
+   manually. This timeout does not affect the upload.
 
 This command requires you to be authenticated with either the `--token` option
 or using [cargo-login(1)](cargo-login.html).
@@ -52,7 +54,7 @@ of the registry in all capital letters.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---no-verify"><a class="option-anchor" href="#option-cargo-publish---no-verify"></a><code>--no-verify</code></dt>
-<dd class="option-desc">Don't verify the contents by building them.</dd>
+<dd class="option-desc">Don’t verify the contents by building them.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---allow-dirty"><a class="option-anchor" href="#option-cargo-publish---allow-dirty"></a><code>--allow-dirty</code></dt>
@@ -76,15 +78,30 @@ which defaults to <code>crates-io</code>.</dd>
 
 </dl>
 
+### Package Selection
+
+By default, the package in the current working directory is selected. The `-p`
+flag can be used to choose a different package in a workspace.
+
+<dl>
+
+<dt class="option-term" id="option-cargo-publish--p"><a class="option-anchor" href="#option-cargo-publish--p"></a><code>-p</code> <em>spec</em></dt>
+<dt class="option-term" id="option-cargo-publish---package"><a class="option-anchor" href="#option-cargo-publish---package"></a><code>--package</code> <em>spec</em></dt>
+<dd class="option-desc">The package to publish. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC
+format.</dd>
+
+
+</dl>
+
+
 ### Compilation Options
 
 <dl>
 
 <dt class="option-term" id="option-cargo-publish---target"><a class="option-anchor" href="#option-cargo-publish---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Publish for the given architecture. The default is the host
-architecture. The general format of the triple is
+<dd class="option-desc">Publish for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -96,8 +113,8 @@ target artifacts are placed in a separate directory. See the
 <dt class="option-term" id="option-cargo-publish---target-dir"><a class="option-anchor" href="#option-cargo-publish---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
-to <code>target</code> in the root of the workspace.</dd>
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
+Defaults to <code>target</code> in the root of the workspace.</dd>
 
 
 
@@ -105,22 +122,20 @@ to <code>target</code> in the root of the workspace.</dd>
 
 ### Feature Selection
 
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in `--manifest-path`. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if `--all-features` is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the `default` feature is activated for every
+selected package.
 
-When no feature options are given, the `default` feature is activated for
-every selected package.
+See [the features documentation](../reference/features.html#command-line-feature-options)
+for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-publish--F"><a class="option-anchor" href="#option-cargo-publish--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-publish---features"><a class="option-anchor" href="#option-cargo-publish---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax. This flag may be
-specified multiple times, which enables all specified features.</dd>
+<dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
+members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
+be specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---all-features"><a class="option-anchor" href="#option-cargo-publish---all-features"></a><code>--all-features</code></dt>
@@ -128,7 +143,7 @@ specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---no-default-features"><a class="option-anchor" href="#option-cargo-publish---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Do not activate the <code>default</code> feature of the current directory's package.</dd>
+<dd class="option-desc">Do not activate the <code>default</code> feature of the selected packages.</dd>
 
 
 </dl>
@@ -178,7 +193,20 @@ offline.</p>
 <dt class="option-term" id="option-cargo-publish---jobs"><a class="option-anchor" href="#option-cargo-publish---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string <code>default</code> is provided, it sets the value back to defaults.
+Should not be 0.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish---keep-going"><a class="option-anchor" href="#option-cargo-publish---keep-going"></a><code>--keep-going</code></dt>
+<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build.</p>
+<p>For example if the current package depends on dependencies <code>fails</code> and <code>works</code>,
+one of which fails to build, <code>cargo publish -j1</code> may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas <code>cargo publish -j1 --keep-going</code> would definitely run both
+builds, even if the one run first fails.</dd>
 
 
 </dl>
@@ -188,7 +216,7 @@ the number of CPUs.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-publish--v"><a class="option-anchor" href="#option-cargo-publish--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-publish---verbose"><a class="option-anchor" href="#option-cargo-publish---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -196,7 +224,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-publish--q"><a class="option-anchor" href="#option-cargo-publish--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-publish---quiet"><a class="option-anchor" href="#option-cargo-publish---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---color"><a class="option-anchor" href="#option-cargo-publish---color"></a><code>--color</code> <em>when</em></dt>
@@ -223,6 +253,23 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish---config"><a class="option-anchor" href="#option-cargo-publish---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish--C"><a class="option-anchor" href="#option-cargo-publish--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-publish--h"><a class="option-anchor" href="#option-cargo-publish--h"></a><code>-h</code></dt>

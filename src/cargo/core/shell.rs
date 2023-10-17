@@ -1,10 +1,12 @@
 use std::fmt;
 use std::io::prelude::*;
+use std::io::IsTerminal;
 
-use termcolor::Color::{Cyan, Green, Red, Yellow};
-use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
+use anstream::AutoStream;
+use anstyle::Style;
 
 use crate::util::errors::CargoResult;
+use crate::util::style::*;
 
 pub enum TtyWidth {
     NoTty,
@@ -13,9 +15,14 @@ pub enum TtyWidth {
 }
 
 impl TtyWidth {
-    /// Returns the width provided with `-Z terminal-width` to rustc to truncate diagnostics with
-    /// long lines.
+    /// Returns the width of the terminal to use for diagnostics (which is
+    /// relayed to rustc via `--diagnostic-width`).
     pub fn diagnostic_terminal_width(&self) -> Option<usize> {
+        // ALLOWED: For testing cargo itself only.
+        #[allow(clippy::disallowed_methods)]
+        if let Ok(width) = std::env::var("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS") {
+            return Some(width.parse().unwrap());
+        }
         match *self {
             TtyWidth::NoTty | TtyWidth::Guess(_) => None,
             TtyWidth::Known(width) => Some(width),
@@ -71,11 +78,11 @@ impl fmt::Debug for Shell {
 /// A `Write`able object, either with or without color support
 enum ShellOut {
     /// A plain write object without color support
-    Write(Box<dyn Write>),
+    Write(AutoStream<Box<dyn Write>>),
     /// Color-enabled stdio, with information on whether color should be used
     Stream {
-        stdout: StandardStream,
-        stderr: StandardStream,
+        stdout: AutoStream<std::io::Stdout>,
+        stderr: AutoStream<std::io::Stderr>,
         stderr_tty: bool,
         color_choice: ColorChoice,
     },
@@ -96,13 +103,15 @@ impl Shell {
     /// Creates a new shell (color choice and verbosity), defaulting to 'auto' color and verbose
     /// output.
     pub fn new() -> Shell {
-        let auto = ColorChoice::CargoAuto.to_termcolor_color_choice();
+        let auto_clr = ColorChoice::CargoAuto;
+        let stdout_choice = auto_clr.to_anstream_color_choice();
+        let stderr_choice = auto_clr.to_anstream_color_choice();
         Shell {
             output: ShellOut::Stream {
-                stdout: StandardStream::stdout(auto),
-                stderr: StandardStream::stderr(auto),
-                color_choice: ColorChoice::CargoAuto,
-                stderr_tty: atty::is(atty::Stream::Stderr),
+                stdout: AutoStream::new(std::io::stdout(), stdout_choice),
+                stderr: AutoStream::new(std::io::stderr(), stderr_choice),
+                color_choice: auto_clr,
+                stderr_tty: std::io::stderr().is_terminal(),
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
@@ -112,7 +121,7 @@ impl Shell {
     /// Creates a shell from a plain writable object, with no color, and max verbosity.
     pub fn from_write(out: Box<dyn Write>) -> Shell {
         Shell {
-            output: ShellOut::Write(out),
+            output: ShellOut::Write(AutoStream::never(out)), // strip all formatting on write
             verbosity: Verbosity::Verbose,
             needs_clear: false,
         }
@@ -124,7 +133,7 @@ impl Shell {
         &mut self,
         status: &dyn fmt::Display,
         message: Option<&dyn fmt::Display>,
-        color: Color,
+        color: &Style,
         justified: bool,
     ) -> CargoResult<()> {
         match self.verbosity {
@@ -185,10 +194,7 @@ impl Shell {
 
     /// Erase from cursor to end of line.
     pub fn err_erase_line(&mut self) {
-        if let ShellOut::Stream {
-            stderr_tty: true, ..
-        } = self.output
-        {
+        if self.err_supports_color() {
             imp::err_erase_line(self);
             self.needs_clear = false;
         }
@@ -200,14 +206,14 @@ impl Shell {
         T: fmt::Display,
         U: fmt::Display,
     {
-        self.print(&status, Some(&message), Green, true)
+        self.print(&status, Some(&message), &HEADER, true)
     }
 
     pub fn status_header<T>(&mut self, status: T) -> CargoResult<()>
     where
         T: fmt::Display,
     {
-        self.print(&status, None, Cyan, true)
+        self.print(&status, None, &NOTE, true)
     }
 
     /// Shortcut to right-align a status message.
@@ -215,7 +221,7 @@ impl Shell {
         &mut self,
         status: T,
         message: U,
-        color: Color,
+        color: &Style,
     ) -> CargoResult<()>
     where
         T: fmt::Display,
@@ -252,20 +258,20 @@ impl Shell {
             self.err_erase_line();
         }
         self.output
-            .message_stderr(&"error", Some(&message), Red, false)
+            .message_stderr(&"error", Some(&message), &ERROR, false)
     }
 
     /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
-            _ => self.print(&"warning", Some(&message), Yellow, false),
+            _ => self.print(&"warning", Some(&message), &WARN, false),
         }
     }
 
     /// Prints a cyan 'note' message.
     pub fn note<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.print(&"note", Some(&message), Cyan, false)
+        self.print(&"note", Some(&message), &NOTE, false)
     }
 
     /// Updates the verbosity of the shell.
@@ -300,9 +306,10 @@ impl Shell {
                 ),
             };
             *color_choice = cfg;
-            let choice = cfg.to_termcolor_color_choice();
-            *stdout = StandardStream::stdout(choice);
-            *stderr = StandardStream::stderr(choice);
+            let stdout_choice = cfg.to_anstream_color_choice();
+            let stderr_choice = cfg.to_anstream_color_choice();
+            *stdout = AutoStream::new(std::io::stdout(), stdout_choice);
+            *stderr = AutoStream::new(std::io::stderr(), stderr_choice);
         }
         Ok(())
     }
@@ -322,29 +329,55 @@ impl Shell {
     pub fn err_supports_color(&self) -> bool {
         match &self.output {
             ShellOut::Write(_) => false,
-            ShellOut::Stream { stderr, .. } => stderr.supports_color(),
+            ShellOut::Stream { stderr, .. } => supports_color(stderr.current_choice()),
         }
     }
 
-    /// Prints a message and translates ANSI escape code into console colors.
-    pub fn print_ansi(&mut self, message: &[u8]) -> CargoResult<()> {
+    pub fn out_supports_color(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream { stdout, .. } => supports_color(stdout.current_choice()),
+        }
+    }
+
+    /// Write a styled fragment
+    ///
+    /// Caller is responsible for deciding whether [`Shell::verbosity`] is affects output.
+    pub fn write_stdout(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
+        self.output.write_stdout(fragment, color)
+    }
+
+    /// Write a styled fragment
+    ///
+    /// Caller is responsible for deciding whether [`Shell::verbosity`] is affects output.
+    pub fn write_stderr(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
+        self.output.write_stderr(fragment, color)
+    }
+
+    /// Prints a message to stderr and translates ANSI escape code into console colors.
+    pub fn print_ansi_stderr(&mut self, message: &[u8]) -> CargoResult<()> {
         if self.needs_clear {
             self.err_erase_line();
-        }
-        #[cfg(windows)]
-        {
-            if let ShellOut::Stream { stderr, .. } = &mut self.output {
-                ::fwdansi::write_ansi(stderr, message)?;
-                return Ok(());
-            }
         }
         self.err().write_all(message)?;
         Ok(())
     }
 
-    pub fn print_json<T: serde::ser::Serialize>(&mut self, obj: &T) {
-        let encoded = serde_json::to_string(&obj).unwrap();
+    /// Prints a message to stdout and translates ANSI escape code into console colors.
+    pub fn print_ansi_stdout(&mut self, message: &[u8]) -> CargoResult<()> {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
+        self.out().write_all(message)?;
+        Ok(())
+    }
+
+    pub fn print_json<T: serde::ser::Serialize>(&mut self, obj: &T) -> CargoResult<()> {
+        // Path may fail to serialize to JSON ...
+        let encoded = serde_json::to_string(&obj)?;
+        // ... but don't fail due to a closed pipe.
         drop(writeln!(self.out(), "{}", encoded));
+        Ok(())
     }
 }
 
@@ -362,38 +395,46 @@ impl ShellOut {
         &mut self,
         status: &dyn fmt::Display,
         message: Option<&dyn fmt::Display>,
-        color: Color,
+        style: &Style,
         justified: bool,
     ) -> CargoResult<()> {
-        match *self {
-            ShellOut::Stream { ref mut stderr, .. } => {
-                stderr.reset()?;
-                stderr.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
-                if justified {
-                    write!(stderr, "{:>12}", status)?;
-                } else {
-                    write!(stderr, "{}", status)?;
-                    stderr.set_color(ColorSpec::new().set_bold(true))?;
-                    write!(stderr, ":")?;
-                }
-                stderr.reset()?;
-                match message {
-                    Some(message) => writeln!(stderr, " {}", message)?,
-                    None => write!(stderr, " ")?,
-                }
-            }
-            ShellOut::Write(ref mut w) => {
-                if justified {
-                    write!(w, "{:>12}", status)?;
-                } else {
-                    write!(w, "{}:", status)?;
-                }
-                match message {
-                    Some(message) => writeln!(w, " {}", message)?,
-                    None => write!(w, " ")?,
-                }
-            }
+        let style = style.render();
+        let bold = (anstyle::Style::new() | anstyle::Effects::BOLD).render();
+        let reset = anstyle::Reset.render();
+
+        let mut buffer = Vec::new();
+        if justified {
+            write!(&mut buffer, "{style}{status:>12}{reset}")?;
+        } else {
+            write!(&mut buffer, "{style}{status}{reset}{bold}:{reset}")?;
         }
+        match message {
+            Some(message) => writeln!(buffer, " {message}")?,
+            None => write!(buffer, " ")?,
+        }
+        self.stderr().write_all(&buffer)?;
+        Ok(())
+    }
+
+    /// Write a styled fragment
+    fn write_stdout(&mut self, fragment: impl fmt::Display, style: &Style) -> CargoResult<()> {
+        let style = style.render();
+        let reset = anstyle::Reset.render();
+
+        let mut buffer = Vec::new();
+        write!(buffer, "{style}{}{reset}", fragment)?;
+        self.stdout().write_all(&buffer)?;
+        Ok(())
+    }
+
+    /// Write a styled fragment
+    fn write_stderr(&mut self, fragment: impl fmt::Display, style: &Style) -> CargoResult<()> {
+        let style = style.render();
+        let reset = anstyle::Reset.render();
+
+        let mut buffer = Vec::new();
+        write!(buffer, "{style}{}{reset}", fragment)?;
+        self.stderr().write_all(&buffer)?;
         Ok(())
     }
 
@@ -415,19 +456,22 @@ impl ShellOut {
 }
 
 impl ColorChoice {
-    /// Converts our color choice to termcolor's version.
-    fn to_termcolor_color_choice(self) -> termcolor::ColorChoice {
+    /// Converts our color choice to anstream's version.
+    fn to_anstream_color_choice(self) -> anstream::ColorChoice {
         match self {
-            ColorChoice::Always => termcolor::ColorChoice::Always,
-            ColorChoice::Never => termcolor::ColorChoice::Never,
-            ColorChoice::CargoAuto => {
-                if atty::is(atty::Stream::Stderr) {
-                    termcolor::ColorChoice::Auto
-                } else {
-                    termcolor::ColorChoice::Never
-                }
-            }
+            ColorChoice::Always => anstream::ColorChoice::Always,
+            ColorChoice::Never => anstream::ColorChoice::Never,
+            ColorChoice::CargoAuto => anstream::ColorChoice::Auto,
         }
+    }
+}
+
+fn supports_color(choice: anstream::ColorChoice) -> bool {
+    match choice {
+        anstream::ColorChoice::Always
+        | anstream::ColorChoice::AlwaysAnsi
+        | anstream::ColorChoice::Auto => true,
+        anstream::ColorChoice::Never => false,
     }
 }
 
@@ -463,12 +507,17 @@ mod imp {
 #[cfg(windows)]
 mod imp {
     use std::{cmp, mem, ptr};
-    use winapi::um::fileapi::*;
-    use winapi::um::handleapi::*;
-    use winapi::um::processenv::*;
-    use winapi::um::winbase::*;
-    use winapi::um::wincon::*;
-    use winapi::um::winnt::*;
+
+    use windows_sys::core::PCSTR;
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
+    use windows_sys::Win32::Storage::FileSystem::{
+        CreateFileA, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+    };
+    use windows_sys::Win32::System::Console::{
+        GetConsoleScreenBufferInfo, GetStdHandle, CONSOLE_SCREEN_BUFFER_INFO, STD_ERROR_HANDLE,
+    };
 
     pub(super) use super::{default_err_erase_line as err_erase_line, TtyWidth};
 
@@ -484,13 +533,13 @@ mod imp {
             // INVALID_HANDLE_VALUE. Use an alternate method which works
             // in that case as well.
             let h = CreateFileA(
-                "CONOUT$\0".as_ptr() as *const CHAR,
+                "CONOUT$\0".as_ptr() as PCSTR,
                 GENERIC_READ | GENERIC_WRITE,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 ptr::null_mut(),
                 OPEN_EXISTING,
                 0,
-                ptr::null_mut(),
+                0,
             );
             if h == INVALID_HANDLE_VALUE {
                 return TtyWidth::NoTty;

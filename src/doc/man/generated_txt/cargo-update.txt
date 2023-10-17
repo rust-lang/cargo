@@ -1,10 +1,10 @@
 CARGO-UPDATE(1)
 
 NAME
-       cargo-update - Update dependencies as recorded in the local lock file
+       cargo-update — Update dependencies as recorded in the local lock file
 
 SYNOPSIS
-       cargo update [options]
+       cargo update [options] spec
 
 DESCRIPTION
        This command will update dependencies in the Cargo.lock file to the
@@ -13,47 +13,50 @@ DESCRIPTION
 
 OPTIONS
    Update Options
-       -p spec..., --package spec...
+       spec…
            Update only the specified packages. This flag may be specified
            multiple times. See cargo-pkgid(1) for the SPEC format.
 
-           If packages are specified with the -p flag, then a conservative
-           update of the lockfile will be performed. This means that only the
-           dependency specified by SPEC will be updated. Its transitive
-           dependencies will be updated only if SPEC cannot be updated without
-           updating dependencies. All other dependencies will remain locked at
-           their currently recorded versions.
+           If packages are specified with spec, then a conservative update of
+           the lockfile will be performed. This means that only the dependency
+           specified by SPEC will be updated. Its transitive dependencies will
+           be updated only if SPEC cannot be updated without updating
+           dependencies. All other dependencies will remain locked at their
+           currently recorded versions.
 
-           If -p is not specified, all dependencies are updated.
+           If spec is not specified, all dependencies are updated.
 
-       --aggressive
-           When used with -p, dependencies of spec are forced to update as
+       --recursive
+           When used with spec, dependencies of spec are forced to update as
            well. Cannot be used with --precise.
 
        --precise precise
-           When used with -p, allows you to specify a specific version number
+           When used with spec, allows you to specify a specific version number
            to set the package to. If the package comes from a git repository,
            this can be a git revision (such as a SHA hash or tag).
 
        -w, --workspace
            Attempt to update only packages defined in the workspace. Other
-           packages are updated only if they don't already exist in the
-           lockfile. This option is useful for updating Cargo.lock after you've
-           changed version numbers in Cargo.toml.
+           packages are updated only if they don’t already exist in the
+           lockfile. This option is useful for updating Cargo.lock after
+           you’ve changed version numbers in Cargo.toml.
 
        --dry-run
-           Displays what would be updated, but doesn't actually write the
+           Displays what would be updated, but doesn’t actually write the
            lockfile.
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -107,6 +110,27 @@ OPTIONS
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
 
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
+
        -h, --help
            Prints help information.
 
@@ -131,11 +155,11 @@ EXAMPLES
 
        2. Update only specific dependencies:
 
-              cargo update -p foo -p bar
+              cargo update foo bar
 
        3. Set a specific dependency to a specific version:
 
-              cargo update -p foo --precise 1.2.3
+              cargo update foo --precise 1.2.3
 
 SEE ALSO
        cargo(1), cargo-generate-lockfile(1)

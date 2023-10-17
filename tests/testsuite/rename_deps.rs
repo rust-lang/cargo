@@ -2,7 +2,7 @@
 
 use cargo_test_support::git;
 use cargo_test_support::paths;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
@@ -14,7 +14,7 @@ fn rename_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -36,7 +36,7 @@ fn rename_with_different_names() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -49,7 +49,7 @@ fn rename_with_different_names() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 authors = []
@@ -66,6 +66,7 @@ fn rename_with_different_names() {
 
 #[cargo_test]
 fn lots_of_names() {
+    registry::alt_init();
     Package::new("foo", "0.1.0")
         .file("src/lib.rs", "pub fn foo1() {}")
         .publish();
@@ -243,7 +244,7 @@ fn can_run_doc_tests() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 
@@ -265,7 +266,7 @@ fn can_run_doc_tests() {
         .with_stderr_contains(
             "\
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]--test [CWD]/src/lib.rs \
+[RUNNING] `rustdoc [..]--test [..]src/lib.rs \
         [..] \
         --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib \
         --extern baz=[CWD]/target/debug/deps/libbar-[..].rlib \

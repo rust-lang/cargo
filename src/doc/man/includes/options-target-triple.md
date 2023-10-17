@@ -1,8 +1,11 @@
 {{#option "`--target` _triple_"}}
-{{actionverb}} for the given architecture. The default is the host
-architecture. The general format of the triple is
+{{actionverb}} for the given architecture.
+{{~#if target-default-to-all-arch}} The default is all architectures.
+{{~else}} The default is the host architecture.
+{{~/if}} The general format of the triple is
 `<arch><sub>-<vendor>-<sys>-<abi>`. Run `rustc --print target-list` for a
 list of supported targets.
+{{~#if multitarget }} This flag may be specified multiple times. {{~/if}}
 
 This may also be specified with the `build.target`
 [config value](../reference/config.html).

@@ -10,6 +10,7 @@
 
 use crate::util::config::Config;
 use serde::de;
+use std::cmp::Ordering;
 use std::fmt;
 use std::marker;
 use std::mem;
@@ -59,7 +60,26 @@ pub enum Definition {
     /// Defined in an environment variable, includes the environment key.
     Environment(String),
     /// Passed in on the command line.
-    Cli,
+    /// A path is attached when the config value is a path to a config file.
+    Cli(Option<PathBuf>),
+}
+
+impl PartialOrd for Definition {
+    fn partial_cmp(&self, other: &Definition) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Definition {
+    fn cmp(&self, other: &Definition) -> Ordering {
+        if mem::discriminant(self) == mem::discriminant(other) {
+            Ordering::Equal
+        } else if self.is_higher_priority(other) {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    }
 }
 
 impl Definition {
@@ -69,8 +89,8 @@ impl Definition {
     /// CLI and env are the current working directory.
     pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
         match self {
-            Definition::Path(p) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli => config.cwd(),
+            Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().parent().unwrap(),
+            Definition::Environment(_) | Definition::Cli(None) => config.cwd(),
         }
     }
 
@@ -78,12 +98,12 @@ impl Definition {
     ///
     /// CLI is preferred over environment, which is preferred over files.
     pub fn is_higher_priority(&self, other: &Definition) -> bool {
-        match (self, other) {
-            (Definition::Cli, Definition::Environment(_)) => true,
-            (Definition::Cli, Definition::Path(_)) => true,
-            (Definition::Environment(_), Definition::Path(_)) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Definition::Cli(_), Definition::Environment(_))
+                | (Definition::Cli(_), Definition::Path(_))
+                | (Definition::Environment(_), Definition::Path(_))
+        )
     }
 }
 
@@ -100,9 +120,9 @@ impl PartialEq for Definition {
 impl fmt::Display for Definition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Definition::Path(p) => p.display().fmt(f),
+            Definition::Path(p) | Definition::Cli(Some(p)) => p.display().fmt(f),
             Definition::Environment(key) => write!(f, "environment variable `{}`", key),
-            Definition::Cli => write!(f, "--config cli option"),
+            Definition::Cli(None) => write!(f, "--config cli option"),
         }
     }
 }
@@ -218,8 +238,11 @@ impl<'de> de::Deserialize<'de> for Definition {
         match discr {
             0 => Ok(Definition::Path(value.into())),
             1 => Ok(Definition::Environment(value)),
-            2 => Ok(Definition::Cli),
-            _ => panic!("unexpected discriminant {} value {}", discr, value),
+            2 => {
+                let path = (value.len() > 0).then_some(value.into());
+                Ok(Definition::Cli(path))
+            }
+            _ => panic!("unexpected discriminant {discr} value {value}"),
         }
     }
 }

@@ -1,0 +1,28 @@
+[package]
+name = "benchsuite"
+version = "0.0.0"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage = "https://github.com/rust-lang/cargo"
+repository = "https://github.com/rust-lang/cargo"
+description = "Benchmarking suite for Cargo."
+publish = false
+
+[dependencies]
+cargo.workspace = true
+criterion.workspace = true
+flate2.workspace = true
+tar.workspace = true
+url.workspace = true
+
+[lib]
+bench = false
+
+[[bench]]
+name = "resolve"
+harness = false
+
+[[bench]]
+name = "workspace_initialization"
+harness = false

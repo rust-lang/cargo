@@ -2,18 +2,20 @@ use crate::command_prelude::*;
 
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("check")
         // subcommand aliases are handled in aliased_command()
         // .alias("c")
         .about("Check a local package and all of its dependencies for errors")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg_ignore_rust_version()
+        .arg_future_incompat_report()
+        .arg_message_format()
+        .arg_quiet()
         .arg_package_spec(
             "Package(s) to check",
             "Check all packages in the workspace",
             "Exclude packages from the check",
         )
-        .arg_jobs()
         .arg_targets_all(
             "Check only this package's library",
             "Check only the specified binary",
@@ -26,33 +28,30 @@ pub fn cli() -> App {
             "Check all benches",
             "Check all targets",
         )
+        .arg_features()
+        .arg_parallel()
         .arg_release("Check artifacts in release mode, with optimizations")
         .arg_profile("Check artifacts with the specified profile")
-        .arg_features()
         .arg_target_triple("Check for the target triple")
         .arg_target_dir()
-        .arg_manifest_path()
-        .arg_message_format()
         .arg_unit_graph()
-        .after_help("Run `cargo help check` for more detailed information.\n")
+        .arg_timings()
+        .arg_manifest_path()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help check</>` for more detailed information.\n"
+        ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
-    let test = match args.value_of("profile") {
-        Some("test") => true,
-        None => false,
-        Some(profile) => {
-            let err = anyhow::format_err!(
-                "unknown profile: `{}`, only `test` is \
-                 currently supported",
-                profile
-            );
-            return Err(CliError::new(err, 101));
-        }
-    };
+    // This is a legacy behavior that causes `cargo check` to pass `--test`.
+    let test = matches!(
+        args.get_one::<String>("profile").map(String::as_str),
+        Some("test")
+    );
     let mode = CompileMode::Check { test };
-    let compile_opts = args.compile_options(config, mode, Some(&ws), ProfileChecking::Unchecked)?;
+    let compile_opts =
+        args.compile_options(config, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
     ops::compile(&ws, &compile_opts)?;
     Ok(())

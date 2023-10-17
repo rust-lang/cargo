@@ -7,8 +7,10 @@ result of the resolution is stored in the `Cargo.lock` file which "locks" the
 dependencies to specific versions, and keeps them fixed over time.
 
 The resolver attempts to unify common dependencies while considering possibly
-conflicting requirements. The sections below provide some details on how these
-constraints are handled, and how to work with the resolver.
+conflicting requirements. It turns out, however, that in many cases there is no
+single "best" dependency resolution, and so the resolver must use heuristics to
+choose a preferred solution. The sections below provide some details on how
+requirements are handled, and how to work with the resolver.
 
 See the chapter [Specifying Dependencies] for more details about how
 dependency requirements are specified.
@@ -37,17 +39,18 @@ with leading zeros. For example, `0.1.0` and `0.1.2` are compatible, but
 `0.1.0` and `0.2.0` are not. Similarly, `0.0.1` and `0.0.2` are not
 compatible.
 
-As a quick refresher, the *version requirement* syntax Cargo uses for
+As a quick refresher, the
+[*version requirement* syntax][Specifying Dependencies] Cargo uses for
 dependencies is:
 
 Requirement | Example | Equivalence | Description
---|--------|--|-------------
+------------|---------|-------------|-------------
 Caret | `1.2.3` or `^1.2.3` | <code>>=1.2.3,&nbsp;<2.0.0</code> | Any SemVer-compatible version of at least the given value.
 Tilde | `~1.2` | <code>>=1.2.0,&nbsp;<1.3.0</code> | Minimum version, with restricted compatibility range.
 Wildcard | `1.*` | <code>>=1.0.0,&nbsp;<2.0.0</code> | Any version in the `*` position.
 Equals | `=1.2.3` | <code>=1.2.3</code> | Exactly the specified version only.
 Comparison | `>1.1` | <code>>=1.2.0</code> | Naive numeric comparison of specified digits.
-Compound | <code>>=1.2,&nbsp;<1.5</code> | <code>>1.2.0,&nbsp;<1.5.0</code> | Multiple requirements that must be simultaneously satisfied.
+Compound | <code>>=1.2,&nbsp;<1.5</code> | <code>>=1.2.0,&nbsp;<1.5.0</code> | Multiple requirements that must be simultaneously satisfied.
 
 When multiple packages specify a dependency for a common package, the resolver
 attempts to ensure that they use the same version of that common package, as
@@ -179,11 +182,7 @@ release. Non-numeric components are compared lexicographically.
 SemVer has the concept of "version metadata" with a plus in the version, such
 as `1.0.0+21AF26D3`. This metadata is usually ignored, and should not be used
 in a version requirement. You should never publish multiple versions that
-differ only in the metadata tag (note, this is a [known issue] with
-[crates.io] that currently permits this).
-
-[known issue]: https://github.com/rust-lang/crates.io/issues/1059
-[crates.io]: https://crates.io/
+differ only in the metadata tag.
 
 ## Other constraints
 
@@ -193,11 +192,13 @@ the other constraints that can affect resolution.
 
 ### Features
 
-The resolver resolves the graph as-if the [features] of all [workspace]
-members are enabled. This ensures that any optional dependencies are available
-and properly resolved with the rest of the graph when features are added or
-removed with the `--features` command-line flag. The actual features used when
-*compiling* a crate will depend on the features enabled on the command-line.
+For the purpose of generating `Cargo.lock`, the resolver builds the dependency
+graph as-if all [features] of all [workspace] members are enabled. This
+ensures that any optional dependencies are available and properly resolved
+with the rest of the graph when features are added or removed with the
+[`--features` command-line flag](features.md#command-line-feature-options).
+The resolver runs a second time to determine the actual features used when
+*compiling* a crate, based on the features selected on the command-line.
 
 Dependencies are resolved with the union of all features enabled on them. For
 example, if one package depends on the [`im`] package with the [`serde`
@@ -206,6 +207,12 @@ dependency] enabled, then `im` will be built with both features enabled, and
 the `serde` and `rayon` crates will be included in the resolve graph. If no
 packages depend on `im` with those features, then those optional dependencies
 will be ignored, and they will not affect resolution.
+
+When building multiple packages in a workspace (such as with `--workspace` or
+multiple `-p` flags), the features of the dependencies of all of those
+packages are unified. If you have a circumstance where you want to avoid that
+unification for different workspace members, you will need to build them via
+separate `cargo` invocations.
 
 The resolver will skip over versions of packages that are missing required
 features. For example, if a package depends on version `^1` of [`regex`] with
@@ -226,6 +233,69 @@ optional dependency].
 [features]: features.md
 [removing an optional dependency]: semver.md#cargo-remove-opt-dep
 [workspace]: workspaces.md
+
+#### Feature resolver version 2
+
+When `resolver = "2"` is specified in `Cargo.toml` (see [resolver
+versions](#resolver-versions) below), a different feature resolver is used
+which uses a different algorithm for unifying features. The version `"1"`
+resolver will unify features for a package no matter where it is specified.
+The version `"2"` resolver will avoid unifying features in the following
+situations:
+
+* Features for target-specific dependencies are not enabled if the target is
+  not currently being built. For example:
+
+  ```toml
+  [dependencies.common]
+  version = "1.0"
+  features = ["f1"]
+
+  [target.'cfg(windows)'.dependencies.common]
+  version = "1.0"
+  features = ["f2"]
+  ```
+
+  When building this example for a non-Windows platform, the `f2` feature will
+  *not* be enabled.
+
+* Features enabled on [build-dependencies] or proc-macros will not be unified
+  when those same dependencies are used as a normal dependency. For example:
+
+  ```toml
+  [dependencies]
+  log = "0.4"
+
+  [build-dependencies]
+  log = {version = "0.4", features=['std']}
+  ```
+
+  When building the build script, the `log` crate will be built with the `std`
+  feature. When building the library of your package, it will not enable the
+  feature.
+
+* Features enabled on [dev-dependencies] will not be unified when those same
+  dependencies are used as a normal dependency, unless those dev-dependencies
+  are currently being built. For example:
+
+  ```toml
+  [dependencies]
+  serde = {version = "1.0", default-features = false}
+
+  [dev-dependencies]
+  serde = {version = "1.0", features = ["std"]}
+  ```
+
+  In this example, the library will normally link against `serde` without the
+  `std` feature. However, when built as a test or example, it will include the
+  `std` feature. For example, `cargo test` or `cargo build --all-targets` will
+  unify these features. Note that dev-dependencies in dependencies are always
+  ignored, this is only relevant for the top-level package or workspace
+  members.
+
+[build-dependencies]: specifying-dependencies.md#build-dependencies
+[dev-dependencies]: specifying-dependencies.md#development-dependencies
+[resolver-field]: features.md#resolver-versions
 
 ### `links`
 
@@ -272,7 +342,7 @@ instead.
 [`cargo update`] can be used to update the entries in `Cargo.lock` when new
 versions are published. Without any options, it will attempt to update all
 packages in the lock file. The `-p` flag can be used to target the update for
-a specific package, and other flags such as `--aggressive` or `--precise` can
+a specific package, and other flags such as `--recursive` or `--precise` can
 be used to control how versions are selected.
 
 [`cargo build`]: ../commands/cargo-build.md
@@ -325,6 +395,40 @@ types.
 If possible, try to split your package into multiple packages and restructure
 it so that it remains strictly acyclic.
 
+## Resolver versions
+
+A different feature resolver algorithm can be used by specifying the resolver
+version in `Cargo.toml` like this:
+
+```toml
+[package]
+name = "my-package"
+version = "1.0.0"
+resolver = "2"
+```
+
+The version `"1"` resolver is the original resolver that shipped with Cargo up to version 1.50.
+The default is `"2"` if the root package specifies [`edition = "2021"`](manifest.md#the-edition-field) or a newer edition.
+Otherwise the default is `"1"`.
+
+The version `"2"` resolver introduces changes in [feature
+unification](#features). See the [features chapter][features-2] for more
+details.
+
+The resolver is a global option that affects the entire workspace. The
+`resolver` version in dependencies is ignored, only the value in the top-level
+package will be used. If using a [virtual workspace], the version should be
+specified in the `[workspace]` table, for example:
+
+```toml
+[workspace]
+members = ["member1", "member2"]
+resolver = "2"
+```
+
+[virtual workspace]: workspaces.md#virtual-workspace
+[features-2]: features.md#feature-resolver-version-2
+
 ## Recommendations
 
 The following are some recommendations for setting the version within your
@@ -360,10 +464,10 @@ situations may require specifying unusual requirements.
   If you fail to do this, it may not be immediately obvious because Cargo can
   opportunistically choose the newest version when you run a blanket `cargo
   update`. However, if another user depends on your library, and runs `cargo
-  update -p your-library`, it will *not* automatically update "bar" if it is
+  update your-library`, it will *not* automatically update "bar" if it is
   locked in their `Cargo.lock`. It will only update "bar" in that situation if
   the dependency declaration is also updated. Failure to do so can cause
-  confusing build errors for the user using `cargo update -p`.
+  confusing build errors for the user using `cargo update your-library`.
 * If two packages are tightly coupled, then an `=` dependency requirement may
   help ensure that they stay in sync. For example, a library with a companion
   proc-macro library will sometimes make assumptions between the two libraries
@@ -378,11 +482,41 @@ are too loose, it may be possible for new versions to be published that will
 break the build.
 
 [SemVer guidelines]: semver.md
+[crates.io]: https://crates.io/
 
 ## Troubleshooting
 
 The following illustrates some problems you may experience, and some possible
 solutions.
+
+### Unexpected dependency duplication
+
+The resolver algorithm may converge on a solution that includes two copies of a
+dependency when one would suffice. For example:
+
+```toml
+# Package A
+[dependencies]
+rand = "0.7"
+
+# Package B
+[dependencies]
+rand = ">=0.6"  # note: open requirements such as this are discouraged
+```
+
+In this example, Cargo may build two copies of the `rand` crate, even though a
+single copy at version `0.7.3` would meet all requirements. This is because the
+resolver's algorithm favors building the latest available version of `rand` for
+Package B, which is `0.8.5` at the time of this writing, and that is
+incompatible with Package A's specification. The resolver's algorithm does not
+currently attempt to "deduplicate" in this situation.
+
+The use of open-ended version requirements like `>=0.6` is discouraged in Cargo.
+But, if you run into this situation, the [`cargo update`] command with the
+`--precise` flag can be used to manually remove such duplications.
+
+[`cargo update`]: ../commands/cargo-update.md
+
 
 ### SemVer-breaking patch release breaks the build
 

@@ -1,4 +1,4 @@
-## Source Replacement
+# Source Replacement
 
 This document is about replacing the crate index. You can read about overriding
 dependencies in the [overriding dependencies] section of this
@@ -8,11 +8,11 @@ A *source* is a provider that contains crates that may be included as
 dependencies for a package. Cargo supports the ability to **replace one source
 with another** to express strategies such as:
 
-* Vendoring - custom sources can be defined which represent crates on the local
+* Vendoring --- custom sources can be defined which represent crates on the local
   filesystem. These sources are subsets of the source that they're replacing and
   can be checked into packages if necessary.
 
-* Mirroring - sources can be replaced with an equivalent version which acts as a
+* Mirroring --- sources can be replaced with an equivalent version which acts as a
   cache for crates.io itself.
 
 Cargo has a core assumption about source replacement that the source code is
@@ -26,10 +26,15 @@ dependencies through the usage of [the `[patch]` key][overriding
 dependencies], and private registry support is described in [the Registries
 chapter][registries].
 
+When using source replacement, running commands like `cargo publish` that need to
+contact the registry require passing the `--registry` option. This helps avoid
+any ambiguity about which registry to contact, and will use the authentication
+token for the specified registry.
+
 [overriding dependencies]: overriding-dependencies.md
 [registries]: registries.md
 
-### Configuration
+## Configuration
 
 Configuration of replacement sources is done through [`.cargo/config.toml`][config]
 and the full set of available keys are:
@@ -50,6 +55,9 @@ directory = "vendor"
 # The crates.io default source for crates is available under the name
 # "crates-io", and here we use the `replace-with` key to indicate that it's
 # replaced with our source above.
+#
+# The `replace-with` key can also reference an alternative registry name
+# defined in the `[registries]` table.
 [source.crates-io]
 replace-with = "my-vendor-source"
 
@@ -74,7 +82,7 @@ git = "https://example.com/path/to/repo"
 
 [config]: config.md
 
-### Registry Sources
+## Registry Sources
 
 A "registry source" is one that is the same as crates.io itself. That is, it has
 an index served in a git repository which matches the format of the
@@ -84,7 +92,7 @@ then has configuration indicating where to download crates from.
 Currently there is not an already-available project for setting up a mirror of
 crates.io. Stay tuned though!
 
-### Local Registry Sources
+## Local Registry Sources
 
 A "local registry source" is intended to be a subset of another registry
 source, but available on the local filesystem (aka vendoring). Local registries
@@ -103,11 +111,11 @@ Local registries are contained within one directory and contain a number of
 the same format as the crates.io-index project (populated with just entries for
 the crates that are present).
 
-### Directory Sources
+## Directory Sources
 
 A "directory source" is similar to a local registry source where it contains a
 number of crates available on the local filesystem, suitable for vendoring
-dependencies. Directory sources are primarily managed the `cargo vendor`
+dependencies. Directory sources are primarily managed by the `cargo vendor`
 subcommand.
 
 Directory sources are distinct from local registries though in that they contain

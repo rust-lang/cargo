@@ -32,6 +32,9 @@ mod imp {
         // when-cargo-is-killed-subprocesses-are-also-killed, but that requires
         // one cargo spawned to become its own session leader, so we do that
         // here.
+        //
+        // ALLOWED: For testing cargo itself only.
+        #[allow(clippy::disallowed_methods)]
         if env::var("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE").is_ok() {
             libc::setsid();
         }
@@ -44,15 +47,20 @@ mod imp {
     use std::io;
     use std::mem;
     use std::ptr;
+    use std::ptr::addr_of;
 
-    use log::info;
+    use tracing::info;
 
-    use winapi::shared::minwindef::*;
-    use winapi::um::handleapi::*;
-    use winapi::um::jobapi2::*;
-    use winapi::um::processthreadsapi::*;
-    use winapi::um::winnt::HANDLE;
-    use winapi::um::winnt::*;
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::System::JobObjects::AssignProcessToJobObject;
+    use windows_sys::Win32::System::JobObjects::CreateJobObjectW;
+    use windows_sys::Win32::System::JobObjects::JobObjectExtendedLimitInformation;
+    use windows_sys::Win32::System::JobObjects::SetInformationJobObject;
+    use windows_sys::Win32::System::JobObjects::JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
+    use windows_sys::Win32::System::JobObjects::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    use windows_sys::Win32::System::Threading::GetCurrentProcess;
 
     pub struct Setup {
         job: Handle,
@@ -77,7 +85,7 @@ mod imp {
         // we're otherwise part of someone else's job object in this case.
 
         let job = CreateJobObjectW(ptr::null_mut(), ptr::null());
-        if job.is_null() {
+        if job == INVALID_HANDLE_VALUE {
             return None;
         }
         let job = Handle { inner: job };
@@ -92,8 +100,8 @@ mod imp {
         let r = SetInformationJobObject(
             job.inner,
             JobObjectExtendedLimitInformation,
-            &mut info as *mut _ as LPVOID,
-            mem::size_of_val(&info) as DWORD,
+            addr_of!(info) as *const _,
+            mem::size_of_val(&info) as u32,
         );
         if r == 0 {
             return None;
@@ -116,13 +124,13 @@ mod imp {
             // processes. The destructor here configures our job object to
             // **not** kill everything on close, then closes the job object.
             unsafe {
-                let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
+                let info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
                 info = mem::zeroed();
                 let r = SetInformationJobObject(
                     self.job.inner,
                     JobObjectExtendedLimitInformation,
-                    &mut info as *mut _ as LPVOID,
-                    mem::size_of_val(&info) as DWORD,
+                    addr_of!(info) as *const _,
+                    mem::size_of_val(&info) as u32,
                 );
                 if r == 0 {
                     info!("failed to configure job object to defaults: {}", last_err());

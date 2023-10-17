@@ -177,7 +177,7 @@ fn complicated() {
         )
         .file("build.rs", "fn main() { dep_build::foo() }")
         .file(
-            "src/main.rs",
+            "src/bin/foo-bin.rs",
             "#[dep_proc_macro::foo] fn main() { dep_normal::foo() }",
         )
         .file(
@@ -206,7 +206,9 @@ fn complicated() {
         .with_stderr_contains(
             "[..]`rustc[..]--crate-name dep_proc_macro [..]-C embed-bitcode=no[..]`",
         )
-        .with_stderr_contains("[..]`rustc[..]--crate-name test [..]--crate-type bin[..]-C lto[..]`")
+        .with_stderr_contains(
+            "[..]`rustc[..]--crate-name foo_bin [..]--crate-type bin[..]-C lto[..]`",
+        )
         .with_stderr_contains(
             "[..]`rustc[..]--crate-name test [..]--crate-type cdylib[..]-C lto[..]`",
         )
@@ -254,9 +256,9 @@ fn off_in_manifest_works() {
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C embed-bitcode=no[..]
+[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C lto=off -C embed-bitcode=no[..]
 [COMPILING] test [..]
-[RUNNING] `rustc --crate-name test [..]--crate-type lib [..]-C embed-bitcode=no[..]
+[RUNNING] `rustc --crate-name test [..]--crate-type lib [..]-C lto=off -C embed-bitcode=no[..]
 [RUNNING] `rustc --crate-name test src/main.rs [..]--crate-type bin [..]-C lto=off[..]
 [FINISHED] [..]
 ",
@@ -351,6 +353,15 @@ fn test_all_and_bench() {
         .run();
 }
 
+/// Basic setup:
+///
+/// foo v0.0.0
+/// ├── bar v0.0.0
+/// │   ├── registry v0.0.1
+/// │   └── registry-shared v0.0.1
+/// └── registry-shared v0.0.1
+///
+/// Where `bar` will have the given crate types.
 fn project_with_dep(crate_types: &str) -> Project {
     Package::new("registry", "0.0.1")
         .file("src/lib.rs", r#"pub fn foo() { println!("registry"); }"#)
@@ -419,6 +430,10 @@ fn project_with_dep(crate_types: &str) -> Project {
         .build()
 }
 
+/// Helper for checking which LTO behavior is used for a specific crate.
+///
+/// `krate_info` is extra compiler flags used to distinguish this if the same
+/// crate name is being built multiple times.
 fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto) {
     let stderr = std::str::from_utf8(&output.stderr).unwrap();
     let mut matches = stderr.lines().filter(|line| {
@@ -438,10 +453,8 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
             krate, krate_info, line, line2, stderr
         );
     }
-    let actual_lto = if let Some(index) = line.find("-C lto=") {
-        let s = &line[index..];
-        let end = s.find(' ').unwrap();
-        let mode = &line[index..index + end];
+    let actual_lto = if let Some((_, line)) = line.split_once("-C lto=") {
+        let mode = line.splitn(2, ' ').next().unwrap();
         if mode == "off" {
             Lto::Off
         } else {
@@ -467,18 +480,22 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
 fn cdylib_and_rlib() {
     let p = project_with_dep("'cdylib', 'rlib'");
     let output = p.cargo("build --release -v").exec_with_output().unwrap();
+    // `registry` is ObjectAndBitcode because it needs Object for the
+    // rlib, and Bitcode for the cdylib (which doesn't support LTO).
     verify_lto(
         &output,
         "registry",
         "--crate-type lib",
         Lto::ObjectAndBitcode,
     );
+    // Same as `registry`
     verify_lto(
         &output,
         "registry_shared",
         "--crate-type lib",
         Lto::ObjectAndBitcode,
     );
+    // Same as `registry`
     verify_lto(
         &output,
         "bar",
@@ -493,8 +510,8 @@ fn cdylib_and_rlib() {
 [FRESH] registry-shared v0.0.1
 [FRESH] bar v0.0.0 [..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]-C embed-bitcode=no --test[..]
-[RUNNING] `rustc --crate-name a [..]-C embed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name foo [..]-C lto [..]--test[..]
+[RUNNING] `rustc --crate-name a [..]-C lto [..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [RUNNING] [..]
@@ -514,19 +531,16 @@ fn cdylib_and_rlib() {
     p.cargo("test --release -v --manifest-path bar/Cargo.toml")
         .with_stderr_unordered(
             "\
-[COMPILING] registry v0.0.1
-[COMPILING] registry-shared v0.0.1
-[RUNNING] `rustc --crate-name registry [..]-C embed-bitcode=no[..]
-[RUNNING] `rustc --crate-name registry_shared [..]-C embed-bitcode=no[..]
+[FRESH] registry-shared v0.0.1
+[FRESH] registry v0.0.1
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar [..]--crate-type cdylib --crate-type rlib [..]-C embed-bitcode=no[..]
-[RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no --test[..]
-[RUNNING] `rustc --crate-name b [..]-C embed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name bar [..]-C lto[..]--test[..]
+[RUNNING] `rustc --crate-name b [..]-C lto[..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]target/release/deps/bar-[..]
 [RUNNING] [..]target/release/deps/b-[..]
 [DOCTEST] bar
-[RUNNING] `rustdoc --crate-type cdylib --crate-type rlib --test [..]-C embed-bitcode=no[..]
+[RUNNING] `rustdoc --crate-type cdylib --crate-type rlib --crate-name bar --test [..]-C lto[..]
 ",
         )
         .run();
@@ -536,15 +550,23 @@ fn cdylib_and_rlib() {
 fn dylib() {
     let p = project_with_dep("'dylib'");
     let output = p.cargo("build --release -v").exec_with_output().unwrap();
+    // `registry` is OnlyObject because rustc doesn't support LTO with dylibs.
     verify_lto(&output, "registry", "--crate-type lib", Lto::OnlyObject);
+    // `registry_shared` is both because it is needed by both bar (Object) and
+    // foo (Bitcode for LTO).
     verify_lto(
         &output,
         "registry_shared",
         "--crate-type lib",
         Lto::ObjectAndBitcode,
     );
+    // `bar` is OnlyObject because rustc doesn't support LTO with dylibs.
     verify_lto(&output, "bar", "--crate-type dylib", Lto::OnlyObject);
+    // `foo` is LTO because it is a binary, and the profile specifies `lto=true`.
     verify_lto(&output, "foo", "--crate-type bin", Lto::Run(None));
+    // `cargo test` should not rebuild dependencies. It builds the test
+    // executables with `lto=true` because the tests are built with the
+    // `--release` flag.
     p.cargo("test --release -v")
         .with_stderr_unordered(
             "\
@@ -552,34 +574,48 @@ fn dylib() {
 [FRESH] registry-shared v0.0.1
 [FRESH] bar v0.0.0 [..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]-C embed-bitcode=no --test[..]
-[RUNNING] `rustc --crate-name a [..]-C embed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name foo [..]-C lto [..]--test[..]
+[RUNNING] `rustc --crate-name a [..]-C lto [..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [RUNNING] [..]
 ",
         )
         .run();
+    // Building just `bar` causes `registry-shared` to get rebuilt because it
+    // switches to OnlyObject because it is now only being used with a dylib
+    // which does not support LTO.
+    //
+    // `bar` gets rebuilt because `registry_shared` got rebuilt.
     p.cargo("build --release -v --manifest-path bar/Cargo.toml")
         .with_stderr_unordered(
             "\
 [COMPILING] registry-shared v0.0.1
 [FRESH] registry v0.0.1
 [RUNNING] `rustc --crate-name registry_shared [..]-C embed-bitcode=no[..]
+[DIRTY] bar v0.0.0 ([..]): dependency info changed
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..]--crate-type dylib [..]-C embed-bitcode=no[..]
 [FINISHED] [..]
 ",
         )
         .run();
+    // Testing just `bar` causes `registry` to get rebuilt because it switches
+    // to needing both Object (for the `bar` dylib) and Bitcode (for the test
+    // built with LTO).
+    //
+    // `bar` the dylib gets rebuilt because `registry` got rebuilt.
     p.cargo("test --release -v --manifest-path bar/Cargo.toml")
         .with_stderr_unordered(
             "\
 [FRESH] registry-shared v0.0.1
-[FRESH] registry v0.0.1
+[COMPILING] registry v0.0.1
+[RUNNING] `rustc --crate-name registry [..]
+[DIRTY] bar v0.0.0 ([..]): dependency info changed
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no --test[..]
-[RUNNING] `rustc --crate-name b [..]-C embed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name bar [..]--crate-type dylib [..]-C embed-bitcode=no[..]
+[RUNNING] `rustc --crate-name bar [..]-C lto [..]--test[..]
+[RUNNING] `rustc --crate-name b [..]-C lto [..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [RUNNING] [..]
@@ -589,6 +625,11 @@ fn dylib() {
 }
 
 #[cargo_test]
+// This is currently broken on windows-gnu, see https://github.com/rust-lang/rust/issues/109797
+#[cfg_attr(
+    all(target_os = "windows", target_env = "gnu"),
+    ignore = "windows-gnu not working"
+)]
 fn test_profile() {
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "pub fn foo() -> i32 { 123 } ")
@@ -641,59 +682,6 @@ fn test_profile() {
 }
 
 #[cargo_test]
-fn dev_profile() {
-    // Mixing dev=LTO with test=not-LTO
-    Package::new("bar", "0.0.1")
-        .file("src/lib.rs", "pub fn foo() -> i32 { 123 } ")
-        .publish();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2018"
-
-                [profile.dev]
-                lto = 'thin'
-
-                [dependencies]
-                bar = "*"
-            "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                #[test]
-                fn t1() {
-                    assert_eq!(123, bar::foo());
-                }
-            "#,
-        )
-        .build();
-
-    p.cargo("test -v")
-        // unordered because the two `foo` builds start in parallel
-        .with_stderr_unordered("\
-[UPDATING] [..]
-[DOWNLOADING] [..]
-[DOWNLOADED] [..]
-[COMPILING] bar v0.0.1
-[RUNNING] `rustc --crate-name bar [..]crate-type lib[..]
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no [..]
-[RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C embed-bitcode=no [..]--test[..]
-[FINISHED] [..]
-[RUNNING] [..]
-[DOCTEST] foo
-[RUNNING] `rustdoc [..]
-")
-        .run();
-}
-
-#[cargo_test]
 fn doctest() {
     let p = project()
         .file(
@@ -732,18 +720,24 @@ fn doctest() {
         .build();
 
     p.cargo("test --doc --release -v")
-        .with_stderr_contains("[..]`rustc --crate-name bar[..]-C embed-bitcode=no[..]")
-        .with_stderr_contains("[..]`rustc --crate-name foo[..]-C embed-bitcode=no[..]")
+        .with_stderr_contains("[..]`rustc --crate-name bar[..]-C linker-plugin-lto[..]")
+        .with_stderr_contains("[..]`rustc --crate-name foo[..]-C linker-plugin-lto[..]")
         // embed-bitcode should be harmless here
-        .with_stderr_contains("[..]`rustdoc [..]-C embed-bitcode=no[..]")
+        .with_stderr_contains("[..]`rustdoc [..]-C lto[..]")
         .run();
 
     // Try with bench profile.
     p.cargo("test --doc --release -v")
         .env("CARGO_PROFILE_BENCH_LTO", "true")
-        .with_stderr_contains("[..]`rustc --crate-name bar[..]-C linker-plugin-lto[..]")
-        .with_stderr_contains("[..]`rustc --crate-name foo[..]-C linker-plugin-lto[..]")
-        .with_stderr_contains("[..]`rustdoc [..]-C lto[..]")
+        .with_stderr_unordered(
+            "\
+[FRESH] bar v0.1.0 [..]
+[FRESH] foo v0.1.0 [..]
+[FINISHED] release [..]
+[DOCTEST] foo
+[RUNNING] `rustdoc [..]-C lto[..]
+",
+        )
         .run();
 }
 
@@ -766,7 +760,7 @@ fn dylib_rlib_bin() {
             "#,
         )
         .file("src/lib.rs", "pub fn foo() { println!(\"hi!\"); }")
-        .file("src/main.rs", "fn main() { foo::foo(); }")
+        .file("src/bin/ferret.rs", "fn main() { foo::foo(); }")
         .build();
 
     let output = p.cargo("build --release -v").exec_with_output().unwrap();
@@ -776,7 +770,7 @@ fn dylib_rlib_bin() {
         "--crate-type dylib --crate-type rlib",
         Lto::ObjectAndBitcode,
     );
-    verify_lto(&output, "foo", "--crate-type bin", Lto::Run(None));
+    verify_lto(&output, "ferret", "--crate-type bin", Lto::Run(None));
 }
 
 #[cargo_test]
@@ -821,15 +815,13 @@ fn fresh_swapping_commands() {
     p.cargo("test --release -v")
         .with_stderr_unordered(
             "\
-[COMPILING] bar v1.0.0
-[RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no[..]
+[FRESH] bar v1.0.0
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib[..]-C embed-bitcode=no[..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C embed-bitcode=no[..]--test[..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C lto[..]--test[..]
 [FINISHED] [..]
 [RUNNING] `[..]/foo[..]`
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]-C embed-bitcode=no[..]
+[RUNNING] `rustdoc [..]-C lto[..]
 ",
         )
         .run();
@@ -849,6 +841,7 @@ fn fresh_swapping_commands() {
 [FRESH] bar v1.0.0
 [FRESH] foo [..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/release/deps/foo-[..][EXE]`
 ",
         )
         .run();

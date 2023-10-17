@@ -4,7 +4,7 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-pkgid \- Print a fully qualified package specification
+cargo\-pkgid \[em] Print a fully qualified package specification
 .SH "SYNOPSIS"
 \fBcargo pkgid\fR [\fIoptions\fR] [\fIspec\fR]
 .SH "DESCRIPTION"
@@ -36,9 +36,9 @@ T}:T{
 \fBbitflags\fR
 T}
 T{
-\fIname\fR\fB:\fR\fIversion\fR
+\fIname\fR\fB@\fR\fIversion\fR
 T}:T{
-\fBbitflags:1.0.4\fR
+\fBbitflags@1.0.4\fR
 T}
 T{
 \fIurl\fR
@@ -56,9 +56,9 @@ T}:T{
 \fBhttps://github.com/rust\-lang/crates.io\-index#bitflags\fR
 T}
 T{
-\fIurl\fR\fB#\fR\fIname\fR\fB:\fR\fIversion\fR
+\fIurl\fR\fB#\fR\fIname\fR\fB@\fR\fIversion\fR
 T}:T{
-\fBhttps://github.com/rust\-lang/cargo#crates\-io:0.21.0\fR
+\fBhttps://github.com/rust\-lang/cargo#crates\-io@0.21.0\fR
 T}
 .TE
 .sp
@@ -75,7 +75,7 @@ Get the package ID for the given package instead of the current package.
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -84,7 +84,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -154,6 +156,26 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -193,7 +215,7 @@ cargo pkgid foo
 .sp
 .RS 4
 .nf
-cargo pkgid foo:1.0.0
+cargo pkgid foo@1.0.0
 .fi
 .RE
 .RE
@@ -204,6 +226,16 @@ cargo pkgid foo:1.0.0
 .RS 4
 .nf
 cargo pkgid https://github.com/rust\-lang/crates.io\-index#foo
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 4.\h'+01'Retrieve package specification for \fBfoo\fR from a local package:
+.sp
+.RS 4
+.nf
+cargo pkgid file:///path/to/local/package#foo
 .fi
 .RE
 .RE

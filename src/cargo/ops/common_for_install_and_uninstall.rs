@@ -3,15 +3,22 @@ use std::env;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::task::Poll;
 
-use anyhow::{bail, format_err};
+use anyhow::{bail, format_err, Context as _};
+use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
-use crate::core::compiler::Freshness;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId};
+use crate::core::compiler::{DirtyReason, Freshness};
+use crate::core::Target;
+use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::PathSource;
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::cache_lock::CacheLockMode;
+use crate::util::errors::CargoResult;
 use crate::util::Config;
 use crate::util::{FileLock, Filesystem};
 
@@ -91,8 +98,10 @@ pub struct CrateListingV1 {
 impl InstallTracker {
     /// Create an InstallTracker from information on disk.
     pub fn load(config: &Config, root: &Filesystem) -> CargoResult<InstallTracker> {
-        let v1_lock = root.open_rw(Path::new(".crates.toml"), config, "crate metadata")?;
-        let v2_lock = root.open_rw(Path::new(".crates2.json"), config, "crate metadata")?;
+        let v1_lock =
+            root.open_rw_exclusive_create(Path::new(".crates.toml"), config, "crate metadata")?;
+        let v2_lock =
+            root.open_rw_exclusive_create(Path::new(".crates2.json"), config, "crate metadata")?;
 
         let v1 = (|| -> CargoResult<_> {
             let mut contents = String::new();
@@ -100,12 +109,11 @@ impl InstallTracker {
             if contents.is_empty() {
                 Ok(CrateListingV1::default())
             } else {
-                Ok(toml::from_str(&contents)
-                    .chain_err(|| format_err!("invalid TOML found for metadata"))?)
+                Ok(toml::from_str(&contents).with_context(|| "invalid TOML found for metadata")?)
             }
         })()
-        .chain_err(|| {
-            format_err!(
+        .with_context(|| {
+            format!(
                 "failed to parse crate metadata at `{}`",
                 v1_lock.path().to_string_lossy()
             )
@@ -118,13 +126,13 @@ impl InstallTracker {
                 CrateListingV2::default()
             } else {
                 serde_json::from_str(&contents)
-                    .chain_err(|| format_err!("invalid JSON found for metadata"))?
+                    .with_context(|| "invalid JSON found for metadata")?
             };
-            v2.sync_v1(&v1)?;
+            v2.sync_v1(&v1);
             Ok(v2)
         })()
-        .chain_err(|| {
-            format_err!(
+        .with_context(|| {
+            format!(
                 "failed to parse crate metadata at `{}`",
                 v2_lock.path().to_string_lossy()
             )
@@ -166,7 +174,7 @@ impl InstallTracker {
         // Check if any tracked exe's are already installed.
         let duplicates = self.find_duplicates(dst, &exes);
         if force || duplicates.is_empty() {
-            return Ok((Freshness::Dirty, duplicates));
+            return Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates));
         }
         // Check if all duplicates come from packages of the same name. If
         // there are duplicates from other packages, then --force will be
@@ -196,7 +204,7 @@ impl InstallTracker {
             let source_id = pkg.package_id().source_id();
             if source_id.is_path() {
                 // `cargo install --path ...` is always rebuilt.
-                return Ok((Freshness::Dirty, duplicates));
+                return Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates));
             }
             let is_up_to_date = |dupe_pkg_id| {
                 let info = self
@@ -220,7 +228,7 @@ impl InstallTracker {
             if matching_duplicates.iter().all(is_up_to_date) {
                 Ok((Freshness::Fresh, duplicates))
             } else {
-                Ok((Freshness::Dirty, duplicates))
+                Ok((Freshness::Dirty(Some(DirtyReason::Forced)), duplicates))
             }
         } else {
             // Format the error message.
@@ -277,15 +285,15 @@ impl InstallTracker {
 
     /// Save tracking information to disk.
     pub fn save(&self) -> CargoResult<()> {
-        self.v1.save(&self.v1_lock).chain_err(|| {
-            format_err!(
+        self.v1.save(&self.v1_lock).with_context(|| {
+            format!(
                 "failed to write crate metadata at `{}`",
                 self.v1_lock.path().to_string_lossy()
             )
         })?;
 
-        self.v2.save(&self.v2_lock).chain_err(|| {
-            format_err!(
+        self.v2.save(&self.v2_lock).with_context(|| {
+            format!(
                 "failed to write crate metadata at `{}`",
                 self.v2_lock.path().to_string_lossy()
             )
@@ -355,7 +363,7 @@ impl CrateListingV1 {
         let mut file = lock.file();
         file.seek(SeekFrom::Start(0))?;
         file.set_len(0)?;
-        let data = toml::to_string(self)?;
+        let data = toml::to_string_pretty(self)?;
         file.write_all(data.as_bytes())?;
         Ok(())
     }
@@ -367,7 +375,7 @@ impl CrateListingV2 {
     /// where v2 is in use, and a v1 update is made, then v2 is used again.
     /// i.e., `cargo +new install foo ; cargo +old install bar ; cargo +new install bar`
     /// For now, v1 is the source of truth, so its values are trusted over v2.
-    fn sync_v1(&mut self, v1: &CrateListingV1) -> CargoResult<()> {
+    fn sync_v1(&mut self, v1: &CrateListingV1) {
         // Make the `bins` entries the same.
         for (pkg_id, bins) in &v1.v1 {
             self.installs
@@ -385,7 +393,6 @@ impl CrateListingV2 {
         for pkg_id in to_remove {
             self.installs.remove(&pkg_id);
         }
-        Ok(())
     }
 
     fn package_for_bin(&self, bin_name: &str) -> Option<PackageId> {
@@ -423,9 +430,9 @@ impl CrateListingV2 {
         if let Some(info) = self.installs.get_mut(&pkg.package_id()) {
             info.bins.append(&mut bins.clone());
             info.version_req = version_req;
-            info.features = feature_set(&opts.features);
-            info.all_features = opts.all_features;
-            info.no_default_features = opts.no_default_features;
+            info.features = feature_set(&opts.cli_features.features);
+            info.all_features = opts.cli_features.all_features;
+            info.no_default_features = !opts.cli_features.uses_default_features;
             info.profile = opts.build_config.requested_profile.to_string();
             info.target = Some(target.to_string());
             info.rustc = Some(rustc.to_string());
@@ -435,9 +442,9 @@ impl CrateListingV2 {
                 InstallInfo {
                     version_req,
                     bins: bins.clone(),
-                    features: feature_set(&opts.features),
-                    all_features: opts.all_features,
-                    no_default_features: opts.no_default_features,
+                    features: feature_set(&opts.cli_features.features),
+                    all_features: opts.cli_features.all_features,
+                    no_default_features: !opts.cli_features.uses_default_features,
                     profile: opts.build_config.requested_profile.to_string(),
                     target: Some(target.to_string()),
                     rustc: Some(rustc.to_string()),
@@ -490,9 +497,9 @@ impl InstallInfo {
     ///
     /// This does not do Package/Source/Version checking.
     fn is_up_to_date(&self, opts: &CompileOptions, target: &str, exes: &BTreeSet<String>) -> bool {
-        self.features == feature_set(&opts.features)
-            && self.all_features == opts.all_features
-            && self.no_default_features == opts.no_default_features
+        self.features == feature_set(&opts.cli_features.features)
+            && self.all_features == opts.cli_features.all_features
+            && self.no_default_features != opts.cli_features.uses_default_features
             && self.profile.as_str() == opts.build_config.requested_profile.as_str()
             && (self.target.is_none() || self.target.as_deref() == Some(target))
             && &self.bins == exes
@@ -504,7 +511,7 @@ pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesyst
     let config_root = config.get_path("install.root")?;
     Ok(flag
         .map(PathBuf::from)
-        .or_else(|| env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
+        .or_else(|| config.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
         .or_else(move || config_root.map(|v| v.val))
         .map(Filesystem::new)
         .unwrap_or_else(|| config.home().clone()))
@@ -525,6 +532,7 @@ pub fn select_dep_pkg<T>(
     dep: Dependency,
     config: &Config,
     needs_update: bool,
+    current_rust_version: Option<&semver::Version>,
 ) -> CargoResult<Package>
 where
     T: Source,
@@ -532,23 +540,87 @@ where
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
     // with other global Cargos
-    let _lock = config.acquire_package_cache_lock()?;
+    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     if needs_update {
-        source.update()?;
+        source.invalidate_cache();
     }
 
-    let deps = source.query_vec(&dep)?;
-    match deps.iter().map(|p| p.package_id()).max() {
-        Some(pkgid) => {
-            let pkg = Box::new(source).download_now(pkgid, config)?;
+    let deps = loop {
+        match source.query_vec(&dep, QueryKind::Exact)? {
+            Poll::Ready(deps) => break deps,
+            Poll::Pending => source.block_until_ready()?,
+        }
+    };
+    match deps.iter().max_by_key(|p| p.package_id()) {
+        Some(summary) => {
+            if let (Some(current), Some(msrv)) = (current_rust_version, summary.rust_version()) {
+                let msrv_req = msrv.caret_req();
+                if !msrv_req.matches(current) {
+                    let name = summary.name();
+                    let ver = summary.version();
+                    let extra = if dep.source_id().is_registry() {
+                        // Match any version, not just the selected
+                        let msrv_dep =
+                            Dependency::parse(dep.package_name(), None, dep.source_id())?;
+                        let msrv_deps = loop {
+                            match source.query_vec(&msrv_dep, QueryKind::Exact)? {
+                                Poll::Ready(deps) => break deps,
+                                Poll::Pending => source.block_until_ready()?,
+                            }
+                        };
+                        if let Some(alt) = msrv_deps
+                            .iter()
+                            .filter(|summary| {
+                                summary
+                                    .rust_version()
+                                    .map(|msrv| msrv.caret_req().matches(current))
+                                    .unwrap_or(true)
+                            })
+                            .max_by_key(|s| s.package_id())
+                        {
+                            if let Some(rust_version) = alt.rust_version() {
+                                format!(
+                                    "\n`{name} {}` supports rustc {rust_version}",
+                                    alt.version()
+                                )
+                            } else {
+                                format!(
+                                    "\n`{name} {}` has an unspecified minimum rustc version",
+                                    alt.version()
+                                )
+                            }
+                        } else {
+                            String::new()
+                        }
+                    } else {
+                        String::new()
+                    };
+                    bail!("\
+cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while the currently active rustc version is {current}{extra}"
+)
+                }
+            }
+            let pkg = Box::new(source).download_now(summary.package_id(), config)?;
             Ok(pkg)
         }
         None => {
             let is_yanked: bool = if dep.version_req().is_exact() {
                 let version: String = dep.version_req().to_string();
-                PackageId::new(dep.package_name(), &version[1..], source.source_id())
-                    .map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false))
+                if let Ok(pkg_id) =
+                    PackageId::new(dep.package_name(), &version[1..], source.source_id())
+                {
+                    source.invalidate_cache();
+                    loop {
+                        match source.is_yanked(pkg_id) {
+                            Poll::Ready(Ok(is_yanked)) => break is_yanked,
+                            Poll::Ready(Err(_)) => break false,
+                            Poll::Pending => source.block_until_ready()?,
+                        }
+                    }
+                } else {
+                    false
+                }
             } else {
                 false
             };
@@ -575,6 +647,7 @@ pub fn select_pkg<T, F>(
     dep: Option<Dependency>,
     mut list_all: F,
     config: &Config,
+    current_rust_version: Option<&semver::Version>,
 ) -> CargoResult<Package>
 where
     T: Source,
@@ -583,12 +656,12 @@ where
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
     // with other global Cargos
-    let _lock = config.acquire_package_cache_lock()?;
+    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
-    source.update()?;
+    source.invalidate_cache();
 
     return if let Some(dep) = dep {
-        select_dep_pkg(source, dep, config, false)
+        select_dep_pkg(source, dep, config, false, current_rust_version)
     } else {
         let candidates = list_all(source)?;
         let binaries = candidates
@@ -597,9 +670,10 @@ where
         let examples = candidates
             .iter()
             .filter(|cand| cand.targets().iter().filter(|t| t.is_example()).count() > 0);
-        let pkg = match one(binaries, |v| multi_err("binaries", v))? {
+        let git_url = source.source_id().url().to_string();
+        let pkg = match one(binaries, |v| multi_err("binaries", &git_url, v))? {
             Some(p) => p,
-            None => match one(examples, |v| multi_err("examples", v))? {
+            None => match one(examples, |v| multi_err("examples", &git_url, v))? {
                 Some(p) => p,
                 None => bail!(
                     "no packages found with binaries or \
@@ -610,15 +684,20 @@ where
         Ok(pkg.clone())
     };
 
-    fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
+    fn multi_err(kind: &str, git_url: &str, mut pkgs: Vec<&Package>) -> String {
         pkgs.sort_unstable_by_key(|a| a.name());
+        let first_pkg = pkgs[0];
         format!(
-            "multiple packages with {} found: {}",
+            "multiple packages with {} found: {}. When installing a git repository, \
+            cargo will always search the entire repo for any Cargo.toml.\n\
+            Please specify a package, e.g. `cargo install --git {} {}`.",
             kind,
             pkgs.iter()
                 .map(|p| p.name().as_str())
                 .collect::<Vec<_>>()
-                .join(", ")
+                .join(", "),
+            git_url,
+            first_pkg.name()
         )
     }
 }
@@ -642,9 +721,9 @@ where
     }
 }
 
-/// Helper to convert features Vec to a BTreeSet.
-fn feature_set(features: &[String]) -> BTreeSet<String> {
-    features.iter().cloned().collect()
+/// Helper to convert features to a BTreeSet.
+fn feature_set(features: &Rc<BTreeSet<FeatureValue>>) -> BTreeSet<String> {
+    features.iter().map(|s| s.to_string()).collect()
 }
 
 /// Helper to get the executable names from a filter.
@@ -670,20 +749,17 @@ pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String>
             ref examples,
             ..
         } => {
-            let all_bins: Vec<String> = bins.try_collect().unwrap_or_else(|| {
-                pkg.targets()
+            let collect = |rule: &_, f: fn(&Target) -> _| match rule {
+                FilterRule::All => pkg
+                    .targets()
                     .iter()
-                    .filter(|t| t.is_bin())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
-            let all_examples: Vec<String> = examples.try_collect().unwrap_or_else(|| {
-                pkg.targets()
-                    .iter()
-                    .filter(|t| t.is_exe_example())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
+                    .filter(|t| f(t))
+                    .map(|t| t.name().into())
+                    .collect(),
+                FilterRule::Just(targets) => targets.clone(),
+            };
+            let all_bins = collect(bins, Target::is_bin);
+            let all_examples = collect(examples, Target::is_exe_example);
 
             all_bins
                 .iter()

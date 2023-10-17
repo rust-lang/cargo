@@ -275,6 +275,7 @@ foo v0.1.0 ([..]/foo)
 opt2 v1.0.0
 └── opt2 feature \"default\"
     └── foo v0.1.0 ([..]/foo)
+        ├── foo feature \"default\" (command-line)
         ├── foo feature \"f1\" (command-line)
         │   └── foo feature \"f2\" (command-line)
         ├── foo feature \"f2\" (command-line)

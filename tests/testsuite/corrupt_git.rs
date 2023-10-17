@@ -1,11 +1,10 @@
 //! Tests for corrupt git repos.
 
-use std::fs;
-use std::path::{Path, PathBuf};
-
-use cargo::util::paths as cargopaths;
 use cargo_test_support::paths;
 use cargo_test_support::{basic_manifest, git, project};
+use cargo_util::paths as cargopaths;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 #[cargo_test]
 fn deleting_database_files() {
@@ -21,7 +20,7 @@ fn deleting_database_files() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -35,7 +34,7 @@ fn deleting_database_files() {
         .file("src/lib.rs", "")
         .build();
 
-    project.cargo("build").run();
+    project.cargo("check").run();
 
     let mut files = Vec::new();
     find_files(&paths::home().join(".cargo/git/db"), &mut files);
@@ -48,7 +47,7 @@ fn deleting_database_files() {
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        project.cargo("build -v").env("CARGO_LOG", log).run();
+        project.cargo("check -v").env("CARGO_LOG", log).run();
 
         if !file.exists() {
             continue;
@@ -61,7 +60,7 @@ fn deleting_database_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        project.cargo("build -v").env("CARGO_LOG", log).run();
+        project.cargo("check -v").env("CARGO_LOG", log).run();
     }
 }
 
@@ -79,7 +78,7 @@ fn deleting_checkout_files() {
             "Cargo.toml",
             &format!(
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.5.0"
                     authors = []
@@ -93,7 +92,7 @@ fn deleting_checkout_files() {
         .file("src/lib.rs", "")
         .build();
 
-    project.cargo("build").run();
+    project.cargo("check").run();
 
     let dir = paths::home()
         .join(".cargo/git/checkouts")
@@ -124,7 +123,7 @@ fn deleting_checkout_files() {
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        project.cargo("build -v").env("CARGO_LOG", log).run();
+        project.cargo("check -v").env("CARGO_LOG", log).run();
 
         if !file.exists() {
             continue;
@@ -137,7 +136,7 @@ fn deleting_checkout_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        project.cargo("build -v").env("CARGO_LOG", log).run();
+        project.cargo("check -v").env("CARGO_LOG", log).run();
     }
 }
 

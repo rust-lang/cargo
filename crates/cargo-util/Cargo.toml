@@ -1,0 +1,29 @@
+[package]
+name = "cargo-util"
+version = "0.2.8"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage = "https://github.com/rust-lang/cargo"
+repository = "https://github.com/rust-lang/cargo"
+description = "Miscellaneous support code used by Cargo."
+
+[dependencies]
+anyhow.workspace = true
+filetime.workspace = true
+hex.workspace = true
+jobserver.workspace = true
+libc.workspace = true
+same-file.workspace = true
+sha2.workspace = true
+shell-escape.workspace = true
+tempfile.workspace = true
+tracing.workspace = true
+walkdir.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+miow.workspace = true
+windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Console"] }

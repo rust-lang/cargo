@@ -9,21 +9,99 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: read
+
 jobs:
+  success:
+    permissions:
+      contents: none
+    name: bors build finished
+    needs:
+    - build_std
+    - clippy
+    - msrv
+    - docs
+    - lockfile
+    - resolver
+    - rustfmt
+    - test
+    - test_gitoxide
+    runs-on: ubuntu-latest
+    if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    steps:
+    - run: echo ok
+  failure:
+    permissions:
+      contents: none
+    name: bors build finished
+    needs:
+    - build_std
+    - clippy
+    - msrv
+    - docs
+    - lockfile
+    - resolver
+    - rustfmt
+    - test
+    - test_gitoxide
+    runs-on: ubuntu-latest
+    if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    steps:
+    - run: exit 1
+
   # Check Code style quickly by running `rustfmt` over all code
   rustfmt:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - run: rustup update stable && rustup default stable
     - run: rustup component add rustfmt
-    - run: cargo fmt --all -- --check
-    - run: cd crates/cargo-test-macro && cargo fmt --all -- --check
-    - run: cd crates/cargo-test-support && cargo fmt --all -- --check
-    - run: cd crates/crates-io && cargo fmt --all -- --check
-    - run: cd crates/resolver-tests && cargo fmt --all -- --check
-    - run: cd crates/cargo-platform && cargo fmt --all -- --check
-    - run: cd crates/mdman && cargo fmt --all -- --check
+    - run: cargo fmt --all --check
+
+  # Ensure there are no clippy warnings
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: rustup component add clippy
+      # Only check cargo lib for now
+      # TODO: check every members
+      - run: cargo clippy -p cargo --lib --no-deps -- -D warnings
+
+  stale-label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo stale-label
+
+  # Ensure Cargo.lock is up-to-date
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo update -p cargo --locked
+
+  check-version-bump:
+    runs-on: ubuntu-latest
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha  }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: rustup update stable && rustup default stable
+      - name: Install cargo-semver-checks
+        run: |
+          mkdir installed-bins
+          curl -Lf https://github.com/obi1kenobi/cargo-semver-checks/releases/download/v0.24.0/cargo-semver-checks-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=./installed-bins
+          echo `pwd`/installed-bins >> $GITHUB_PATH
+      - run: ci/validate-version-bump.sh
 
   test:
     runs-on: ${{ matrix.os }}
@@ -31,92 +109,149 @@ jobs:
       CARGO_PROFILE_DEV_DEBUG: 1
       CARGO_PROFILE_TEST_DEBUG: 1
       CARGO_INCREMENTAL: 0
+      CARGO_PUBLIC_NETWORK_TESTS: 1
+      # Deny warnings on CI to avoid warnings getting into the codebase.
+      RUSTFLAGS: -D warnings
     strategy:
       matrix:
         include:
-        - os: ubuntu-latest
+        - name: Linux x86_64 stable
+          os: ubuntu-latest
           rust: stable
           other: i686-unknown-linux-gnu
-        - os: ubuntu-latest
+        - name: Linux x86_64 beta
+          os: ubuntu-latest
           rust: beta
           other: i686-unknown-linux-gnu
-        - os: ubuntu-latest
+        - name: Linux x86_64 nightly
+          os: ubuntu-latest
           rust: nightly
           other: i686-unknown-linux-gnu
-        - os: macos-latest
+        - name: macOS x86_64 stable
+          os: macos-latest
           rust: stable
           other: x86_64-apple-ios
-        - os: windows-latest
+        - name: macOS x86_64 nightly
+          os: macos-latest
+          rust: nightly
+          other: x86_64-apple-ios
+        - name: Windows x86_64 MSVC stable
+          os: windows-latest
           rust: stable-msvc
           other: i686-pc-windows-msvc
-        - os: windows-latest
+        - name: Windows x86_64 gnu nightly # runs out of space while trying to link the test suite
+          os: windows-latest
           rust: nightly-gnu
           other: i686-pc-windows-gnu
+    name: Tests ${{ matrix.name }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+    - name: Dump Environment
+      run: ci/dump-environment.sh
     - run: rustup update --no-self-update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
     - run: rustup target add ${{ matrix.other }}
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
       if: startsWith(matrix.rust, 'nightly')
-    - run: sudo apt update -y && sudo apt install gcc-multilib -y
+    - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
       if: matrix.os == 'ubuntu-latest'
     - run: rustup component add rustfmt || echo "rustfmt not available"
+    - name: Configure extra test environment
+      run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
+      if: matrix.os == 'ubuntu-latest'
 
-    # Deny warnings on CI to avoid warnings getting into the codebase.
-    - run: cargo test --features 'deny-warnings'
-    - run: cargo test --features 'deny-warnings' -p cargo-test-support
-    - run: cargo test -p cargo-platform
-    - run: cargo test --manifest-path crates/mdman/Cargo.toml
+    - run: cargo test -p cargo
+    - name: Clear intermediate test output
+      run: ci/clean-test-output.sh
+
+    - name: gitoxide tests (all git-related tests)
+      run: cargo test -p cargo git
+      env:
+        __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
+      # The testsuite generates a huge amount of data, and fetch-smoke-test was
+    # running out of disk space.
+    - name: Clear test output
+      run: ci/clean-test-output.sh
+
+    # This only tests `cargo fix` because fix-proxy-mode is one of the most
+    # complicated subprocess management in Cargo.
+    - name: Check operability of rustc invocation with argfile
+      run: 'cargo test -p cargo --test testsuite -- fix::'
+      env:
+        __CARGO_TEST_FORCE_ARGFILE: 1
+    - run: cargo test --workspace --exclude cargo --exclude benchsuite --exclude resolver-tests
+    - name: Check benchmarks
+      run: |
+        # This only tests one benchmark since it can take over 10 minutes to
+        # download all workspaces.
+        cargo test -p benchsuite --all-targets -- cargo
+        cargo check -p capture
+    # The testsuite generates a huge amount of data, and fetch-smoke-test was
+    # running out of disk space.
+    - name: Clear benchmark output
+      run: ci/clean-test-output.sh
+
+    - name: Fetch smoke test
+      run: ci/fetch-smoke-test.sh
 
   resolver:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - run: rustup update stable && rustup default stable
-    - run: cargo test --manifest-path crates/resolver-tests/Cargo.toml
+    - run: cargo test -p resolver-tests
+
+  test_gitoxide:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update --no-self-update stable && rustup default stable
+      - run: rustup target add i686-unknown-linux-gnu
+      - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
+      - run: rustup component add rustfmt || echo "rustfmt not available"
+      - run: cargo test -p cargo
+        env:
+          __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
 
   build_std:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - run: rustup update nightly && rustup default nightly
     - run: rustup component add rust-src
     - run: cargo build
-    - run: cargo test --test build-std
+    - run: cargo test -p cargo --test build-std
       env:
         CARGO_RUN_BUILD_STD_TESTS: 1
   docs:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - run: rustup update nightly && rustup default nightly
+    - run: rustup update stable
     - run: rustup component add rust-docs
     - run: ci/validate-man.sh
     # This requires rustfmt, use stable.
-    - run: cd src/doc/semver-check && cargo +stable run
-    - run: |
+    - name: Run semver-check
+      run: cargo +stable run -p semver-check
+    - name: Ensure intradoc links are valid
+      run: cargo doc --workspace --document-private-items --no-deps
+      env:
+        RUSTDOCFLAGS: -D warnings
+    - name: Install mdbook
+      run: |
         mkdir mdbook
-        curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
+        curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.31/mdbook-v0.4.31-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
-    - run: cargo doc --no-deps
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
-    - run: |
-        cd src/doc
-        curl -sSLo linkcheck.sh \
-          https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
-        sh linkcheck.sh --all cargo
+    - name: Run linkchecker.sh
+      run: |
+        cd target
+        curl -sSLO https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
+        sh linkcheck.sh --all --path ../src/doc cargo
 
-  success:
-    name: bors build finished
-    needs: [docs, rustfmt, test, resolver, build_std]
+  msrv:
     runs-on: ubuntu-latest
-    if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
     steps:
-    - run: echo ok
-  failure:
-    name: bors build finished
-    needs: [docs, rustfmt, test, resolver, build_std]
-    runs-on: ubuntu-latest
-    if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
-    steps:
-    - run: exit 1
+    - uses: actions/checkout@v4
+    - uses: taiki-e/install-action@cargo-hack
+    - run: cargo hack check --all-targets --rust-version --workspace --ignore-private

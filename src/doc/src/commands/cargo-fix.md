@@ -1,9 +1,8 @@
 # cargo-fix(1)
 
-
 ## NAME
 
-cargo-fix - Automatically fix lint warnings reported by rustc
+cargo-fix --- Automatically fix lint warnings reported by rustc
 
 ## SYNOPSIS
 
@@ -14,17 +13,13 @@ cargo-fix - Automatically fix lint warnings reported by rustc
 This Cargo subcommand will automatically take rustc's suggestions from
 diagnostics like warnings and apply them to your source code. This is intended
 to help automate tasks that rustc itself already knows how to tell you to fix!
-The `cargo fix` subcommand is also being developed for the Rust 2018 edition
-to provide code the ability to easily opt-in to the new edition without having
-to worry about any breakage.
 
 Executing `cargo fix` will under the hood execute [cargo-check(1)](cargo-check.html). Any warnings
 applicable to your crate will be automatically fixed (if possible) and all
 remaining warnings will be displayed when the check process is finished. For
-example if you'd like to prepare for the 2018 edition, you can do so by
-executing:
+example if you'd like to apply all fixes to the current package, you can run:
 
-    cargo fix --edition
+    cargo fix
 
 which behaves the same as `cargo check --all-targets`.
 
@@ -32,16 +27,40 @@ which behaves the same as `cargo check --all-targets`.
 `cargo check`. If code is conditionally enabled with optional features, you
 will need to enable those features for that code to be analyzed:
 
-    cargo fix --edition --features foo
+    cargo fix --features foo
 
 Similarly, other `cfg` expressions like platform-specific code will need to
 pass `--target` to fix code for the given target.
 
-    cargo fix --edition --target x86_64-pc-windows-gnu
+    cargo fix --target x86_64-pc-windows-gnu
 
 If you encounter any problems with `cargo fix` or otherwise have any questions
 or feature requests please don't hesitate to file an issue at
-<https://github.com/rust-lang/cargo>
+<https://github.com/rust-lang/cargo>.
+
+### Edition migration
+
+The `cargo fix` subcommand can also be used to migrate a package from one
+[edition] to the next. The general procedure is:
+
+1. Run `cargo fix --edition`. Consider also using the `--all-features` flag if
+   your project has multiple features. You may also want to run `cargo fix
+   --edition` multiple times with different `--target` flags if your project
+   has platform-specific code gated by `cfg` attributes.
+2. Modify `Cargo.toml` to set the [edition field] to the new edition.
+3. Run your project tests to verify that everything still works. If new
+   warnings are issued, you may want to consider running `cargo fix` again
+   (without the `--edition` flag) to apply any suggestions given by the
+   compiler.
+
+And hopefully that's it! Just keep in mind of the caveats mentioned above that
+`cargo fix` cannot update code for inactive features or `cfg` expressions.
+Also, in some rare cases the compiler is unable to automatically migrate all
+code to the new edition, and this may require manual changes after building
+with the new edition.
+
+[edition]: https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+[edition field]: ../reference/manifest.html#the-edition-field
 
 ## OPTIONS
 
@@ -56,9 +75,9 @@ code in the working directory for you to inspect and manually fix.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---edition"><a class="option-anchor" href="#option-cargo-fix---edition"></a><code>--edition</code></dt>
-<dd class="option-desc">Apply changes that will update the code to the latest edition. This will not
+<dd class="option-desc">Apply changes that will update the code to the next edition. This will not
 update the edition in the <code>Cargo.toml</code> manifest, which must be updated
-manually.</dd>
+manually after <code>cargo fix --edition</code> has finished.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---edition-idioms"><a class="option-anchor" href="#option-cargo-fix---edition-idioms"></a><code>--edition-idioms</code></dt>
@@ -95,8 +114,8 @@ virtual workspace will include all workspace members (equivalent to passing
 
 <dl>
 
-<dt class="option-term" id="option-cargo-fix--p"><a class="option-anchor" href="#option-cargo-fix--p"></a><code>-p</code> <em>spec</em>...</dt>
-<dt class="option-term" id="option-cargo-fix---package"><a class="option-anchor" href="#option-cargo-fix---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-fix--p"><a class="option-anchor" href="#option-cargo-fix--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-fix---package"><a class="option-anchor" href="#option-cargo-fix---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Fix only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
@@ -114,7 +133,7 @@ double quotes around each pattern.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-fix---exclude"><a class="option-anchor" href="#option-cargo-fix---exclude"></a><code>--exclude</code> <em>SPEC</em>...</dt>
+<dt class="option-term" id="option-cargo-fix---exclude"><a class="option-anchor" href="#option-cargo-fix---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
 common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
@@ -142,10 +161,10 @@ use single quotes or double quotes around each glob pattern.
 <dl>
 
 <dt class="option-term" id="option-cargo-fix---lib"><a class="option-anchor" href="#option-cargo-fix---lib"></a><code>--lib</code></dt>
-<dd class="option-desc">Fix the package's library.</dd>
+<dd class="option-desc">Fix the package’s library.</dd>
 
 
-<dt class="option-term" id="option-cargo-fix---bin"><a class="option-anchor" href="#option-cargo-fix---bin"></a><code>--bin</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-fix---bin"><a class="option-anchor" href="#option-cargo-fix---bin"></a><code>--bin</code> <em>name</em>…</dt>
 <dd class="option-desc">Fix the specified binary. This flag may be specified multiple times
 and supports common Unix glob patterns.</dd>
 
@@ -155,7 +174,7 @@ and supports common Unix glob patterns.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-fix---example"><a class="option-anchor" href="#option-cargo-fix---example"></a><code>--example</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-fix---example"><a class="option-anchor" href="#option-cargo-fix---example"></a><code>--example</code> <em>name</em>…</dt>
 <dd class="option-desc">Fix the specified example. This flag may be specified multiple times
 and supports common Unix glob patterns.</dd>
 
@@ -164,7 +183,7 @@ and supports common Unix glob patterns.</dd>
 <dd class="option-desc">Fix all example targets.</dd>
 
 
-<dt class="option-term" id="option-cargo-fix---test"><a class="option-anchor" href="#option-cargo-fix---test"></a><code>--test</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-fix---test"><a class="option-anchor" href="#option-cargo-fix---test"></a><code>--test</code> <em>name</em>…</dt>
 <dd class="option-desc">Fix the specified integration test. This flag may be specified
 multiple times and supports common Unix glob patterns.</dd>
 
@@ -179,7 +198,7 @@ Targets may be enabled or disabled by setting the <code>test</code> flag in the
 manifest settings for the target.</dd>
 
 
-<dt class="option-term" id="option-cargo-fix---bench"><a class="option-anchor" href="#option-cargo-fix---bench"></a><code>--bench</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-fix---bench"><a class="option-anchor" href="#option-cargo-fix---bench"></a><code>--bench</code> <em>name</em>…</dt>
 <dd class="option-desc">Fix the specified benchmark. This flag may be specified multiple
 times and supports common Unix glob patterns.</dd>
 
@@ -203,22 +222,20 @@ manifest settings for the target.</dd>
 
 ### Feature Selection
 
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in `--manifest-path`. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if `--all-features` is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the `default` feature is activated for every
+selected package.
 
-When no feature options are given, the `default` feature is activated for
-every selected package.
+See [the features documentation](../reference/features.html#command-line-feature-options)
+for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-fix--F"><a class="option-anchor" href="#option-cargo-fix--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-fix---features"><a class="option-anchor" href="#option-cargo-fix---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax. This flag may be
-specified multiple times, which enables all specified features.</dd>
+<dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
+members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
+be specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---all-features"><a class="option-anchor" href="#option-cargo-fix---all-features"></a><code>--all-features</code></dt>
@@ -226,7 +243,7 @@ specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---no-default-features"><a class="option-anchor" href="#option-cargo-fix---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Do not activate the <code>default</code> feature of the current directory's package.</dd>
+<dd class="option-desc">Do not activate the <code>default</code> feature of the selected packages.</dd>
 
 
 </dl>
@@ -237,10 +254,9 @@ specified multiple times, which enables all specified features.</dd>
 <dl>
 
 <dt class="option-term" id="option-cargo-fix---target"><a class="option-anchor" href="#option-cargo-fix---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Fix for the given architecture. The default is the host
-architecture. The general format of the triple is
+<dd class="option-desc">Fix for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -249,19 +265,45 @@ target artifacts are placed in a separate directory. See the
 
 
 
+<dt class="option-term" id="option-cargo-fix--r"><a class="option-anchor" href="#option-cargo-fix--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-fix---release"><a class="option-anchor" href="#option-cargo-fix---release"></a><code>--release</code></dt>
-<dd class="option-desc">Fix optimized artifacts with the <code>release</code> profile. See the
-<a href="#profiles">PROFILES</a> section for details on how this affects profile
-selection.</dd>
+<dd class="option-desc">Fix optimized artifacts with the <code>release</code> profile.
+See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
 
 
 
 <dt class="option-term" id="option-cargo-fix---profile"><a class="option-anchor" href="#option-cargo-fix---profile"></a><code>--profile</code> <em>name</em></dt>
-<dd class="option-desc">Changes fix behavior. Currently only <code>test</code> is supported,
-which will fix with the <code>#[cfg(test)]</code> attribute enabled.
-This is useful to have it fix unit tests which are usually
-excluded via the <code>cfg</code> attribute. This does not change the actual profile
-used.</dd>
+<dd class="option-desc">Fix with the given profile.</p>
+<p>As a special case, specifying the <code>test</code> profile will also enable checking in
+test mode which will enable checking tests and enable the <code>test</code> cfg option.
+See <a href="https://doc.rust-lang.org/rustc/tests/index.html">rustc tests</a> for more
+detail.</p>
+<p>See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-fix---ignore-rust-version"><a class="option-anchor" href="#option-cargo-fix---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Fix the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-fix---timings=fmts"><a class="option-anchor" href="#option-cargo-fix---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
+<dd class="option-desc">Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma-separated list of output
+formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
+Specifying an output format (rather than the default) is unstable and requires
+<code>-Zunstable-options</code>. Valid output formats:</p>
+<ul>
+<li><code>html</code> (unstable, requires <code>-Zunstable-options</code>): Write a human-readable file <code>cargo-timing.html</code> to the
+<code>target/cargo-timings</code> directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine-readable timing data.</li>
+<li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
+information about timing information.</li>
+</ul></dd>
+
 
 
 
@@ -273,8 +315,8 @@ used.</dd>
 <dt class="option-term" id="option-cargo-fix---target-dir"><a class="option-anchor" href="#option-cargo-fix---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
-to <code>target</code> in the root of the workspace.</dd>
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
+Defaults to <code>target</code> in the root of the workspace.</dd>
 
 
 </dl>
@@ -284,7 +326,7 @@ to <code>target</code> in the root of the workspace.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-fix--v"><a class="option-anchor" href="#option-cargo-fix--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-fix---verbose"><a class="option-anchor" href="#option-cargo-fix---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -292,7 +334,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-fix--q"><a class="option-anchor" href="#option-cargo-fix--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-fix---quiet"><a class="option-anchor" href="#option-cargo-fix---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---color"><a class="option-anchor" href="#option-cargo-fix---color"></a><code>--color</code> <em>when</em></dt>
@@ -312,20 +356,22 @@ terminal.</li>
 <dd class="option-desc">The output format for diagnostic messages. Can be specified multiple times
 and consists of comma-separated values. Valid values:</p>
 <ul>
-<li><code>human</code> (default): Display in a human-readable text format.</li>
-<li><code>short</code>: Emit shorter, human-readable text messages.</li>
+<li><code>human</code> (default): Display in a human-readable text format. Conflicts with
+<code>short</code> and <code>json</code>.</li>
+<li><code>short</code>: Emit shorter, human-readable text messages. Conflicts with <code>human</code>
+and <code>json</code>.</li>
 <li><code>json</code>: Emit JSON messages to stdout. See
 <a href="../reference/external-tools.html#json-messages">the reference</a>
-for more details.</li>
+for more details. Conflicts with <code>human</code> and <code>short</code>.</li>
 <li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
-the &quot;short&quot; rendering from rustc.</li>
+the “short” rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
-scheme.</li>
-<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+contains embedded ANSI color codes for respecting rustc’s default color
+scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
+<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
-coming from rustc are still emitted.</li>
+JSON diagnostics coming from rustc. Cargo’s own JSON diagnostics and others
+coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
 </ul></dd>
 
 
@@ -378,6 +424,23 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-fix---config"><a class="option-anchor" href="#option-cargo-fix---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-fix--C"><a class="option-anchor" href="#option-cargo-fix--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+
+
 <dt class="option-term" id="option-cargo-fix--h"><a class="option-anchor" href="#option-cargo-fix--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-fix---help"><a class="option-anchor" href="#option-cargo-fix---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -397,28 +460,23 @@ for more information about how toolchain overrides work.</dd>
 <dt class="option-term" id="option-cargo-fix---jobs"><a class="option-anchor" href="#option-cargo-fix---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string <code>default</code> is provided, it sets the value back to defaults.
+Should not be 0.</dd>
+
+
+<dt class="option-term" id="option-cargo-fix---keep-going"><a class="option-anchor" href="#option-cargo-fix---keep-going"></a><code>--keep-going</code></dt>
+<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build.</p>
+<p>For example if the current package depends on dependencies <code>fails</code> and <code>works</code>,
+one of which fails to build, <code>cargo fix -j1</code> may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas <code>cargo fix -j1 --keep-going</code> would definitely run both
+builds, even if the one run first fails.</dd>
 
 
 </dl>
-
-## PROFILES
-
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See [the reference](../reference/profiles.html) for more
-details.
-
-Profile selection depends on the target and crate being built. By default the
-`dev` or `test` profiles are used. If the `--release` flag is given, then the
-`release` or `bench` profiles are used.
-
-Target | Default Profile | `--release` Profile
--------|-----------------|---------------------
-lib, bin, example | `dev` | `release`
-test, bench, or any target in "test" or "bench" mode | `test` | `bench`
-
-Dependencies use the `dev`/`release` profiles.
-
 
 ## ENVIRONMENT
 
@@ -438,7 +496,7 @@ details on environment variables that Cargo reads.
 
        cargo fix
 
-2. Convert a 2015 edition to 2018:
+2. Update a package to prepare it for the next edition:
 
        cargo fix --edition
 

@@ -1,43 +1,156 @@
-#![cfg_attr(test, deny(warnings))]
-// While we're getting used to 2018:
+//! # Cargo as a library
+//!
+//! There are two places you can find API documentation of cargo-the-library,
+//!
+//! - <https://docs.rs/cargo>: targeted at external tool developers using cargo-the-library
+//!   - Released with every rustc release
+//! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo>: targeted at cargo contributors
+//!   - Updated on each update of the `cargo` submodule in `rust-lang/rust`
+//!
+//! **WARNING:** Using Cargo as a library has drawbacks, particularly the API is unstable,
+//! and there is no clear path to stabilize it soon at the time of writing.  See [The Cargo Book:
+//! External tools] for more on this topic.
+//!
+//! ## Overview
+//!
+//! Major components of cargo include:
+//!
+//! - [`ops`]:
+//!   Every major operation is implemented here. Each command is a thin wrapper around ops.
+//!   - [`ops::cargo_compile`]:
+//!     This is the entry point for all the compilation commands. This is a
+//!     good place to start if you want to follow how compilation starts and
+//!     flows to completion.
+//! - [`ops::resolve`]:
+//!   Top-level API for dependency and feature resolver (e.g. [`ops::resolve_ws`])
+//!   - [`core::resolver`]: The core algorithm
+//! - [`core::compiler`]:
+//!   This is the code responsible for running `rustc` and `rustdoc`.
+//!   - [`core::compiler::build_context`]:
+//!     The [`BuildContext`][core::compiler::BuildContext] is the result of the "front end" of the
+//!     build process. This contains the graph of work to perform and any settings necessary for
+//!     `rustc`. After this is built, the next stage of building is handled in
+//!     [`Context`][core::compiler::Context].
+//!   - [`core::compiler::context`]:
+//!     The `Context` is the mutable state used during the build process. This
+//!     is the core of the build process, and everything is coordinated through
+//!     this.
+//!   - [`core::compiler::fingerprint`]:
+//!     The `fingerprint` module contains all the code that handles detecting
+//!     if a crate needs to be recompiled.
+//! - [`sources::source`]:
+//!   The [`sources::source::Source`] trait is an abstraction over different sources of packages.
+//!   Sources are uniquely identified by a [`core::SourceId`]. Sources are implemented in the [`sources`]
+//!   directory.
+//! - [`util`]:
+//!   This directory contains generally-useful utility modules.
+//! - [`util::config`]:
+//!   This directory contains the config parser. It makes heavy use of
+//!   [serde](https://serde.rs/) to merge and translate config values. The
+//!   [`util::Config`] is usually accessed from the
+//!   [`core::Workspace`]
+//!   though references to it are scattered around for more convenient access.
+//! - [`util::toml`]:
+//!   This directory contains the code for parsing `Cargo.toml` files.
+//!   - [`ops::lockfile`]:
+//!     This is where `Cargo.lock` files are loaded and saved.
+//!
+//! Related crates:
+//! - [`cargo-platform`](https://crates.io/crates/cargo-platform)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_platform)):
+//!   This library handles parsing `cfg` expressions.
+//! - [`cargo-util`](https://crates.io/crates/cargo-util)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_util)):
+//!   This contains general utility code that is shared between cargo and the testsuite
+//! - [`crates-io`](https://crates.io/crates/crates-io)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/crates_io)):
+//!   This contains code for accessing the crates.io API.
+//! - [`home`](https://crates.io/crates/home):
+//!   This library is shared between cargo and rustup and is used for finding their home directories.
+//!   This is not directly depended upon with a `path` dependency; cargo uses the version from crates.io.
+//!   It is intended to be versioned and published independently of Rust's release system.
+//!   Whenever a change needs to be made, bump the version in Cargo.toml and `cargo publish` it manually, and then update cargo's `Cargo.toml` to depend on the new version.
+//! - [`cargo-test-support`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-support)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_support/index.html)):
+//!   This contains a variety of code to support writing tests
+//! - [`cargo-test-macro`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-macro)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_macro/index.html)):
+//!   This is the `#[cargo_test]` proc-macro used by the test suite to define tests.
+//! - [`credential`](https://github.com/rust-lang/cargo/tree/master/credential)
+//!   This subdirectory contains several packages for implementing the
+//!   [credential providers](https://doc.rust-lang.org/nightly/cargo/reference/registry-authentication.html).
+//! - [`mdman`](https://github.com/rust-lang/cargo/tree/master/crates/mdman)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/mdman/index.html)):
+//!   This is a utility for generating cargo's man pages. See [Building the man
+//!   pages](https://github.com/rust-lang/cargo/tree/master/src/doc#building-the-man-pages)
+//!   for more information.
+//! - [`resolver-tests`](https://github.com/rust-lang/cargo/tree/master/crates/resolver-tests)
+//!   This is a dedicated package that defines tests for the [dependency
+//!   resolver][core::resolver].
+//!
+//! ### File Overview
+//!
+//! Files that interact with cargo include
+//!
+//! - Package
+//!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::TomlManifest`] and then
+//!     translated to [`core::manifest::Manifest`] which maybe stored in a [`core::Package`].
+//!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
+//!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`core::resolver::Resolve`]
+//!     - At the lowest level, [`ops::load_pkg_lockfile`] and [`ops::write_pkg_lockfile`] are used
+//!     - See [`core::resolver::encode`] for versioning of `Cargo.lock`
+//!   - `target/`: Used for build artifacts and abstracted with [`core::compiler::layout`]. `Layout` handles locking the target directory and providing paths to parts inside. There is a separate `Layout` for each build `target`.
+//!     - `target/debug/.fingerprint`: Tracker whether nor not a crate needs to be rebuilt.  See [`core::compiler::fingerprint`]
+//! - `$CARGO_HOME/`:
+//!   - `registry/`: Package registry cache which is managed in [`sources::registry`].  Be careful
+//!     as the lock [`util::Config::acquire_package_cache_lock`] must be manually acquired.
+//!     - `index`/: Fast-to-access crate metadata (no need to download / extract `*.crate` files)
+//!     - `cache/*/*.crate`: Local cache of published crates
+//!     - `src/*/*`: Extracted from `*.crate` by [`sources::registry::RegistrySource`]
+//!   - `git/`: Git source cache.  See [`sources::git`].
+//! - `**/.cargo/config.toml`: Environment dependent (env variables, files) configuration.  See
+//!   [`util::config`]
+//!
+//! ## Contribute to Cargo documentations
+//!
+//! The Cargo team always continues improving all external and internal documentations.
+//! If you spot anything could be better, don't hesitate to discuss with the team on
+//! Zulip [`t-cargo` stream], or [submit an issue] right on GitHub.
+//! There is also an issue label [`A-documenting-cargo-itself`],
+//! which is generally for documenting user-facing [The Cargo Book],
+//! but the Cargo team is welcome any form of enhancement for the [Cargo Contributor Guide]
+//! and this API documentation as well.
+//!
+//! [The Cargo Book: External tools]: https://doc.rust-lang.org/stable/cargo/reference/external-tools.html
+//! [Cargo Architecture Overview]: https://doc.crates.io/contrib/architecture
+//! [`t-cargo` stream]: https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo
+//! [submit an issue]: https://github.com/rust-lang/cargo/issues/new/choose
+//! [`A-documenting-cargo-itself`]: https://github.com/rust-lang/cargo/labels/A-documenting-cargo-itself
+//! [The Cargo Book]: https://doc.rust-lang.org/cargo/
+//! [Cargo Contributor Guide]: https://doc.crates.io/contrib/
+
+// TODO: consider removing these lint attributes when `-Zlints` hits stable.
+// For various reasons, some idioms are still allow'ed, but we would like to
+// test and enforce them.
 #![warn(rust_2018_idioms)]
-// Clippy isn't enforced by CI (@alexcrichton isn't a fan).
-#![allow(clippy::blacklisted_name)] // frequently used in tests
-#![allow(clippy::cognitive_complexity)] // large project
-#![allow(clippy::derive_hash_xor_eq)] // there's an intentional incoherence
-#![allow(clippy::explicit_into_iter_loop)] // explicit loops are clearer
-#![allow(clippy::explicit_iter_loop)] // explicit loops are clearer
-#![allow(clippy::identity_op)] // used for vertical alignment
-#![allow(clippy::implicit_hasher)] // large project
-#![allow(clippy::large_enum_variant)] // large project
-#![allow(clippy::new_without_default)] // explicit is maybe clearer
-#![allow(clippy::redundant_closure)] // closures can be less verbose
-#![allow(clippy::redundant_closure_call)] // closures over try catch blocks
-#![allow(clippy::too_many_arguments)] // large project
-#![allow(clippy::type_complexity)] // there's an exceptionally complex type
-#![allow(clippy::wrong_self_convention)] // perhaps `Rc` should be special-cased in Clippy?
-#![allow(clippy::write_with_newline)] // too pedantic
-#![allow(clippy::inefficient_to_string)] // this causes suggestions that result in `(*s).to_string()`
-#![allow(clippy::collapsible_if)] // too pedantic
-#![warn(clippy::needless_borrow)]
-// Unit is now interned, and would probably be better as pass-by-copy, but
-// doing so causes a lot of & and * shenanigans that makes the code arguably
-// less clear and harder to read.
-#![allow(clippy::trivially_copy_pass_by_ref)]
-// exhaustively destructuring ensures future fields are handled
-#![allow(clippy::unneeded_field_pattern)]
-// false positives in target-specific code, for details see
-// https://github.com/rust-lang/cargo/pull/7251#pullrequestreview-274914270
-#![allow(clippy::useless_conversion)]
+// Due to some of the default clippy lints being somewhat subjective and not
+// necessarily an improvement, we prefer to not use them at this time.
+#![allow(clippy::all)]
+#![warn(clippy::disallowed_methods)]
+#![warn(clippy::self_named_module_files)]
+#![warn(clippy::print_stdout)]
+#![warn(clippy::print_stderr)]
+#![warn(clippy::dbg_macro)]
+#![allow(rustdoc::private_intra_doc_links)]
 
 use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
 use anyhow::Error;
-use log::debug;
-use std::fmt;
+use tracing::debug;
 
-pub use crate::util::errors::{InternalError, VerboseError};
-pub use crate::util::{CargoResult, CliError, CliResult, Config};
+pub use crate::util::errors::{AlreadyPrintedError, InternalError, VerboseError};
+pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, Config};
+pub use crate::version::version;
 
 pub const CARGO_ENV: &str = "CARGO";
 
@@ -48,55 +161,16 @@ pub mod core;
 pub mod ops;
 pub mod sources;
 pub mod util;
-
-pub struct CommitInfo {
-    pub short_commit_hash: String,
-    pub commit_hash: String,
-    pub commit_date: String,
-}
-
-pub struct CfgInfo {
-    // Information about the Git repository we may have been built from.
-    pub commit_info: Option<CommitInfo>,
-    // The release channel we were built for.
-    pub release_channel: String,
-}
-
-pub struct VersionInfo {
-    pub major: u8,
-    pub minor: u8,
-    pub patch: u8,
-    pub pre_release: Option<String>,
-    // Information that's only available when we were built with
-    // configure/make, rather than Cargo itself.
-    pub cfg_info: Option<CfgInfo>,
-}
-
-impl fmt::Display for VersionInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "cargo {}.{}.{}", self.major, self.minor, self.patch)?;
-        if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
-            if channel != "stable" {
-                write!(f, "-{}", channel)?;
-                let empty = String::new();
-                write!(f, "{}", self.pre_release.as_ref().unwrap_or(&empty))?;
-            }
-        };
-
-        if let Some(ref cfg) = self.cfg_info {
-            if let Some(ref ci) = cfg.commit_info {
-                write!(f, " ({} {})", ci.short_commit_hash, ci.commit_date)?;
-            }
-        };
-        Ok(())
-    }
-}
+mod version;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);
+
     if let Some(ref err) = err.error {
         if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
-            clap_err.exit()
+            let exit_code = if clap_err.use_stderr() { 1 } else { 0 };
+            let _ = clap_err.print();
+            std::process::exit(exit_code)
         }
     }
 
@@ -111,13 +185,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
 /// Displays an error, and all its causes, to stderr.
 pub fn display_error(err: &Error, shell: &mut Shell) {
     debug!("display_error; err={:?}", err);
-    let has_verbose = _display_error(err, shell, true);
-    if has_verbose {
-        drop(writeln!(
-            shell.err(),
-            "\nTo learn more, run the command again with --verbose."
-        ));
-    }
+    _display_error(err, shell, true);
     if err
         .chain()
         .any(|e| e.downcast_ref::<InternalError>().is_some())
@@ -128,7 +196,7 @@ pub fn display_error(err: &Error, shell: &mut Shell) {
                 "we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/",
             ),
         );
-        drop(shell.note(format!("{}", version())));
+        drop(shell.note(format!("cargo {}", version())));
         // Once backtraces are stabilized, this should print out a backtrace
         // if it is available.
     }
@@ -143,88 +211,27 @@ pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell)
 }
 
 fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
-    let verbosity = shell.verbosity();
-    let is_verbose = |e: &(dyn std::error::Error + 'static)| -> bool {
-        verbosity != Verbose && e.downcast_ref::<VerboseError>().is_some()
-    };
-    // Generally the top error shouldn't be verbose, but check it anyways.
-    if is_verbose(err.as_ref()) {
-        return true;
-    }
-    if as_err {
-        drop(shell.error(&err));
-    } else {
-        drop(writeln!(shell.err(), "{}", err));
-    }
-    for cause in err.chain().skip(1) {
-        // If we're not in verbose mode then print remaining errors until one
+    for (i, err) in err.chain().enumerate() {
+        // If we're not in verbose mode then only print cause chain until one
         // marked as `VerboseError` appears.
-        if is_verbose(cause) {
+        //
+        // Generally the top error shouldn't be verbose, but check it anyways.
+        if shell.verbosity() != Verbose && err.is::<VerboseError>() {
             return true;
         }
-        drop(writeln!(shell.err(), "\nCaused by:"));
-        for line in cause.to_string().lines() {
-            if line.is_empty() {
-                drop(writeln!(shell.err()));
+        if err.is::<AlreadyPrintedError>() {
+            break;
+        }
+        if i == 0 {
+            if as_err {
+                drop(shell.error(&err));
             } else {
-                drop(writeln!(shell.err(), "  {}", line));
+                drop(writeln!(shell.err(), "{}", err));
             }
+        } else {
+            drop(writeln!(shell.err(), "\nCaused by:"));
+            drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
         }
     }
     false
-}
-
-pub fn version() -> VersionInfo {
-    macro_rules! option_env_str {
-        ($name:expr) => {
-            option_env!($name).map(|s| s.to_string())
-        };
-    }
-
-    // So this is pretty horrible...
-    // There are two versions at play here:
-    //   - version of cargo-the-binary, which you see when you type `cargo --version`
-    //   - version of cargo-the-library, which you download from crates.io for use
-    //     in your packages.
-    //
-    // We want to make the `binary` version the same as the corresponding Rust/rustc release.
-    // At the same time, we want to keep the library version at `0.x`, because Cargo as
-    // a library is (and probably will always be) unstable.
-    //
-    // Historically, Cargo used the same version number for both the binary and the library.
-    // Specifically, rustc 1.x.z was paired with cargo 0.x+1.w.
-    // We continue to use this scheme for the library, but transform it to 1.x.w for the purposes
-    // of `cargo --version`.
-    let major = 1;
-    let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() - 1;
-    let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
-
-    match option_env!("CFG_RELEASE_CHANNEL") {
-        // We have environment variables set up from configure/make.
-        Some(_) => {
-            let commit_info = option_env!("CFG_COMMIT_HASH").map(|s| CommitInfo {
-                commit_hash: s.to_string(),
-                short_commit_hash: option_env_str!("CFG_SHORT_COMMIT_HASH").unwrap(),
-                commit_date: option_env_str!("CFG_COMMIT_DATE").unwrap(),
-            });
-            VersionInfo {
-                major,
-                minor,
-                patch,
-                pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
-                cfg_info: Some(CfgInfo {
-                    release_channel: option_env_str!("CFG_RELEASE_CHANNEL").unwrap(),
-                    commit_info,
-                }),
-            }
-        }
-        // We are being compiled by Cargo itself.
-        None => VersionInfo {
-            major,
-            minor,
-            patch,
-            pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
-            cfg_info: None,
-        },
-    }
 }

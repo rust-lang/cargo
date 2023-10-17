@@ -1,0 +1,5 @@
+[workspace]
+members = ["primary", "dependency", "dependency-alt"]
+
+[workspace.dependencies]
+foo = { version = "0.0.0", path = "./dependency"}

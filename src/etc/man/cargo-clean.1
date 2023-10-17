@@ -4,7 +4,7 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-clean \- Remove generated artifacts
+cargo\-clean \[em] Remove generated artifacts
 .SH "SYNOPSIS"
 \fBcargo clean\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
@@ -17,13 +17,19 @@ With no options, \fBcargo clean\fR will delete the entire target directory.
 When no packages are selected, all packages and all dependencies in the
 workspace are cleaned.
 .sp
-\fB\-p\fR \fIspec\fR\&..., 
-\fB\-\-package\fR \fIspec\fR\&...
+\fB\-p\fR \fIspec\fR\[u2026], 
+\fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
 Clean only the specified packages. This flag may be specified
 multiple times. See \fBcargo\-pkgid\fR(1) for the SPEC format.
 .RE
 .SS "Clean Options"
+.sp
+\fB\-\-dry\-run\fR
+.RS 4
+Displays a summary of what would be deleted without deleting anything.
+Use with \fB\-\-verbose\fR to display the actual files that would be deleted.
+.RE
 .sp
 \fB\-\-doc\fR
 .RS 4
@@ -33,23 +39,27 @@ the target directory.
 .sp
 \fB\-\-release\fR
 .RS 4
-Clean all artifacts that were built with the \fBrelease\fR or \fBbench\fR profiles.
+Remove all artifacts in the \fBrelease\fR directory.
+.RE
+.sp
+\fB\-\-profile\fR \fIname\fR
+.RS 4
+Remove all artifacts in the directory with the given profile name.
 .RE
 .sp
 \fB\-\-target\-dir\fR \fIdirectory\fR
 .RS 4
 Directory for all generated artifacts and intermediate files. May also be
 specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
-\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults
-to \fBtarget\fR in the root of the workspace.
+\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+Defaults to \fBtarget\fR in the root of the workspace.
 .RE
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Clean for the given architecture. The default is the host
-architecture. The general format of the triple is
+Clean for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets.
+list of supported targets. This flag may be specified multiple times.
 .sp
 This may also be specified with the \fBbuild.target\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -63,7 +73,7 @@ target artifacts are placed in a separate directory. See the
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -72,7 +82,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -140,6 +152,26 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

@@ -5,18 +5,16 @@ use std::hash::Hash;
 use std::path::Path;
 use std::ptr;
 use std::sync::Mutex;
+use std::sync::OnceLock;
 
 use serde::de;
 use serde::ser;
 
-use crate::core::source::SourceId;
+use crate::core::SourceId;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, ToSemver};
 
-lazy_static::lazy_static! {
-    static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> =
-        Mutex::new(HashSet::new());
-}
+static PACKAGE_ID_CACHE: OnceLock<Mutex<HashSet<&'static PackageIdInner>>> = OnceLock::new();
 
 /// Identifier for a specific version of a package in a specific source.
 #[derive(Clone, Copy, Eq, PartialOrd, Ord)]
@@ -32,6 +30,12 @@ struct PackageIdInner {
 }
 
 // Custom equality that uses full equality of SourceId, rather than its custom equality.
+//
+// The `build` part of the version is usually ignored (like a "comment").
+// However, there are some cases where it is important. The download path from
+// a registry includes the build metadata, and Cargo uses PackageIds for
+// creating download paths. Including it here prevents the PackageId interner
+// from getting poisoned with PackageIds where that build metadata is missing.
 impl PartialEq for PackageIdInner {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
@@ -69,27 +73,29 @@ impl<'de> de::Deserialize<'de> for PackageId {
         D: de::Deserializer<'de>,
     {
         let string = String::deserialize(d)?;
-        let mut s = string.splitn(3, ' ');
-        let name = s.next().unwrap();
-        let name = InternedString::new(name);
-        let version = match s.next() {
-            Some(s) => s,
-            None => return Err(de::Error::custom("invalid serialized PackageId")),
-        };
-        let version = version.to_semver().map_err(de::Error::custom)?;
-        let url = match s.next() {
-            Some(s) => s,
-            None => return Err(de::Error::custom("invalid serialized PackageId")),
-        };
-        let url = if url.starts_with('(') && url.ends_with(')') {
-            &url[1..url.len() - 1]
-        } else {
-            return Err(de::Error::custom("invalid serialized PackageId"));
-        };
+
+        let (field, rest) = string
+            .split_once(' ')
+            .ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
+        let name = InternedString::new(field);
+
+        let (field, rest) = rest
+            .split_once(' ')
+            .ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
+        let version = field.to_semver().map_err(de::Error::custom)?;
+
+        let url =
+            strip_parens(rest).ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
         Ok(PackageId::pure(name, version, source_id))
     }
+}
+
+fn strip_parens(value: &str) -> Option<&str> {
+    let value = value.strip_prefix('(')?;
+    let value = value.strip_suffix(')')?;
+    Some(value)
 }
 
 impl PartialEq for PackageId {
@@ -97,6 +103,8 @@ impl PartialEq for PackageId {
         if ptr::eq(self.inner, other.inner) {
             return true;
         }
+        // This is here so that PackageId uses SourceId's and Version's idea
+        // of equality. PackageIdInner uses a more exact notion of equality.
         self.inner.name == other.inner.name
             && self.inner.version == other.inner.version
             && self.inner.source_id == other.inner.source_id
@@ -105,6 +113,9 @@ impl PartialEq for PackageId {
 
 impl Hash for PackageId {
     fn hash<S: hash::Hasher>(&self, state: &mut S) {
+        // This is here (instead of derived) so that PackageId uses SourceId's
+        // and Version's idea of equality. PackageIdInner uses a more exact
+        // notion of hashing.
         self.inner.name.hash(state);
         self.inner.version.hash(state);
         self.inner.source_id.hash(state);
@@ -127,7 +138,10 @@ impl PackageId {
             version,
             source_id,
         };
-        let mut cache = PACKAGE_ID_CACHE.lock().unwrap();
+        let mut cache = PACKAGE_ID_CACHE
+            .get_or_init(|| Default::default())
+            .lock()
+            .unwrap();
         let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
             let inner = Box::leak(Box::new(inner));
             cache.insert(inner);
@@ -166,8 +180,19 @@ impl PackageId {
         }
     }
 
+    /// Returns a value that implements a "stable" hashable value.
+    ///
+    /// Stable hashing removes the path prefix of the workspace from path
+    /// packages. This helps with reproducible builds, since this hash is part
+    /// of the symbol metadata, and we don't want the absolute path where the
+    /// build is performed to affect the binary output.
     pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {
         PackageIdStableHash(self, workspace)
+    }
+
+    /// Filename of the `.crate` tarball, e.g., `once_cell-1.18.0.crate`.
+    pub fn tarball_name(&self) -> String {
+        format!("{}-{}.crate", self.name(), self.version())
     }
 }
 
@@ -185,7 +210,7 @@ impl fmt::Display for PackageId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} v{}", self.inner.name, self.inner.version)?;
 
-        if !self.inner.source_id.is_default_registry() {
+        if !self.inner.source_id.is_crates_io() {
             write!(f, " ({})", self.inner.source_id)?;
         }
 
@@ -203,10 +228,20 @@ impl fmt::Debug for PackageId {
     }
 }
 
+impl fmt::Debug for PackageIdInner {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PackageIdInner")
+            .field("name", &self.name)
+            .field("version", &self.version.to_string())
+            .field("source", &self.source_id.to_string())
+            .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::PackageId;
-    use crate::core::source::SourceId;
+    use crate::core::SourceId;
     use crate::sources::CRATES_IO_INDEX;
     use crate::util::IntoUrl;
 
@@ -222,46 +257,19 @@ mod tests {
     }
 
     #[test]
-    fn debug() {
-        let loc = CRATES_IO_INDEX.into_url().unwrap();
-        let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
-        assert_eq!(
-            r#"PackageId { name: "foo", version: "1.0.0", source: "registry `https://github.com/rust-lang/crates.io-index`" }"#,
-            format!("{:?}", pkg_id)
-        );
-
-        let expected = r#"
-PackageId {
-    name: "foo",
-    version: "1.0.0",
-    source: "registry `https://github.com/rust-lang/crates.io-index`",
-}
-"#
-        .trim();
-
-        // Can be removed once trailing commas in Debug have reached the stable
-        // channel.
-        let expected_without_trailing_comma = r#"
-PackageId {
-    name: "foo",
-    version: "1.0.0",
-    source: "registry `https://github.com/rust-lang/crates.io-index`"
-}
-"#
-        .trim();
-
-        let actual = format!("{:#?}", pkg_id);
-        if actual.ends_with(",\n}") {
-            assert_eq!(actual, expected);
-        } else {
-            assert_eq!(actual, expected_without_trailing_comma);
-        }
-    }
-
-    #[test]
     fn display() {
         let loc = CRATES_IO_INDEX.into_url().unwrap();
         let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
         assert_eq!("foo v1.0.0", pkg_id.to_string());
+    }
+
+    #[test]
+    fn unequal_build_metadata() {
+        let loc = CRATES_IO_INDEX.into_url().unwrap();
+        let repo = SourceId::for_registry(&loc).unwrap();
+        let first = PackageId::new("foo", "0.0.1+first", repo).unwrap();
+        let second = PackageId::new("foo", "0.0.1+second", repo).unwrap();
+        assert_ne!(first, second);
+        assert_ne!(first.inner, second.inner);
     }
 }

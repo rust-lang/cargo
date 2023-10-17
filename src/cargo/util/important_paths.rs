@@ -1,22 +1,36 @@
 use crate::util::errors::CargoResult;
-use crate::util::paths;
+use cargo_util::paths;
 use std::path::{Path, PathBuf};
 
 /// Finds the root `Cargo.toml`.
 pub fn find_root_manifest_for_wd(cwd: &Path) -> CargoResult<PathBuf> {
-    let file = "Cargo.toml";
-    for current in paths::ancestors(cwd) {
-        let manifest = current.join(file);
+    let valid_cargo_toml_file_name = "Cargo.toml";
+    let invalid_cargo_toml_file_name = "cargo.toml";
+    let mut invalid_cargo_toml_path_exists = false;
+
+    for current in paths::ancestors(cwd, None) {
+        let manifest = current.join(valid_cargo_toml_file_name);
         if manifest.exists() {
             return Ok(manifest);
         }
+        if current.join(invalid_cargo_toml_file_name).exists() {
+            invalid_cargo_toml_path_exists = true;
+        }
     }
 
-    anyhow::bail!(
-        "could not find `{}` in `{}` or any parent directory",
-        file,
+    if invalid_cargo_toml_path_exists {
+        anyhow::bail!(
+        "could not find `{}` in `{}` or any parent directory, but found cargo.toml please try to rename it to Cargo.toml",
+        valid_cargo_toml_file_name,
         cwd.display()
     )
+    } else {
+        anyhow::bail!(
+            "could not find `{}` in `{}` or any parent directory",
+            valid_cargo_toml_file_name,
+            cwd.display()
+        )
+    }
 }
 
 /// Returns the path to the `file` in `pwd`, if it exists.

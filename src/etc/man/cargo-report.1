@@ -1,0 +1,48 @@
+'\" t
+.TH "CARGO\-REPORT" "1"
+.nh
+.ad l
+.ss \n[.ss] 0
+.SH "NAME"
+cargo\-report \[em] Generate and display various kinds of reports
+.SH "SYNOPSIS"
+\fBcargo report\fR \fItype\fR [\fIoptions\fR]
+.SS "DESCRIPTION"
+Displays a report of the given \fItype\fR \[em] currently, only \fBfuture\-incompat\fR is supported
+.SH "OPTIONS"
+.sp
+\fB\-\-id\fR \fIid\fR
+.RS 4
+Show the report with the specified Cargo\-generated id
+.RE
+.sp
+\fB\-p\fR \fIspec\fR\[u2026], 
+\fB\-\-package\fR \fIspec\fR\[u2026]
+.RS 4
+Only display a report for the specified package
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+\h'-04' 1.\h'+01'Display the latest future\-incompat report:
+.sp
+.RS 4
+.nf
+cargo report future\-incompat
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Display the latest future\-incompat report for a specific package:
+.sp
+.RS 4
+.nf
+cargo report future\-incompat \-\-package my\-dep:0.0.1
+.fi
+.RE
+.RE
+.SH "SEE ALSO"
+\fIFuture incompat report\fR <https://doc.rust\-lang.org/cargo/reference/future\-incompat\-report.html>
+.sp
+\fBcargo\fR(1)

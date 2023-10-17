@@ -1,0 +1,4 @@
+    Updating `dummy-registry` index
+      Adding my-package v99999.0.0 to dependencies.
+error: unrecognized feature for crate my-package: noze
+no features available for crate my-package

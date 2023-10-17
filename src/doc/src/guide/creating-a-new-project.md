@@ -1,4 +1,4 @@
-## Creating a New Package
+# Creating a New Package
 
 To start a new [package][def-package] with Cargo, use `cargo new`:
 
@@ -29,8 +29,7 @@ Let’s take a closer look at `Cargo.toml`:
 [package]
 name = "hello_world"
 version = "0.1.0"
-authors = ["Your Name <you@example.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 

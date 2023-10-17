@@ -1,4 +1,4 @@
-## First Steps with Cargo
+# First Steps with Cargo
 
 This section provides a quick sense for the `cargo` command line tool. We
 demonstrate its ability to generate a new [***package***][def-package] for us,
@@ -33,8 +33,7 @@ This is all we need to get started. First, let’s check out `Cargo.toml`:
 [package]
 name = "hello_world"
 version = "0.1.0"
-authors = ["Your Name <you@example.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 ```
@@ -74,7 +73,7 @@ $ cargo run
 Hello, world!
 ```
 
-### Going further
+## Going further
 
 For more details on using Cargo, check out the [Cargo Guide](../guide/index.md)
 

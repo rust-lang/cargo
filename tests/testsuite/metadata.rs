@@ -1,7 +1,10 @@
 //! Tests for the `cargo metadata` command.
 
+use cargo_test_support::install::cargo_home;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};
+use serde_json::json;
 
 #[cargo_test]
 fn cargo_metadata_simple() {
@@ -20,6 +23,7 @@ fn cargo_metadata_simple() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "version": "0.5.0",
                 "id": "foo[..]",
@@ -33,6 +37,7 @@ fn cargo_metadata_simple() {
                 "description": null,
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "homepage": null,
@@ -60,6 +65,7 @@ fn cargo_metadata_simple() {
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -117,12 +123,14 @@ crate-type = ["lib", "staticlib"]
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
+                "rust_version": null,
                 "id": "foo[..]",
                 "keywords": [],
                 "source": null,
@@ -157,6 +165,7 @@ crate-type = ["lib", "staticlib"]
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -204,9 +213,11 @@ optional_feat = []
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
@@ -248,6 +259,7 @@ optional_feat = []
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -278,7 +290,7 @@ fn cargo_metadata_with_deps_and_version() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.5.0"
                 authors = []
@@ -307,6 +319,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "dependencies": [
                     {
                         "features": [],
@@ -335,6 +348,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "name": "bar",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -359,6 +373,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "dependencies": [],
                 "description": null,
                 "edition": "2015",
@@ -374,6 +389,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "name": "baz",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -398,6 +414,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "dependencies": [
                     {
                         "features": [],
@@ -438,6 +455,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "name": "foo",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "source": null,
@@ -462,6 +480,7 @@ fn cargo_metadata_with_deps_and_version() {
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "dependencies": [],
                 "description": null,
                 "edition": "2015",
@@ -477,6 +496,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "name": "foobar",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -570,6 +590,9 @@ fn cargo_metadata_with_deps_and_version() {
         "workspace_members": [
             "foo 0.5.0 (path+file:[..]foo)"
         ],
+        "workspace_default_members": [
+            "foo 0.5.0 (path+file:[..]foo)"
+        ],
         "workspace_root": "[..]/foo",
         "metadata": null
     }"#,
@@ -603,9 +626,11 @@ name = "ex"
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
@@ -647,6 +672,9 @@ name = "ex"
             }
         ],
         "workspace_members": [
+            "foo 0.1.0 (path+file:[..]foo)"
+        ],
+        "workspace_default_members": [
             "foo 0.1.0 (path+file:[..]foo)"
         ],
         "resolve": {
@@ -696,9 +724,11 @@ crate-type = ["rlib", "dylib"]
             {
                 "authors": [],
                 "categories": [],
+                "default_run": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
@@ -740,6 +770,9 @@ crate-type = ["rlib", "dylib"]
             }
         ],
         "workspace_members": [
+            "foo 0.1.0 (path+file:[..]foo)"
+        ],
+         "workspace_default_members": [
             "foo 0.1.0 (path+file:[..]foo)"
         ],
         "resolve": {
@@ -796,11 +829,13 @@ fn workspace_metadata() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "bar",
                 "version": "0.5.0",
                 "id": "bar[..]",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "keywords": [],
@@ -833,9 +868,11 @@ fn workspace_metadata() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "baz",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
@@ -867,6 +904,7 @@ fn workspace_metadata() {
             }
         ],
         "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
+        "workspace_default_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
         "resolve": {
             "nodes": [
                 {
@@ -900,8 +938,9 @@ fn workspace_metadata() {
 }
 
 #[cargo_test]
-fn workspace_metadata_no_deps() {
+fn workspace_metadata_with_dependencies_no_deps() {
     let p = project()
+        // NOTE that 'artifact' isn't mentioned in the workspace here, yet it shows up as member.
         .file(
             "Cargo.toml",
             r#"
@@ -909,13 +948,29 @@ fn workspace_metadata_no_deps() {
                 members = ["bar", "baz"]
             "#,
         )
-        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+
+                name = "bar"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                
+                [dependencies]
+                baz = { path = "../baz/" }
+                artifact = { path = "../artifact/", artifact = "bin" }
+           "#,
+        )
         .file("bar/src/lib.rs", "")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/lib.rs", "")
+        .file("artifact/Cargo.toml", &basic_bin_manifest("artifact"))
+        .file("artifact/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata --no-deps")
+    p.cargo("metadata --no-deps -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
         .with_json(
             r#"
     {
@@ -925,17 +980,53 @@ fn workspace_metadata_no_deps() {
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "bar",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
                 "id": "bar[..]",
                 "keywords": [],
                 "source": null,
-                "dependencies": [],
                 "license": null,
+                "dependencies": [
+                   {
+                      "features": [],
+                      "kind": null,
+                      "name": "artifact",
+                      "optional": false,
+                      "path": "[..]/foo/artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true,
+                      "artifact": {
+                          "kinds": [
+                            "bin"
+                          ],
+                          "lib": false,
+                          "target": null
+                        }
+                    }, 
+                    {
+                      "features": [],
+                      "kind": null,
+                      "name": "baz",
+                      "optional": false,
+                      "path": "[..]/foo/baz",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    }
+                  ],
                 "license_file": null,
                 "links": null,
                 "description": null,
@@ -958,13 +1049,58 @@ fn workspace_metadata_no_deps() {
                 "publish": null
             },
             {
+              "authors": [
+                "wycats@example.com"
+              ],
+              "categories": [],
+              "default_run": null,
+              "dependencies": [],
+              "description": null,
+              "documentation": null,
+              "edition": "2015",
+              "features": {},
+              "homepage": null,
+              "id": "artifact 0.5.0 (path+file:[..]/foo/artifact)",
+              "keywords": [],
+              "license": null,
+              "license_file": null,
+              "links": null,
+              "manifest_path": "[..]/foo/artifact/Cargo.toml",
+              "metadata": null,
+              "name": "artifact",
+              "publish": null,
+              "readme": null,
+              "repository": null,
+              "rust_version": null,
+              "source": null,
+              "targets": [
+                {
+                  "crate_types": [
+                    "bin"
+                  ],
+                  "doc": true,
+                  "doctest": false,
+                  "edition": "2015",
+                  "kind": [
+                    "bin"
+                  ],
+                  "name": "artifact",
+                  "src_path": "[..]/foo/artifact/src/main.rs",
+                  "test": true
+                }
+              ],
+              "version": "0.5.0"
+            },
+            {
                 "authors": [
                     "wycats@example.com"
                 ],
                 "categories": [],
+                "default_run": null,
                 "name": "baz",
                 "readme": null,
                 "repository": null,
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
@@ -995,13 +1131,657 @@ fn workspace_metadata_no_deps() {
                 "publish": null
             }
         ],
-        "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
+        "workspace_members": [
+            "bar 0.5.0 (path+file:[..]bar)",
+            "artifact 0.5.0 (path+file:[..]/foo/artifact)",
+            "baz 0.5.0 (path+file:[..]baz)"
+        ],
+        "workspace_default_members": [
+            "bar 0.5.0 (path+file:[..]bar)",
+            "artifact 0.5.0 (path+file:[..]/foo/artifact)",
+            "baz 0.5.0 (path+file:[..]baz)"
+        ],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_root": "[..]/foo",
         "metadata": null
     }"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_metadata_with_dependencies_and_resolve() {
+    let alt_target = "wasm32-unknown-unknown";
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "artifact", "non-artifact", "bin-only-artifact"]
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            &r#"
+                [package]
+
+                name = "bar"
+                version = "0.5.0"
+                authors = []
+
+                [build-dependencies]
+                artifact = { path = "../artifact/", artifact = "bin", target = "target" }
+                bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin", target = "$ALT_TARGET" }
+                non-artifact = { path = "../non-artifact" }
+
+                [dependencies]
+                artifact = { path = "../artifact/", artifact = ["cdylib", "staticlib", "bin:baz-name"], lib = true, target = "$ALT_TARGET" }
+                bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin:a-name" }
+                non-artifact = { path = "../non-artifact" }
+
+                [dev-dependencies]
+                artifact = { path = "../artifact/" }
+                non-artifact = { path = "../non-artifact" }
+                bin-only-artifact = { path = "../bin-only-artifact/", artifact = "bin:b-name" }
+           "#.replace("$ALT_TARGET", alt_target),
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/build.rs", "fn main() {}")
+        .file(
+            "artifact/Cargo.toml",
+            r#"
+                [package]
+                name = "artifact"
+                version = "0.5.0"
+                authors = []
+                
+                [lib]
+                crate-type = ["staticlib", "cdylib", "rlib"]
+                
+                [[bin]]
+                name = "bar-name"
+                
+                [[bin]]
+                name = "baz-name"
+            "#,
+        )
+        .file("artifact/src/main.rs", "fn main() {}")
+        .file("artifact/src/lib.rs", "")
+        .file(
+            "bin-only-artifact/Cargo.toml",
+            r#"
+                [package]
+                name = "bin-only-artifact"
+                version = "0.5.0"
+                authors = []
+                
+                [[bin]]
+                name = "a-name"
+                
+                [[bin]]
+                name = "b-name"
+            "#,
+        )
+        .file("bin-only-artifact/src/main.rs", "fn main() {}")
+        .file("non-artifact/Cargo.toml",
+              r#"
+                [package]
+
+                name = "non-artifact"
+                version = "0.5.0"
+                authors = []
+            "#,
+        )
+        .file("non-artifact/src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_json(
+            r#"
+            {
+              "metadata": null,
+              "packages": [
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/artifact/Cargo.toml",
+                  "metadata": null,
+                  "name": "artifact",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "staticlib",
+                        "cdylib",
+                        "rlib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "staticlib",
+                        "cdylib",
+                        "rlib"
+                      ],
+                      "name": "artifact",
+                      "src_path": "[..]/foo/artifact/src/lib.rs",
+                      "test": true
+                    },
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "bar-name",
+                      "src_path": "[..]/foo/artifact/src/main.rs",
+                      "test": true
+                    },
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "baz-name",
+                      "src_path": "[..]/foo/artifact/src/main.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "cdylib",
+                          "staticlib",
+                          "bin:baz-name"
+                        ],
+                        "lib": true,
+                        "target": "wasm32-unknown-unknown"
+                      },
+                      "features": [],
+                      "kind": null,
+                      "name": "artifact",
+                      "optional": false,
+                      "path": "[..]/foo/artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin:a-name"
+                        ],
+                        "lib": false,
+                        "target": null
+                      },
+                      "features": [],
+                      "kind": null,
+                      "name": "bin-only-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/bin-only-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": null,
+                      "name": "non-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/non-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": "dev",
+                      "name": "artifact",
+                      "optional": false,
+                      "path": "[..]/foo/artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin:b-name"
+                        ],
+                        "lib": false,
+                        "target": null
+                      },
+                      "features": [],
+                      "kind": "dev",
+                      "name": "bin-only-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/bin-only-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": "dev",
+                      "name": "non-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/non-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin"
+                        ],
+                        "lib": false,
+                        "target": "target"
+                      },
+                      "features": [],
+                      "kind": "build",
+                      "name": "artifact",
+                      "optional": false,
+                      "path": "[..]/foo/artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin"
+                        ],
+                        "lib": false,
+                        "target": "wasm32-unknown-unknown"
+                      },
+                      "features": [],
+                      "kind": "build",
+                      "name": "bin-only-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/bin-only-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": "build",
+                      "name": "non-artifact",
+                      "optional": false,
+                      "path": "[..]/foo/non-artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    }
+                  ],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "bar 0.5.0 (path+file://[..]/foo/bar)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/bar/Cargo.toml",
+                  "metadata": null,
+                  "name": "bar",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "lib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "lib"
+                      ],
+                      "name": "bar",
+                      "src_path": "[..]/foo/bar/src/lib.rs",
+                      "test": true
+                    },
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": false,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "custom-build"
+                      ],
+                      "name": "build-script-build",
+                      "src_path": "[..]/foo/bar/build.rs",
+                      "test": false
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/bin-only-artifact/Cargo.toml",
+                  "metadata": null,
+                  "name": "bin-only-artifact",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "a-name",
+                      "src_path": "[..]/foo/bin-only-artifact/src/main.rs",
+                      "test": true
+                    },
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "b-name",
+                      "src_path": "[..]/foo/bin-only-artifact/src/main.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/non-artifact/Cargo.toml",
+                  "metadata": null,
+                  "name": "non-artifact",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "lib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "lib"
+                      ],
+                      "name": "non-artifact",
+                      "src_path": "[..]/foo/non-artifact/src/lib.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                }
+              ],
+              "resolve": {
+                "nodes": [
+                  {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "artifact 0.5.0 (path+file://[..]/foo/artifact)"
+                  },
+                  {
+                    "dependencies": [
+                      "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                      "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                      "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                    ],
+                    "deps": [
+                      {
+                        "dep_kinds": [
+                          {
+                            "extern_name": "artifact",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "cdylib",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "artifact",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "staticlib",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "artifact",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "baz-name",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "baz_name",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "kind": "dev",
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "bar-name",
+                            "compile_target": "<target>",
+                            "extern_name": "bar_name",
+                            "kind": "build",
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "baz-name",
+                            "compile_target": "<target>",
+                            "extern_name": "baz_name",
+                            "kind": "build",
+                            "target": null
+                          }
+                        ],
+                        "name": "artifact",
+                        "pkg": "artifact 0.5.0 (path+file://[..]/foo/artifact)"
+                      },
+                      {
+                        "dep_kinds": [
+                          {
+                            "artifact": "bin",
+                            "bin_name": "a-name",
+                            "extern_name": "a_name",
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "b-name",
+                            "extern_name": "b_name",
+                            "kind": "dev",
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "a-name",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "a_name",
+                            "kind": "build",
+                            "target": null
+                          },
+                          {
+                            "artifact": "bin",
+                            "bin_name": "b-name",
+                            "compile_target": "wasm32-unknown-unknown",
+                            "extern_name": "b_name",
+                            "kind": "build",
+                            "target": null
+                          }
+                        ],
+                        "name": "",
+                        "pkg": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)"
+                      },
+                      {
+                        "dep_kinds": [
+                          {
+                            "kind": null,
+                            "target": null
+                          },
+                          {
+                            "kind": "dev",
+                            "target": null
+                          },
+                          {
+                            "kind": "build",
+                            "target": null
+                          }
+                        ],
+                        "name": "non_artifact",
+                        "pkg": "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                      }
+                    ],
+                    "features": [],
+                    "id": "bar 0.5.0 (path+file://[..]/foo/bar)"
+                  },
+                  {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)"
+                  },
+                  {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                  }
+                ],
+                "root": null
+              },
+              "target_directory": "[..]/foo/target",
+              "version": 1,
+              "workspace_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+              ],
+              "workspace_default_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+              ],
+              "workspace_root": "[..]/foo"
+            }
+    "#,
         )
         .run();
 }
@@ -1022,6 +1802,150 @@ Caused by:
         .run();
 }
 
+#[cargo_test]
+fn cargo_metadata_with_invalid_authors_field() {
+    let p = project()
+        .file("src/foo.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                authors = ""
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr(
+            r#"[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  TOML parse error at line 3, column 27
+    |
+  3 |                 authors = ""
+    |                           ^^
+  invalid type: string "", expected a vector of strings or workspace"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_invalid_version_field() {
+    let p = project()
+        .file("src/foo.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                version = 1
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr(
+            r#"[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  TOML parse error at line 3, column 27
+    |
+  3 |                 version = 1
+    |                           ^
+  invalid type: integer `1`, expected SemVer version"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_invalid_publish_field() {
+    let p = project()
+        .file("src/foo.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                publish = "foo"
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr(
+            r#"[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  TOML parse error at line 3, column 27
+    |
+  3 |                 publish = "foo"
+    |                           ^^^^^
+  invalid type: string "foo", expected a boolean, a vector of strings, or workspace"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_invalid_artifact_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                artifact = { path = "artifact", artifact = "bin:notfound" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("artifact/Cargo.toml", &basic_bin_manifest("artifact"))
+        .file("artifact/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] dependency `artifact` in package `foo` requires a `bin:notfound` artifact to be present.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_invalid_duplicate_renamed_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar = { path = "bar" }
+                baz = { path = "bar", package = "bar" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] the crate `foo v0.5.0 ([..])` depends on crate `bar v0.5.0 ([..])` multiple times with different names",
+        )
+        .run();
+}
+
 const MANIFEST_OUTPUT: &str = r#"
 {
     "packages": [{
@@ -1029,6 +1953,7 @@ const MANIFEST_OUTPUT: &str = r#"
             "wycats@example.com"
         ],
         "categories": [],
+        "default_run": null,
         "name":"foo",
         "version":"0.5.0",
         "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
@@ -1056,10 +1981,12 @@ const MANIFEST_OUTPUT: &str = r#"
         "publish": null,
         "readme": null,
         "repository": null,
+        "rust_version": null,
         "homepage": null,
         "documentation": null
     }],
     "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
+    "workspace_default_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
     "resolve": null,
     "target_directory": "[..]foo/target",
     "version": 1,
@@ -1152,8 +2079,8 @@ fn cargo_metadata_bad_version() {
         .with_status(1)
         .with_stderr_contains(
             "\
-error: '2' isn't a valid value for '--format-version <VERSION>'
-<tab>[possible values: 1]
+error: invalid value '2' for '--format-version <VERSION>'
+  [possible values: 1]
 ",
         )
         .run();
@@ -1214,9 +2141,11 @@ fn package_metadata() {
             {
                 "authors": ["wycats@example.com"],
                 "categories": ["database"],
+                "default_run": null,
                 "name": "foo",
                 "readme": "README.md",
                 "repository": "https://github.com/rust-lang/cargo",
+                "rust_version": null,
                 "homepage": "https://rust-lang.org",
                 "documentation": "https://doc.rust-lang.org/stable/std/",
                 "version": "0.1.0",
@@ -1252,6 +2181,7 @@ fn package_metadata() {
             }
         ],
         "workspace_members": ["foo[..]"],
+        "workspace_default_members": ["foo[..]"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -1291,9 +2221,11 @@ fn package_publish() {
             {
                 "authors": ["wycats@example.com"],
                 "categories": ["database"],
+                "default_run": null,
                 "name": "foo",
                 "readme": "README.md",
                 "repository": "https://github.com/rust-lang/cargo",
+                "rust_version": null,
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
@@ -1325,6 +2257,7 @@ fn package_publish() {
             }
         ],
         "workspace_members": ["foo[..]"],
+        "workspace_default_members": ["foo[..]"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -1365,6 +2298,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "wycats@example.com"
                     ],
                     "categories": [],
+                    "default_run": null,
                     "dependencies": [],
                     "description": null,
                     "edition": "2015",
@@ -1380,6 +2314,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                     "name": "bar",
                     "readme": null,
                     "repository": null,
+                    "rust_version": null,
                     "homepage": null,
                     "documentation": null,
                     "source": null,
@@ -1418,6 +2353,9 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "workspace_members": [
                     "bar 0.5.0 (path+file:[..])"
                 ],
+                "workspace_default_members": [
+                    "bar 0.5.0 (path+file:[..])"
+                ],
                 "workspace_root": "[..]",
                 "metadata": null
             }
@@ -1451,6 +2389,7 @@ fn package_edition_2018() {
                             "wycats@example.com"
                         ],
                         "categories": [],
+                        "default_run": null,
                         "dependencies": [],
                         "description": null,
                         "edition": "2018",
@@ -1466,6 +2405,7 @@ fn package_edition_2018() {
                         "name": "foo",
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "source": null,
@@ -1504,12 +2444,57 @@ fn package_edition_2018() {
                 "workspace_members": [
                     "foo 0.1.0 (path+file:[..])"
                 ],
+                "workspace_default_members": [
+                    "foo 0.1.0 (path+file:[..])"
+                ],
                 "workspace_root": "[..]",
                 "metadata": null
             }
             "#,
         )
         .run();
+}
+
+#[cargo_test]
+fn package_default_run() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .file("src/bin/b.rs", r#"fn main() { println!("hello B"); }"#)
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = ["wycats@example.com"]
+                edition = "2018"
+                default-run = "a"
+            "#,
+        )
+        .build();
+    let json = p.cargo("metadata").run_json();
+    assert_eq!(json["packages"][0]["default_run"], json!("a"));
+}
+
+#[cargo_test]
+fn package_rust_version() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = ["wycats@example.com"]
+                edition = "2018"
+                rust-version = "1.56"
+            "#,
+        )
+        .build();
+    let json = p.cargo("metadata").run_json();
+    assert_eq!(json["packages"][0]["rust_version"], json!("1.56"));
 }
 
 #[cargo_test]
@@ -1541,6 +2526,7 @@ fn target_edition_2018() {
                             "wycats@example.com"
                         ],
                         "categories": [],
+                        "default_run": null,
                         "dependencies": [],
                         "description": null,
                         "edition": "2015",
@@ -1556,6 +2542,7 @@ fn target_edition_2018() {
                         "name": "foo",
                         "readme": null,
                         "repository": null,
+                        "rust_version": null,
                         "homepage": null,
                         "documentation": null,
                         "source": null,
@@ -1608,6 +2595,9 @@ fn target_edition_2018() {
                 "workspace_members": [
                     "foo 0.1.0 (path+file:[..])"
                 ],
+                "workspace_default_members": [
+                    "foo 0.1.0 (path+file:[..])"
+                ],
                 "workspace_root": "[..]",
                 "metadata": null
             }
@@ -1625,7 +2615,7 @@ fn rename_dependency() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1646,6 +2636,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "default_run": null,
             "dependencies": [],
             "description": null,
             "edition": "2015",
@@ -1661,6 +2652,7 @@ fn rename_dependency() {
             "name": "bar",
             "readme": null,
             "repository": null,
+            "rust_version": null,
             "homepage": null,
             "documentation": null,
             "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -1685,6 +2677,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "default_run": null,
             "dependencies": [],
             "description": null,
             "edition": "2015",
@@ -1700,6 +2693,7 @@ fn rename_dependency() {
             "name": "bar",
             "readme": null,
             "repository": null,
+            "rust_version": null,
             "homepage": null,
             "documentation": null,
             "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -1724,6 +2718,7 @@ fn rename_dependency() {
         {
             "authors": [],
             "categories": [],
+            "default_run": null,
             "dependencies": [
                 {
                     "features": [],
@@ -1764,6 +2759,7 @@ fn rename_dependency() {
             "name": "foo",
             "readme": null,
             "repository": null,
+            "rust_version": null,
             "homepage": null,
             "documentation": null,
             "source": null,
@@ -1838,6 +2834,9 @@ fn rename_dependency() {
     "workspace_members": [
         "foo 0.0.1[..]"
     ],
+    "workspace_default_members": [
+        "foo 0.0.1[..]"
+    ],
     "workspace_root": "[..]",
     "metadata": null
 }"#,
@@ -1851,7 +2850,7 @@ fn metadata_links() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.5.0"
             links = "a"
@@ -1869,6 +2868,7 @@ fn metadata_links() {
                 {
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "dependencies": [],
                   "description": null,
                   "edition": "2015",
@@ -1884,6 +2884,7 @@ fn metadata_links() {
                   "name": "foo",
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "source": null,
@@ -1936,6 +2937,9 @@ fn metadata_links() {
               "workspace_members": [
                 "foo 0.5.0 [..]"
               ],
+              "workspace_default_members": [
+                "foo 0.5.0 [..]"
+              ],
               "workspace_root": "[..]/foo",
               "metadata": null
             }
@@ -1984,6 +2988,7 @@ fn deps_with_bin_only() {
                       "rename": null,
                       "optional": false,
                       "uses_default_features": true,
+                      "path": "[..]/foo/bdep",
                       "features": [],
                       "target": null,
                       "registry": null
@@ -2011,9 +3016,11 @@ fn deps_with_bin_only() {
                   "publish": null,
                   "authors": [],
                   "categories": [],
+                  "default_run": null,
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "rust_version": null,
                   "homepage": null,
                   "documentation": null,
                   "edition": "2015",
@@ -2021,6 +3028,9 @@ fn deps_with_bin_only() {
                 }
               ],
               "workspace_members": [
+                "foo 0.1.0 ([..])"
+              ],
+              "workspace_default_members": [
                 "foo 0.1.0 ([..])"
               ],
               "resolve": {
@@ -2054,6 +3064,7 @@ fn filter_platform() {
     // Just needs to be a valid target that is different from host.
     // Presumably nobody runs these tests on wasm. 🙃
     let alt_target = "wasm32-unknown-unknown";
+    let host_target = rustc_host();
     let p = project()
         .file(
             "Cargo.toml",
@@ -2075,8 +3086,7 @@ fn filter_platform() {
                 [target.'cfg(foobar)'.dependencies]
                 cfg-dep = "0.0.1"
                 "#,
-                rustc_host(),
-                alt_target
+                host_target, alt_target
             ),
         )
         .file("src/lib.rs", "")
@@ -2114,9 +3124,11 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2156,9 +3168,11 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2198,9 +3212,11 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2240,9 +3256,11 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2250,16 +3268,10 @@ fn filter_platform() {
     }
     "#;
 
-    let foo = r#"
-    {
-      "name": "foo",
-      "version": "0.1.0",
-      "id": "foo 0.1.0 (path+file:[..]foo)",
-      "license": null,
-      "license_file": null,
-      "description": null,
-      "source": null,
-      "dependencies": [
+    // The dependencies are stored in sorted order by target and then by name.
+    // Since the testsuite may run on different targets, this needs to be
+    // sorted before it can be compared.
+    let mut foo_deps = serde_json::json!([
         {
           "name": "normal-dep",
           "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -2293,7 +3305,7 @@ fn filter_platform() {
           "optional": false,
           "uses_default_features": true,
           "features": [],
-          "target": "$ALT_TRIPLE",
+          "target": alt_target,
           "registry": null
         },
         {
@@ -2305,10 +3317,30 @@ fn filter_platform() {
           "optional": false,
           "uses_default_features": true,
           "features": [],
-          "target": "$HOST_TRIPLE",
+          "target": host_target,
           "registry": null
         }
-      ],
+    ]);
+    foo_deps.as_array_mut().unwrap().sort_by(|a, b| {
+        // This really should be `rename`, but not needed here.
+        // Also, sorting on `name` isn't really necessary since this test
+        // only has one package per target, but leaving it here to be safe.
+        let a = (a["target"].as_str(), a["name"].as_str());
+        let b = (b["target"].as_str(), b["name"].as_str());
+        a.cmp(&b)
+    });
+
+    let foo = r#"
+    {
+      "name": "foo",
+      "version": "0.1.0",
+      "id": "foo 0.1.0 (path+file:[..]foo)",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies":
+        $FOO_DEPS,
       "targets": [
         {
           "kind": [
@@ -2331,9 +3363,11 @@ fn filter_platform() {
       "publish": null,
       "authors": [],
       "categories": [],
+      "default_run": null,
       "keywords": [],
       "readme": null,
       "repository": null,
+      "rust_version": null,
       "homepage": null,
       "documentation": null,
       "edition": "2015",
@@ -2341,10 +3375,30 @@ fn filter_platform() {
     }
     "#
     .replace("$ALT_TRIPLE", alt_target)
-    .replace("$HOST_TRIPLE", &rustc_host());
+    .replace("$HOST_TRIPLE", host_target)
+    .replace("$FOO_DEPS", &foo_deps.to_string());
+
+    // We're going to be checking that we don't download excessively,
+    // so we need to ensure that downloads will happen.
+    let clear = || {
+        cargo_home().join("registry/cache").rm_rf();
+        cargo_home().join("registry/src").rm_rf();
+        p.build_dir().rm_rf();
+    };
 
     // Normal metadata, no filtering, returns *everything*.
     p.cargo("metadata")
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] alt-dep v0.0.1 [..]
+[DOWNLOADED] cfg-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2356,6 +3410,9 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": [
+    "foo 0.1.0 (path+file:[..]foo)"
+  ],
+  "workspace_default_members": [
     "foo 0.1.0 (path+file:[..]foo)"
   ],
   "resolve": {
@@ -2446,7 +3503,7 @@ fn filter_platform() {
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
-            .replace("$HOST_TRIPLE", &rustc_host())
+            .replace("$HOST_TRIPLE", host_target)
             .replace("$ALT_DEP", alt_dep)
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
@@ -2454,10 +3511,20 @@ fn filter_platform() {
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter on alternate, removes cfg and host.
     p.cargo("metadata --filter-platform")
         .arg(alt_target)
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] alt-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2467,6 +3534,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -2526,10 +3594,19 @@ fn filter_platform() {
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter on host, removes alt and cfg.
     p.cargo("metadata --filter-platform")
-        .arg(rustc_host())
+        .arg(&host_target)
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2539,6 +3616,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -2592,17 +3670,27 @@ fn filter_platform() {
   "metadata": null
 }
 "#
-            .replace("$HOST_TRIPLE", &rustc_host())
+            .replace("$HOST_TRIPLE", host_target)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
             .replace("$FOO", &foo),
         )
         .run();
+    clear();
 
     // Filter host with cfg, removes alt only
     p.cargo("metadata --filter-platform")
-        .arg(rustc_host())
+        .arg(&host_target)
         .env("RUSTFLAGS", "--cfg=foobar")
+        .with_stderr_unordered(
+            "\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal-dep v0.0.1 [..]
+[DOWNLOADED] host-dep v0.0.1 [..]
+[DOWNLOADED] cfg-dep v0.0.1 [..]
+",
+        )
         .with_json(
             &r#"
 {
@@ -2613,6 +3701,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -2683,7 +3772,7 @@ fn filter_platform() {
   "metadata": null
 }
 "#
-            .replace("$HOST_TRIPLE", &rustc_host())
+            .replace("$HOST_TRIPLE", host_target)
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
@@ -2727,6 +3816,7 @@ fn dep_kinds() {
             {
               "packages": "{...}",
               "workspace_members": "{...}",
+              "workspace_default_members": "{...}",
               "target_directory": "{...}",
               "version": 1,
               "workspace_root": "{...}",
@@ -2842,6 +3932,7 @@ fn dep_kinds_workspace() {
             {
               "packages": "{...}",
               "workspace_members": "{...}",
+              "workspace_default_members": "{...}",
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_root": "[..]/foo",
@@ -2899,6 +3990,270 @@ fn dep_kinds_workspace() {
               }
             }
             "#,
+        )
+        .run();
+}
+
+// Creating non-utf8 path is an OS-specific pain, so let's run this only on
+// linux, where arbitrary bytes work.
+#[cfg(target_os = "linux")]
+#[cargo_test]
+fn cargo_metadata_non_utf8() {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+    use std::path::PathBuf;
+
+    let base = PathBuf::from(OsString::from_vec(vec![255]));
+
+    let p = project()
+        .no_manifest()
+        .file(base.join("./src/lib.rs"), "")
+        .file(base.join("./Cargo.toml"), &basic_lib_manifest("foo"))
+        .build();
+
+    p.cargo("metadata")
+        .cwd(p.root().join(base))
+        .arg("--format-version")
+        .arg("1")
+        .with_stderr("error: path contains invalid UTF-8 characters")
+        .with_status(101)
+        .run();
+}
+
+// TODO: Consider using this test instead of the version without the 'artifact' suffix or merge them because they should be pretty much the same.
+#[cargo_test]
+fn workspace_metadata_with_dependencies_no_deps_artifact() {
+    let p = project()
+        // NOTE that 'artifact' isn't mentioned in the workspace here, yet it shows up as member.
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+
+                name = "bar"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                
+                [dependencies]
+                baz = { path = "../baz/" }
+                baz-renamed = { path = "../baz/" }
+                artifact = { path = "../artifact/", artifact = "bin" }
+           "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        .file("baz/src/lib.rs", "")
+        .file("artifact/Cargo.toml", &basic_bin_manifest("artifact"))
+        .file("artifact/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata --no-deps -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_json(
+            r#"
+            {
+              "metadata": null,
+              "packages": [
+                {
+                  "authors": [
+                    "wycats@example.com"
+                  ],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [
+                    {
+                      "artifact": {
+                        "kinds": [
+                          "bin"
+                        ],
+                        "lib": false,
+                        "target": null
+                      },
+                      "features": [],
+                      "kind": null,
+                      "name": "artifact",
+                      "optional": false,
+                      "path": "[..]/foo/artifact",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": null,
+                      "name": "baz",
+                      "optional": false,
+                      "path": "[..]/foo/baz",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    },
+                    {
+                      "features": [],
+                      "kind": null,
+                      "name": "baz-renamed",
+                      "optional": false,
+                      "path": "[..]/foo/baz",
+                      "registry": null,
+                      "rename": null,
+                      "req": "*",
+                      "source": null,
+                      "target": null,
+                      "uses_default_features": true
+                    }
+                  ],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "bar 0.5.0 (path+file://[..]/foo/bar)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/bar/Cargo.toml",
+                  "metadata": null,
+                  "name": "bar",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "lib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "lib"
+                      ],
+                      "name": "bar",
+                      "src_path": "[..]/foo/bar/src/lib.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [
+                    "wycats@example.com"
+                  ],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/artifact/Cargo.toml",
+                  "metadata": null,
+                  "name": "artifact",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "bin"
+                      ],
+                      "doc": true,
+                      "doctest": false,
+                      "edition": "2015",
+                      "kind": [
+                        "bin"
+                      ],
+                      "name": "artifact",
+                      "src_path": "[..]/foo/artifact/src/main.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                },
+                {
+                  "authors": [
+                    "wycats@example.com"
+                  ],
+                  "categories": [],
+                  "default_run": null,
+                  "dependencies": [],
+                  "description": null,
+                  "documentation": null,
+                  "edition": "2015",
+                  "features": {},
+                  "homepage": null,
+                  "id": "baz 0.5.0 (path+file://[..]/foo/baz)",
+                  "keywords": [],
+                  "license": null,
+                  "license_file": null,
+                  "links": null,
+                  "manifest_path": "[..]/foo/baz/Cargo.toml",
+                  "metadata": null,
+                  "name": "baz",
+                  "publish": null,
+                  "readme": null,
+                  "repository": null,
+                  "rust_version": null,
+                  "source": null,
+                  "targets": [
+                    {
+                      "crate_types": [
+                        "lib"
+                      ],
+                      "doc": true,
+                      "doctest": true,
+                      "edition": "2015",
+                      "kind": [
+                        "lib"
+                      ],
+                      "name": "baz",
+                      "src_path": "[..]/foo/baz/src/lib.rs",
+                      "test": true
+                    }
+                  ],
+                  "version": "0.5.0"
+                }
+              ],
+              "resolve": null,
+              "target_directory": "[..]/foo/target",
+              "version": 1,
+              "workspace_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "baz 0.5.0 (path+file://[..]/foo/baz)"
+              ],
+              "workspace_default_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "baz 0.5.0 (path+file://[..]/foo/baz)"
+              ],
+              "workspace_root": "[..]/foo"
+            }
+"#,
         )
         .run();
 }

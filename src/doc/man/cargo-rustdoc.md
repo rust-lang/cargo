@@ -1,9 +1,11 @@
 # cargo-rustdoc(1)
-{{*set actionverb="Document"}}
+{{~*set command="rustdoc"}}
+{{~*set actionverb="Document"}}
+{{~*set multitarget=true}}
 
 ## NAME
 
-cargo-rustdoc - Build a package's documentation, using specified custom flags
+cargo-rustdoc --- Build a package's documentation, using specified custom flags
 
 ## SYNOPSIS
 
@@ -34,7 +36,9 @@ or the `build.rustdocflags` [config value](../reference/config.html).
 
 {{#option "`--open`" }}
 Open the docs in a browser after building them. This will use your default
-browser unless you define another one in the `BROWSER` environment variable.
+browser unless you define another one in the `BROWSER` environment variable
+or use the [`doc.browser`](../reference/config.html#docbrowser) configuration
+option.
 {{/option}}
 
 {{/options}}
@@ -59,6 +63,12 @@ if its name is the same as the lib target. Binaries are skipped if they have
 {{> options-target-triple }}
 
 {{> options-release }}
+
+{{> options-profile }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
 
 {{/options}}
 
@@ -90,9 +100,8 @@ if its name is the same as the lib target. Binaries are skipped if they have
 
 {{#options}}
 {{> options-jobs }}
+{{> options-keep-going }}
 {{/options}}
-
-{{> section-profiles }}
 
 {{> section-environment }}
 

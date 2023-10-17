@@ -4,26 +4,22 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-fix \- Automatically fix lint warnings reported by rustc
+cargo\-fix \[em] Automatically fix lint warnings reported by rustc
 .SH "SYNOPSIS"
 \fBcargo fix\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
-This Cargo subcommand will automatically take rustc's suggestions from
+This Cargo subcommand will automatically take rustc\[cq]s suggestions from
 diagnostics like warnings and apply them to your source code. This is intended
 to help automate tasks that rustc itself already knows how to tell you to fix!
-The \fBcargo fix\fR subcommand is also being developed for the Rust 2018 edition
-to provide code the ability to easily opt\-in to the new edition without having
-to worry about any breakage.
 .sp
 Executing \fBcargo fix\fR will under the hood execute \fBcargo\-check\fR(1). Any warnings
 applicable to your crate will be automatically fixed (if possible) and all
 remaining warnings will be displayed when the check process is finished. For
-example if you'd like to prepare for the 2018 edition, you can do so by
-executing:
+example if you\[cq]d like to apply all fixes to the current package, you can run:
 .sp
 .RS 4
 .nf
-cargo fix \-\-edition
+cargo fix
 .fi
 .RE
 .sp
@@ -35,7 +31,7 @@ will need to enable those features for that code to be analyzed:
 .sp
 .RS 4
 .nf
-cargo fix \-\-edition \-\-features foo
+cargo fix \-\-features foo
 .fi
 .RE
 .sp
@@ -44,13 +40,39 @@ pass \fB\-\-target\fR to fix code for the given target.
 .sp
 .RS 4
 .nf
-cargo fix \-\-edition \-\-target x86_64\-pc\-windows\-gnu
+cargo fix \-\-target x86_64\-pc\-windows\-gnu
 .fi
 .RE
 .sp
 If you encounter any problems with \fBcargo fix\fR or otherwise have any questions
-or feature requests please don't hesitate to file an issue at
-<https://github.com/rust\-lang/cargo>
+or feature requests please don\[cq]t hesitate to file an issue at
+<https://github.com/rust\-lang/cargo>\&.
+.SS "Edition migration"
+The \fBcargo fix\fR subcommand can also be used to migrate a package from one
+\fIedition\fR <https://doc.rust\-lang.org/edition\-guide/editions/transitioning\-an\-existing\-project\-to\-a\-new\-edition.html> to the next. The general procedure is:
+.sp
+.RS 4
+\h'-04' 1.\h'+01'Run \fBcargo fix \-\-edition\fR\&. Consider also using the \fB\-\-all\-features\fR flag if
+your project has multiple features. You may also want to run \fBcargo fix \-\-edition\fR multiple times with different \fB\-\-target\fR flags if your project
+has platform\-specific code gated by \fBcfg\fR attributes.
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Modify \fBCargo.toml\fR to set the \fIedition field\fR <https://doc.rust\-lang.org/cargo/reference/manifest.html#the\-edition\-field> to the new edition.
+.RE
+.sp
+.RS 4
+\h'-04' 3.\h'+01'Run your project tests to verify that everything still works. If new
+warnings are issued, you may want to consider running \fBcargo fix\fR again
+(without the \fB\-\-edition\fR flag) to apply any suggestions given by the
+compiler.
+.RE
+.sp
+And hopefully that\[cq]s it! Just keep in mind of the caveats mentioned above that
+\fBcargo fix\fR cannot update code for inactive features or \fBcfg\fR expressions.
+Also, in some rare cases the compiler is unable to automatically migrate all
+code to the new edition, and this may require manual changes after building
+with the new edition.
 .SH "OPTIONS"
 .SS "Fix options"
 .sp
@@ -63,9 +85,9 @@ code in the working directory for you to inspect and manually fix.
 .sp
 \fB\-\-edition\fR
 .RS 4
-Apply changes that will update the code to the latest edition. This will not
+Apply changes that will update the code to the next edition. This will not
 update the edition in the \fBCargo.toml\fR manifest, which must be updated
-manually.
+manually after \fBcargo fix \-\-edition\fR has finished.
 .RE
 .sp
 \fB\-\-edition\-idioms\fR
@@ -100,8 +122,8 @@ The default members of a workspace can be set explicitly with the
 virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-workspace\fR), and a non\-virtual workspace will include only the root crate itself.
 .sp
-\fB\-p\fR \fIspec\fR\&..., 
-\fB\-\-package\fR \fIspec\fR\&...
+\fB\-p\fR \fIspec\fR\[u2026], 
+\fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
 Fix only the specified packages. See \fBcargo\-pkgid\fR(1) for the
 SPEC format. This flag may be specified multiple times and supports common Unix
@@ -120,7 +142,7 @@ Fix all members in the workspace.
 Deprecated alias for \fB\-\-workspace\fR\&.
 .RE
 .sp
-\fB\-\-exclude\fR \fISPEC\fR\&...
+\fB\-\-exclude\fR \fISPEC\fR\[u2026]
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
 \fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
@@ -143,10 +165,10 @@ use single quotes or double quotes around each glob pattern.
 .sp
 \fB\-\-lib\fR
 .RS 4
-Fix the package's library.
+Fix the package\[cq]s library.
 .RE
 .sp
-\fB\-\-bin\fR \fIname\fR\&...
+\fB\-\-bin\fR \fIname\fR\[u2026]
 .RS 4
 Fix the specified binary. This flag may be specified multiple times
 and supports common Unix glob patterns.
@@ -157,7 +179,7 @@ and supports common Unix glob patterns.
 Fix all binary targets.
 .RE
 .sp
-\fB\-\-example\fR \fIname\fR\&...
+\fB\-\-example\fR \fIname\fR\[u2026]
 .RS 4
 Fix the specified example. This flag may be specified multiple times
 and supports common Unix glob patterns.
@@ -168,7 +190,7 @@ and supports common Unix glob patterns.
 Fix all example targets.
 .RE
 .sp
-\fB\-\-test\fR \fIname\fR\&...
+\fB\-\-test\fR \fIname\fR\[u2026]
 .RS 4
 Fix the specified integration test. This flag may be specified
 multiple times and supports common Unix glob patterns.
@@ -185,7 +207,7 @@ Targets may be enabled or disabled by setting the \fBtest\fR flag in the
 manifest settings for the target.
 .RE
 .sp
-\fB\-\-bench\fR \fIname\fR\&...
+\fB\-\-bench\fR \fIname\fR\[u2026]
 .RS 4
 Fix the specified benchmark. This flag may be specified multiple
 times and supports common Unix glob patterns.
@@ -207,21 +229,19 @@ manifest settings for the target.
 Fix all targets. This is equivalent to specifying \fB\-\-lib \-\-bins \-\-tests \-\-benches \-\-examples\fR\&.
 .RE
 .SS "Feature Selection"
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in \fB\-\-manifest\-path\fR\&. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if \fB\-\-all\-features\fR is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the \fBdefault\fR feature is activated for every
+selected package.
 .sp
-When no feature options are given, the \fBdefault\fR feature is activated for
-every selected package.
+See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
+for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
-Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fR syntax. This flag may be
-specified multiple times, which enables all specified features.
+Space or comma separated list of features to activate. Features of workspace
+members may be enabled with \fBpackage\-name/feature\-name\fR syntax. This flag may
+be specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fR
@@ -231,16 +251,15 @@ Activate all available features of all selected packages.
 .sp
 \fB\-\-no\-default\-features\fR
 .RS 4
-Do not activate the \fBdefault\fR feature of the current directory's package.
+Do not activate the \fBdefault\fR feature of the selected packages.
 .RE
 .SS "Compilation Options"
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Fix for the given architecture. The default is the host
-architecture. The general format of the triple is
+Fix for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets.
+list of supported targets. This flag may be specified multiple times.
 .sp
 This may also be specified with the \fBbuild.target\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -250,20 +269,51 @@ target artifacts are placed in a separate directory. See the
 \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
 .sp
+\fB\-r\fR, 
 \fB\-\-release\fR
 .RS 4
-Fix optimized artifacts with the \fBrelease\fR profile. See the
-PROFILES section for details on how this affects profile
-selection.
+Fix optimized artifacts with the \fBrelease\fR profile.
+See also the \fB\-\-profile\fR option for choosing a specific profile by name.
 .RE
 .sp
 \fB\-\-profile\fR \fIname\fR
 .RS 4
-Changes fix behavior. Currently only \fBtest\fR is supported,
-which will fix with the \fB#[cfg(test)]\fR attribute enabled.
-This is useful to have it fix unit tests which are usually
-excluded via the \fBcfg\fR attribute. This does not change the actual profile
-used.
+Fix with the given profile.
+.sp
+As a special case, specifying the \fBtest\fR profile will also enable checking in
+test mode which will enable checking tests and enable the \fBtest\fR cfg option.
+See \fIrustc tests\fR <https://doc.rust\-lang.org/rustc/tests/index.html> for more
+detail.
+.sp
+See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+.RE
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Fix the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project\[cq]s \fBrust\-version\fR field.
+.RE
+.sp
+\fB\-\-timings=\fR\fIfmts\fR
+.RS 4
+Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma\-separated list of output
+formats; \fB\-\-timings\fR without an argument will default to \fB\-\-timings=html\fR\&.
+Specifying an output format (rather than the default) is unstable and requires
+\fB\-Zunstable\-options\fR\&. Valid output formats:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBhtml\fR (unstable, requires \fB\-Zunstable\-options\fR): Write a human\-readable file \fBcargo\-timing.html\fR to the
+\fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine\-readable timing data.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
+information about timing information.
+.RE
 .RE
 .SS "Output Options"
 .sp
@@ -271,15 +321,15 @@ used.
 .RS 4
 Directory for all generated artifacts and intermediate files. May also be
 specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
-\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults
-to \fBtarget\fR in the root of the workspace.
+\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+Defaults to \fBtarget\fR in the root of the workspace.
 .RE
 .SS "Display Options"
 .sp
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -288,7 +338,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -318,35 +370,37 @@ The output format for diagnostic messages. Can be specified multiple times
 and consists of comma\-separated values. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBhuman\fR (default): Display in a human\-readable text format.
+\h'-04'\(bu\h'+02'\fBhuman\fR (default): Display in a human\-readable text format. Conflicts with
+\fBshort\fR and \fBjson\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBshort\fR: Emit shorter, human\-readable text messages.
+\h'-04'\(bu\h'+02'\fBshort\fR: Emit shorter, human\-readable text messages. Conflicts with \fBhuman\fR
+and \fBjson\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\fR: Emit JSON messages to stdout. See
 \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages>
-for more details.
+for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
-the "short" rendering from rustc.
+the \[lq]short\[rq] rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
-scheme.
+contains embedded ANSI color codes for respecting rustc\[cq]s default color
+scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
+\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
-coming from rustc are still emitted.
+JSON diagnostics coming from rustc. Cargo\[cq]s own JSON diagnostics and others
+coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .RE
 .SS "Manifest Options"
@@ -396,6 +450,26 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -413,45 +487,23 @@ Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
 .RS 4
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
-the number of CPUs.
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
+Should not be 0.
 .RE
-.SH "PROFILES"
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more
-details.
 .sp
-Profile selection depends on the target and crate being built. By default the
-\fBdev\fR or \fBtest\fR profiles are used. If the \fB\-\-release\fR flag is given, then the
-\fBrelease\fR or \fBbench\fR profiles are used.
-
-.TS
-allbox tab(:);
-lt lt lt.
-T{
-Target
-T}:T{
-Default Profile
-T}:T{
-\fB\-\-release\fR Profile
-T}
-T{
-lib, bin, example
-T}:T{
-\fBdev\fR
-T}:T{
-\fBrelease\fR
-T}
-T{
-test, bench, or any target in "test" or "bench" mode
-T}:T{
-\fBtest\fR
-T}:T{
-\fBbench\fR
-T}
-.TE
+\fB\-\-keep\-going\fR
+.RS 4
+Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build.
 .sp
-.sp
-Dependencies use the \fBdev\fR/\fBrelease\fR profiles.
+For example if the current package depends on dependencies \fBfails\fR and \fBworks\fR,
+one of which fails to build, \fBcargo fix \-j1\fR may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas \fBcargo fix \-j1 \-\-keep\-going\fR would definitely run both
+builds, even if the one run first fails.
+.RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.
@@ -477,7 +529,7 @@ cargo fix
 .RE
 .sp
 .RS 4
-\h'-04' 2.\h'+01'Convert a 2015 edition to 2018:
+\h'-04' 2.\h'+01'Update a package to prepare it for the next edition:
 .sp
 .RS 4
 .nf

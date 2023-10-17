@@ -1,6 +1,10 @@
-use crate::core::compiler::{CompileKind, CompileMode, CrateType};
+//! Types and impls for [`Unit`].
+
+use crate::core::compiler::unit_dependencies::IsArtifact;
+use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::manifest::{Target, TargetKind};
-use crate::core::{profiles::Profile, Package};
+use crate::core::profiles::Profile;
+use crate::core::Package;
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
 use crate::util::Config;
@@ -55,6 +59,9 @@ pub struct UnitInner {
     /// The `cfg` features to enable for this unit.
     /// This must be sorted.
     pub features: Vec<InternedString>,
+    // if `true`, the dependency is an artifact dependency, requiring special handling when
+    // calculating output directories, linkage and environment variables provided to builds.
+    pub artifact: IsArtifact,
     /// Whether this is a standard library unit.
     pub is_std: bool,
     /// A hash of all dependencies of this unit.
@@ -69,6 +76,12 @@ pub struct UnitInner {
     /// This value initially starts as 0, and then is filled in via a
     /// second-pass after all the unit dependencies have been computed.
     pub dep_hash: u64,
+
+    /// This is used for target-dependent feature resolution and is copied from
+    /// [`FeaturesFor::ArtifactDep`], if the enum matches the variant.
+    ///
+    /// [`FeaturesFor::ArtifactDep`]: crate::core::resolver::features::FeaturesFor::ArtifactDep
+    pub artifact_target_for_features: Option<CompileTarget>,
 }
 
 impl UnitInner {
@@ -97,6 +110,9 @@ impl UnitInner {
 }
 
 impl Unit {
+    /// Gets the unique key for [`-Zbuild-plan`].
+    ///
+    /// [`-Zbuild-plan`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-plan
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))
     }
@@ -135,6 +151,11 @@ impl fmt::Debug for Unit {
             .field("kind", &self.kind)
             .field("mode", &self.mode)
             .field("features", &self.features)
+            .field("artifact", &self.artifact.is_true())
+            .field(
+                "artifact_target_for_features",
+                &self.artifact_target_for_features,
+            )
             .field("is_std", &self.is_std)
             .field("dep_hash", &self.dep_hash)
             .finish()
@@ -179,6 +200,8 @@ impl UnitInterner {
         features: Vec<InternedString>,
         is_std: bool,
         dep_hash: u64,
+        artifact: IsArtifact,
+        artifact_target_for_features: Option<CompileTarget>,
     ) -> Unit {
         let target = match (is_std, target.kind()) {
             // This is a horrible hack to support build-std. `libstd` declares
@@ -210,6 +233,8 @@ impl UnitInterner {
             features,
             is_std,
             dep_hash,
+            artifact,
+            artifact_target_for_features,
         });
         Unit { inner }
     }

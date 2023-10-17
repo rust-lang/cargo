@@ -1,0 +1,30 @@
+name: Security audit
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+  push:
+    branches:
+    - master
+
+jobs:
+  cargo_deny:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+    steps:
+    - uses: actions/checkout@v4
+    - uses: EmbarkStudios/cargo-deny-action@v1
+      # Prevent sudden announcement of a new advisory from failing ci:
+      continue-on-error: ${{ matrix.checks == 'advisories' }}
+      with:
+        command: check ${{ matrix.checks }}
+        rust-version: stable

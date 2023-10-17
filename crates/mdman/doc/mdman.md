@@ -28,7 +28,7 @@ man page:
   and `{{/options}}` tags. This tells the processor where the options start
   and end.
 - Each option must be expressed with a `{{#option}}` block. The parameters to
-  the the block are a sequence of strings indicating the option. For example,
+  the block are a sequence of strings indicating the option. For example,
   ```{{#option "`-p` _spec_..." "`--package` _spec_..."}}``` is an option that
   has two different forms. The text within the string is processed as markdown.
   It is recommended to use formatting similar to this example.
@@ -57,11 +57,11 @@ man page:
 
 {{#option "`-t` _type_"}}
 Specifies the output type. The following output types are supported:
-- `man` — A troff-style man page. Outputs with a numbered extension (like
+- `man` — A troff-style man page. Outputs with a numbered extension (like
   `.1`) matching the man page section.
-- `md` — A markdown file, after all handlebars processing has been finished.
+- `md` — A markdown file, after all handlebars processing has been finished.
   Outputs with the `.md` extension.
-- `txt` — A text file, rendered for situations where a man page viewer isn't
+- `txt` — A text file, rendered for situations where a man page viewer isn't
   available. Outputs with the `.txt` extension.
 {{/option}}
 

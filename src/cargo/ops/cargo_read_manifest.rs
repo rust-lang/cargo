@@ -3,13 +3,13 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use log::{info, trace};
-
 use crate::core::{EitherManifest, Package, PackageId, SourceId};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::toml::read_manifest;
-use crate::util::{self, Config};
+use crate::util::Config;
+use cargo_util::paths;
+use tracing::{info, trace};
 
 pub fn read_package(
     path: &Path,
@@ -88,10 +88,19 @@ pub fn read_packages(
     if all_packages.is_empty() {
         match errors.pop() {
             Some(err) => Err(err),
-            None => Err(anyhow::format_err!(
-                "Could not find Cargo.toml in `{}`",
+            None => {
+                if find_project_manifest_exact(path, "cargo.toml").is_ok() {
+                    Err(anyhow::format_err!(
+                "Could not find Cargo.toml in `{}`, but found cargo.toml please try to rename it to Cargo.toml",
                 path.display()
-            )),
+            ))
+                } else {
+                    Err(anyhow::format_err!(
+                        "Could not find Cargo.toml in `{}`",
+                        path.display()
+                    ))
+                }
+            }
         }
     } else {
         Ok(all_packages.into_iter().map(|(_, v)| v).collect())
@@ -174,11 +183,16 @@ fn read_nested_packages(
             v.insert(pkg);
         }
         Entry::Occupied(_) => {
-            info!(
-                "skipping nested package `{}` found at `{}`",
-                pkg.name(),
-                path.to_string_lossy()
-            );
+            // We can assume a package with publish = false isn't intended to be seen
+            // by users so we can hide the warning about those since the user is unlikely
+            // to care about those cases.
+            if pkg.publish().is_none() {
+                let _ = config.shell().warn(format!(
+                    "skipping duplicate package `{}` found at `{}`",
+                    pkg.name(),
+                    path.display()
+                ));
+            }
         }
     }
 
@@ -192,7 +206,7 @@ fn read_nested_packages(
     // TODO: filesystem/symlink implications?
     if !source_id.is_registry() {
         for p in nested.iter() {
-            let path = util::normalize_path(&path.join(p));
+            let path = paths::normalize_path(&path.join(p));
             let result =
                 read_nested_packages(&path, all_packages, source_id, config, visited, errors);
             // Ignore broken manifests found on git repositories.

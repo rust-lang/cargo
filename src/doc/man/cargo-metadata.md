@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-metadata - Machine-readable metadata about the current package
+cargo-metadata --- Machine-readable metadata about the current package
 
 ## SYNOPSIS
 
@@ -13,15 +13,34 @@ cargo-metadata - Machine-readable metadata about the current package
 Output JSON to stdout containing information about the workspace members and
 resolved dependencies of the current package.
 
-It is recommended to include the `--format-version` flag to future-proof
-your code to ensure the output is in the format you are expecting.
+The format of the output is subject to change in futures versions of Cargo. It
+is recommended to include the `--format-version` flag to future-proof your code
+to ensure the output is in the format you are expecting. For more on the
+expectations, see ["Compatibility"](#compatibility).
 
 See the [cargo_metadata crate](https://crates.io/crates/cargo_metadata)
 for a Rust API for reading the metadata.
 
 ## OUTPUT FORMAT
 
-The output has the following format:
+### Compatibility
+
+Within the same output format version, the compatibility is maintained, except
+some scenarios. The following is a non-exhaustive list of changes that are not
+considersed as incompatible:
+
+* **Adding new fields** — New fields will be added when needed. Reserving this
+  helps Cargo evolve without bumping the format version too often.
+* **Adding new values for enum-like fields** — Same as adding new fields. It
+  keeps metadata evolving without stagnation.
+* **Changing opaque representations** — The inner representations of some
+  fields are implementation details. For example, fields related to "Package ID"
+  or "Source ID" are treated as opaque identifiers to differentiate packages or
+  sources. Consumers shouldn't rely on those representations unless specified.
+
+### JSON format
+
+The JSON output has the following format:
 
 ```javascript
 {
@@ -34,7 +53,9 @@ The output has the following format:
             "name": "my-package",
             /* The version of the package. */
             "version": "0.1.0",
-            /* The Package ID, a unique identifier for referring to the package. */
+            /* The Package ID, an opaque and unique identifier for referring to the
+               package. See "Compatibility" above for the stability guarantee.
+            */
             "id": "my-package 0.1.0 (path+file:///path/to/my-package)",
             /* The license value from the manifest, or null. */
             "license": "MIT/Apache-2.0",
@@ -42,14 +63,25 @@ The output has the following format:
             "license_file": "LICENSE",
             /* The description value from the manifest, or null. */
             "description": "Package description.",
-            /* The source ID of the package. This represents where
-               a package is retrieved from.
+            /* The source ID of the package, an "opaque" identifier representing
+               where a package is retrieved from. See "Compatibility" above for
+               the stability guarantee.
+
                This is null for path dependencies and workspace members.
+
                For other dependencies, it is a string with the format:
                - "registry+URL" for registry-based dependencies.
                  Example: "registry+https://github.com/rust-lang/crates.io-index"
                - "git+URL" for git-based dependencies.
                  Example: "git+https://github.com/rust-lang/cargo?rev=5e85ba14aaa20f8133863373404cb0af69eeef2c#5e85ba14aaa20f8133863373404cb0af69eeef2c"
+               - "sparse+URL" for dependencies from a sparse registry
+                 Example: "sparse+https://my-sparse-registry.org"
+
+               The value after the `+` is not explicitly defined, and may change
+               between versions of Cargo and may not directly correlate to other
+               things, such as registry definitions in a config file. New source
+               kinds may be added in the future which will have different `+`
+               prefixed identifiers.
             */
             "source": null,
             /* Array of dependencies declared in the package's manifest. */
@@ -83,6 +115,10 @@ The output has the following format:
                        null if not a target dependency.
                     */
                     "target": "cfg(windows)",
+                    /* The file system path for a local path dependency.
+                       not present if not a path dependency.
+                    */
+                    "path": "/path/to/dep",
                     /* A string of the URL of the registry this dependency is from.
                        If not specified or null, the dependency is from the default
                        registry (crates.io).
@@ -176,6 +212,10 @@ The output has the following format:
             "categories": [
                 "command-line-utilities"
             ],
+            /* Optional string that is the default binary picked by cargo run. */
+            "default_run": null,
+            /* Optional string that is the minimum supported rust version */
+            "rust_version": "1.56",
             /* Array of keywords from the manifest. */
             "keywords": [
                 "cli"
@@ -202,6 +242,12 @@ The output has the following format:
        Each entry is the Package ID for the package.
     */
     "workspace_members": [
+        "my-package 0.1.0 (path+file:///path/to/my-package)",
+    ],
+    /* Array of default members of the workspace.
+       Each entry is the Package ID for the package.
+    */
+    "workspace_default_members": [
         "my-package 0.1.0 (path+file:///path/to/my-package)",
     ],
     // The resolved dependency graph for the entire workspace. The enabled
@@ -303,7 +349,8 @@ possible value.
 
 {{#option "`--filter-platform` _triple_" }}
 This filters the `resolve` output to only include dependencies for the
-given target triple. Without this flag, the resolve includes all targets.
+given [target triple](../appendix/glossary.html#target). 
+Without this flag, the resolve includes all targets.
 
 Note that the dependencies listed in the "packages" array still includes all
 dependencies. Each package definition is intended to be an unaltered

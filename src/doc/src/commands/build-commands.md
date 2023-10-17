@@ -10,3 +10,4 @@
 * [cargo rustc](cargo-rustc.md)
 * [cargo rustdoc](cargo-rustdoc.md)
 * [cargo test](cargo-test.md)
+* [cargo report](cargo-report.md)

@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-new - Create a new Cargo package
+cargo-new --- Create a new Cargo package
 
 ## SYNOPSIS
 
@@ -14,32 +14,6 @@ This command will create a new Cargo package in the given directory. This
 includes a simple template with a `Cargo.toml` manifest, sample source file,
 and a VCS ignore file. If the directory is not already in a VCS repository,
 then a new repository is created (see `--vcs` below).
-
-The "authors" field in the manifest is determined from the environment or
-configuration settings. A name is required and is determined from (first match
-wins):
-
-- `cargo-new.name` Cargo config value
-- `CARGO_NAME` environment variable
-- `GIT_AUTHOR_NAME` environment variable
-- `GIT_COMMITTER_NAME` environment variable
-- `user.name` git configuration value
-- `USER` environment variable
-- `USERNAME` environment variable
-- `NAME` environment variable
-
-The email address is optional and is determined from:
-
-- `cargo-new.email` Cargo config value
-- `CARGO_EMAIL` environment variable
-- `GIT_AUTHOR_EMAIL` environment variable
-- `GIT_COMMITTER_EMAIL` environment variable
-- `user.email` git configuration value
-- `EMAIL` environment variable
-
-See [the reference](../reference/config.html) for more information about
-configuration files.
-
 
 See [cargo-init(1)](cargo-init.html) for a similar command which will create a new manifest
 in an existing directory.
@@ -60,8 +34,8 @@ This is the default behavior.</dd>
 
 
 <dt class="option-term" id="option-cargo-new---edition"><a class="option-anchor" href="#option-cargo-new---edition"></a><code>--edition</code> <em>edition</em></dt>
-<dd class="option-desc">Specify the Rust edition to use. Default is 2018.
-Possible values: 2015, 2018</dd>
+<dd class="option-desc">Specify the Rust edition to use. Default is 2021.
+Possible values: 2015, 2018, 2021, 2024</dd>
 
 
 <dt class="option-term" id="option-cargo-new---name"><a class="option-anchor" href="#option-cargo-new---name"></a><code>--name</code> <em>name</em></dt>
@@ -93,7 +67,7 @@ be restricted.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-new--v"><a class="option-anchor" href="#option-cargo-new--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-new---verbose"><a class="option-anchor" href="#option-cargo-new---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -101,7 +75,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-new--q"><a class="option-anchor" href="#option-cargo-new--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-new---quiet"><a class="option-anchor" href="#option-cargo-new---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-new---color"><a class="option-anchor" href="#option-cargo-new---color"></a><code>--color</code> <em>when</em></dt>
@@ -128,6 +104,23 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-new---config"><a class="option-anchor" href="#option-cargo-new---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-new--C"><a class="option-anchor" href="#option-cargo-new--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-new--h"><a class="option-anchor" href="#option-cargo-new--h"></a><code>-h</code></dt>

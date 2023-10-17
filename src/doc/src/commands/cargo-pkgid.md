@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-pkgid - Print a fully qualified package specification
+cargo-pkgid --- Print a fully qualified package specification
 
 ## SYNOPSIS
 
@@ -27,11 +27,11 @@ following:
 SPEC Structure             | Example SPEC
 ---------------------------|--------------
 _name_                     | `bitflags`
-_name_`:`_version_         | `bitflags:1.0.4`
+_name_`@`_version_         | `bitflags@1.0.4`
 _url_                      | `https://github.com/rust-lang/cargo`
 _url_`#`_version_          | `https://github.com/rust-lang/cargo#0.33.0`
 _url_`#`_name_             | `https://github.com/rust-lang/crates.io-index#bitflags`
-_url_`#`_name_`:`_version_ | `https://github.com/rust-lang/cargo#crates-io:0.21.0`
+_url_`#`_name_`@`_version_ | `https://github.com/rust-lang/cargo#crates-io@0.21.0`
 
 ## OPTIONS
 
@@ -51,7 +51,7 @@ _url_`#`_name_`:`_version_ | `https://github.com/rust-lang/cargo#crates-io:0.21.
 <dl>
 <dt class="option-term" id="option-cargo-pkgid--v"><a class="option-anchor" href="#option-cargo-pkgid--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-pkgid---verbose"><a class="option-anchor" href="#option-cargo-pkgid---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -59,7 +59,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-pkgid--q"><a class="option-anchor" href="#option-cargo-pkgid--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-pkgid---quiet"><a class="option-anchor" href="#option-cargo-pkgid---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-pkgid---color"><a class="option-anchor" href="#option-cargo-pkgid---color"></a><code>--color</code> <em>when</em></dt>
@@ -125,6 +127,23 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-pkgid---config"><a class="option-anchor" href="#option-cargo-pkgid---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-pkgid--C"><a class="option-anchor" href="#option-cargo-pkgid--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+
+
 <dt class="option-term" id="option-cargo-pkgid--h"><a class="option-anchor" href="#option-cargo-pkgid--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-pkgid---help"><a class="option-anchor" href="#option-cargo-pkgid---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -157,11 +176,15 @@ details on environment variables that Cargo reads.
 
 2. Retrieve package specification for version 1.0.0 of `foo`:
 
-       cargo pkgid foo:1.0.0
+       cargo pkgid foo@1.0.0
 
 3. Retrieve package specification for `foo` from crates.io:
 
        cargo pkgid https://github.com/rust-lang/crates.io-index#foo
+
+4. Retrieve package specification for `foo` from a local package:
+
+       cargo pkgid file:///path/to/local/package#foo
 
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-generate-lockfile(1)](cargo-generate-lockfile.html), [cargo-metadata(1)](cargo-metadata.html)

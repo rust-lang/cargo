@@ -1,4 +1,4 @@
-use super::features::RequestedFeatures;
+use super::features::{CliFeatures, RequestedFeatures};
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -15,6 +15,9 @@ pub struct ResolverProgress {
     time_to_print: Duration,
     printed: bool,
     deps_time: Duration,
+    /// Provides an escape hatch for machine with slow CPU for debugging and
+    /// testing Cargo itself.
+    /// See [rust-lang/cargo#6596](https://github.com/rust-lang/cargo/pull/6596) for more.
     #[cfg(debug_assertions)]
     slow_cpu_multiplier: u64,
 }
@@ -31,6 +34,9 @@ impl ResolverProgress {
             // Architectures that do not have a modern processor, hardware emulation, etc.
             // In the test code we have `slow_cpu_multiplier`, but that is not accessible here.
             #[cfg(debug_assertions)]
+            // ALLOWED: For testing cargo itself only. However, it was communicated as an public
+            // interface to other developers, so keep it as-is, shouldn't add `__CARGO` prefix.
+            #[allow(clippy::disallowed_methods)]
             slow_cpu_multiplier: std::env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER")
                 .ok()
                 .and_then(|m| m.parse().ok())
@@ -119,11 +125,12 @@ impl ResolveBehavior {
         }
     }
 
-    pub fn to_manifest(&self) -> Option<String> {
+    pub fn to_manifest(&self) -> String {
         match self {
-            ResolveBehavior::V1 => None,
-            ResolveBehavior::V2 => Some("2".to_string()),
+            ResolveBehavior::V1 => "1",
+            ResolveBehavior::V2 => "2",
         }
+        .to_owned()
     }
 }
 
@@ -133,6 +140,7 @@ pub struct ResolveOpts {
     /// Whether or not dev-dependencies should be included.
     ///
     /// This may be set to `false` by things like `cargo install` or `-Z avoid-dev-deps`.
+    /// It also gets set to `false` when activating dependencies in the resolver.
     pub dev_deps: bool,
     /// Set of features requested on the command-line.
     pub features: RequestedFeatures,
@@ -143,24 +151,12 @@ impl ResolveOpts {
     pub fn everything() -> ResolveOpts {
         ResolveOpts {
             dev_deps: true,
-            features: RequestedFeatures::new_all(true),
+            features: RequestedFeatures::CliFeatures(CliFeatures::new_all(true)),
         }
     }
 
-    pub fn new(
-        dev_deps: bool,
-        features: &[String],
-        all_features: bool,
-        uses_default_features: bool,
-    ) -> ResolveOpts {
-        ResolveOpts {
-            dev_deps,
-            features: RequestedFeatures::from_command_line(
-                features,
-                all_features,
-                uses_default_features,
-            ),
-        }
+    pub fn new(dev_deps: bool, features: RequestedFeatures) -> ResolveOpts {
+        ResolveOpts { dev_deps, features }
     }
 }
 
@@ -185,7 +181,7 @@ impl DepsFrame {
             .unwrap_or(0)
     }
 
-    pub fn flatten<'a>(&'a self) -> impl Iterator<Item = (PackageId, Dependency)> + 'a {
+    pub fn flatten(&self) -> impl Iterator<Item = (PackageId, Dependency)> + '_ {
         self.remaining_siblings
             .clone()
             .map(move |(d, _, _)| (self.parent.package_id(), d))
@@ -216,7 +212,7 @@ impl Ord for DepsFrame {
     }
 }
 
-/// Note that a `OrdSet` is used for the remaining dependencies that need
+/// Note that an `OrdSet` is used for the remaining dependencies that need
 /// activation. This set is sorted by how many candidates each dependency has.
 ///
 /// This helps us get through super constrained portions of the dependency
@@ -259,7 +255,7 @@ impl RemainingDeps {
         }
         None
     }
-    pub fn iter<'a>(&'a mut self) -> impl Iterator<Item = (PackageId, Dependency)> + 'a {
+    pub fn iter(&mut self) -> impl Iterator<Item = (PackageId, Dependency)> + '_ {
         self.data.iter().flat_map(|(other, _)| other.flatten())
     }
 }
@@ -289,7 +285,7 @@ pub enum ConflictReason {
     /// A dependency listed features that weren't actually available on the
     /// candidate. For example we tried to activate feature `foo` but the
     /// candidate we're activating didn't actually have the feature `foo`.
-    MissingFeatures(String),
+    MissingFeatures(InternedString),
 
     /// A dependency listed a feature that ended up being a required dependency.
     /// For example we tried to activate feature `foo` but the
@@ -310,34 +306,22 @@ pub enum ConflictReason {
 
 impl ConflictReason {
     pub fn is_links(&self) -> bool {
-        if let ConflictReason::Links(_) = *self {
-            return true;
-        }
-        false
+        matches!(self, ConflictReason::Links(_))
     }
 
     pub fn is_missing_features(&self) -> bool {
-        if let ConflictReason::MissingFeatures(_) = *self {
-            return true;
-        }
-        false
+        matches!(self, ConflictReason::MissingFeatures(_))
     }
 
     pub fn is_required_dependency_as_features(&self) -> bool {
-        if let ConflictReason::RequiredDependencyAsFeature(_) = *self {
-            return true;
-        }
-        false
+        matches!(self, ConflictReason::RequiredDependencyAsFeature(_))
     }
 
     pub fn is_public_dependency(&self) -> bool {
-        if let ConflictReason::PublicDependency(_) = *self {
-            return true;
-        }
-        if let ConflictReason::PubliclyExports(_) = *self {
-            return true;
-        }
-        false
+        matches!(
+            self,
+            ConflictReason::PublicDependency(_) | ConflictReason::PubliclyExports(_)
+        )
     }
 }
 

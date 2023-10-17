@@ -1,0 +1,122 @@
+CARGO-LOGOUT(1)
+
+NAME
+       cargo-logout — Remove an API token from the registry locally
+
+SYNOPSIS
+       cargo logout [options]
+
+DESCRIPTION
+       This command will run a credential provider to remove a saved token.
+
+       For the default cargo:token credential provider, credentials are stored
+       in $CARGO_HOME/credentials.toml where $CARGO_HOME defaults to .cargo in
+       your home directory.
+
+       If a registry has a credential-provider specified, it will be used.
+       Otherwise, the providers from the config value
+       registry.global-credential-providers will be attempted, starting from
+       the end of the list.
+
+       If --registry is not specified, then the credentials for the default
+       registry will be removed (configured by registry.default
+       <https://doc.rust-lang.org/cargo/reference/config.html#registrydefault>,
+       which defaults to <https://crates.io/>).
+
+       This will not revoke the token on the server. If you need to revoke the
+       token, visit the registry website and follow its instructions (see
+       <https://crates.io/me> to revoke the token for <https://crates.io/>).
+
+OPTIONS
+   Logout Options
+       --registry registry
+           Name of the registry to use. Registry names are defined in Cargo
+           config files
+           <https://doc.rust-lang.org/cargo/reference/config.html>. If not
+           specified, the default registry is used, which is defined by the
+           registry.default config key which defaults to crates-io.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://rust-lang.github.io/rustup/overrides.html> for more
+           information about how toolchain overrides work.
+
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Remove the default registry token:
+
+              cargo logout
+
+       2. Remove the token for a specific registry:
+
+              cargo logout --registry my-registry
+
+SEE ALSO
+       cargo(1), cargo-login(1)
+

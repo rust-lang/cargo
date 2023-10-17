@@ -1,0 +1,13 @@
+[package]
+name = "your-face"
+version = "0.1.3"
+
+[dependencies]
+my-package = "0.1.1"
+optional-dependency = { path = "../optional", optional = true }
+
+[features]
+default = ["mouth"]
+nose = []
+mouth = ["nose"]
+eyes = []

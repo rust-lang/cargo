@@ -1,9 +1,11 @@
 # cargo-clean(1)
-{{*set actionverb="Clean"}}
+{{~*set command="clean"}}
+{{~*set actionverb="Clean"}}
+{{~*set multitarget=true}}
 
 ## NAME
 
-cargo-clean - Remove generated artifacts
+cargo-clean --- Remove generated artifacts
 
 ## SYNOPSIS
 
@@ -34,13 +36,22 @@ multiple times. See {{man "cargo-pkgid" 1}} for the SPEC format.
 
 {{#options}}
 
+{{#option "`--dry-run`" }}
+Displays a summary of what would be deleted without deleting anything.
+Use with `--verbose` to display the actual files that would be deleted.
+{{/option}}
+
 {{#option "`--doc`" }}
 This option will cause `cargo clean` to remove only the `doc` directory in
 the target directory.
 {{/option}}
 
 {{#option "`--release`" }}
-Clean all artifacts that were built with the `release` or `bench` profiles.
+Remove all artifacts in the `release` directory.
+{{/option}}
+
+{{#option "`--profile` _name_" }}
+Remove all artifacts in the directory with the given profile name.
 {{/option}}
 
 {{> options-target-dir }}

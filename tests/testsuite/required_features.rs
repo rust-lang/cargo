@@ -13,7 +13,7 @@ fn build_bin_default_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -68,7 +68,7 @@ fn build_bin_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -94,7 +94,7 @@ fn build_bin_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -139,7 +139,7 @@ fn build_example_default_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -176,7 +176,7 @@ fn build_example_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -202,7 +202,7 @@ fn build_example_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -272,7 +272,7 @@ fn test_default_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -294,7 +294,7 @@ fn test_default_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test test ... ok")
         .run();
@@ -308,7 +308,7 @@ fn test_default_features() {
         .with_stderr(
             "\
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test test ... ok")
         .run();
@@ -330,7 +330,7 @@ fn test_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -351,7 +351,7 @@ fn test_arg_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test test ... ok")
         .run();
@@ -363,7 +363,7 @@ fn test_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -392,7 +392,7 @@ fn test_multiple_required_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo_2-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo_2-[..][EXE])",
         )
         .with_stdout_contains("test test ... ok")
         .run();
@@ -402,8 +402,8 @@ fn test_multiple_required_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo_1-[..][EXE]
-[RUNNING] target/debug/deps/foo_2-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo_1-[..][EXE])
+[RUNNING] [..] (target/debug/deps/foo_2-[..][EXE])",
         )
         .with_stdout_contains_n("test test ... ok", 2)
         .run();
@@ -414,18 +414,13 @@ fn test_multiple_required_features() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_default_features() {
-    if !is_nightly() {
-        // #[bench] is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -457,7 +452,7 @@ fn bench_default_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] target/release/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
@@ -471,7 +466,7 @@ fn bench_default_features() {
         .with_stderr(
             "\
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] target/release/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
@@ -487,18 +482,13 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_arg_features() {
-    if !is_nightly() {
-        // #[bench] is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -529,24 +519,19 @@ fn bench_arg_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] target/release/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "bench")]
 fn bench_multiple_required_features() {
-    if !is_nightly() {
-        // #[bench] is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -595,7 +580,7 @@ fn bench_multiple_required_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] target/release/deps/foo_2-[..][EXE]",
+[RUNNING] [..] (target/release/deps/foo_2-[..][EXE])",
         )
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
@@ -605,8 +590,8 @@ fn bench_multiple_required_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] target/release/deps/foo_1-[..][EXE]
-[RUNNING] target/release/deps/foo_2-[..][EXE]",
+[RUNNING] [..] (target/release/deps/foo_1-[..][EXE])
+[RUNNING] [..] (target/release/deps/foo_2-[..][EXE])",
         )
         .with_stdout_contains_n("test bench ... bench: [..]", 2)
         .run();
@@ -623,7 +608,7 @@ fn install_default_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -650,12 +635,14 @@ fn install_default_features() {
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
-        .with_status(101)
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[ERROR] no binaries are available for install using the selected features
+[WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo\" requires the features: `a`
+  example \"foo\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -671,7 +658,9 @@ fn install_default_features() {
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
-    `[..]target`
+    `[..]target`.
+To reuse those artifacts with a future compilation, set the environment \
+variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
@@ -691,7 +680,8 @@ Caused by:
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
-    `[..]target`
+    `[..]target`.\nTo reuse those artifacts with a future compilation, set the environment \
+    variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
@@ -708,7 +698,7 @@ fn install_arg_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -735,7 +725,7 @@ fn install_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -755,34 +745,116 @@ fn install_multiple_required_features() {
                 name = "foo_2"
                 path = "src/foo_2.rs"
                 required-features = ["a"]
+
+                [[example]]
+                name = "foo_3"
+                path = "src/foo_3.rs"
+                required-features = ["b", "c"]
+
+                [[example]]
+                name = "foo_4"
+                path = "src/foo_4.rs"
+                required-features = ["a"]
             "#,
         )
         .file("src/foo_1.rs", "fn main() {}")
         .file("src/foo_2.rs", "fn main() {}")
+        .file("src/foo_3.rs", "fn main() {}")
+        .file("src/foo_4.rs", "fn main() {}")
         .build();
 
     p.cargo("install --path .").run();
     assert_has_not_installed_exe(cargo_home(), "foo_1");
     assert_has_installed_exe(cargo_home(), "foo_2");
+    assert_has_not_installed_exe(cargo_home(), "foo_3");
+    assert_has_not_installed_exe(cargo_home(), "foo_4");
+    p.cargo("uninstall foo").run();
+
+    p.cargo("install --path . --bins --examples").run();
+    assert_has_not_installed_exe(cargo_home(), "foo_1");
+    assert_has_installed_exe(cargo_home(), "foo_2");
+    assert_has_not_installed_exe(cargo_home(), "foo_3");
+    assert_has_installed_exe(cargo_home(), "foo_4");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --features c").run();
     assert_has_installed_exe(cargo_home(), "foo_1");
     assert_has_installed_exe(cargo_home(), "foo_2");
+    assert_has_not_installed_exe(cargo_home(), "foo_3");
+    assert_has_not_installed_exe(cargo_home(), "foo_4");
+    p.cargo("uninstall foo").run();
+
+    p.cargo("install --path . --features c --bins --examples")
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo_1");
+    assert_has_installed_exe(cargo_home(), "foo_2");
+    assert_has_installed_exe(cargo_home(), "foo_3");
+    assert_has_installed_exe(cargo_home(), "foo_4");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
-        .with_status(101)
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[ERROR] no binaries are available for install using the selected features
+[WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo_1\" requires the features: `b`, `c`
+  bin \"foo_2\" requires the features: `a`
+  example \"foo_3\" requires the features: `b`, `c`
+  example \"foo_4\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
+",
+        )
+        .run();
+    p.cargo("install --path . --no-default-features --bins")
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.0.1 ([..])
+[WARNING] Target filter `bins` specified, but no targets matched. This is a no-op
+[FINISHED] release [optimized] target(s) in [..]
+[WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo_1\" requires the features: `b`, `c`
+  bin \"foo_2\" requires the features: `a`
+  example \"foo_3\" requires the features: `b`, `c`
+  example \"foo_4\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
+",
+        )
+        .run();
+    p.cargo("install --path . --no-default-features --examples")
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.0.1 ([..])
+[WARNING] Target filter `examples` specified, but no targets matched. This is a no-op
+[FINISHED] release [optimized] target(s) in [..]
+[WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo_1\" requires the features: `b`, `c`
+  bin \"foo_2\" requires the features: `a`
+  example \"foo_3\" requires the features: `b`, `c`
+  example \"foo_4\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
+",
+        )
+        .run();
+    p.cargo("install --path . --no-default-features --bins --examples")
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.0.1 ([..])
+[WARNING] Target filters `bins`, `examples` specified, but no targets matched. This is a no-op
+[FINISHED] release [optimized] target(s) in [..]
+[WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo_1\" requires the features: `b`, `c`
+  bin \"foo_2\" requires the features: `a`
+  example \"foo_3\" requires the features: `b`, `c`
+  example \"foo_4\" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
 ",
         )
         .run();
     assert_has_not_installed_exe(cargo_home(), "foo_1");
     assert_has_not_installed_exe(cargo_home(), "foo_2");
+    assert_has_not_installed_exe(cargo_home(), "foo_3");
+    assert_has_not_installed_exe(cargo_home(), "foo_4");
 }
 
 #[cargo_test]
@@ -791,7 +863,7 @@ fn dep_feature_in_toml() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -833,7 +905,7 @@ fn dep_feature_in_toml() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 authors = []
@@ -861,7 +933,7 @@ fn dep_feature_in_toml() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test test ... ok")
         .run();
@@ -874,7 +946,7 @@ fn dep_feature_in_toml() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] target/release/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
             )
             .with_stdout_contains("test bench ... bench: [..]")
             .run();
@@ -892,7 +964,7 @@ fn dep_feature_in_cmd_line() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -944,7 +1016,7 @@ fn dep_feature_in_cmd_line() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 authors = []
@@ -1003,7 +1075,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test bin_is_built ... ok")
         .run();
@@ -1021,7 +1093,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] target/release/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
             )
             .with_stdout_contains("test bench ... bench: [..]")
             .run();
@@ -1029,12 +1101,14 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
 
     // install
     p.cargo("install --path .")
-        .with_status(101)
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[ERROR] no binaries are available for install using the selected features
+[WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo\" requires the features: `bar/a`
+  example \"foo\" requires the features: `bar/a`
+Consider enabling some of the needed features by passing, e.g., `--features=\"bar/a\"`
 ",
         )
         .run();
@@ -1051,7 +1125,7 @@ fn test_skips_compiling_bin_with_missing_required_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1075,7 +1149,7 @@ fn test_skips_compiling_bin_with_missing_required_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/debug/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("running 0 tests")
         .run();
@@ -1095,7 +1169,7 @@ error[E0463]: can't find crate for `bar`",
                 "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] bench [optimized] target(s) in [..]
-[RUNNING] target/release/deps/foo-[..][EXE]",
+[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
             )
             .with_stdout_contains("running 0 tests")
             .run();
@@ -1117,7 +1191,7 @@ fn run_default() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1154,7 +1228,7 @@ fn run_default_multiple_required_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1170,6 +1244,11 @@ fn run_default_multiple_required_features() {
                 required-features = ["a"]
 
                 [[bin]]
+                name = "foo3"
+                path = "src/foo3.rs"
+                required-features = ["b"]
+
+                [[bin]]
                 name = "foo2"
                 path = "src/foo2.rs"
                 required-features = ["b"]
@@ -1177,6 +1256,7 @@ fn run_default_multiple_required_features() {
         )
         .file("src/lib.rs", "")
         .file("src/foo1.rs", "extern crate foo; fn main() {}")
+        .file("src/foo3.rs", "extern crate foo; fn main() {}")
         .file("src/foo2.rs", "extern crate foo; fn main() {}")
         .build();
 
@@ -1185,7 +1265,7 @@ fn run_default_multiple_required_features() {
         .with_stderr(
             "\
 error: `cargo run` could not determine which binary to run[..]
-available binaries: foo1, foo2",
+available binaries: foo1, foo2, foo3",
         )
         .run();
 }
@@ -1281,4 +1361,95 @@ Consider enabling them by passing, e.g., `--features=\"a1/f1\"`
     p.rename_run("x", "x_with_f1_f2")
         .with_stdout("a1 f1\na2 f2")
         .run();
+}
+
+#[cargo_test]
+fn truncated_install_warning_message() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.1.0"
+    edition = "2021"
+
+    [features]
+    feature1 = []
+    feature2 = []
+    feature3 = []
+    feature4 = []
+    feature5 = []
+
+    [[bin]]
+    name = "foo1"
+    required-features = ["feature1", "feature2", "feature3"]
+
+    [[bin]]
+    name = "foo2"
+    required-features = ["feature2"]
+
+    [[bin]]
+    name = "foo3"
+    required-features = ["feature3"]
+
+    [[bin]]
+    name = "foo4"
+    required-features = ["feature4", "feature1"]
+
+    [[bin]]
+    name = "foo5"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo6"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo7"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo8"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo9"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[bin]]
+    name = "foo10"
+    required-features = ["feature1", "feature2", "feature3", "feature4", "feature5"]
+
+    [[example]]
+    name = "example1"
+    required-features = ["feature1", "feature2"]
+    "#,
+        )
+        .file("src/bin/foo1.rs", "fn main() {}")
+        .file("src/bin/foo2.rs", "fn main() {}")
+        .file("src/bin/foo3.rs", "fn main() {}")
+        .file("src/bin/foo4.rs", "fn main() {}")
+        .file("src/bin/foo5.rs", "fn main() {}")
+        .file("src/bin/foo6.rs", "fn main() {}")
+        .file("src/bin/foo7.rs", "fn main() {}")
+        .file("src/bin/foo8.rs", "fn main() {}")
+        .file("src/bin/foo9.rs", "fn main() {}")
+        .file("src/bin/foo10.rs", "fn main() {}")
+        .file("examples/example1.rs", "fn main() {}")
+        .build();
+
+    p.cargo("install --path .").with_stderr("\
+[INSTALLING] foo v0.1.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+[WARNING] none of the package's binaries are available for install using the selected features
+  bin \"foo1\" requires the features: `feature1`, `feature2`, `feature3`
+  bin \"foo2\" requires the features: `feature2`
+  bin \"foo3\" requires the features: `feature3`
+  bin \"foo4\" requires the features: `feature4`, `feature1`
+  bin \"foo5\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+  bin \"foo6\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+  bin \"foo7\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+4 more targets also requires features not enabled. See them in the Cargo.toml file.
+Consider enabling some of the needed features by passing, e.g., `--features=\"feature1 feature2 feature3\"`").run();
 }

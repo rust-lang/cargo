@@ -3,19 +3,6 @@
 use cargo_test_support::{basic_manifest, cross_compile, project, rustc_host};
 
 #[cargo_test]
-fn double_target_rejected() {
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build --target a --target b")
-        .with_stderr("error: specifying multiple `--target` flags requires `-Zmultitarget`")
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
 fn simple_build() {
     if cross_compile::disabled() {
         return;
@@ -27,16 +14,42 @@ fn simple_build() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z multitarget")
+    p.cargo("build")
         .arg("--target")
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .masquerade_as_nightly_cargo()
         .run();
 
     assert!(p.target_bin(t1, "foo").is_file());
-    assert!(p.target_bin(&t2, "foo").is_file());
+    assert!(p.target_bin(t2, "foo").is_file());
+}
+
+#[cargo_test]
+fn simple_build_with_config() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let t1 = cross_compile::alternate();
+    let t2 = rustc_host();
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [build]
+                    target = ["{t1}", "{t2}"]
+                "#
+            ),
+        )
+        .build();
+
+    p.cargo("build").run();
+
+    assert!(p.target_bin(t1, "foo").is_file());
+    assert!(p.target_bin(t2, "foo").is_file());
 }
 
 #[cargo_test]
@@ -51,12 +64,11 @@ fn simple_test() {
         .file("src/lib.rs", "fn main() {}")
         .build();
 
-    p.cargo("test -Z multitarget")
+    p.cargo("test")
         .arg("--target")
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains(&format!("[RUNNING] [..]{}[..]", t1))
         .with_stderr_contains(&format!("[RUNNING] [..]{}[..]", t2))
         .run();
@@ -69,10 +81,9 @@ fn simple_run() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("run -Z multitarget --target a --target b")
-        .with_stderr("error: only one `--target` argument is supported")
+    p.cargo("run --target a --target b")
+        .with_stderr("[ERROR] only one `--target` argument is supported")
         .with_status(101)
-        .masquerade_as_nightly_cargo()
         .run();
 }
 
@@ -88,12 +99,11 @@ fn simple_doc() {
         .file("src/lib.rs", "//! empty lib")
         .build();
 
-    p.cargo("doc -Z multitarget")
+    p.cargo("doc")
         .arg("--target")
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .masquerade_as_nightly_cargo()
         .run();
 
     assert!(p.build_dir().join(&t1).join("doc/foo/index.html").is_file());
@@ -112,12 +122,11 @@ fn simple_check() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Z multitarget")
+    p.cargo("check")
         .arg("--target")
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .masquerade_as_nightly_cargo()
         .run();
 }
 
@@ -132,13 +141,91 @@ fn same_value_twice() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z multitarget")
+    p.cargo("build")
         .arg("--target")
         .arg(&t)
         .arg("--target")
         .arg(&t)
-        .masquerade_as_nightly_cargo()
         .run();
 
-    assert!(p.target_bin(&t, "foo").is_file());
+    assert!(p.target_bin(t, "foo").is_file());
+}
+
+#[cargo_test]
+fn same_value_twice_with_config() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let t = rustc_host();
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [build]
+                    target = ["{t}", "{t}"]
+                "#
+            ),
+        )
+        .build();
+
+    p.cargo("build").run();
+
+    assert!(p.target_bin(t, "foo").is_file());
+}
+
+#[cargo_test]
+fn works_with_config_in_both_string_or_list() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let t = rustc_host();
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [build]
+                    target = "{t}"
+                "#
+            ),
+        )
+        .build();
+
+    p.cargo("build").run();
+
+    assert!(p.target_bin(t, "foo").is_file());
+
+    p.cargo("clean").run();
+
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+                [build]
+                target = ["{t}"]
+            "#
+        ),
+    );
+
+    p.cargo("build").run();
+
+    assert!(p.target_bin(t, "foo").is_file());
+}
+
+#[cargo_test]
+fn works_with_env() {
+    let t = rustc_host();
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build").env("CARGO_BUILD_TARGET", t).run();
+
+    assert!(p.target_bin(t, "foo").is_file());
 }

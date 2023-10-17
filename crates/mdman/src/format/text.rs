@@ -3,7 +3,7 @@
 use crate::util::{header_text, unwrap};
 use crate::EventIter;
 use anyhow::{bail, Error};
-use pulldown_cmark::{Alignment, Event, LinkType, Tag};
+use pulldown_cmark::{Alignment, Event, HeadingLevel, LinkType, Tag};
 use std::fmt::Write;
 use std::mem;
 use url::Url;
@@ -116,24 +116,24 @@ impl<'e> TextRenderer<'e> {
                                 self.flush();
                             }
                         }
-                        Tag::Heading(n) => {
+                        Tag::Heading(level, ..) => {
                             self.flush();
-                            if n == 1 {
+                            if level == HeadingLevel::H1 {
                                 let text = header_text(&mut self.parser)?;
                                 self.push_to_line(&text.to_uppercase());
                                 self.hard_break();
                                 self.hard_break();
-                            } else if n == 2 {
+                            } else if level == HeadingLevel::H2 {
                                 let text = header_text(&mut self.parser)?;
                                 self.push_to_line(&text.to_uppercase());
                                 self.flush();
                                 self.indent = 7;
                             } else {
                                 let text = header_text(&mut self.parser)?;
-                                self.push_indent((n as usize - 2) * 3);
+                                self.push_indent((level as usize - 2) * 3);
                                 self.push_to_line(&text);
                                 self.flush();
-                                self.indent = (n as usize - 1) * 3 + 1;
+                                self.indent = (level as usize - 1) * 3 + 1;
                             }
                         }
                         Tag::BlockQuote => {
@@ -223,7 +223,7 @@ impl<'e> TextRenderer<'e> {
                         self.flush();
                         self.hard_break();
                     }
-                    Tag::Heading(_n) => {}
+                    Tag::Heading(..) => {}
                     Tag::BlockQuote => {
                         self.indent -= 3;
                     }

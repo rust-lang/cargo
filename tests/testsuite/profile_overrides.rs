@@ -29,11 +29,11 @@ fn profile_override_basic() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr(
-            "[COMPILING] bar [..]
+            "[CHECKING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
-[COMPILING] foo [..]
+[CHECKING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
 [FINISHED] dev [optimized + debuginfo] target(s) in [..]",
         )
@@ -71,7 +71,7 @@ fn profile_override_warnings() {
     p.cargo("build")
         .with_stderr_contains(
             "\
-[WARNING] profile package spec `bar:1.2.3` in profile `dev` \
+[WARNING] profile package spec `bar@1.2.3` in profile `dev` \
     has a version or URL that does not match any of the packages: \
     bar v0.5.0 ([..]/foo/bar)
 [WARNING] profile package spec `bart` in profile `dev` did not match any packages
@@ -125,7 +125,7 @@ fn profile_override_bad_settings() {
             .file("bar/src/lib.rs", "")
             .build();
 
-        p.cargo("build")
+        p.cargo("check")
             .with_status(101)
             .with_stderr_contains(format!("Caused by:\n  {}", expected))
             .run();
@@ -257,13 +257,67 @@ fn profile_override_spec_multiple() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains(
             "\
 [ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([..])`
-found package specs: bar, bar:0.5.0",
+found package specs: bar, bar@0.5.0",
         )
+        .run();
+}
+
+#[cargo_test]
+fn profile_override_spec_with_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev.package."bar:0.5.0"]
+            codegen-units = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains("[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]")
+        .run();
+}
+
+#[cargo_test]
+fn profile_override_spec_with_partial_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev.package."bar:0.5"]
+            codegen-units = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains("[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]")
         .run();
 }
 
@@ -323,7 +377,7 @@ fn profile_override_spec() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_contains("[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
         .with_stderr_contains("[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
         .run();
@@ -378,7 +432,7 @@ fn override_proc_macro() {
         )
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         // Shared built for the proc-macro.
         .with_stderr_contains("[RUNNING] `rustc [..]--crate-name shared [..]-C codegen-units=4[..]")
         // Shared built for the library.
@@ -414,10 +468,10 @@ fn no_warning_ws() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("build -p b")
+    p.cargo("check -p b")
         .with_stderr(
             "\
-[COMPILING] b [..]
+[CHECKING] b [..]
 [FINISHED] [..]
 ",
         )

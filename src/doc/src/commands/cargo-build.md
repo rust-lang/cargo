@@ -1,9 +1,8 @@
 # cargo-build(1)
 
-
 ## NAME
 
-cargo-build - Compile the current package
+cargo-build --- Compile the current package
 
 ## SYNOPSIS
 
@@ -30,8 +29,8 @@ virtual workspace will include all workspace members (equivalent to passing
 
 <dl>
 
-<dt class="option-term" id="option-cargo-build--p"><a class="option-anchor" href="#option-cargo-build--p"></a><code>-p</code> <em>spec</em>...</dt>
-<dt class="option-term" id="option-cargo-build---package"><a class="option-anchor" href="#option-cargo-build---package"></a><code>--package</code> <em>spec</em>...</dt>
+<dt class="option-term" id="option-cargo-build--p"><a class="option-anchor" href="#option-cargo-build--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-build---package"><a class="option-anchor" href="#option-cargo-build---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Build only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
@@ -49,7 +48,7 @@ double quotes around each pattern.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-build---exclude"><a class="option-anchor" href="#option-cargo-build---exclude"></a><code>--exclude</code> <em>SPEC</em>...</dt>
+<dt class="option-term" id="option-cargo-build---exclude"><a class="option-anchor" href="#option-cargo-build---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
 common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
@@ -66,6 +65,16 @@ When no target selection options are given, `cargo build` will build all
 binary and library targets of the selected packages. Binaries are skipped if
 they have `required-features` that are missing.
 
+Binary targets are automatically built if there is an integration test or
+benchmark being selected to build. This allows an integration
+test to execute the binary to exercise and test its behavior. 
+The `CARGO_BIN_EXE_<name>`
+[environment variable](../reference/environment-variables.html#environment-variables-cargo-sets-for-crates)
+is set when the integration test is built so that it can use the
+[`env` macro](https://doc.rust-lang.org/std/macro.env.html) to locate the
+executable.
+
+
 Passing target selection flags will build only the specified
 targets. 
 
@@ -77,10 +86,10 @@ use single quotes or double quotes around each glob pattern.
 <dl>
 
 <dt class="option-term" id="option-cargo-build---lib"><a class="option-anchor" href="#option-cargo-build---lib"></a><code>--lib</code></dt>
-<dd class="option-desc">Build the package's library.</dd>
+<dd class="option-desc">Build the package’s library.</dd>
 
 
-<dt class="option-term" id="option-cargo-build---bin"><a class="option-anchor" href="#option-cargo-build---bin"></a><code>--bin</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-build---bin"><a class="option-anchor" href="#option-cargo-build---bin"></a><code>--bin</code> <em>name</em>…</dt>
 <dd class="option-desc">Build the specified binary. This flag may be specified multiple times
 and supports common Unix glob patterns.</dd>
 
@@ -90,7 +99,7 @@ and supports common Unix glob patterns.</dd>
 
 
 
-<dt class="option-term" id="option-cargo-build---example"><a class="option-anchor" href="#option-cargo-build---example"></a><code>--example</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-build---example"><a class="option-anchor" href="#option-cargo-build---example"></a><code>--example</code> <em>name</em>…</dt>
 <dd class="option-desc">Build the specified example. This flag may be specified multiple times
 and supports common Unix glob patterns.</dd>
 
@@ -99,7 +108,7 @@ and supports common Unix glob patterns.</dd>
 <dd class="option-desc">Build all example targets.</dd>
 
 
-<dt class="option-term" id="option-cargo-build---test"><a class="option-anchor" href="#option-cargo-build---test"></a><code>--test</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-build---test"><a class="option-anchor" href="#option-cargo-build---test"></a><code>--test</code> <em>name</em>…</dt>
 <dd class="option-desc">Build the specified integration test. This flag may be specified
 multiple times and supports common Unix glob patterns.</dd>
 
@@ -114,7 +123,7 @@ Targets may be enabled or disabled by setting the <code>test</code> flag in the
 manifest settings for the target.</dd>
 
 
-<dt class="option-term" id="option-cargo-build---bench"><a class="option-anchor" href="#option-cargo-build---bench"></a><code>--bench</code> <em>name</em>...</dt>
+<dt class="option-term" id="option-cargo-build---bench"><a class="option-anchor" href="#option-cargo-build---bench"></a><code>--bench</code> <em>name</em>…</dt>
 <dd class="option-desc">Build the specified benchmark. This flag may be specified multiple
 times and supports common Unix glob patterns.</dd>
 
@@ -138,22 +147,20 @@ manifest settings for the target.</dd>
 
 ### Feature Selection
 
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in `--manifest-path`. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if `--all-features` is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the `default` feature is activated for every
+selected package.
 
-When no feature options are given, the `default` feature is activated for
-every selected package.
+See [the features documentation](../reference/features.html#command-line-feature-options)
+for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-build--F"><a class="option-anchor" href="#option-cargo-build--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-build---features"><a class="option-anchor" href="#option-cargo-build---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax. This flag may be
-specified multiple times, which enables all specified features.</dd>
+<dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
+members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
+be specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-build---all-features"><a class="option-anchor" href="#option-cargo-build---all-features"></a><code>--all-features</code></dt>
@@ -161,7 +168,7 @@ specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-build---no-default-features"><a class="option-anchor" href="#option-cargo-build---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Do not activate the <code>default</code> feature of the current directory's package.</dd>
+<dd class="option-desc">Do not activate the <code>default</code> feature of the selected packages.</dd>
 
 
 </dl>
@@ -172,10 +179,9 @@ specified multiple times, which enables all specified features.</dd>
 <dl>
 
 <dt class="option-term" id="option-cargo-build---target"><a class="option-anchor" href="#option-cargo-build---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Build for the given architecture. The default is the host
-architecture. The general format of the triple is
+<dd class="option-desc">Build for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -184,10 +190,41 @@ target artifacts are placed in a separate directory. See the
 
 
 
+<dt class="option-term" id="option-cargo-build--r"><a class="option-anchor" href="#option-cargo-build--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-build---release"><a class="option-anchor" href="#option-cargo-build---release"></a><code>--release</code></dt>
-<dd class="option-desc">Build optimized artifacts with the <code>release</code> profile. See the
-<a href="#profiles">PROFILES</a> section for details on how this affects profile
-selection.</dd>
+<dd class="option-desc">Build optimized artifacts with the <code>release</code> profile.
+See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-build---profile"><a class="option-anchor" href="#option-cargo-build---profile"></a><code>--profile</code> <em>name</em></dt>
+<dd class="option-desc">Build with the given profile.
+See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-build---ignore-rust-version"><a class="option-anchor" href="#option-cargo-build---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Build the target even if the selected Rust compiler is older than the
+required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
+
+
+
+<dt class="option-term" id="option-cargo-build---timings=fmts"><a class="option-anchor" href="#option-cargo-build---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
+<dd class="option-desc">Output information how long each compilation takes, and track concurrency
+information over time. Accepts an optional comma-separated list of output
+formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
+Specifying an output format (rather than the default) is unstable and requires
+<code>-Zunstable-options</code>. Valid output formats:</p>
+<ul>
+<li><code>html</code> (unstable, requires <code>-Zunstable-options</code>): Write a human-readable file <code>cargo-timing.html</code> to the
+<code>target/cargo-timings</code> directory with a report of the compilation. Also write
+a report to the same directory with a timestamp in the filename if you want
+to look at older runs. HTML output is suitable for human consumption only,
+and does not provide machine-readable timing data.</li>
+<li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
+information about timing information.</li>
+</ul></dd>
+
 
 
 
@@ -199,8 +236,8 @@ selection.</dd>
 <dt class="option-term" id="option-cargo-build---target-dir"><a class="option-anchor" href="#option-cargo-build---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
-to <code>target</code> in the root of the workspace.</dd>
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
+Defaults to <code>target</code> in the root of the workspace.</dd>
 
 
 
@@ -209,7 +246,7 @@ to <code>target</code> in the root of the workspace.</dd>
 <p>This option is unstable and available only on the
 <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
 and requires the <code>-Z unstable-options</code> flag to enable.
-See https://github.com/rust-lang/cargo/issues/6790 for more information.</dd>
+See <a href="https://github.com/rust-lang/cargo/issues/6790">https://github.com/rust-lang/cargo/issues/6790</a> for more information.</dd>
 
 
 </dl>
@@ -219,7 +256,7 @@ See https://github.com/rust-lang/cargo/issues/6790 for more information.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-build--v"><a class="option-anchor" href="#option-cargo-build--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-build---verbose"><a class="option-anchor" href="#option-cargo-build---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -227,7 +264,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-build--q"><a class="option-anchor" href="#option-cargo-build--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-build---quiet"><a class="option-anchor" href="#option-cargo-build---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-build---color"><a class="option-anchor" href="#option-cargo-build---color"></a><code>--color</code> <em>when</em></dt>
@@ -247,20 +286,22 @@ terminal.</li>
 <dd class="option-desc">The output format for diagnostic messages. Can be specified multiple times
 and consists of comma-separated values. Valid values:</p>
 <ul>
-<li><code>human</code> (default): Display in a human-readable text format.</li>
-<li><code>short</code>: Emit shorter, human-readable text messages.</li>
+<li><code>human</code> (default): Display in a human-readable text format. Conflicts with
+<code>short</code> and <code>json</code>.</li>
+<li><code>short</code>: Emit shorter, human-readable text messages. Conflicts with <code>human</code>
+and <code>json</code>.</li>
 <li><code>json</code>: Emit JSON messages to stdout. See
 <a href="../reference/external-tools.html#json-messages">the reference</a>
-for more details.</li>
+for more details. Conflicts with <code>human</code> and <code>short</code>.</li>
 <li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
-the &quot;short&quot; rendering from rustc.</li>
+the “short” rendering from rustc. Cannot be used with <code>human</code> or <code>short</code>.</li>
 <li><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
-contains embedded ANSI color codes for respecting rustc's default color
-scheme.</li>
-<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+contains embedded ANSI color codes for respecting rustc’s default color
+scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
+<li><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
-coming from rustc are still emitted.</li>
+JSON diagnostics coming from rustc. Cargo’s own JSON diagnostics and others
+coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
 </ul></dd>
 
 
@@ -322,6 +363,23 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-build---config"><a class="option-anchor" href="#option-cargo-build---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-build--C"><a class="option-anchor" href="#option-cargo-build--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+
+
 <dt class="option-term" id="option-cargo-build--h"><a class="option-anchor" href="#option-cargo-build--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-build---help"><a class="option-anchor" href="#option-cargo-build---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -341,28 +399,29 @@ for more information about how toolchain overrides work.</dd>
 <dt class="option-term" id="option-cargo-build---jobs"><a class="option-anchor" href="#option-cargo-build---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string <code>default</code> is provided, it sets the value back to defaults.
+Should not be 0.</dd>
+
+
+<dt class="option-term" id="option-cargo-build---keep-going"><a class="option-anchor" href="#option-cargo-build---keep-going"></a><code>--keep-going</code></dt>
+<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build.</p>
+<p>For example if the current package depends on dependencies <code>fails</code> and <code>works</code>,
+one of which fails to build, <code>cargo build -j1</code> may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas <code>cargo build -j1 --keep-going</code> would definitely run both
+builds, even if the one run first fails.</dd>
+
+
+<dt class="option-term" id="option-cargo-build---future-incompat-report"><a class="option-anchor" href="#option-cargo-build---future-incompat-report"></a><code>--future-incompat-report</code></dt>
+<dd class="option-desc">Displays a future-incompat report for any future-incompatible warnings
+produced during execution of this command</p>
+<p>See <a href="cargo-report.html">cargo-report(1)</a></dd>
 
 
 </dl>
-
-## PROFILES
-
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See [the reference](../reference/profiles.html) for more
-details.
-
-Profile selection depends on the target and crate being built. By default the
-`dev` or `test` profiles are used. If the `--release` flag is given, then the
-`release` or `bench` profiles are used.
-
-Target | Default Profile | `--release` Profile
--------|-----------------|---------------------
-lib, bin, example | `dev` | `release`
-test, bench, or any target in "test" or "bench" mode | `test` | `bench`
-
-Dependencies use the `dev`/`release` profiles.
-
 
 ## ENVIRONMENT
 

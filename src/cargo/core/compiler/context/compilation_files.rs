@@ -1,12 +1,13 @@
+//! See [`CompilationFiles`].
+
 use std::collections::HashMap;
-use std::env;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use lazycell::LazyCell;
-use log::info;
+use tracing::debug;
 
 use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
@@ -16,14 +17,16 @@ use crate::util::{self, CargoResult, StableHasher};
 /// This is a generic version number that can be changed to make
 /// backwards-incompatible changes to any file structures in the output
 /// directory. For example, the fingerprint files or the build-script
-/// output files. Normally cargo updates ship with rustc updates which will
+/// output files.
+///
+/// Normally cargo updates ship with rustc updates which will
 /// cause a new hash due to the rustc version changing, but this allows
 /// cargo to be extra careful to deal with different versions of cargo that
 /// use the same rustc version.
 const METADATA_VERSION: u8 = 2;
 
 /// The `Metadata` is a hash used to make unique file names for each unit in a
-/// build. It is also use for symbol mangling.
+/// build. It is also used for symbol mangling.
 ///
 /// For example:
 /// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
@@ -41,7 +44,7 @@ const METADATA_VERSION: u8 = 2;
 ///
 /// This also acts as the main layer of caching provided by Cargo.
 /// For example, we want to cache `cargo build` and `cargo doc` separately, so that running one
-/// does not invalidate the artifacts for the other. We do this by including `CompileMode` in the
+/// does not invalidate the artifacts for the other. We do this by including [`CompileMode`] in the
 /// hash, thus the artifacts go in different folders and do not override each other.
 /// If we don't add something that we should have, for this reason, we get the
 /// correct output but rebuild more than is needed.
@@ -80,6 +83,17 @@ impl fmt::Debug for Metadata {
     }
 }
 
+/// Information about the metadata hashes used for a `Unit`.
+struct MetaInfo {
+    /// The symbol hash to use.
+    meta_hash: Metadata,
+    /// Whether or not the `-C extra-filename` flag is used to generate unique
+    /// output filenames for this `Unit`.
+    ///
+    /// If this is `true`, the `meta_hash` is used for the filename.
+    use_extra_filename: bool,
+}
+
 /// Collection of information about the files emitted by the compiler, and the
 /// output directory structure.
 pub struct CompilationFiles<'a, 'cfg> {
@@ -94,7 +108,7 @@ pub struct CompilationFiles<'a, 'cfg> {
     roots: Vec<Unit>,
     ws: &'a Workspace<'cfg>,
     /// Metadata hash to use for each unit.
-    metas: HashMap<Unit, Option<Metadata>>,
+    metas: HashMap<Unit, MetaInfo>,
     /// For each Unit, a list all files produced.
     outputs: HashMap<Unit, LazyCell<Arc<Vec<OutputFile>>>>,
 }
@@ -159,12 +173,17 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Gets the metadata for the given unit.
     ///
-    /// See module docs for more details.
+    /// See [`Metadata`] and [`fingerprint`] module for more.
     ///
-    /// Returns `None` if the unit should not use a metadata hash (like
-    /// rustdoc, or some dylibs).
-    pub fn metadata(&self, unit: &Unit) -> Option<Metadata> {
-        self.metas[unit]
+    /// [`fingerprint`]: ../../fingerprint/index.html#fingerprints-and-metadata
+    pub fn metadata(&self, unit: &Unit) -> Metadata {
+        self.metas[unit].meta_hash
+    }
+
+    /// Returns whether or not `-C extra-filename` is used to extend the
+    /// output filenames to make them unique.
+    pub fn use_extra_filename(&self, unit: &Unit) -> bool {
+        self.metas[unit].use_extra_filename
     }
 
     /// Gets the short hash based only on the `PackageId`.
@@ -177,7 +196,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the directory where the artifacts for the given unit are
     /// initially created.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
-        if unit.mode.is_doc() {
+        // Docscrape units need to have doc/ set as the out_dir so sources for reverse-dependencies
+        // will be put into doc/ and not into deps/ where the *.examples files are stored.
+        if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
             self.layout(unit.kind).doc().to_path_buf()
         } else if unit.mode.is_doc_test() {
             panic!("doc tests do not have an out dir");
@@ -185,6 +206,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             self.build_script_dir(unit)
         } else if unit.target.is_example() {
             self.layout(unit.kind).examples().to_path_buf()
+        } else if unit.artifact.is_true() {
+            self.artifact_dir(unit)
         } else {
             self.deps_dir(unit).to_path_buf()
         }
@@ -201,9 +224,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// taken in those cases!
     fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
-        match self.metas[unit] {
-            Some(ref meta) => format!("{}-{}", name, meta),
-            None => format!("{}-{}", name, self.target_short_hash(unit)),
+        let meta = &self.metas[unit];
+        if meta.use_extra_filename {
+            format!("{}-{}", name, meta.meta_hash)
+        } else {
+            format!("{}-{}", name, self.target_short_hash(unit))
         }
     }
 
@@ -267,6 +292,30 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         assert!(self.metas.contains_key(unit));
         let dir = self.pkg_dir(unit);
         self.layout(CompileKind::Host).build().join(dir)
+    }
+
+    /// Returns the directory for compiled artifacts files.
+    /// `/path/to/target/{debug,release}/deps/artifact/KIND/PKG-HASH`
+    fn artifact_dir(&self, unit: &Unit) -> PathBuf {
+        assert!(self.metas.contains_key(unit));
+        assert!(unit.artifact.is_true());
+        let dir = self.pkg_dir(unit);
+        let kind = match unit.target.kind() {
+            TargetKind::Bin => "bin",
+            TargetKind::Lib(lib_kinds) => match lib_kinds.as_slice() {
+                &[CrateType::Cdylib] => "cdylib",
+                &[CrateType::Staticlib] => "staticlib",
+                invalid => unreachable!(
+                    "BUG: unexpected artifact library type(s): {:?} - these should have been split",
+                    invalid
+                ),
+            },
+            invalid => unreachable!(
+                "BUG: {:?} are not supposed to be used as artifacts",
+                invalid
+            ),
+        };
+        self.layout(unit.kind).artifact().join(dir).join(kind)
     }
 
     /// Returns the directory where information about running a build script
@@ -336,7 +385,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         if unit.mode != CompileMode::Build || file_type.flavor == FileFlavor::Rmeta {
             return None;
         }
-        // Only uplift:
+
+        // Artifact dependencies are never uplifted.
+        if unit.artifact.is_true() {
+            return None;
+        }
+
         // - Binaries: The user always wants to see these, even if they are
         //   implicitly built (for example for integration tests).
         // - dylibs: This ensures that the dynamic linker pulls in all the
@@ -372,6 +426,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         Some(uplift_path)
     }
 
+    /// Calculates the filenames that the given unit will generate.
+    /// Should use [`CompilationFiles::outputs`] instead
+    /// as it caches the result of this function.
     fn calc_outputs(
         &self,
         unit: &Unit,
@@ -401,12 +458,25 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 // but Cargo does not know about that.
                 vec![]
             }
+            CompileMode::Docscrape => {
+                // The file name needs to be stable across Cargo sessions.
+                // This originally used unit.buildkey(), but that isn't stable,
+                // so we use metadata instead (prefixed with name for debugging).
+                let file_name = format!("{}-{}.examples", unit.pkg.name(), self.metadata(unit));
+                let path = self.deps_dir(unit).join(file_name);
+                vec![OutputFile {
+                    path,
+                    hardlink: None,
+                    export_path: None,
+                    flavor: FileFlavor::Normal,
+                }]
+            }
             CompileMode::Test
             | CompileMode::Build
             | CompileMode::Bench
             | CompileMode::Check { .. } => self.calc_outputs_rustc(unit, bcx)?,
         };
-        info!("Target filenames: {:?}", ret);
+        debug!("Target filenames: {:?}", ret);
 
         Ok(Arc::new(ret))
     }
@@ -448,8 +518,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         // Convert FileType to OutputFile.
         let mut outputs = Vec::new();
         for file_type in file_types {
-            let meta = self.metadata(unit).map(|m| m.to_string());
-            let path = out_dir.join(file_type.output_filename(&unit.target, meta.as_deref()));
+            let meta = &self.metas[unit];
+            let meta_opt = meta.use_extra_filename.then(|| meta.meta_hash.to_string());
+            let path = out_dir.join(file_type.output_filename(&unit.target, meta_opt.as_deref()));
+
+            // If, the `different_binary_name` feature is enabled, the name of the hardlink will
+            // be the name of the binary provided by the user in `Cargo.toml`.
             let hardlink = self.uplift_to(unit, &file_type, &path);
             let export_path = if unit.target.is_custom_build() {
                 None
@@ -471,11 +545,16 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 }
 
-fn metadata_of(
+/// Gets the metadata hash for the given [`Unit`].
+///
+/// When a metadata hash doesn't exist for the given unit,
+/// this calls itself recursively to compute metadata hashes of all its dependencies.
+/// See [`compute_metadata`] for how a single metadata hash is computed.
+fn metadata_of<'a>(
     unit: &Unit,
     cx: &Context<'_, '_>,
-    metas: &mut HashMap<Unit, Option<Metadata>>,
-) -> Option<Metadata> {
+    metas: &'a mut HashMap<Unit, MetaInfo>,
+) -> &'a MetaInfo {
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, cx, metas);
         metas.insert(unit.clone(), meta);
@@ -483,18 +562,16 @@ fn metadata_of(
             metadata_of(&dep.unit, cx, metas);
         }
     }
-    metas[unit]
+    &metas[unit]
 }
 
+/// Computes the metadata hash for the given [`Unit`].
 fn compute_metadata(
     unit: &Unit,
     cx: &Context<'_, '_>,
-    metas: &mut HashMap<Unit, Option<Metadata>>,
-) -> Option<Metadata> {
+    metas: &mut HashMap<Unit, MetaInfo>,
+) -> MetaInfo {
     let bcx = &cx.bcx;
-    if !should_use_metadata(bcx, unit) {
-        return None;
-    }
     let mut hasher = StableHasher::new();
 
     METADATA_VERSION.hash(&mut hasher);
@@ -514,7 +591,7 @@ fn compute_metadata(
     let mut deps_metadata = cx
         .unit_deps(unit)
         .iter()
-        .map(|dep| metadata_of(&dep.unit, cx, metas))
+        .map(|dep| metadata_of(&dep.unit, cx, metas).meta_hash)
         .collect::<Vec<_>>();
     deps_metadata.sort();
     deps_metadata.hash(&mut hasher);
@@ -526,10 +603,12 @@ fn compute_metadata(
     unit.mode.hash(&mut hasher);
     cx.lto[unit].hash(&mut hasher);
 
-    // Artifacts compiled for the host should have a different metadata
-    // piece than those compiled for the target, so make sure we throw in
-    // the unit's `kind` as well
-    unit.kind.hash(&mut hasher);
+    // Artifacts compiled for the host should have a different
+    // metadata piece than those compiled for the target, so make sure
+    // we throw in the unit's `kind` as well.  Use `fingerprint_hash`
+    // so that the StableHash doesn't change based on the pathnames
+    // of the custom target JSON spec files.
+    unit.kind.fingerprint_hash().hash(&mut hasher);
 
     // Finally throw in the target name/kind. This ensures that concurrent
     // compiles of targets in the same crate don't collide.
@@ -548,7 +627,7 @@ fn compute_metadata(
 
     // Seed the contents of `__CARGO_DEFAULT_LIB_METADATA` to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.
-    if let Ok(ref channel) = env::var("__CARGO_DEFAULT_LIB_METADATA") {
+    if let Ok(ref channel) = cx.bcx.config.get_env("__CARGO_DEFAULT_LIB_METADATA") {
         channel.hash(&mut hasher);
     }
 
@@ -561,9 +640,13 @@ fn compute_metadata(
     // with user dependencies.
     unit.is_std.hash(&mut hasher);
 
-    Some(Metadata(hasher.finish()))
+    MetaInfo {
+        meta_hash: Metadata(hasher.finish()),
+        use_extra_filename: should_use_metadata(bcx, unit),
+    }
 }
 
+/// Hash the version of rustc being used during the build process.
 fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     let vers = &bcx.rustc().version;
     if vers.pre.is_empty() || bcx.config.cli_unstable().separate_nightlies {
@@ -578,7 +661,7 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     //
     // This assumes that the first segment is the important bit ("nightly",
     // "beta", "dev", etc.). Skip other parts like the `.3` in `-beta.3`.
-    vers.pre[0].hash(hasher);
+    vers.pre.split('.').next().hash(hasher);
     // Keep "host" since some people switch hosts to implicitly change
     // targets, (like gnu vs musl or gnu vs msvc). In the future, we may want
     // to consider hashing `unit.kind.short_name()` instead.
@@ -598,7 +681,7 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
 
 /// Returns whether or not this unit should use a metadata hash.
 fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
-    if unit.mode.is_doc_test() {
+    if unit.mode.is_doc_test() || unit.mode.is_doc() {
         // Doc tests do not have metadata.
         return false;
     }
@@ -609,19 +692,13 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     // No metadata in these cases:
     //
     // - dylibs:
-    //   - macOS encodes the dylib name in the executable, so it can't be renamed.
-    //   - TODO: Are there other good reasons? If not, maybe this should be macos specific?
+    //   - if any dylib names are encoded in executables, so they can't be renamed.
+    //   - TODO: Maybe use `-install-name` on macOS or `-soname` on other UNIX systems
+    //     to specify the dylib name to be used by the linker instead of the filename.
     // - Windows MSVC executables: The path to the PDB is embedded in the
     //   executable, and we don't want the PDB path to include the hash in it.
-    // - wasm32 executables: When using emscripten, the path to the .wasm file
-    //   is embedded in the .js file, so we don't want the hash in there.
-    //   TODO: Is this necessary for wasm32-unknown-unknown?
-    // - apple executables: The executable name is used in the dSYM directory
-    //   (such as `target/debug/foo.dSYM/Contents/Resources/DWARF/foo-64db4e4bf99c12dd`).
-    //   Unfortunately this causes problems with our current backtrace
-    //   implementation which looks for a file matching the exe name exactly.
-    //   See https://github.com/rust-lang/rust/issues/72550#issuecomment-638501691
-    //   for more details.
+    // - wasm32-unknown-emscripten executables: When using emscripten, the path to the
+    //   .wasm file is embedded in the .js file, so we don't want the hash in there.
     //
     // This is only done for local packages, as we don't expect to export
     // dependencies.
@@ -630,16 +707,16 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     // force metadata in the hash. This is only used for building libstd. For
     // example, if libstd is placed in a common location, we don't want a file
     // named /usr/lib/libstd.so which could conflict with other rustc
-    // installs. TODO: Is this still a realistic concern?
+    // installs. In addition it prevents accidentally loading a libstd of a
+    // different compiler at runtime.
     // See https://github.com/rust-lang/cargo/issues/3005
     let short_name = bcx.target_data.short_name(&unit.kind);
     if (unit.target.is_dylib()
         || unit.target.is_cdylib()
-        || (unit.target.is_executable() && short_name.starts_with("wasm32-"))
-        || (unit.target.is_executable() && short_name.contains("msvc"))
-        || (unit.target.is_executable() && short_name.contains("-apple-")))
+        || (unit.target.is_executable() && short_name == "wasm32-unknown-emscripten")
+        || (unit.target.is_executable() && short_name.contains("msvc")))
         && unit.pkg.package_id().source_id().is_path()
-        && env::var("__CARGO_DEFAULT_LIB_METADATA").is_err()
+        && bcx.config.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
     {
         return false;
     }

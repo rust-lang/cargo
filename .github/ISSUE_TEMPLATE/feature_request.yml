@@ -1,0 +1,35 @@
+name: Feature Request
+description: Suggest an idea for enhancing Cargo
+labels: ["C-feature-request", "S-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a 🙋 feature request 😄!
+
+        If the feature request is relatively small and already with a possible solution, this might be the place for you.
+
+        If you are brewing a big feature that needs feedback from the community, [the internal forum] is the best fit, especially for pre-RFC. You can also talk the idea over with other developers in [#t-cargo Zulip stream].
+
+        [the internal forum]: https://internals.rust-lang.org/c/tools-and-infrastructure/cargo/15
+        [#t-cargo Zulip stream]: https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: >
+        Please provide a clear description of your use case and the problem
+        this feature request is trying to solve.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: >
+        Please provide a clear and concise description of what you want to happen.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Provide any additional context or information that might be helpful.

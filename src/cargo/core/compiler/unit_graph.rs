@@ -1,9 +1,14 @@
+//! Serialization of [`UnitGraph`] for unstable option [`--unit-graph`].
+//!
+//! [`--unit-graph`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#unit-graph
+
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::profiles::{Profile, UnitFor};
-use crate::core::{nightly_features_allowed, PackageId, Target};
+use crate::core::{PackageId, Target};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
+use crate::Config;
 use std::collections::HashMap;
 use std::io::Write;
 
@@ -20,6 +25,12 @@ pub struct UnitDep {
     pub unit_for: UnitFor,
     /// The name the parent uses to refer to this dependency.
     pub extern_crate_name: InternedString,
+    /// If `Some`, the name of the dependency if renamed in toml.
+    /// It's particularly interesting to artifact dependencies which rely on it
+    /// for naming their environment variables. Note that the `extern_crate_name`
+    /// cannot be used for this as it also may be the build target itself,
+    /// which isn't always the renamed dependency name.
+    pub dep_name: Option<InternedString>,
     /// Whether or not this is a public dependency.
     pub public: bool,
     /// If `true`, the dependency should not be added to Rust's prelude.
@@ -62,8 +73,13 @@ struct SerializedUnitDep {
     // internal detail that is mostly used for building the graph.
 }
 
-pub fn emit_serialized_unit_graph(root_units: &[Unit], unit_graph: &UnitGraph) -> CargoResult<()> {
-    let is_nightly = nightly_features_allowed();
+/// Outputs a JSON serialization of [`UnitGraph`] for given `root_units`
+/// to the standard output.
+pub fn emit_serialized_unit_graph(
+    root_units: &[Unit],
+    unit_graph: &UnitGraph,
+    config: &Config,
+) -> CargoResult<()> {
     let mut units: Vec<(&Unit, &Vec<UnitDep>)> = unit_graph.iter().collect();
     units.sort_unstable();
     // Create a map for quick lookup for dependencies.
@@ -80,7 +96,7 @@ pub fn emit_serialized_unit_graph(root_units: &[Unit], unit_graph: &UnitGraph) -
                 .iter()
                 .map(|unit_dep| {
                     // https://github.com/rust-lang/rust/issues/64260 when stabilized.
-                    let (public, noprelude) = if is_nightly {
+                    let (public, noprelude) = if config.nightly_features_allowed {
                         (Some(unit_dep.public), Some(unit_dep.noprelude))
                     } else {
                         (None, None)

@@ -1,0 +1,50 @@
+name: Tracking Issue
+description: A tracking issue for an accepted feature or RFC in Cargo.
+title: "Tracking Issue for _FEATURE_NAME_"
+labels: ["C-tracking-issue"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thank you for creating a tracking issue! Tracking issues are for tracking an
+        accepted feature or RFC from implementation to stabilization. Please do not
+        file a tracking issue until the feature or RFC has been approved.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Please provide a very brief summary of the feature.
+      value: |
+        RFC: [#NNNN](https://github.com/rust-lang/rfcs/pull/NNNN) <!-- If this is an RFC -->
+        Original issue: #NNNN <!-- if there is a related issue that spawned this feature -->
+        Implementation: #NNNN <!-- link to the PR that implemented this feature if applicable -->
+        Documentation: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#my-feature
+
+        Please enter a short, one-sentence description here.
+    validations:
+      required: true
+  - type: textarea
+    id: unresolved
+    attributes:
+      label: Unresolved Issues
+      description: List issues that have not yet been resolved.
+      placeholder: |
+        * [ ] Make a list of any known implementation or design issues.
+  - type: textarea
+    id: future
+    attributes:
+      label: Future Extensions
+      description: >
+        An optional section where you can mention where the feature may be
+        extended in the future, but is explicitly not intended to
+        address.
+  - type: textarea
+    id: about
+    attributes:
+      label: About tracking issues
+      description: Please include this notice in the issue.
+      value: |
+        Tracking issues are used to record the overall progress of implementation.
+        They are also used as hubs connecting to other relevant issues, e.g., bugs or open design questions.
+        A tracking issue is however *not* meant for large scale discussion, questions, or bug reports about a feature.
+        Instead, open a dedicated issue for the specific matter and add the relevant feature gate label.

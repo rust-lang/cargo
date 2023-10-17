@@ -32,6 +32,7 @@ fn rustdoc_args() {
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
+        -C metadata=[..] \
         -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -83,6 +84,7 @@ fn rustdoc_foo_with_bar_dependency() {
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
+        -C metadata=[..] \
         -L dependency=[CWD]/target/debug/deps \
         --extern [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -122,6 +124,7 @@ fn rustdoc_only_bar_dependency() {
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
+        -C metadata=[..] \
         -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -144,6 +147,7 @@ fn rustdoc_same_name_documents_lib() {
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
+        -C metadata=[..] \
         -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",

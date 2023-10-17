@@ -105,7 +105,7 @@ fn warning_on_lib_failure() {
         .with_stderr_contains("[UPDATING] `[..]` index")
         .with_stderr_contains("[DOWNLOADED] bar v0.0.1 ([..])")
         .with_stderr_contains("[COMPILING] bar v0.0.1")
-        .with_stderr_contains(&format!("[WARNING] {}", WARNING1))
-        .with_stderr_contains(&format!("[WARNING] {}", WARNING2))
+        .with_stderr_contains(&format!("[WARNING] bar@0.0.1: {}", WARNING1))
+        .with_stderr_contains(&format!("[WARNING] bar@0.0.1: {}", WARNING2))
         .run();
 }

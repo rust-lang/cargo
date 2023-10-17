@@ -2,18 +2,27 @@
 
 ## NAME
 
-cargo-login - Save an API token from the registry locally
+cargo-login --- Log in to a registry
 
 ## SYNOPSIS
 
-`cargo login` [_options_] [_token_]
+`cargo login` [_options_] [_token_] [`--` _args_]
 
 ## DESCRIPTION
 
-This command will save the API token to disk so that commands that require
-authentication, such as [cargo-publish(1)](cargo-publish.html), will be automatically
-authenticated. The token is saved in `$CARGO_HOME/credentials.toml`. `CARGO_HOME`
-defaults to `.cargo` in your home directory.
+This command will run a credential provider to save a token so that commands
+that require authentication, such as [cargo-publish(1)](cargo-publish.html), will be
+automatically authenticated.
+
+All the arguments following the two dashes (`--`) are passed to the credential provider.
+
+For the default `cargo:token` credential provider, the token is saved
+in `$CARGO_HOME/credentials.toml`. `CARGO_HOME` defaults to `.cargo`
+in your home directory.
+
+If a registry has a credential-provider specified, it will be used. Otherwise,
+the providers from the config value `registry.global-credential-providers` will
+be attempted, starting from the end of the list.
 
 If the _token_ argument is not specified, it will be read from stdin.
 
@@ -40,7 +49,7 @@ which is defined by the <code>registry.default</code> config key which defaults 
 <dl>
 <dt class="option-term" id="option-cargo-login--v"><a class="option-anchor" href="#option-cargo-login--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-login---verbose"><a class="option-anchor" href="#option-cargo-login---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -48,7 +57,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-login--q"><a class="option-anchor" href="#option-cargo-login--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-login---quiet"><a class="option-anchor" href="#option-cargo-login---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-login---color"><a class="option-anchor" href="#option-cargo-login---color"></a><code>--color</code> <em>when</em></dt>
@@ -77,6 +88,23 @@ See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup docum
 for more information about how toolchain overrides work.</dd>
 
 
+<dt class="option-term" id="option-cargo-login---config"><a class="option-anchor" href="#option-cargo-login---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-login--C"><a class="option-anchor" href="#option-cargo-login--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+
+
 <dt class="option-term" id="option-cargo-login--h"><a class="option-anchor" href="#option-cargo-login--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-login---help"><a class="option-anchor" href="#option-cargo-login---help"></a><code>--help</code></dt>
 <dd class="option-desc">Prints help information.</dd>
@@ -103,9 +131,13 @@ details on environment variables that Cargo reads.
 
 ## EXAMPLES
 
-1. Save the API token to disk:
+1. Save the token for the default registry:
 
        cargo login
 
+2. Save the token for a specific registry:
+
+       cargo login --registry my-registry
+
 ## SEE ALSO
-[cargo(1)](cargo.html), [cargo-publish(1)](cargo-publish.html)
+[cargo(1)](cargo.html), [cargo-logout(1)](cargo-logout.html), [cargo-publish(1)](cargo-publish.html)

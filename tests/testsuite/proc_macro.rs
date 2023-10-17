@@ -1,6 +1,5 @@
 //! Tests for proc-macros.
 
-use cargo_test_support::is_nightly;
 use cargo_test_support::project;
 
 #[cargo_test]
@@ -59,7 +58,7 @@ fn probe_cfg_before_crate_type_discovery() {
         )
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -118,8 +117,8 @@ fn noop() {
         )
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build").run();
+    p.cargo("check").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -203,13 +202,8 @@ fn impl_and_derive() {
     p.cargo("run").with_stdout("X { success: true }").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "plugins are unstable")]
 fn plugin_and_proc_macro() {
-    if !is_nightly() {
-        // plugins are unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -227,7 +221,7 @@ fn plugin_and_proc_macro() {
         .file(
             "src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
                 #![feature(proc_macro, proc_macro_lib)]
 
                 extern crate rustc_driver;
@@ -236,8 +230,8 @@ fn plugin_and_proc_macro() {
                 extern crate proc_macro;
                 use proc_macro::TokenStream;
 
-                #[plugin_registrar]
-                pub fn plugin_registrar(reg: &mut Registry) {}
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(reg: &mut Registry) {}
 
                 #[proc_macro_derive(Questionable)]
                 pub fn questionable(input: TokenStream) -> TokenStream {
@@ -248,7 +242,7 @@ fn plugin_and_proc_macro() {
         .build();
 
     let msg = "  `lib.plugin` and `lib.proc-macro` cannot both be `true`";
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_contains(msg)
         .run();
@@ -381,9 +375,34 @@ fn proc_macro_crate_type_warning() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr_contains(
             "[WARNING] library `foo` should only specify `proc-macro = true` instead of setting `crate-type`")
+        .run();
+}
+
+#[cargo_test]
+fn proc_macro_conflicting_warning() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [lib]
+                proc-macro = false
+                proc_macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .with_stderr_contains(
+"[WARNING] conflicting between `proc-macro` and `proc_macro` in the `foo` library target.\n
+        `proc_macro` is ignored and not recommended for use in the future",
+        )
         .run();
 }
 
@@ -404,7 +423,7 @@ fn proc_macro_crate_type_warning_plugin() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr_contains(
             "[WARNING] proc-macro library `foo` should not specify `plugin = true`")
         .with_stderr_contains(
@@ -428,7 +447,7 @@ fn proc_macro_crate_type_multiple() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build")
+    foo.cargo("check")
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
@@ -479,6 +498,7 @@ fn proc_macro_built_once() {
             r#"
                 [workspace]
                 members = ['a', 'b']
+                resolver = "2"
             "#,
         )
         .file(
@@ -522,8 +542,7 @@ fn proc_macro_built_once() {
         )
         .file("the-macro/src/lib.rs", "")
         .build();
-    p.cargo("build -Zfeatures=all --verbose")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --verbose")
         .with_stderr_unordered(
             "\
 [COMPILING] the-macro [..]

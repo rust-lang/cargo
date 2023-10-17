@@ -1,0 +1,6 @@
+error: the following required arguments were not provided:
+  <DEP_ID>...
+
+Usage: cargo[EXE] remove <DEP_ID>...
+
+For more information, try '--help'.

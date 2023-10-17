@@ -37,6 +37,17 @@
 //! everything to bail out immediately and return success, and only if *nothing*
 //! works do we actually return an error up the stack.
 //!
+//! Resolution is currently performed twice
+//! 1. With all features enabled (this is what gets saved to `Cargo.lock`)
+//! 2. With only the specific features the user selected on the command-line. Ideally this
+//!    run will get removed in the future when transitioning to the new feature resolver.
+//!
+//! A new feature-specific resolver was added in 2020 which adds more sophisticated feature
+//! resolution. It is located in the [`features`] module. The original dependency resolver still
+//! performs feature unification, as it can help reduce the dependencies it has to consider during
+//! resolution (rather than assuming every optional dependency of every package is enabled).
+//! Checking if a feature is enabled must go through the new feature resolver.
+//!
 //! ## Performance
 //!
 //! Note that this is a relatively performance-critical portion of Cargo. The
@@ -52,13 +63,15 @@ use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use log::{debug, trace};
+use tracing::{debug, trace};
 
 use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
+use crate::util::network::PollExt;
 use crate::util::profile;
+use crate::util::RustVersion;
 
 use self::context::Context;
 use self::dep_cache::RegistryQueryer;
@@ -69,18 +82,20 @@ use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::features::{ForceAllTargets, HasDevUnits};
+pub use self::features::{CliFeatures, ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
+pub use self::version_prefs::{VersionOrdering, VersionPreferences};
 
 mod conflict_cache;
 mod context;
 mod dep_cache;
-mod encode;
-mod errors;
+pub(crate) mod encode;
+pub(crate) mod errors;
 pub mod features;
 mod resolve;
 mod types;
+mod version_prefs;
 
 /// Builds the list of all packages required to build the first argument.
 ///
@@ -101,10 +116,8 @@ mod types;
 ///   for the same query every time). Typically this is an instance of a
 ///   `PackageRegistry`.
 ///
-/// * `try_to_use` - this is a list of package IDs which were previously found
-///   in the lock file. We heuristically prefer the ids listed in `try_to_use`
-///   when sorting candidates to activate, but otherwise this isn't used
-///   anywhere else.
+/// * `version_prefs` - this represents a preference for some versions over others,
+///   based on the lock file or other reasons such as `[patch]`es.
 ///
 /// * `config` - a location to print warnings and such, or `None` if no warnings
 ///   should be printed
@@ -123,19 +136,48 @@ pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
-    try_to_use: &HashSet<PackageId>,
+    version_prefs: &VersionPreferences,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
+    mut max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
-    let cx = Context::new(check_public_visible_dependencies);
     let _p = profile::start("resolving");
     let minimal_versions = match config {
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let mut registry =
-        RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions, config);
-    let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
+    let direct_minimal_versions = match config {
+        Some(config) => config.cli_unstable().direct_minimal_versions,
+        None => false,
+    };
+    if !config
+        .map(|c| c.cli_unstable().msrv_policy)
+        .unwrap_or(false)
+    {
+        max_rust_version = None;
+    }
+    let mut registry = RegistryQueryer::new(
+        registry,
+        replacements,
+        version_prefs,
+        minimal_versions,
+        max_rust_version,
+    );
+    let cx = loop {
+        let cx = Context::new(check_public_visible_dependencies);
+        let cx = activate_deps_loop(
+            cx,
+            &mut registry,
+            summaries,
+            direct_minimal_versions,
+            config,
+        )?;
+        if registry.reset_pending() {
+            break cx;
+        } else {
+            registry.registry.block_until_ready()?;
+        }
+    };
 
     let mut cksums = HashMap::new();
     for (summary, _) in cx.activations.values() {
@@ -181,6 +223,7 @@ fn activate_deps_loop(
     mut cx: Context,
     registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, ResolveOpts)],
+    direct_minimal_versions: bool,
     config: Option<&Config>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
@@ -191,9 +234,16 @@ fn activate_deps_loop(
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
 
     // Activate all the initial summaries to kick off some work.
-    for &(ref summary, ref opts) in summaries {
+    for (summary, opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let res = activate(&mut cx, registry, None, summary.clone(), opts.clone());
+        let res = activate(
+            &mut cx,
+            registry,
+            None,
+            summary.clone(),
+            direct_minimal_versions,
+            opts,
+        );
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -379,9 +429,8 @@ fn activate_deps_loop(
             let pid = candidate.package_id();
             let opts = ResolveOpts {
                 dev_deps: false,
-                features: RequestedFeatures {
+                features: RequestedFeatures::DepFeatures {
                     features: Rc::clone(&features),
-                    all_features: false,
                     uses_default_features: dep.uses_default_features(),
                 },
             };
@@ -392,7 +441,15 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, opts);
+            let direct_minimal_version = false; // this is an indirect dependency
+            let res = activate(
+                &mut cx,
+                registry,
+                Some((&parent, &dep)),
+                candidate,
+                direct_minimal_version,
+                &opts,
+            );
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -409,7 +466,7 @@ fn activate_deps_loop(
                     // global cache which lists sets of packages where, when
                     // activated, the dependency is unresolvable.
                     //
-                    // If any our our frame's dependencies fit in that bucket,
+                    // If any our frame's dependencies fit in that bucket,
                     // aka known unresolvable, then we extend our own set of
                     // conflicting activations with theirs. We can do this
                     // because the set of conflicts we found implies the
@@ -457,9 +514,7 @@ fn activate_deps_loop(
                             if let Some((other_parent, conflict)) = remaining_deps
                                 .iter()
                                 // for deps related to us
-                                .filter(|&(_, ref other_dep)| {
-                                    known_related_bad_deps.contains(other_dep)
-                                })
+                                .filter(|(_, other_dep)| known_related_bad_deps.contains(other_dep))
                                 .filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
                                         .find_conflicting(&cx, &other_dep, Some(pid))
@@ -604,13 +659,14 @@ fn activate(
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
-    opts: ResolveOpts,
+    first_minimal_version: bool,
+    opts: &ResolveOpts,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
-        // add a edge from candidate to parent in the parents graph
+        // add an edge from candidate to parent in the parents graph
         cx.parents
             .link(candidate_pid, parent_pid)
             // and associate dep with that edge
@@ -626,7 +682,7 @@ fn activate(
         }
     }
 
-    let activated = cx.flag_activated(&candidate, &opts, parent)?;
+    let activated = cx.flag_activated(&candidate, opts, parent)?;
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
@@ -635,7 +691,7 @@ fn activate(
             // does. TBH it basically cause panics in the test suite if
             // `parent` is passed through here and `[replace]` is otherwise
             // on life support so it's not critical to fix bugs anyway per se.
-            if cx.flag_activated(replace, &opts, None)? && activated {
+            if cx.flag_activated(replace, opts, None)? && activated {
                 return Ok(None);
             }
             trace!(
@@ -655,8 +711,13 @@ fn activate(
     };
 
     let now = Instant::now();
-    let (used_features, deps) =
-        &*registry.build_deps(cx, parent.map(|p| p.0.package_id()), &candidate, &opts)?;
+    let (used_features, deps) = &*registry.build_deps(
+        cx,
+        parent.map(|p| p.0.package_id()),
+        &candidate,
+        opts,
+        first_minimal_version,
+    )?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {
@@ -701,7 +762,7 @@ struct BacktrackFrame {
 #[derive(Clone)]
 struct RemainingCandidates {
     remaining: RcVecIter<Summary>,
-    // This is a inlined peekable generator
+    // This is an inlined peekable generator
     has_another: Option<Summary>,
 }
 
@@ -804,10 +865,8 @@ impl RemainingCandidates {
     }
 }
 
-/// Attempts to find a new conflict that allows a `find_candidate` feather then the input one.
+/// Attempts to find a new conflict that allows a `find_candidate` better then the input one.
 /// It will add the new conflict to the cache if one is found.
-///
-/// Panics if the input conflict is not all active in `cx`.
 fn generalize_conflicting(
     cx: &Context,
     registry: &mut RegistryQueryer<'_>,
@@ -816,15 +875,12 @@ fn generalize_conflicting(
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
 ) -> Option<ConflictMap> {
-    if conflicting_activations.is_empty() {
-        return None;
-    }
     // We need to determine the `ContextAge` that this `conflicting_activations` will jump to, and why.
-    let (backtrack_critical_age, backtrack_critical_id) = conflicting_activations
-        .keys()
-        .map(|&c| (cx.is_active(c).expect("not currently active!?"), c))
-        .max()
-        .unwrap();
+    let (backtrack_critical_age, backtrack_critical_id) = shortcircuit_max(
+        conflicting_activations
+            .keys()
+            .map(|&c| cx.is_active(c).map(|a| (a, c))),
+    )?;
     let backtrack_critical_reason: ConflictReason =
         conflicting_activations[&backtrack_critical_id].clone();
 
@@ -849,12 +905,16 @@ fn generalize_conflicting(
         })
     {
         for critical_parents_dep in critical_parents_deps.iter() {
+            // We only want `first_minimal_version=true` for direct dependencies of workspace
+            // members which isn't the case here as this has a `parent`
+            let first_minimal_version = false;
             // A dep is equivalent to one of the things it can resolve to.
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
             if let Some(others) = registry
-                .query(critical_parents_dep)
+                .query(critical_parents_dep, first_minimal_version)
                 .expect("an already used dep now error!?")
+                .expect("an already used dep now pending!?")
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
                 .map(|other| {
@@ -915,6 +975,19 @@ fn generalize_conflicting(
     None
 }
 
+/// Returns Some of the largest item in the iterator.
+/// Returns None if any of the items are None or the iterator is empty.
+fn shortcircuit_max<I: Ord>(iter: impl Iterator<Item = Option<I>>) -> Option<I> {
+    let mut out = None;
+    for i in iter {
+        if i.is_none() {
+            return None;
+        }
+        out = std::cmp::max(out, i);
+    }
+    out
+}
+
 /// Looks through the states in `backtrack_stack` for dependencies with
 /// remaining candidates. For each one, also checks if rolling back
 /// could change the outcome of the failed resolution that caused backtracking
@@ -941,12 +1014,10 @@ fn find_candidate(
     // the cause of that backtrack, so we do not update it.
     let age = if !backtracked {
         // we don't have abnormal situations. So we can ask `cx` for how far back we need to go.
-        let a = cx.is_conflicting(Some(parent.package_id()), conflicting_activations);
-        // If the `conflicting_activations` does not apply to `cx`, then something went very wrong
-        // in building it. But we will just fall back to laboriously trying all possibilities witch
-        // will give us the correct answer so only `assert` if there is a developer to debug it.
-        debug_assert!(a.is_some());
-        a
+        // If the `conflicting_activations` does not apply to `cx`,
+        // we will just fall back to laboriously trying all possibilities witch
+        // will give us the correct answer.
+        cx.is_conflicting(Some(parent.package_id()), conflicting_activations)
     } else {
         None
     };
@@ -958,9 +1029,8 @@ fn find_candidate(
             &frame.dep,
             frame.parent.package_id(),
         );
-        let (candidate, has_another) = match next {
-            Some(pair) => pair,
-            None => continue,
+        let Some((candidate, has_another)) = next else {
+            continue;
         };
 
         // If all members of `conflicting_activations` are still
@@ -1001,62 +1071,68 @@ fn find_candidate(
 }
 
 fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
-    // Sort packages to produce user friendly deterministic errors.
-    let mut all_packages: Vec<_> = resolve.iter().collect();
-    all_packages.sort_unstable();
+    // Create a simple graph representation alternative of `resolve` which has
+    // only the edges we care about. Note that `BTree*` is used to produce
+    // deterministic error messages here. Also note that the main reason for
+    // this copy of the resolve graph is to avoid edges between a crate and its
+    // dev-dependency since that doesn't count for cycles.
+    let mut graph = BTreeMap::new();
+    for id in resolve.iter() {
+        let map = graph.entry(id).or_insert_with(BTreeMap::new);
+        for (dep_id, listings) in resolve.deps_not_replaced(id) {
+            let transitive_dep = listings.iter().find(|d| d.is_transitive());
+
+            if let Some(transitive_dep) = transitive_dep.cloned() {
+                map.insert(dep_id, transitive_dep.clone());
+                resolve
+                    .replacement(dep_id)
+                    .map(|p| map.insert(p, transitive_dep));
+            }
+        }
+    }
+
+    // After we have the `graph` that we care about, perform a simple cycle
+    // check by visiting all nodes. We visit each node at most once and we keep
+    // track of the path through the graph as we walk it. If we walk onto the
+    // same node twice that's a cycle.
     let mut checked = HashSet::new();
     let mut path = Vec::new();
     let mut visited = HashSet::new();
-    for pkg in all_packages {
-        if !checked.contains(&pkg) {
-            visit(resolve, pkg, &mut visited, &mut path, &mut checked)?
+    for pkg in graph.keys() {
+        if !checked.contains(pkg) {
+            visit(&graph, *pkg, &mut visited, &mut path, &mut checked)?
         }
     }
     return Ok(());
 
     fn visit(
-        resolve: &Resolve,
+        graph: &BTreeMap<PackageId, BTreeMap<PackageId, Dependency>>,
         id: PackageId,
         visited: &mut HashSet<PackageId>,
         path: &mut Vec<PackageId>,
         checked: &mut HashSet<PackageId>,
     ) -> CargoResult<()> {
         path.push(id);
-        // See if we visited ourselves
         if !visited.insert(id) {
+            let iter = path.iter().rev().skip(1).scan(id, |child, parent| {
+                let dep = graph.get(parent).and_then(|adjacent| adjacent.get(child));
+                *child = *parent;
+                Some((parent, dep))
+            });
+            let iter = std::iter::once((&id, None)).chain(iter);
             anyhow::bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
-                errors::describe_path(&path.iter().rev().collect::<Vec<_>>()),
+                errors::describe_path(iter),
             );
         }
 
-        // If we've already checked this node no need to recurse again as we'll
-        // just conclude the same thing as last time, so we only execute the
-        // recursive step if we successfully insert into `checked`.
-        //
-        // Note that if we hit an intransitive dependency then we clear out the
-        // visitation list as we can't induce a cycle through transitive
-        // dependencies.
         if checked.insert(id) {
-            let mut empty_set = HashSet::new();
-            let mut empty_vec = Vec::new();
-            for (dep, listings) in resolve.deps_not_replaced(id) {
-                let is_transitive = listings.iter().any(|d| d.is_transitive());
-                let (visited, path) = if is_transitive {
-                    (&mut *visited, &mut *path)
-                } else {
-                    (&mut empty_set, &mut empty_vec)
-                };
-                visit(resolve, dep, visited, path, checked)?;
-
-                if let Some(id) = resolve.replacement(dep) {
-                    visit(resolve, id, visited, path, checked)?;
-                }
+            for dep in graph[&id].keys() {
+                visit(graph, *dep, visited, path, checked)?;
             }
         }
 
-        // Ok, we're done, no longer visiting our node any more
         path.pop();
         visited.remove(&id);
         Ok(())

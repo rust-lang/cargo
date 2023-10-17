@@ -1,4 +1,4 @@
-## Cargo Reference
+# Cargo Reference
 
 The reference covers the details of various areas of Cargo.
 
@@ -8,6 +8,7 @@ The reference covers the details of various areas of Cargo.
     * [Cargo Targets](cargo-targets.md)
 * [Workspaces](workspaces.md)
 * [Features](features.md)
+    * [Features Examples](features-examples.md)
 * [Profiles](profiles.md)
 * [Configuration](config.md)
 * [Environment Variables](environment-variables.md)
@@ -20,4 +21,6 @@ The reference covers the details of various areas of Cargo.
 * [Registries](registries.md)
 * [Dependency Resolution](resolver.md)
 * [SemVer Compatibility](semver.md)
+* [Future incompat report](future-incompat-report.md)
+* [Reporting build timings](timings.md)
 * [Unstable Features](unstable.md)

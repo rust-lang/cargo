@@ -1,0 +1,34 @@
+CARGO-REPORT(1)
+
+NAME
+       cargo-report — Generate and display various kinds of reports
+
+SYNOPSIS
+       cargo report type [options]
+
+   DESCRIPTION
+       Displays a report of the given type — currently, only future-incompat
+       is supported
+
+OPTIONS
+       --id id
+           Show the report with the specified Cargo-generated id
+
+       -p spec…, --package spec…
+           Only display a report for the specified package
+
+EXAMPLES
+       1. Display the latest future-incompat report:
+
+              cargo report future-incompat
+
+       2. Display the latest future-incompat report for a specific package:
+
+              cargo report future-incompat --package my-dep:0.0.1
+
+SEE ALSO
+       Future incompat report
+       <https://doc.rust-lang.org/cargo/reference/future-incompat-report.html>
+
+       cargo(1)
+

@@ -1,6 +1,9 @@
+use std::io::IsTerminal;
+
 use cargo::core::dependency::DepKind;
-use cargo::core::{enable_nightly_features, Dependency};
-use cargo::util::{is_ci, Config};
+use cargo::core::Dependency;
+use cargo::util::Config;
+use cargo_util::is_ci;
 
 use resolver_tests::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,
@@ -20,7 +23,7 @@ use proptest::prelude::*;
 proptest! {
     #![proptest_config(ProptestConfig {
         max_shrink_iters:
-            if is_ci() || !atty::is(atty::Stream::Stderr) {
+            if is_ci() || !std::io::stderr().is_terminal() {
                 // This attempts to make sure that CI will fail fast,
                 0
             } else {
@@ -55,9 +58,8 @@ proptest! {
     fn prop_minimum_version_errors_the_same(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     ) {
-        enable_nightly_features();
-
         let mut config = Config::default().unwrap();
+        config.nightly_features_allowed = true;
         config
             .configure(
                 1,
@@ -93,10 +95,68 @@ proptest! {
             prop_assert_eq!(
                 res.is_ok(),
                 mres.is_ok(),
-                "minimal-versions and regular resolver disagree about weather `{} = \"={}\"` can resolve",
+                "minimal-versions and regular resolver disagree about whether `{} = \"={}\"` can resolve",
                 this.name(),
                 this.version()
             )
+        }
+    }
+
+    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
+    #[test]
+    fn prop_direct_minimum_version_error_implications(
+            PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
+    ) {
+        let mut config = Config::default().unwrap();
+        config.nightly_features_allowed = true;
+        config
+            .configure(
+                1,
+                false,
+                None,
+                false,
+                false,
+                false,
+                &None,
+                &["direct-minimal-versions".to_string()],
+                &[],
+            )
+            .unwrap();
+
+        let reg = registry(input.clone());
+        // there is only a small chance that any one
+        // crate will be interesting.
+        // So we try some of the most complicated.
+        for this in input.iter().rev().take(10) {
+            // direct-minimal-versions reduces the number of available solutions, so we verify that
+            // we do not come up with solutions maximal versions does not
+            let res = resolve(
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+
+            let mres = resolve_with_config(
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+                &config,
+            );
+
+            if res.is_err() {
+                prop_assert!(
+                    mres.is_err(),
+                    "direct-minimal-versions should not have more solutions than the regular, maximal resolver but found one when resolving `{} = \"={}\"`",
+                    this.name(),
+                    this.version()
+                )
+            }
+            if mres.is_ok() {
+                prop_assert!(
+                    res.is_ok(),
+                    "direct-minimal-versions should not have more solutions than the regular, maximal resolver but found one when resolving `{} = \"={}\"`",
+                    this.name(),
+                    this.version()
+                )
+            }
         }
     }
 
@@ -553,11 +613,6 @@ fn test_resolving_maximum_version_with_transitive_deps() {
 
 #[test]
 fn test_resolving_minimum_version_with_transitive_deps() {
-    enable_nightly_features(); // -Z minimal-versions
-                               // When the minimal-versions config option is specified then the lowest
-                               // possible version of a package should be selected. "util 1.0.0" can't be
-                               // selected because of the requirements of "bar", so the minimum version
-                               // must be 1.1.1.
     let reg = registry(vec![
         pkg!(("util", "1.2.2")),
         pkg!(("util", "1.0.0")),
@@ -567,6 +622,12 @@ fn test_resolving_minimum_version_with_transitive_deps() {
     ]);
 
     let mut config = Config::default().unwrap();
+    // -Z minimal-versions
+    // When the minimal-versions config option is specified then the lowest
+    // possible version of a package should be selected. "util 1.0.0" can't be
+    // selected because of the requirements of "bar", so the minimum version
+    // must be 1.1.1.
+    config.nightly_features_allowed = true;
     config
         .configure(
             1,
@@ -1497,7 +1558,40 @@ fn cyclic_good_error_message() {
     assert_eq!("\
 cyclic package dependency: package `A v0.0.0 (registry `https://example.com/`)` depends on itself. Cycle:
 package `A v0.0.0 (registry `https://example.com/`)`
-    ... which is depended on by `C v0.0.0 (registry `https://example.com/`)`
-    ... which is depended on by `A v0.0.0 (registry `https://example.com/`)`\
+    ... which satisfies dependency `A = \"*\"` of package `C v0.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `C = \"*\"` of package `A v0.0.0 (registry `https://example.com/`)`\
 ", error.to_string());
+}
+
+#[test]
+fn shortest_path_in_error_message() {
+    let input = vec![
+        pkg!(("F", "0.1.2")),
+        pkg!(("F", "0.1.1") => [dep("bad"),]),
+        pkg!(("F", "0.1.0") => [dep("bad"),]),
+        pkg!("E" => [dep_req("F", "^0.1.2"),]),
+        pkg!("D" => [dep_req("F", "^0.1.2"),]),
+        pkg!("C" => [dep("D"),]),
+        pkg!("A" => [dep("C"),dep("E"),dep_req("F", "<=0.1.1"),]),
+    ];
+    let error = resolve(vec![dep("A")], &registry(input)).unwrap_err();
+    println!("{}", error);
+    assert_eq!(
+        "\
+failed to select a version for `F`.
+    ... required by package `A v1.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `A = \"*\"` of package `root v1.0.0 (registry `https://example.com/`)`
+versions that meet the requirements `<=0.1.1` are: 0.1.1, 0.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `F v0.1.2 (registry `https://example.com/`)`
+    ... which satisfies dependency `F = \"^0.1.2\"` of package `E v1.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `E = \"*\"` of package `A v1.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `A = \"*\"` of package `root v1.0.0 (registry `https://example.com/`)`
+
+failed to select a version for `F` which could resolve this conflict\
+    ",
+        error.to_string()
+    );
 }

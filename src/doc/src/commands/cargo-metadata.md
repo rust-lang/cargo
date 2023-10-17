@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-metadata - Machine-readable metadata about the current package
+cargo-metadata --- Machine-readable metadata about the current package
 
 ## SYNOPSIS
 
@@ -13,15 +13,34 @@ cargo-metadata - Machine-readable metadata about the current package
 Output JSON to stdout containing information about the workspace members and
 resolved dependencies of the current package.
 
-It is recommended to include the `--format-version` flag to future-proof
-your code to ensure the output is in the format you are expecting.
+The format of the output is subject to change in futures versions of Cargo. It
+is recommended to include the `--format-version` flag to future-proof your code
+to ensure the output is in the format you are expecting. For more on the
+expectations, see ["Compatibility"](#compatibility).
 
 See the [cargo_metadata crate](https://crates.io/crates/cargo_metadata)
 for a Rust API for reading the metadata.
 
 ## OUTPUT FORMAT
 
-The output has the following format:
+### Compatibility
+
+Within the same output format version, the compatibility is maintained, except
+some scenarios. The following is a non-exhaustive list of changes that are not
+considersed as incompatible:
+
+* **Adding new fields** — New fields will be added when needed. Reserving this
+  helps Cargo evolve without bumping the format version too often.
+* **Adding new values for enum-like fields** — Same as adding new fields. It
+  keeps metadata evolving without stagnation.
+* **Changing opaque representations** — The inner representations of some
+  fields are implementation details. For example, fields related to "Package ID"
+  or "Source ID" are treated as opaque identifiers to differentiate packages or
+  sources. Consumers shouldn't rely on those representations unless specified.
+
+### JSON format
+
+The JSON output has the following format:
 
 ```javascript
 {
@@ -34,7 +53,9 @@ The output has the following format:
             "name": "my-package",
             /* The version of the package. */
             "version": "0.1.0",
-            /* The Package ID, a unique identifier for referring to the package. */
+            /* The Package ID, an opaque and unique identifier for referring to the
+               package. See "Compatibility" above for the stability guarantee.
+            */
             "id": "my-package 0.1.0 (path+file:///path/to/my-package)",
             /* The license value from the manifest, or null. */
             "license": "MIT/Apache-2.0",
@@ -42,14 +63,25 @@ The output has the following format:
             "license_file": "LICENSE",
             /* The description value from the manifest, or null. */
             "description": "Package description.",
-            /* The source ID of the package. This represents where
-               a package is retrieved from.
+            /* The source ID of the package, an "opaque" identifier representing
+               where a package is retrieved from. See "Compatibility" above for
+               the stability guarantee.
+
                This is null for path dependencies and workspace members.
+
                For other dependencies, it is a string with the format:
                - "registry+URL" for registry-based dependencies.
                  Example: "registry+https://github.com/rust-lang/crates.io-index"
                - "git+URL" for git-based dependencies.
                  Example: "git+https://github.com/rust-lang/cargo?rev=5e85ba14aaa20f8133863373404cb0af69eeef2c#5e85ba14aaa20f8133863373404cb0af69eeef2c"
+               - "sparse+URL" for dependencies from a sparse registry
+                 Example: "sparse+https://my-sparse-registry.org"
+
+               The value after the `+` is not explicitly defined, and may change
+               between versions of Cargo and may not directly correlate to other
+               things, such as registry definitions in a config file. New source
+               kinds may be added in the future which will have different `+`
+               prefixed identifiers.
             */
             "source": null,
             /* Array of dependencies declared in the package's manifest. */
@@ -83,6 +115,10 @@ The output has the following format:
                        null if not a target dependency.
                     */
                     "target": "cfg(windows)",
+                    /* The file system path for a local path dependency.
+                       not present if not a path dependency.
+                    */
+                    "path": "/path/to/dep",
                     /* A string of the URL of the registry this dependency is from.
                        If not specified or null, the dependency is from the default
                        registry (crates.io).
@@ -176,6 +212,10 @@ The output has the following format:
             "categories": [
                 "command-line-utilities"
             ],
+            /* Optional string that is the default binary picked by cargo run. */
+            "default_run": null,
+            /* Optional string that is the minimum supported rust version */
+            "rust_version": "1.56",
             /* Array of keywords from the manifest. */
             "keywords": [
                 "cli"
@@ -202,6 +242,12 @@ The output has the following format:
        Each entry is the Package ID for the package.
     */
     "workspace_members": [
+        "my-package 0.1.0 (path+file:///path/to/my-package)",
+    ],
+    /* Array of default members of the workspace.
+       Each entry is the Package ID for the package.
+    */
+    "workspace_default_members": [
         "my-package 0.1.0 (path+file:///path/to/my-package)",
     ],
     // The resolved dependency graph for the entire workspace. The enabled
@@ -292,7 +338,7 @@ The output has the following format:
 <dl>
 
 <dt class="option-term" id="option-cargo-metadata---no-deps"><a class="option-anchor" href="#option-cargo-metadata---no-deps"></a><code>--no-deps</code></dt>
-<dd class="option-desc">Output information only about the workspace members and don't fetch
+<dd class="option-desc">Output information only about the workspace members and don’t fetch
 dependencies.</dd>
 
 
@@ -303,8 +349,9 @@ possible value.</dd>
 
 <dt class="option-term" id="option-cargo-metadata---filter-platform"><a class="option-anchor" href="#option-cargo-metadata---filter-platform"></a><code>--filter-platform</code> <em>triple</em></dt>
 <dd class="option-desc">This filters the <code>resolve</code> output to only include dependencies for the
-given target triple. Without this flag, the resolve includes all targets.</p>
-<p>Note that the dependencies listed in the &quot;packages&quot; array still includes all
+given <a href="../appendix/glossary.html#target">target triple</a>. 
+Without this flag, the resolve includes all targets.</p>
+<p>Note that the dependencies listed in the “packages” array still includes all
 dependencies. Each package definition is intended to be an unaltered
 reproduction of the information within <code>Cargo.toml</code>.</dd>
 
@@ -313,22 +360,20 @@ reproduction of the information within <code>Cargo.toml</code>.</dd>
 
 ### Feature Selection
 
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in `--manifest-path`. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if `--all-features` is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the `default` feature is activated for every
+selected package.
 
-When no feature options are given, the `default` feature is activated for
-every selected package.
+See [the features documentation](../reference/features.html#command-line-feature-options)
+for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-metadata--F"><a class="option-anchor" href="#option-cargo-metadata--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-metadata---features"><a class="option-anchor" href="#option-cargo-metadata---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax. This flag may be
-specified multiple times, which enables all specified features.</dd>
+<dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
+members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
+be specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---all-features"><a class="option-anchor" href="#option-cargo-metadata---all-features"></a><code>--all-features</code></dt>
@@ -336,7 +381,7 @@ specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---no-default-features"><a class="option-anchor" href="#option-cargo-metadata---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Do not activate the <code>default</code> feature of the current directory's package.</dd>
+<dd class="option-desc">Do not activate the <code>default</code> feature of the selected packages.</dd>
 
 
 </dl>
@@ -347,7 +392,7 @@ specified multiple times, which enables all specified features.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-metadata--v"><a class="option-anchor" href="#option-cargo-metadata--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-metadata---verbose"><a class="option-anchor" href="#option-cargo-metadata---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -355,7 +400,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-metadata--q"><a class="option-anchor" href="#option-cargo-metadata--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-metadata---quiet"><a class="option-anchor" href="#option-cargo-metadata---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---color"><a class="option-anchor" href="#option-cargo-metadata---color"></a><code>--color</code> <em>when</em></dt>
@@ -417,6 +464,23 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-metadata---config"><a class="option-anchor" href="#option-cargo-metadata---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-metadata--C"><a class="option-anchor" href="#option-cargo-metadata--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata--h"><a class="option-anchor" href="#option-cargo-metadata--h"></a><code>-h</code></dt>

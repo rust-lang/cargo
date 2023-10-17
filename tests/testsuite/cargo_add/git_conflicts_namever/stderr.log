@@ -1,0 +1,1 @@
+error: cannot specify a git URL (`https://github.com/dcjanus/invalid`) with a version (`0.4.3`).

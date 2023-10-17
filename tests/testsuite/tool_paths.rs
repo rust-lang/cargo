@@ -1,6 +1,6 @@
 //! Tests for configuration values that point to programs.
 
-use cargo_test_support::{basic_lib_manifest, no_such_file_err_msg, project, rustc_host};
+use cargo_test_support::{basic_lib_manifest, project, rustc_host, rustc_host_env};
 
 #[cargo_test]
 fn pathless_tools() {
@@ -29,6 +29,93 @@ fn pathless_tools() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
+        .run();
+}
+
+// can set a custom linker via `target.'cfg(..)'.linker`
+#[cargo_test]
+fn custom_linker_cfg() {
+    let foo = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(not(target_os = "none"))']
+            linker = "nonexistent-linker"
+            "#,
+        )
+        .build();
+
+    foo.cargo("build --verbose")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+// custom linker set via `target.$triple.linker` have precede over `target.'cfg(..)'.linker`
+#[cargo_test]
+fn custom_linker_cfg_precedence() {
+    let target = rustc_host();
+
+    let foo = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [target.'cfg(not(target_os = "none"))']
+                    linker = "ignored-linker"
+                    [target.{}]
+                    linker = "nonexistent-linker"
+                "#,
+                target
+            ),
+        )
+        .build();
+
+    foo.cargo("build --verbose")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_linker_cfg_collision() {
+    let foo = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(not(target_arch = "avr"))']
+            linker = "nonexistent-linker1"
+            [target.'cfg(not(target_os = "none"))']
+            linker = "nonexistent-linker2"
+            "#,
+        )
+        .build();
+
+    foo.cargo("build --verbose")
+        .with_status(101)
+        .with_stderr(&format!(
+            "\
+[ERROR] several matching instances of `target.'cfg(..)'.linker` in configurations
+first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config
+second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
+",
+        ))
         .run();
 }
 
@@ -252,7 +339,7 @@ fn custom_runner_cfg_collision() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`
+[ERROR] several matching instances of `target.'cfg(..)'.runner` in configurations
 first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config
 second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
 ",
@@ -262,17 +349,16 @@ second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
 
 #[cargo_test]
 fn custom_runner_env() {
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "nonexistent-runner --foo")
         .with_status(101)
+        // FIXME: Update "Caused by" error message once rust/pull/87704 is merged.
+        // On Windows, changing to a custom executable resolver has changed the
+        // error messages.
         .with_stderr(&format!(
             "\
 [COMPILING] foo [..]
@@ -281,9 +367,8 @@ fn custom_runner_env() {
 [ERROR] could not execute process `nonexistent-runner --foo target/debug/foo[EXE]` (never executed)
 
 Caused by:
-  {}
-",
-            no_such_file_err_msg()
+  [..]
+"
         ))
         .run();
 }
@@ -305,10 +390,7 @@ fn custom_runner_env_overrides_config() {
         )
         .build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "should-run --foo")
@@ -322,13 +404,9 @@ fn custom_runner_env_overrides_config() {
 fn custom_runner_env_true() {
     // Check for a bug where "true" was interpreted as a boolean instead of
     // the executable.
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_RUNNER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_RUNNER", rustc_host_env());
 
     p.cargo("run")
         .env(&key, "true")
@@ -338,18 +416,36 @@ fn custom_runner_env_true() {
 
 #[cargo_test]
 fn custom_linker_env() {
-    let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    let key = format!(
-        "CARGO_TARGET_{}_LINKER",
-        target.to_uppercase().replace('-', "_")
-    );
+    let key = format!("CARGO_TARGET_{}_LINKER", rustc_host_env());
 
     p.cargo("build -v")
         .env(&key, "nonexistent-linker")
         .with_status(101)
         .with_stderr_contains("[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]")
+        .run();
+}
+
+#[cargo_test]
+fn target_in_environment_contains_lower_case() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let target = rustc_host();
+    let env_key = format!(
+        "CARGO_TARGET_{}_LINKER",
+        target.to_lowercase().replace('-', "_")
+    );
+
+    p.cargo("build -v --target")
+        .arg(target)
+        .env(&env_key, "nonexistent-linker")
+        .with_stderr_contains(format!(
+            "warning: Environment variables are expected to use uppercase \
+             letters and underscores, the variable `{}` will be ignored and \
+             have no effect",
+            env_key
+        ))
         .run();
 }
 
@@ -384,7 +480,6 @@ fn cfg_ignored_fields() {
 [WARNING] unused key `ar` in [target] config table `cfg(not(target_os = \"none\"))`
 [WARNING] unused key `foo` in [target] config table `cfg(not(target_os = \"none\"))`
 [WARNING] unused key `invalid` in [target] config table `cfg(not(target_os = \"none\"))`
-[WARNING] unused key `linker` in [target] config table `cfg(not(target_os = \"none\"))`
 [CHECKING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",

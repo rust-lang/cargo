@@ -1,25 +1,28 @@
 use cargo_platform::Platform;
-use log::trace;
-use semver::ReqParseError;
 use semver::VersionReq;
 use serde::ser;
 use serde::Serialize;
+use std::borrow::Cow;
+use std::fmt;
+use std::path::PathBuf;
 use std::rc::Rc;
+use tracing::trace;
 
+use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::{PackageId, SourceId, Summary};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::Config;
+use crate::util::OptVersionReq;
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
-#[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Dependency {
     inner: Rc<Inner>,
 }
 
 /// The data underlying a `Dependency`.
-#[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 struct Inner {
     name: InternedString,
     source_id: SourceId,
@@ -30,7 +33,7 @@ struct Inner {
     /// `registry` is specified. Or in the case of a crates.io dependency,
     /// `source_id` will be crates.io and this will be None.
     registry_id: Option<SourceId>,
-    req: VersionReq,
+    req: OptVersionReq,
     specified_req: bool,
     kind: DepKind,
     only_match_name: bool,
@@ -40,6 +43,8 @@ struct Inner {
     public: bool,
     default_features: bool,
     features: Vec<InternedString>,
+    // The presence of this information turns a dependency into an artifact dependency.
+    artifact: Option<Artifact>,
 
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
@@ -57,10 +62,16 @@ struct SerializedDependency<'a> {
     optional: bool,
     uses_default_features: bool,
     features: &'a [InternedString],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    artifact: Option<&'a Artifact>,
     target: Option<&'a Platform>,
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
     registry: Option<&'a str>,
+
+    /// The file system path for a local path dependency.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<PathBuf>,
 }
 
 impl ser::Serialize for Dependency {
@@ -80,6 +91,8 @@ impl ser::Serialize for Dependency {
             target: self.platform(),
             rename: self.explicit_name_in_toml().map(|s| s.as_str()),
             registry: registry_id.as_ref().map(|sid| sid.url().as_str()),
+            path: self.source_id().local_path(),
+            artifact: self.artifact(),
         }
         .serialize(s)
     }
@@ -92,49 +105,13 @@ pub enum DepKind {
     Build,
 }
 
-fn parse_req_with_deprecated(
-    name: InternedString,
-    req: &str,
-    extra: Option<(PackageId, &Config)>,
-) -> CargoResult<VersionReq> {
-    match VersionReq::parse(req) {
-        Err(ReqParseError::DeprecatedVersionRequirement(requirement)) => {
-            let (inside, config) = match extra {
-                Some(pair) => pair,
-                None => return Err(ReqParseError::DeprecatedVersionRequirement(requirement).into()),
-            };
-            let msg = format!(
-                "\
-parsed version requirement `{}` is no longer valid
-
-Previous versions of Cargo accepted this malformed requirement,
-but it is being deprecated. This was found when parsing the manifest
-of {} {}, and the correct version requirement is `{}`.
-
-This will soon become a hard error, so it's either recommended to
-update to a fixed version or contact the upstream maintainer about
-this warning.
-",
-                req,
-                inside.name(),
-                inside.version(),
-                requirement
-            );
-            config.shell().warn(&msg)?;
-
-            Ok(requirement)
+impl DepKind {
+    pub fn kind_table(&self) -> &'static str {
+        match self {
+            DepKind::Normal => "dependencies",
+            DepKind::Development => "dev-dependencies",
+            DepKind::Build => "build-dependencies",
         }
-        Err(e) => {
-            let err: CargoResult<VersionReq> = Err(e.into());
-            let v: VersionReq = err.chain_err(|| {
-                format!(
-                    "failed to parse the version requirement `{}` for dependency `{}`",
-                    req, name
-                )
-            })?;
-            Ok(v)
-        }
-        Ok(v) => Ok(v),
     }
 }
 
@@ -158,36 +135,19 @@ impl Dependency {
         name: impl Into<InternedString>,
         version: Option<&str>,
         source_id: SourceId,
-        inside: PackageId,
-        config: &Config,
-    ) -> CargoResult<Dependency> {
-        let name = name.into();
-        let arg = Some((inside, config));
-        let (specified_req, version_req) = match version {
-            Some(v) => (true, parse_req_with_deprecated(name, v, arg)?),
-            None => (false, VersionReq::any()),
-        };
-
-        let mut ret = Dependency::new_override(name, source_id);
-        {
-            let ptr = Rc::make_mut(&mut ret.inner);
-            ptr.only_match_name = false;
-            ptr.req = version_req;
-            ptr.specified_req = specified_req;
-        }
-        Ok(ret)
-    }
-
-    /// Attempt to create a `Dependency` from an entry in the manifest.
-    pub fn parse_no_deprecated(
-        name: impl Into<InternedString>,
-        version: Option<&str>,
-        source_id: SourceId,
     ) -> CargoResult<Dependency> {
         let name = name.into();
         let (specified_req, version_req) = match version {
-            Some(v) => (true, parse_req_with_deprecated(name, v, None)?),
-            None => (false, VersionReq::any()),
+            Some(v) => match VersionReq::parse(v) {
+                Ok(req) => (true, OptVersionReq::Req(req)),
+                Err(err) => {
+                    return Err(anyhow::Error::new(err).context(format!(
+                        "failed to parse the version requirement `{}` for dependency `{}`",
+                        v, name,
+                    )))
+                }
+            },
+            None => (false, OptVersionReq::Any),
         };
 
         let mut ret = Dependency::new_override(name, source_id);
@@ -207,7 +167,7 @@ impl Dependency {
                 name,
                 source_id,
                 registry_id: None,
-                req: VersionReq::any(),
+                req: OptVersionReq::Any,
                 kind: DepKind::Normal,
                 only_match_name: true,
                 optional: false,
@@ -217,11 +177,12 @@ impl Dependency {
                 specified_req: false,
                 platform: None,
                 explicit_name_in_toml: None,
+                artifact: None,
             }),
         }
     }
 
-    pub fn version_req(&self) -> &VersionReq {
+    pub fn version_req(&self) -> &OptVersionReq {
         &self.inner.req
     }
 
@@ -357,7 +318,7 @@ impl Dependency {
     }
 
     /// Sets the version requirement for this dependency.
-    pub fn set_version_req(&mut self, req: VersionReq) -> &mut Dependency {
+    pub fn set_version_req(&mut self, req: OptVersionReq) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).req = req;
         self
     }
@@ -378,7 +339,6 @@ impl Dependency {
     /// Locks this dependency to depending on the specified package ID.
     pub fn lock_to(&mut self, id: PackageId) -> &mut Dependency {
         assert_eq!(self.inner.source_id, id.source_id());
-        assert!(self.inner.req.matches(id.version()));
         trace!(
             "locking dep from `{}` with `{}` at {} to {}",
             self.package_name(),
@@ -387,7 +347,7 @@ impl Dependency {
             id
         );
         let me = Rc::make_mut(&mut self.inner);
-        me.req = VersionReq::exact(id.version());
+        me.req.lock_to(id.version());
 
         // Only update the `precise` of this source to preserve other
         // information about dependency's source which may not otherwise be
@@ -398,10 +358,20 @@ impl Dependency {
         self
     }
 
-    /// Returns `true` if this is a "locked" dependency, basically whether it has
-    /// an exact version req.
+    /// Locks this dependency to a specified version.
+    ///
+    /// Mainly used in dependency patching like `[patch]` or `[replace]`, which
+    /// doesn't need to lock the entire dependency to a specific [`PackageId`].
+    pub fn lock_version(&mut self, version: &semver::Version) -> &mut Dependency {
+        let me = Rc::make_mut(&mut self.inner);
+        me.req.lock_to(version);
+        self
+    }
+
+    /// Returns `true` if this is a "locked" dependency. Basically a locked
+    /// dependency has an exact version req, but not vice versa.
     pub fn is_locked(&self) -> bool {
-        self.inner.req.is_exact()
+        self.inner.req.is_locked()
     }
 
     /// Returns `false` if the dependency is only used to build the local package.
@@ -447,11 +417,230 @@ impl Dependency {
     }
 
     pub fn map_source(mut self, to_replace: SourceId, replace_with: SourceId) -> Dependency {
-        if self.source_id() != to_replace {
-            self
-        } else {
+        if self.source_id() == to_replace {
             self.set_source_id(replace_with);
-            self
         }
+        self
+    }
+
+    pub(crate) fn set_artifact(&mut self, artifact: Artifact) {
+        Rc::make_mut(&mut self.inner).artifact = Some(artifact);
+    }
+
+    pub(crate) fn artifact(&self) -> Option<&Artifact> {
+        self.inner.artifact.as_ref()
+    }
+
+    /// Dependencies are potential rust libs if they are not artifacts or they are an
+    /// artifact which allows to be seen as library.
+    /// Previously, every dependency was potentially seen as library.
+    pub(crate) fn maybe_lib(&self) -> bool {
+        self.artifact().map(|a| a.is_lib).unwrap_or(true)
+    }
+}
+
+/// The presence of an artifact turns an ordinary dependency into an Artifact dependency.
+/// As such, it will build one or more different artifacts of possibly various kinds
+/// for making them available at build time for rustc invocations or runtime
+/// for build scripts.
+///
+/// This information represents a requirement in the package this dependency refers to.
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct Artifact {
+    inner: Rc<Vec<ArtifactKind>>,
+    is_lib: bool,
+    target: Option<ArtifactTarget>,
+}
+
+#[derive(Serialize)]
+pub struct SerializedArtifact<'a> {
+    kinds: &'a [ArtifactKind],
+    lib: bool,
+    target: Option<&'a str>,
+}
+
+impl ser::Serialize for Artifact {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        SerializedArtifact {
+            kinds: self.kinds(),
+            lib: self.is_lib,
+            target: self.target.as_ref().map(ArtifactTarget::as_str),
+        }
+        .serialize(s)
+    }
+}
+
+impl Artifact {
+    pub(crate) fn parse(
+        artifacts: &[impl AsRef<str>],
+        is_lib: bool,
+        target: Option<&str>,
+    ) -> CargoResult<Self> {
+        let kinds = ArtifactKind::validate(
+            artifacts
+                .iter()
+                .map(|s| ArtifactKind::parse(s.as_ref()))
+                .collect::<Result<Vec<_>, _>>()?,
+        )?;
+        Ok(Artifact {
+            inner: Rc::new(kinds),
+            is_lib,
+            target: target.map(ArtifactTarget::parse).transpose()?,
+        })
+    }
+
+    pub(crate) fn kinds(&self) -> &[ArtifactKind] {
+        &self.inner
+    }
+
+    pub(crate) fn is_lib(&self) -> bool {
+        self.is_lib
+    }
+
+    pub(crate) fn target(&self) -> Option<ArtifactTarget> {
+        self.target
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Ord, PartialOrd, Debug)]
+pub enum ArtifactTarget {
+    /// Only applicable to build-dependencies, causing them to be built
+    /// for the given target (i.e. via `--target <triple>`) instead of for the host.
+    /// Has no effect on non-build dependencies.
+    BuildDependencyAssumeTarget,
+    /// The name of the platform triple, like `x86_64-apple-darwin`, that this
+    /// artifact will always be built for, no matter if it is a build,
+    /// normal or dev dependency.
+    Force(CompileTarget),
+}
+
+impl ArtifactTarget {
+    pub fn parse(target: &str) -> CargoResult<ArtifactTarget> {
+        Ok(match target {
+            "target" => ArtifactTarget::BuildDependencyAssumeTarget,
+            name => ArtifactTarget::Force(CompileTarget::new(name)?),
+        })
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            ArtifactTarget::BuildDependencyAssumeTarget => "target",
+            ArtifactTarget::Force(target) => target.rustc_target().as_str(),
+        }
+    }
+
+    pub fn to_compile_kind(&self) -> Option<CompileKind> {
+        self.to_compile_target().map(CompileKind::Target)
+    }
+
+    pub fn to_compile_target(&self) -> Option<CompileTarget> {
+        match self {
+            ArtifactTarget::BuildDependencyAssumeTarget => None,
+            ArtifactTarget::Force(target) => Some(*target),
+        }
+    }
+
+    pub(crate) fn to_resolved_compile_kind(
+        &self,
+        root_unit_compile_kind: CompileKind,
+    ) -> CompileKind {
+        match self {
+            ArtifactTarget::Force(target) => CompileKind::Target(*target),
+            ArtifactTarget::BuildDependencyAssumeTarget => root_unit_compile_kind,
+        }
+    }
+
+    pub(crate) fn to_resolved_compile_target(
+        &self,
+        root_unit_compile_kind: CompileKind,
+    ) -> Option<CompileTarget> {
+        match self.to_resolved_compile_kind(root_unit_compile_kind) {
+            CompileKind::Host => None,
+            CompileKind::Target(target) => Some(target),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Ord, PartialOrd, Debug)]
+pub enum ArtifactKind {
+    /// We represent all binaries in this dependency
+    AllBinaries,
+    /// We represent a single binary
+    SelectedBinary(InternedString),
+    Cdylib,
+    Staticlib,
+}
+
+impl ser::Serialize for ArtifactKind {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        self.as_str().serialize(s)
+    }
+}
+
+impl fmt::Display for ArtifactKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.as_str())
+    }
+}
+
+impl ArtifactKind {
+    /// Returns a string of crate type of the artifact being built.
+    ///
+    /// Note that the name of `SelectedBinary` would be dropped and displayed as `bin`.
+    pub fn crate_type(&self) -> &'static str {
+        match self {
+            ArtifactKind::AllBinaries | ArtifactKind::SelectedBinary(_) => "bin",
+            ArtifactKind::Cdylib => "cdylib",
+            ArtifactKind::Staticlib => "staticlib",
+        }
+    }
+
+    pub fn as_str(&self) -> Cow<'static, str> {
+        match *self {
+            ArtifactKind::SelectedBinary(name) => format!("bin:{}", name.as_str()).into(),
+            _ => self.crate_type().into(),
+        }
+    }
+
+    pub fn parse(kind: &str) -> CargoResult<Self> {
+        Ok(match kind {
+            "bin" => ArtifactKind::AllBinaries,
+            "cdylib" => ArtifactKind::Cdylib,
+            "staticlib" => ArtifactKind::Staticlib,
+            _ => {
+                return kind
+                    .strip_prefix("bin:")
+                    .map(|bin_name| ArtifactKind::SelectedBinary(InternedString::new(bin_name)))
+                    .ok_or_else(|| anyhow::anyhow!("'{}' is not a valid artifact specifier", kind))
+            }
+        })
+    }
+
+    fn validate(kinds: Vec<ArtifactKind>) -> CargoResult<Vec<ArtifactKind>> {
+        if kinds.iter().any(|k| matches!(k, ArtifactKind::AllBinaries))
+            && kinds
+                .iter()
+                .any(|k| matches!(k, ArtifactKind::SelectedBinary(_)))
+        {
+            anyhow::bail!("Cannot specify both 'bin' and 'bin:<name>' binary artifacts, as 'bin' selects all available binaries.");
+        }
+        let mut kinds_without_dupes = kinds.clone();
+        kinds_without_dupes.sort();
+        kinds_without_dupes.dedup();
+        let num_dupes = kinds.len() - kinds_without_dupes.len();
+        if num_dupes != 0 {
+            anyhow::bail!(
+                "Found {} duplicate binary artifact{}",
+                num_dupes,
+                (num_dupes > 1).then(|| "s").unwrap_or("")
+            );
+        }
+        Ok(kinds)
     }
 }

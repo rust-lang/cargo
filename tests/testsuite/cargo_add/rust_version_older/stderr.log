@@ -1,0 +1,3 @@
+    Updating `dummy-registry` index
+warning: ignoring `rust-version-user@0.2.1` (which has a rust-version of 1.72) to satisfy this package's rust-version of 1.70 (use `--ignore-rust-version` to override)
+      Adding rust-version-user v0.1.0 to dependencies.

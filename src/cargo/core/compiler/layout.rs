@@ -47,6 +47,9 @@
 //!         # prevent collisions. One notable exception is dynamic libraries.
 //!         deps/
 //!
+//!             # Each artifact dependency gets in its own directory.
+//!             /artifact/$pkgname-$META/$kind
+//!
 //!         # Root directory for all compiled examples.
 //!         examples/
 //!
@@ -100,8 +103,8 @@
 
 use crate::core::compiler::CompileTarget;
 use crate::core::Workspace;
-use crate::util::paths;
 use crate::util::{CargoResult, FileLock};
+use cargo_util::paths;
 use std::path::{Path, PathBuf};
 
 /// Contains the paths of all target output locations.
@@ -117,6 +120,8 @@ pub struct Layout {
     deps: PathBuf,
     /// The directory for build scripts: `$dest/build`
     build: PathBuf,
+    /// The directory for artifacts, i.e. binaries, cdylibs, staticlibs: `$dest/deps/artifact`
+    artifact: PathBuf,
     /// The directory for incremental files: `$dest/incremental`
     incremental: PathBuf,
     /// The directory for fingerprints: `$dest/.fingerprint`
@@ -125,6 +130,8 @@ pub struct Layout {
     examples: PathBuf,
     /// The directory for rustdoc output: `$root/doc`
     doc: PathBuf,
+    /// The directory for temporary data of integration tests and benches: `$dest/tmp`
+    tmp: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
     _lock: FileLock,
@@ -159,17 +166,21 @@ impl Layout {
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
         // compile.
-        let lock = dest.open_rw(".cargo-lock", ws.config(), "build directory")?;
+        let lock = dest.open_rw_exclusive_create(".cargo-lock", ws.config(), "build directory")?;
         let root = root.into_path_unlocked();
         let dest = dest.into_path_unlocked();
+        let deps = dest.join("deps");
+        let artifact = deps.join("artifact");
 
         Ok(Layout {
-            deps: dest.join("deps"),
+            deps,
             build: dest.join("build"),
+            artifact,
             incremental: dest.join("incremental"),
             fingerprint: dest.join(".fingerprint"),
             examples: dest.join("examples"),
             doc: root.join("doc"),
+            tmp: root.join("tmp"),
             root,
             dest,
             _lock: lock,
@@ -218,5 +229,14 @@ impl Layout {
     /// Fetch the build script path.
     pub fn build(&self) -> &Path {
         &self.build
+    }
+    /// Fetch the artifact path.
+    pub fn artifact(&self) -> &Path {
+        &self.artifact
+    }
+    /// Create and return the tmp path.
+    pub fn prepare_tmp(&self) -> CargoResult<&Path> {
+        paths::create_dir_all(&self.tmp)?;
+        Ok(&self.tmp)
     }
 }

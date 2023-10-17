@@ -1,10 +1,12 @@
 //! Tests for the `cargo clean` command.
 
-use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_manifest, git, main_file, project, rustc_host};
+use cargo_test_support::{
+    basic_bin_manifest, basic_manifest, git, main_file, project, project_in, rustc_host,
+};
+use glob::GlobError;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[cargo_test]
 fn cargo_clean_simple() {
@@ -87,6 +89,121 @@ fn clean_multiple_packages() {
 }
 
 #[cargo_test]
+fn clean_multiple_packages_in_glob_char_path() {
+    let p = project_in("[d1]")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+    let foo_path = &p.build_dir().join("debug").join("deps");
+
+    #[cfg(not(target_env = "msvc"))]
+    let file_glob = "foo-*";
+
+    #[cfg(target_env = "msvc")]
+    let file_glob = "foo.pdb";
+
+    // Assert that build artifacts are produced
+    p.cargo("build").run();
+    assert_ne!(get_build_artifacts(foo_path, file_glob).len(), 0);
+
+    // Assert that build artifacts are destroyed
+    p.cargo("clean -p foo").run();
+    assert_eq!(get_build_artifacts(foo_path, file_glob).len(), 0);
+}
+
+fn get_build_artifacts(path: &PathBuf, file_glob: &str) -> Vec<Result<PathBuf, GlobError>> {
+    let pattern = path.to_str().expect("expected utf-8 path");
+    let pattern = glob::Pattern::escape(pattern);
+
+    let path = PathBuf::from(pattern).join(file_glob);
+    let path = path.to_str().expect("expected utf-8 path");
+    glob::glob(path)
+        .expect("expected glob to run")
+        .into_iter()
+        .collect::<Vec<Result<PathBuf, GlobError>>>()
+}
+
+#[cargo_test]
+fn clean_p_only_cleans_specified_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "foo",
+                    "foo_core",
+                    "foo-base",
+                ]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "//! foo")
+        .file("foo_core/Cargo.toml", &basic_manifest("foo_core", "0.1.0"))
+        .file("foo_core/src/lib.rs", "//! foo_core")
+        .file("foo-base/Cargo.toml", &basic_manifest("foo-base", "0.1.0"))
+        .file("foo-base/src/lib.rs", "//! foo-base")
+        .build();
+
+    let fingerprint_path = &p.build_dir().join("debug").join(".fingerprint");
+
+    p.cargo("build -p foo -p foo_core -p foo-base").run();
+
+    let mut fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Artifacts present for all after building
+    assert!(fingerprint_names.iter().any(|e| e == "foo"));
+    let num_foo_core_artifacts = fingerprint_names
+        .iter()
+        .filter(|&e| e == "foo_core")
+        .count();
+    assert_ne!(num_foo_core_artifacts, 0);
+    let num_foo_base_artifacts = fingerprint_names
+        .iter()
+        .filter(|&e| e == "foo-base")
+        .count();
+    assert_ne!(num_foo_base_artifacts, 0);
+
+    p.cargo("clean -p foo").run();
+
+    fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Cleaning `foo` leaves artifacts for the others
+    assert!(!fingerprint_names.iter().any(|e| e == "foo"));
+    assert_eq!(
+        fingerprint_names
+            .iter()
+            .filter(|&e| e == "foo_core")
+            .count(),
+        num_foo_core_artifacts,
+    );
+    assert_eq!(
+        fingerprint_names
+            .iter()
+            .filter(|&e| e == "foo-base")
+            .count(),
+        num_foo_core_artifacts,
+    );
+}
+
+fn get_fingerprints_without_hashes(fingerprint_path: &Path) -> Vec<String> {
+    std::fs::read_dir(fingerprint_path)
+        .expect("Build dir should be readable")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| {
+            let name = entry.file_name();
+            let name = name
+                .into_string()
+                .expect("fingerprint name should be UTF-8");
+            name.rsplit_once('-')
+                .expect("Name should contain at least one hyphen")
+                .0
+                .to_owned()
+        })
+        .collect()
+}
+
+#[cargo_test]
 fn clean_release() {
     let p = project()
         .file(
@@ -155,7 +272,7 @@ fn clean_doc() {
 
     assert!(doc_path.is_dir());
 
-    p.cargo("clean --doc").run();
+    p.cargo("clean --doc").with_stderr("[REMOVED] [..]").run();
 
     assert!(!doc_path.is_dir());
     assert!(p.build_dir().is_dir());
@@ -286,15 +403,23 @@ fn clean_verbose() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("build").run();
-    p.cargo("clean -p bar --verbose")
-        .with_stderr(
-            "\
-[REMOVING] [..]
-[REMOVING] [..]
-[REMOVING] [..]
-[REMOVING] [..]
+    let mut expected = String::from(
+        "\
+[REMOVING] [..]target/debug/.fingerprint/bar[..]
+[REMOVING] [..]target/debug/deps/libbar[..].rlib
+[REMOVING] [..]target/debug/deps/bar-[..].d
+[REMOVING] [..]target/debug/deps/libbar[..].rmeta
 ",
-        )
+    );
+    if cfg!(target_os = "macos") {
+        // Rust 1.69 has changed so that split-debuginfo=unpacked includes unpacked for rlibs.
+        for obj in p.glob("target/debug/deps/bar-*.o") {
+            expected.push_str(&format!("[REMOVING] [..]{}\n", obj.unwrap().display()));
+        }
+    }
+    expected.push_str("[REMOVED] [..] files, [..] total\n");
+    p.cargo("clean -p bar --verbose")
+        .with_stderr_unordered(&expected)
         .run();
     p.cargo("build").run();
 }
@@ -378,7 +503,7 @@ fn package_cleans_all_the_things() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file("src/main.rs", "fn main() {}")
+        .file("src/lib/some-main.rs", "fn main() {}")
         .file("src/bin/other-main.rs", "fn main() {}")
         .file("examples/foo-ex-rlib.rs", "")
         .file("examples/foo-ex-cdylib.rs", "")
@@ -409,6 +534,7 @@ fn package_cleans_all_the_things() {
 }
 
 // Ensures that all files for the package have been deleted.
+#[track_caller]
 fn assert_all_clean(build_dir: &Path) {
     let walker = walkdir::WalkDir::new(build_dir).into_iter();
     for entry in walker.filter_entry(|e| {
@@ -444,10 +570,10 @@ fn assert_all_clean(build_dir: &Path) {
 }
 
 #[cargo_test]
-fn clean_spec_multiple() {
+fn clean_spec_version() {
     // clean -p foo where foo matches multiple versions
-    Package::new("bar", "1.0.0").publish();
-    Package::new("bar", "2.0.0").publish();
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
 
     let p = project()
         .file(
@@ -458,18 +584,142 @@ fn clean_spec_multiple() {
             version = "0.1.0"
 
             [dependencies]
-            bar1 = {version="1.0", package="bar"}
-            bar2 = {version="2.0", package="bar"}
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
-    p.cargo("clean -p bar:1.0.0")
+
+    // Check suggestion for bad pkgid.
+    p.cargo("clean -p baz")
+        .with_status(101)
         .with_stderr(
-            "warning: version qualifier in `-p bar:1.0.0` is ignored, \
-            cleaning all versions of `bar` found",
+            "\
+error: package ID specification `baz` did not match any packages
+
+<tab>Did you mean `bar`?
+",
+        )
+        .run();
+
+    p.cargo("clean -p bar:0.1.0")
+        .with_stderr(
+            "warning: version qualifier in `-p bar:0.1.0` is ignored, \
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files, [..] total",
+        )
+        .run();
+    let mut walker = walkdir::WalkDir::new(p.build_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name().to_str().unwrap();
+            n.starts_with("bar") || n.starts_with("libbar")
+        });
+    if let Some(e) = walker.next() {
+        panic!("{:?} was not cleaned", e.path());
+    }
+}
+
+#[cargo_test]
+fn clean_spec_partial_version() {
+    // clean -p foo where foo matches multiple versions
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    // Check suggestion for bad pkgid.
+    p.cargo("clean -p baz")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `baz` did not match any packages
+
+<tab>Did you mean `bar`?
+",
+        )
+        .run();
+
+    p.cargo("clean -p bar:0.1")
+        .with_stderr(
+            "warning: version qualifier in `-p bar:0.1` is ignored, \
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files, [..] total",
+        )
+        .run();
+    let mut walker = walkdir::WalkDir::new(p.build_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name().to_str().unwrap();
+            n.starts_with("bar") || n.starts_with("libbar")
+        });
+    if let Some(e) = walker.next() {
+        panic!("{:?} was not cleaned", e.path());
+    }
+}
+
+#[cargo_test]
+fn clean_spec_partial_version_ambiguous() {
+    // clean -p foo where foo matches multiple versions
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    // Check suggestion for bad pkgid.
+    p.cargo("clean -p baz")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `baz` did not match any packages
+
+<tab>Did you mean `bar`?
+",
+        )
+        .run();
+
+    p.cargo("clean -p bar:0")
+        .with_stderr(
+            "warning: version qualifier in `-p bar:0` is ignored, \
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files, [..] total",
         )
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
@@ -533,5 +783,74 @@ fn clean_spec_reserved() {
 [FINISHED] [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn clean_dry_run() {
+    // Basic `clean --dry-run` test.
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let ls_r = || -> Vec<_> {
+        let mut file_list: Vec<_> = walkdir::WalkDir::new(p.build_dir())
+            .into_iter()
+            .filter_map(|e| e.map(|e| e.path().to_owned()).ok())
+            .collect();
+        file_list.sort();
+        file_list
+    };
+
+    // Start with no files.
+    p.cargo("clean --dry-run")
+        .with_stdout("")
+        .with_stderr(
+            "[SUMMARY] 0 files\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
+        .run();
+    p.cargo("check").run();
+    let before = ls_r();
+    p.cargo("clean --dry-run")
+        .with_stderr(
+            "[SUMMARY] [..] files, [..] total\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
+        .run();
+    // Verify it didn't delete anything.
+    let after = ls_r();
+    assert_eq!(before, after);
+    let expected = cargo::util::iter_join(before.iter().map(|p| p.to_str().unwrap()), "\n");
+    eprintln!("{expected}");
+    // Verify the verbose output.
+    p.cargo("clean --dry-run -v")
+        .with_stdout_unordered(expected)
+        .with_stderr(
+            "[SUMMARY] [..] files, [..] total\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn doc_with_package_selection() {
+    // --doc with -p
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("clean --doc -p foo")
+        .with_status(101)
+        .with_stderr("error: --doc cannot be used with -p")
         .run();
 }

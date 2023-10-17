@@ -51,7 +51,7 @@ fn broken_path_override_warns() {
         .file(".cargo/config", r#"paths = ["a2"]"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -65,16 +65,16 @@ never intended to support this feature, so for now this message is just a
 warning. In the future, however, this message will become a hard error.
 
 To change the dependency graph via an override it's recommended to use the
-`[replace]` feature of Cargo instead of the path override feature. This is
+`[patch]` feature of Cargo instead of the path override feature. This is
 documented online at the url below for more information.
 
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
+[CHECKING] [..]
+[CHECKING] [..]
+[CHECKING] [..]
 [FINISHED] [..]
 ",
         )
@@ -118,7 +118,7 @@ fn override_to_path_dep() {
         .file(".cargo/config", r#"paths = ["bar"]"#)
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -168,11 +168,11 @@ fn paths_ok_with_optional() {
         .file(".cargo/config", r#"paths = ["bar2"]"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0 ([..]bar2)
-[COMPILING] foo v0.0.1 ([..])
+[CHECKING] bar v0.1.0 ([..]bar2)
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         )
@@ -215,7 +215,7 @@ fn paths_add_optional_bad() {
         .file(".cargo/config", r#"paths = ["bar2"]"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
             "\
 warning: path override for crate `bar` has altered the original list of

@@ -1,0 +1,31 @@
+Remove dependencies from a Cargo.toml manifest file
+
+Usage: cargo[EXE] remove [OPTIONS] <DEP_ID>...
+
+Arguments:
+  <DEP_ID>...  Dependencies to be removed
+
+Options:
+  -n, --dry-run             Don't actually write the manifest
+  -q, --quiet               Do not print cargo log messages
+  -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>        Coloring: auto, always, never
+      --config <KEY=VALUE>  Override a configuration value
+  -Z <FLAG>                 Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                Print help
+
+Section:
+      --dev              Remove from dev-dependencies
+      --build            Remove from build-dependencies
+      --target <TARGET>  Remove from target-dependencies
+
+Package Selection:
+  -p, --package [<SPEC>]  Package to remove from
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help remove` for more detailed information.

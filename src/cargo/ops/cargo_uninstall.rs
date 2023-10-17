@@ -1,15 +1,14 @@
-use anyhow::bail;
-use std::collections::BTreeSet;
-use std::env;
-
 use crate::core::PackageId;
 use crate::core::{PackageIdSpec, SourceId};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
-use crate::util::paths;
 use crate::util::Config;
 use crate::util::Filesystem;
+use anyhow::bail;
+use cargo_util::paths;
+use std::collections::BTreeSet;
+use std::env;
 
 pub fn uninstall(
     root: Option<&str>,
@@ -91,6 +90,7 @@ fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoRe
         None,
         |path: &mut PathSource<'_>| path.read_packages(),
         config,
+        None,
     )?;
     let pkgid = pkg.package_id();
     uninstall_pkgid(root, tracker, pkgid, bins, config)

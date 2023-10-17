@@ -27,7 +27,7 @@ fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
 }
 
 #[cargo_test]
-fn deprecated() {
+fn removed() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -47,15 +47,17 @@ fn deprecated() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("package")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["publish-lockfile"])
+        .with_status(101)
         .with_stderr(
             "\
-[PACKAGING] foo v0.1.0 ([..])
-[VERIFYING] foo v0.1.0 ([..])
-[WARNING] The `publish-lockfile` feature is deprecated and currently has no effect. \
-    It may be removed in a future version.
-[COMPILING] foo v0.1.0 ([..])
-[FINISHED] dev [..]
+[ERROR] failed to parse manifest at [..]
+
+Caused by:
+  the cargo feature `publish-lockfile` has been removed in the 1.37 release
+
+  Remove the feature from Cargo.toml to remove this error.
+  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#publish-lockfile [..]
 ",
         )
         .run();
@@ -75,6 +77,7 @@ fn package_lockfile() {
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -133,6 +136,7 @@ src/main.rs
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo src/main.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -184,7 +188,7 @@ fn lock_file_and_workspace() {
 #[cargo_test]
 fn note_resolve_changes() {
     // `multi` has multiple sources (path and registry).
-    Package::new("mutli", "0.1.0").publish();
+    Package::new("multi", "0.1.0").publish();
     // `updated` is always from registry, but should not change.
     Package::new("updated", "1.0.0").publish();
     // `patched` is [patch]ed.
@@ -198,7 +202,7 @@ fn note_resolve_changes() {
                 "0.0.1",
                 r#"
                 [dependencies]
-                mutli = { path = "mutli", version = "0.1" }
+                multi = { path = "multi", version = "0.1" }
                 updated = "1.0"
                 patched = "1.0"
 
@@ -208,8 +212,8 @@ fn note_resolve_changes() {
             ),
         )
         .file("src/main.rs", "fn main() {}")
-        .file("mutli/Cargo.toml", &basic_manifest("mutli", "0.1.0"))
-        .file("mutli/src/lib.rs", "")
+        .file("multi/Cargo.toml", &basic_manifest("multi", "0.1.0"))
+        .file("multi/src/lib.rs", "")
         .file("patched/Cargo.toml", &basic_manifest("patched", "1.0.0"))
         .file("patched/src/lib.rs", "")
         .build();
@@ -228,8 +232,9 @@ fn note_resolve_changes() {
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
 [UPDATING] `[..]` index
-[NOTE] package `mutli v0.1.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/mutli`
+[NOTE] package `multi v0.1.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/multi`
 [NOTE] package `patched v1.0.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/patched`
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -249,7 +254,12 @@ fn outdated_lock_version_change_does_not_warn() {
     p.change_file("Cargo.toml", &pl_manifest("foo", "0.2.0", ""));
 
     p.cargo("package --no-verify")
-        .with_stderr("[PACKAGING] foo v0.2.0 ([..])")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.2.0 ([..])
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
         .run();
 }
 
@@ -299,6 +309,7 @@ fn no_warn_workspace_extras() {
             "\
 [PACKAGING] a v0.1.0 ([..])
 [UPDATING] `[..]` index
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -331,7 +342,8 @@ fn warn_package_with_yanked() {
 [PACKAGING] foo v0.0.1 ([..])
 [UPDATING] `[..]` index
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
-    `crates.io`, consider updating to a version that is not yanked
+    `crates-io`, consider updating to a version that is not yanked
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -370,7 +382,7 @@ dependencies = [
 [DOWNLOADED] foo v0.1.0 (registry `[..]`)
 [INSTALLING] foo v0.1.0
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
-    `crates.io`, consider running without --locked
+    `crates-io`, consider running without --locked
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `[..]`)
 [COMPILING] bar v0.1.0
@@ -448,6 +460,7 @@ src/main.rs
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo src/main.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -474,7 +487,106 @@ fn ignore_lockfile_inner() {
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
+[PACKAGED] 6 files, [..] ([..] compressed)
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn use_workspace_root_lockfile() {
+    // Issue #11148
+    // Workspace members should use `Cargo.lock` at workspace root
+
+    Package::new("serde", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                serde = "0.2"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                workspace = ".."
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    // Create `Cargo.lock` in the workspace root.
+    p.cargo("generate-lockfile").run();
+
+    // Now, add a newer version of `serde`.
+    Package::new("serde", "0.2.1").publish();
+
+    // Expect: package `bar` uses `serde v0.2.0` as required by workspace `Cargo.lock`.
+    p.cargo("package --workspace")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[UPDATING] `dummy-registry` index
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[DOWNLOADING] crates ...
+[DOWNLOADED] serde v0.2.0 ([..])
+[COMPILING] serde v0.2.0
+[COMPILING] bar v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..]
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] serde v0.2.0
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..]
+",
+        )
+        .run();
+
+    let package_path = p.root().join("target/package/foo-0.0.1.crate");
+    assert!(package_path.is_file());
+    let f = File::open(&package_path).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
+
+    let package_path = p.root().join("target/package/bar-0.0.1.crate");
+    assert!(package_path.is_file());
+    let f = File::open(&package_path).unwrap();
+    validate_crate_contents(
+        f,
+        "bar-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
 }

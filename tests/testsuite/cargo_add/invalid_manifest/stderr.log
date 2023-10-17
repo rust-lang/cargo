@@ -1,0 +1,9 @@
+error: failed to parse manifest at `[ROOT]/case/Cargo.toml`
+
+Caused by:
+  TOML parse error at line 8, column 7
+    |
+  8 | key = invalid-value
+    |       ^
+  invalid string
+  expected `"`, `'`

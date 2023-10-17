@@ -4,7 +4,7 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-init \- Create a new Cargo package in an existing directory
+cargo\-init \[em] Create a new Cargo package in an existing directory
 .SH "SYNOPSIS"
 \fBcargo init\fR [\fIoptions\fR] [\fIpath\fR]
 .SH "DESCRIPTION"
@@ -17,71 +17,6 @@ will be used. If not, then a sample \fBsrc/main.rs\fR file will be created, or
 .sp
 If the directory is not already in a VCS repository, then a new repository
 is created (see \fB\-\-vcs\fR below).
-.sp
-The "authors" field in the manifest is determined from the environment or
-configuration settings. A name is required and is determined from (first match
-wins):
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBcargo\-new.name\fR Cargo config value
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBCARGO_NAME\fR environment variable
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBGIT_AUTHOR_NAME\fR environment variable
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBGIT_COMMITTER_NAME\fR environment variable
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBuser.name\fR git configuration value
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBUSER\fR environment variable
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBUSERNAME\fR environment variable
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBNAME\fR environment variable
-.RE
-.sp
-The email address is optional and is determined from:
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBcargo\-new.email\fR Cargo config value
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBCARGO_EMAIL\fR environment variable
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBGIT_AUTHOR_EMAIL\fR environment variable
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBGIT_COMMITTER_EMAIL\fR environment variable
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBuser.email\fR git configuration value
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+02'\fBEMAIL\fR environment variable
-.RE
-.sp
-See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/config.html> for more information about
-configuration files.
 .sp
 See \fBcargo\-new\fR(1) for a similar command which will create a new package in
 a new directory.
@@ -101,8 +36,8 @@ Create a package with a library target (\fBsrc/lib.rs\fR).
 .sp
 \fB\-\-edition\fR \fIedition\fR
 .RS 4
-Specify the Rust edition to use. Default is 2018.
-Possible values: 2015, 2018
+Specify the Rust edition to use. Default is 2021.
+Possible values: 2015, 2018, 2021, 2024
 .RE
 .sp
 \fB\-\-name\fR \fIname\fR
@@ -134,7 +69,7 @@ be restricted.
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -143,7 +78,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -175,6 +112,26 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

@@ -7,14 +7,15 @@
 //! dependencies on other Invocations.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
 use super::context::OutputFile;
 use super::{CompileKind, CompileMode, Context, Unit};
 use crate::core::TargetKind;
-use crate::util::{internal, CargoResult, Config, ProcessBuilder};
+use crate::util::{internal, CargoResult, Config};
+use cargo_util::ProcessBuilder;
 
 #[derive(Debug, Serialize)]
 struct Invocation {
@@ -63,10 +64,10 @@ impl Invocation {
         }
     }
 
-    pub fn add_output(&mut self, path: &PathBuf, link: &Option<PathBuf>) {
-        self.outputs.push(path.clone());
+    pub fn add_output(&mut self, path: &Path, link: &Option<PathBuf>) {
+        self.outputs.push(path.to_path_buf());
         if let Some(ref link) = *link {
-            self.links.insert(link.clone(), path.clone());
+            self.links.insert(link.clone(), path.to_path_buf());
         }
     }
 
@@ -77,7 +78,7 @@ impl Invocation {
             .ok_or_else(|| anyhow::format_err!("unicode program string required"))?
             .to_string();
         self.cwd = Some(cmd.get_cwd().unwrap().to_path_buf());
-        for arg in cmd.get_args().iter() {
+        for arg in cmd.get_args() {
             self.args.push(
                 arg.to_str()
                     .ok_or_else(|| anyhow::format_err!("unicode argument string required"))?
@@ -85,10 +86,7 @@ impl Invocation {
             );
         }
         for (var, value) in cmd.get_envs() {
-            let value = match value {
-                Some(s) => s,
-                None => continue,
-            };
+            let Some(value) = value else { continue };
             self.env.insert(
                 var.clone(),
                 value

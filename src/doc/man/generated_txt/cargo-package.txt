@@ -1,7 +1,8 @@
 CARGO-PACKAGE(1)
 
 NAME
-       cargo-package - Assemble the local package into a distributable tarball
+       cargo-package — Assemble the local package into a distributable
+       tarball
 
 SYNOPSIS
        cargo package [options]
@@ -45,13 +46,26 @@ DESCRIPTION
        <https://doc.rust-lang.org/cargo/reference/publishing.html> for more
        details about packaging and publishing.
 
+   .cargo_vcs_info.json format
+       Will generate a .cargo_vcs_info.json in the following format
+
+           {
+            "git": {
+              "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+            },
+            "path_in_vcs": ""
+           }
+
+       path_in_vcs will be set to a repo-relative path for packages in
+       subdirectories of the version control repository.
+
 OPTIONS
    Package Options
        -l, --list
            Print files included in a package without making one.
 
        --no-verify
-           Don't verify the contents by building them.
+           Don’t verify the contents by building them.
 
        --no-metadata
            Ignore warnings about a lack of human-usable metadata (such as the
@@ -61,12 +75,46 @@ OPTIONS
            Allow working directories with uncommitted VCS changes to be
            packaged.
 
+   Package Selection
+       By default, when no package selection options are given, the packages
+       selected depend on the selected manifest file (based on the current
+       working directory if --manifest-path is not given). If the manifest is
+       the root of a workspace then the workspaces default members are
+       selected, otherwise only the package defined by the manifest will be
+       selected.
+
+       The default members of a workspace can be set explicitly with the
+       workspace.default-members key in the root manifest. If this is not set,
+       a virtual workspace will include all workspace members (equivalent to
+       passing --workspace), and a non-virtual workspace will include only the
+       root crate itself.
+
+       -p spec…, --package spec…
+           Package only the specified packages. See cargo-pkgid(1) for the SPEC
+           format. This flag may be specified multiple times and supports
+           common Unix glob patterns like *, ? and []. However, to avoid your
+           shell accidentally expanding glob patterns before Cargo handles
+           them, you must use single quotes or double quotes around each
+           pattern.
+
+       --workspace
+           Package all members in the workspace.
+
+       --exclude SPEC…
+           Exclude the specified packages. Must be used in conjunction with the
+           --workspace flag. This flag may be specified multiple times and
+           supports common Unix glob patterns like *, ? and []. However, to
+           avoid your shell accidentally expanding glob patterns before Cargo
+           handles them, you must use single quotes or double quotes around
+           each pattern.
+
    Compilation Options
        --target triple
            Package for the given architecture. The default is the host
            architecture. The general format of the triple is
            <arch><sub>-<vendor>-<sys>-<abi>. Run rustc --print target-list for
-           a list of supported targets.
+           a list of supported targets. This flag may be specified multiple
+           times.
 
            This may also be specified with the build.target config value
            <https://doc.rust-lang.org/cargo/reference/config.html>.
@@ -85,19 +133,17 @@ OPTIONS
            target in the root of the workspace.
 
    Feature Selection
-       The feature flags allow you to control the enabled features for the
-       "current" package. The "current" package is the package in the current
-       directory, or the one specified in --manifest-path. If running in the
-       root of a virtual workspace, then the default features are selected for
-       all workspace members, or all features if --all-features is specified.
+       The feature flags allow you to control which features are enabled. When
+       no feature options are given, the default feature is activated for every
+       selected package.
 
-       When no feature options are given, the default feature is activated for
-       every selected package.
+       See the features documentation
+       <https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options>
+       for more details.
 
-       --features features
-           Space or comma separated list of features to activate. These
-           features only apply to the current directory's package. Features of
-           direct dependencies may be enabled with <dep-name>/<feature-name>
+       -F features, --features features
+           Space or comma separated list of features to activate. Features of
+           workspace members may be enabled with package-name/feature-name
            syntax. This flag may be specified multiple times, which enables all
            specified features.
 
@@ -105,8 +151,7 @@ OPTIONS
            Activate all available features of all selected packages.
 
        --no-default-features
-           Do not activate the default feature of the current directory's
-           package.
+           Do not activate the default feature of the selected packages.
 
    Manifest Options
        --manifest-path path
@@ -144,17 +189,34 @@ OPTIONS
            Number of parallel jobs to run. May also be specified with the
            build.jobs config value
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
-           the number of CPUs.
+           the number of logical CPUs. If negative, it sets the maximum number
+           of parallel jobs to the number of logical CPUs plus provided value.
+           If a string default is provided, it sets the value back to defaults.
+           Should not be 0.
+
+       --keep-going
+           Build as many crates in the dependency graph as possible, rather
+           than aborting the build on the first one that fails to build.
+
+           For example if the current package depends on dependencies fails and
+           works, one of which fails to build, cargo package -j1 may or may not
+           build the one that succeeds (depending on which one of the two
+           builds Cargo picked to run first), whereas cargo package -j1
+           --keep-going would definitely run both builds, even if the one run
+           first fails.
 
    Display Options
        -v, --verbose
-           Use verbose output. May be specified twice for "very verbose" output
-           which includes extra output such as dependency warnings and build
-           script output. May also be specified with the term.verbose config
-           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        -q, --quiet
-           No output printed to stdout.
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
 
        --color when
            Control when colored output is used. Valid values:
@@ -176,6 +238,27 @@ OPTIONS
            name (such as +stable or +nightly). See the rustup documentation
            <https://rust-lang.github.io/rustup/overrides.html> for more
            information about how toolchain overrides work.
+
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
 
        -h, --help
            Prints help information.

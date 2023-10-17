@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-verify-project - Check correctness of crate manifest
+cargo-verify-project --- Check correctness of crate manifest
 
 ## SYNOPSIS
 

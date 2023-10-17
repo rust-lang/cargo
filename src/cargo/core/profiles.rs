@@ -1,15 +1,45 @@
-use crate::core::compiler::CompileMode;
+//! Handles built-in and customizable compiler flag presets.
+//!
+//! [`Profiles`] is a collections of built-in profiles, and profiles defined
+//! in the root manifest and configurations.
+//!
+//! To start using a profile, most of the time you start from [`Profiles::new`],
+//! which does the followings:
+//!
+//! - Create a `Profiles` by merging profiles from configs onto the profile
+//!   from root manifest (see [`merge_config_profiles`]).
+//! - Add built-in profiles onto it (see [`Profiles::add_root_profiles`]).
+//! - Process profile inheritance for each profiles. (see [`Profiles::add_maker`]).
+//!
+//! Then you can query a [`Profile`] via [`Profiles::get_profile`], which respects
+//! the profile overridden hierarchy described in below. The [`Profile`] you get
+//! is basically an immutable struct containing the compiler flag presets.
+//!
+//! ## Profile overridden hierarchy
+//!
+//! Profile settings can be overridden for specific packages and build-time crates.
+//! The precedence is explained in [`ProfileMaker`].
+//! The algorithm happens within [`ProfileMaker::get_profile`].
+
+use crate::core::compiler::{CompileKind, CompileTarget, Unit};
+use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
-use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
-use crate::util::errors::CargoResultExt;
+use crate::core::{PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
 use crate::util::interning::InternedString;
-use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
+use crate::util::toml::{
+    ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
+};
 use crate::util::{closest_msg, config, CargoResult, Config};
-use anyhow::bail;
+use anyhow::{bail, Context as _};
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::{cmp, env, fmt, hash};
+use std::hash::Hash;
+use std::{cmp, fmt, hash};
 
 /// Collection of all profiles.
+///
+/// To get a specific [`Profile`], you usually create this and call [`get_profile`] then.
+///
+/// [`get_profile`]: Profiles::get_profile
 #[derive(Clone, Debug)]
 pub struct Profiles {
     /// Incremental compilation can be overridden globally via:
@@ -20,87 +50,37 @@ pub struct Profiles {
     dir_names: HashMap<InternedString, InternedString>,
     /// The profile makers. Key is the profile name.
     by_name: HashMap<InternedString, ProfileMaker>,
-    /// Whether or not unstable "named" profiles are enabled.
-    named_profiles_enabled: bool,
+    /// The original profiles written by the user in the manifest and config.
+    ///
+    /// This is here to assist with error reporting, as the `ProfileMaker`
+    /// values have the inherits chains all merged together.
+    original_profiles: BTreeMap<InternedString, TomlProfile>,
     /// The profile the user requested to use.
     requested_profile: InternedString,
+    /// The host target for rustc being used by this `Profiles`.
+    rustc_host: InternedString,
 }
 
 impl Profiles {
-    pub fn new(
-        profiles: Option<&TomlProfiles>,
-        config: &Config,
-        requested_profile: InternedString,
-        features: &Features,
-    ) -> CargoResult<Profiles> {
-        let incremental = match env::var_os("CARGO_INCREMENTAL") {
+    pub fn new(ws: &Workspace<'_>, requested_profile: InternedString) -> CargoResult<Profiles> {
+        let config = ws.config();
+        let incremental = match config.get_env_os("CARGO_INCREMENTAL") {
             Some(v) => Some(v == "1"),
             None => config.build_config()?.incremental,
         };
-        let mut profiles = merge_config_profiles(profiles, config, requested_profile, features)?;
-
-        if !features.is_enabled(Feature::named_profiles()) {
-            let mut profile_makers = Profiles {
-                incremental,
-                named_profiles_enabled: false,
-                dir_names: Self::predefined_dir_names(),
-                by_name: HashMap::new(),
-                requested_profile,
-            };
-
-            profile_makers.by_name.insert(
-                InternedString::new("dev"),
-                ProfileMaker::new(Profile::default_dev(), profiles.remove("dev")),
-            );
-            profile_makers
-                .dir_names
-                .insert(InternedString::new("dev"), InternedString::new("debug"));
-
-            profile_makers.by_name.insert(
-                InternedString::new("release"),
-                ProfileMaker::new(Profile::default_release(), profiles.remove("release")),
-            );
-            profile_makers.dir_names.insert(
-                InternedString::new("release"),
-                InternedString::new("release"),
-            );
-
-            profile_makers.by_name.insert(
-                InternedString::new("test"),
-                ProfileMaker::new(Profile::default_test(), profiles.remove("test")),
-            );
-            profile_makers
-                .dir_names
-                .insert(InternedString::new("test"), InternedString::new("debug"));
-
-            profile_makers.by_name.insert(
-                InternedString::new("bench"),
-                ProfileMaker::new(Profile::default_bench(), profiles.remove("bench")),
-            );
-            profile_makers
-                .dir_names
-                .insert(InternedString::new("bench"), InternedString::new("release"));
-
-            profile_makers.by_name.insert(
-                InternedString::new("doc"),
-                ProfileMaker::new(Profile::default_doc(), profiles.remove("doc")),
-            );
-            profile_makers
-                .dir_names
-                .insert(InternedString::new("doc"), InternedString::new("debug"));
-
-            return Ok(profile_makers);
-        }
+        let mut profiles = merge_config_profiles(ws, requested_profile)?;
+        let rustc_host = ws.config().load_global_rustc(Some(ws))?.host;
 
         let mut profile_makers = Profiles {
             incremental,
-            named_profiles_enabled: true,
             dir_names: Self::predefined_dir_names(),
             by_name: HashMap::new(),
+            original_profiles: profiles.clone(),
             requested_profile,
+            rustc_host,
         };
 
-        Self::add_root_profiles(&mut profile_makers, &profiles)?;
+        Self::add_root_profiles(&mut profile_makers, &profiles);
 
         // Merge with predefined profiles.
         use std::collections::btree_map::Entry;
@@ -130,12 +110,12 @@ impl Profiles {
 
     /// Returns the hard-coded directory names for built-in profiles.
     fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
-        let mut dir_names = HashMap::new();
-        dir_names.insert(InternedString::new("dev"), InternedString::new("debug"));
-        dir_names.insert(InternedString::new("check"), InternedString::new("debug"));
-        dir_names.insert(InternedString::new("test"), InternedString::new("debug"));
-        dir_names.insert(InternedString::new("bench"), InternedString::new("release"));
-        dir_names
+        [
+            (InternedString::new("dev"), InternedString::new("debug")),
+            (InternedString::new("test"), InternedString::new("debug")),
+            (InternedString::new("bench"), InternedString::new("release")),
+        ]
+        .into()
     }
 
     /// Initialize `by_name` with the two "root" profiles, `dev`, and
@@ -143,7 +123,7 @@ impl Profiles {
     fn add_root_profiles(
         profile_makers: &mut Profiles,
         profiles: &BTreeMap<InternedString, TomlProfile>,
-    ) -> CargoResult<()> {
+    ) {
         profile_makers.by_name.insert(
             InternedString::new("dev"),
             ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),
@@ -153,7 +133,6 @@ impl Profiles {
             InternedString::new("release"),
             ProfileMaker::new(Profile::default_release(), profiles.get("release").cloned()),
         );
-        Ok(())
     }
 
     /// Returns the built-in profiles (not including dev/release, which are
@@ -169,13 +148,6 @@ impl Profiles {
             ),
             (
                 "test",
-                TomlProfile {
-                    inherits: Some(InternedString::new("dev")),
-                    ..TomlProfile::default()
-                },
-            ),
-            (
-                "check",
                 TomlProfile {
                     inherits: Some(InternedString::new("dev")),
                     ..TomlProfile::default()
@@ -289,59 +261,30 @@ impl Profiles {
         is_member: bool,
         is_local: bool,
         unit_for: UnitFor,
-        mode: CompileMode,
+        kind: CompileKind,
     ) -> Profile {
-        let (profile_name, inherits) = if !self.named_profiles_enabled {
-            // With the feature disabled, we degrade `--profile` back to the
-            // `--release` and `--debug` predicates, and convert back from
-            // ProfileKind::Custom instantiation.
-
-            let release = matches!(self.requested_profile.as_str(), "release" | "bench");
-
-            match mode {
-                CompileMode::Test | CompileMode::Bench | CompileMode::Doctest => {
-                    if release {
-                        (
-                            InternedString::new("bench"),
-                            Some(InternedString::new("release")),
-                        )
-                    } else {
-                        (
-                            InternedString::new("test"),
-                            Some(InternedString::new("dev")),
-                        )
-                    }
-                }
-                CompileMode::Build | CompileMode::Check { .. } | CompileMode::RunCustomBuild => {
-                    // Note: `RunCustomBuild` doesn't normally use this code path.
-                    // `build_unit_profiles` normally ensures that it selects the
-                    // ancestor's profile. However, `cargo clean -p` can hit this
-                    // path.
-                    if release {
-                        (InternedString::new("release"), None)
-                    } else {
-                        (InternedString::new("dev"), None)
-                    }
-                }
-                CompileMode::Doc { .. } => (InternedString::new("doc"), None),
-            }
-        } else {
-            (self.requested_profile, None)
-        };
-        let maker = self.get_profile_maker(profile_name).unwrap();
-        let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
+        let maker = self.get_profile_maker(self.requested_profile).unwrap();
+        let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for.is_for_host());
 
         // Dealing with `panic=abort` and `panic=unwind` requires some special
         // treatment. Be sure to process all the various options here.
         match unit_for.panic_setting() {
             PanicSetting::AlwaysUnwind => profile.panic = PanicStrategy::Unwind,
             PanicSetting::ReadProfile => {}
-            PanicSetting::Inherit => {
-                if let Some(inherits) = inherits {
-                    // TODO: Fixme, broken with named profiles.
-                    let maker = self.get_profile_maker(inherits).unwrap();
-                    profile.panic = maker.get_profile(Some(pkg_id), is_member, unit_for).panic;
-                }
+        }
+
+        // Default macOS debug information to being stored in the "unpacked"
+        // split-debuginfo format. At the time of this writing that's the only
+        // platform which has a stable `-Csplit-debuginfo` option for rustc,
+        // and it's typically much faster than running `dsymutil` on all builds
+        // in incremental cases.
+        if profile.debuginfo.is_turned_on() && profile.split_debuginfo.is_none() {
+            let target = match &kind {
+                CompileKind::Host => self.rustc_host.as_str(),
+                CompileKind::Target(target) => target.short_name(),
+            };
+            if target.contains("-apple-") {
+                profile.split_debuginfo = Some(InternedString::new("unpacked"));
             }
         }
 
@@ -349,6 +292,7 @@ impl Profiles {
         if let Some(v) = self.incremental {
             profile.incremental = v;
         }
+
         // Only enable incremental compilation for sources the user can
         // modify (aka path sources). For things that change infrequently,
         // non-incremental builds yield better performance in the compiler
@@ -358,7 +302,7 @@ impl Profiles {
         if !is_local {
             profile.incremental = false;
         }
-        profile.name = profile_name;
+        profile.name = self.requested_profile;
         profile
     }
 
@@ -380,17 +324,9 @@ impl Profiles {
     /// `[Finished]` line. It is not entirely accurate, since it doesn't
     /// select for the package that was actually built.
     pub fn base_profile(&self) -> Profile {
-        let profile_name = if !self.named_profiles_enabled {
-            match self.requested_profile.as_str() {
-                "release" | "bench" => self.requested_profile,
-                _ => InternedString::new("dev"),
-            }
-        } else {
-            self.requested_profile
-        };
-
+        let profile_name = self.requested_profile;
         let maker = self.get_profile_maker(profile_name).unwrap();
-        maker.get_profile(None, true, UnitFor::new_normal())
+        maker.get_profile(None, /*is_member*/ true, /*is_for_host*/ false)
     }
 
     /// Gets the directory name for a profile, like `debug` or `release`.
@@ -409,6 +345,19 @@ impl Profiles {
         resolve: &Resolve,
     ) -> CargoResult<()> {
         for (name, profile) in &self.by_name {
+            // If the user did not specify an override, skip this. This is here
+            // to avoid generating errors for inherited profiles which don't
+            // specify package overrides. The `by_name` profile has had the inherits
+            // chain merged, so we need to look at the original source to check
+            // if an override was specified.
+            if self
+                .original_profiles
+                .get(name)
+                .and_then(|orig| orig.package.as_ref())
+                .is_none()
+            {
+                continue;
+            }
             let found = validate_packages_unique(resolve, name, &profile.toml)?;
             // We intentionally do not validate unmatched packages for config
             // profiles, in case they are defined in a central location. This
@@ -433,18 +382,23 @@ impl Profiles {
 /// An object used for handling the profile hierarchy.
 ///
 /// The precedence of profiles are (first one wins):
+///
 /// - Profiles in `.cargo/config` files (using same order as below).
-/// - [profile.dev.package.name] -- a named package.
-/// - [profile.dev.package."*"] -- this cannot apply to workspace members.
-/// - [profile.dev.build-override] -- this can only apply to `build.rs` scripts
+/// - `[profile.dev.package.name]` -- a named package.
+/// - `[profile.dev.package."*"]` -- this cannot apply to workspace members.
+/// - `[profile.dev.build-override]` -- this can only apply to `build.rs` scripts
 ///   and their dependencies.
-/// - [profile.dev]
+/// - `[profile.dev]`
 /// - Default (hard-coded) values.
 #[derive(Debug, Clone)]
 struct ProfileMaker {
     /// The starting, hard-coded defaults for the profile.
     default: Profile,
     /// The TOML profile defined in `Cargo.toml` or config.
+    ///
+    /// This is None if the user did not specify one, in which case the
+    /// `default` is used. Note that the built-in defaults for test/bench/doc
+    /// always set this since they need to declare the `inherits` value.
     toml: Option<TomlProfile>,
 }
 
@@ -461,9 +415,9 @@ impl ProfileMaker {
         &self,
         pkg_id: Option<PackageId>,
         is_member: bool,
-        unit_for: UnitFor,
+        is_for_host: bool,
     ) -> Profile {
-        let mut profile = self.default;
+        let mut profile = self.default.clone();
 
         // First apply profile-specific settings, things like
         // `[profile.release]`
@@ -473,7 +427,7 @@ impl ProfileMaker {
 
         // Next start overriding those settings. First comes build dependencies
         // which default to opt-level 0...
-        if unit_for.is_for_host() {
+        if is_for_host {
             // For-host units are things like procedural macros, build scripts, and
             // their dependencies. For these units most projects simply want them
             // to compile quickly and the runtime doesn't matter too much since
@@ -484,12 +438,24 @@ impl ProfileMaker {
             // well as enabling parallelism by not constraining codegen units.
             profile.opt_level = InternedString::new("0");
             profile.codegen_units = None;
+
+            // For build dependencies, we usually don't need debuginfo, and
+            // removing it will compile faster. However, that can conflict with
+            // a unit graph optimization, reusing units that are shared between
+            // build dependencies and runtime dependencies: when the runtime
+            // target is the same as the build host, we only need to build a
+            // dependency once and reuse the results, instead of building twice.
+            // We defer the choice of the debuginfo level until we can check if
+            // a unit is shared. If that's the case, we'll use the deferred value
+            // below so the unit can be reused, otherwise we can avoid emitting
+            // the unit's debuginfo.
+            profile.debuginfo = DebugInfo::Deferred(profile.debuginfo.into_inner());
         }
         // ... and next comes any other sorts of overrides specified in
         // profiles, such as `[profile.release.build-override]` or
         // `[profile.release.package.foo]`
         if let Some(toml) = &self.toml {
-            merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
+            merge_toml_overrides(pkg_id, is_member, is_for_host, &mut profile, toml);
         }
         profile
     }
@@ -499,11 +465,11 @@ impl ProfileMaker {
 fn merge_toml_overrides(
     pkg_id: Option<PackageId>,
     is_member: bool,
-    unit_for: UnitFor,
+    is_for_host: bool,
     profile: &mut Profile,
     toml: &TomlProfile,
 ) {
-    if unit_for.is_for_host() {
+    if is_for_host {
         if let Some(build_override) = &toml.build_override {
             merge_profile(profile, build_override);
         }
@@ -550,23 +516,24 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     }
     match toml.lto {
         Some(StringOrBool::Bool(b)) => profile.lto = Lto::Bool(b),
-        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "off" | "n" | "no") => {
-            profile.lto = Lto::Off
-        }
+        Some(StringOrBool::String(ref n)) if is_off(n.as_str()) => profile.lto = Lto::Off,
         Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(InternedString::new(n)),
         None => {}
+    }
+    if toml.codegen_backend.is_some() {
+        profile.codegen_backend = toml.codegen_backend;
     }
     if toml.codegen_units.is_some() {
         profile.codegen_units = toml.codegen_units;
     }
-    match toml.debug {
-        Some(U32OrBool::U32(debug)) => profile.debuginfo = Some(debug),
-        Some(U32OrBool::Bool(true)) => profile.debuginfo = Some(2),
-        Some(U32OrBool::Bool(false)) => profile.debuginfo = None,
-        None => {}
+    if let Some(debuginfo) = toml.debug {
+        profile.debuginfo = DebugInfo::Resolved(debuginfo);
     }
     if let Some(debug_assertions) = toml.debug_assertions {
         profile.debug_assertions = debug_assertions;
+    }
+    if let Some(split_debuginfo) = &toml.split_debuginfo {
+        profile.split_debuginfo = Some(InternedString::new(split_debuginfo));
     }
     if let Some(rpath) = toml.rpath {
         profile.rpath = rpath;
@@ -585,9 +552,15 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(incremental) = toml.incremental {
         profile.incremental = incremental;
     }
-    if let Some(strip) = toml.strip {
-        profile.strip = strip;
+    if let Some(flags) = &toml.rustflags {
+        profile.rustflags = flags.clone();
     }
+    profile.strip = match toml.strip {
+        Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
+        None | Some(StringOrBool::Bool(false)) => Strip::None,
+        Some(StringOrBool::String(ref n)) if n.as_str() == "none" => Strip::None,
+        Some(StringOrBool::String(ref n)) => Strip::Named(InternedString::new(n)),
+    };
 }
 
 /// The root profile (dev/release).
@@ -603,7 +576,7 @@ pub enum ProfileRoot {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Clone, Copy, Eq, PartialOrd, Ord, serde::Serialize)]
+#[derive(Clone, Eq, PartialOrd, Ord, serde::Serialize)]
 pub struct Profile {
     pub name: InternedString,
     pub opt_level: InternedString,
@@ -611,14 +584,20 @@ pub struct Profile {
     pub root: ProfileRoot,
     pub lto: Lto,
     // `None` means use rustc default.
+    pub codegen_backend: Option<InternedString>,
+    // `None` means use rustc default.
     pub codegen_units: Option<u32>,
-    pub debuginfo: Option<u32>,
+    pub debuginfo: DebugInfo,
+    pub split_debuginfo: Option<InternedString>,
     pub debug_assertions: bool,
     pub overflow_checks: bool,
     pub rpath: bool,
     pub incremental: bool,
     pub panic: PanicStrategy,
     pub strip: Strip,
+    #[serde(skip_serializing_if = "Vec::is_empty")] // remove when `rustflags` is stablized
+    // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
+    pub rustflags: Vec<InternedString>,
 }
 
 impl Default for Profile {
@@ -628,14 +607,17 @@ impl Default for Profile {
             opt_level: InternedString::new("0"),
             root: ProfileRoot::Debug,
             lto: Lto::Bool(false),
+            codegen_backend: None,
             codegen_units: None,
-            debuginfo: None,
+            debuginfo: DebugInfo::Resolved(TomlDebugInfo::None),
             debug_assertions: false,
+            split_debuginfo: None,
             overflow_checks: false,
             rpath: false,
             incremental: false,
             panic: PanicStrategy::Unwind,
             strip: Strip::None,
+            rustflags: vec![],
         }
     }
 }
@@ -653,14 +635,17 @@ compact_debug! {
                 opt_level
                 lto
                 root
+                codegen_backend
                 codegen_units
                 debuginfo
+                split_debuginfo
                 debug_assertions
                 overflow_checks
                 rpath
                 incremental
                 panic
                 strip
+                rustflags
             )]
         }
     }
@@ -688,11 +673,12 @@ impl cmp::PartialEq for Profile {
 }
 
 impl Profile {
+    /// Returns a built-in `dev` profile.
     fn default_dev() -> Profile {
         Profile {
             name: InternedString::new("dev"),
             root: ProfileRoot::Debug,
-            debuginfo: Some(2),
+            debuginfo: DebugInfo::Resolved(TomlDebugInfo::Full),
             debug_assertions: true,
             overflow_checks: true,
             incremental: true,
@@ -700,6 +686,7 @@ impl Profile {
         }
     }
 
+    /// Returns a built-in `release` profile.
     fn default_release() -> Profile {
         Profile {
             name: InternedString::new("release"),
@@ -709,58 +696,112 @@ impl Profile {
         }
     }
 
-    // NOTE: Remove the following three once `named_profiles` is default:
-
-    fn default_test() -> Profile {
-        Profile {
-            name: InternedString::new("test"),
-            ..Profile::default_dev()
-        }
-    }
-
-    fn default_bench() -> Profile {
-        Profile {
-            name: InternedString::new("bench"),
-            ..Profile::default_release()
-        }
-    }
-
-    fn default_doc() -> Profile {
-        Profile {
-            name: InternedString::new("doc"),
-            ..Profile::default_dev()
-        }
-    }
-
     /// Compares all fields except `name`, which doesn't affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
-    fn comparable(
-        &self,
-    ) -> (
-        InternedString,
-        Lto,
-        Option<u32>,
-        Option<u32>,
-        bool,
-        bool,
-        bool,
-        bool,
-        PanicStrategy,
-        Strip,
-    ) {
+    fn comparable(&self) -> impl Hash + Eq + '_ {
         (
             self.opt_level,
             self.lto,
+            self.codegen_backend,
             self.codegen_units,
             self.debuginfo,
+            self.split_debuginfo,
             self.debug_assertions,
             self.overflow_checks,
             self.rpath,
-            self.incremental,
-            self.panic,
-            self.strip,
+            (self.incremental, self.panic, self.strip),
+            &self.rustflags,
         )
+    }
+}
+
+/// The debuginfo level setting.
+///
+/// This is semantically a [`TomlDebugInfo`], and should be used as so via the
+/// [`DebugInfo::into_inner`] method for all intents and purposes.
+///
+/// Internally, it's used to model a debuginfo level whose value can be deferred
+/// for optimization purposes: host dependencies usually don't need the same
+/// level as target dependencies. For dependencies that are shared between the
+/// two however, that value also affects reuse: different debuginfo levels would
+/// cause to build a unit twice. By deferring the choice until we know
+/// whether to choose the optimized value or the default value, we can make sure
+/// the unit is only built once and the unit graph is still optimized.
+#[derive(Debug, Copy, Clone, serde::Serialize)]
+#[serde(untagged)]
+pub enum DebugInfo {
+    /// A debuginfo level that is fixed and will not change.
+    ///
+    /// This can be set by a profile, user, or default value.
+    Resolved(TomlDebugInfo),
+    /// For internal purposes: a deferred debuginfo level that can be optimized
+    /// away, but has this value otherwise.
+    ///
+    /// Behaves like `Resolved` in all situations except for the default build
+    /// dependencies profile: whenever a build dependency is not shared with
+    /// runtime dependencies, this level is weakened to a lower level that is
+    /// faster to build (see [`DebugInfo::weaken`]).
+    ///
+    /// In all other situations, this level value will be the one to use.
+    Deferred(TomlDebugInfo),
+}
+
+impl DebugInfo {
+    /// The main way to interact with this debuginfo level, turning it into a [`TomlDebugInfo`].
+    pub fn into_inner(self) -> TomlDebugInfo {
+        match self {
+            DebugInfo::Resolved(v) | DebugInfo::Deferred(v) => v,
+        }
+    }
+
+    /// Returns true if any debuginfo will be generated. Helper
+    /// for a common operation on the usual `Option` representation.
+    pub(crate) fn is_turned_on(&self) -> bool {
+        !matches!(self.into_inner(), TomlDebugInfo::None)
+    }
+
+    pub(crate) fn is_deferred(&self) -> bool {
+        matches!(self, DebugInfo::Deferred(_))
+    }
+
+    /// Force the deferred, preferred, debuginfo level to a finalized explicit value.
+    pub(crate) fn finalize(self) -> Self {
+        match self {
+            DebugInfo::Deferred(v) => DebugInfo::Resolved(v),
+            _ => self,
+        }
+    }
+
+    /// Reset to the lowest level: no debuginfo.
+    pub(crate) fn weaken(self) -> Self {
+        DebugInfo::Resolved(TomlDebugInfo::None)
+    }
+}
+
+impl PartialEq for DebugInfo {
+    fn eq(&self, other: &DebugInfo) -> bool {
+        self.into_inner().eq(&other.into_inner())
+    }
+}
+
+impl Eq for DebugInfo {}
+
+impl Hash for DebugInfo {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.into_inner().hash(state);
+    }
+}
+
+impl PartialOrd for DebugInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.into_inner().partial_cmp(&other.into_inner())
+    }
+}
+
+impl Ord for DebugInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.into_inner().cmp(&other.into_inner())
     }
 }
 
@@ -813,26 +854,27 @@ impl fmt::Display for PanicStrategy {
 )]
 #[serde(rename_all = "lowercase")]
 pub enum Strip {
-    /// Only strip debugging symbols
-    DebugInfo,
     /// Don't remove any symbols
     None,
-    /// Strip all non-exported symbols from the final binary
-    Symbols,
+    /// Named Strip settings
+    Named(InternedString),
 }
 
 impl fmt::Display for Strip {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Strip::DebugInfo => "debuginfo",
             Strip::None => "none",
-            Strip::Symbols => "symbols",
+            Strip::Named(s) => s.as_str(),
         }
         .fmt(f)
     }
 }
+
 /// Flags used in creating `Unit`s to indicate the purpose for the target, and
 /// to ensure the target's dependencies have the correct settings.
+///
+/// This means these are passed down from the root of the dependency tree to apply
+/// to most child dependencies.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct UnitFor {
     /// A target for `build.rs` or any of its dependencies, or a proc-macro or
@@ -847,7 +889,7 @@ pub struct UnitFor {
     /// uses the `get_profile_run_custom_build` method to get the correct
     /// profile information for the unit. `host` needs to be true so that all
     /// of the dependencies of that `RunCustomBuild` unit have this flag be
-    /// sticky (and forced to `true` for all further dependencies) — which is
+    /// sticky (and forced to `true` for all further dependencies) — which is
     /// the whole point of `UnitFor`.
     host: bool,
     /// A target for a build dependency or proc-macro (or any of its
@@ -882,12 +924,35 @@ pub struct UnitFor {
     /// build.rs` is HOST=true, HOST_FEATURES=false for the same reasons that
     /// foo's build script is set that way.
     host_features: bool,
-    /// How Cargo processes the `panic` setting or profiles. This is done to
-    /// handle test/benches inheriting from dev/release, as well as forcing
-    /// `for_host` units to always unwind.
+    /// How Cargo processes the `panic` setting or profiles.
     panic_setting: PanicSetting,
+
+    /// The compile kind of the root unit for which artifact dependencies are built.
+    /// This is required particularly for the `target = "target"` setting of artifact
+    /// dependencies which mean to inherit the `--target` specified on the command-line.
+    /// However, that is a multi-value argument and root units are already created to
+    /// reflect one unit per --target. Thus we have to build one artifact with the
+    /// correct target for each of these trees.
+    /// Note that this will always be set as we don't initially know if there are
+    /// artifacts that make use of it.
+    root_compile_kind: CompileKind,
+
+    /// This is only set for artifact dependencies which have their
+    /// `<target-triple>|target` set.
+    /// If so, this information is used as part of the key for resolving their features,
+    /// allowing for target-dependent feature resolution within the entire dependency tree.
+    /// Note that this target corresponds to the target used to build the units in that
+    /// dependency tree, too, but this copy of it is specifically used for feature lookup.
+    artifact_target_for_features: Option<CompileTarget>,
 }
 
+/// How Cargo processes the `panic` setting or profiles.
+///
+/// This is done to handle test/benches inheriting from dev/release,
+/// as well as forcing `for_host` units to always unwind.
+/// It also interacts with [`-Z panic-abort-tests`].
+///
+/// [`-Z panic-abort-tests`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#panic-abort-tests
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 enum PanicSetting {
     /// Used to force a unit to always be compiled with the `panic=unwind`
@@ -897,20 +962,18 @@ enum PanicSetting {
     /// Indicates that this unit will read its `profile` setting and use
     /// whatever is configured there.
     ReadProfile,
-
-    /// This unit will ignore its `panic` setting in its profile and will
-    /// instead inherit it from the `dev` or `release` profile, as appropriate.
-    Inherit,
 }
 
 impl UnitFor {
     /// A unit for a normal target/dependency (i.e., not custom build,
     /// proc macro/plugin, or test/bench).
-    pub fn new_normal() -> UnitFor {
+    pub fn new_normal(root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: false,
             host_features: false,
             panic_setting: PanicSetting::ReadProfile,
+            root_compile_kind,
+            artifact_target_for_features: None,
         }
     }
 
@@ -920,18 +983,20 @@ impl UnitFor {
     /// dependency or proc-macro (something that requires being built "on the
     /// host"). Build scripts for non-host units should use `false` because
     /// they want to use the features of the package they are running for.
-    pub fn new_host(host_features: bool) -> UnitFor {
+    pub fn new_host(host_features: bool, root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: true,
             host_features,
             // Force build scripts to always use `panic=unwind` for now to
             // maximally share dependencies with procedural macros.
             panic_setting: PanicSetting::AlwaysUnwind,
+            root_compile_kind,
+            artifact_target_for_features: None,
         }
     }
 
     /// A unit for a compiler plugin or their dependencies.
-    pub fn new_compiler() -> UnitFor {
+    pub fn new_compiler(root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: false,
             // The feature resolver doesn't know which dependencies are
@@ -942,6 +1007,8 @@ impl UnitFor {
             // not abort the process but instead end with a reasonable error
             // message that involves catching the panic in the compiler.
             panic_setting: PanicSetting::AlwaysUnwind,
+            root_compile_kind,
+            artifact_target_for_features: None,
         }
     }
 
@@ -951,7 +1018,7 @@ impl UnitFor {
     /// whether `panic=abort` is supported for tests. Historical versions of
     /// rustc did not support this, but newer versions do with an unstable
     /// compiler flag.
-    pub fn new_test(config: &Config) -> UnitFor {
+    pub fn new_test(config: &Config, root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: false,
             host_features: false,
@@ -960,52 +1027,93 @@ impl UnitFor {
             // (basically avoid recompiles) but historical defaults required
             // that we always unwound.
             panic_setting: if config.cli_unstable().panic_abort_tests {
-                PanicSetting::Inherit
+                PanicSetting::ReadProfile
             } else {
                 PanicSetting::AlwaysUnwind
             },
+            root_compile_kind,
+            artifact_target_for_features: None,
         }
     }
 
     /// This is a special case for unit tests of a proc-macro.
     ///
     /// Proc-macro unit tests are forced to be run on the host.
-    pub fn new_host_test(config: &Config) -> UnitFor {
-        let mut unit_for = UnitFor::new_test(config);
+    pub fn new_host_test(config: &Config, root_compile_kind: CompileKind) -> UnitFor {
+        let mut unit_for = UnitFor::new_test(config, root_compile_kind);
         unit_for.host = true;
         unit_for.host_features = true;
         unit_for
     }
 
-    /// Returns a new copy based on `for_host` setting.
+    /// Returns a new copy updated based on the target dependency.
     ///
-    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky
-    /// fashion so that all its dependencies also have `panic_abort_ok=false`.
-    /// This'll help ensure that once we start compiling for the host platform
-    /// (build scripts, plugins, proc macros, etc) we'll share the same build
-    /// graph where everything is `panic=unwind`.
-    pub fn with_for_host(self, for_host: bool) -> UnitFor {
+    /// This is where the magic happens that the host/host_features settings
+    /// transition in a sticky fashion. As the dependency graph is being
+    /// built, once those flags are set, they stay set for the duration of
+    /// that portion of tree.
+    pub fn with_dependency(
+        self,
+        parent: &Unit,
+        dep_target: &Target,
+        root_compile_kind: CompileKind,
+    ) -> UnitFor {
+        // A build script or proc-macro transitions this to being built for the host.
+        let dep_for_host = dep_target.for_host();
+        // This is where feature decoupling of host versus target happens.
+        //
+        // Once host features are desired, they are always desired.
+        //
+        // A proc-macro should always use host features.
+        //
+        // Dependencies of a build script should use host features (subtle
+        // point: the build script itself does *not* use host features, that's
+        // why the parent is checked here, and not the dependency).
+        let host_features =
+            self.host_features || parent.target.is_custom_build() || dep_target.proc_macro();
+        // Build scripts and proc macros, and all of their dependencies are
+        // AlwaysUnwind.
+        let panic_setting = if dep_for_host {
+            PanicSetting::AlwaysUnwind
+        } else {
+            self.panic_setting
+        };
         UnitFor {
-            host: self.host || for_host,
-            host_features: self.host_features,
-            panic_setting: if for_host {
-                PanicSetting::AlwaysUnwind
-            } else {
-                self.panic_setting
-            },
+            host: self.host || dep_for_host,
+            host_features,
+            panic_setting,
+            root_compile_kind,
+            artifact_target_for_features: self.artifact_target_for_features,
         }
     }
 
-    /// Returns a new copy updating it whether or not it should use features
-    /// for build dependencies and proc-macros.
-    ///
-    /// This is part of the machinery responsible for handling feature
-    /// decoupling for build dependencies in the new feature resolver.
-    pub fn with_host_features(mut self, host_features: bool) -> UnitFor {
-        if host_features {
-            assert!(self.host);
+    pub fn for_custom_build(self) -> UnitFor {
+        UnitFor {
+            host: true,
+            host_features: self.host_features,
+            // Force build scripts to always use `panic=unwind` for now to
+            // maximally share dependencies with procedural macros.
+            panic_setting: PanicSetting::AlwaysUnwind,
+            root_compile_kind: self.root_compile_kind,
+            artifact_target_for_features: self.artifact_target_for_features,
         }
-        self.host_features = self.host_features || host_features;
+    }
+
+    /// Set the artifact compile target for use in features using the given `artifact`.
+    pub(crate) fn with_artifact_features(mut self, artifact: &Artifact) -> UnitFor {
+        self.artifact_target_for_features = artifact.target().and_then(|t| t.to_compile_target());
+        self
+    }
+
+    /// Set the artifact compile target as determined by a resolved compile target. This is used if `target = "target"`.
+    pub(crate) fn with_artifact_features_from_resolved_compile_kind(
+        mut self,
+        kind: Option<CompileKind>,
+    ) -> UnitFor {
+        self.artifact_target_for_features = kind.and_then(|kind| match kind {
+            CompileKind::Host => None,
+            CompileKind::Target(triple) => Some(triple),
+        });
         self
     }
 
@@ -1024,47 +1132,25 @@ impl UnitFor {
         self.panic_setting
     }
 
-    /// All possible values, used by `clean`.
-    pub fn all_values() -> &'static [UnitFor] {
-        static ALL: &[UnitFor] = &[
-            UnitFor {
-                host: false,
-                host_features: false,
-                panic_setting: PanicSetting::ReadProfile,
+    /// We might contain a parent artifact compile kind for features already, but will
+    /// gladly accept the one of this dependency as an override as it defines how
+    /// the artifact is built.
+    /// If we are an artifact but don't specify a `target`, we assume the default
+    /// compile kind that is suitable in this situation.
+    pub(crate) fn map_to_features_for(&self, dep_artifact: Option<&Artifact>) -> FeaturesFor {
+        FeaturesFor::from_for_host_or_artifact_target(
+            self.is_for_host_features(),
+            match dep_artifact {
+                Some(artifact) => artifact
+                    .target()
+                    .and_then(|t| t.to_resolved_compile_target(self.root_compile_kind)),
+                None => self.artifact_target_for_features,
             },
-            UnitFor {
-                host: true,
-                host_features: false,
-                panic_setting: PanicSetting::AlwaysUnwind,
-            },
-            UnitFor {
-                host: false,
-                host_features: false,
-                panic_setting: PanicSetting::AlwaysUnwind,
-            },
-            UnitFor {
-                host: false,
-                host_features: false,
-                panic_setting: PanicSetting::Inherit,
-            },
-            // host_features=true must always have host=true
-            // `Inherit` is not used in build dependencies.
-            UnitFor {
-                host: true,
-                host_features: true,
-                panic_setting: PanicSetting::ReadProfile,
-            },
-            UnitFor {
-                host: true,
-                host_features: true,
-                panic_setting: PanicSetting::AlwaysUnwind,
-            },
-        ];
-        ALL
+        )
     }
 
-    pub(crate) fn map_to_features_for(&self) -> FeaturesFor {
-        FeaturesFor::from_for_host(self.is_for_host_features())
+    pub(crate) fn root_compile_kind(&self) -> CompileKind {
+        self.root_compile_kind
     }
 }
 
@@ -1072,12 +1158,10 @@ impl UnitFor {
 ///
 /// Returns a new copy of the profile map with all the mergers complete.
 fn merge_config_profiles(
-    profiles: Option<&TomlProfiles>,
-    config: &Config,
+    ws: &Workspace<'_>,
     requested_profile: InternedString,
-    features: &Features,
 ) -> CargoResult<BTreeMap<InternedString, TomlProfile>> {
-    let mut profiles = match profiles {
+    let mut profiles = match ws.profiles() {
         Some(profiles) => profiles.get_all().clone(),
         None => BTreeMap::new(),
     };
@@ -1086,7 +1170,7 @@ fn merge_config_profiles(
     check_to_add.insert(requested_profile);
     // Merge config onto manifest profiles.
     for (name, profile) in &mut profiles {
-        if let Some(config_profile) = get_config_profile(name, config, features)? {
+        if let Some(config_profile) = get_config_profile(ws, name)? {
             profile.merge(&config_profile);
         }
         if let Some(inherits) = &profile.inherits {
@@ -1105,7 +1189,7 @@ fn merge_config_profiles(
         std::mem::swap(&mut current, &mut check_to_add);
         for name in current.drain() {
             if !profiles.contains_key(&name) {
-                if let Some(config_profile) = get_config_profile(&name, config, features)? {
+                if let Some(config_profile) = get_config_profile(ws, &name)? {
                     if let Some(inherits) = &config_profile.inherits {
                         check_to_add.insert(*inherits);
                     }
@@ -1118,29 +1202,29 @@ fn merge_config_profiles(
 }
 
 /// Helper for fetching a profile from config.
-fn get_config_profile(
-    name: &str,
-    config: &Config,
-    features: &Features,
-) -> CargoResult<Option<TomlProfile>> {
-    let profile: Option<config::Value<TomlProfile>> = config.get(&format!("profile.{}", name))?;
-    let profile = match profile {
-        Some(profile) => profile,
-        None => return Ok(None),
+fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<TomlProfile>> {
+    let profile: Option<config::Value<TomlProfile>> =
+        ws.config().get(&format!("profile.{}", name))?;
+    let Some(profile) = profile else {
+        return Ok(None);
     };
     let mut warnings = Vec::new();
     profile
         .val
-        .validate(name, features, &mut warnings)
-        .chain_err(|| {
-            anyhow::format_err!(
+        .validate(
+            name,
+            ws.config().cli_unstable(),
+            ws.unstable_features(),
+            &mut warnings,
+        )
+        .with_context(|| {
+            format!(
                 "config profile `{}` is not valid (defined in `{}`)",
-                name,
-                profile.definition
+                name, profile.definition
             )
         })?;
     for warning in warnings {
-        config.shell().warn(warning)?;
+        ws.config().shell().warn(warning)?;
     }
     Ok(Some(profile.val))
 }
@@ -1154,13 +1238,11 @@ fn validate_packages_unique(
     name: &str,
     toml: &Option<TomlProfile>,
 ) -> CargoResult<HashSet<PackageIdSpec>> {
-    let toml = match toml {
-        Some(ref toml) => toml,
-        None => return Ok(HashSet::new()),
+    let Some(toml) = toml else {
+        return Ok(HashSet::new());
     };
-    let overrides = match toml.package.as_ref() {
-        Some(overrides) => overrides,
-        None => return Ok(HashSet::new()),
+    let Some(overrides) = toml.package.as_ref() else {
+        return Ok(HashSet::new());
     };
     // Verify that a package doesn't match multiple spec overrides.
     let mut found = HashSet::new();
@@ -1212,9 +1294,8 @@ fn validate_packages_unmatched(
     toml: &TomlProfile,
     found: &HashSet<PackageIdSpec>,
 ) -> CargoResult<()> {
-    let overrides = match toml.package.as_ref() {
-        Some(overrides) => overrides,
-        None => return Ok(()),
+    let Some(overrides) = toml.package.as_ref() else {
+        return Ok(());
     };
 
     // Verify every override matches at least one package.
@@ -1255,4 +1336,9 @@ fn validate_packages_unmatched(
         }
     }
     Ok(())
+}
+
+/// Returns `true` if a string is a toggle that turns an option off.
+fn is_off(s: &str) -> bool {
+    matches!(s, "off" | "n" | "no" | "none")
 }

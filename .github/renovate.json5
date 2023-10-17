@@ -1,0 +1,95 @@
+{
+  schedule: [
+    'before 5am on the first day of the month',
+  ],
+  semanticCommits: 'enabled',
+  configMigration: true,
+  dependencyDashboard: false,
+  ignorePaths: [
+    "**/tests/**",
+  ],
+  customManagers: [
+    {
+      customType: 'regex',
+      fileMatch: [
+        'Cargo.toml$',
+      ],
+      matchStrings: [
+        '\bMSRV:1\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
+        '(?<currentValue>\\d+\\.\\d+(\\.\\d+)?).*?\bMSRV:1\b',
+      ],
+      depNameTemplate: 'MSRV:1',  // Support 1 version of rustc
+      packageNameTemplate: 'rust-lang/rust',
+      datasourceTemplate: 'github-releases',
+    },
+    {
+      customType: 'regex',
+      fileMatch: [
+        'Cargo.toml$',
+      ],
+      matchStrings: [
+        '\bMSRV:3\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
+        '(?<currentValue>\\d+\\.\\d+(\\.\\d+)?).*?\bMSRV:3\b',
+      ],
+      depNameTemplate: 'MSRV:3',  // Support 3 versions of rustc
+      packageNameTemplate: 'rust-lang/rust',
+      datasourceTemplate: 'github-releases',
+    },
+  ],
+  packageRules: [
+    {
+      commitMessageTopic: 'MSRV (1 version)',
+      matchManagers: [
+        'regex',
+      ],
+      matchPackageNames: [
+        'MSRV:1',
+      ],
+      schedule: [
+        '* * * * *',
+      ],
+      groupName: 'msrv',
+    },
+    {
+      commitMessageTopic: 'MSRV (3 versions)',
+      matchManagers: [
+        'regex',
+      ],
+      matchPackageNames: [
+        'MSRV:3',
+      ],
+      "extractVersion": "^(?<version>\\d+\\.\\d+)",  // Drop the patch version
+      schedule: [
+        '* * * * *',
+      ],
+      minimumReleaseAge: '85 days',  // 2 releases back * 6 weeks per release * 7 days per week + 1
+      internalChecksFilter: 'strict',
+      groupName: 'msrv',
+    },
+    // Goals:
+    // - Rollup safe upgrades to reduce CI runner load
+    // - Have lockfile and manifest in-sync (implicit rules)
+    {
+      matchManagers: [
+        'cargo',
+      ],
+      matchCurrentVersion: '>=0.1.0',
+      matchUpdateTypes: [
+        'patch',
+      ],
+      automerge: false,
+      groupName: 'compatible',
+    },
+    {
+      matchManagers: [
+        'cargo',
+      ],
+      matchCurrentVersion: '>=1.0.0',
+      matchUpdateTypes: [
+        'minor',
+      ],
+      automerge: false,
+      groupName: 'compatible',
+    },
+  ],
+}

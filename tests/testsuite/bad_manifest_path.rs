@@ -2,6 +2,7 @@
 
 use cargo_test_support::{basic_bin_manifest, main_file, project};
 
+#[track_caller]
 fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -20,6 +21,7 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
         .run();
 }
 
+#[track_caller]
 fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
     let p = project().build();
     let expected_path = manifest_path_argument
@@ -61,7 +63,7 @@ fn bench_dir_to_nonexistent_cargo_toml() {
 
 #[cargo_test]
 fn build_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("build", "foo");
+    assert_not_a_cargo_toml("check", "foo");
 }
 
 #[cargo_test]
@@ -76,7 +78,7 @@ fn build_dir_plus_path() {
 
 #[cargo_test]
 fn build_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("build", "foo/bar/baz/Cargo.toml");
+    assert_cargo_toml_doesnt_exist("check", "foo/bar/baz/Cargo.toml");
 }
 
 #[cargo_test]

@@ -3,12 +3,12 @@
 use self::format::Pattern;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::{ForceAllTargets, HasDevUnits, ResolveOpts};
+use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::{CargoResult, Config};
 use crate::{drop_print, drop_println};
-use anyhow::{bail, Context};
+use anyhow::Context;
 use graph::Graph;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -19,9 +19,7 @@ mod graph;
 pub use {graph::EdgeKind, graph::Node};
 
 pub struct TreeOptions {
-    pub features: Vec<String>,
-    pub no_default_features: bool,
-    pub all_features: bool,
+    pub cli_features: CliFeatures,
     /// The packages to display the tree for.
     pub packages: Packages,
     /// The platform to filter for.
@@ -29,6 +27,8 @@ pub struct TreeOptions {
     /// The dependency kinds to display.
     pub edge_kinds: HashSet<EdgeKind>,
     pub invert: Vec<String>,
+    /// The packages to prune from the display of the dependency tree.
+    pub pkgs_to_prune: Vec<String>,
     /// The style of prefix for each line.
     pub prefix: Prefix,
     /// If `true`, duplicates will be repeated.
@@ -45,6 +45,10 @@ pub struct TreeOptions {
     pub format: String,
     /// Includes features in the tree as separate nodes.
     pub graph_features: bool,
+    /// Maximum display depth of the dependency tree.
+    pub max_display_depth: u32,
+    /// Excludes proc-macro dependencies.
+    pub no_proc_macro: bool,
 }
 
 #[derive(PartialEq)]
@@ -124,9 +128,6 @@ static ASCII_SYMBOLS: Symbols = Symbols {
 
 /// Entry point for the `cargo tree` command.
 pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()> {
-    if opts.graph_features && opts.duplicates {
-        bail!("the `-e features` flag does not support `--duplicates`");
-    }
     let requested_targets = match &opts.target {
         Target::All | Target::Host => Vec::new(),
         Target::Specific(t) => t.clone(),
@@ -134,14 +135,8 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     // TODO: Target::All is broken with -Zfeatures=itarget. To handle that properly,
     // `FeatureResolver` will need to be taught what "all" means.
     let requested_kinds = CompileKind::from_requested_targets(ws.config(), &requested_targets)?;
-    let target_data = RustcTargetData::new(ws, &requested_kinds)?;
+    let mut target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let specs = opts.packages.to_package_id_specs(ws)?;
-    let resolve_opts = ResolveOpts::new(
-        /*dev_deps*/ true,
-        &opts.features,
-        opts.all_features,
-        !opts.no_default_features,
-    );
     let has_dev = if opts
         .edge_kinds
         .contains(&EdgeKind::Dep(DepKind::Development))
@@ -155,22 +150,21 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     } else {
         ForceAllTargets::No
     };
+    let max_rust_version = ws.rust_version();
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
-        &target_data,
+        &mut target_data,
         &requested_kinds,
-        &resolve_opts,
+        &opts.cli_features,
         &specs,
         has_dev,
         force_all,
+        max_rust_version,
     )?;
-    // Download all Packages. Some display formats need to display package metadata.
-    // This may trigger some unnecessary downloads, but trying to figure out a
-    // minimal set would be difficult.
+
     let package_map: HashMap<PackageId, &Package> = ws_resolve
         .pkg_set
-        .get_many(ws_resolve.pkg_set.package_ids())?
-        .into_iter()
+        .packages()
         .map(|pkg| (pkg.package_id(), pkg))
         .collect();
 
@@ -179,7 +173,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         &ws_resolve.targeted_resolve,
         &ws_resolve.resolved_features,
         &specs,
-        &resolve_opts.features,
+        &opts.cli_features,
         &target_data,
         &requested_kinds,
         package_map,
@@ -209,7 +203,27 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         graph.invert();
     }
 
-    print(ws.config(), opts, root_indexes, &graph)?;
+    // Packages to prune.
+    let pkgs_to_prune = opts
+        .pkgs_to_prune
+        .iter()
+        .map(|p| PackageIdSpec::parse(p))
+        .map(|r| {
+            // Provide an error message if pkgid is not within the resolved
+            // dependencies graph.
+            r.and_then(|spec| spec.query(ws_resolve.targeted_resolve.iter()).and(Ok(spec)))
+        })
+        .collect::<CargoResult<Vec<PackageIdSpec>>>()?;
+
+    if root_indexes.len() == 0 {
+        ws.config().shell().warn(
+            "nothing to print.\n\n\
+        To find dependencies that require specific target platforms, \
+        try to use option `--target all` first, and then narrow your search scope accordingly.",
+        )?;
+    } else {
+        print(ws.config(), opts, root_indexes, &pkgs_to_prune, &graph)?;
+    }
     Ok(())
 }
 
@@ -218,6 +232,7 @@ fn print(
     config: &Config,
     opts: &TreeOptions,
     roots: Vec<usize>,
+    pkgs_to_prune: &[PackageIdSpec],
     graph: &Graph<'_>,
 ) -> CargoResult<()> {
     let format = Pattern::new(&opts.format)
@@ -250,8 +265,10 @@ fn print(
             root_index,
             &format,
             symbols,
+            pkgs_to_prune,
             opts.prefix,
             opts.no_dedupe,
+            opts.max_display_depth,
             &mut visited_deps,
             &mut levels_continue,
             &mut print_stack,
@@ -268,8 +285,10 @@ fn print_node<'a>(
     node_index: usize,
     format: &Pattern,
     symbols: &Symbols,
+    pkgs_to_prune: &[PackageIdSpec],
     prefix: Prefix,
     no_dedupe: bool,
+    max_display_depth: u32,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
@@ -325,8 +344,10 @@ fn print_node<'a>(
             node_index,
             format,
             symbols,
+            pkgs_to_prune,
             prefix,
             no_dedupe,
+            max_display_depth,
             visited_deps,
             levels_continue,
             print_stack,
@@ -343,8 +364,10 @@ fn print_dependencies<'a>(
     node_index: usize,
     format: &Pattern,
     symbols: &Symbols,
+    pkgs_to_prune: &[PackageIdSpec],
     prefix: Prefix,
     no_dedupe: bool,
+    max_display_depth: u32,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
@@ -373,7 +396,24 @@ fn print_dependencies<'a>(
         }
     }
 
-    let mut it = deps.iter().peekable();
+    // Current level exceeds maximum display depth. Skip.
+    if levels_continue.len() + 1 > max_display_depth as usize {
+        return;
+    }
+
+    let mut it = deps
+        .iter()
+        .filter(|dep| {
+            // Filter out packages to prune.
+            match graph.node(**dep) {
+                Node::Package { package_id, .. } => {
+                    !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
+                }
+                _ => true,
+            }
+        })
+        .peekable();
+
     while let Some(dependency) = it.next() {
         levels_continue.push(it.peek().is_some());
         print_node(
@@ -382,8 +422,10 @@ fn print_dependencies<'a>(
             *dependency,
             format,
             symbols,
+            pkgs_to_prune,
             prefix,
             no_dedupe,
+            max_display_depth,
             visited_deps,
             levels_continue,
             print_stack,

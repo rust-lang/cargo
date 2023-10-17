@@ -1,39 +1,39 @@
 use std::io::prelude::*;
 
 use crate::core::{resolver, Resolve, ResolveVersion, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::toml as cargo_toml;
+use crate::util::errors::CargoResult;
 use crate::util::Filesystem;
 
+use anyhow::Context as _;
+
 pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
-    if !ws.root().join("Cargo.lock").exists() {
+    let lock_root = lock_root(ws);
+    if !lock_root.as_path_unlocked().join("Cargo.lock").exists() {
         return Ok(None);
     }
 
-    let root = Filesystem::new(ws.root().to_path_buf());
-    let mut f = root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file")?;
+    let mut f = lock_root.open_ro_shared("Cargo.lock", ws.config(), "Cargo.lock file")?;
 
     let mut s = String::new();
     f.read_to_string(&mut s)
-        .chain_err(|| format!("failed to read file: {}", f.path().display()))?;
+        .with_context(|| format!("failed to read file: {}", f.path().display()))?;
 
     let resolve = (|| -> CargoResult<Option<Resolve>> {
-        let resolve: toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
-        let v: resolver::EncodableResolve = resolve.try_into()?;
+        let v: resolver::EncodableResolve = toml::from_str(&s)?;
         Ok(Some(v.into_resolve(&s, ws)?))
     })()
-    .chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
+    .with_context(|| format!("failed to parse lock file at: {}", f.path().display()))?;
     Ok(resolve)
 }
 
 /// Generate a toml String of Cargo.lock from a Resolve.
 pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<String> {
-    let (_orig, out, _ws_root) = resolve_to_string_orig(ws, resolve)?;
+    let (_orig, out, _lock_root) = resolve_to_string_orig(ws, resolve);
     Ok(out)
 }
 
 pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<()> {
-    let (orig, mut out, ws_root) = resolve_to_string_orig(ws, resolve)?;
+    let (orig, mut out, lock_root) = resolve_to_string_orig(ws, resolve);
 
     // If the lock file contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
@@ -44,11 +44,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     }
 
     if !ws.config().lock_update_allowed() {
-        if ws.config().offline() {
-            anyhow::bail!("can't update in the offline mode");
-        }
-
-        let flag = if ws.config().network_allowed() {
+        let flag = if ws.config().locked() {
             "--locked"
         } else {
             "--frozen"
@@ -56,8 +52,9 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
         anyhow::bail!(
             "the lock file {} needs to be updated but {} was passed to prevent this\n\
              If you want to try to generate the lock file without accessing the network, \
-             use the --offline flag.",
-            ws.root().to_path_buf().join("Cargo.lock").display(),
+             remove the {} flag and use --offline instead.",
+            lock_root.as_path_unlocked().join("Cargo.lock").display(),
+            flag,
             flag
         );
     }
@@ -70,38 +67,51 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     if resolve.version() < ResolveVersion::default() {
         resolve.set_version(ResolveVersion::default());
         out = serialize_resolve(resolve, orig.as_deref());
+    } else if resolve.version() > ResolveVersion::default()
+        && !ws.config().cli_unstable().next_lockfile_bump
+    {
+        // The next version hasn't yet stabilized.
+        anyhow::bail!(
+            "lock file version `{:?}` requires `-Znext-lockfile-bump`",
+            resolve.version()
+        )
     }
 
     // Ok, if that didn't work just write it out
-    ws_root
-        .open_rw("Cargo.lock", ws.config(), "Cargo.lock file")
+    lock_root
+        .open_rw_exclusive_create("Cargo.lock", ws.config(), "Cargo.lock file")
         .and_then(|mut f| {
             f.file().set_len(0)?;
             f.write_all(out.as_bytes())?;
             Ok(())
         })
-        .chain_err(|| format!("failed to write {}", ws.root().join("Cargo.lock").display()))?;
+        .with_context(|| {
+            format!(
+                "failed to write {}",
+                lock_root.as_path_unlocked().join("Cargo.lock").display()
+            )
+        })?;
     Ok(())
 }
 
 fn resolve_to_string_orig(
     ws: &Workspace<'_>,
     resolve: &mut Resolve,
-) -> CargoResult<(Option<String>, String, Filesystem)> {
+) -> (Option<String>, String, Filesystem) {
     // Load the original lock file if it exists.
-    let ws_root = Filesystem::new(ws.root().to_path_buf());
-    let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
+    let lock_root = lock_root(ws);
+    let orig = lock_root.open_ro_shared("Cargo.lock", ws.config(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
         let mut s = String::new();
         f.read_to_string(&mut s)?;
         Ok(s)
     });
-    let out = serialize_resolve(resolve, orig.as_ref().ok().map(|s| &**s));
-    Ok((orig.ok(), out, ws_root))
+    let out = serialize_resolve(resolve, orig.as_deref().ok());
+    (orig.ok(), out, lock_root)
 }
 
 fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
-    let toml = toml::Value::try_from(resolve).unwrap();
+    let toml = toml::Table::try_from(resolve).unwrap();
 
     let mut out = String::new();
 
@@ -156,8 +166,17 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
     }
 
     if let Some(meta) = toml.get("metadata") {
-        out.push_str("[metadata]\n");
-        out.push_str(&meta.to_string());
+        // 1. We need to ensure we print the entire tree, not just the direct members of `metadata`
+        //    (which `toml_edit::Table::to_string` only shows)
+        // 2. We need to ensure all children tables have `metadata.` prefix
+        let meta_table = meta
+            .as_table()
+            .expect("validation ensures this is a table")
+            .clone();
+        let mut meta_doc = toml::Table::new();
+        meta_doc.insert("metadata".to_owned(), toml::Value::Table(meta_table));
+
+        out.push_str(&meta_doc.to_string());
     }
 
     // Historical versions of Cargo in the old format accidentally left trailing
@@ -191,7 +210,7 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     orig.lines().eq(current.lines())
 }
 
-fn emit_package(dep: &toml::value::Table, out: &mut String) {
+fn emit_package(dep: &toml::Table, out: &mut String) {
     out.push_str(&format!("name = {}\n", &dep["name"]));
     out.push_str(&format!("version = {}\n", &dep["version"]));
 
@@ -217,5 +236,13 @@ fn emit_package(dep: &toml::value::Table, out: &mut String) {
         out.push('\n');
     } else if dep.contains_key("replace") {
         out.push_str(&format!("replace = {}\n\n", &dep["replace"]));
+    }
+}
+
+fn lock_root(ws: &Workspace<'_>) -> Filesystem {
+    if ws.root_maybe().is_embedded() {
+        ws.target_dir()
+    } else {
+        Filesystem::new(ws.root().to_owned())
     }
 }

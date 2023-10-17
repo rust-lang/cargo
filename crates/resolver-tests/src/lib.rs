@@ -1,5 +1,4 @@
-#![allow(clippy::many_single_char_names)]
-#![allow(clippy::needless_range_loop)] // false positives
+#![allow(clippy::all)]
 
 use std::cell::RefCell;
 use std::cmp::PartialEq;
@@ -8,14 +7,17 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::fmt::Write;
 use std::rc::Rc;
+use std::sync::OnceLock;
+use std::task::Poll;
 use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
-use cargo::core::resolver::{self, ResolveOpts};
-use cargo::core::source::{GitReference, SourceId};
+use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, Config, Graph, IntoUrl};
+use cargo::core::{GitReference, SourceId};
+use cargo::sources::source::QueryKind;
+use cargo::util::{CargoResult, Config, Graph, IntoUrl, RustVersion};
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
@@ -123,21 +125,25 @@ pub fn resolve_with_config_raw(
     struct MyRegistry<'a> {
         list: &'a [Summary],
         used: HashSet<PackageId>,
-    };
+    }
     impl<'a> Registry for MyRegistry<'a> {
         fn query(
             &mut self,
             dep: &Dependency,
+            kind: QueryKind,
             f: &mut dyn FnMut(Summary),
-            fuzzy: bool,
-        ) -> CargoResult<()> {
+        ) -> Poll<CargoResult<()>> {
             for summary in self.list.iter() {
-                if fuzzy || dep.matches(summary) {
+                let matched = match kind {
+                    QueryKind::Exact => dep.matches(summary),
+                    QueryKind::Fuzzy => true,
+                };
+                if matched {
                     self.used.insert(summary.package_id());
                     f(summary.clone());
                 }
             }
-            Ok(())
+            Poll::Ready(Ok(()))
         }
 
         fn describe_source(&self, _src: SourceId) -> String {
@@ -147,14 +153,18 @@ pub fn resolve_with_config_raw(
         fn is_replaced(&self, _src: SourceId) -> bool {
             false
         }
+
+        fn block_until_ready(&mut self) -> CargoResult<()> {
+            Ok(())
+        }
     }
     impl<'a> Drop for MyRegistry<'a> {
         fn drop(&mut self) {
             if std::thread::panicking() && self.list.len() != self.used.len() {
                 // we found a case that causes a panic and did not use all of the input.
                 // lets print the part of the input that was used for minimization.
-                println!(
-                    "{:?}",
+                eprintln!(
+                    "Part used befor drop: {:?}",
                     PrettyPrintRegistry(
                         self.list
                             .iter()
@@ -171,22 +181,24 @@ pub fn resolve_with_config_raw(
         used: HashSet::new(),
     };
     let summary = Summary::new(
-        config,
         pkg_id("root"),
         deps,
         &BTreeMap::new(),
         None::<&String>,
+        None::<RustVersion>,
     )
     .unwrap();
     let opts = ResolveOpts::everything();
     let start = Instant::now();
+    let max_rust_version = None;
     let resolve = resolver::resolve(
         &[(summary, opts)],
         &[],
         &mut registry,
-        &HashSet::new(),
+        &VersionPreferences::default(),
         Some(config),
         true,
+        max_rust_version,
     );
 
     // The largest test in our suite takes less then 30 sec.
@@ -507,7 +519,7 @@ pub trait ToDep {
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
-        Dependency::parse_no_deprecated(self, Some("1.0.0"), registry_loc()).unwrap()
+        Dependency::parse(self, Some("1.0.0"), registry_loc()).unwrap()
     }
 }
 
@@ -553,11 +565,11 @@ macro_rules! pkg {
 }
 
 fn registry_loc() -> SourceId {
-    lazy_static::lazy_static! {
-        static ref EXAMPLE_DOT_COM: SourceId =
-            SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap();
-    }
-    *EXAMPLE_DOT_COM
+    static EXAMPLE_DOT_COM: OnceLock<SourceId> = OnceLock::new();
+    let example_dot = EXAMPLE_DOT_COM.get_or_init(|| {
+        SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap()
+    });
+    *example_dot
 }
 
 pub fn pkg<T: ToPkgId>(name: T) -> Summary {
@@ -572,11 +584,11 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
         None
     };
     Summary::new(
-        &Config::default().unwrap(),
         name.to_pkgid(),
         dep,
         &BTreeMap::new(),
         link,
+        None::<RustVersion>,
     )
     .unwrap()
 }
@@ -600,11 +612,11 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
         None
     };
     Summary::new(
-        &Config::default().unwrap(),
         pkg_id_loc(name, loc),
         Vec::new(),
         &BTreeMap::new(),
         link,
+        None::<RustVersion>,
     )
     .unwrap()
 }
@@ -614,11 +626,11 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
     deps.remove(ind);
     // note: more things will need to be copied over in the future, but it works for now.
     Summary::new(
-        &Config::default().unwrap(),
         sum.package_id(),
         deps,
         &BTreeMap::new(),
         sum.links().map(|a| a.as_str()),
+        None::<RustVersion>,
     )
     .unwrap()
 }
@@ -627,7 +639,7 @@ pub fn dep(name: &str) -> Dependency {
     dep_req(name, "*")
 }
 pub fn dep_req(name: &str, req: &str) -> Dependency {
-    Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
+    Dependency::parse(name, Some(req), registry_loc()).unwrap()
 }
 pub fn dep_req_kind(name: &str, req: &str, kind: DepKind, public: bool) -> Dependency {
     let mut dep = dep_req(name, req);
@@ -640,7 +652,7 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.into_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master).unwrap();
-    Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()
+    Dependency::parse(name, Some("1.0.0"), source_id).unwrap()
 }
 pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
     dep(name).set_kind(kind).clone()
@@ -763,7 +775,7 @@ pub fn registry_strategy(
         format!("{}.{}.{}", major, minor, patch)
     };
 
-    // If this is false than the crate will depend on the nonexistent "bad"
+    // If this is false then the crate will depend on the nonexistent "bad"
     // instead of the complex set we generated for it.
     let allow_deps = prop::bool::weighted(0.99);
 
@@ -969,12 +981,14 @@ fn meta_test_multiple_versions_strategy() {
 }
 
 /// Assert `xs` contains `elems`
+#[track_caller]
 pub fn assert_contains<A: PartialEq>(xs: &[A], elems: &[A]) {
     for elem in elems {
         assert!(xs.contains(elem));
     }
 }
 
+#[track_caller]
 pub fn assert_same<A: PartialEq>(a: &[A], b: &[A]) {
     assert_eq!(a.len(), b.len());
     assert_contains(b, a);

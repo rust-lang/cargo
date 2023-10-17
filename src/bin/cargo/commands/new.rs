@@ -2,22 +2,24 @@ use crate::command_prelude::*;
 
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("new")
         .about("Create a new cargo package at <path>")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
-        .arg(Arg::with_name("path").required(true))
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg(Arg::new("path").action(ArgAction::Set).required(true))
         .arg_new_opts()
-        .after_help("Run `cargo help new` for more detailed information.\n")
+        .arg_registry("Registry to use")
+        .arg_quiet()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help new</>` for more detailed information.\n"
+        ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let opts = args.new_options(config)?;
 
     ops::new(&opts, config)?;
-    let path = args.value_of("path").unwrap();
-    let package_name = if let Some(name) = args.value_of("name") {
+    let path = args.get_one::<String>("path").unwrap();
+    let package_name = if let Some(name) = args.get_one::<String>("name") {
         name
     } else {
         path

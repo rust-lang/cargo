@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-pkgid - Print a fully qualified package specification
+cargo-pkgid --- Print a fully qualified package specification
 
 ## SYNOPSIS
 
@@ -27,11 +27,11 @@ following:
 SPEC Structure             | Example SPEC
 ---------------------------|--------------
 _name_                     | `bitflags`
-_name_`:`_version_         | `bitflags:1.0.4`
+_name_`@`_version_         | `bitflags@1.0.4`
 _url_                      | `https://github.com/rust-lang/cargo`
 _url_`#`_version_          | `https://github.com/rust-lang/cargo#0.33.0`
 _url_`#`_name_             | `https://github.com/rust-lang/crates.io-index#bitflags`
-_url_`#`_name_`:`_version_ | `https://github.com/rust-lang/cargo#crates-io:0.21.0`
+_url_`#`_name_`@`_version_ | `https://github.com/rust-lang/cargo#crates-io@0.21.0`
 
 ## OPTIONS
 
@@ -75,11 +75,15 @@ Get the package ID for the given package instead of the current package.
 
 2. Retrieve package specification for version 1.0.0 of `foo`:
 
-       cargo pkgid foo:1.0.0
+       cargo pkgid foo@1.0.0
 
 3. Retrieve package specification for `foo` from crates.io:
 
        cargo pkgid https://github.com/rust-lang/crates.io-index#foo
+
+4. Retrieve package specification for `foo` from a local package:
+
+       cargo pkgid file:///path/to/local/package#foo
 
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}, {{man "cargo-metadata" 1}}

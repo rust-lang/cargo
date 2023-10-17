@@ -4,7 +4,7 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-publish \- Upload a package to the registry
+cargo\-publish \[em] Upload a package to the registry
 .SH "SYNOPSIS"
 \fBcargo publish\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
@@ -27,8 +27,14 @@ which registries you are allowed to publish to.
 .RE
 .sp
 .RS 4
-\h'-04' 3.\h'+01'Upload the crate to the registry. Note that the server will perform
-additional checks on the crate.
+\h'-04' 3.\h'+01'Upload the crate to the registry. The server will perform additional
+checks on the crate. 
+.RE
+.sp
+.RS 4
+\h'-04' 4.\h'+01'The client will poll waiting for the package to appear in the index,
+and may timeout. In that case, you will need to check for completion
+manually. This timeout does not affect the upload.
 .RE
 .sp
 This command requires you to be authenticated with either the \fB\-\-token\fR option
@@ -59,7 +65,7 @@ of the registry in all capital letters.
 .sp
 \fB\-\-no\-verify\fR
 .RS 4
-Don't verify the contents by building them.
+Don\[cq]t verify the contents by building them.
 .RE
 .sp
 \fB\-\-allow\-dirty\fR
@@ -82,14 +88,23 @@ Otherwise it will use the default registry, which is defined by the
 \fI\f(BIregistry.default\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#registrydefault> config key
 which defaults to \fBcrates\-io\fR\&.
 .RE
+.SS "Package Selection"
+By default, the package in the current working directory is selected. The \fB\-p\fR
+flag can be used to choose a different package in a workspace.
+.sp
+\fB\-p\fR \fIspec\fR, 
+\fB\-\-package\fR \fIspec\fR
+.RS 4
+The package to publish. See \fBcargo\-pkgid\fR(1) for the SPEC
+format.
+.RE
 .SS "Compilation Options"
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Publish for the given architecture. The default is the host
-architecture. The general format of the triple is
+Publish for the given architecture. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets.
+list of supported targets. This flag may be specified multiple times.
 .sp
 This may also be specified with the \fBbuild.target\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -103,25 +118,23 @@ target artifacts are placed in a separate directory. See the
 .RS 4
 Directory for all generated artifacts and intermediate files. May also be
 specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
-\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults
-to \fBtarget\fR in the root of the workspace.
+\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+Defaults to \fBtarget\fR in the root of the workspace.
 .RE
 .SS "Feature Selection"
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in \fB\-\-manifest\-path\fR\&. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if \fB\-\-all\-features\fR is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the \fBdefault\fR feature is activated for every
+selected package.
 .sp
-When no feature options are given, the \fBdefault\fR feature is activated for
-every selected package.
+See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
+for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
-Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fR syntax. This flag may be
-specified multiple times, which enables all specified features.
+Space or comma separated list of features to activate. Features of workspace
+members may be enabled with \fBpackage\-name/feature\-name\fR syntax. This flag may
+be specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fR
@@ -131,7 +144,7 @@ Activate all available features of all selected packages.
 .sp
 \fB\-\-no\-default\-features\fR
 .RS 4
-Do not activate the \fBdefault\fR feature of the current directory's package.
+Do not activate the \fBdefault\fR feature of the selected packages.
 .RE
 .SS "Manifest Options"
 .sp
@@ -176,14 +189,29 @@ May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc
 .RS 4
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
-the number of CPUs.
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
+Should not be 0.
+.RE
+.sp
+\fB\-\-keep\-going\fR
+.RS 4
+Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build.
+.sp
+For example if the current package depends on dependencies \fBfails\fR and \fBworks\fR,
+one of which fails to build, \fBcargo publish \-j1\fR may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas \fBcargo publish \-j1 \-\-keep\-going\fR would definitely run both
+builds, even if the one run first fails.
 .RE
 .SS "Display Options"
 .sp
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -192,7 +220,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -224,6 +254,26 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

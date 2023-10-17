@@ -1,9 +1,12 @@
 # cargo-fetch(1)
-{{*set actionverb="Fetch"}}
+{{~*set command="fetch"}}
+{{~*set actionverb="Fetch"}}
+{{~*set target-default-to-all-arch=true}}
+{{~*set multitarget=true}}
 
 ## NAME
 
-cargo-fetch - Fetch dependencies of a package from the network
+cargo-fetch --- Fetch dependencies of a package from the network
 
 ## SYNOPSIS
 
@@ -13,7 +16,7 @@ cargo-fetch - Fetch dependencies of a package from the network
 
 If a `Cargo.lock` file is available, this command will ensure that all of the
 git dependencies and/or registry dependencies are downloaded and locally
-available. Subsequent Cargo commands never touch the network after a `cargo
+available. Subsequent Cargo commands will be able to run offline after a `cargo
 fetch` unless the lock file changes.
 
 If the lock file is not available, then this command will generate the lock

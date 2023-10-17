@@ -1,0 +1,2 @@
+      Adding cargo-list-test-fixture (local) to dependencies.
+error: cannot add `cargo-list-test-fixture` as a dependency to itself

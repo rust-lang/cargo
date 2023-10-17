@@ -1,0 +1,1 @@
+error: cannot override workspace dependency with `--rename`, either change `workspace.dependencies.foo.package` or define the dependency exclusively in the package's manifest

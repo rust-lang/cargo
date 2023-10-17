@@ -1,8 +1,10 @@
 use crate::aliased_command;
+use crate::command_prelude::*;
 use cargo::util::errors::CargoResult;
-use cargo::util::paths::resolve_executable;
-use cargo::Config;
+use cargo::{drop_println, Config};
+use cargo_util::paths::resolve_executable;
 use flate2::read::GzDecoder;
+use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io::Read;
 use std::io::Write;
@@ -10,62 +12,76 @@ use std::path::Path;
 
 const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"));
 
-/// Checks if the `help` command is being issued.
-///
-/// This runs before clap processing, because it needs to intercept the `help`
-/// command if a man page is available.
-///
-/// Returns `true` if a man page was displayed. In this case, Cargo should
-/// exit.
-pub fn handle_embedded_help(config: &Config) -> bool {
-    match try_help(config) {
-        Ok(true) => true,
-        Ok(false) => false,
-        Err(e) => {
-            log::warn!("man failed: {:?}", e);
-            false
-        }
-    }
+pub fn cli() -> Command {
+    subcommand("help")
+        .about("Displays help for a cargo subcommand")
+        .arg(Arg::new("COMMAND").action(ArgAction::Set))
 }
 
-fn try_help(config: &Config) -> CargoResult<bool> {
-    let mut args = std::env::args_os()
-        .skip(1)
-        .skip_while(|arg| arg.to_str().map_or(false, |s| s.starts_with('-')));
-    if !args
-        .next()
-        .map_or(false, |arg| arg.to_str() == Some("help"))
-    {
-        return Ok(false);
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let subcommand = args.get_one::<String>("COMMAND");
+    if let Some(subcommand) = subcommand {
+        if !try_help(config, subcommand)? {
+            match check_builtin(&subcommand) {
+                Some(s) => {
+                    crate::execute_internal_subcommand(
+                        config,
+                        &[OsStr::new(s), OsStr::new("--help")],
+                    )?;
+                }
+                None => {
+                    crate::execute_external_subcommand(
+                        config,
+                        subcommand,
+                        &[OsStr::new(subcommand), OsStr::new("--help")],
+                    )?;
+                }
+            }
+        }
+    } else {
+        let mut cmd = crate::cli::cli();
+        let _ = cmd.print_help();
     }
-    let subcommand = match args.next() {
-        Some(arg) => arg,
-        None => return Ok(false),
-    };
-    let subcommand = match subcommand.to_str() {
-        Some(s) => s,
-        None => return Ok(false),
-    };
-    // Check if this is a built-in command (or alias);
+    Ok(())
+}
+
+fn try_help(config: &Config, subcommand: &str) -> CargoResult<bool> {
     let subcommand = match check_alias(config, subcommand) {
+        // If this alias is more than a simple subcommand pass-through, show the alias.
+        Some(argv) if argv.len() > 1 => {
+            let alias = argv.join(" ");
+            drop_println!(config, "`{}` is aliased to `{}`", subcommand, alias);
+            return Ok(true);
+        }
+        // Otherwise, resolve the alias into its subcommand.
+        Some(argv) => {
+            // An alias with an empty argv can be created via `"empty-alias" = ""`.
+            let first = argv.get(0).map(String::as_str).unwrap_or(subcommand);
+            first.to_string()
+        }
+        None => subcommand.to_string(),
+    };
+
+    let subcommand = match check_builtin(&subcommand) {
         Some(s) => s,
         None => return Ok(false),
     };
+
     if resolve_executable(Path::new("man")).is_ok() {
-        let man = match extract_man(&subcommand, "1") {
+        let man = match extract_man(subcommand, "1") {
             Some(man) => man,
             None => return Ok(false),
         };
-        write_and_spawn(&man, "man")?;
+        write_and_spawn(subcommand, &man, "man")?;
     } else {
-        let txt = match extract_man(&subcommand, "txt") {
+        let txt = match extract_man(subcommand, "txt") {
             Some(txt) => txt,
             None => return Ok(false),
         };
         if resolve_executable(Path::new("less")).is_ok() {
-            write_and_spawn(&txt, "less")?;
+            write_and_spawn(subcommand, &txt, "less")?;
         } else if resolve_executable(Path::new("more")).is_ok() {
-            write_and_spawn(&txt, "more")?;
+            write_and_spawn(subcommand, &txt, "more")?;
         } else {
             drop(std::io::stdout().write_all(&txt));
         }
@@ -73,24 +89,18 @@ fn try_help(config: &Config) -> CargoResult<bool> {
     Ok(true)
 }
 
-/// Checks if the given subcommand is a built-in command (possibly via an alias).
+/// Checks if the given subcommand is an alias.
+///
+/// Returns None if it is not an alias.
+fn check_alias(config: &Config, subcommand: &str) -> Option<Vec<String>> {
+    aliased_command(config, subcommand).ok().flatten()
+}
+
+/// Checks if the given subcommand is a built-in command (not via an alias).
 ///
 /// Returns None if it is not a built-in command.
-fn check_alias(config: &Config, subcommand: &str) -> Option<String> {
-    if super::builtin_exec(subcommand).is_some() {
-        return Some(subcommand.to_string());
-    }
-    match aliased_command(config, subcommand) {
-        Ok(Some(alias)) => {
-            let alias = alias.into_iter().next()?;
-            if super::builtin_exec(&alias).is_some() {
-                Some(alias)
-            } else {
-                None
-            }
-        }
-        _ => None,
-    }
+fn check_builtin(subcommand: &str) -> Option<&str> {
+    super::builtin_exec(subcommand).map(|_| subcommand)
 }
 
 /// Extracts the given man page from the compressed archive.
@@ -117,13 +127,20 @@ fn extract_man(subcommand: &str, extension: &str) -> Option<Vec<u8>> {
 
 /// Write the contents of a man page to disk and spawn the given command to
 /// display it.
-fn write_and_spawn(contents: &[u8], command: &str) -> CargoResult<()> {
-    let mut tmp = tempfile::Builder::new().prefix("cargo-man").tempfile()?;
+fn write_and_spawn(name: &str, contents: &[u8], command: &str) -> CargoResult<()> {
+    let prefix = format!("cargo-{}.", name);
+    let mut tmp = tempfile::Builder::new().prefix(&prefix).tempfile()?;
     let f = tmp.as_file_mut();
     f.write_all(contents)?;
     f.flush()?;
+    let path = tmp.path();
+    // Use a path relative to the temp directory so that it can work on
+    // cygwin/msys systems which don't handle windows-style paths.
+    let mut relative_name = std::ffi::OsString::from("./");
+    relative_name.push(path.file_name().unwrap());
     let mut cmd = std::process::Command::new(command)
-        .arg(tmp.path())
+        .arg(relative_name)
+        .current_dir(path.parent().unwrap())
         .spawn()?;
     drop(cmd.wait());
     Ok(())

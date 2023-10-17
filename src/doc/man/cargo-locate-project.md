@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-locate-project - Print a JSON representation of a Cargo.toml file's location
+cargo-locate-project --- Print a JSON representation of a Cargo.toml file's location
 
 ## SYNOPSIS
 
@@ -10,8 +10,14 @@ cargo-locate-project - Print a JSON representation of a Cargo.toml file's locati
 
 ## DESCRIPTION
 
-This command will print a JSON object to stdout with the full path to the
-`Cargo.toml` manifest.
+This command will print a JSON object to stdout with the full path to the manifest. The
+manifest is found by searching upward for a file named `Cargo.toml` starting from the current
+working directory.
+
+If the project happens to be a part of a workspace, the manifest of the project, rather than
+the workspace root, is output. This can be overridden by the `--workspace` flag. The root
+workspace is found by traversing further upward or by using the field `package.workspace` after
+locating the manifest of a workspace member.
 
 ## OPTIONS
 

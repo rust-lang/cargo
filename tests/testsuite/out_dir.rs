@@ -13,7 +13,8 @@ fn binary_with_debug() {
         .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .enable_mac_dsym()
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -30,7 +31,7 @@ fn static_library_with_debug() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -49,7 +50,7 @@ fn static_library_with_debug() {
         .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -66,7 +67,7 @@ fn dynamic_library_with_debug() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -85,7 +86,8 @@ fn dynamic_library_with_debug() {
         .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .enable_mac_dsym()
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -102,7 +104,7 @@ fn rlib_with_debug() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -120,7 +122,7 @@ fn rlib_with_debug() {
         .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -137,7 +139,7 @@ fn include_only_the_binary_from_the_current_package() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -164,7 +166,8 @@ fn include_only_the_binary_from_the_current_package() {
         .build();
 
     p.cargo("build -Z unstable-options --bin foo --out-dir out")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .enable_mac_dsym()
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -183,7 +186,7 @@ fn out_dir_is_a_file() {
         .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
         .with_status(101)
         .with_stderr_contains("[ERROR] failed to create directory [..]")
         .run();
@@ -196,7 +199,7 @@ fn replaces_artifacts() {
         .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
         .run();
     p.process(
         &p.root()
@@ -209,7 +212,7 @@ fn replaces_artifacts() {
     p.change_file("src/main.rs", r#"fn main() { println!("bar") }"#);
 
     p.cargo("build -Z unstable-options --out-dir out")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
         .run();
     p.process(
         &p.root()
@@ -238,7 +241,8 @@ fn avoid_build_scripts() {
         .build();
 
     p.cargo("build -Z unstable-options --out-dir out -vv")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .enable_mac_dsym()
         .with_stdout_contains("[a 0.0.1] hello-build-a")
         .with_stdout_contains("[b 0.0.1] hello-build-b")
         .run();
@@ -265,7 +269,8 @@ fn cargo_build_out_dir() {
         .build();
 
     p.cargo("build -Z unstable-options")
-        .masquerade_as_nightly_cargo()
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .enable_mac_dsym()
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -274,6 +279,29 @@ fn cargo_build_out_dir() {
         &["foo.exe", "foo.pdb"],
         &["foo.exe"],
     );
+}
+
+#[cargo_test]
+fn unsupported_short_out_dir_flag() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .build();
+
+    p.cargo("build -Z unstable-options -O")
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .with_stderr(
+            "\
+error: unexpected argument '-O' found
+
+  tip: a similar argument exists: '--out-dir'
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
 }
 
 fn check_dir_contents(

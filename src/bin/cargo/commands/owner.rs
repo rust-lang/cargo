@@ -1,19 +1,19 @@
 use crate::command_prelude::*;
 
 use cargo::ops::{self, OwnersOptions};
+use cargo_credential::Secret;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
-        .arg(Arg::with_name("crate"))
+        .arg(Arg::new("crate").action(ArgAction::Set))
         .arg(
             multi_opt(
                 "add",
                 "LOGIN",
                 "Name of a user or team to invite as an owner",
             )
-            .short("a"),
+            .short('a'),
         )
         .arg(
             multi_opt(
@@ -21,31 +21,30 @@ pub fn cli() -> App {
                 "LOGIN",
                 "Name of a user or team to remove as an owner",
             )
-            .short("r"),
+            .short('r'),
         )
-        .arg(opt("list", "List owners of a crate").short("l"))
-        .arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
+        .arg(flag("list", "List owners of a crate").short('l'))
+        .arg_index("Registry index URL to modify owners for")
+        .arg_registry("Registry to modify owners for")
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
-        .after_help("Run `cargo help owner` for more detailed information.\n")
+        .arg_quiet()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help owner</>` for more detailed information.\n"
+        ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    config.load_credentials()?;
-
-    let registry = args.registry(config)?;
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let opts = OwnersOptions {
-        krate: args.value_of("crate").map(|s| s.to_string()),
-        token: args.value_of("token").map(|s| s.to_string()),
-        index: args.value_of("index").map(|s| s.to_string()),
+        krate: args.get_one::<String>("crate").cloned(),
+        token: args.get_one::<String>("token").cloned().map(Secret::from),
+        reg_or_index: args.registry_or_index(config)?,
         to_add: args
-            .values_of("add")
-            .map(|xs| xs.map(|s| s.to_string()).collect()),
+            .get_many::<String>("add")
+            .map(|xs| xs.cloned().collect()),
         to_remove: args
-            .values_of("remove")
-            .map(|xs| xs.map(|s| s.to_string()).collect()),
-        list: args.is_present("list"),
-        registry,
+            .get_many::<String>("remove")
+            .map(|xs| xs.cloned().collect()),
+        list: args.flag("list"),
     };
     ops::modify_owners(config, &opts)?;
     Ok(())

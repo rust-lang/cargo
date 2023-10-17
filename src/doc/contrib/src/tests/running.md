@@ -39,3 +39,40 @@ the `CARGO_RUN_BUILD_STD_TESTS=1` environment variable and running `cargo test
 --test build-std`. This requires the nightly channel, and also requires the
 `rust-src` component installed with `rustup component add rust-src
 --toolchain=nightly`.
+
+## Running with `gitoxide` as default git backend in tests
+
+By default, the `git2` backend is used for most git operations. As tests need to explicitly
+opt-in to use nightly features and feature flags, adjusting all tests to run with nightly
+and `-Zgitoxide` is unfeasible.
+
+This is why the private environment variable named `__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2` can be
+set while running tests to automatically enable the `-Zgitoxide` flag implicitly, allowing to
+test `gitoxide` for the entire cargo test suite.
+
+## Running public network tests
+
+Some (very rare) tests involve connecting to the public internet.
+These tests are disabled by default,
+but you can run them by setting the `CARGO_PUBLIC_NETWORK_TESTS=1` environment variable.
+Additionally our CI suite has a smoke test for fetching dependencies.
+For most contributors, you will never need to bother with this.
+
+## Running container tests
+
+Tests marked with `container_test` involve running Docker to test more complex configurations.
+These tests are disabled by default,
+but you can run them by setting the `CARGO_CONTAINER_TESTS=1` environment variable.
+You will need to have Docker installed and running to use these.
+
+> Note: Container tests mostly do not work on Windows.
+> * The SSH tests require ssh-agent, but the two versions of ssh-agent
+> on Windows are not suitable for testing.
+>     * The Microsoft version of ssh-agent runs as a global service, and can't be isolated per test.
+>     * The mingw/cygwin one can't be accessed from a Windows executable like cargo.
+>     * Pageant similarly does not seem to have a way to isolate it (and I'm not certain it can be driven completely from the command-line).
+>
+> The tests also can't run on Windows CI because the Docker that is preinstalled doesn't support Linux containers, and setting up Windows containers is a pain.
+>
+> macOS should work with Docker installed and running,
+> but unfortunately the tests are not run on CI because Docker is not available.

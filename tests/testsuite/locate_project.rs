@@ -5,28 +5,22 @@ use cargo_test_support::project;
 #[cargo_test]
 fn simple() {
     let p = project().build();
-    let root_manifest_path = p.root().join("Cargo.toml");
 
     p.cargo("locate-project")
-        .with_stdout(format!(
-            r#"{{"root":"{}"}}"#,
-            root_manifest_path.to_str().unwrap()
-        ))
+        .with_json(r#"{"root": "[ROOT]/foo/Cargo.toml"}"#)
         .run();
 }
 
 #[cargo_test]
 fn message_format() {
     let p = project().build();
-    let root_manifest_path = p.root().join("Cargo.toml");
-    let root_str = root_manifest_path.to_str().unwrap();
 
     p.cargo("locate-project --message-format plain")
-        .with_stdout(root_str)
+        .with_stdout("[ROOT]/foo/Cargo.toml")
         .run();
 
     p.cargo("locate-project --message-format json")
-        .with_stdout(format!(r#"{{"root":"{}"}}"#, root_str))
+        .with_json(r#"{"root": "[ROOT]/foo/Cargo.toml"}"#)
         .run();
 
     p.cargo("locate-project --message-format cryptic")
@@ -61,28 +55,22 @@ fn workspace() {
         .file("inner/src/lib.rs", "")
         .build();
 
-    let outer_manifest = format!(
-        r#"{{"root":"{}"}}"#,
-        p.root().join("Cargo.toml").to_str().unwrap(),
-    );
-    let inner_manifest = format!(
-        r#"{{"root":"{}"}}"#,
-        p.root().join("inner").join("Cargo.toml").to_str().unwrap(),
-    );
+    let outer_manifest = r#"{"root": "[ROOT]/foo/Cargo.toml"}"#;
+    let inner_manifest = r#"{"root": "[ROOT]/foo/inner/Cargo.toml"}"#;
 
-    p.cargo("locate-project").with_stdout(&outer_manifest).run();
+    p.cargo("locate-project").with_json(outer_manifest).run();
 
     p.cargo("locate-project")
         .cwd("inner")
-        .with_stdout(&inner_manifest)
+        .with_json(inner_manifest)
         .run();
 
     p.cargo("locate-project --workspace")
-        .with_stdout(&outer_manifest)
+        .with_json(outer_manifest)
         .run();
 
     p.cargo("locate-project --workspace")
         .cwd("inner")
-        .with_stdout(&outer_manifest)
+        .with_json(outer_manifest)
         .run();
 }

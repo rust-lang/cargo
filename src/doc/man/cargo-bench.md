@@ -1,10 +1,12 @@
 # cargo-bench(1)
-{{*set actionverb="Benchmark"}}
-{{*set nouns="benchmarks"}}
+{{~*set command="bench"}}
+{{~*set actionverb="Benchmark"}}
+{{~*set nouns="benchmarks"}}
+{{~*set multitarget=true}}
 
 ## NAME
 
-cargo-bench - Execute benchmarks of a package
+cargo-bench --- Execute benchmarks of a package
 
 ## SYNOPSIS
 
@@ -19,16 +21,20 @@ the two dashes (`--`) are passed to the benchmark binaries and thus to
 _libtest_ (rustc's built in unit-test and micro-benchmarking framework). If
 you are passing arguments to both Cargo and the binary, the ones after `--` go
 to the binary, the ones before go to Cargo. For details about libtest's
-arguments see the output of `cargo bench -- --help`.  As an example, this will
-run only the benchmark named `foo` (and skip other similarly named benchmarks
-like `foobar`):
+arguments see the output of `cargo bench -- --help` and check out the rustc
+book's chapter on how tests work at
+<https://doc.rust-lang.org/rustc/tests/index.html>.
+
+As an example, this will run only the benchmark named `foo` (and skip other
+similarly named benchmarks like `foobar`):
 
     cargo bench -- foo --exact
 
-Benchmarks are built with the `--test` option to `rustc` which creates an
-executable with a `main` function that automatically runs all functions
-annotated with the `#[bench]` attribute. Cargo passes the `--bench` flag to
-the test harness to tell it to run only benchmarks.
+Benchmarks are built with the `--test` option to `rustc` which creates a
+special executable by linking your code with libtest. The executable
+automatically runs all functions annotated with the `#[bench]` attribute.
+Cargo passes the `--bench` flag to the test harness to tell it to run
+only benchmarks.
 
 The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
@@ -43,6 +49,22 @@ function to handle running benchmarks.
 > running benchmarks on the stable channel, such as
 > [Criterion](https://crates.io/crates/criterion).
 
+By default, `cargo bench` uses the [`bench` profile], which enables
+optimizations and disables debugging information. If you need to debug a
+benchmark, you can use the `--profile=dev` command-line option to switch to
+the dev profile. You can then run the debug-enabled benchmark within a
+debugger.
+
+[`bench` profile]: ../reference/profiles.html#bench
+
+### Working directory of benchmarks
+
+The working directory of every benchmark is set to the root directory of the 
+package the benchmark belongs to.
+Setting the working directory of benchmarks to the package's root directory 
+makes it possible for benchmarks to reliably access the package's files using 
+relative paths, regardless from where `cargo bench` was executed from.
+
 ## OPTIONS
 
 ### Benchmark Options
@@ -56,7 +78,7 @@ function to handle running benchmarks.
 When no target selection options are given, `cargo bench` will build the
 following targets of the selected packages:
 
-- lib — used to link with binaries and benchmarks
+- lib --- used to link with binaries and benchmarks
 - bins (only if benchmark targets are built and required features are
   available)
 - lib as a benchmark
@@ -65,10 +87,18 @@ following targets of the selected packages:
 
 The default behavior can be changed by setting the `bench` flag for the target
 in the manifest settings. Setting examples to `bench = true` will build and
-run the example as a benchmark. Setting targets to `bench = false` will stop
-them from being benchmarked by default. Target selection options that take a
-target by name ignore the `bench` flag and will always benchmark the given
+run the example as a benchmark, replacing the example's `main` function with
+the libtest harness.
+
+Setting targets to `bench = false` will stop them from being bencharmked by
+default. Target selection options that take a target by name (such as
+`--example foo`) ignore the `bench` flag and will always benchmark the given
 target.
+
+See [Configuring a target](../reference/cargo-targets.html#configuring-a-target)
+for more information on per-target settings.
+
+{{> options-targets-bin-auto-built }}
 
 {{> options-targets }}
 
@@ -79,6 +109,12 @@ target.
 {{#options}}
 
 {{> options-target-triple }}
+
+{{> options-profile }}
+
+{{> options-ignore-rust-version }}
+
+{{> options-timings }}
 
 {{/options}}
 
@@ -124,22 +160,13 @@ Rust test harness runs benchmarks serially in a single thread.
 {{> options-jobs }}
 {{/options}}
 
-## PROFILES
+While `cargo bench` involves compilation, it does not provide a `--keep-going`
+flag. Use `--no-fail-fast` to run as many benchmarks as possible without
+stopping at the first failure. To "compile" as many benchmarks as possible, use
+`--benches` to build benchmark binaries separately. For example:
 
-Profiles may be used to configure compiler options such as optimization levels
-and debug settings. See
-[the reference](../reference/profiles.html)
-for more details.
-
-Benchmarks are always built with the `bench` profile. Binary and lib targets
-are built separately as benchmarks with the `bench` profile. Library targets
-are built with the `release` profiles when linked to binaries and benchmarks.
-Dependencies use the `release` profile.
-
-If you need a debug build of a benchmark, try building it with
-{{man "cargo-build" 1}} which will use the `test` profile which is by default
-unoptimized and includes debug information. You can then run the debug-enabled
-benchmark manually.
+    cargo build --benches --release --keep-going
+    cargo bench --no-fail-fast
 
 {{> section-environment }}
 

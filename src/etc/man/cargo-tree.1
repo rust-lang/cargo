@@ -4,12 +4,12 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-tree \- Display a tree visualization of a dependency graph
+cargo\-tree \[em] Display a tree visualization of a dependency graph
 .SH "SYNOPSIS"
 \fBcargo tree\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
 This command will display a tree of dependencies to the terminal. An example
-of a simple project that depends on the "rand" package:
+of a simple project that depends on the \[lq]rand\[rq] package:
 .sp
 .RS 4
 .nf
@@ -29,12 +29,12 @@ myproject v0.1.0 (/myproject)
 .fi
 .RE
 .sp
-Packages marked with \fB(*)\fR have been "de\-duplicated". The dependencies for the
+Packages marked with \fB(*)\fR have been \[lq]de\-duplicated\[rq]\&. The dependencies for the
 package have already been shown elsewhere in the graph, and so are not
 repeated. Use the \fB\-\-no\-dedupe\fR option to repeat the duplicates.
 .sp
 The \fB\-e\fR flag can be used to select the dependency kinds to display. The
-"features" kind changes the output to display the features enabled by
+\[lq]features\[rq] kind changes the output to display the features enabled by
 each dependency. For example, \fBcargo tree \-e features\fR:
 .sp
 .RS 4
@@ -49,9 +49,24 @@ myproject v0.1.0 (/myproject)
 .RE
 .sp
 In this tree, \fBmyproject\fR depends on \fBlog\fR with the \fBserde\fR feature. \fBlog\fR in
-turn depends on \fBcfg\-if\fR with "default" features. When using \fB\-e features\fR it
+turn depends on \fBcfg\-if\fR with \[lq]default\[rq] features. When using \fB\-e features\fR it
 can be helpful to use \fB\-i\fR flag to show how the features flow into a package.
 See the examples below for more detail.
+.SS "Feature Unification"
+This command shows a graph much closer to a feature\-unified graph Cargo will
+build, rather than what you list in \fBCargo.toml\fR\&. For instance, if you specify
+the same dependency in both \fB[dependencies]\fR and \fB[dev\-dependencies]\fR but with
+different features on. This command may merge all features and show a \fB(*)\fR on
+one of the dependency to indicate the duplicate.
+.sp
+As a result, for a mostly equivalent overview of what \fBcargo build\fR does,
+\fBcargo tree \-e normal,build\fR is pretty close; for a mostly equivalent overview
+of what \fBcargo test\fR does, \fBcargo tree\fR is pretty close. However, it doesn\[cq]t
+guarantee the exact equivalence to what Cargo is going to build, since a
+compilation is complex and depends on lots of different factors.
+.sp
+To learn more about feature unification, check out this
+\fIdedicated section\fR <https://doc.rust\-lang.org/cargo/reference/features.html#feature\-unification>\&.
 .SH "OPTIONS"
 .SS "Tree Options"
 .sp
@@ -61,12 +76,23 @@ See the examples below for more detail.
 Show the reverse dependencies for the given package. This flag will invert
 the tree and display the packages that depend on the given package.
 .sp
-Note that in a workspace, by default it will only display the package's
+Note that in a workspace, by default it will only display the package\[cq]s
 reverse dependencies inside the tree of the workspace member in the current
 directory. The \fB\-\-workspace\fR flag can be used to extend it so that it will
-show the package's reverse dependencies across the entire workspace. The \fB\-p\fR
-flag can be used to display the package's reverse dependencies only with the
+show the package\[cq]s reverse dependencies across the entire workspace. The \fB\-p\fR
+flag can be used to display the package\[cq]s reverse dependencies only with the
 subtree of the package given to \fB\-p\fR\&.
+.RE
+.sp
+\fB\-\-prune\fR \fIspec\fR
+.RS 4
+Prune the given package from the display of the dependency tree.
+.RE
+.sp
+\fB\-\-depth\fR \fIdepth\fR
+.RS 4
+Maximum display depth of the dependency tree. A depth of 1 displays the direct
+dependencies, for example.
 .RE
 .sp
 \fB\-\-no\-dedupe\fR
@@ -129,28 +155,33 @@ kind given, then it will automatically include the other dependency kinds.
 \h'-04'\(bu\h'+02'\fBno\-dev\fR \[em] Do not include development dependencies.
 .RE
 .sp
-The \fBno\-\fR prefixed options cannot be mixed with the other dependency kinds.
+.RS 4
+\h'-04'\(bu\h'+02'\fBno\-proc\-macro\fR \[em] Do not include procedural macro dependencies.
+.RE
+.sp
+The \fBnormal\fR, \fBbuild\fR, \fBdev\fR, and \fBall\fR dependency kinds cannot be mixed with
+\fBno\-normal\fR, \fBno\-build\fR, or \fBno\-dev\fR dependency kinds.
 .sp
 The default is \fBnormal,build,dev\fR\&.
 .RE
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Filter dependencies matching the given target\-triple. The default is the host
-platform. Use the value \fBall\fR to include \fIall\fR targets.
+Filter dependencies matching the given \fItarget triple\fR <https://doc.rust\-lang.org/cargo/appendix/glossary.html#target>\&. 
+The default is the host platform. Use the value \fBall\fR to include \fIall\fR targets.
 .RE
 .SS "Tree Formatting Options"
 .sp
 \fB\-\-charset\fR \fIcharset\fR
 .RS 4
-Chooses the character set to use for the tree. Valid values are "utf8" or
-"ascii". Default is "utf8".
+Chooses the character set to use for the tree. Valid values are \[lq]utf8\[rq] or
+\[lq]ascii\[rq]\&. Default is \[lq]utf8\[rq]\&.
 .RE
 .sp
 \fB\-f\fR \fIformat\fR, 
 \fB\-\-format\fR \fIformat\fR
 .RS 4
-Set the format string for each package. The default is "{p}".
+Set the format string for each package. The default is \[lq]{p}\[rq]\&.
 .sp
 This is an arbitrary string which will be used to display each package. The following
 strings will be replaced with the corresponding value:
@@ -169,6 +200,10 @@ strings will be replaced with the corresponding value:
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fB{f}\fR \[em] Comma\-separated list of package features that are enabled.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fB{lib}\fR \[em] The name, as used in a \fBuse\fR statement, of the package\[cq]s library.
 .RE
 .RE
 .sp
@@ -200,8 +235,8 @@ The default members of a workspace can be set explicitly with the
 virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-workspace\fR), and a non\-virtual workspace will include only the root crate itself.
 .sp
-\fB\-p\fR \fIspec\fR\&..., 
-\fB\-\-package\fR \fIspec\fR\&...
+\fB\-p\fR \fIspec\fR\[u2026], 
+\fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
 Display only the specified packages. See \fBcargo\-pkgid\fR(1) for the
 SPEC format. This flag may be specified multiple times and supports common Unix
@@ -215,7 +250,7 @@ double quotes around each pattern.
 Display all members in the workspace.
 .RE
 .sp
-\fB\-\-exclude\fR \fISPEC\fR\&...
+\fB\-\-exclude\fR \fISPEC\fR\[u2026]
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
 \fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
@@ -260,21 +295,19 @@ offline.
 May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .SS "Feature Selection"
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in \fB\-\-manifest\-path\fR\&. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if \fB\-\-all\-features\fR is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the \fBdefault\fR feature is activated for every
+selected package.
 .sp
-When no feature options are given, the \fBdefault\fR feature is activated for
-every selected package.
+See \fIthe features documentation\fR <https://doc.rust\-lang.org/cargo/reference/features.html#command\-line\-feature\-options>
+for more details.
 .sp
+\fB\-F\fR \fIfeatures\fR, 
 \fB\-\-features\fR \fIfeatures\fR
 .RS 4
-Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fR syntax. This flag may be
-specified multiple times, which enables all specified features.
+Space or comma separated list of features to activate. Features of workspace
+members may be enabled with \fBpackage\-name/feature\-name\fR syntax. This flag may
+be specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fR
@@ -284,14 +317,14 @@ Activate all available features of all selected packages.
 .sp
 \fB\-\-no\-default\-features\fR
 .RS 4
-Do not activate the \fBdefault\fR feature of the current directory's package.
+Do not activate the \fBdefault\fR feature of the selected packages.
 .RE
 .SS "Display Options"
 .sp
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -300,7 +333,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -332,6 +367,26 @@ begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
 as \fB+stable\fR or \fB+nightly\fR).
 See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
 for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 
@@ -439,13 +494,13 @@ syn v1.0.17
 .RE
 .sp
 To read this graph, you can follow the chain for each feature from the root
-to see why it is included. For example, the "full" feature is added by the
+to see why it is included. For example, the \[lq]full\[rq] feature is added by the
 \fBrustversion\fR crate which is included from \fBmyproject\fR (with the default
 features), and \fBmyproject\fR is the package selected on the command\-line. All
-of the other \fBsyn\fR features are added by the "default" feature ("quote" is
-added by "printing" and "proc\-macro", both of which are default features).
+of the other \fBsyn\fR features are added by the \[lq]default\[rq] feature (\[lq]quote\[rq] is
+added by \[lq]printing\[rq] and \[lq]proc\-macro\[rq], both of which are default features).
 .sp
-If you're having difficulty cross\-referencing the de\-duplicated \fB(*)\fR
+If you\[cq]re having difficulty cross\-referencing the de\-duplicated \fB(*)\fR
 entries, try with the \fB\-\-no\-dedupe\fR flag to get the full output.
 .RE
 .SH "SEE ALSO"

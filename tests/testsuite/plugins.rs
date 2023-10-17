@@ -1,15 +1,10 @@
 //! Tests for rustc plugins.
 
+use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_manifest, project};
-use cargo_test_support::{is_nightly, rustc_host};
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "plugins are unstable")]
 fn plugin_to_the_max() {
-    if !is_nightly() {
-        // plugins are unstable
-        return;
-    }
-
     let foo = project()
         .file(
             "Cargo.toml",
@@ -67,15 +62,15 @@ fn plugin_to_the_max() {
         .file(
             "src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
 
                 extern crate baz;
                 extern crate rustc_driver;
 
                 use rustc_driver::plugin::Registry;
 
-                #[plugin_registrar]
-                pub fn foo(_reg: &mut Registry) {
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(_reg: &mut Registry) {
                     println!("{}", baz::baz());
                 }
             "#,
@@ -103,13 +98,8 @@ fn plugin_to_the_max() {
     foo.cargo("doc").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "plugins are unstable")]
 fn plugin_with_dynamic_native_dependency() {
-    if !is_nightly() {
-        // plugins are unstable
-        return;
-    }
-
     let build = project()
         .at("builder")
         .file(
@@ -191,7 +181,7 @@ fn plugin_with_dynamic_native_dependency() {
         .file(
             "bar/src/lib.rs",
             r#"
-                #![feature(plugin_registrar, rustc_private)]
+                #![feature(rustc_private)]
 
                 extern crate rustc_driver;
                 use rustc_driver::plugin::Registry;
@@ -200,8 +190,8 @@ fn plugin_with_dynamic_native_dependency() {
                 #[cfg_attr(target_env = "msvc", link(name = "builder.dll"))]
                 extern { fn foo(); }
 
-                #[plugin_registrar]
-                pub fn bar(_reg: &mut Registry) {
+                #[no_mangle]
+                pub fn __rustc_plugin_registrar(_reg: &mut Registry) {
                     unsafe { foo() }
                 }
             "#,
@@ -335,13 +325,8 @@ fn native_plugin_dependency_with_custom_linker() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires rustc_private")]
 fn panic_abort_plugins() {
-    if !is_nightly() {
-        // requires rustc_private
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -376,6 +361,7 @@ fn panic_abort_plugins() {
             r#"
                 #![feature(rustc_private)]
                 extern crate rustc_ast;
+                extern crate rustc_driver;
             "#,
         )
         .build();
@@ -383,13 +369,8 @@ fn panic_abort_plugins() {
     p.cargo("build").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires rustc_private")]
 fn shared_panic_abort_plugins() {
-    if !is_nightly() {
-        // requires rustc_private
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -428,6 +409,7 @@ fn shared_panic_abort_plugins() {
             r#"
                 #![feature(rustc_private)]
                 extern crate rustc_ast;
+                extern crate rustc_driver;
                 extern crate baz;
             "#,
         )

@@ -17,7 +17,7 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -39,6 +39,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -77,6 +78,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -85,7 +87,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -103,6 +105,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -111,7 +114,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -129,6 +132,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -140,8 +144,8 @@ fn package_verbose() {
     let repo = git::repo(&root)
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file("src/main.rs", "fn main() {}")
-        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
-        .file("a/src/lib.rs", "")
+        .file("a/a/Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("a/a/src/lib.rs", "")
         .build();
     cargo_process("build").cwd(repo.root()).run();
 
@@ -158,6 +162,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -167,7 +172,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         r#"{{
   "git": {{
     "sha1": "{}"
-  }}
+  }},
+  "path_in_vcs": ""
 }}
 "#,
         repo.revparse_head()
@@ -187,7 +193,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 
     println!("package sub-repo");
     cargo_process("package -v --no-verify")
-        .cwd(repo.root().join("a"))
+        .cwd(repo.root().join("a/a"))
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
@@ -197,9 +203,33 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
+
+    let f = File::open(&repo.root().join("a/a/target/package/a-0.0.1.crate")).unwrap();
+    let vcs_contents = format!(
+        r#"{{
+  "git": {{
+    "sha1": "{}"
+  }},
+  "path_in_vcs": "a/a"
+}}
+"#,
+        repo.revparse_head()
+    );
+    validate_crate_contents(
+        f,
+        "a-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            ".cargo_vcs_info.json",
+        ],
+        &[(".cargo_vcs_info.json", &vcs_contents)],
+    );
 }
 
 #[cargo_test]
@@ -215,6 +245,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -227,7 +258,7 @@ fn vcs_file_collision() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 description = "foo"
                 version = "0.0.1"
@@ -260,12 +291,51 @@ in package source
 }
 
 #[cargo_test]
+fn orig_file_collision() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                exclude = ["*.no-existe"]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {}
+            "#,
+        )
+        .file("Cargo.toml.orig", "oops")
+        .build();
+    p.cargo("package")
+        .arg("--no-verify")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid inclusion of reserved file name Cargo.toml.orig \
+in package source
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn path_dependency_no_version() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -287,8 +357,47 @@ fn path_dependency_no_version() {
             "\
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] all path dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version\n\
+Note: The packaged dependency will use the version from crates.io,
+the `path` specification will be removed from the dependency declaration.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn git_dependency_no_version() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies.foo]
+                git = "git://path/to/nowhere"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `foo` does not specify a version
+Note: The packaged dependency will use the version from crates.io,
+the `git` specification will be removed from the dependency declaration.
 ",
         )
         .run();
@@ -301,7 +410,7 @@ fn exclude() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -386,6 +495,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] some_dir/file_deep_4
 [ARCHIVING] some_dir/file_deep_5
 [ARCHIVING] src/main.rs
+[PACKAGED] 15 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -423,7 +533,7 @@ fn include() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -453,6 +563,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] foo.txt
 [ARCHIVING] src/main.rs
+[PACKAGED] 7 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -475,7 +586,7 @@ fn package_git_submodule() {
             .file(
                 "Cargo.toml",
                 r#"
-                    [project]
+                    [package]
                     name = "foo"
                     version = "0.0.1"
                     authors = ["foo@example.com"]
@@ -578,7 +689,7 @@ src/main.rs
 #[cargo_test]
 fn ignore_nested() {
     let cargo_toml = r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -606,6 +717,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -673,6 +785,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -712,7 +825,7 @@ fn broken_symlink() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -731,13 +844,140 @@ fn broken_symlink() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: failed to prepare local package for uploading
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
   failed to open for archiving: `[..]foo.rs`
 
 Caused by:
   [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+/// Tests if a broken but excluded symlink is ignored.
+/// See issue rust-lang/cargo#10917
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
+fn broken_but_excluded_symlink() {
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    if !symlink_supported() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = 'foo'
+                documentation = 'foo'
+                homepage = 'foo'
+                repository = 'foo'
+                exclude = ["src/foo.rs"]
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+    t!(symlink("nowhere", &p.root().join("src/foo.rs")));
+
+    p.cargo("package -v --list")
+        // `src/foo.rs` is excluded.
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))] // https://github.com/libgit2/libgit2/issues/6250
+/// Test that /dir and /dir/ matches symlinks to directories.
+fn gitignore_symlink_dir() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let (p, _repo) = git::new_repo("foo", |p| {
+        p.file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+            .symlink_dir("src", "src1")
+            .symlink_dir("src", "src2")
+            .symlink_dir("src", "src3")
+            .symlink_dir("src", "src4")
+            .file(".gitignore", "/src1\n/src2/\nsrc3\nsrc4/")
+    });
+
+    p.cargo("package -l --no-metadata")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))] // https://github.com/libgit2/libgit2/issues/6250
+/// Test that /dir and /dir/ matches symlinks to directories in dirty working directory.
+fn gitignore_symlink_dir_dirty() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let (p, _repo) = git::new_repo("foo", |p| {
+        p.file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+            .file(".gitignore", "/src1\n/src2/\nsrc3\nsrc4/")
+    });
+
+    p.symlink("src", "src1");
+    p.symlink("src", "src2");
+    p.symlink("src", "src3");
+    p.symlink("src", "src4");
+
+    p.cargo("package -l --no-metadata")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+
+    p.cargo("package -l --no-metadata --allow-dirty")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.gitignore
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
 ",
         )
         .run();
@@ -764,6 +1004,27 @@ fn package_symlink_to_dir() {
 }
 
 #[cargo_test]
+/// Tests if a symlink to ancestor causes filesystem loop error.
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
+fn filesystem_loop() {
+    if !symlink_supported() {
+        return;
+    }
+
+    project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .symlink_dir("a/b", "a/b/c/d/foo")
+        .build()
+        .cargo("package -v")
+        .with_stderr_contains(
+            "[WARNING] File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn do_not_package_if_repository_is_dirty() {
     let p = project().build();
 
@@ -772,7 +1033,7 @@ fn do_not_package_if_repository_is_dirty() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 license = "MIT"
@@ -789,7 +1050,7 @@ fn do_not_package_if_repository_is_dirty() {
     p.change_file(
         "Cargo.toml",
         r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             license = "MIT"
@@ -817,7 +1078,61 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 }
 
 #[cargo_test]
+fn dirty_ignored() {
+    // Cargo warns about an ignored file that will be published.
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                license = "foo"
+                documentation = "foo"
+                include = ["src", "build"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(".gitignore", "build")
+    });
+    // Example of adding a file that is confusingly ignored by an overzealous
+    // gitignore rule.
+    p.change_file("src/build/mod.rs", "");
+    p.cargo("package --list")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: 1 files in the working directory contain changes that were not yet committed into git:
+
+src/build/mod.rs
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+",
+        )
+        .run();
+    // Add the ignored file and make sure it is included.
+    let mut index = t!(repo.index());
+    t!(index.add_path(Path::new("src/build/mod.rs")));
+    t!(index.write());
+    git::commit(&repo);
+    p.cargo("package --list")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.toml
+Cargo.toml.orig
+src/build/mod.rs
+src/lib.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn generated_manifest() {
+    let registry = registry::alt_init();
     Package::new("abc", "1.0.0").publish();
     Package::new("def", "1.0.0").alternative(true).publish();
     Package::new("ghi", "1.0.0").publish();
@@ -827,7 +1142,7 @@ fn generated_manifest() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -835,7 +1150,7 @@ fn generated_manifest() {
                 license = "MIT"
                 description = "foo"
 
-                [project.metadata]
+                [package.metadata]
                 foo = 'bar'
 
                 [workspace]
@@ -867,6 +1182,7 @@ license = "MIT"
 
 [package.metadata]
 foo = "bar"
+
 [dependencies.abc]
 version = "1.0"
 
@@ -881,7 +1197,7 @@ registry-index = "{}"
 version = "1.0"
 "#,
         cargo::core::package::MANIFEST_PREAMBLE,
-        registry::alt_registry_url()
+        registry.index_url()
     );
 
     validate_crate_contents(
@@ -898,7 +1214,7 @@ fn ignore_workspace_specifier() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
 
@@ -952,7 +1268,7 @@ fn package_two_kinds_of_deps() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -985,10 +1301,10 @@ fn test_edition() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_contains(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]--edition=2018 [..]
 ",
         )
@@ -1033,7 +1349,7 @@ fn test_edition_malformed() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -1043,7 +1359,7 @@ Caused by:
   failed to parse the `edition` key
 
 Caused by:
-  supported edition values are `2015` or `2018`, but `chicken` is unknown
+  supported edition values are `2015`, `2018`, `2021`, or `2024`, but `chicken` is unknown
 "
             .to_string(),
         )
@@ -1065,7 +1381,7 @@ fn test_edition_from_the_future() {
         .file("src/main.rs", r#""#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1075,7 +1391,7 @@ Caused by:
   failed to parse the `edition` key
 
 Caused by:
-  this version of Cargo is older than the `2038` edition, and only supports `2015` and `2018` editions.
+  this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, `2021`, and `2024` editions.
 "
             .to_string(),
         )
@@ -1134,7 +1450,7 @@ fn package_with_select_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1163,7 +1479,7 @@ fn package_with_all_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1192,7 +1508,7 @@ fn package_no_default_features() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1459,6 +1775,142 @@ fn exclude_dot_files_and_directories_by_default() {
 }
 
 #[cargo_test]
+fn empty_readme_path() {
+    // Warn but don't fail if `readme` is empty.
+    // Issue #11522.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            readme = ""
+            license = "MIT"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] readme `` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn invalid_readme_path() {
+    // Warn but don't fail if `readme` path is invalid.
+    // Issue #11522.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            readme = "DOES-NOT-EXIST"
+            license = "MIT"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] readme `DOES-NOT-EXIST` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn readme_or_license_file_is_dir() {
+    // Test warning when `readme` or `license-file` is a directory, not a file.
+    // Issue #11522.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            readme = "./src"
+            license-file = "./src"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] license-file `./src` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[WARNING] readme `./src` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn empty_license_file_path() {
+    // Warn but don't fail if license-file is empty.
+    // Issue #11522.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            license-file = ""
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] manifest has no license or license-file.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[WARNING] license-file `` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn invalid_license_file_path() {
     // Test warning when license-file points to a non-existent file.
     let p = project()
@@ -1483,6 +1935,7 @@ fn invalid_license_file_path() {
 Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
 This may become a hard error in the future.
 [PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1530,6 +1983,7 @@ subdir/LICENSE
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
 [ARCHIVING] subdir/LICENSE
+[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1586,6 +2040,7 @@ src/lib.rs
 [VERIFYING] foo v1.0.0 [..]
 [COMPILING] foo v1.0.0 [..]
 [FINISHED] [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1644,6 +2099,7 @@ src/lib.rs
 [VERIFYING] foo v1.0.0 [..]
 [COMPILING] foo v1.0.0 [..]
 [FINISHED] [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -1681,13 +2137,15 @@ fn package_restricted_windows() {
         .build();
 
     p.cargo("package")
-        .with_stderr(
+        // use unordered here because the order of the warning is different on each platform.
+        .with_stderr_unordered(
             "\
 [WARNING] file src/aux/mod.rs is a reserved Windows filename, it will not work on Windows platforms
 [WARNING] file src/con.rs is a reserved Windows filename, it will not work on Windows platforms
 [PACKAGING] foo [..]
 [VERIFYING] foo [..]
 [COMPILING] foo [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
 [FINISHED] [..]
 ",
         )
@@ -1750,6 +2208,12 @@ src/lib.rs
 #[cargo_test]
 #[cfg(windows)]
 fn reserved_windows_name() {
+    // If we are running on a version of Windows that allows these reserved filenames,
+    // skip this test.
+    if paths::windows_reserved_names_are_allowed() {
+        return;
+    }
+
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "pub mod aux;")
         .file("src/aux.rs", "")
@@ -1759,7 +2223,7 @@ fn reserved_windows_name() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1841,8 +2305,10 @@ src/main.rs
         .with_status(101)
         .with_stderr(
             "\
-error: all path dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version.
+[ERROR] all dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version
+Note: The packaged dependency will use the version from crates.io,
+the `path` specification will be removed from the dependency declaration.
 ",
         )
         .run();
@@ -1926,7 +2392,7 @@ fn reproducible_output() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -1946,10 +2412,686 @@ fn reproducible_output() {
     let mut archive = Archive::new(decoder);
     for ent in archive.entries().unwrap() {
         let ent = ent.unwrap();
+        println!("checking {:?}", ent.path());
         let header = ent.header();
         assert_eq!(header.mode().unwrap(), 0o644);
-        assert_eq!(header.mtime().unwrap(), 0);
+        assert!(header.mtime().unwrap() != 0);
         assert_eq!(header.username().unwrap().unwrap(), "");
         assert_eq!(header.groupname().unwrap().unwrap(), "");
     }
+}
+
+#[cargo_test]
+fn package_with_resolver_and_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                resolver = '2'
+
+                [package.metadata.docs.rs]
+                all-features = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package").run();
+}
+
+#[cargo_test]
+fn deleted_git_working_tree() {
+    // When deleting a file, but not staged, cargo should ignore the file.
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file("src/lib.rs", "").file("src/main.rs", "fn main() {}")
+    });
+    p.root().join("src/lib.rs").rm_rf();
+    p.cargo("package --allow-dirty --list")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package --allow-dirty").run();
+    let mut index = t!(repo.index());
+    t!(index.remove(Path::new("src/lib.rs"), 0));
+    t!(index.write());
+    p.cargo("package --allow-dirty --list")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package --allow-dirty").run();
+}
+
+#[cargo_test]
+fn in_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package --workspace")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    assert!(p.root().join("target/package/bar-0.0.1.crate").is_file());
+}
+
+#[cargo_test]
+fn workspace_noconflict_readme() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("README.md", "workspace readme")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                repository = "https://github.com/bar/bar"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                readme = "../README.md"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/example/README.md", "# example readmdBar")
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD]/[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_conflict_readme() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("README.md", "workspace readme")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                repository = "https://github.com/bar/bar"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                readme = "../README.md"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/README.md", "# workspace member: Bar")
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+warning: readme `../README.md` appears to be a path outside of the package, but there is already a file named `README.md` in the root of the package. The archived crate will contain the copy in the root of the package. Update the readme to point to the path relative to the root of the package to remove this warning.
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD]/[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_overrides_resolver() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                edition = "2015"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify -p bar -p baz").run();
+
+    let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+edition = "2021"
+name = "bar"
+version = "0.1.0"
+resolver = "1"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    validate_crate_contents(
+        f,
+        "bar-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
+
+    // When the crate has the same implicit resolver as the workspace it is not overridden
+    let f = File::open(&p.root().join("target/package/baz-0.1.0.crate")).unwrap();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+edition = "2015"
+name = "baz"
+version = "0.1.0"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    validate_crate_contents(
+        f,
+        "baz-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
+}
+
+fn verify_packaged_status_line(
+    output: std::process::Output,
+    num_files: usize,
+    uncompressed_size: u64,
+    compressed_size: u64,
+) {
+    use cargo::util::human_readable_bytes;
+
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let mut packaged_lines = stderr
+        .lines()
+        .filter(|line| line.trim().starts_with("Packaged"));
+    let packaged_line = packaged_lines
+        .next()
+        .expect("`Packaged` status line should appear in stderr");
+    assert!(
+        packaged_lines.next().is_none(),
+        "Only one `Packaged` status line should appear in stderr"
+    );
+    let size_info = packaged_line.trim().trim_start_matches("Packaged").trim();
+    let uncompressed = human_readable_bytes(uncompressed_size);
+    let compressed = human_readable_bytes(compressed_size);
+    let expected = format!(
+        "{} files, {:.1}{} ({:.1}{} compressed)",
+        num_files, uncompressed.0, uncompressed.1, compressed.0, compressed.1
+    );
+    assert_eq!(size_info, expected);
+}
+
+#[cargo_test]
+fn basic_filesizes() {
+    let cargo_toml_orig_contents = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#;
+    let main_rs_contents = r#"fn main() { println!("🦀"); }"#;
+    let cargo_toml_contents = format!(
+        r#"{}
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+exclude = ["*.txt"]
+description = "foo"
+license = "MIT"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    let cargo_lock_contents = r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+"#;
+    let p = project()
+        .file("Cargo.toml", cargo_toml_orig_contents)
+        .file("src/main.rs", main_rs_contents)
+        .file("src/bar.txt", "Ignored text file contents") // should be ignored when packaging
+        .build();
+
+    let uncompressed_size = (cargo_toml_orig_contents.len()
+        + main_rs_contents.len()
+        + cargo_toml_contents.len()
+        + cargo_lock_contents.len()) as u64;
+    let output = p.cargo("package").exec_with_output().unwrap();
+
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let compressed_size = f.metadata().unwrap().len();
+    verify_packaged_status_line(output, 4, uncompressed_size, compressed_size);
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[
+            ("Cargo.lock", cargo_lock_contents),
+            ("Cargo.toml", &cargo_toml_contents),
+            ("Cargo.toml.orig", cargo_toml_orig_contents),
+            ("src/main.rs", main_rs_contents),
+        ],
+    );
+}
+
+#[cargo_test]
+fn larger_filesizes() {
+    let cargo_toml_orig_contents = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#;
+    let lots_of_crabs = std::iter::repeat("🦀").take(1337).collect::<String>();
+    let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
+    let bar_txt_contents = "This file is relatively uncompressible, to increase the compressed
+        package size beyond 1KiB.
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
+        ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+        ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+        reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
+        sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est
+        laborum.";
+    let cargo_toml_contents = format!(
+        r#"{}
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+description = "foo"
+license = "MIT"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    let cargo_lock_contents = r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+"#;
+    let p = project()
+        .file("Cargo.toml", cargo_toml_orig_contents)
+        .file("src/main.rs", &main_rs_contents)
+        .file("src/bar.txt", bar_txt_contents)
+        .build();
+
+    let uncompressed_size = (cargo_toml_orig_contents.len()
+        + main_rs_contents.len()
+        + cargo_toml_contents.len()
+        + cargo_lock_contents.len()
+        + bar_txt_contents.len()) as u64;
+
+    let output = p.cargo("package").exec_with_output().unwrap();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/bar.txt
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let compressed_size = f.metadata().unwrap().len();
+    verify_packaged_status_line(output, 5, uncompressed_size, compressed_size);
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/bar.txt",
+            "src/main.rs",
+        ],
+        &[
+            ("Cargo.lock", cargo_lock_contents),
+            ("Cargo.toml", &cargo_toml_contents),
+            ("Cargo.toml.orig", cargo_toml_orig_contents),
+            ("src/bar.txt", bar_txt_contents),
+            ("src/main.rs", &main_rs_contents),
+        ],
+    );
+}
+
+#[cargo_test]
+fn symlink_filesizes() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let cargo_toml_orig_contents = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#;
+    let lots_of_crabs = std::iter::repeat("🦀").take(1337).collect::<String>();
+    let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
+    let bar_txt_contents = "This file is relatively uncompressible, to increase the compressed
+        package size beyond 1KiB.
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
+        ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+        ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+        reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
+        sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est
+        laborum.";
+    let cargo_toml_contents = format!(
+        r#"{}
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+description = "foo"
+license = "MIT"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+    let cargo_lock_contents = r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "foo"
+version = "0.0.1"
+"#;
+
+    let p = project()
+        .file("Cargo.toml", cargo_toml_orig_contents)
+        .file("src/main.rs", &main_rs_contents)
+        .file("bla/bar.txt", bar_txt_contents)
+        .symlink("src/main.rs", "src/main.rs.bak")
+        .symlink_dir("bla", "foo")
+        .build();
+
+    let uncompressed_size = (cargo_toml_orig_contents.len()
+        + main_rs_contents.len() * 2
+        + cargo_toml_contents.len()
+        + cargo_lock_contents.len()
+        + bar_txt_contents.len() * 2) as u64;
+
+    let output = p.cargo("package").exec_with_output().unwrap();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+bla/bar.txt
+foo/bar.txt
+src/main.rs
+src/main.rs.bak
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let compressed_size = f.metadata().unwrap().len();
+    verify_packaged_status_line(output, 7, uncompressed_size, compressed_size);
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "bla/bar.txt",
+            "foo/bar.txt",
+            "src/main.rs",
+            "src/main.rs.bak",
+        ],
+        &[
+            ("Cargo.lock", cargo_lock_contents),
+            ("Cargo.toml", &cargo_toml_contents),
+            ("Cargo.toml.orig", cargo_toml_orig_contents),
+            ("bla/bar.txt", bar_txt_contents),
+            ("foo/bar.txt", bar_txt_contents),
+            ("src/main.rs", &main_rs_contents),
+            ("src/main.rs.bak", &main_rs_contents),
+        ],
+    );
+}
+
+#[cargo_test]
+#[cfg(windows)] // windows is the platform that is most consistently configured for case insensitive filesystems
+fn normalize_case() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("src/bar.txt", "") // should be ignored when packaging
+        .build();
+    // Workaround `project()` making a `Cargo.toml` on our behalf
+    std::fs::remove_file(p.root().join("Cargo.toml")).unwrap();
+    std::fs::write(
+        p.root().join("cargo.toml"),
+        r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#,
+    )
+    .unwrap();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
+}
+
+#[cargo_test]
+#[cfg(target_os = "linux")] // linux is generally configured to be case sensitive
+fn mixed_case() {
+    let manifest = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#;
+    let p = project()
+        .file("Cargo.toml", manifest)
+        .file("cargo.toml", manifest)
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("src/bar.txt", "") // should be ignored when packaging
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
 }

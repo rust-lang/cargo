@@ -1,30 +1,39 @@
 use crate::command_prelude::*;
-use anyhow::Error;
-use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
-use cargo::util::errors;
+use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("test")
         // Subcommand aliases are handled in `aliased_command()`.
         // .alias("t")
-        .setting(AppSettings::TrailingVarArg)
         .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
-            Arg::with_name("TESTNAME")
+            Arg::new("TESTNAME")
+                .action(ArgAction::Set)
                 .help("If specified, only run tests containing this string in their names"),
         )
         .arg(
-            Arg::with_name("args")
+            Arg::new("args")
                 .help("Arguments for the test binary")
-                .multiple(true)
+                .num_args(0..)
                 .last(true),
         )
+        .arg(flag("doc", "Test only this library's documentation"))
+        .arg(flag("no-run", "Compile, but don't run tests"))
+        .arg(flag("no-fail-fast", "Run all tests regardless of failure"))
+        .arg_ignore_rust_version()
+        .arg_future_incompat_report()
+        .arg_message_format()
         .arg(
-            opt(
+            flag(
                 "quiet",
                 "Display one character per test instead of one line",
             )
-            .short("q"),
+            .short('q'),
+        )
+        .arg_package_spec(
+            "Package to run tests for",
+            "Test all packages in the workspace",
+            "Exclude packages from the test",
         )
         .arg_targets_all(
             "Test only this package's library unit tests",
@@ -36,101 +45,70 @@ pub fn cli() -> App {
             "Test all tests",
             "Test only the specified bench target",
             "Test all benches",
-            "Test all targets",
+            "Test all targets (does not include doctests)",
         )
-        .arg(opt("doc", "Test only this library's documentation"))
-        .arg(opt("no-run", "Compile, but don't run tests"))
-        .arg(opt("no-fail-fast", "Run all tests regardless of failure"))
-        .arg_package_spec(
-            "Package to run tests for",
-            "Test all packages in the workspace",
-            "Exclude packages from the test",
-        )
+        .arg_features()
         .arg_jobs()
+        .arg_unsupported_keep_going()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg_manifest_path()
-        .arg_message_format()
         .arg_unit_graph()
-        .after_help("Run `cargo help test` for more detailed information.\n")
+        .arg_timings()
+        .arg_manifest_path()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help test</>` for more detailed information.\n\
+             Run `<cyan,bold>cargo test -- --help</>` for test binary options.\n",
+        ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mut compile_opts = args.compile_options(
         config,
         CompileMode::Test,
         Some(&ws),
-        ProfileChecking::Checked,
+        ProfileChecking::Custom,
     )?;
 
     compile_opts.build_config.requested_profile =
-        args.get_profile_name(config, "test", ProfileChecking::Checked)?;
+        args.get_profile_name(config, "test", ProfileChecking::Custom)?;
 
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.
-    let test_name: Option<&str> = args.value_of("TESTNAME");
-    let test_args = args.value_of("TESTNAME").into_iter();
-    let test_args = test_args.chain(args.values_of("args").unwrap_or_default());
-    let test_args = test_args.collect::<Vec<_>>();
+    let test_name = args.get_one::<String>("TESTNAME");
+    let test_args = args.get_one::<String>("TESTNAME").into_iter();
+    let test_args = test_args.chain(args.get_many::<String>("args").unwrap_or_default());
+    let test_args = test_args.map(String::as_str).collect::<Vec<_>>();
 
-    let no_run = args.is_present("no-run");
-    let doc = args.is_present("doc");
+    let no_run = args.flag("no-run");
+    let doc = args.flag("doc");
     if doc {
-        if let CompileFilter::Only { .. } = compile_opts.filter {
-            return Err(CliError::new(
-                anyhow::format_err!("Can't mix --doc with other target selecting options"),
-                101,
-            ));
+        if compile_opts.filter.is_specific() {
+            return Err(
+                anyhow::format_err!("Can't mix --doc with other target selecting options").into(),
+            );
         }
         if no_run {
-            return Err(CliError::new(
-                anyhow::format_err!("Can't skip running doc tests with --no-run"),
-                101,
-            ));
+            return Err(anyhow::format_err!("Can't skip running doc tests with --no-run").into());
         }
         compile_opts.build_config.mode = CompileMode::Doctest;
-        compile_opts.filter = ops::CompileFilter::new(
-            LibRule::True,
-            FilterRule::none(),
-            FilterRule::none(),
-            FilterRule::none(),
-            FilterRule::none(),
-        );
-    } else if test_name.is_some() {
-        if let CompileFilter::Default { .. } = compile_opts.filter {
-            compile_opts.filter = ops::CompileFilter::new(
-                LibRule::Default,   // compile the library, so the unit tests can be run filtered
-                FilterRule::All, // compile the binaries, so the unit tests in binaries can be run filtered
-                FilterRule::All, // compile the tests, so the integration tests can be run filtered
-                FilterRule::none(), // specify --examples to unit test binaries filtered
-                FilterRule::none(), // specify --benches to unit test benchmarks filtered
-            ); // also, specify --doc to run doc tests filtered
-        }
+        compile_opts.filter = ops::CompileFilter::lib_only();
+    } else if test_name.is_some() && !compile_opts.filter.is_specific() {
+        // If arg `TESTNAME` is provided, assumed that the user knows what
+        // exactly they wants to test, so we use `all_test_targets` to
+        // avoid compiling unnecessary targets such as examples, which are
+        // included by the logic of default target filter.
+        compile_opts.filter = ops::CompileFilter::all_test_targets();
     }
 
     let ops = ops::TestOptions {
         no_run,
-        no_fail_fast: args.is_present("no-fail-fast"),
+        no_fail_fast: args.flag("no-fail-fast"),
         compile_opts,
     };
 
-    let err = ops::run_tests(&ws, &ops, &test_args)?;
-    match err {
-        None => Ok(()),
-        Some(err) => {
-            let context = anyhow::format_err!("{}", err.hint(&ws, &ops.compile_opts));
-            let e = match err.exit.as_ref().and_then(|e| e.code()) {
-                // Don't show "process didn't exit successfully" for simple errors.
-                Some(i) if errors::is_simple_exit_code(i) => CliError::new(context, i),
-                Some(i) => CliError::new(Error::from(err).context(context), i),
-                None => CliError::new(Error::from(err).context(context), 101),
-            };
-            Err(e)
-        }
-    }
+    ops::run_tests(&ws, &ops, &test_args)
 }

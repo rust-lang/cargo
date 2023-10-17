@@ -6,282 +6,15 @@
 
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
-use cargo_test_support::{is_nightly, paths, project, rustc_host, Execs};
-use std::path::PathBuf;
+use cargo_test_support::{paths, project, rustc_host, Execs};
+use std::path::{Path, PathBuf};
 
 struct Setup {
     rustc_wrapper: PathBuf,
     real_sysroot: String,
 }
 
-fn setup() -> Option<Setup> {
-    if !is_nightly() {
-        // -Zbuild-std is nightly
-        // We don't want these tests to run on rust-lang/rust.
-        return None;
-    }
-
-    if cfg!(all(target_os = "windows", target_env = "gnu")) {
-        // FIXME: contains object files that we don't handle yet:
-        // https://github.com/rust-lang/wg-cargo-std-aware/issues/46
-        return None;
-    }
-
-    // Register a version of one of the std dependencies that doesn't compile.
-    // This ensures that the mock-std's vendor is actually being used.
-    Package::new("registry-dep-using-core", "1.0.0")
-        .file(
-            "src/lib.rs",
-            "
-               don't compile me bro!!
-            ",
-        )
-        .add_dep(Dependency::new("rustc-std-workspace-core", "*").optional(true))
-        .feature("mockbuild", &["rustc-std-workspace-core"])
-        .publish();
-
-    let p = ProjectBuilder::new(paths::root().join("rustc-wrapper"))
-        .file(
-            "src/main.rs",
-            r#"
-                use std::process::Command;
-                use std::env;
-                fn main() {
-                    let mut args = env::args().skip(1).collect::<Vec<_>>();
-
-                    let is_sysroot_crate = env::var_os("RUSTC_BOOTSTRAP").is_some();
-                    if is_sysroot_crate {
-                        args.push("--sysroot".to_string());
-                        args.push(env::var("REAL_SYSROOT").unwrap());
-                    } else if args.iter().any(|arg| arg == "--target") {
-                        // build-std target unit
-                        args.push("--sysroot".to_string());
-                        args.push("/path/to/nowhere".to_string());
-                    } else {
-                        // host unit, do not use sysroot
-                    }
-
-                    let ret = Command::new(&args[0]).args(&args[1..]).status().unwrap();
-                    std::process::exit(ret.code().unwrap_or(1));
-                }
-            "#,
-        )
-        .build();
-    p.cargo("build").run();
-
-    Some(Setup {
-        rustc_wrapper: p.bin("foo"),
-        real_sysroot: paths::sysroot(),
-    })
-}
-
-fn enable_build_std(e: &mut Execs, setup: &Setup) {
-    // First up, force Cargo to use our "mock sysroot" which mimics what
-    // libstd looks like upstream.
-    let root = paths::root();
-    let root = root
-        .parent() // chop off test name
-        .unwrap()
-        .parent() // chop off `citN`
-        .unwrap()
-        .parent() // chop off `target`
-        .unwrap()
-        .join("tests/testsuite/mock-std");
-    e.env("__CARGO_TESTS_ONLY_SRC_ROOT", &root);
-
-    e.masquerade_as_nightly_cargo();
-
-    // We do various shenanigans to ensure our "mock sysroot" actually links
-    // with the real sysroot, so we don't have to actually recompile std for
-    // each test. Perform all that logic here, namely:
-    //
-    // * RUSTC_WRAPPER - uses our shim executable built above to control rustc
-    // * REAL_SYSROOT - used by the shim executable to swap out to the real
-    //   sysroot temporarily for some compilations
-    // * RUST{,DOC}FLAGS - an extra `-L` argument to ensure we can always load
-    //   crates from the sysroot, but only indirectly through other crates.
-    e.env("RUSTC_WRAPPER", &setup.rustc_wrapper);
-    e.env("REAL_SYSROOT", &setup.real_sysroot);
-    let libdir = format!("/lib/rustlib/{}/lib", rustc_host());
-    e.env(
-        "RUSTFLAGS",
-        format!("-Ldependency={}{}", setup.real_sysroot, libdir),
-    );
-    e.env(
-        "RUSTDOCFLAGS",
-        format!("-Ldependency={}{}", setup.real_sysroot, libdir),
-    );
-}
-
-// Helper methods used in the tests below
-trait BuildStd: Sized {
-    fn build_std(&mut self, setup: &Setup) -> &mut Self;
-    fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self;
-    fn target_host(&mut self) -> &mut Self;
-}
-
-impl BuildStd for Execs {
-    fn build_std(&mut self, setup: &Setup) -> &mut Self {
-        enable_build_std(self, setup);
-        self.arg("-Zbuild-std");
-        self
-    }
-
-    fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self {
-        enable_build_std(self, setup);
-        self.arg(format!("-Zbuild-std={}", arg));
-        self
-    }
-
-    fn target_host(&mut self) -> &mut Self {
-        self.arg("--target").arg(rustc_host());
-        self
-    }
-}
-
-#[cargo_test]
-fn basic() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
-
-    let p = project()
-        .file(
-            "src/main.rs",
-            "
-                fn main() {
-                    std::custom_api();
-                    foo::f();
-                }
-
-                #[test]
-                fn smoke_bin_unit() {
-                    std::custom_api();
-                    foo::f();
-                }
-            ",
-        )
-        .file(
-            "src/lib.rs",
-            "
-                extern crate alloc;
-                extern crate proc_macro;
-
-                /// ```
-                /// foo::f();
-                /// ```
-                pub fn f() {
-                    core::custom_api();
-                    std::custom_api();
-                    alloc::custom_api();
-                    proc_macro::custom_api();
-                }
-
-                #[test]
-                fn smoke_lib_unit() {
-                    std::custom_api();
-                    f();
-                }
-            ",
-        )
-        .file(
-            "tests/smoke.rs",
-            "
-                #[test]
-                fn smoke_integration() {
-                    std::custom_api();
-                    foo::f();
-                }
-            ",
-        )
-        .build();
-
-    p.cargo("check -v").build_std(&setup).target_host().run();
-    p.cargo("build").build_std(&setup).target_host().run();
-    p.cargo("run").build_std(&setup).target_host().run();
-    p.cargo("test").build_std(&setup).target_host().run();
-}
-
-#[cargo_test]
-fn simple_lib_std() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("build -v")
-        .build_std(&setup)
-        .target_host()
-        .with_stderr_contains("[RUNNING] `[..]--crate-name std [..]`")
-        .run();
-    // Check freshness.
-    p.change_file("src/lib.rs", " ");
-    p.cargo("build -v")
-        .build_std(&setup)
-        .target_host()
-        .with_stderr_contains("[FRESH] std[..]")
-        .run();
-}
-
-#[cargo_test]
-fn simple_bin_std() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
-    let p = project().file("src/main.rs", "fn main() {}").build();
-    p.cargo("run -v").build_std(&setup).target_host().run();
-}
-
-#[cargo_test]
-fn lib_nostd() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
-    let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-                #![no_std]
-                pub fn foo() {
-                    assert_eq!(u8::MIN, 0);
-                }
-            "#,
-        )
-        .build();
-    p.cargo("build -v --lib")
-        .build_std_arg(&setup, "core")
-        .target_host()
-        .with_stderr_does_not_contain("[..]libstd[..]")
-        .run();
-}
-
-#[cargo_test]
-fn check_core() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
-    let p = project()
-        .file("src/lib.rs", "#![no_std] fn unused_fn() {}")
-        .build();
-
-    p.cargo("check -v")
-        .build_std_arg(&setup, "core")
-        .target_host()
-        .with_stderr_contains("[WARNING] [..]unused_fn[..]`")
-        .run();
-}
-
-#[cargo_test]
-fn depend_same_as_std() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
-
+fn setup() -> Setup {
     // Our mock sysroot requires a few packages from crates.io, so make sure
     // they're "published" to crates.io. Also edit their code a bit to make sure
     // that they have access to our custom crates with custom apis.
@@ -347,15 +80,226 @@ fn depend_same_as_std() {
         .add_dep(Dependency::new("rustc-std-workspace-std", "*").optional(true))
         .feature("mockbuild", &["rustc-std-workspace-std"])
         .publish();
-    Package::new("registry-dep-only-used-by-test", "1.0.0")
+
+    let p = ProjectBuilder::new(paths::root().join("rustc-wrapper"))
         .file(
-            "src/lib.rs",
+            "src/main.rs",
+            r#"
+                use std::process::Command;
+                use std::env;
+                fn main() {
+                    let mut args = env::args().skip(1).collect::<Vec<_>>();
+
+                    let is_sysroot_crate = env::var_os("RUSTC_BOOTSTRAP").is_some();
+                    if is_sysroot_crate {
+                        args.push("--sysroot".to_string());
+                        args.push(env::var("REAL_SYSROOT").unwrap());
+                    } else if args.iter().any(|arg| arg == "--target") {
+                        // build-std target unit
+                        args.push("--sysroot".to_string());
+                        args.push("/path/to/nowhere".to_string());
+                    } else {
+                        // host unit, do not use sysroot
+                    }
+
+                    let ret = Command::new(&args[0]).args(&args[1..]).status().unwrap();
+                    std::process::exit(ret.code().unwrap_or(1));
+                }
+            "#,
+        )
+        .build();
+    p.cargo("build").run();
+
+    Setup {
+        rustc_wrapper: p.bin("foo"),
+        real_sysroot: paths::sysroot(),
+    }
+}
+
+fn enable_build_std(e: &mut Execs, setup: &Setup) {
+    // First up, force Cargo to use our "mock sysroot" which mimics what
+    // libstd looks like upstream.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testsuite/mock-std");
+    e.env("__CARGO_TESTS_ONLY_SRC_ROOT", &root);
+
+    e.masquerade_as_nightly_cargo(&["build-std"]);
+
+    // We do various shenanigans to ensure our "mock sysroot" actually links
+    // with the real sysroot, so we don't have to actually recompile std for
+    // each test. Perform all that logic here, namely:
+    //
+    // * RUSTC_WRAPPER - uses our shim executable built above to control rustc
+    // * REAL_SYSROOT - used by the shim executable to swap out to the real
+    //   sysroot temporarily for some compilations
+    // * RUST{,DOC}FLAGS - an extra `-L` argument to ensure we can always load
+    //   crates from the sysroot, but only indirectly through other crates.
+    e.env("RUSTC_WRAPPER", &setup.rustc_wrapper);
+    e.env("REAL_SYSROOT", &setup.real_sysroot);
+    let libdir = format!("/lib/rustlib/{}/lib", rustc_host());
+    e.env(
+        "RUSTFLAGS",
+        format!("-Ldependency={}{}", setup.real_sysroot, libdir),
+    );
+    e.env(
+        "RUSTDOCFLAGS",
+        format!("-Ldependency={}{}", setup.real_sysroot, libdir),
+    );
+}
+
+// Helper methods used in the tests below
+trait BuildStd: Sized {
+    fn build_std(&mut self, setup: &Setup) -> &mut Self;
+    fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self;
+    fn target_host(&mut self) -> &mut Self;
+}
+
+impl BuildStd for Execs {
+    fn build_std(&mut self, setup: &Setup) -> &mut Self {
+        enable_build_std(self, setup);
+        self.arg("-Zbuild-std");
+        self
+    }
+
+    fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self {
+        enable_build_std(self, setup);
+        self.arg(format!("-Zbuild-std={}", arg));
+        self
+    }
+
+    fn target_host(&mut self) -> &mut Self {
+        self.arg("--target").arg(rustc_host());
+        self
+    }
+}
+
+#[cargo_test(build_std_mock)]
+fn basic() {
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "src/main.rs",
             "
-                pub fn wow_testing_is_so_easy() {
+                fn main() {
+                    std::custom_api();
+                    foo::f();
+                }
+
+                #[test]
+                fn smoke_bin_unit() {
+                    std::custom_api();
+                    foo::f();
                 }
             ",
         )
-        .publish();
+        .file(
+            "src/lib.rs",
+            "
+                extern crate alloc;
+                extern crate proc_macro;
+
+                /// ```
+                /// foo::f();
+                /// ```
+                pub fn f() {
+                    core::custom_api();
+                    std::custom_api();
+                    alloc::custom_api();
+                    proc_macro::custom_api();
+                }
+
+                #[test]
+                fn smoke_lib_unit() {
+                    std::custom_api();
+                    f();
+                }
+            ",
+        )
+        .file(
+            "tests/smoke.rs",
+            "
+                #[test]
+                fn smoke_integration() {
+                    std::custom_api();
+                    foo::f();
+                }
+            ",
+        )
+        .build();
+
+    p.cargo("check -v").build_std(&setup).target_host().run();
+    p.cargo("build").build_std(&setup).target_host().run();
+    p.cargo("run").build_std(&setup).target_host().run();
+    p.cargo("test").build_std(&setup).target_host().run();
+}
+
+#[cargo_test(build_std_mock)]
+fn simple_lib_std() {
+    let setup = setup();
+
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[RUNNING] `[..]--crate-name std [..]`")
+        .run();
+    // Check freshness.
+    p.change_file("src/lib.rs", " ");
+    p.cargo("build -v")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[FRESH] std[..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn simple_bin_std() {
+    let setup = setup();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("run -v").build_std(&setup).target_host().run();
+}
+
+#[cargo_test(build_std_mock)]
+fn lib_nostd() {
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #![no_std]
+                pub fn foo() {
+                    assert_eq!(u8::MIN, 0);
+                }
+            "#,
+        )
+        .build();
+    p.cargo("build -v --lib")
+        .build_std_arg(&setup, "core")
+        .target_host()
+        .with_stderr_does_not_contain("[..]libstd[..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn check_core() {
+    let setup = setup();
+
+    let p = project()
+        .file("src/lib.rs", "#![no_std] fn unused_fn() {}")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg(&setup, "core")
+        .target_host()
+        .with_stderr_contains("[WARNING] [..]unused_fn[..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn depend_same_as_std() {
+    let setup = setup();
 
     let p = project()
         .file(
@@ -387,12 +331,10 @@ fn depend_same_as_std() {
     p.cargo("build -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn test() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -415,12 +357,10 @@ fn test() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn target_proc_macro() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -436,12 +376,10 @@ fn target_proc_macro() {
     p.cargo("build -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn bench() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -460,12 +398,10 @@ fn bench() {
     p.cargo("bench -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn doc() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -479,12 +415,10 @@ fn doc() {
     p.cargo("doc -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn check_std() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -517,12 +451,10 @@ fn check_std() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn doctest() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -543,13 +475,11 @@ fn doctest() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn no_implicit_alloc() {
     // Demonstrate that alloc is not implicitly in scope.
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -569,17 +499,15 @@ fn no_implicit_alloc() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn macro_expanded_shadow() {
     // This tests a bug caused by the previous use of `--extern` to directly
     // load sysroot crates. This necessitated the switch to `--sysroot` to
     // retain existing behavior. See
     // https://github.com/rust-lang/wg-cargo-std-aware/issues/40 for more
     // detail.
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -595,15 +523,13 @@ fn macro_expanded_shadow() {
     p.cargo("build -v").build_std(&setup).target_host().run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn ignores_incremental() {
     // Incremental is not really needed for std, make sure it is disabled.
     // Incremental also tends to have bugs that affect std libraries more than
     // any other crate.
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build")
         .env("CARGO_INCREMENTAL", "1")
@@ -623,12 +549,10 @@ fn ignores_incremental() {
         .starts_with("foo-"));
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn cargo_config_injects_compiler_builtins() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -655,12 +579,10 @@ fn cargo_config_injects_compiler_builtins() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(build_std_mock)]
 fn different_features() {
-    let setup = match setup() {
-        Some(s) => s,
-        None => return,
-    };
+    let setup = setup();
+
     let p = project()
         .file(
             "src/lib.rs",
@@ -675,5 +597,61 @@ fn different_features() {
         .build_std(&setup)
         .arg("-Zbuild-std-features=feature1")
         .target_host()
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn no_roots() {
+    // Checks for a bug where it would panic if there are no roots.
+    let setup = setup();
+
+    let p = project().file("tests/t1.rs", "").build();
+    p.cargo("build")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[FINISHED] [..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn proc_macro_only() {
+    // Checks for a bug where it would panic if building a proc-macro only
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("build")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[FINISHED] [..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn fetch() {
+    let setup = setup();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("fetch")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[DOWNLOADED] [..]")
+        .run();
+    p.cargo("build")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_does_not_contain("[DOWNLOADED] [..]")
         .run();
 }

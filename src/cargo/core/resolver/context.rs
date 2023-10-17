@@ -1,13 +1,14 @@
 use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
 use super::types::{ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
+use super::RequestedFeatures;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::util::interning::InternedString;
 use crate::util::Graph;
 use anyhow::format_err;
-use log::debug;
 use std::collections::HashMap;
 use std::num::NonZeroU64;
+use tracing::debug;
 
 pub use super::encode::Metadata;
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -26,7 +27,7 @@ pub struct Context {
     /// get the package that will be linking to a native library by its links attribute
     pub links: im_rc::HashMap<InternedString, PackageId>,
     /// for each package the list of names it can see,
-    /// then for each name the exact version that name represents and weather the name is public.
+    /// then for each name the exact version that name represents and whether the name is public.
     pub public_dependency: Option<PublicDependency>,
 
     /// a way to look up for a package in activations what packages required it
@@ -160,23 +161,32 @@ impl Context {
             }
         }
         debug!("checking if {} is already activated", summary.package_id());
-        if opts.features.all_features {
-            return Ok(false);
+        match &opts.features {
+            // This returns `false` for CliFeatures just for simplicity. It
+            // would take a bit of work to compare since they are not in the
+            // same format as DepFeatures (and that may be expensive
+            // performance-wise). Also, it should only occur once for a root
+            // package. The only drawback is that it may re-activate a root
+            // package again, which should only affect performance, but that
+            // should be rare. Cycles should still be detected since those
+            // will have `DepFeatures` edges.
+            RequestedFeatures::CliFeatures(_) => Ok(false),
+            RequestedFeatures::DepFeatures {
+                features,
+                uses_default_features,
+            } => {
+                let has_default_feature = summary.features().contains_key("default");
+                Ok(match self.resolve_features.get(&id) {
+                    Some(prev) => {
+                        features.is_subset(prev)
+                            && (!uses_default_features
+                                || prev.contains("default")
+                                || !has_default_feature)
+                    }
+                    None => features.is_empty() && (!uses_default_features || !has_default_feature),
+                })
+            }
         }
-
-        let has_default_feature = summary.features().contains_key("default");
-        Ok(match self.resolve_features.get(&id) {
-            Some(prev) => {
-                opts.features.features.is_subset(prev)
-                    && (!opts.features.uses_default_features
-                        || prev.contains("default")
-                        || !has_default_feature)
-            }
-            None => {
-                opts.features.features.is_empty()
-                    && (!opts.features.uses_default_features || !has_default_feature)
-            }
-        })
     }
 
     /// If the package is active returns the `ContextAge` when it was added

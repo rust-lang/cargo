@@ -18,10 +18,18 @@ use super::{
     PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
     TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };
+use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::restricted_names;
+
+use anyhow::Context as _;
+
+const DEFAULT_TEST_DIR_NAME: &'static str = "tests";
+const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
+const DEFAULT_EXAMPLE_DIR_NAME: &'static str = "examples";
+const DEFAULT_BIN_DIR_NAME: &'static str = "bin";
 
 pub fn targets(
     features: &Features,
@@ -39,7 +47,6 @@ pub fn targets(
     let has_lib;
 
     if let Some(target) = clean_lib(
-        features,
         manifest.lib.as_ref(),
         package_root,
         package_name,
@@ -71,7 +78,6 @@ pub fn targets(
     )?);
 
     targets.extend(clean_examples(
-        features,
         manifest.example.as_ref(),
         package_root,
         edition,
@@ -81,7 +87,6 @@ pub fn targets(
     )?);
 
     targets.extend(clean_tests(
-        features,
         manifest.test.as_ref(),
         package_root,
         edition,
@@ -91,7 +96,6 @@ pub fn targets(
     )?);
 
     targets.extend(clean_benches(
-        features,
         manifest.bench.as_ref(),
         package_root,
         edition,
@@ -140,7 +144,6 @@ pub fn targets(
 }
 
 fn clean_lib(
-    features: &Features,
     toml_lib: Option<&TomlLibTarget>,
     package_root: &Path,
     package_name: &str,
@@ -168,10 +171,9 @@ fn clean_lib(
         }),
     };
 
-    let lib = match lib {
-        Some(ref lib) => lib,
-        None => return Ok(None),
-    };
+    let Some(ref lib) = lib else { return Ok(None) };
+    lib.validate_proc_macro(warnings);
+    lib.validate_crate_types("library", warnings);
 
     validate_target_name(lib, "library", "lib", warnings)?;
 
@@ -208,6 +210,15 @@ fn clean_lib(
     // A plugin requires exporting plugin_registrar so a crate cannot be
     // both at once.
     let crate_types = match (lib.crate_types(), lib.plugin, lib.proc_macro()) {
+        (Some(kinds), _, _)
+            if kinds.contains(&CrateType::Dylib.as_str().to_owned())
+                && kinds.contains(&CrateType::Cdylib.as_str().to_owned()) =>
+        {
+            anyhow::bail!(format!(
+                "library `{}` cannot set the crate type of both `dylib` and `cdylib`",
+                lib.name()
+            ));
+        }
         (Some(kinds), _, _) if kinds.contains(&"proc-macro".to_string()) => {
             if let Some(true) = lib.plugin {
                 // This is a warning to retain backwards compatibility.
@@ -235,7 +246,7 @@ fn clean_lib(
     };
 
     let mut target = Target::lib_target(&lib.name(), crate_types, path, edition);
-    configure(features, lib, &mut target)?;
+    configure(lib, &mut target)?;
     Ok(Some(target))
 }
 
@@ -264,7 +275,14 @@ fn clean_bins(
         "autobins",
     );
 
+    // This loop performs basic checks on each of the TomlTarget in `bins`.
     for bin in &bins {
+        // For each binary, check if the `filename` parameter is populated. If it is,
+        // check if the corresponding cargo feature has been activated.
+        if bin.filename.is_some() {
+            features.require(Feature::different_binary_name())?;
+        }
+
         validate_target_name(bin, "binary", "bin", warnings)?;
 
         let name = bin.name();
@@ -289,7 +307,11 @@ fn clean_bins(
         }
 
         if restricted_names::is_conflicting_artifact_name(&name) {
-            anyhow::bail!("the binary target name `{}` is forbidden", name)
+            anyhow::bail!(
+                "the binary target name `{}` is forbidden, \
+                 it conflicts with cargo's build directory names",
+                name
+            )
         }
     }
 
@@ -315,9 +337,15 @@ fn clean_bins(
             Err(e) => anyhow::bail!("{}", e),
         };
 
-        let mut target =
-            Target::bin_target(&bin.name(), path, bin.required_features.clone(), edition);
-        configure(features, bin, &mut target)?;
+        let mut target = Target::bin_target(
+            &bin.name(),
+            bin.filename.clone(),
+            path,
+            bin.required_features.clone(),
+            edition,
+        );
+
+        configure(bin, &mut target)?;
         result.push(target);
     }
     return Ok(result);
@@ -334,7 +362,10 @@ fn clean_bins(
             return Some(path);
         }
 
-        let path = package_root.join("src").join("bin").join("main.rs");
+        let path = package_root
+            .join("src")
+            .join(DEFAULT_BIN_DIR_NAME)
+            .join("main.rs");
         if path.exists() {
             return Some(path);
         }
@@ -343,7 +374,6 @@ fn clean_bins(
 }
 
 fn clean_examples(
-    features: &Features,
     toml_examples: Option<&Vec<TomlExampleTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -351,7 +381,7 @@ fn clean_examples(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
-    let inferred = infer_from_directory(&package_root.join("examples"));
+    let inferred = infer_from_directory(&package_root.join(DEFAULT_EXAMPLE_DIR_NAME));
 
     let targets = clean_targets(
         "example",
@@ -368,6 +398,7 @@ fn clean_examples(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
+        toml.validate_crate_types("example", warnings);
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
             None => Vec::new(),
@@ -380,7 +411,7 @@ fn clean_examples(
             toml.required_features.clone(),
             edition,
         );
-        configure(features, &toml, &mut target)?;
+        configure(&toml, &mut target)?;
         result.push(target);
     }
 
@@ -388,7 +419,6 @@ fn clean_examples(
 }
 
 fn clean_tests(
-    features: &Features,
     toml_tests: Option<&Vec<TomlTestTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -396,7 +426,7 @@ fn clean_tests(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
-    let inferred = infer_from_directory(&package_root.join("tests"));
+    let inferred = infer_from_directory(&package_root.join(DEFAULT_TEST_DIR_NAME));
 
     let targets = clean_targets(
         "test",
@@ -415,14 +445,13 @@ fn clean_tests(
     for (path, toml) in targets {
         let mut target =
             Target::test_target(&toml.name(), path, toml.required_features.clone(), edition);
-        configure(features, &toml, &mut target)?;
+        configure(&toml, &mut target)?;
         result.push(target);
     }
     Ok(result)
 }
 
 fn clean_benches(
-    features: &Features,
     toml_benches: Option<&Vec<TomlBenchTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -470,7 +499,7 @@ fn clean_benches(
     for (path, toml) in targets {
         let mut target =
             Target::bench_target(&toml.name(), path, toml.required_features.clone(), edition);
-        configure(features, &toml, &mut target)?;
+        configure(&toml, &mut target)?;
         result.push(target);
     }
 
@@ -571,7 +600,9 @@ fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBu
     if main.exists() {
         result.push((package_name.to_string(), main));
     }
-    result.extend(infer_from_directory(&package_root.join("src").join("bin")));
+    result.extend(infer_from_directory(
+        &package_root.join("src").join(DEFAULT_BIN_DIR_NAME),
+    ));
 
     result
 }
@@ -590,10 +621,10 @@ fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
 }
 
 fn infer_any(entry: &DirEntry) -> Option<(String, PathBuf)> {
-    if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
-        infer_file(entry)
-    } else if entry.file_type().map(|t| t.is_dir()).ok() == Some(true) {
+    if entry.file_type().map_or(false, |t| t.is_dir()) {
         infer_subdirectory(entry)
+    } else if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
+        infer_file(entry)
     } else {
         None
     }
@@ -713,7 +744,7 @@ https://github.com/rust-lang/cargo/issues/5330",
 fn inferred_to_toml_targets(inferred: &[(String, PathBuf)]) -> Vec<TomlTarget> {
     inferred
         .iter()
-        .map(|&(ref name, ref path)| TomlTarget {
+        .map(|(name, path)| TomlTarget {
             name: Some(name.clone()),
             path: Some(PathValue(path.clone())),
             ..TomlTarget::new()
@@ -766,7 +797,7 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     Ok(())
 }
 
-fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
+fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
     let t2 = target.clone();
     target
         .set_tested(toml.test.unwrap_or_else(|| t2.tested()))
@@ -775,22 +806,108 @@ fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> Car
         .set_benched(toml.bench.unwrap_or_else(|| t2.benched()))
         .set_harness(toml.harness.unwrap_or_else(|| t2.harness()))
         .set_proc_macro(toml.proc_macro().unwrap_or_else(|| t2.proc_macro()))
+        .set_doc_scrape_examples(match toml.doc_scrape_examples {
+            None => RustdocScrapeExamples::Unset,
+            Some(false) => RustdocScrapeExamples::Disabled,
+            Some(true) => RustdocScrapeExamples::Enabled,
+        })
         .set_for_host(match (toml.plugin, toml.proc_macro()) {
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,
             (Some(false), _) | (_, Some(false)) => false,
         });
     if let Some(edition) = toml.edition.clone() {
-        features
-            .require(Feature::edition())
-            .chain_err(|| "editions are unstable")?;
         target.set_edition(
             edition
                 .parse()
-                .chain_err(|| "failed to parse the `edition` key")?,
+                .with_context(|| "failed to parse the `edition` key")?,
         );
     }
     Ok(())
+}
+
+/// Build an error message for a target path that cannot be determined either
+/// by auto-discovery or specifying.
+///
+/// This function tries to detect commonly wrong paths for targets:
+///
+/// test -> tests/*.rs, tests/*/main.rs
+/// bench -> benches/*.rs, benches/*/main.rs
+/// example -> examples/*.rs, examples/*/main.rs
+/// bin -> src/bin/*.rs, src/bin/*/main.rs
+///
+/// Note that the logic need to sync with [`infer_from_directory`] if changes.
+fn target_path_not_found_error_message(
+    package_root: &Path,
+    target: &TomlTarget,
+    target_kind: &str,
+) -> String {
+    fn possible_target_paths(name: &str, kind: &str, commonly_wrong: bool) -> [PathBuf; 2] {
+        let mut target_path = PathBuf::new();
+        match (kind, commonly_wrong) {
+            // commonly wrong paths
+            ("test" | "bench" | "example", true) => target_path.push(kind),
+            ("bin", true) => {
+                target_path.push("src");
+                target_path.push("bins");
+            }
+            // default inferred paths
+            ("test", false) => target_path.push(DEFAULT_TEST_DIR_NAME),
+            ("bench", false) => target_path.push(DEFAULT_BENCH_DIR_NAME),
+            ("example", false) => target_path.push(DEFAULT_EXAMPLE_DIR_NAME),
+            ("bin", false) => {
+                target_path.push("src");
+                target_path.push(DEFAULT_BIN_DIR_NAME);
+            }
+            _ => unreachable!("invalid target kind: {}", kind),
+        }
+        target_path.push(name);
+
+        let target_path_file = {
+            let mut path = target_path.clone();
+            path.set_extension("rs");
+            path
+        };
+        let target_path_subdir = {
+            target_path.push("main.rs");
+            target_path
+        };
+        return [target_path_file, target_path_subdir];
+    }
+
+    let target_name = target.name();
+    let commonly_wrong_paths = possible_target_paths(&target_name, target_kind, true);
+    let possible_paths = possible_target_paths(&target_name, target_kind, false);
+    let existing_wrong_path_index = match (
+        package_root.join(&commonly_wrong_paths[0]).exists(),
+        package_root.join(&commonly_wrong_paths[1]).exists(),
+    ) {
+        (true, _) => Some(0),
+        (_, true) => Some(1),
+        _ => None,
+    };
+
+    if let Some(i) = existing_wrong_path_index {
+        return format!(
+            "\
+can't find `{name}` {kind} at default paths, but found a file at `{wrong_path}`.
+Perhaps rename the file to `{possible_path}` for target auto-discovery, \
+or specify {kind}.path if you want to use a non-default path.",
+            name = target_name,
+            kind = target_kind,
+            wrong_path = commonly_wrong_paths[i].display(),
+            possible_path = possible_paths[i].display(),
+        );
+    }
+
+    format!(
+        "can't find `{name}` {kind} at `{path_file}` or `{path_dir}`. \
+        Please specify {kind}.path if you want to use a non-default path.",
+        name = target_name,
+        kind = target_kind,
+        path_file = possible_paths[0].display(),
+        path_dir = possible_paths[1].display(),
+    )
 }
 
 fn target_path(
@@ -809,23 +926,39 @@ fn target_path(
 
     let mut matching = inferred
         .iter()
-        .filter(|&&(ref n, _)| n == &name)
-        .map(|&(_, ref p)| p.clone());
+        .filter(|(n, _)| n == &name)
+        .map(|(_, p)| p.clone());
 
     let first = matching.next();
     let second = matching.next();
     match (first, second) {
         (Some(path), None) => Ok(path),
-        (None, None) | (Some(_), Some(_)) => {
+        (None, None) => {
+            if edition == Edition::Edition2015 {
+                if let Some(path) = legacy_path(target) {
+                    return Ok(path);
+                }
+            }
+            Err(target_path_not_found_error_message(
+                package_root,
+                target,
+                target_kind,
+            ))
+        }
+        (Some(p0), Some(p1)) => {
             if edition == Edition::Edition2015 {
                 if let Some(path) = legacy_path(target) {
                     return Ok(path);
                 }
             }
             Err(format!(
-                "can't find `{name}` {target_kind}, specify {target_kind}.path",
-                name = name,
-                target_kind = target_kind
+                "\
+cannot infer path for `{}` {}
+Cargo doesn't know which to use because multiple target files found at `{}` and `{}`.",
+                target.name(),
+                target_kind,
+                p0.strip_prefix(package_root).unwrap_or(&p0).display(),
+                p1.strip_prefix(package_root).unwrap_or(&p1).display(),
             ))
         }
         (None, Some(_)) => unreachable!(),

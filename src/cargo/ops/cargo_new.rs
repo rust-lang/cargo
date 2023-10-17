@@ -1,18 +1,18 @@
-use crate::core::{Shell, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::core::{Edition, Shell, Workspace};
+use crate::util::errors::CargoResult;
+use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
-use crate::util::{paths, restricted_names, Config};
-use git2::Config as GitConfig;
-use git2::Repository as GitRepository;
+use crate::util::{restricted_names, Config};
+use anyhow::{anyhow, Context as _};
+use cargo_util::paths;
 use serde::de;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::env;
-use std::fmt;
+use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::str::{from_utf8, FromStr};
+use std::str::FromStr;
+use std::{fmt, slice};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl {
@@ -52,6 +52,7 @@ impl<'de> de::Deserialize<'de> for VersionControl {
 pub struct NewOptions {
     pub version_control: Option<VersionControl>,
     pub kind: NewProjectKind,
+    pub auto_detect_kind: bool,
     /// Absolute path to the directory for the new package
     pub path: PathBuf,
     pub name: Option<String>,
@@ -92,7 +93,6 @@ struct MkOptions<'a> {
     path: &'a Path,
     name: &'a str,
     source_files: Vec<SourceFileInformation>,
-    bin: bool,
     edition: Option<&'a str>,
     registry: Option<&'a str>,
 }
@@ -107,16 +107,18 @@ impl NewOptions {
         edition: Option<String>,
         registry: Option<String>,
     ) -> CargoResult<NewOptions> {
+        let auto_detect_kind = !bin && !lib;
+
         let kind = match (bin, lib) {
             (true, true) => anyhow::bail!("can't specify both lib and binary outputs"),
             (false, true) => NewProjectKind::Lib,
-            // default to bin
             (_, false) => NewProjectKind::Bin,
         };
 
         let opts = NewOptions {
             version_control,
             kind,
+            auto_detect_kind,
             path,
             name,
             edition,
@@ -128,8 +130,14 @@ impl NewOptions {
 
 #[derive(Deserialize)]
 struct CargoNewConfig {
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[allow(dead_code)]
     name: Option<String>,
+
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[allow(dead_code)]
     email: Option<String>,
+
     #[serde(rename = "vcs")]
     version_control: Option<VersionControl>,
 }
@@ -154,6 +162,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     })
 }
 
+/// See also `util::toml::embedded::sanitize_name`
 fn check_name(
     name: &str,
     show_name_help: bool,
@@ -163,23 +172,42 @@ fn check_name(
     // If --name is already used to override, no point in suggesting it
     // again as a fix.
     let name_help = if show_name_help {
-        "\nIf you need a crate name to not match the directory name, consider using --name flag."
+        "\nIf you need a package name to not match the directory name, consider using --name flag."
     } else {
         ""
     };
-    restricted_names::validate_package_name(name, "crate name", name_help)?;
+    let bin_help = || {
+        let mut help = String::from(name_help);
+        if has_bin {
+            help.push_str(&format!(
+                "\n\
+                If you need a binary with the name \"{name}\", use a valid package \
+                name, and set the binary name to be different from the package. \
+                This can be done by setting the binary filename to `src/bin/{name}.rs` \
+                or change the name in Cargo.toml with:\n\
+                \n    \
+                [[bin]]\n    \
+                name = \"{name}\"\n    \
+                path = \"src/main.rs\"\n\
+            ",
+                name = name
+            ));
+        }
+        help
+    };
+    restricted_names::validate_package_name(name, "package name", &bin_help())?;
 
     if restricted_names::is_keyword(name) {
         anyhow::bail!(
-            "the name `{}` cannot be used as a crate name, it is a Rust keyword{}",
+            "the name `{}` cannot be used as a package name, it is a Rust keyword{}",
             name,
-            name_help
+            bin_help()
         );
     }
     if restricted_names::is_conflicting_artifact_name(name) {
         if has_bin {
             anyhow::bail!(
-                "the name `{}` cannot be used as a crate name, \
+                "the name `{}` cannot be used as a package name, \
                 it conflicts with cargo's build directory names{}",
                 name,
                 name_help
@@ -195,16 +223,17 @@ fn check_name(
     }
     if name == "test" {
         anyhow::bail!(
-            "the name `test` cannot be used as a crate name, \
+            "the name `test` cannot be used as a package name, \
             it conflicts with Rust's built-in test library{}",
-            name_help
+            bin_help()
         );
     }
     if ["core", "std", "alloc", "proc_macro", "proc-macro"].contains(&name) {
         shell.warn(format!(
             "the name `{}` is part of Rust's standard library\n\
-            It is recommended to use a different name to avoid problems.",
-            name
+            It is recommended to use a different name to avoid problems.{}",
+            name,
+            bin_help()
         ))?;
     }
     if restricted_names::is_windows_reserved(name) {
@@ -225,12 +254,24 @@ fn check_name(
     if restricted_names::is_non_ascii_name(name) {
         shell.warn(format!(
             "the name `{}` contains non-ASCII characters\n\
-            Support for non-ASCII crate names is experimental and only valid \
-            on the nightly toolchain.",
+            Non-ASCII crate names are not supported by Rust.",
             name
         ))?;
     }
 
+    Ok(())
+}
+
+/// Checks if the path contains any invalid PATH env characters.
+fn check_path(path: &Path, shell: &mut Shell) -> CargoResult<()> {
+    // warn if the path contains characters that will break `env::join_paths`
+    if let Err(_) = paths::join_paths(slice::from_ref(&OsStr::new(path)), "") {
+        let path = path.to_string_lossy();
+        shell.warn(format!(
+            "the path `{path}` contains invalid PATH characters (usually `:`, `;`, or `\"`)\n\
+            It is recommended to use a different name to avoid problems."
+        ))?;
+    }
     Ok(())
 }
 
@@ -364,6 +405,26 @@ fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformatio
     }
 }
 
+fn calculate_new_project_kind(
+    requested_kind: NewProjectKind,
+    auto_detect_kind: bool,
+    found_files: &Vec<SourceFileInformation>,
+) -> NewProjectKind {
+    let bin_file = found_files.iter().find(|x| x.bin);
+
+    let kind_from_files = if !found_files.is_empty() && bin_file.is_none() {
+        NewProjectKind::Lib
+    } else {
+        NewProjectKind::Bin
+    };
+
+    if auto_detect_kind {
+        return kind_from_files;
+    }
+
+    requested_kind
+}
+
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
     if path.exists() {
@@ -374,26 +435,24 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     }
 
+    check_path(path, &mut config.shell())?;
+
+    let is_bin = opts.kind.is_bin();
+
     let name = get_name(path, opts)?;
-    check_name(
-        name,
-        opts.name.is_none(),
-        opts.kind.is_bin(),
-        &mut config.shell(),
-    )?;
+    check_name(name, opts.name.is_none(), is_bin, &mut config.shell())?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path,
         name,
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
-        bin: opts.kind.is_bin(),
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
 
-    mk(config, &mkopts).chain_err(|| {
-        anyhow::format_err!(
+    mk(config, &mkopts).with_context(|| {
+        format!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
@@ -402,9 +461,9 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
+pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     // This is here just as a random location to exercise the internal error handling.
-    if std::env::var_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
+    if config.get_env_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
         return Err(crate::util::internal("internal error test"));
     }
 
@@ -414,50 +473,72 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
 
+    check_path(path, &mut config.shell())?;
+
     let name = get_name(path, opts)?;
 
     let mut src_paths_types = vec![];
 
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
 
+    let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
+    let has_bin = kind.is_bin();
+
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(opts.kind.is_bin(), name.to_string()));
-    } else {
-        // --bin option may be ignored if lib.rs or src/lib.rs present
-        // Maybe when doing `cargo init --bin` inside a library package stub,
-        // user may mean "initialize for library, but also add binary target"
+        src_paths_types.push(plan_new_source_file(has_bin, name.to_string()));
+    } else if src_paths_types.len() == 1 && !src_paths_types.iter().any(|x| x.bin == has_bin) {
+        // we've found the only file and it's not the type user wants. Change the type and warn
+        let file_type = if src_paths_types[0].bin {
+            NewProjectKind::Bin
+        } else {
+            NewProjectKind::Lib
+        };
+        config.shell().warn(format!(
+            "file `{}` seems to be a {} file",
+            src_paths_types[0].relative_path, file_type
+        ))?;
+        src_paths_types[0].bin = has_bin
+    } else if src_paths_types.len() > 1 && !has_bin {
+        // We have found both lib and bin files and the user would like us to treat both as libs
+        anyhow::bail!(
+            "cannot have a package with \
+             multiple libraries, \
+             found both `{}` and `{}`",
+            src_paths_types[0].relative_path,
+            src_paths_types[1].relative_path
+        )
     }
-    let has_bin = src_paths_types.iter().any(|x| x.bin);
+
     check_name(name, opts.name.is_none(), has_bin, &mut config.shell())?;
 
     let mut version_control = opts.version_control;
 
     if version_control == None {
-        let mut num_detected_vsces = 0;
+        let mut num_detected_vcses = 0;
 
         if path.join(".git").exists() {
             version_control = Some(VersionControl::Git);
-            num_detected_vsces += 1;
+            num_detected_vcses += 1;
         }
 
         if path.join(".hg").exists() {
             version_control = Some(VersionControl::Hg);
-            num_detected_vsces += 1;
+            num_detected_vcses += 1;
         }
 
         if path.join(".pijul").exists() {
             version_control = Some(VersionControl::Pijul);
-            num_detected_vsces += 1;
+            num_detected_vcses += 1;
         }
 
         if path.join(".fossil").exists() {
             version_control = Some(VersionControl::Fossil);
-            num_detected_vsces += 1;
+            num_detected_vcses += 1;
         }
 
         // if none exists, maybe create git, like in `cargo new`
 
-        if num_detected_vsces > 1 {
+        if num_detected_vcses > 1 {
             anyhow::bail!(
                 "more than one of .hg, .git, .pijul, .fossil configurations \
                  found and the ignore file can't be filled in as \
@@ -470,20 +551,19 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         version_control,
         path,
         name,
-        bin: has_bin,
         source_files: src_paths_types,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
 
-    mk(config, &mkopts).chain_err(|| {
-        anyhow::format_err!(
+    mk(config, &mkopts).with_context(|| {
+        format!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
         )
     })?;
-    Ok(())
+    Ok(kind)
 }
 
 /// IgnoreList
@@ -492,6 +572,8 @@ struct IgnoreList {
     ignore: Vec<String>,
     /// mercurial formatted entries
     hg_ignore: Vec<String>,
+    /// Fossil-formatted entries.
+    fossil_ignore: Vec<String>,
 }
 
 impl IgnoreList {
@@ -500,15 +582,17 @@ impl IgnoreList {
         IgnoreList {
             ignore: Vec::new(),
             hg_ignore: Vec::new(),
+            fossil_ignore: Vec::new(),
         }
     }
 
-    /// add a new entry to the ignore list. Requires two arguments with the
-    /// entry in two different formats. One for "git style" entries and one for
-    /// "mercurial like" entries.
-    fn push(&mut self, ignore: &str, hg_ignore: &str) {
+    /// Add a new entry to the ignore list. Requires three arguments with the
+    /// entry in possibly three different formats. One for "git style" entries,
+    /// one for "mercurial style" entries and one for "fossil style" entries.
+    fn push(&mut self, ignore: &str, hg_ignore: &str, fossil_ignore: &str) {
         self.ignore.push(ignore.to_string());
         self.hg_ignore.push(hg_ignore.to_string());
+        self.fossil_ignore.push(fossil_ignore.to_string());
     }
 
     /// Return the correctly formatted content of the ignore file for the given
@@ -516,6 +600,7 @@ impl IgnoreList {
     fn format_new(&self, vcs: VersionControl) -> String {
         let ignore_items = match vcs {
             VersionControl::Hg => &self.hg_ignore,
+            VersionControl::Fossil => &self.fossil_ignore,
             _ => &self.ignore,
         };
 
@@ -526,63 +611,91 @@ impl IgnoreList {
     /// already exists. It reads the contents of the given `BufRead` and
     /// checks if the contents of the ignore list are already existing in the
     /// file.
-    fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> String {
-        // TODO: is unwrap safe?
-        let existing_items = existing.lines().collect::<Result<Vec<_>, _>>().unwrap();
+    fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> CargoResult<String> {
+        let mut existing_items = Vec::new();
+        for (i, item) in existing.lines().enumerate() {
+            match item {
+                Ok(s) => existing_items.push(s),
+                Err(err) => match err.kind() {
+                    ErrorKind::InvalidData => {
+                        return Err(anyhow!(
+                            "Character at line {} is invalid. Cargo only supports UTF-8.",
+                            i
+                        ))
+                    }
+                    _ => return Err(anyhow!(err)),
+                },
+            }
+        }
 
         let ignore_items = match vcs {
             VersionControl::Hg => &self.hg_ignore,
+            VersionControl::Fossil => &self.fossil_ignore,
             _ => &self.ignore,
         };
 
-        let mut out = "\n\n# Added by cargo\n".to_string();
-        if ignore_items
-            .iter()
-            .any(|item| existing_items.contains(item))
-        {
-            out.push_str("#\n# already existing elements were commented out\n");
+        let mut out = String::new();
+
+        // Fossil does not support `#` comments.
+        if vcs != VersionControl::Fossil {
+            out.push_str("\n\n# Added by cargo\n");
+            if ignore_items
+                .iter()
+                .any(|item| existing_items.contains(item))
+            {
+                out.push_str("#\n# already existing elements were commented out\n");
+            }
+            out.push('\n');
         }
-        out.push('\n');
 
         for item in ignore_items {
             if existing_items.contains(item) {
+                if vcs == VersionControl::Fossil {
+                    // Just merge for Fossil.
+                    continue;
+                }
                 out.push('#');
             }
             out.push_str(item);
             out.push('\n');
         }
 
-        out
+        Ok(out)
     }
 }
 
 /// Writes the ignore file to the given directory. If the ignore file for the
 /// given vcs system already exists, its content is read and duplicate ignore
 /// file entries are filtered out.
-fn write_ignore_file(
-    base_path: &Path,
-    list: &IgnoreList,
-    vcs: VersionControl,
-) -> CargoResult<String> {
-    let fp_ignore = match vcs {
-        VersionControl::Git => base_path.join(".gitignore"),
-        VersionControl::Hg => base_path.join(".hgignore"),
-        VersionControl::Pijul => base_path.join(".ignore"),
-        VersionControl::Fossil => return Ok("".to_string()),
-        VersionControl::NoVcs => return Ok("".to_string()),
-    };
+fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -> CargoResult<()> {
+    // Fossil only supports project-level settings in a dedicated subdirectory.
+    if vcs == VersionControl::Fossil {
+        paths::create_dir_all(base_path.join(".fossil-settings"))?;
+    }
 
-    let ignore: String = match paths::open(&fp_ignore) {
-        Err(err) => match err.downcast_ref::<std::io::Error>() {
-            Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
-            _ => return Err(err),
-        },
-        Ok(file) => list.format_existing(BufReader::new(file), vcs),
-    };
+    for fp_ignore in match vcs {
+        VersionControl::Git => vec![base_path.join(".gitignore")],
+        VersionControl::Hg => vec![base_path.join(".hgignore")],
+        VersionControl::Pijul => vec![base_path.join(".ignore")],
+        // Fossil has a cleaning functionality configured in a separate file.
+        VersionControl::Fossil => vec![
+            base_path.join(".fossil-settings/ignore-glob"),
+            base_path.join(".fossil-settings/clean-glob"),
+        ],
+        VersionControl::NoVcs => return Ok(()),
+    } {
+        let ignore: String = match paths::open(&fp_ignore) {
+            Err(err) => match err.downcast_ref::<std::io::Error>() {
+                Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
+                _ => return Err(err),
+            },
+            Ok(file) => list.format_existing(BufReader::new(file), vcs)?,
+        };
 
-    paths::append(&fp_ignore, ignore.as_bytes())?;
+        paths::append(&fp_ignore, ignore.as_bytes())?;
+    }
 
-    Ok(ignore)
+    Ok(())
 }
 
 /// Initializes the correct VCS system based on the provided config.
@@ -625,13 +738,10 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let name = opts.name;
     let cfg = config.get::<CargoNewConfig>("cargo-new")?;
 
-    // Using the push method with two arguments ensures that the entries for
-    // both `ignore` and `hgignore` are in sync.
+    // Using the push method with multiple arguments ensures that the entries
+    // for all mutually-incompatible VCS in terms of syntax are in sync.
     let mut ignore = IgnoreList::new();
-    ignore.push("/target", "^target/");
-    if !opts.bin {
-        ignore.push("Cargo.lock", "glob:Cargo.lock");
-    }
+    ignore.push("/target", "^target$", "target");
 
     let vcs = opts.version_control.unwrap_or_else(|| {
         let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
@@ -645,86 +755,83 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let (author_name, email) = discover_author(path)?;
-    let author = match (cfg.name, cfg.email, author_name, email) {
-        (Some(name), Some(email), _, _)
-        | (Some(name), None, _, Some(email))
-        | (None, Some(email), name, _)
-        | (None, None, name, Some(email)) => {
-            if email.is_empty() {
-                name
-            } else {
-                format!("{} <{}>", name, email)
-            }
-        }
-        (Some(name), None, _, None) | (None, None, name, None) => name,
+    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
+    let mut manifest = toml_edit::Document::new();
+    manifest["package"] = toml_edit::Item::Table(toml_edit::Table::new());
+    manifest["package"]["name"] = toml_edit::value(name);
+    manifest["package"]["version"] = toml_edit::value("0.1.0");
+    let edition = match opts.edition {
+        Some(edition) => edition.to_string(),
+        None => Edition::LATEST_STABLE.to_string(),
     };
-
-    let mut cargotoml_path_specifier = String::new();
+    manifest["package"]["edition"] = toml_edit::value(edition);
+    if let Some(registry) = opts.registry {
+        let mut array = toml_edit::Array::default();
+        array.push(registry);
+        manifest["package"]["publish"] = toml_edit::value(array);
+    }
+    let mut dep_table = toml_edit::Table::default();
+    dep_table.decor_mut().set_prefix("\n# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html\n\n");
+    manifest["dependencies"] = toml_edit::Item::Table(dep_table);
 
     // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
-
     for i in &opts.source_files {
         if i.bin {
             if i.relative_path != "src/main.rs" {
-                cargotoml_path_specifier.push_str(&format!(
-                    r#"
-[[bin]]
-name = "{}"
-path = {}
-"#,
-                    i.target_name,
-                    toml::Value::String(i.relative_path.clone())
-                ));
+                let mut bin = toml_edit::Table::new();
+                bin["name"] = toml_edit::value(i.target_name.clone());
+                bin["path"] = toml_edit::value(i.relative_path.clone());
+                manifest["bin"]
+                    .or_insert(toml_edit::Item::ArrayOfTables(
+                        toml_edit::ArrayOfTables::new(),
+                    ))
+                    .as_array_of_tables_mut()
+                    .expect("bin is an array of tables")
+                    .push(bin);
             }
         } else if i.relative_path != "src/lib.rs" {
-            cargotoml_path_specifier.push_str(&format!(
-                r#"
-[lib]
-name = "{}"
-path = {}
-"#,
-                i.target_name,
-                toml::Value::String(i.relative_path.clone())
-            ));
+            let mut lib = toml_edit::Table::new();
+            lib["name"] = toml_edit::value(i.target_name.clone());
+            lib["path"] = toml_edit::value(i.relative_path.clone());
+            manifest["lib"] = toml_edit::Item::Table(lib);
         }
     }
 
-    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
+    let manifest_path = path.join("Cargo.toml");
+    if let Ok(root_manifest_path) = find_root_manifest_for_wd(&manifest_path) {
+        let root_manifest = paths::read(&root_manifest_path)?;
+        // Sometimes the root manifest is not a valid manifest, so we only try to parse it if it is.
+        // This should not block the creation of the new project. It is only a best effort to
+        // inherit the workspace package keys.
+        if let Ok(workspace_document) = root_manifest.parse::<toml_edit::Document>() {
+            if let Some(workspace_package_keys) = workspace_document
+                .get("workspace")
+                .and_then(|workspace| workspace.get("package"))
+                .and_then(|package| package.as_table())
+            {
+                update_manifest_with_inherited_workspace_package_keys(
+                    opts,
+                    &mut manifest,
+                    workspace_package_keys,
+                )
+            }
 
-    paths::write(
-        &path.join("Cargo.toml"),
-        format!(
-            r#"[package]
-name = "{}"
-version = "0.1.0"
-authors = [{}]
-edition = {}
-{}
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+            // Try to inherit the workspace lints key if it exists.
+            if workspace_document
+                .get("workspace")
+                .and_then(|workspace| workspace.get("lints"))
+                .is_some()
+            {
+                let mut table = toml_edit::Table::new();
+                table["workspace"] = toml_edit::value(true);
+                manifest["lints"] = toml_edit::Item::Table(table);
+            }
+        }
+    }
 
-[dependencies]
-{}"#,
-            name,
-            toml::Value::String(author),
-            match opts.edition {
-                Some(edition) => toml::Value::String(edition.to_string()),
-                None => toml::Value::String("2018".to_string()),
-            },
-            match opts.registry {
-                Some(registry) => format!(
-                    "publish = {}\n",
-                    toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
-                ),
-                None => "".to_string(),
-            },
-            cargotoml_path_specifier
-        )
-        .as_bytes(),
-    )?;
+    paths::write(&manifest_path, manifest.to_string())?;
 
     // Create all specified source files (with respective parent directories) if they don't exist.
-
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());
 
@@ -740,11 +847,18 @@ fn main() {
 "
         } else {
             b"\
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let result = add(2, 2);
+        assert_eq!(result, 4);
     }
 }
 "
@@ -754,20 +868,18 @@ mod tests {
             paths::write(&path_of_source_file, default_file_content)?;
 
             // Format the newly created source file
-            match Command::new("rustfmt").arg(&path_of_source_file).output() {
-                Err(e) => log::warn!("failed to call rustfmt: {}", e),
-                Ok(output) => {
-                    if !output.status.success() {
-                        log::warn!("rustfmt failed: {:?}", from_utf8(&output.stdout));
-                    }
-                }
-            };
+            if let Err(e) = cargo_util::ProcessBuilder::new("rustfmt")
+                .arg(&path_of_source_file)
+                .exec_with_output()
+            {
+                tracing::warn!("failed to call rustfmt: {:#}", e);
+            }
         }
     }
 
     if let Err(e) = Workspace::new(&path.join("Cargo.toml"), config) {
         crate::display_warning_with_error(
-            "compiling this new crate may not work due to invalid \
+            "compiling this new package may not work due to invalid \
              workspace configuration",
             &e,
             &mut config.shell(),
@@ -777,83 +889,39 @@ mod tests {
     Ok(())
 }
 
-fn get_environment_variable(variables: &[&str]) -> Option<String> {
-    variables.iter().filter_map(|var| env::var(var).ok()).next()
-}
+// Update the manifest with the inherited workspace package keys.
+// If the option is not set, the key is removed from the manifest.
+// If the option is set, keep the value from the manifest.
+fn update_manifest_with_inherited_workspace_package_keys(
+    opts: &MkOptions<'_>,
+    manifest: &mut toml_edit::Document,
+    workspace_package_keys: &toml_edit::Table,
+) {
+    if workspace_package_keys.is_empty() {
+        return;
+    }
 
-fn discover_author(path: &Path) -> CargoResult<(String, Option<String>)> {
-    let git_config = find_git_config(path);
-    let git_config = git_config.as_ref();
-
-    let name_variables = [
-        "CARGO_NAME",
-        "GIT_AUTHOR_NAME",
-        "GIT_COMMITTER_NAME",
-        "USER",
-        "USERNAME",
-        "NAME",
-    ];
-    let name = get_environment_variable(&name_variables[0..3])
-        .or_else(|| git_config.and_then(|g| g.get_string("user.name").ok()))
-        .or_else(|| get_environment_variable(&name_variables[3..]));
-
-    let name = match name {
-        Some(name) => name,
-        None => {
-            let username_var = if cfg!(windows) { "USERNAME" } else { "USER" };
-            anyhow::bail!(
-                "could not determine the current user, please set ${}",
-                username_var
-            )
-        }
+    let try_remove_and_inherit_package_key = |key: &str, manifest: &mut toml_edit::Document| {
+        let package = manifest["package"]
+            .as_table_mut()
+            .expect("package is a table");
+        package.remove(key);
+        let mut table = toml_edit::Table::new();
+        table.set_dotted(true);
+        table["workspace"] = toml_edit::value(true);
+        package.insert(key, toml_edit::Item::Table(table));
     };
-    let email_variables = [
-        "CARGO_EMAIL",
-        "GIT_AUTHOR_EMAIL",
-        "GIT_COMMITTER_EMAIL",
-        "EMAIL",
-    ];
-    let email = get_environment_variable(&email_variables[0..3])
-        .or_else(|| git_config.and_then(|g| g.get_string("user.email").ok()))
-        .or_else(|| get_environment_variable(&email_variables[3..]));
 
-    let name = name.trim().to_string();
-    let email = email.map(|s| {
-        let mut s = s.trim();
-
-        // In some cases emails will already have <> remove them since they
-        // are already added when needed.
-        if s.starts_with('<') && s.ends_with('>') {
-            s = &s[1..s.len() - 1];
+    // Inherit keys from the workspace.
+    // Only keep the value from the manifest if the option is set.
+    for (key, _) in workspace_package_keys {
+        if key == "edition" && opts.edition.is_some() {
+            continue;
+        }
+        if key == "publish" && opts.registry.is_some() {
+            continue;
         }
 
-        s.to_string()
-    });
-
-    Ok((name, email))
-}
-
-fn find_git_config(path: &Path) -> Option<GitConfig> {
-    match env::var("__CARGO_TEST_ROOT") {
-        Ok(test_root) => find_tests_git_config(test_root),
-        Err(_) => find_real_git_config(path),
+        try_remove_and_inherit_package_key(key, manifest);
     }
-}
-
-fn find_tests_git_config(cargo_test_root: String) -> Option<GitConfig> {
-    // Path where 'git config --local' puts variables when run from inside a test
-    let test_git_config = PathBuf::from(cargo_test_root).join(".git").join("config");
-
-    if test_git_config.exists() {
-        GitConfig::open(&test_git_config).ok()
-    } else {
-        GitConfig::open_default().ok()
-    }
-}
-
-fn find_real_git_config(path: &Path) -> Option<GitConfig> {
-    GitRepository::discover(path)
-        .and_then(|repo| repo.config())
-        .or_else(|_| GitConfig::open_default())
-        .ok()
 }

@@ -1,0 +1,1 @@
+error: cannot override workspace dependency with `--default-features`, either change `workspace.dependencies.foo.default-features` or define the dependency exclusively in the package's manifest

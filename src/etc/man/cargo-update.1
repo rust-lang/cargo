@@ -4,9 +4,9 @@
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-update \- Update dependencies as recorded in the local lock file
+cargo\-update \[em] Update dependencies as recorded in the local lock file
 .SH "SYNOPSIS"
-\fBcargo update\fR [\fIoptions\fR]
+\fBcargo update\fR [\fIoptions\fR] \fIspec\fR
 .SH "DESCRIPTION"
 This command will update dependencies in the \fBCargo.lock\fR file to the latest
 version. If the \fBCargo.lock\fR file does not exist, it will be created with the
@@ -14,30 +14,29 @@ latest available versions.
 .SH "OPTIONS"
 .SS "Update Options"
 .sp
-\fB\-p\fR \fIspec\fR\&..., 
-\fB\-\-package\fR \fIspec\fR\&...
+\fIspec\fR\[u2026]
 .RS 4
 Update only the specified packages. This flag may be specified
 multiple times. See \fBcargo\-pkgid\fR(1) for the SPEC format.
 .sp
-If packages are specified with the \fB\-p\fR flag, then a conservative update of
+If packages are specified with \fIspec\fR, then a conservative update of
 the lockfile will be performed. This means that only the dependency specified
 by SPEC will be updated. Its transitive dependencies will be updated only if
 SPEC cannot be updated without updating dependencies.  All other dependencies
 will remain locked at their currently recorded versions.
 .sp
-If \fB\-p\fR is not specified, all dependencies are updated.
+If \fIspec\fR is not specified, all dependencies are updated.
 .RE
 .sp
-\fB\-\-aggressive\fR
+\fB\-\-recursive\fR
 .RS 4
-When used with \fB\-p\fR, dependencies of \fIspec\fR are forced to update as well.
+When used with \fIspec\fR, dependencies of \fIspec\fR are forced to update as well.
 Cannot be used with \fB\-\-precise\fR\&.
 .RE
 .sp
 \fB\-\-precise\fR \fIprecise\fR
 .RS 4
-When used with \fB\-p\fR, allows you to specify a specific version number to set
+When used with \fIspec\fR, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).
 .RE
@@ -46,21 +45,21 @@ revision (such as a SHA hash or tag).
 \fB\-\-workspace\fR
 .RS 4
 Attempt to update only packages defined in the workspace. Other packages
-are updated only if they don't already exist in the lockfile. This
-option is useful for updating \fBCargo.lock\fR after you've changed version
+are updated only if they don\[cq]t already exist in the lockfile. This
+option is useful for updating \fBCargo.lock\fR after you\[cq]ve changed version
 numbers in \fBCargo.toml\fR\&.
 .RE
 .sp
 \fB\-\-dry\-run\fR
 .RS 4
-Displays what would be updated, but doesn't actually write the lockfile.
+Displays what would be updated, but doesn\[cq]t actually write the lockfile.
 .RE
 .SS "Display Options"
 .sp
 \fB\-v\fR, 
 \fB\-\-verbose\fR
 .RS 4
-Use verbose output. May be specified twice for "very verbose" output which
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the \fBterm.verbose\fR
 \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
@@ -69,7 +68,9 @@ May also be specified with the \fBterm.verbose\fR
 \fB\-q\fR, 
 \fB\-\-quiet\fR
 .RS 4
-No output printed to stdout.
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
 \fB\-\-color\fR \fIwhen\fR
@@ -139,6 +140,26 @@ See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/override
 for more information about how toolchain overrides work.
 .RE
 .sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
+.RE
+.sp
 \fB\-h\fR, 
 \fB\-\-help\fR
 .RS 4
@@ -178,7 +199,7 @@ cargo update
 .sp
 .RS 4
 .nf
-cargo update \-p foo \-p bar
+cargo update foo bar
 .fi
 .RE
 .RE
@@ -188,7 +209,7 @@ cargo update \-p foo \-p bar
 .sp
 .RS 4
 .nf
-cargo update \-p foo \-\-precise 1.2.3
+cargo update foo \-\-precise 1.2.3
 .fi
 .RE
 .RE

@@ -3,6 +3,7 @@
 This chapter gives an overview of how to build Cargo, make a change, and
 submit a Pull Request.
 
+0. [Before hacking on Cargo.](#before-hacking-on-cargo)
 1. [Check out the Cargo source.](#checkout-out-the-source)
 2. [Building Cargo.](#building-cargo)
 3. [Making a change.](#making-a-change)
@@ -10,7 +11,16 @@ submit a Pull Request.
 5. [Submitting a Pull Request.](#submitting-a-pull-request)
 6. [The merging process.](#the-merging-process)
 
-## Checkout out the source
+## Before hacking on Cargo
+
+We encourage people to discuss their design before hacking on code. This gives
+the Cargo team a chance to know your idea more. Sometimes after a discussion,
+we even find a way to solve the problem without coding! Typically, you
+[file an issue] or start a thread on the [internals forum] before submitting a
+pull request. Please read [the process] of how features and bugs are managed in
+Cargo.
+
+## Checkout the source
 
 We use the "fork and pull" model [described here][development-models], where
 contributors push changes to their personal fork and [create pull requests] to
@@ -83,7 +93,6 @@ Some guidelines on working on a change:
 * All code changes are expected to comply with the formatting suggested by
   `rustfmt`. You can use `rustup component add rustfmt` to install `rustfmt`
   and use `cargo fmt` to automatically format your code.
-* [Commit as you go][githelp].
 * Include tests that cover all non-trivial code. See the [Testing chapter] for
   more about writing and running tests.
 * All code should be warning-free. This is checked during tests.
@@ -101,7 +110,7 @@ open a Pull Request
   #1234 to the PR. When the PR is merged, GitHub will automatically close the
   issue.
 
-The [rust-highfive] bot will automatically assign a reviewer for the PR. It
+[`@rustbot`] will automatically assign a reviewer for the PR. It
 may take at least a few days for someone to respond. If you don't get a
 response in over a week, feel free to ping the assigned reviewer.
 
@@ -112,6 +121,21 @@ typically finish in under 30 minutes.
 
 The reviewer might point out changes deemed necessary. Large or tricky changes
 may require several passes of review and changes.
+
+### Status labeling
+
+PRs will get marked with [labels] like [`S-waiting-on-review`] or [`S-waiting-on-author`] to indicate their status.
+The [`@rustbot`] bot can be used by anyone to adjust the labels.
+If a PR gets marked as `S-waiting-on-author`, and you have pushed new changes that you would like to be reviewed, you can write a comment on the PR with the text `@rustbot ready`.
+The bot will switch the labels on the PR.
+
+More information about these commands can be found at the [shortcuts documentation].
+
+[labels]: https://github.com/rust-lang/cargo/labels
+[`S-waiting-on-review`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-review
+[`S-waiting-on-author`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-author
+[`@rustbot`]: https://github.com/rustbot
+[shortcuts documentation]: https://forge.rust-lang.org/triagebot/shortcuts.html
 
 ## The merging process
 
@@ -136,12 +160,13 @@ more information on how Cargo releases are made.
 [git]: https://git-scm.com/
 [GitHub]: https://github.com/
 [how-to-clone]: https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository
-[githelp]: https://dont-be-afraid-to-commit.readthedocs.io/en/latest/git/commandlinegit.html
 [Testing chapter]: ../tests/index.md
 [GitHub's keywords]: https://docs.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
-[rust-highfive]: https://github.com/rust-highfive
 [bors]: https://buildbot2.rust-lang.org/homu/
 [`@bors`]: https://github.com/bors
 [homu-cargo]: https://buildbot2.rust-lang.org/homu/queue/cargo
 [homu-rust]: https://buildbot2.rust-lang.org/homu/queue/rust
 [release chapter]: release.md
+[internals forum]: https://internals.rust-lang.org/c/tools-and-infrastructure/cargo
+[file an issue]: https://github.com/rust-lang/cargo/issues
+[the process]: index.md

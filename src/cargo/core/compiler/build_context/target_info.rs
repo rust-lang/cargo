@@ -1,18 +1,34 @@
-use crate::core::compiler::{BuildOutput, CompileKind, CompileMode, CompileTarget, CrateType};
-use crate::core::{Dependency, Target, TargetKind, Workspace};
+//! This modules contains types storing information of target platforms.
+//!
+//! Normally, call [`RustcTargetData::new`] to construct all the target
+//! platform once, and then query info on your demand. For example,
+//!
+//! * [`RustcTargetData::dep_platform_activated`] to check if platform is activated.
+//! * [`RustcTargetData::info`] to get a [`TargetInfo`] for an in-depth query.
+//! * [`TargetInfo::rustc_outputs`] to get a list of supported file types.
+
+use crate::core::compiler::apply_env_config;
+use crate::core::compiler::{
+    BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
+};
+use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
-use crate::util::{CargoResult, CargoResultExt, ProcessBuilder, Rustc};
+use crate::util::interning::InternedString;
+use crate::util::{CargoResult, Rustc};
+use anyhow::Context as _;
 use cargo_platform::{Cfg, CfgExpr};
+use cargo_util::{paths, ProcessBuilder};
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
-use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
 /// Information about the platform target gleaned from querying rustc.
 ///
-/// `RustcTargetData` keeps two of these, one for the host and one for the
-/// target. If no target is specified, it uses a clone from the host.
+/// [`RustcTargetData`] keeps several of these, one for the host and the others
+/// for other specified targets. If no target is specified, it uses a clone from
+/// the host.
 #[derive(Clone)]
 pub struct TargetInfo {
     /// A base process builder for discovering crate type information. In
@@ -23,11 +39,13 @@ pub struct TargetInfo {
     ///
     /// The key is the crate type name (like `cdylib`) and the value is
     /// `Some((prefix, suffix))`, for example `libcargo.so` would be
-    /// `Some(("lib", ".so")). The value is `None` if the crate type is not
+    /// `Some(("lib", ".so"))`. The value is `None` if the crate type is not
     /// supported.
     crate_types: RefCell<HashMap<CrateType, Option<(String, String)>>>,
     /// `cfg` information extracted from `rustc --print=cfg`.
     cfg: Vec<Cfg>,
+    /// Supported values for `-Csplit-debuginfo=` flag, queried from rustc
+    support_split_debuginfo: Vec<String>,
     /// Path to the sysroot.
     pub sysroot: PathBuf,
     /// Path to the "lib" or "bin" directory that rustc uses for its dynamic
@@ -36,9 +54,9 @@ pub struct TargetInfo {
     /// Path to the "lib" directory in the sysroot which rustc uses for linking
     /// target libraries.
     pub sysroot_target_libdir: PathBuf,
-    /// Extra flags to pass to `rustc`, see `env_args`.
+    /// Extra flags to pass to `rustc`, see [`extra_args`].
     pub rustflags: Vec<String>,
-    /// Extra flags to pass to `rustdoc`, see `env_args`.
+    /// Extra flags to pass to `rustdoc`, see [`extra_args`].
     pub rustdocflags: Vec<String>,
 }
 
@@ -96,11 +114,18 @@ impl FileType {
     /// The filename for this FileType that Cargo should use when "uplifting"
     /// it to the destination directory.
     pub fn uplift_filename(&self, target: &Target) -> String {
-        let name = if self.should_replace_hyphens {
-            target.crate_name()
-        } else {
-            target.name().to_string()
+        let name = match target.binary_filename() {
+            Some(name) => name,
+            None => {
+                // For binary crate type, `should_replace_hyphens` will always be false.
+                if self.should_replace_hyphens {
+                    target.crate_name()
+                } else {
+                    target.name().to_string()
+                }
+            }
         };
+
         format!("{}{}{}", self.prefix, name, self.suffix)
     }
 
@@ -118,120 +143,187 @@ impl FileType {
 }
 
 impl TargetInfo {
+    /// Learns the information of target platform from `rustc` invocation(s).
+    ///
+    /// Generally, the first time calling this function is expensive, as it may
+    /// query `rustc` several times. To reduce the cost, output of each `rustc`
+    /// invocation is cached by [`Rustc::cached_output`].
+    ///
+    /// Search `Tricky` to learn why querying `rustc` several times is needed.
     pub fn new(
         config: &Config,
         requested_kinds: &[CompileKind],
         rustc: &Rustc,
         kind: CompileKind,
     ) -> CargoResult<TargetInfo> {
-        let rustflags = env_args(
+        let mut rustflags = extra_args(
             config,
             requested_kinds,
             &rustc.host,
             None,
             kind,
-            "RUSTFLAGS",
+            Flags::Rust,
         )?;
-        let mut process = rustc.process();
-        process
-            .arg("-")
-            .arg("--crate-name")
-            .arg("___")
-            .arg("--print=file-names")
-            .args(&rustflags)
-            .env_remove("RUSTC_LOG");
+        let mut turn = 0;
+        loop {
+            let extra_fingerprint = kind.fingerprint_hash();
 
-        if let CompileKind::Target(target) = kind {
-            process.arg("--target").arg(target.rustc_target());
-        }
+            // Query rustc for several kinds of info from each line of output:
+            // 0) file-names (to determine output file prefix/suffix for given crate type)
+            // 1) sysroot
+            // 2) split-debuginfo
+            // 3) cfg
+            //
+            // Search `--print` to see what we query so far.
+            let mut process = rustc.workspace_process();
+            apply_env_config(config, &mut process)?;
+            process
+                .arg("-")
+                .arg("--crate-name")
+                .arg("___")
+                .arg("--print=file-names")
+                .args(&rustflags)
+                .env_remove("RUSTC_LOG");
 
-        let crate_type_process = process.clone();
-        const KNOWN_CRATE_TYPES: &[CrateType] = &[
-            CrateType::Bin,
-            CrateType::Rlib,
-            CrateType::Dylib,
-            CrateType::Cdylib,
-            CrateType::Staticlib,
-            CrateType::ProcMacro,
-        ];
-        for crate_type in KNOWN_CRATE_TYPES.iter() {
-            process.arg("--crate-type").arg(crate_type.as_str());
-        }
+            // Removes `FD_CLOEXEC` set by `jobserver::Client` to pass jobserver
+            // as environment variables specify.
+            if let Some(client) = config.jobserver_from_env() {
+                process.inherit_jobserver(client);
+            }
 
-        process.arg("--print=sysroot");
-        process.arg("--print=cfg");
+            if let CompileKind::Target(target) = kind {
+                process.arg("--target").arg(target.rustc_target());
+            }
 
-        let (output, error) = rustc
-            .cached_output(&process)
-            .chain_err(|| "failed to run `rustc` to learn about target-specific information")?;
+            let crate_type_process = process.clone();
+            const KNOWN_CRATE_TYPES: &[CrateType] = &[
+                CrateType::Bin,
+                CrateType::Rlib,
+                CrateType::Dylib,
+                CrateType::Cdylib,
+                CrateType::Staticlib,
+                CrateType::ProcMacro,
+            ];
+            for crate_type in KNOWN_CRATE_TYPES.iter() {
+                process.arg("--crate-type").arg(crate_type.as_str());
+            }
 
-        let mut lines = output.lines();
-        let mut map = HashMap::new();
-        for crate_type in KNOWN_CRATE_TYPES {
-            let out = parse_crate_type(crate_type, &process, &output, &error, &mut lines)?;
-            map.insert(crate_type.clone(), out);
-        }
+            process.arg("--print=sysroot");
+            process.arg("--print=split-debuginfo");
+            process.arg("--print=crate-name"); // `___` as a delimiter.
+            process.arg("--print=cfg");
 
-        let line = match lines.next() {
-            Some(line) => line,
-            None => anyhow::bail!(
-                "output of --print=sysroot missing when learning about \
-                 target-specific information from rustc\n{}",
-                output_err_info(&process, &output, &error)
-            ),
-        };
-        let sysroot = PathBuf::from(line);
-        let sysroot_host_libdir = if cfg!(windows) {
-            sysroot.join("bin")
-        } else {
-            sysroot.join("lib")
-        };
-        let mut sysroot_target_libdir = sysroot.clone();
-        sysroot_target_libdir.push("lib");
-        sysroot_target_libdir.push("rustlib");
-        sysroot_target_libdir.push(match &kind {
-            CompileKind::Host => rustc.host.as_str(),
-            CompileKind::Target(target) => target.short_name(),
-        });
-        sysroot_target_libdir.push("lib");
+            let (output, error) = rustc
+                .cached_output(&process, extra_fingerprint)
+                .with_context(|| {
+                    "failed to run `rustc` to learn about target-specific information"
+                })?;
 
-        let cfg = lines
-            .map(|line| Ok(Cfg::from_str(line)?))
-            .filter(TargetInfo::not_user_specific_cfg)
-            .collect::<CargoResult<Vec<_>>>()
-            .chain_err(|| {
-                format!(
-                    "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
-                    output
-                )
-            })?;
+            let mut lines = output.lines();
+            let mut map = HashMap::new();
+            for crate_type in KNOWN_CRATE_TYPES {
+                let out = parse_crate_type(crate_type, &process, &output, &error, &mut lines)?;
+                map.insert(crate_type.clone(), out);
+            }
 
-        Ok(TargetInfo {
-            crate_type_process,
-            crate_types: RefCell::new(map),
-            sysroot,
-            sysroot_host_libdir,
-            sysroot_target_libdir,
+            let Some(line) = lines.next() else {
+                return error_missing_print_output("sysroot", &process, &output, &error);
+            };
+            let sysroot = PathBuf::from(line);
+            let sysroot_host_libdir = if cfg!(windows) {
+                sysroot.join("bin")
+            } else {
+                sysroot.join("lib")
+            };
+            let mut sysroot_target_libdir = sysroot.clone();
+            sysroot_target_libdir.push("lib");
+            sysroot_target_libdir.push("rustlib");
+            sysroot_target_libdir.push(match &kind {
+                CompileKind::Host => rustc.host.as_str(),
+                CompileKind::Target(target) => target.short_name(),
+            });
+            sysroot_target_libdir.push("lib");
+
+            let support_split_debuginfo = {
+                // HACK: abuse `--print=crate-name` to use `___` as a delimiter.
+                let mut res = Vec::new();
+                loop {
+                    match lines.next() {
+                        Some(line) if line == "___" => break,
+                        Some(line) => res.push(line.into()),
+                        None => {
+                            return error_missing_print_output(
+                                "split-debuginfo",
+                                &process,
+                                &output,
+                                &error,
+                            )
+                        }
+                    }
+                }
+                res
+            };
+
+            let cfg = lines
+                .map(|line| Ok(Cfg::from_str(line)?))
+                .filter(TargetInfo::not_user_specific_cfg)
+                .collect::<CargoResult<Vec<_>>>()
+                .with_context(|| {
+                    format!(
+                        "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
+                        output
+                    )
+                })?;
+
             // recalculate `rustflags` from above now that we have `cfg`
             // information
-            rustflags: env_args(
+            let new_flags = extra_args(
                 config,
                 requested_kinds,
                 &rustc.host,
                 Some(&cfg),
                 kind,
-                "RUSTFLAGS",
-            )?,
-            rustdocflags: env_args(
-                config,
-                requested_kinds,
-                &rustc.host,
-                Some(&cfg),
-                kind,
-                "RUSTDOCFLAGS",
-            )?,
-            cfg,
-        })
+                Flags::Rust,
+            )?;
+
+            // Tricky: `RUSTFLAGS` defines the set of active `cfg` flags, active
+            // `cfg` flags define which `.cargo/config` sections apply, and they
+            // in turn can affect `RUSTFLAGS`! This is a bona fide mutual
+            // dependency, and it can even diverge (see `cfg_paradox` test).
+            //
+            // So what we do here is running at most *two* iterations of
+            // fixed-point iteration, which should be enough to cover
+            // practically useful cases, and warn if that's not enough for
+            // convergence.
+            let reached_fixed_point = new_flags == rustflags;
+            if !reached_fixed_point && turn == 0 {
+                turn += 1;
+                rustflags = new_flags;
+                continue;
+            }
+            if !reached_fixed_point {
+                config.shell().warn("non-trivial mutual dependency between target-specific configuration and RUSTFLAGS")?;
+            }
+
+            return Ok(TargetInfo {
+                crate_type_process,
+                crate_types: RefCell::new(map),
+                sysroot,
+                sysroot_host_libdir,
+                sysroot_target_libdir,
+                rustflags,
+                rustdocflags: extra_args(
+                    config,
+                    requested_kinds,
+                    &rustc.host,
+                    Some(&cfg),
+                    kind,
+                    Flags::Rustdoc,
+                )?,
+                cfg,
+                support_split_debuginfo,
+            });
+        }
     }
 
     fn not_user_specific_cfg(cfg: &CargoResult<Cfg>) -> bool {
@@ -246,7 +338,7 @@ impl TargetInfo {
         true
     }
 
-    /// All the target `cfg` settings.
+    /// All the target [`Cfg`] settings.
     pub fn cfg(&self) -> &[Cfg] {
         &self.cfg
     }
@@ -275,9 +367,8 @@ impl TargetInfo {
                 &*v.insert(value)
             }
         };
-        let (prefix, suffix) = match *crate_type_info {
-            Some((ref prefix, ref suffix)) => (prefix, suffix),
-            None => return Ok(None),
+        let Some((prefix, suffix)) = crate_type_info else {
+            return Ok(None);
         };
         let mut ret = vec![FileType {
             suffix: suffix.clone(),
@@ -374,7 +465,7 @@ impl TargetInfo {
                     // the names to match.
                     should_replace_hyphens: false,
                 })
-            } else if target_triple.ends_with("-msvc") {
+            } else if target_triple.ends_with("-msvc") || target_triple.ends_with("-uefi") {
                 ret.push(FileType {
                     suffix: ".pdb".to_string(),
                     prefix: prefix.clone(),
@@ -388,6 +479,25 @@ impl TargetInfo {
                     // preserved.
                     should_replace_hyphens: true,
                 })
+            } else {
+                // Because DWARF Package (dwp) files are produced after the
+                // fact by another tool, there is nothing in the binary that
+                // provides a means to locate them. By convention, debuggers
+                // take the binary filename and append ".dwp" (including to
+                // binaries that already have an extension such as shared libs)
+                // to find the dwp.
+                ret.push(FileType {
+                    // It is important to preserve the existing suffix for
+                    // e.g. shared libraries, where the dwp for libfoo.so is
+                    // expected to be at libfoo.so.dwp.
+                    suffix: format!("{suffix}.dwp"),
+                    prefix: prefix.clone(),
+                    flavor: FileFlavor::DebugInfo,
+                    crate_type: Some(crate_type.clone()),
+                    // Likewise, the dwp needs to match the primary artifact's
+                    // hyphenation exactly.
+                    should_replace_hyphens: crate_type != CrateType::Bin,
+                })
             }
         }
 
@@ -399,7 +509,7 @@ impl TargetInfo {
 
         process.arg("--crate-type").arg(crate_type.as_str());
 
-        let output = process.exec_with_output().chain_err(|| {
+        let output = process.exec_with_output().with_context(|| {
             format!(
                 "failed to run `rustc` to learn about crate-type {} information",
                 crate_type
@@ -408,13 +518,7 @@ impl TargetInfo {
 
         let error = str::from_utf8(&output.stderr).unwrap();
         let output = str::from_utf8(&output.stdout).unwrap();
-        Ok(parse_crate_type(
-            crate_type,
-            &process,
-            output,
-            error,
-            &mut output.lines(),
-        )?)
+        parse_crate_type(crate_type, &process, output, error, &mut output.lines())
     }
 
     /// Returns all the file types generated by rustc for the given mode/target_kind.
@@ -436,7 +540,10 @@ impl TargetInfo {
                 }
             }
             CompileMode::Check { .. } => Ok((vec![FileType::new_rmeta()], Vec::new())),
-            CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::RunCustomBuild => {
+            CompileMode::Doc { .. }
+            | CompileMode::Doctest
+            | CompileMode::Docscrape
+            | CompileMode::RunCustomBuild => {
                 panic!("asked for rustc output for non-rustc mode")
             }
         }
@@ -472,6 +579,13 @@ impl TargetInfo {
         }
         Ok((result, unsupported))
     }
+
+    /// Checks if the debuginfo-split value is supported by this target
+    pub fn supports_debuginfo_split(&self, split: InternedString) -> bool {
+        self.support_split_debuginfo
+            .iter()
+            .any(|sup| sup.as_str() == split.as_str())
+    }
 }
 
 /// Takes rustc output (using specialized command line args), and calculates the file prefix and
@@ -497,25 +611,34 @@ fn parse_crate_type(
     if not_supported {
         return Ok(None);
     }
-    let line = match lines.next() {
-        Some(line) => line,
-        None => anyhow::bail!(
+    let Some(line) = lines.next() else {
+        anyhow::bail!(
             "malformed output when learning about crate-type {} information\n{}",
             crate_type,
             output_err_info(cmd, output, error)
-        ),
+        )
     };
     let mut parts = line.trim().split("___");
     let prefix = parts.next().unwrap();
-    let suffix = match parts.next() {
-        Some(part) => part,
-        None => anyhow::bail!(
-            "output of --print=file-names has changed in the compiler, cannot parse\n{}",
-            output_err_info(cmd, output, error)
-        ),
+    let Some(suffix) = parts.next() else {
+        return error_missing_print_output("file-names", cmd, output, error);
     };
 
     Ok(Some((prefix.to_string(), suffix.to_string())))
+}
+
+/// Helper for creating an error message for missing output from a certain `--print` request.
+fn error_missing_print_output<T>(
+    request: &str,
+    cmd: &ProcessBuilder,
+    stdout: &str,
+    stderr: &str,
+) -> CargoResult<T> {
+    let err_info = output_err_info(cmd, stdout, stderr);
+    anyhow::bail!(
+        "output of --print={request} missing when learning about \
+     target-specific information from rustc\n{err_info}",
+    )
 }
 
 /// Helper for creating an error message when parsing rustc output fails.
@@ -535,79 +658,140 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
     result
 }
 
+/// Compiler flags for either rustc or rustdoc.
+#[derive(Debug, Copy, Clone)]
+enum Flags {
+    Rust,
+    Rustdoc,
+}
+
+impl Flags {
+    fn as_key(self) -> &'static str {
+        match self {
+            Flags::Rust => "rustflags",
+            Flags::Rustdoc => "rustdocflags",
+        }
+    }
+
+    fn as_env(self) -> &'static str {
+        match self {
+            Flags::Rust => "RUSTFLAGS",
+            Flags::Rustdoc => "RUSTDOCFLAGS",
+        }
+    }
+}
+
 /// Acquire extra flags to pass to the compiler from various locations.
 ///
 /// The locations are:
 ///
+///  - the `CARGO_ENCODED_RUSTFLAGS` environment variable
 ///  - the `RUSTFLAGS` environment variable
 ///
-/// then if this was not found
+/// then if none of those were found
 ///
 ///  - `target.*.rustflags` from the config (.cargo/config)
 ///  - `target.cfg(..).rustflags` from the config
+///  - `host.*.rustflags` from the config if compiling a host artifact or without `--target`
+///     (requires `-Zhost-config`)
 ///
-/// then if neither of these were found
+/// then if none of those were found
 ///
 ///  - `build.rustflags` from the config
 ///
-/// Note that if a `target` is specified, no args will be passed to host code (plugins, build
-/// scripts, ...), even if it is the same as the target.
-fn env_args(
+/// The behavior differs slightly when cross-compiling (or, specifically, when `--target` is
+/// provided) for artifacts that are always built for the host (plugins, build scripts, ...).
+/// For those artifacts, _only_ `host.*.rustflags` is respected, and no other configuration
+/// sources, _regardless of the value of `target-applies-to-host`_. This is counterintuitive, but
+/// necessary to retain backwards compatibility with older versions of Cargo.
+fn extra_args(
     config: &Config,
     requested_kinds: &[CompileKind],
     host_triple: &str,
     target_cfg: Option<&[Cfg]>,
     kind: CompileKind,
-    name: &str,
+    flags: Flags,
 ) -> CargoResult<Vec<String>> {
-    // We *want* to apply RUSTFLAGS only to builds for the
-    // requested target architecture, and not to things like build
-    // scripts and plugins, which may be for an entirely different
-    // architecture. Cargo's present architecture makes it quite
-    // hard to only apply flags to things that are not build
-    // scripts and plugins though, so we do something more hacky
-    // instead to avoid applying the same RUSTFLAGS to multiple targets
-    // arches:
+    let target_applies_to_host = config.target_applies_to_host()?;
+
+    // Host artifacts should not generally pick up rustflags from anywhere except [host].
     //
-    // 1) If --target is not specified we just apply RUSTFLAGS to
-    // all builds; they are all going to have the same target.
-    //
-    // 2) If --target *is* specified then we only apply RUSTFLAGS
-    // to compilation units with the Target kind, which indicates
-    // it was chosen by the --target flag.
-    //
-    // This means that, e.g., even if the specified --target is the
-    // same as the host, build scripts in plugins won't get
-    // RUSTFLAGS.
-    if requested_kinds != [CompileKind::Host] && kind.is_host() {
-        // This is probably a build script or plugin and we're
-        // compiling with --target. In this scenario there are
-        // no rustflags we can apply.
-        return Ok(Vec::new());
+    // The one exception to this is if `target-applies-to-host = true`, which opts into a
+    // particular (inconsistent) past Cargo behavior where host artifacts _do_ pick up rustflags
+    // set elsewhere when `--target` isn't passed.
+    if kind.is_host() {
+        if target_applies_to_host && requested_kinds == [CompileKind::Host] {
+            // This is the past Cargo behavior where we fall back to the same logic as for other
+            // artifacts without --target.
+        } else {
+            // In all other cases, host artifacts just get flags from [host], regardless of
+            // --target. Or, phrased differently, no `--target` behaves the same as `--target
+            // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
+            // example).
+            return Ok(rustflags_from_host(config, flags, host_triple)?.unwrap_or_else(Vec::new));
+        }
     }
 
-    // First try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(name) {
+    // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
+    // NOTE: It is impossible to have a [host] section and reach this logic with kind.is_host(),
+    // since [host] implies `target-applies-to-host = false`, which always early-returns above.
+
+    if let Some(rustflags) = rustflags_from_env(config, flags) {
+        Ok(rustflags)
+    } else if let Some(rustflags) =
+        rustflags_from_target(config, host_triple, target_cfg, kind, flags)?
+    {
+        Ok(rustflags)
+    } else if let Some(rustflags) = rustflags_from_build(config, flags)? {
+        Ok(rustflags)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+/// Gets compiler flags from environment variables.
+/// See [`extra_args`] for more.
+fn rustflags_from_env(config: &Config, flags: Flags) -> Option<Vec<String>> {
+    // First try CARGO_ENCODED_RUSTFLAGS from the environment.
+    // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
+    if let Ok(a) = config.get_env(format!("CARGO_ENCODED_{}", flags.as_env())) {
+        if a.is_empty() {
+            return Some(Vec::new());
+        }
+        return Some(a.split('\x1f').map(str::to_string).collect());
+    }
+
+    // Then try RUSTFLAGS from the environment
+    if let Ok(a) = config.get_env(flags.as_env()) {
         let args = a
             .split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string);
-        return Ok(args.collect());
+        return Some(args.collect());
     }
 
+    // No rustflags to be collected from the environment
+    None
+}
+
+/// Gets compiler flags from `[target]` section in the config.
+/// See [`extra_args`] for more.
+fn rustflags_from_target(
+    config: &Config,
+    host_triple: &str,
+    target_cfg: Option<&[Cfg]>,
+    kind: CompileKind,
+    flag: Flags,
+) -> CargoResult<Option<Vec<String>>> {
     let mut rustflags = Vec::new();
 
-    let name = name
-        .chars()
-        .flat_map(|c| c.to_lowercase())
-        .collect::<String>();
     // Then the target.*.rustflags value...
     let target = match &kind {
         CompileKind::Host => host_triple,
         CompileKind::Target(target) => target.short_name(),
     };
-    let key = format!("target.{}.{}", target, name);
+    let key = format!("target.{}.{}", target, flag.as_key());
     if let Some(args) = config.get::<Option<StringList>>(&key)? {
         rustflags.extend(args.as_slice().iter().cloned());
     }
@@ -617,9 +801,15 @@ fn env_args(
             .target_cfgs()?
             .iter()
             .filter_map(|(key, cfg)| {
-                cfg.rustflags
-                    .as_ref()
-                    .map(|rustflags| (key, &rustflags.val))
+                match flag {
+                    Flags::Rust => cfg
+                        .rustflags
+                        .as_ref()
+                        .map(|rustflags| (key, &rustflags.val)),
+                    // `target.cfg(…).rustdocflags` is currently not supported.
+                    // In fact, neither is `target.<triple>.rustdocflags`.
+                    Flags::Rustdoc => None,
+                }
             })
             .filter(|(key, _rustflags)| CfgExpr::matches_key(key, target_cfg))
             .for_each(|(_key, cfg_rustflags)| {
@@ -627,61 +817,81 @@ fn env_args(
             });
     }
 
-    if !rustflags.is_empty() {
-        return Ok(rustflags);
+    if rustflags.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(rustflags))
     }
+}
 
+/// Gets compiler flags from `[host]` section in the config.
+/// See [`extra_args`] for more.
+fn rustflags_from_host(
+    config: &Config,
+    flag: Flags,
+    host_triple: &str,
+) -> CargoResult<Option<Vec<String>>> {
+    let target_cfg = config.host_cfg_triple(host_triple)?;
+    let list = match flag {
+        Flags::Rust => &target_cfg.rustflags,
+        Flags::Rustdoc => {
+            // host.rustdocflags is not a thing, since it does not make sense
+            return Ok(None);
+        }
+    };
+    Ok(list.as_ref().map(|l| l.val.as_slice().to_vec()))
+}
+
+/// Gets compiler flags from `[build]` section in the config.
+/// See [`extra_args`] for more.
+fn rustflags_from_build(config: &Config, flag: Flags) -> CargoResult<Option<Vec<String>>> {
     // Then the `build.rustflags` value.
     let build = config.build_config()?;
-    let list = if name == "rustflags" {
-        &build.rustflags
-    } else {
-        &build.rustdocflags
+    let list = match flag {
+        Flags::Rust => &build.rustflags,
+        Flags::Rustdoc => &build.rustdocflags,
     };
-    if let Some(list) = list {
-        return Ok(list.as_slice().to_vec());
-    }
-
-    Ok(Vec::new())
+    Ok(list.as_ref().map(|l| l.as_slice().to_vec()))
 }
 
 /// Collection of information about `rustc` and the host and target.
-pub struct RustcTargetData {
+pub struct RustcTargetData<'cfg> {
     /// Information about `rustc` itself.
     pub rustc: Rustc,
+
+    /// Config
+    pub config: &'cfg Config,
+    requested_kinds: Vec<CompileKind>,
+
     /// Build information for the "host", which is information about when
     /// `rustc` is invoked without a `--target` flag. This is used for
     /// procedural macros, build scripts, etc.
     host_config: TargetConfig,
+    /// Information about the host platform.
     host_info: TargetInfo,
 
-    /// Build information for targets that we're building for. This will be
-    /// empty if the `--target` flag is not passed.
+    /// Build information for targets that we're building for.
     target_config: HashMap<CompileTarget, TargetConfig>,
+    /// Information about the target platform that we're building for.
     target_info: HashMap<CompileTarget, TargetInfo>,
 }
 
-impl RustcTargetData {
+impl<'cfg> RustcTargetData<'cfg> {
     pub fn new(
-        ws: &Workspace<'_>,
+        ws: &Workspace<'cfg>,
         requested_kinds: &[CompileKind],
-    ) -> CargoResult<RustcTargetData> {
+    ) -> CargoResult<RustcTargetData<'cfg>> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
-        let host_config = config.target_cfg_triple(&rustc.host)?;
-        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
-        for kind in requested_kinds {
-            if let CompileKind::Target(target) = *kind {
-                let tcfg = config.target_cfg_triple(target.short_name())?;
-                target_config.insert(target, tcfg);
-                target_info.insert(
-                    target,
-                    TargetInfo::new(config, requested_kinds, &rustc, *kind)?,
-                );
-            }
-        }
+        let target_applies_to_host = config.target_applies_to_host()?;
+        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
+        let host_config = if target_applies_to_host {
+            config.target_cfg_triple(&rustc.host)?
+        } else {
+            config.host_cfg_triple(&rustc.host)?
+        };
 
         // This is a hack. The unit_dependency graph builder "pretends" that
         // `CompileKind::Host` is `CompileKind::Target(host)` if the
@@ -691,16 +901,65 @@ impl RustcTargetData {
         if requested_kinds.iter().any(CompileKind::is_host) {
             let ct = CompileTarget::new(&rustc.host)?;
             target_info.insert(ct, host_info.clone());
-            target_config.insert(ct, host_config.clone());
-        }
+            target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
+        };
 
-        Ok(RustcTargetData {
+        let mut res = RustcTargetData {
             rustc,
-            target_config,
-            target_info,
+            config,
+            requested_kinds: requested_kinds.into(),
             host_config,
             host_info,
-        })
+            target_config,
+            target_info,
+        };
+
+        // Get all kinds we currently know about.
+        //
+        // For now, targets can only ever come from the root workspace
+        // units and artifact dependencies, so this
+        // correctly represents all the kinds that can happen. When we have
+        // other ways for targets to appear at places that are not the root units,
+        // we may have to revisit this.
+        fn artifact_targets(package: &Package) -> impl Iterator<Item = CompileKind> + '_ {
+            package
+                .manifest()
+                .dependencies()
+                .iter()
+                .filter_map(|d| d.artifact()?.target()?.to_compile_kind())
+        }
+        let all_kinds = requested_kinds
+            .iter()
+            .copied()
+            .chain(ws.members().flat_map(|p| {
+                p.manifest()
+                    .default_kind()
+                    .into_iter()
+                    .chain(p.manifest().forced_kind())
+                    .chain(artifact_targets(p))
+            }));
+        for kind in all_kinds {
+            res.merge_compile_kind(kind)?;
+        }
+
+        Ok(res)
+    }
+
+    /// Insert `kind` into our `target_info` and `target_config` members if it isn't present yet.
+    pub fn merge_compile_kind(&mut self, kind: CompileKind) -> CargoResult<()> {
+        if let CompileKind::Target(target) = kind {
+            if !self.target_config.contains_key(&target) {
+                self.target_config
+                    .insert(target, self.config.target_cfg_triple(target.short_name())?);
+            }
+            if !self.target_info.contains_key(&target) {
+                self.target_info.insert(
+                    target,
+                    TargetInfo::new(self.config, &self.requested_kinds, &self.rustc, kind)?,
+                );
+            }
+        }
+        Ok(())
     }
 
     /// Returns a "short" name for the given kind, suitable for keying off
@@ -717,9 +976,8 @@ impl RustcTargetData {
     pub fn dep_platform_activated(&self, dep: &Dependency, kind: CompileKind) -> bool {
         // If this dependency is only available for certain platforms,
         // make sure we're only enabling it for that platform.
-        let platform = match dep.platform() {
-            Some(p) => p,
-            None => return true,
+        let Some(platform) = dep.platform() else {
+            return true;
         };
         let name = self.short_name(&kind);
         platform.matches(name, self.cfg(kind))
@@ -731,10 +989,22 @@ impl RustcTargetData {
     }
 
     /// Information about the given target platform, learned by querying rustc.
+    ///
+    /// # Panics
+    ///
+    /// Panics, if the target platform described by `kind` can't be found.
+    /// See [`get_info`](Self::get_info) for a non-panicking alternative.
     pub fn info(&self, kind: CompileKind) -> &TargetInfo {
+        self.get_info(kind).unwrap()
+    }
+
+    /// Information about the given target platform, learned by querying rustc.
+    ///
+    /// Returns `None` if the target platform described by `kind` can't be found.
+    pub fn get_info(&self, kind: CompileKind) -> Option<&TargetInfo> {
         match kind {
-            CompileKind::Host => &self.host_info,
-            CompileKind::Target(s) => &self.target_info[&s],
+            CompileKind::Host => Some(&self.host_info),
+            CompileKind::Target(s) => self.target_info.get(&s),
         }
     }
 
@@ -752,5 +1022,99 @@ impl RustcTargetData {
     /// Host or Target.
     pub fn script_override(&self, lib_name: &str, kind: CompileKind) -> Option<&BuildOutput> {
         self.target_config(kind).links_overrides.get(lib_name)
+    }
+}
+
+/// Structure used to deal with Rustdoc fingerprinting
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RustDocFingerprint {
+    pub rustc_vv: String,
+}
+
+impl RustDocFingerprint {
+    /// This function checks whether the latest version of `Rustc` used to compile this
+    /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
+    /// call.
+    ///
+    /// In case it's not, it takes care of removing the `doc/` folder as well as overwriting
+    /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
+    /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
+    /// any versioning.
+    pub fn check_rustdoc_fingerprint(cx: &Context<'_, '_>) -> CargoResult<()> {
+        if cx.bcx.config.cli_unstable().skip_rustdoc_fingerprint {
+            return Ok(());
+        }
+        let actual_rustdoc_target_data = RustDocFingerprint {
+            rustc_vv: cx.bcx.rustc().verbose_version.clone(),
+        };
+
+        let fingerprint_path = cx.files().host_root().join(".rustdoc_fingerprint.json");
+        let write_fingerprint = || -> CargoResult<()> {
+            paths::write(
+                &fingerprint_path,
+                serde_json::to_string(&actual_rustdoc_target_data)?,
+            )
+        };
+        let Ok(rustdoc_data) = paths::read(&fingerprint_path) else {
+            // If the fingerprint does not exist, do not clear out the doc
+            // directories. Otherwise this ran into problems where projects
+            // like rustbuild were creating the doc directory before running
+            // `cargo doc` in a way that deleting it would break it.
+            return write_fingerprint();
+        };
+        match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
+            Ok(fingerprint) => {
+                if fingerprint.rustc_vv == actual_rustdoc_target_data.rustc_vv {
+                    return Ok(());
+                } else {
+                    tracing::debug!(
+                        "doc fingerprint changed:\noriginal:\n{}\nnew:\n{}",
+                        fingerprint.rustc_vv,
+                        actual_rustdoc_target_data.rustc_vv
+                    );
+                }
+            }
+            Err(e) => {
+                tracing::debug!("could not deserialize {:?}: {}", fingerprint_path, e);
+            }
+        };
+        // Fingerprint does not match, delete the doc directories and write a new fingerprint.
+        tracing::debug!(
+            "fingerprint {:?} mismatch, clearing doc directories",
+            fingerprint_path
+        );
+        cx.bcx
+            .all_kinds
+            .iter()
+            .map(|kind| cx.files().layout(*kind).doc())
+            .filter(|path| path.exists())
+            .try_for_each(|path| clean_doc(path))?;
+        write_fingerprint()?;
+        return Ok(());
+
+        fn clean_doc(path: &Path) -> CargoResult<()> {
+            let entries = path
+                .read_dir()
+                .with_context(|| format!("failed to read directory `{}`", path.display()))?;
+            for entry in entries {
+                let entry = entry?;
+                // Don't remove hidden files. Rustdoc does not create them,
+                // but the user might have.
+                if entry
+                    .file_name()
+                    .to_str()
+                    .map_or(false, |name| name.starts_with('.'))
+                {
+                    continue;
+                }
+                let path = entry.path();
+                if entry.file_type()?.is_dir() {
+                    paths::remove_dir_all(path)?;
+                } else {
+                    paths::remove_file(path)?;
+                }
+            }
+            Ok(())
+        }
     }
 }

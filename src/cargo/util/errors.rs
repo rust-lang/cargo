@@ -1,53 +1,117 @@
 #![allow(unknown_lints)]
 
-use crate::core::{TargetKind, Workspace};
-use crate::ops::CompileOptions;
 use anyhow::Error;
-use std::fmt;
+use curl::easy::Easy;
+use std::fmt::{self, Write};
 use std::path::PathBuf;
-use std::process::{ExitStatus, Output};
-use std::str;
+
+use super::truncate_with_ellipsis;
 
 pub type CargoResult<T> = anyhow::Result<T>;
 
-// TODO: should delete this trait and just use `with_context` instead
-pub trait CargoResultExt<T, E> {
-    fn chain_err<F, D>(self, f: F) -> CargoResult<T>
-    where
-        F: FnOnce() -> D,
-        D: fmt::Display + Send + Sync + 'static;
-}
-
-impl<T, E> CargoResultExt<T, E> for Result<T, E>
-where
-    E: Into<Error>,
-{
-    fn chain_err<F, D>(self, f: F) -> CargoResult<T>
-    where
-        F: FnOnce() -> D,
-        D: fmt::Display + Send + Sync + 'static,
-    {
-        self.map_err(|e| e.into().context(f()))
-    }
-}
+/// These are headers that are included in error messages to help with
+/// diagnosing issues.
+pub const DEBUG_HEADERS: &[&str] = &[
+    // This is the unique ID that identifies the request in CloudFront which
+    // can be used for looking at the AWS logs.
+    "x-amz-cf-id",
+    // This is the CloudFront POP (Point of Presence) that identifies the
+    // region where the request was routed. This can help identify if an issue
+    // is region-specific.
+    "x-amz-cf-pop",
+    // The unique token used for troubleshooting S3 requests via AWS logs or support.
+    "x-amz-request-id",
+    // Another token used in conjunction with x-amz-request-id.
+    "x-amz-id-2",
+    // Whether or not there was a cache hit or miss (both CloudFront and Fastly).
+    "x-cache",
+    // The cache server that processed the request (Fastly).
+    "x-served-by",
+];
 
 #[derive(Debug)]
-pub struct HttpNot200 {
+pub struct HttpNotSuccessful {
     pub code: u32,
     pub url: String,
+    pub ip: Option<String>,
+    pub body: Vec<u8>,
+    pub headers: Vec<String>,
 }
 
-impl fmt::Display for HttpNot200 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl HttpNotSuccessful {
+    pub fn new_from_handle(
+        handle: &mut Easy,
+        initial_url: &str,
+        body: Vec<u8>,
+        headers: Vec<String>,
+    ) -> HttpNotSuccessful {
+        let ip = handle.primary_ip().ok().flatten().map(|s| s.to_string());
+        let url = handle
+            .effective_url()
+            .ok()
+            .flatten()
+            .unwrap_or(initial_url)
+            .to_string();
+        HttpNotSuccessful {
+            code: handle.response_code().unwrap_or(0),
+            url,
+            ip,
+            body,
+            headers,
+        }
+    }
+
+    /// Renders the error in a compact form.
+    pub fn display_short(&self) -> String {
+        self.render(false)
+    }
+
+    fn render(&self, show_headers: bool) -> String {
+        let mut result = String::new();
+        let body = std::str::from_utf8(&self.body)
+            .map(|s| truncate_with_ellipsis(s, 512))
+            .unwrap_or_else(|_| format!("[{} non-utf8 bytes]", self.body.len()));
+
         write!(
-            f,
-            "failed to get 200 response from `{}`, got {}",
-            self.url, self.code
+            result,
+            "failed to get successful HTTP response from `{}`",
+            self.url
         )
+        .unwrap();
+        if let Some(ip) = &self.ip {
+            write!(result, " ({ip})").unwrap();
+        }
+        write!(result, ", got {}\n", self.code).unwrap();
+        if show_headers {
+            let headers: Vec<_> = self
+                .headers
+                .iter()
+                .filter(|header| {
+                    let Some((name, _)) = header.split_once(":") else {
+                        return false;
+                    };
+                    DEBUG_HEADERS.contains(&name.to_ascii_lowercase().trim())
+                })
+                .collect();
+            if !headers.is_empty() {
+                writeln!(result, "debug headers:").unwrap();
+                for header in headers {
+                    writeln!(result, "{header}").unwrap();
+                }
+            }
+        }
+        write!(result, "body:\n{body}").unwrap();
+        result
     }
 }
 
-impl std::error::Error for HttpNot200 {}
+impl fmt::Display for HttpNotSuccessful {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.render(true))
+    }
+}
+
+impl std::error::Error for HttpNotSuccessful {}
 
 // =============================================================================
 // Verbose error
@@ -122,6 +186,39 @@ impl fmt::Display for InternalError {
 }
 
 // =============================================================================
+// Already printed error
+
+/// An error that does not need to be printed because it does not add any new
+/// information to what has already been printed.
+pub struct AlreadyPrintedError {
+    inner: Error,
+}
+
+impl AlreadyPrintedError {
+    pub fn new(inner: Error) -> Self {
+        AlreadyPrintedError { inner }
+    }
+}
+
+impl std::error::Error for AlreadyPrintedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.source()
+    }
+}
+
+impl fmt::Debug for AlreadyPrintedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+impl fmt::Display for AlreadyPrintedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+// =============================================================================
 // Manifest error
 
 /// Error wrapper related to a particular manifest and providing it's path.
@@ -187,115 +284,6 @@ impl<'a> Iterator for ManifestCauses<'a> {
 impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
 
 // =============================================================================
-// Process errors
-#[derive(Debug)]
-pub struct ProcessError {
-    /// A detailed description to show to the user why the process failed.
-    pub desc: String,
-    /// The exit status of the process.
-    ///
-    /// This can be `None` if the process failed to launch (like process not found).
-    pub exit: Option<ExitStatus>,
-    /// The output from the process.
-    ///
-    /// This can be `None` if the process failed to launch, or the output was not captured.
-    pub output: Option<Output>,
-}
-
-impl fmt::Display for ProcessError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.desc.fmt(f)
-    }
-}
-
-impl std::error::Error for ProcessError {}
-
-// =============================================================================
-// Cargo test errors.
-
-/// Error when testcases fail
-#[derive(Debug)]
-pub struct CargoTestError {
-    pub test: Test,
-    pub desc: String,
-    pub exit: Option<ExitStatus>,
-    pub causes: Vec<ProcessError>,
-}
-
-impl fmt::Display for CargoTestError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.desc.fmt(f)
-    }
-}
-
-impl std::error::Error for CargoTestError {}
-
-#[derive(Debug)]
-pub enum Test {
-    Multiple,
-    Doc,
-    UnitTest {
-        kind: TargetKind,
-        name: String,
-        pkg_name: String,
-    },
-}
-
-impl CargoTestError {
-    pub fn new(test: Test, errors: Vec<ProcessError>) -> Self {
-        if errors.is_empty() {
-            panic!("Cannot create CargoTestError from empty Vec")
-        }
-        let desc = errors
-            .iter()
-            .map(|error| error.desc.clone())
-            .collect::<Vec<String>>()
-            .join("\n");
-        CargoTestError {
-            test,
-            desc,
-            exit: errors[0].exit,
-            causes: errors,
-        }
-    }
-
-    pub fn hint(&self, ws: &Workspace<'_>, opts: &CompileOptions) -> String {
-        match self.test {
-            Test::UnitTest {
-                ref kind,
-                ref name,
-                ref pkg_name,
-            } => {
-                let pkg_info = if opts.spec.needs_spec_flag(ws) {
-                    format!("-p {} ", pkg_name)
-                } else {
-                    String::new()
-                };
-
-                match *kind {
-                    TargetKind::Bench => {
-                        format!("test failed, to rerun pass '{}--bench {}'", pkg_info, name)
-                    }
-                    TargetKind::Bin => {
-                        format!("test failed, to rerun pass '{}--bin {}'", pkg_info, name)
-                    }
-                    TargetKind::Lib(_) => format!("test failed, to rerun pass '{}--lib'", pkg_info),
-                    TargetKind::Test => {
-                        format!("test failed, to rerun pass '{}--test {}'", pkg_info, name)
-                    }
-                    TargetKind::ExampleBin | TargetKind::ExampleLib(_) => {
-                        format!("test failed, to rerun pass '{}--example {}", pkg_info, name)
-                    }
-                    _ => "test failed.".into(),
-                }
-            }
-            Test::Doc => "test failed, to rerun pass '--doc'".into(),
-            _ => "test failed.".into(),
-        }
-    }
-}
-
-// =============================================================================
 // CLI errors
 
 pub type CliResult = Result<(), CliError>;
@@ -346,132 +334,14 @@ impl From<clap::Error> for CliError {
     }
 }
 
+impl From<std::io::Error> for CliError {
+    fn from(err: std::io::Error) -> CliError {
+        CliError::new(err.into(), 1)
+    }
+}
+
 // =============================================================================
 // Construction helpers
-
-/// Creates a new process error.
-///
-/// `status` can be `None` if the process did not launch.
-/// `output` can be `None` if the process did not launch, or output was not captured.
-pub fn process_error(
-    msg: &str,
-    status: Option<ExitStatus>,
-    output: Option<&Output>,
-) -> ProcessError {
-    let exit = match status {
-        Some(s) => status_to_string(s),
-        None => "never executed".to_string(),
-    };
-    let mut desc = format!("{} ({})", &msg, exit);
-
-    if let Some(out) = output {
-        match str::from_utf8(&out.stdout) {
-            Ok(s) if !s.trim().is_empty() => {
-                desc.push_str("\n--- stdout\n");
-                desc.push_str(s);
-            }
-            Ok(..) | Err(..) => {}
-        }
-        match str::from_utf8(&out.stderr) {
-            Ok(s) if !s.trim().is_empty() => {
-                desc.push_str("\n--- stderr\n");
-                desc.push_str(s);
-            }
-            Ok(..) | Err(..) => {}
-        }
-    }
-
-    return ProcessError {
-        desc,
-        exit: status,
-        output: output.cloned(),
-    };
-
-    #[cfg(unix)]
-    fn status_to_string(status: ExitStatus) -> String {
-        use std::os::unix::process::*;
-
-        if let Some(signal) = status.signal() {
-            let name = match signal as libc::c_int {
-                libc::SIGABRT => ", SIGABRT: process abort signal",
-                libc::SIGALRM => ", SIGALRM: alarm clock",
-                libc::SIGFPE => ", SIGFPE: erroneous arithmetic operation",
-                libc::SIGHUP => ", SIGHUP: hangup",
-                libc::SIGILL => ", SIGILL: illegal instruction",
-                libc::SIGINT => ", SIGINT: terminal interrupt signal",
-                libc::SIGKILL => ", SIGKILL: kill",
-                libc::SIGPIPE => ", SIGPIPE: write on a pipe with no one to read",
-                libc::SIGQUIT => ", SIGQUIT: terminal quit signal",
-                libc::SIGSEGV => ", SIGSEGV: invalid memory reference",
-                libc::SIGTERM => ", SIGTERM: termination signal",
-                libc::SIGBUS => ", SIGBUS: access to undefined memory",
-                #[cfg(not(target_os = "haiku"))]
-                libc::SIGSYS => ", SIGSYS: bad system call",
-                libc::SIGTRAP => ", SIGTRAP: trace/breakpoint trap",
-                _ => "",
-            };
-            format!("signal: {}{}", signal, name)
-        } else {
-            status.to_string()
-        }
-    }
-
-    #[cfg(windows)]
-    fn status_to_string(status: ExitStatus) -> String {
-        use winapi::shared::minwindef::DWORD;
-        use winapi::um::winnt::*;
-
-        let mut base = status.to_string();
-        let extra = match status.code().unwrap() as DWORD {
-            STATUS_ACCESS_VIOLATION => "STATUS_ACCESS_VIOLATION",
-            STATUS_IN_PAGE_ERROR => "STATUS_IN_PAGE_ERROR",
-            STATUS_INVALID_HANDLE => "STATUS_INVALID_HANDLE",
-            STATUS_INVALID_PARAMETER => "STATUS_INVALID_PARAMETER",
-            STATUS_NO_MEMORY => "STATUS_NO_MEMORY",
-            STATUS_ILLEGAL_INSTRUCTION => "STATUS_ILLEGAL_INSTRUCTION",
-            STATUS_NONCONTINUABLE_EXCEPTION => "STATUS_NONCONTINUABLE_EXCEPTION",
-            STATUS_INVALID_DISPOSITION => "STATUS_INVALID_DISPOSITION",
-            STATUS_ARRAY_BOUNDS_EXCEEDED => "STATUS_ARRAY_BOUNDS_EXCEEDED",
-            STATUS_FLOAT_DENORMAL_OPERAND => "STATUS_FLOAT_DENORMAL_OPERAND",
-            STATUS_FLOAT_DIVIDE_BY_ZERO => "STATUS_FLOAT_DIVIDE_BY_ZERO",
-            STATUS_FLOAT_INEXACT_RESULT => "STATUS_FLOAT_INEXACT_RESULT",
-            STATUS_FLOAT_INVALID_OPERATION => "STATUS_FLOAT_INVALID_OPERATION",
-            STATUS_FLOAT_OVERFLOW => "STATUS_FLOAT_OVERFLOW",
-            STATUS_FLOAT_STACK_CHECK => "STATUS_FLOAT_STACK_CHECK",
-            STATUS_FLOAT_UNDERFLOW => "STATUS_FLOAT_UNDERFLOW",
-            STATUS_INTEGER_DIVIDE_BY_ZERO => "STATUS_INTEGER_DIVIDE_BY_ZERO",
-            STATUS_INTEGER_OVERFLOW => "STATUS_INTEGER_OVERFLOW",
-            STATUS_PRIVILEGED_INSTRUCTION => "STATUS_PRIVILEGED_INSTRUCTION",
-            STATUS_STACK_OVERFLOW => "STATUS_STACK_OVERFLOW",
-            STATUS_DLL_NOT_FOUND => "STATUS_DLL_NOT_FOUND",
-            STATUS_ORDINAL_NOT_FOUND => "STATUS_ORDINAL_NOT_FOUND",
-            STATUS_ENTRYPOINT_NOT_FOUND => "STATUS_ENTRYPOINT_NOT_FOUND",
-            STATUS_CONTROL_C_EXIT => "STATUS_CONTROL_C_EXIT",
-            STATUS_DLL_INIT_FAILED => "STATUS_DLL_INIT_FAILED",
-            STATUS_FLOAT_MULTIPLE_FAULTS => "STATUS_FLOAT_MULTIPLE_FAULTS",
-            STATUS_FLOAT_MULTIPLE_TRAPS => "STATUS_FLOAT_MULTIPLE_TRAPS",
-            STATUS_REG_NAT_CONSUMPTION => "STATUS_REG_NAT_CONSUMPTION",
-            STATUS_HEAP_CORRUPTION => "STATUS_HEAP_CORRUPTION",
-            STATUS_STACK_BUFFER_OVERRUN => "STATUS_STACK_BUFFER_OVERRUN",
-            STATUS_ASSERTION_FAILURE => "STATUS_ASSERTION_FAILURE",
-            _ => return base,
-        };
-        base.push_str(", ");
-        base.push_str(extra);
-        base
-    }
-}
-
-pub fn is_simple_exit_code(code: i32) -> bool {
-    // Typical unix exit codes are 0 to 127.
-    // Windows doesn't have anything "typical", and is a
-    // 32-bit number (which appears signed here, but is really
-    // unsigned). However, most of the interesting NTSTATUS
-    // codes are very large. This is just a rough
-    // approximation of which codes are "normal" and which
-    // ones are abnormal termination.
-    code >= 0 && code <= 127
-}
 
 pub fn internal<S: fmt::Display>(error: S) -> anyhow::Error {
     InternalError::new(anyhow::format_err!("{}", error)).into()

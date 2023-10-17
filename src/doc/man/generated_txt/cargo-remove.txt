@@ -1,0 +1,155 @@
+CARGO-REMOVE(1)
+
+NAME
+       cargo-remove — Remove dependencies from a Cargo.toml manifest file
+
+SYNOPSIS
+       cargo remove [options] dependency…
+
+DESCRIPTION
+       Remove one or more dependencies from a Cargo.toml manifest.
+
+OPTIONS
+   Section options
+       --dev
+           Remove as a development dependency
+           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies>.
+
+       --build
+           Remove as a build dependency
+           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#build-dependencies>.
+
+       --target target
+           Remove as a dependency to the given target platform
+           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#platform-specific-dependencies>.
+
+           To avoid unexpected shell expansions, you may use quotes around each
+           target, e.g., --target 'cfg(unix)'.
+
+   Miscellaneous Options
+       --dry-run
+           Don’t actually write to the manifest.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for “very verbose”
+           output which includes extra output such as dependency warnings and
+           build script output. May also be specified with the term.verbose
+           config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           Do not print cargo log messages. May also be specified with the
+           term.quiet config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Manifest Options
+       --manifest-path path
+           Path to the Cargo.toml file. By default, Cargo searches for the
+           Cargo.toml file in the current directory or any parent directory.
+
+       --frozen, --locked
+           Either of these flags requires that the Cargo.lock file is
+           up-to-date. If the lock file is missing, or it needs to be updated,
+           Cargo will exit with an error. The --frozen flag also prevents Cargo
+           from attempting to access the network to determine if it is
+           out-of-date.
+
+           These may be used in environments where you want to assert that the
+           Cargo.lock file is up-to-date (such as a CI build) or want to avoid
+           network access.
+
+       --offline
+           Prevents Cargo from accessing the network for any reason. Without
+           this flag, Cargo will stop with an error if it needs to access the
+           network and the network is not available. With this flag, Cargo will
+           attempt to proceed without the network if possible.
+
+           Beware that this may result in different dependency resolution than
+           online mode. Cargo will restrict itself to crates that are
+           downloaded locally, even if there might be a newer version as
+           indicated in the local copy of the index. See the cargo-fetch(1)
+           command to download dependencies before going offline.
+
+           May also be specified with the net.offline config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Package Selection
+       -p spec…, --package spec…
+           Package to remove from.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://rust-lang.github.io/rustup/overrides.html> for more
+           information about how toolchain overrides work.
+
+       --config KEY=VALUE or PATH
+           Overrides a Cargo configuration value. The argument should be in
+           TOML syntax of KEY=VALUE, or provided as a path to an extra
+           configuration file. This flag may be specified multiple times. See
+           the command-line overrides section
+           <https://doc.rust-lang.org/cargo/reference/config.html#command-line-overrides>
+           for more information.
+
+       -C PATH
+           Changes the current working directory before executing any specified
+           operations. This affects things like where cargo looks by default
+           for the project manifest (Cargo.toml), as well as the directories
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Remove regex as a dependency
+
+              cargo remove regex
+
+       2. Remove trybuild as a dev-dependency
+
+              cargo remove --dev trybuild
+
+       3. Remove nom from the x86_64-pc-windows-gnu dependencies table
+
+              cargo remove --target x86_64-pc-windows-gnu nom
+
+SEE ALSO
+       cargo(1), cargo-add(1)
+

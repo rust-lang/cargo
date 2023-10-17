@@ -1,24 +1,43 @@
+use std::collections::HashSet;
 use std::fmt::{self, Debug, Formatter};
-use std::fs;
 use std::path::{Path, PathBuf};
+use std::task::Poll;
 
+use crate::core::{Dependency, Package, PackageId, SourceId, Summary};
+use crate::ops;
+use crate::sources::source::MaybePackage;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
+use crate::util::{internal, CargoResult, Config};
+use anyhow::Context as _;
+use cargo_util::paths;
 use filetime::FileTime;
 use ignore::gitignore::GitignoreBuilder;
-use ignore::Match;
-use log::{trace, warn};
+use tracing::{trace, warn};
+use walkdir::WalkDir;
 
-use crate::core::source::MaybePackage;
-use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
-use crate::ops;
-use crate::util::{internal, paths, CargoResult, CargoResultExt, Config};
-
+/// A source represents one or multiple packages gathering from a given root
+/// path on the filesystem.
+///
+/// It's the cornerstone of every other source --- other implementations
+/// eventually need to call `PathSource` to read local packages somewhere on
+/// the filesystem.
+///
+/// It also provides convenient methods like [`PathSource::list_files`] to
+/// list all files in a package, given its ability to walk the filesystem.
 pub struct PathSource<'cfg> {
+    /// The unique identifier of this source.
     source_id: SourceId,
+    /// The root path of this source.
     path: PathBuf,
+    /// Whether this source has updated all package information it may contain.
     updated: bool,
+    /// Packages that this sources has discovered.
     packages: Vec<Package>,
-    config: &'cfg Config,
+    /// Whether this source should discover nested packages recursively.
+    /// See [`PathSource::new_recursive`] for more.
     recursive: bool,
+    config: &'cfg Config,
 }
 
 impl<'cfg> PathSource<'cfg> {
@@ -39,9 +58,9 @@ impl<'cfg> PathSource<'cfg> {
 
     /// Creates a new source which is walked recursively to discover packages.
     ///
-    /// This is similar to the `new` method except that instead of requiring a
-    /// valid package to be present at `root` the folder is walked entirely to
-    /// crawl for packages.
+    /// This is similar to the [`PathSource::new`] method except that instead
+    /// of requiring a valid package to be present at `root` the folder is
+    /// walked entirely to crawl for packages.
     ///
     /// Note that this should be used with care and likely shouldn't be chosen
     /// by default!
@@ -52,6 +71,8 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
+    /// Preloads a package for this source. The source is assumed that it has
+    /// yet loaded any other packages.
     pub fn preload_with(&mut self, pkg: Package) {
         assert!(!self.updated);
         assert!(!self.recursive);
@@ -60,6 +81,7 @@ impl<'cfg> PathSource<'cfg> {
         self.packages.push(pkg);
     }
 
+    /// Gets the package on the root path.
     pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
@@ -74,6 +96,8 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
+    /// Returns the packages discovered by this source. It may walk the
+    /// filesystem if package information haven't yet updated.
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
@@ -94,9 +118,10 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// The basic assumption of this method is that all files in the directory
     /// are relevant for building this package, but it also contains logic to
-    /// use other methods like .gitignore to filter the list of files.
+    /// use other methods like `.gitignore`, `package.include`, or
+    /// `package.exclude` to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
-        self._list_files(pkg).chain_err(|| {
+        self._list_files(pkg).with_context(|| {
             format!(
                 "failed to determine list of files in {}",
                 pkg.root().display()
@@ -104,11 +129,21 @@ impl<'cfg> PathSource<'cfg> {
         })
     }
 
+    /// See [`PathSource::list_files`].
     fn _list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         let root = pkg.root();
         let no_include_option = pkg.manifest().include().is_empty();
+        let git_repo = if no_include_option {
+            self.discover_git_repo(root)?
+        } else {
+            None
+        };
 
         let mut exclude_builder = GitignoreBuilder::new(root);
+        if no_include_option && git_repo.is_none() {
+            // no include option and not git repo discovered (see rust-lang/cargo#7183).
+            exclude_builder.add_line(None, ".*")?;
+        }
         for rule in pkg.manifest().exclude() {
             exclude_builder.add_line(None, rule)?;
         }
@@ -120,39 +155,35 @@ impl<'cfg> PathSource<'cfg> {
         }
         let ignore_include = include_builder.build()?;
 
-        let ignore_should_package = |relative_path: &Path, is_dir: bool| -> CargoResult<bool> {
+        let ignore_should_package = |relative_path: &Path, is_dir: bool| {
             // "Include" and "exclude" options are mutually exclusive.
             if no_include_option {
-                match ignore_exclude.matched_path_or_any_parents(relative_path, is_dir) {
-                    Match::None => Ok(true),
-                    Match::Ignore(_) => Ok(false),
-                    Match::Whitelist(_) => Ok(true),
-                }
+                !ignore_exclude
+                    .matched_path_or_any_parents(relative_path, is_dir)
+                    .is_ignore()
             } else {
                 if is_dir {
                     // Generally, include directives don't list every
                     // directory (nor should they!). Just skip all directory
                     // checks, and only check files.
-                    return Ok(true);
+                    return true;
                 }
-                match ignore_include
+                ignore_include
                     .matched_path_or_any_parents(relative_path, /* is_dir */ false)
-                {
-                    Match::None => Ok(false),
-                    Match::Ignore(_) => Ok(true),
-                    Match::Whitelist(_) => Ok(false),
-                }
+                    .is_ignore()
             }
         };
 
-        let mut filter = |path: &Path, is_dir: bool| -> CargoResult<bool> {
-            let relative_path = path.strip_prefix(root)?;
+        let filter = |path: &Path, is_dir: bool| {
+            let Ok(relative_path) = path.strip_prefix(root) else {
+                return false;
+            };
 
             let rel = relative_path.as_os_str();
             if rel == "Cargo.lock" {
-                return Ok(pkg.include_lockfile());
+                return pkg.include_lockfile();
             } else if rel == "Cargo.toml" {
-                return Ok(true);
+                return true;
             }
 
             ignore_should_package(relative_path, is_dir)
@@ -160,27 +191,20 @@ impl<'cfg> PathSource<'cfg> {
 
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
         if no_include_option {
-            if let Some(result) = self.discover_git_and_list_files(pkg, root, &mut filter)? {
-                return Ok(result);
+            if let Some(repo) = git_repo {
+                return self.list_files_git(pkg, &repo, &filter);
             }
-            // no include option and not git repo discovered (see rust-lang/cargo#7183).
-            return self.list_files_walk_except_dot_files_and_dirs(pkg, &mut filter);
         }
-        self.list_files_walk(pkg, &mut filter)
+        self.list_files_walk(pkg, &filter)
     }
 
-    // Returns `Some(_)` if found sibling `Cargo.toml` and `.git` directory;
-    // otherwise, caller should fall back on full file list.
-    fn discover_git_and_list_files(
-        &self,
-        pkg: &Package,
-        root: &Path,
-        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
-    ) -> CargoResult<Option<Vec<PathBuf>>> {
+    /// Returns `Some(git2::Repository)` if found sibling `Cargo.toml` and `.git`
+    /// directory; otherwise, caller should fall back on full file list.
+    fn discover_git_repo(&self, root: &Path) -> CargoResult<Option<git2::Repository>> {
         let repo = match git2::Repository::discover(root) {
             Ok(repo) => repo,
             Err(e) => {
-                log::debug!(
+                tracing::debug!(
                     "could not discover git repo at or above {}: {}",
                     root.display(),
                     e
@@ -190,7 +214,7 @@ impl<'cfg> PathSource<'cfg> {
         };
         let index = repo
             .index()
-            .chain_err(|| format!("failed to open git index at {}", repo.path().display()))?;
+            .with_context(|| format!("failed to open git index at {}", repo.path().display()))?;
         let repo_root = repo.workdir().ok_or_else(|| {
             anyhow::format_err!(
                 "did not expect repo at {} to be bare",
@@ -200,7 +224,7 @@ impl<'cfg> PathSource<'cfg> {
         let repo_relative_path = match paths::strip_prefix_canonical(root, repo_root) {
             Ok(p) => p,
             Err(e) => {
-                log::warn!(
+                tracing::warn!(
                     "cannot determine if path `{:?}` is in git repo `{:?}`: {:?}",
                     root,
                     repo_root,
@@ -211,17 +235,22 @@ impl<'cfg> PathSource<'cfg> {
         };
         let manifest_path = repo_relative_path.join("Cargo.toml");
         if index.get_path(&manifest_path, 0).is_some() {
-            return Ok(Some(self.list_files_git(pkg, &repo, filter)?));
+            return Ok(Some(repo));
         }
         // Package Cargo.toml is not in git, don't use git to guide our selection.
         Ok(None)
     }
 
+    /// Lists files relevant to building this package inside this source by
+    /// consulting both Git index (tracked) or status (untracked) under
+    /// a given Git repository.
+    ///
+    /// This looks into Git submodules as well.
     fn list_files_git(
         &self,
         pkg: &Package,
         repo: &git2::Repository,
-        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
+        filter: &dyn Fn(&Path, bool) -> bool,
     ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
@@ -258,19 +287,36 @@ impl<'cfg> PathSource<'cfg> {
             opts.pathspec(suffix);
         }
         let statuses = repo.statuses(Some(&mut opts))?;
-        let untracked = statuses.iter().filter_map(|entry| match entry.status() {
-            // Don't include Cargo.lock if it is untracked. Packaging will
-            // generate a new one as needed.
-            git2::Status::WT_NEW if entry.path() != Some("Cargo.lock") => {
-                Some((join(root, entry.path_bytes()), None))
-            }
-            _ => None,
-        });
+        let mut skip_paths = HashSet::new();
+        let untracked: Vec<_> = statuses
+            .iter()
+            .filter_map(|entry| {
+                match entry.status() {
+                    // Don't include Cargo.lock if it is untracked. Packaging will
+                    // generate a new one as needed.
+                    git2::Status::WT_NEW if entry.path() != Some("Cargo.lock") => {
+                        Some(Ok((join(root, entry.path_bytes()), None)))
+                    }
+                    git2::Status::WT_DELETED => {
+                        let path = match join(root, entry.path_bytes()) {
+                            Ok(p) => p,
+                            Err(e) => return Some(Err(e)),
+                        };
+                        skip_paths.insert(path);
+                        None
+                    }
+                    _ => None,
+                }
+            })
+            .collect::<CargoResult<_>>()?;
 
         let mut subpackages_found = Vec::new();
 
         for (file_path, is_dir) in index_files.chain(untracked) {
             let file_path = file_path?;
+            if skip_paths.contains(&file_path) {
+                continue;
+            }
 
             // Filter out files blatantly outside this package. This is helped a
             // bit above via the `pathspec` function call, but we need to filter
@@ -323,10 +369,10 @@ impl<'cfg> PathSource<'cfg> {
                         ret.extend(files.into_iter());
                     }
                     Err(..) => {
-                        PathSource::walk(&file_path, &mut ret, false, filter)?;
+                        self.walk(&file_path, &mut ret, false, filter)?;
                     }
                 }
-            } else if (*filter)(&file_path, is_dir)? {
+            } else if filter(&file_path, is_dir) {
                 assert!(!is_dir);
                 // We found a file!
                 warn!("  found {}", file_path.display());
@@ -355,77 +401,88 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
-    fn list_files_walk_except_dot_files_and_dirs(
-        &self,
-        pkg: &Package,
-        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
-    ) -> CargoResult<Vec<PathBuf>> {
-        let root = pkg.root();
-        let mut exclude_dot_files_dir_builder = GitignoreBuilder::new(root);
-        exclude_dot_files_dir_builder.add_line(None, ".*")?;
-        let ignore_dot_files_and_dirs = exclude_dot_files_dir_builder.build()?;
-
-        let mut filter_ignore_dot_files_and_dirs =
-            |path: &Path, is_dir: bool| -> CargoResult<bool> {
-                let relative_path = path.strip_prefix(root)?;
-                match ignore_dot_files_and_dirs.matched_path_or_any_parents(relative_path, is_dir) {
-                    Match::Ignore(_) => Ok(false),
-                    _ => filter(path, is_dir),
-                }
-            };
-        self.list_files_walk(pkg, &mut filter_ignore_dot_files_and_dirs)
-    }
-
+    /// Lists files relevant to building this package inside this source by
+    /// walking the filesystem from the package root path.
+    ///
+    /// This is a fallback for [`PathSource::list_files_git`] when the package
+    /// is not tracked under a Git repository.
     fn list_files_walk(
         &self,
         pkg: &Package,
-        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
+        filter: &dyn Fn(&Path, bool) -> bool,
     ) -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
-        PathSource::walk(pkg.root(), &mut ret, true, filter)?;
+        self.walk(pkg.root(), &mut ret, true, filter)?;
         Ok(ret)
     }
 
+    /// Helper recursive function for [`PathSource::list_files_walk`].
     fn walk(
+        &self,
         path: &Path,
         ret: &mut Vec<PathBuf>,
         is_root: bool,
-        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
+        filter: &dyn Fn(&Path, bool) -> bool,
     ) -> CargoResult<()> {
-        let is_dir = path.is_dir();
-        if !is_root && !(*filter)(path, is_dir)? {
-            return Ok(());
-        }
-        if !is_dir {
-            ret.push(path.to_path_buf());
-            return Ok(());
-        }
-        // Don't recurse into any sub-packages that we have.
-        if !is_root && path.join("Cargo.toml").exists() {
-            return Ok(());
+        let walkdir = WalkDir::new(path)
+            .follow_links(true)
+            .into_iter()
+            .filter_entry(|entry| {
+                let path = entry.path();
+                let at_root = is_root && entry.depth() == 0;
+                let is_dir = entry.file_type().is_dir();
+
+                if !at_root && !filter(path, is_dir) {
+                    return false;
+                }
+
+                if !is_dir {
+                    return true;
+                }
+
+                // Don't recurse into any sub-packages that we have.
+                if !at_root && path.join("Cargo.toml").exists() {
+                    return false;
+                }
+
+                // Skip root Cargo artifacts.
+                if is_root
+                    && entry.depth() == 1
+                    && path.file_name().and_then(|s| s.to_str()) == Some("target")
+                {
+                    return false;
+                }
+
+                true
+            });
+        for entry in walkdir {
+            match entry {
+                Ok(entry) => {
+                    if !entry.file_type().is_dir() {
+                        ret.push(entry.into_path());
+                    }
+                }
+                Err(err) if err.loop_ancestor().is_some() => {
+                    self.config.shell().warn(err)?;
+                }
+                Err(err) => match err.path() {
+                    // If an error occurs with a path, filter it again.
+                    // If it is excluded, Just ignore it in this case.
+                    // See issue rust-lang/cargo#10917
+                    Some(path) if !filter(path, path.is_dir()) => {}
+                    // Otherwise, simply recover from it.
+                    // Don't worry about error skipping here, the callers would
+                    // still hit the IO error if they do access it thereafter.
+                    Some(path) => ret.push(path.to_path_buf()),
+                    None => return Err(err.into()),
+                },
+            }
         }
 
-        // For package integration tests, we need to sort the paths in a deterministic order to
-        // be able to match stdout warnings in the same order.
-        //
-        // TODO: drop `collect` and sort after transition period and dropping warning tests.
-        // See rust-lang/cargo#4268 and rust-lang/cargo#4270.
-        let mut entries: Vec<PathBuf> = fs::read_dir(path)
-            .chain_err(|| format!("cannot read {:?}", path))?
-            .map(|e| e.unwrap().path())
-            .collect();
-        entries.sort_unstable_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
-        for path in entries {
-            let name = path.file_name().and_then(|s| s.to_str());
-            if is_root && name == Some("target") {
-                // Skip Cargo artifacts.
-                continue;
-            }
-            PathSource::walk(&path, ret, false, filter)?;
-        }
         Ok(())
     }
 
+    /// Gets the last modified file in a package.
     pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
         if !self.updated {
             return Err(internal(format!(
@@ -436,7 +493,7 @@ impl<'cfg> PathSource<'cfg> {
 
         let mut max = FileTime::zero();
         let mut max_path = PathBuf::new();
-        for file in self.list_files(pkg).chain_err(|| {
+        for file in self.list_files(pkg).with_context(|| {
             format!(
                 "failed to determine the most recently modified file in {}",
                 pkg.root().display()
@@ -457,8 +514,20 @@ impl<'cfg> PathSource<'cfg> {
         Ok((max, max_path))
     }
 
+    /// Returns the root path of this source.
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// Discovers packages inside this source if it hasn't yet done.
+    pub fn update(&mut self) -> CargoResult<()> {
+        if !self.updated {
+            let packages = self.read_packages()?;
+            self.packages.extend(packages.into_iter());
+            self.updated = true;
+        }
+
+        Ok(())
     }
 }
 
@@ -469,20 +538,23 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+    fn query(
+        &mut self,
+        dep: &Dependency,
+        kind: QueryKind,
+        f: &mut dyn FnMut(Summary),
+    ) -> Poll<CargoResult<()>> {
+        self.update()?;
         for s in self.packages.iter().map(|p| p.summary()) {
-            if dep.matches(s) {
+            let matched = match kind {
+                QueryKind::Exact => dep.matches(s),
+                QueryKind::Fuzzy => true,
+            };
+            if matched {
                 f(s.clone())
             }
         }
-        Ok(())
-    }
-
-    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
-        for s in self.packages.iter().map(|p| p.summary()) {
-            f(s.clone())
-        }
-        Ok(())
+        Poll::Ready(Ok(()))
     }
 
     fn supports_checksums(&self) -> bool {
@@ -497,19 +569,9 @@ impl<'cfg> Source for PathSource<'cfg> {
         self.source_id
     }
 
-    fn update(&mut self) -> CargoResult<()> {
-        if !self.updated {
-            let packages = self.read_packages()?;
-            self.packages.extend(packages.into_iter());
-            self.updated = true;
-        }
-
-        Ok(())
-    }
-
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
-
+        self.update()?;
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
         pkg.cloned()
             .map(MaybePackage::Ready)
@@ -538,7 +600,19 @@ impl<'cfg> Source for PathSource<'cfg> {
 
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
-        Ok(false)
+    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
+        Poll::Ready(Ok(false))
+    }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        self.update()
+    }
+
+    fn invalidate_cache(&mut self) {
+        // Path source has no local cache.
+    }
+
+    fn set_quiet(&mut self, _quiet: bool) {
+        // Path source does not display status
     }
 }

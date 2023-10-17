@@ -4,23 +4,32 @@
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
 use crate::core::compiler::job_queue::JobId;
-use crate::core::compiler::BuildContext;
+use crate::core::compiler::{BuildContext, Context, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
-use crate::util::{paths, CargoResult, CargoResultExt, Config};
+use crate::util::style;
+use crate::util::{CargoResult, Config};
+use anyhow::Context as _;
+use cargo_util::paths;
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
+use std::thread::available_parallelism;
 use std::time::{Duration, Instant, SystemTime};
 
+/// Tracking information for the entire build.
+///
+/// Methods on this structure are generally called from the main thread of a
+/// running [`JobQueue`] instance (`DrainState` in specific) when the queue
+/// receives messages from spawned off threads.
+///
+/// [`JobQueue`]: super::JobQueue
 pub struct Timings<'cfg> {
     config: &'cfg Config,
     /// Whether or not timings should be captured.
     enabled: bool,
     /// If true, saves an HTML report to disk.
     report_html: bool,
-    /// If true, reports unit completion to stderr.
-    report_info: bool,
     /// If true, emits JSON information with timing information.
     report_json: bool,
     /// When Cargo started.
@@ -29,7 +38,7 @@ pub struct Timings<'cfg> {
     start_str: String,
     /// A summary of the root units.
     ///
-    /// Tuples of `(package_description, target_descrptions)`.
+    /// Tuples of `(package_description, target_descriptions)`.
     root_targets: Vec<(String, Vec<String>)>,
     /// The build profile.
     profile: String,
@@ -84,25 +93,14 @@ struct Concurrency {
     /// Number of units that are not yet ready, because they are waiting for
     /// dependencies to finish.
     inactive: usize,
-    /// Number of rustc "extra" threads -- i.e., how many tokens have been
-    /// provided across all current rustc instances that are not the main thread
-    /// tokens.
-    rustc_parallelism: usize,
 }
 
 impl<'cfg> Timings<'cfg> {
     pub fn new(bcx: &BuildContext<'_, 'cfg>, root_units: &[Unit]) -> Timings<'cfg> {
-        let has_report = |what| {
-            bcx.config
-                .cli_unstable()
-                .timings
-                .as_ref()
-                .map_or(false, |t| t.iter().any(|opt| opt == what))
-        };
-        let report_html = has_report("html");
-        let report_info = has_report("info");
-        let report_json = has_report("json");
-        let enabled = report_html | report_info | report_json;
+        let has_report = |what| bcx.build_config.timing_outputs.contains(&what);
+        let report_html = has_report(TimingOutput::Html);
+        let report_json = has_report(TimingOutput::Json);
+        let enabled = report_html | report_json;
 
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();
         for unit in root_units {
@@ -125,7 +123,7 @@ impl<'cfg> Timings<'cfg> {
             match State::current() {
                 Ok(state) => Some(state),
                 Err(e) => {
-                    log::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
+                    tracing::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
                     None
                 }
             }
@@ -137,7 +135,6 @@ impl<'cfg> Timings<'cfg> {
             config: bcx.config,
             enabled,
             report_html,
-            report_info,
             report_json,
             start: bcx.config.creation_time(),
             start_str,
@@ -174,6 +171,7 @@ impl<'cfg> Timings<'cfg> {
             CompileMode::Bench => target.push_str(" (bench)"),
             CompileMode::Doc { .. } => target.push_str(" (doc)"),
             CompileMode::Doctest => target.push_str(" (doc test)"),
+            CompileMode::Docscrape => target.push_str(" (doc scrape)"),
             CompileMode::RunCustomBuild => target.push_str(" (run)"),
         }
         let unit_time = UnitTime {
@@ -196,9 +194,8 @@ impl<'cfg> Timings<'cfg> {
         // `id` may not always be active. "fresh" units unconditionally
         // generate `Message::Finish`, but this active map only tracks dirty
         // units.
-        let unit_time = match self.active.get_mut(&id) {
-            Some(ut) => ut,
-            None => return,
+        let Some(unit_time) = self.active.get_mut(&id) else {
+            return;
         };
         let t = self.start.elapsed().as_secs_f64();
         unit_time.rmeta_time = Some(t - unit_time.start);
@@ -214,9 +211,8 @@ impl<'cfg> Timings<'cfg> {
             return;
         }
         // See note above in `unit_rmeta_finished`, this may not always be active.
-        let mut unit_time = match self.active.remove(&id) {
-            Some(ut) => ut,
-            None => return,
+        let Some(mut unit_time) = self.active.remove(&id) else {
+            return;
         };
         let t = self.start.elapsed().as_secs_f64();
         unit_time.duration = t - unit_time.start;
@@ -224,18 +220,6 @@ impl<'cfg> Timings<'cfg> {
         unit_time
             .unlocked_units
             .extend(unlocked.iter().cloned().cloned());
-        if self.report_info {
-            let msg = format!(
-                "{}{} in {:.1}s",
-                unit_time.name_ver(),
-                unit_time.target,
-                unit_time.duration
-            );
-            let _ = self
-                .config
-                .shell()
-                .status_with_color("Completed", msg, termcolor::Color::Cyan);
-        }
         if self.report_json {
             let msg = machine_message::TimingInfo {
                 package_id: unit_time.unit.pkg.package_id(),
@@ -251,13 +235,7 @@ impl<'cfg> Timings<'cfg> {
     }
 
     /// This is called periodically to mark the concurrency of internal structures.
-    pub fn mark_concurrency(
-        &mut self,
-        active: usize,
-        waiting: usize,
-        inactive: usize,
-        rustc_parallelism: usize,
-    ) {
+    pub fn mark_concurrency(&mut self, active: usize, waiting: usize, inactive: usize) {
         if !self.enabled {
             return;
         }
@@ -266,17 +244,16 @@ impl<'cfg> Timings<'cfg> {
             active,
             waiting,
             inactive,
-            rustc_parallelism,
         };
         self.concurrency.push(c);
     }
 
-    /// Mark that a fresh unit was encountered.
+    /// Mark that a fresh unit was encountered. (No re-compile needed)
     pub fn add_fresh(&mut self) {
         self.total_fresh += 1;
     }
 
-    /// Mark that a dirty unit was encountered.
+    /// Mark that a dirty unit was encountered. (Re-compile needed)
     pub fn add_dirty(&mut self) {
         self.total_dirty += 1;
     }
@@ -286,11 +263,10 @@ impl<'cfg> Timings<'cfg> {
         if !self.enabled {
             return;
         }
-        let prev = match &mut self.last_cpu_state {
-            Some(state) => state,
-            None => return,
+        let Some(prev) = &mut self.last_cpu_state else {
+            return;
         };
-        // Don't take samples too too frequently, even if requested.
+        // Don't take samples too frequently, even if requested.
         let now = Instant::now();
         if self.last_cpu_recording.elapsed() < Duration::from_millis(100) {
             return;
@@ -298,7 +274,7 @@ impl<'cfg> Timings<'cfg> {
         let current = match State::current() {
             Ok(s) => s,
             Err(e) => {
-                log::info!("failed to get CPU state: {:?}", e);
+                tracing::info!("failed to get CPU state: {:?}", e);
                 return;
             }
         };
@@ -312,31 +288,29 @@ impl<'cfg> Timings<'cfg> {
     /// Call this when all units are finished.
     pub fn finished(
         &mut self,
-        bcx: &BuildContext<'_, '_>,
+        cx: &Context<'_, '_>,
         error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
         if !self.enabled {
             return Ok(());
         }
-        self.mark_concurrency(0, 0, 0, 0);
+        self.mark_concurrency(0, 0, 0);
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html(bcx, error)
-                .chain_err(|| "failed to save timing report")?;
+            self.report_html(cx, error)
+                .with_context(|| "failed to save timing report")?;
         }
         Ok(())
     }
 
     /// Save HTML report to disk.
-    fn report_html(
-        &self,
-        bcx: &BuildContext<'_, '_>,
-        error: &Option<anyhow::Error>,
-    ) -> CargoResult<()> {
+    fn report_html(&self, cx: &Context<'_, '_>, error: &Option<anyhow::Error>) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs_f64();
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
-        let filename = format!("cargo-timing-{}.html", timestamp);
+        let timings_path = cx.files().host_root().join("cargo-timings");
+        paths::create_dir_all(&timings_path)?;
+        let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
         let mut f = BufWriter::new(paths::create(&filename)?);
         let roots: Vec<&str> = self
             .root_targets
@@ -344,7 +318,7 @@ impl<'cfg> Timings<'cfg> {
             .map(|(name, _targets)| name.as_str())
             .collect();
         f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.write_summary_table(&mut f, duration, bcx, error)?;
+        self.write_summary_table(&mut f, duration, cx.bcx, error)?;
         f.write_all(HTML_CANVAS.as_bytes())?;
         self.write_unit_table(&mut f)?;
         // It helps with pixel alignment to use whole numbers.
@@ -372,10 +346,11 @@ impl<'cfg> Timings<'cfg> {
                 .join(&filename)
                 .display()
         );
-        paths::link_or_copy(&filename, "cargo-timing.html")?;
+        let unstamped_filename = timings_path.join("cargo-timing.html");
+        paths::link_or_copy(&filename, &unstamped_filename)?;
         self.config
             .shell()
-            .status_with_color("Timing", msg, termcolor::Color::Cyan)?;
+            .status_with_color("Timing", msg, &style::NOTE)?;
         Ok(())
     }
 
@@ -400,12 +375,9 @@ impl<'cfg> Timings<'cfg> {
         };
         let total_time = format!("{:.1}s{}", duration, time_human);
         let max_concurrency = self.concurrency.iter().map(|c| c.active).max().unwrap();
-        let max_rustc_concurrency = self
-            .concurrency
-            .iter()
-            .map(|c| c.rustc_parallelism)
-            .max()
-            .unwrap();
+        let num_cpus = available_parallelism()
+            .map(|x| x.get().to_string())
+            .unwrap_or_else(|_| "n/a".into());
         let rustc_info = render_rustc_info(bcx);
         let error_msg = match error {
             Some(e) => format!(
@@ -449,9 +421,6 @@ impl<'cfg> Timings<'cfg> {
   <tr>
     <td>rustc:</td><td>{}</td>
   </tr>
-  <tr>
-    <td>Max (global) rustc threads concurrency:</td><td>{}</td>
-  </tr>
 {}
 </table>
 "#,
@@ -461,17 +430,18 @@ impl<'cfg> Timings<'cfg> {
             self.total_dirty,
             self.total_fresh + self.total_dirty,
             max_concurrency,
-            bcx.build_config.jobs,
-            num_cpus::get(),
+            bcx.jobs(),
+            num_cpus,
             self.start_str,
             total_time,
             rustc_info,
-            max_rustc_concurrency,
             error_msg,
         )?;
         Ok(())
     }
 
+    /// Write timing data in JavaScript. Primarily for `timings.js` to put data
+    /// in a `<script>` HTML element to draw graphs.
     fn write_js_data(&self, f: &mut impl Write) -> CargoResult<()> {
         // Create a map to link indices of unlocked units.
         let unit_map: HashMap<Unit, usize> = self
@@ -527,7 +497,7 @@ impl<'cfg> Timings<'cfg> {
                     target: ut.target.clone(),
                     start: round(ut.start),
                     duration: round(ut.duration),
-                    rmeta_time: ut.rmeta_time.map(|t| round(t)),
+                    rmeta_time: ut.rmeta_time.map(round),
                     unlocked_units,
                     unlocked_rmeta_units,
                 }
@@ -641,7 +611,7 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
 static HTML_TMPL: &str = r#"
 <html>
 <head>
-  <title>Cargo Build Timings — {ROOTS}</title>
+  <title>Cargo Build Timings — {ROOTS}</title>
   <meta charset="utf-8">
 <style type="text/css">
 html {
@@ -749,6 +719,7 @@ h1 {
 <body>
 
 <h1>Cargo Build Timings</h1>
+See <a href="https://doc.rust-lang.org/nightly/cargo/reference/timings.html">Documentation</a>
 "#;
 
 static HTML_CANVAS: &str = r#"

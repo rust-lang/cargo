@@ -1,6 +1,7 @@
 //! Tests for some invalid .cargo/config files.
 
-use cargo_test_support::registry::Package;
+use cargo_test_support::git::cargo_uses_gitoxide;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project, rustc_host};
 
 #[cargo_test]
@@ -15,12 +16,12 @@ fn bad1() {
             "#,
         )
         .build();
-    p.cargo("build -v --target=nonexistent-target")
+    p.cargo("check -v --target=nonexistent-target")
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] invalid configuration for key `target.nonexistent-target`
-expected a table, but found a string for `[..]` in [..]config
+[ERROR] expected table for configuration key `target.nonexistent-target`, \
+but found string in [..]/config
 ",
         )
         .run();
@@ -62,6 +63,7 @@ Caused by:
 
 #[cargo_test]
 fn bad3() {
+    let registry = registry::init();
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -75,6 +77,7 @@ fn bad3() {
     Package::new("foo", "1.0.0").publish();
 
     p.cargo("publish -v")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
             "\
@@ -94,7 +97,7 @@ fn bad4() {
             ".cargo/config",
             r#"
                 [cargo-new]
-                  name = false
+                  vcs = false
             "#,
         )
         .build();
@@ -105,7 +108,7 @@ fn bad4() {
 [ERROR] Failed to create package `foo` at `[..]`
 
 Caused by:
-  error in [..]config: `cargo-new.name` expected a string, but found a boolean
+  error in [..]config: `cargo-new.vcs` expected a string, but found a boolean
 ",
         )
         .run();
@@ -113,6 +116,7 @@ Caused by:
 
 #[cargo_test]
 fn bad6() {
+    let registry = registry::init();
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -126,6 +130,7 @@ fn bad6() {
     Package::new("foo", "1.0.0").publish();
 
     p.cargo("publish -v")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
             "\
@@ -133,32 +138,6 @@ error: failed to update registry [..]
 
 Caused by:
   error in [..]config: `http.user-agent` expected a string, but found a boolean
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn bad_cargo_config_jobs() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-                [build]
-                jobs = -1
-            "#,
-        )
-        .build();
-    p.cargo("build -v")
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] error in [..].cargo/config: \
-could not load config key `build.jobs`
-
-Caused by:
-  invalid value: integer `-1`, expected u32
 ",
         )
         .run();
@@ -183,7 +162,7 @@ fn invalid_global_config() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -193,10 +172,11 @@ Caused by:
   could not parse TOML configuration in `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
-  expected an equals, found eof at line 1 column 2
+  TOML parse error at line 1, column 2
+    |
+  1 | 4
+    |  ^
+  expected `.`, `=`
 ",
         )
         .run();
@@ -209,14 +189,18 @@ fn bad_cargo_lock() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
-  missing field `name` for key `package`
+  TOML parse error at line 1, column 1
+    |
+  1 | [[package]]
+    | ^^^^^^^^^^^
+  missing field `name`
 ",
         )
         .run();
@@ -230,7 +214,7 @@ fn duplicate_packages_in_cargo_lock() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -263,7 +247,7 @@ fn duplicate_packages_in_cargo_lock() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -284,7 +268,7 @@ fn bad_source_in_cargo_lock() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -312,14 +296,18 @@ fn bad_source_in_cargo_lock() {
         )
         .build();
 
-    p.cargo("build --verbose")
+    p.cargo("check --verbose")
         .with_status(101)
         .with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
-  invalid source `You shall not parse` for key `package.source`
+  TOML parse error at line 12, column 26
+     |
+  12 |                 source = \"You shall not parse\"
+     |                          ^^^^^^^^^^^^^^^^^^^^^
+  invalid source `You shall not parse`
 ",
         )
         .run();
@@ -342,7 +330,7 @@ fn bad_dependency_in_lockfile() {
         )
         .build();
 
-    p.cargo("build").run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -350,23 +338,45 @@ fn bad_git_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
-            r#"
+            &format!(
+                r#"
                 [package]
                 name = "foo"
                 version = "0.0.0"
                 authors = []
 
                 [dependencies]
-                foo = { git = "file:.." }
+                foo = {{ git = "{url}" }}
             "#,
+                url = if cargo_uses_gitoxide() {
+                    "git://host.xz"
+                } else {
+                    "file:.."
+                }
+            ),
         )
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
-        .with_status(101)
-        .with_stderr(
-            "\
+    let expected_stderr = if cargo_uses_gitoxide() {
+        "\
+[UPDATING] git repository `git://host.xz`
+[ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
+
+Caused by:
+  failed to load source for dependency `foo`
+
+Caused by:
+  Unable to update git://host.xz
+
+Caused by:
+  failed to clone into: [..]
+
+Caused by:
+  URLs need to specify the path to the repository
+"
+    } else {
+        "\
 [UPDATING] git repository `file:///`
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
 
@@ -381,8 +391,11 @@ Caused by:
 
 Caused by:
   [..]'file:///' is not a valid local file URI[..]
-",
-        )
+"
+    };
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr(expected_stderr)
         .run();
 }
 
@@ -432,17 +445,19 @@ fn malformed_override() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
-  expected a table key, found a newline at line 8 column 27
+  TOML parse error at line 8, column 27
+    |
+  8 |                 native = {
+    |                           ^
+  invalid inline table
+  expected `}`
 ",
         )
         .run();
@@ -472,7 +487,7 @@ fn duplicate_binary_names() {
         .file("b.rs", r#"fn main() -> () {}"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -509,7 +524,7 @@ fn duplicate_example_names() {
         .file("examples/ex2.rs", r#"fn main () -> () {}"#)
         .build();
 
-    p.cargo("build --example ex")
+    p.cargo("check --example ex")
         .with_status(101)
         .with_stderr(
             "\
@@ -584,7 +599,7 @@ fn duplicate_deps() {
         .file("src/main.rs", r#"fn main () {}"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -623,7 +638,7 @@ fn duplicate_deps_diff_sources() {
         .file("src/main.rs", r#"fn main () {}"#)
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -655,11 +670,11 @@ fn unused_keys() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 warning: unused manifest key: target.foo.bar
-[COMPILING] foo v0.1.0 ([CWD])
+[CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -669,40 +684,7 @@ warning: unused manifest key: target.foo.bar
         .file(
             "Cargo.toml",
             r#"
-               cargo-features = ["named-profiles"]
-
-               [package]
-               name = "foo"
-               version = "0.1.0"
-               authors = []
-
-               [profile.debug]
-               debug = 1
-               inherits = "dev"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build -Z named-profiles")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-warning: use `[profile.dev]` to configure debug builds
-[..]
-[..]",
-        )
-        .run();
-
-    p.cargo("build -Z named-profiles")
-        .masquerade_as_nightly_cargo()
-        .run();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -712,11 +694,11 @@ warning: use `[profile.dev]` to configure debug builds
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
-warning: unused manifest key: project.bulid
-[COMPILING] foo [..]
+warning: unused manifest key: package.bulid
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -727,7 +709,7 @@ warning: unused manifest key: project.bulid
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
 
                 name = "foo"
                 version = "0.5.0"
@@ -739,11 +721,11 @@ warning: unused manifest key: project.bulid
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr(
             "\
 warning: unused manifest key: lib.build
-[COMPILING] foo [..]
+[CHECKING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -764,11 +746,11 @@ fn unused_keys_in_virtual_manifest() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
-    p.cargo("build --workspace")
+    p.cargo("check --workspace")
         .with_stderr(
             "\
 [WARNING] [..]/foo/Cargo.toml: unused manifest key: workspace.bulid
-[COMPILING] bar [..]
+[CHECKING] bar [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -795,35 +777,39 @@ fn empty_dependencies() {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
             "\
-warning: dependency (bar) specified without providing a local path, Git repository, or version \
-to use. This will be considered an error in future versions
+warning: dependency (bar) specified without providing a local path, Git repository, version, \
+or workspace dependency to use. This will be considered an error in future versions
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn invalid_toml_historically_allowed_is_warned() {
+fn invalid_toml_historically_allowed_fails() {
     let p = project()
         .file(".cargo/config", "[bar] baz = 2")
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
+        .with_status(101)
         .with_stderr(
             "\
-warning: TOML file found which contains invalid syntax and will soon not parse
-at `[..]config`.
+error: could not load Cargo configuration
 
-The TOML spec requires newlines after table definitions (e.g., `[a] b = 1` is
-invalid), but this file has a table header which does not have a newline after
-it. A newline needs to be added and this warning will soon become a hard error
-in the future.
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+Caused by:
+  could not parse TOML configuration in `[..]`
+
+Caused by:
+  TOML parse error at line 1, column 7
+    |
+  1 | [bar] baz = 2
+    |       ^
+  invalid table header
+  expected newline, `#`
 ",
         )
         .run();
@@ -849,13 +835,14 @@ fn ambiguous_git_reference() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
-[WARNING] dependency (bar) specification is ambiguous. \
-Only one of `branch`, `tag` or `rev` is allowed. \
-This will be considered an error in future versions
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  dependency (bar) specification is ambiguous. Only one of `branch`, `tag` or `rev` is allowed.
 ",
         )
         .run();
@@ -879,7 +866,7 @@ fn fragment_in_git_url() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -898,7 +885,7 @@ fn bad_source_config1() {
         .file(".cargo/config", "[source.foo]")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr("error: no source location specified for `source.foo`, need [..]")
         .run();
@@ -930,7 +917,7 @@ fn bad_source_config2() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -940,7 +927,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   could not find a configured source with the name `bar` \
@@ -976,7 +963,7 @@ fn bad_source_config3() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -986,7 +973,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   detected a cycle of `replace-with` sources, [..]
@@ -1024,7 +1011,7 @@ fn bad_source_config4() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1034,7 +1021,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `https://[..]`
+  Unable to update registry `crates-io`
 
 Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is \
@@ -1073,7 +1060,7 @@ fn bad_source_config5() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1105,13 +1092,14 @@ fn both_git_and_path_specified() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build -v")
+    foo.cargo("check -v")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
-[WARNING] dependency (bar) specification is ambiguous. \
-Only one of `git` or `path` is allowed. \
-This will be considered an error in future versions
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  dependency (bar) specification is ambiguous. Only one of `git` or `path` is allowed.
 ",
         )
         .run();
@@ -1143,7 +1131,7 @@ fn bad_source_config6() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
@@ -1175,12 +1163,32 @@ fn ignored_git_revision() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build -v")
+    let err_msg = "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  key `branch` is ignored for dependency (bar).
+";
+    foo.cargo("check -v")
         .with_status(101)
-        .with_stderr_contains(
-            "[WARNING] key `branch` is ignored for dependency (bar). \
-             This will be considered an error in future versions",
-        )
+        .with_stderr(err_msg)
+        .run();
+
+    // #11540, check that [target] dependencies fail the same way.
+    foo.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+
+            [target.some-target.dependencies]
+            bar = { path = "bar", branch = "spam" }
+        "#,
+    );
+    foo.cargo("check")
+        .with_status(101)
+        .with_stderr(err_msg)
         .run();
 }
 
@@ -1212,7 +1220,7 @@ fn bad_source_config7() {
 
     Package::new("bar", "0.1.0").publish();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr("error: more than one source location specified for `source.foo`")
         .run();
@@ -1243,7 +1251,7 @@ fn bad_source_config8() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "[ERROR] source definition `source.foo` specifies `branch`, \
@@ -1270,13 +1278,17 @@ fn bad_dependency() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 8, column 23
+    |
+  8 |                 bar = 3
+    |                       ^
   invalid type: integer `3`, expected a version string like [..]
 ",
         )
@@ -1301,14 +1313,53 @@ fn bad_debuginfo() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest [..]
+
+Caused by:
+  TOML parse error at line 8, column 25
+    |
+  8 |                 debug = 'a'
+    |                         ^^^
+  invalid value: string \"a\", expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_debuginfo2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+
+                [profile.dev]
+                debug = 3.6
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string \"a\", expected a boolean or an integer for [..]
+  TOML parse error at line 8, column 25
+    |
+  8 |                 debug = 3.6
+    |                         ^^^
+  invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
 ",
         )
         .run();
@@ -1330,14 +1381,18 @@ fn bad_opt_level() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_status(101)
         .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: integer `3`, expected a boolean or a string for key [..]
+  TOML parse error at line 6, column 25
+    |
+  6 |                 build = 3
+    |                         ^
+  invalid type: integer `3`, expected a boolean or string
 ",
         )
         .run();
@@ -1366,6 +1421,117 @@ fn warn_semver_metadata() {
 }
 
 #[cargo_test]
+fn bad_http_ssl_version() {
+    // Invalid type in SslVersionConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [http]
+            ssl-version = ["tlsv1.2", "tlsv1.3"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `http.ssl-version`
+
+Caused by:
+  invalid type: sequence, expected a string or map
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_http_ssl_version_range() {
+    // Invalid type in SslVersionConfigRange.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [http]
+            ssl-version.min = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `http.ssl-version`
+
+Caused by:
+  error in [..]/config.toml: `http.ssl-version.min` expected a string, but found a boolean
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_build_jobs() {
+    // Invalid type in JobsConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            jobs = { default = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `build.jobs`
+
+Caused by:
+  invalid type: map, expected an integer or string
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_build_target() {
+    // Invalid type in BuildTargetConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target.'cfg(unix)' = "x86_64"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `build.target`
+
+Caused by:
+  error in [..]/config.toml: could not load config key `build.target`
+
+Caused by:
+  invalid type: map, expected a string or array
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn bad_target_cfg() {
     // Invalid type in a StringList.
     //
@@ -1390,16 +1556,16 @@ fn bad_target_cfg() {
         .with_stderr(
             "\
 [ERROR] error in [..]/foo/.cargo/config: \
-could not load config key `target.cfg(not(target_os = \"none\")).runner`
+could not load config key `target.\"cfg(not(target_os = \\\"none\\\"))\".runner`
 
 Caused by:
   error in [..]/foo/.cargo/config: \
-  could not load config key `target.cfg(not(target_os = \"none\")).runner`
+  could not load config key `target.\"cfg(not(target_os = \\\"none\\\"))\".runner`
 
 Caused by:
-  invalid configuration for key `target.cfg(not(target_os = \"none\")).runner`
+  invalid configuration for key `target.\"cfg(not(target_os = \\\"none\\\"))\".runner`
   expected a string or array of strings, but found a boolean for \
-  `target.cfg(not(target_os = \"none\")).runner` in [..]/foo/.cargo/config
+  `target.\"cfg(not(target_os = \\\"none\\\"))\".runner` in [..]/foo/.cargo/config
 ",
         )
         .run();
@@ -1468,7 +1634,7 @@ fn redefined_sources() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] source `foo` defines source registry `https://github.com/rust-lang/crates.io-index`, \
+[ERROR] source `foo` defines source registry `crates-io`, \
     but that source is already defined by `crates-io`
 note: Sources are not allowed to be defined multiple times.
 ",

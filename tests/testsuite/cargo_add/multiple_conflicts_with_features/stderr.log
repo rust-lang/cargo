@@ -1,0 +1,1 @@
+error: feature `nose` must be qualified by the dependency it's being activated for, like `my-package1/nose`, `your-face/nose`

@@ -1,0 +1,8 @@
+allow-print-in-tests = true
+allow-dbg-in-tests = true
+disallowed-methods = [
+    { path = "std::env::var", reason = "use `Config::get_env` instead. See rust-lang/cargo#11588" },
+    { path = "std::env::var_os", reason = "use `Config::get_env_os` instead. See rust-lang/cargo#11588" },
+    { path = "std::env::vars", reason = "not recommended to use in Cargo. See rust-lang/cargo#11588" },
+    { path = "std::env::vars_os", reason = "not recommended to use in Cargo. See rust-lang/cargo#11588" },
+]

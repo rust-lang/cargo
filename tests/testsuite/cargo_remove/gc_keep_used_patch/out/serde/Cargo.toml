@@ -1,0 +1,6 @@
+# serde/Cargo.toml
+
+[package]
+name = "serde"
+version = "1.0.0"
+

@@ -8,7 +8,7 @@ fn net_retry_loads_from_config() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -29,7 +29,7 @@ fn net_retry_loads_from_config() {
         )
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_contains(
             "[WARNING] spurious network error \
@@ -44,7 +44,7 @@ fn net_retry_git_outputs_warning() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -63,7 +63,7 @@ fn net_retry_git_outputs_warning() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build -v -j 1")
+    p.cargo("check -v -j 1")
         .with_status(101)
         .with_stderr_contains(
             "[WARNING] spurious network error \

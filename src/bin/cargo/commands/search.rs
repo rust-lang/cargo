@@ -4,12 +4,10 @@ use std::cmp::min;
 
 use cargo::ops;
 
-pub fn cli() -> App {
+pub fn cli() -> Command {
     subcommand("search")
         .about("Search packages in crates.io")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
-        .arg(Arg::with_name("query").multiple(true))
-        .arg_index()
+        .arg(Arg::new("query").num_args(0..))
         .arg(
             opt(
                 "limit",
@@ -17,17 +15,24 @@ pub fn cli() -> App {
             )
             .value_name("LIMIT"),
         )
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
-        .after_help("Run `cargo help search` for more detailed information.\n")
+        .arg_index("Registry index URL to search packages in")
+        .arg_registry("Registry to search packages in")
+        .arg_quiet()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help search</>` for more detailed information.\n"
+        ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    let registry = args.registry(config)?;
-    let index = args.index(config)?;
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let reg_or_index = args.registry_or_index(config)?;
     let limit = args.value_of_u32("limit")?;
     let limit = min(100, limit.unwrap_or(10));
-    let query: Vec<&str> = args.values_of("query").unwrap_or_default().collect();
+    let query: Vec<&str> = args
+        .get_many::<String>("query")
+        .unwrap_or_default()
+        .map(String::as_str)
+        .collect();
     let query: String = query.join("+");
-    ops::search(&query, config, index, limit, registry)?;
+    ops::search(&query, config, reg_or_index, limit)?;
     Ok(())
 }

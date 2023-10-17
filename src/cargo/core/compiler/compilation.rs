@@ -1,16 +1,17 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
-use std::env;
+//! Type definitions for the result of a compilation.
+
+use std::collections::{BTreeSet, HashMap};
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
-use semver::Version;
+use cargo_util::{paths, ProcessBuilder};
 
-use super::BuildContext;
-use crate::core::compiler::CompileKind;
-use crate::core::compiler::Unit;
-use crate::core::{Edition, Package, PackageId};
-use crate::util::{self, config, join_paths, process, CargoResult, Config, ProcessBuilder};
+use crate::core::compiler::apply_env_config;
+use crate::core::compiler::BuildContext;
+use crate::core::compiler::{CompileKind, Metadata, Unit};
+use crate::core::Package;
+use crate::util::{config, CargoResult, Config};
 
 /// Structure with enough information to run `rustdoc --test`.
 pub struct Doctest {
@@ -22,20 +23,41 @@ pub struct Doctest {
     pub unstable_opts: bool,
     /// The -Clinker value to use.
     pub linker: Option<PathBuf>,
+    /// The script metadata, if this unit's package has a build script.
+    ///
+    /// This is used for indexing [`Compilation::extra_env`].
+    pub script_meta: Option<Metadata>,
+
+    /// Environment variables to set in the rustdoc process.
+    pub env: HashMap<String, OsString>,
+}
+
+/// Information about the output of a unit.
+#[derive(Ord, PartialOrd, Eq, PartialEq)]
+pub struct UnitOutput {
+    /// The unit that generated this output.
+    pub unit: Unit,
+    /// Path to the unit's primary output (an executable or cdylib).
+    pub path: PathBuf,
+    /// The script metadata, if this unit's package has a build script.
+    ///
+    /// This is used for indexing [`Compilation::extra_env`].
+    pub script_meta: Option<Metadata>,
 }
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
-    /// `(unit, path_to_test_exe)` where `unit` contains information such as the
-    /// package, compile target, etc.
-    pub tests: Vec<(Unit, PathBuf)>,
+    pub tests: Vec<UnitOutput>,
 
     /// An array of all binaries created.
-    pub binaries: Vec<(Unit, PathBuf)>,
+    pub binaries: Vec<UnitOutput>,
 
     /// An array of all cdylibs created.
-    pub cdylibs: Vec<(Unit, PathBuf)>,
+    pub cdylibs: Vec<UnitOutput>,
+
+    /// The crate names of the root units specified on the command-line.
+    pub root_crate_names: Vec<String>,
 
     /// All directories for the output of native build commands.
     ///
@@ -60,16 +82,13 @@ pub struct Compilation<'cfg> {
 
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
-    pub extra_env: HashMap<PackageId, Vec<(String, String)>>,
+    ///
+    /// The key is the build script metadata for uniquely identifying the
+    /// `RunCustomBuild` unit that generated these env vars.
+    pub extra_env: HashMap<Metadata, Vec<(String, String)>>,
 
     /// Libraries to test with rustdoc.
     pub to_doc_test: Vec<Doctest>,
-
-    /// Features per package enabled during this compilation.
-    pub cfgs: HashMap<PackageId, HashSet<String>>,
-
-    /// Flags to pass to rustdoc when invoked from cargo test, per package.
-    pub rustdocflags: HashMap<PackageId, Vec<String>>,
 
     /// The target host triple.
     pub host: String,
@@ -85,6 +104,8 @@ pub struct Compilation<'cfg> {
     primary_rustc_process: Option<ProcessBuilder>,
 
     target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
+    /// The linker to use for each host or target.
+    target_linkers: HashMap<CompileKind, Option<PathBuf>>,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -112,25 +133,13 @@ impl<'cfg> Compilation<'cfg> {
                 .info(CompileKind::Host)
                 .sysroot_host_libdir
                 .clone(),
-            sysroot_target_libdir: bcx
-                .build_config
-                .requested_kinds
-                .iter()
-                .chain(Some(&CompileKind::Host))
-                .map(|kind| {
-                    (
-                        *kind,
-                        bcx.target_data.info(*kind).sysroot_target_libdir.clone(),
-                    )
-                })
-                .collect(),
+            sysroot_target_libdir: get_sysroot_target_libdir(bcx)?,
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
+            root_crate_names: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
-            cfgs: HashMap::new(),
-            rustdocflags: HashMap::new(),
             config: bcx.config,
             host: bcx.host_triple().to_string(),
             rustc_process: rustc,
@@ -143,10 +152,23 @@ impl<'cfg> Compilation<'cfg> {
                 .chain(Some(&CompileKind::Host))
                 .map(|kind| Ok((*kind, target_runner(bcx, *kind)?)))
                 .collect::<CargoResult<HashMap<_, _>>>()?,
+            target_linkers: bcx
+                .build_config
+                .requested_kinds
+                .iter()
+                .chain(Some(&CompileKind::Host))
+                .map(|kind| Ok((*kind, target_linker(bcx, *kind)?)))
+                .collect::<CargoResult<HashMap<_, _>>>()?,
         })
     }
 
-    /// See `process`.
+    /// Returns a [`ProcessBuilder`] for running `rustc`.
+    ///
+    /// `is_primary` is true if this is a "primary package", which means it
+    /// was selected by the user on the command-line (such as with a `-p`
+    /// flag), see [`crate::core::compiler::Context::primary_packages`].
+    ///
+    /// `is_workspace` is true if this is a workspace member.
     pub fn rustc_process(
         &self,
         unit: &Unit,
@@ -162,54 +184,80 @@ impl<'cfg> Compilation<'cfg> {
         };
 
         let cmd = fill_rustc_tool_env(rustc, unit);
-        self.fill_env(cmd, &unit.pkg, unit.kind, true)
+        self.fill_env(cmd, &unit.pkg, None, unit.kind, true)
     }
 
-    /// See `process`.
-    pub fn rustdoc_process(&self, unit: &Unit) -> CargoResult<ProcessBuilder> {
-        let rustdoc = process(&*self.config.rustdoc()?);
+    /// Returns a [`ProcessBuilder`] for running `rustdoc`.
+    pub fn rustdoc_process(
+        &self,
+        unit: &Unit,
+        script_meta: Option<Metadata>,
+    ) -> CargoResult<ProcessBuilder> {
+        let rustdoc = ProcessBuilder::new(&*self.config.rustdoc()?);
         let cmd = fill_rustc_tool_env(rustdoc, unit);
-        let mut p = self.fill_env(cmd, &unit.pkg, unit.kind, true)?;
-        if unit.target.edition() != Edition::Edition2015 {
-            p.arg(format!("--edition={}", unit.target.edition()));
-        }
+        let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
+        cmd.retry_with_argfile(true);
+        unit.target.edition().cmd_edition_arg(&mut cmd);
 
         for crate_type in unit.target.rustc_crate_types() {
-            p.arg("--crate-type").arg(crate_type.as_str());
+            cmd.arg("--crate-type").arg(crate_type.as_str());
         }
 
-        Ok(p)
+        Ok(cmd)
     }
 
-    /// See `process`.
+    /// Returns a [`ProcessBuilder`] appropriate for running a process for the
+    /// host platform.
+    ///
+    /// This is currently only used for running build scripts. If you use this
+    /// for anything else, please be extra careful on how environment
+    /// variables are set!
     pub fn host_process<T: AsRef<OsStr>>(
         &self,
         cmd: T,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(cmd), pkg, CompileKind::Host, false)
+        self.fill_env(
+            ProcessBuilder::new(cmd),
+            pkg,
+            None,
+            CompileKind::Host,
+            false,
+        )
     }
 
     pub fn target_runner(&self, kind: CompileKind) -> Option<&(PathBuf, Vec<String>)> {
         self.target_runners.get(&kind).and_then(|x| x.as_ref())
     }
 
-    /// See `process`.
+    /// Gets the user-specified linker for a particular host or target.
+    pub fn target_linker(&self, kind: CompileKind) -> Option<PathBuf> {
+        self.target_linkers.get(&kind).and_then(|x| x.clone())
+    }
+
+    /// Returns a [`ProcessBuilder`] appropriate for running a process for the
+    /// target platform. This is typically used for `cargo run` and `cargo
+    /// test`.
+    ///
+    /// `script_meta` is the metadata for the `RunCustomBuild` unit that this
+    /// unit used for its build script. Use `None` if the package did not have
+    /// a build script.
     pub fn target_process<T: AsRef<OsStr>>(
         &self,
         cmd: T,
         kind: CompileKind,
         pkg: &Package,
+        script_meta: Option<Metadata>,
     ) -> CargoResult<ProcessBuilder> {
         let builder = if let Some((runner, args)) = self.target_runner(kind) {
-            let mut builder = process(runner);
+            let mut builder = ProcessBuilder::new(runner);
             builder.args(args);
             builder.arg(cmd);
             builder
         } else {
-            process(cmd)
+            ProcessBuilder::new(cmd)
         };
-        self.fill_env(builder, pkg, kind, false)
+        self.fill_env(builder, pkg, script_meta, kind, false)
     }
 
     /// Prepares a new process with an appropriate environment to run against
@@ -221,6 +269,7 @@ impl<'cfg> Compilation<'cfg> {
         &self,
         mut cmd: ProcessBuilder,
         pkg: &Package,
+        script_meta: Option<Metadata>,
         kind: CompileKind,
         is_rustc_tool: bool,
     ) -> CargoResult<ProcessBuilder> {
@@ -244,25 +293,27 @@ impl<'cfg> Compilation<'cfg> {
             }
         }
 
-        let dylib_path = util::dylib_path();
+        let dylib_path = paths::dylib_path();
         let dylib_path_is_empty = dylib_path.is_empty();
         search_path.extend(dylib_path.into_iter());
         if cfg!(target_os = "macos") && dylib_path_is_empty {
             // These are the defaults when DYLD_FALLBACK_LIBRARY_PATH isn't
             // set or set to an empty string. Since Cargo is explicitly setting
             // the value, make sure the defaults still work.
-            if let Some(home) = env::var_os("HOME") {
+            if let Some(home) = self.config.get_env_os("HOME") {
                 search_path.push(PathBuf::from(home).join("lib"));
             }
             search_path.push(PathBuf::from("/usr/local/lib"));
             search_path.push(PathBuf::from("/usr/lib"));
         }
-        let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
+        let search_path = paths::join_paths(&search_path, paths::dylib_path_envvar())?;
 
-        cmd.env(util::dylib_path_envvar(), &search_path);
-        if let Some(env) = self.extra_env.get(&pkg.package_id()) {
-            for &(ref k, ref v) in env {
-                cmd.env(k, v);
+        cmd.env(paths::dylib_path_envvar(), &search_path);
+        if let Some(meta) = script_meta {
+            if let Some(env) = self.extra_env.get(&meta) {
+                for (k, v) in env {
+                    cmd.env(k, v);
+                }
             }
         }
 
@@ -275,14 +326,12 @@ impl<'cfg> Compilation<'cfg> {
         // crate properties which might require rebuild upon change
         // consider adding the corresponding properties to the hash
         // in BuildContext::target_metadata()
+        let rust_version = pkg.rust_version().as_ref().map(ToString::to_string);
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
-            .env(
-                "CARGO_PKG_VERSION_PRE",
-                &pre_version_component(pkg.version()),
-            )
+            .env("CARGO_PKG_VERSION_PRE", pkg.version().pre.as_str())
             .env("CARGO_PKG_VERSION", &pkg.version().to_string())
             .env("CARGO_PKG_NAME", &*pkg.name())
             .env(
@@ -306,7 +355,18 @@ impl<'cfg> Compilation<'cfg> {
                 metadata.license_file.as_ref().unwrap_or(&String::new()),
             )
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
+            .env(
+                "CARGO_PKG_RUST_VERSION",
+                &rust_version.as_deref().unwrap_or_default(),
+            )
+            .env(
+                "CARGO_PKG_README",
+                metadata.readme.as_ref().unwrap_or(&String::new()),
+            )
             .cwd(pkg.root());
+
+        apply_env_config(self.config, &mut cmd)?;
+
         Ok(cmd)
     }
 }
@@ -314,28 +374,45 @@ impl<'cfg> Compilation<'cfg> {
 /// Prepares a rustc_tool process with additional environment variables
 /// that are only relevant in a context that has a unit
 fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
-    if unit.target.is_bin() {
-        cmd.env("CARGO_BIN_NAME", unit.target.name());
+    if unit.target.is_executable() {
+        let name = unit
+            .target
+            .binary_filename()
+            .unwrap_or(unit.target.name().to_string());
+
+        cmd.env("CARGO_BIN_NAME", name);
     }
     cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
     cmd
 }
 
-fn pre_version_component(v: &Version) -> String {
-    if v.pre.is_empty() {
-        return String::new();
-    }
+fn get_sysroot_target_libdir(
+    bcx: &BuildContext<'_, '_>,
+) -> CargoResult<HashMap<CompileKind, PathBuf>> {
+    bcx.all_kinds
+        .iter()
+        .map(|&kind| {
+            let Some(info) = bcx.target_data.get_info(kind) else {
+                let target = match kind {
+                    CompileKind::Host => "host".to_owned(),
+                    CompileKind::Target(s) => s.short_name().to_owned(),
+                };
 
-    let mut ret = String::new();
+                let dependency = bcx
+                    .unit_graph
+                    .iter()
+                    .find_map(|(u, _)| (u.kind == kind).then_some(u.pkg.summary().package_id()))
+                    .unwrap();
 
-    for (i, x) in v.pre.iter().enumerate() {
-        if i != 0 {
-            ret.push('.')
-        };
-        ret.push_str(&x.to_string());
-    }
+                anyhow::bail!(
+                    "could not find specification for target `{target}`.\n  \
+                    Dependency `{dependency}` requires to build for target `{target}`."
+                )
+            };
 
-    ret
+            Ok((kind, info.sysroot_target_libdir.clone()))
+        })
+        .collect()
 }
 
 fn target_runner(
@@ -363,7 +440,7 @@ fn target_runner(
     let matching_runner = cfgs.next();
     if let Some((key, runner)) = cfgs.next() {
         anyhow::bail!(
-            "several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`\n\
+            "several matching instances of `target.'cfg(..)'.runner` in configurations\n\
              first match `{}` located in {}\n\
              second match `{}` located in {}",
             matching_runner.unwrap().0,
@@ -378,4 +455,40 @@ fn target_runner(
             runner.val.args.clone(),
         )
     }))
+}
+
+/// Gets the user-specified linker for a particular host or target from the configuration.
+fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<Option<PathBuf>> {
+    // Try host.linker and target.{}.linker.
+    if let Some(path) = bcx
+        .target_data
+        .target_config(kind)
+        .linker
+        .as_ref()
+        .map(|l| l.val.clone().resolve_program(bcx.config))
+    {
+        return Ok(Some(path));
+    }
+
+    // Try target.'cfg(...)'.linker.
+    let target_cfg = bcx.target_data.info(kind).cfg();
+    let mut cfgs = bcx
+        .config
+        .target_cfgs()?
+        .iter()
+        .filter_map(|(key, cfg)| cfg.linker.as_ref().map(|linker| (key, linker)))
+        .filter(|(key, _linker)| CfgExpr::matches_key(key, target_cfg));
+    let matching_linker = cfgs.next();
+    if let Some((key, linker)) = cfgs.next() {
+        anyhow::bail!(
+            "several matching instances of `target.'cfg(..)'.linker` in configurations\n\
+             first match `{}` located in {}\n\
+             second match `{}` located in {}",
+            matching_linker.unwrap().0,
+            matching_linker.unwrap().1.definition,
+            key,
+            linker.definition
+        );
+    }
+    Ok(matching_linker.map(|(_k, linker)| linker.val.clone().resolve_program(bcx.config)))
 }

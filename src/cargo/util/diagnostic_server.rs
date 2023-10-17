@@ -2,35 +2,35 @@
 //! cross-platform way for the `cargo fix` command.
 
 use std::collections::HashSet;
-use std::env;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 use anyhow::{Context, Error};
-use log::warn;
+use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
+use crate::core::Edition;
 use crate::util::errors::CargoResult;
-use crate::util::{Config, ProcessBuilder};
+use crate::util::Config;
 
-const DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
-const PLEASE_REPORT_THIS_BUG: &str =
-    "This likely indicates a bug in either rustc or cargo itself,\n\
-     and we would appreciate a bug report! You're likely to see \n\
-     a number of compiler warnings after this message which cargo\n\
-     attempted to fix but failed. If you could open an issue at\n\
-     https://github.com/rust-lang/rust/issues\n\
-     quoting the full output of this command we'd be very appreciative!\n\
-     Note that you may be able to make some more progress in the near-term\n\
-     fixing code with the `--broken-code` flag\n\n\
-     ";
+const DIAGNOSTICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Hash, Eq, PartialEq, Clone)]
 pub enum Message {
+    Migrating {
+        file: String,
+        from_edition: Edition,
+        to_edition: Edition,
+    },
     Fixing {
+        file: String,
+    },
+    Fixed {
         file: String,
         fixes: u32,
     },
@@ -38,26 +38,23 @@ pub enum Message {
         files: Vec<String>,
         krate: Option<String>,
         errors: Vec<String>,
+        abnormal_exit: Option<String>,
     },
     ReplaceFailed {
         file: String,
         message: String,
     },
     EditionAlreadyEnabled {
-        file: String,
-        edition: String,
-    },
-    IdiomEditionMismatch {
-        file: String,
-        idioms: String,
-        edition: Option<String>,
+        message: String,
+        edition: Edition,
     },
 }
 
 impl Message {
-    pub fn post(&self) -> Result<(), Error> {
-        let addr =
-            env::var(DIAGNOSICS_SERVER_VAR).context("diagnostics collector misconfigured")?;
+    pub fn post(&self, config: &Config) -> Result<(), Error> {
+        let addr = config
+            .get_env(DIAGNOSTICS_SERVER_VAR)
+            .context("diagnostics collector misconfigured")?;
         let mut client =
             TcpStream::connect(&addr).context("failed to connect to parent diagnostics target")?;
 
@@ -69,36 +66,62 @@ impl Message {
             .shutdown(Shutdown::Write)
             .context("failed to shutdown")?;
 
-        let mut tmp = Vec::new();
         client
-            .read_to_end(&mut tmp)
+            .read_to_end(&mut Vec::new())
             .context("failed to receive a disconnect")?;
 
         Ok(())
     }
 }
 
+/// A printer that will print diagnostics messages to the shell.
 pub struct DiagnosticPrinter<'a> {
+    /// The config to get the shell to print to.
     config: &'a Config,
-    edition_already_enabled: HashSet<String>,
-    idiom_mismatch: HashSet<String>,
+    /// An optional wrapper to be used in addition to `rustc.wrapper` for workspace crates.
+    /// This is used to get the correct bug report URL. For instance,
+    /// if `clippy-driver` is set as the value for the wrapper,
+    /// then the correct bug report URL for `clippy` can be obtained.
+    workspace_wrapper: &'a Option<PathBuf>,
+    // A set of messages that have already been printed.
+    dedupe: HashSet<Message>,
 }
 
 impl<'a> DiagnosticPrinter<'a> {
-    pub fn new(config: &'a Config) -> DiagnosticPrinter<'a> {
+    pub fn new(
+        config: &'a Config,
+        workspace_wrapper: &'a Option<PathBuf>,
+    ) -> DiagnosticPrinter<'a> {
         DiagnosticPrinter {
             config,
-            edition_already_enabled: HashSet::new(),
-            idiom_mismatch: HashSet::new(),
+            workspace_wrapper,
+            dedupe: HashSet::new(),
         }
     }
 
     pub fn print(&mut self, msg: &Message) -> CargoResult<()> {
         match msg {
-            Message::Fixing { file, fixes } => {
+            Message::Migrating {
+                file,
+                from_edition,
+                to_edition,
+            } => {
+                if !self.dedupe.insert(msg.clone()) {
+                    return Ok(());
+                }
+                self.config.shell().status(
+                    "Migrating",
+                    &format!("{} from {} edition to {}", file, from_edition, to_edition),
+                )
+            }
+            Message::Fixing { file } => self
+                .config
+                .shell()
+                .verbose(|shell| shell.status("Fixing", file)),
+            Message::Fixed { file, fixes } => {
                 let msg = if *fixes == 1 { "fix" } else { "fixes" };
                 let msg = format!("{} ({} {})", file, fixes, msg);
-                self.config.shell().status("Fixing", msg)
+                self.config.shell().status("Fixed", msg)
             }
             Message::ReplaceFailed { file, message } => {
                 let msg = format!("error applying suggestions to `{}`\n", file);
@@ -108,13 +131,19 @@ impl<'a> DiagnosticPrinter<'a> {
                     "The full error message was:\n\n> {}\n\n",
                     message,
                 )?;
-                write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                let issue_link = get_bug_report_url(self.workspace_wrapper);
+                write!(
+                    self.config.shell().err(),
+                    "{}",
+                    gen_please_report_this_bug_text(issue_link)
+                )?;
                 Ok(())
             }
             Message::FixFailed {
                 files,
                 krate,
                 errors,
+                abnormal_exit,
             } => {
                 if let Some(ref krate) = *krate {
                     self.config.shell().warn(&format!(
@@ -138,7 +167,12 @@ impl<'a> DiagnosticPrinter<'a> {
                     }
                     writeln!(self.config.shell().err())?;
                 }
-                write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                let issue_link = get_bug_report_url(self.workspace_wrapper);
+                write!(
+                    self.config.shell().err(),
+                    "{}",
+                    gen_please_report_this_bug_text(issue_link)
+                )?;
                 if !errors.is_empty() {
                     writeln!(
                         self.config.shell().err(),
@@ -151,67 +185,75 @@ impl<'a> DiagnosticPrinter<'a> {
                         }
                     }
                 }
+                if let Some(exit) = abnormal_exit {
+                    writeln!(
+                        self.config.shell().err(),
+                        "rustc exited abnormally: {}",
+                        exit
+                    )?;
+                }
                 writeln!(
                     self.config.shell().err(),
                     "Original diagnostics will follow.\n"
                 )?;
                 Ok(())
             }
-            Message::EditionAlreadyEnabled { file, edition } => {
-                // Like above, only warn once per file
-                if !self.edition_already_enabled.insert(file.clone()) {
+            Message::EditionAlreadyEnabled { message, edition } => {
+                if !self.dedupe.insert(msg.clone()) {
                     return Ok(());
                 }
+                // Don't give a really verbose warning if it has already been issued.
+                if self.dedupe.insert(Message::EditionAlreadyEnabled {
+                    message: "".to_string(), // Dummy, so that this only long-warns once.
+                    edition: *edition,
+                }) {
+                    self.config.shell().warn(&format!("\
+{}
 
-                let msg = format!(
-                    "\
-cannot prepare for the {} edition when it is enabled, so cargo cannot
-automatically fix errors in `{}`
+If you are trying to migrate from the previous edition ({prev_edition}), the
+process requires following these steps:
 
-To prepare for the {0} edition you should first remove `edition = '{0}'` from
-your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
-then you can re-enable the `edition` key in `Cargo.toml`. For some more
-information about transitioning to the {0} edition see:
+1. Start with `edition = \"{prev_edition}\"` in `Cargo.toml`
+2. Run `cargo fix --edition`
+3. Modify `Cargo.toml` to set `edition = \"{this_edition}\"`
+4. Run `cargo build` or `cargo test` to verify the fixes worked
 
-  https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+More details may be found at
+https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
 ",
-                    edition,
-                    file,
-                );
-                self.config.shell().error(&msg)?;
-                Ok(())
-            }
-            Message::IdiomEditionMismatch {
-                file,
-                idioms,
-                edition,
-            } => {
-                // Same as above
-                if !self.idiom_mismatch.insert(file.clone()) {
-                    return Ok(());
+                        message, this_edition=edition, prev_edition=edition.previous().unwrap()
+                    ))
+                } else {
+                    self.config.shell().warn(message)
                 }
-                self.config.shell().error(&format!(
-                    "\
-cannot migrate to the idioms of the {} edition for `{}`
-because it is compiled {}, which doesn't match {0}
-
-consider migrating to the {0} edition by adding `edition = '{0}'` to
-`Cargo.toml` and then rerunning this command; a more detailed transition
-guide can be found at
-
-  https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
-",
-                    idioms,
-                    file,
-                    match edition {
-                        Some(s) => format!("with the {} edition", s),
-                        None => "without an edition".to_string(),
-                    },
-                ))?;
-                Ok(())
             }
         }
     }
+}
+
+fn gen_please_report_this_bug_text(url: &str) -> String {
+    format!(
+        "This likely indicates a bug in either rustc or cargo itself,\n\
+     and we would appreciate a bug report! You're likely to see \n\
+     a number of compiler warnings after this message which cargo\n\
+     attempted to fix but failed. If you could open an issue at\n\
+     {}\n\
+     quoting the full output of this command we'd be very appreciative!\n\
+     Note that you may be able to make some more progress in the near-term\n\
+     fixing code with the `--broken-code` flag\n\n\
+     ",
+        url
+    )
+}
+
+fn get_bug_report_url(rustc_workspace_wrapper: &Option<PathBuf>) -> &str {
+    let clippy = std::ffi::OsStr::new("clippy-driver");
+    let issue_link = match rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem()) {
+        Some(wrapper) if wrapper == clippy => "https://github.com/rust-lang/rust-clippy/issues",
+        _ => "https://github.com/rust-lang/rust/issues",
+    };
+
+    issue_link
 }
 
 #[derive(Debug)]
@@ -236,7 +278,7 @@ impl RustfixDiagnosticServer {
     }
 
     pub fn configure(&self, process: &mut ProcessBuilder) {
-        process.env(DIAGNOSICS_SERVER_VAR, self.addr.to_string());
+        process.env(DIAGNOSTICS_SERVER_VAR, self.addr.to_string());
     }
 
     pub fn start<F>(self, on_message: F) -> Result<StartedServer, Error>

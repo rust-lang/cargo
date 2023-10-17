@@ -1,8 +1,8 @@
 //! Tests for profiles.
 
+use cargo_test_support::project;
+use cargo_test_support::registry::Package;
 use std::env;
-
-use cargo_test_support::{is_nightly, project};
 
 #[cargo_test]
 fn profile_overrides() {
@@ -66,7 +66,7 @@ fn opt_level_override_0() {
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -99,7 +99,7 @@ fn debug_override_1() {
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]\
-        -C debuginfo=1 \
+        -C debuginfo=1 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -136,7 +136,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level={level}[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C debug-assertions=on \
         -C metadata=[..] \
         --out-dir [..] \
@@ -211,7 +211,7 @@ fn top_level_overrides_deps() {
         --emit=[..]link \
         -C prefer-dynamic \
         -C opt-level=1[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/release/deps \
         -L dependency=[CWD]/target/release/deps`
@@ -219,7 +219,7 @@ fn top_level_overrides_deps() {
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level=1[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps \
@@ -240,7 +240,7 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.1.0"
                 authors = []
@@ -256,7 +256,7 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -301,7 +301,7 @@ fn profile_in_virtual_manifest_works() {
         .file(
             "bar/Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.1.0"
                 authors = []
@@ -318,6 +318,37 @@ fn profile_in_virtual_manifest_works() {
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc [..]`
 [FINISHED] dev [optimized] target(s) in [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn profile_lto_string_bool_dev() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [profile.dev]
+                lto = "true"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  `lto` setting of string `\"true\"` for `dev` profile is not a valid setting, \
+must be a boolean (`true`/`false`) or a string (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.
+",
         )
         .run();
 }
@@ -406,6 +437,9 @@ fn panic_unwind_does_not_build_twice() {
 [RUNNING] `rustc --crate-name foo src/main.rs [..] --test [..]
 [RUNNING] `rustc --crate-name t1 tests/t1.rs [..]
 [FINISHED] [..]
+[EXECUTABLE] `[..]/target/debug/deps/t1-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
+[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
         .run();
@@ -433,10 +467,11 @@ fn debug_0_report() {
         .with_stderr(
             "\
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C debuginfo=0 [..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]
 [FINISHED] dev [unoptimized] target(s) in [..]
 ",
         )
+        .with_stderr_does_not_contain("-C debuginfo")
         .run();
 }
 
@@ -446,7 +481,7 @@ fn thin_lto_works() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "top"
                 version = "0.5.0"
                 authors = []
@@ -470,20 +505,11 @@ fn thin_lto_works() {
 }
 
 #[cargo_test]
-// Strip doesn't work on macos.
-#[cfg_attr(target_os = "macos", ignore)]
 fn strip_works() {
-    if !is_nightly() {
-        // -Zstrip is unstable
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["strip"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -496,11 +522,10 @@ fn strip_works() {
         .build();
 
     p.cargo("build --release -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] foo [..]
-[RUNNING] `rustc [..] -Z strip=symbols [..]`
+[RUNNING] `rustc [..] -C strip=symbols [..]`
 [FINISHED] [..]
 ",
         )
@@ -508,7 +533,7 @@ fn strip_works() {
 }
 
 #[cargo_test]
-fn strip_requires_cargo_feature() {
+fn strip_passes_unknown_option_to_rustc() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -518,57 +543,242 @@ fn strip_requires_cargo_feature() {
                 version = "0.1.0"
 
                 [profile.release]
-                strip = 'symbols'
+                strip = 'unknown'
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build --release -v")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr(
+        .with_stderr_contains(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  feature `strip` is required
-
-  consider adding `cargo-features = [\"strip\"]` to the manifest
+[COMPILING] foo [..]
+[RUNNING] `rustc [..] -C strip=unknown [..]`
+error: incorrect value `unknown` for [..] `strip` [..] was expected
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn strip_rejects_invalid_option() {
+fn strip_accepts_true_to_strip_symbols() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["strip"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
 
                 [profile.release]
-                strip = 'wrong'
+                strip = true
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build --release -v")
-        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc [..] -C strip=symbols [..]`
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn strip_accepts_false_to_disable_strip() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.release]
+                strip = false
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr_does_not_contain("-C strip")
+        .run();
+}
+
+#[cargo_test]
+fn rustflags_works() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-rustflags"]
+
+            [profile.dev]
+            rustflags = ["-C", "link-dead-code=yes"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn rustflags_works_with_env() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-rustflags"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .env("CARGO_PROFILE_DEV_RUSTFLAGS", "-C link-dead-code=yes")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn rustflags_requires_cargo_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [profile.dev]
+                rustflags = ["-C", "link-dead-code=yes"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
         .with_status(101)
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  unknown variant `wrong`, expected one of `debuginfo`, `none`, `symbols` for key [..]
+  feature `profile-rustflags` is required
+
+  The package requires the Cargo feature called `profile-rustflags`, but that feature is \
+  not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"profile-rustflags\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-rustflags-option \
+  for more information about the status of this feature.
 ",
         )
+        .run();
+
+    Package::new("bar", "1.0.0").publish();
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = "1.0"
+
+            [profile.dev.package.bar]
+            rustflags = ["-C", "link-dead-code=yes"]
+        "#,
+    );
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["profile-rustflags"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `profile-rustflags` is required
+
+  The package requires the Cargo feature called `profile-rustflags`, but that feature is \
+  not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = [\"profile-rustflags\"]` to the top of Cargo.toml \
+  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-rustflags-option \
+  for more information about the status of this feature.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn debug_options_valid() {
+    let build = |option| {
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "foo"
+                    authors = []
+                    version = "0.0.0"
+
+                    [profile.dev]
+                    debug = "{option}"
+                "#
+                ),
+            )
+            .file("src/main.rs", "fn main() {}")
+            .build();
+
+        p.cargo("build -v")
+    };
+
+    for (option, cli) in [
+        ("line-directives-only", "line-directives-only"),
+        ("line-tables-only", "line-tables-only"),
+        ("limited", "1"),
+        ("full", "2"),
+    ] {
+        build(option)
+            .with_stderr_contains(&format!("[RUNNING] `rustc [..]-C debuginfo={cli} [..]"))
+            .run();
+    }
+    build("none")
+        .with_stderr_does_not_contain("[..]-C debuginfo[..]")
         .run();
 }

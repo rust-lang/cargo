@@ -48,7 +48,9 @@ fn z_flags_help() {
     // Test that the output of `cargo -Z help` shows a different help screen with
     // all the `-Z` flags.
     cargo_process("-Z help")
-        .with_stdout_contains("    -Z unstable-options    -- Allow the usage of unstable options")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
         .run();
 }
 
@@ -108,6 +110,20 @@ fn help_with_man_and_path(
     assert_eq!(stdout, contents);
 }
 
+fn help_with_stdout_and_path(subcommand: &str, path: &Path) -> String {
+    let output = process(&cargo_exe())
+        .arg("help")
+        .arg(subcommand)
+        .env("PATH", path)
+        .exec_with_output()
+        .unwrap();
+    assert!(output.status.success());
+    let stderr = from_utf8(&output.stderr).unwrap();
+    assert_eq!(stderr, "");
+    let stdout = from_utf8(&output.stdout).unwrap();
+    stdout.to_string()
+}
+
 #[cargo_test]
 fn help_man() {
     // Checks that `help command` displays the man page using the given command.
@@ -130,9 +146,74 @@ fn help_alias() {
         config,
         r#"
             [alias]
-            my-alias = ["build", "--release"]
+            empty-alias   = ""
+            simple-alias  = "build"
+            complex-alias = ["build", "--release"]
         "#,
     )
     .unwrap();
-    help_with_man_and_path("", "my-alias", "build", Path::new(""));
+
+    // The `empty-alias` returns an error.
+    cargo_process("help empty-alias")
+        .env("PATH", Path::new(""))
+        .with_stderr_contains("[..]The subcommand 'empty-alias' wasn't recognized[..]")
+        .run_expect_error();
+
+    // Because `simple-alias` aliases a subcommand with no arguments, help shows the manpage.
+    help_with_man_and_path("", "simple-alias", "build", Path::new(""));
+
+    // Help for `complex-alias` displays the full alias command.
+    let out = help_with_stdout_and_path("complex-alias", Path::new(""));
+    assert_eq!(out, "`complex-alias` is aliased to `build --release`\n");
+}
+
+#[cargo_test]
+fn alias_z_flag_help() {
+    cargo_process("build -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("run -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("check -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("test -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("b -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("r -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("c -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
+
+    cargo_process("t -Z help")
+        .with_stdout_contains(
+            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
+        )
+        .run();
 }

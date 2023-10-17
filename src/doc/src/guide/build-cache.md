@@ -1,29 +1,35 @@
-## Build cache
+# Build cache
 
 Cargo stores the output of a build into the "target" directory. By default,
 this is the directory named `target` in the root of your
-[*workspace*][def-worksapce]. To change the location, you can set the
+[*workspace*][def-workspace]. To change the location, you can set the
 `CARGO_TARGET_DIR` [environment variable], the [`build.target-dir`] config
 value, or the `--target-dir` command-line flag.
 
 The directory layout depends on whether or not you are using the `--target`
 flag to build for a specific platform. If `--target` is not specified, Cargo
 runs in a mode where it builds for the host architecture. The output goes into
-the root of the target directory, separated based on whether or not it is a
-release build:
+the root of the target directory, with each [profile] stored in a separate
+subdirectory:
 
 Directory | Description
 ----------|------------
-<code style="white-space: nowrap">target/debug/</code> | Contains debug build output.
-<code style="white-space: nowrap">target/release/</code> | Contains release build output (with `--release` flag).
+<code style="white-space: nowrap">target/debug/</code> | Contains output for the `dev` profile.
+<code style="white-space: nowrap">target/release/</code> | Contains output for the `release` profile (with the `--release` option).
+<code style="white-space: nowrap">target/foo/</code> | Contains build output for the `foo` profile (with the `--profile=foo` option).
+
+For historical reasons, the `dev` and `test` profiles are stored in the
+`debug` directory, and the `release` and `bench` profiles are stored in the
+`release` directory. User-defined profiles are stored in a directory with the
+same name as the profile.
 
 When building for another target with `--target`, the output is placed in a
-directory with the name of the target:
+directory with the name of the [target]:
 
 Directory | Example
 ----------|--------
-<code style="white-space: nowrap">target/&lt;triple&gt;/debug/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/debug/</code>
-<code style="white-space: nowrap">target/&lt;triple&gt;/release/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/release/</code>
+<code style="white-space: nowrap">target/&lt;triple&gt;/debug/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/debug/</code>
+<code style="white-space: nowrap">target/&lt;triple&gt;/release/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/release/</code>
 
 > **Note**: When not using `--target`, this has a consequence that Cargo will
 > share your dependencies with build scripts and proc macros. [`RUSTFLAGS`]
@@ -31,13 +37,13 @@ Directory | Example
 > build scripts and proc macros are built separately (for the host
 > architecture), and do not share `RUSTFLAGS`.
 
-Within the profile directory (`debug` or `release`), artifacts are placed into
-the following directories:
+Within the profile directory (such as `debug` or `release`), artifacts are
+placed into the following directories:
 
 Directory | Description
 ----------|------------
-<code style="white-space: nowrap">target/debug/</code> | Contains the output of the package being built (the `[[bin]]` executables and `[lib]` library targets).
-<code style="white-space: nowrap">target/debug/examples/</code> | Contains examples (`[[example]]` targets).
+<code style="white-space: nowrap">target/debug/</code> | Contains the output of the package being built (the [binary executables] and [library targets]).
+<code style="white-space: nowrap">target/debug/examples/</code> | Contains [example targets].
 
 Some commands place their output in dedicated directories in the top level of
 the `target` directory:
@@ -53,11 +59,11 @@ change. Some of these directories are:
 
 Directory | Description
 ----------|------------
-<code style="white-space: nowrap">target/debug/deps/</code> |  Dependencies and other artifacts.
-<code style="white-space: nowrap">target/debug/incremental/</code> |  `rustc` [incremental output], a cache used to speed up subsequent builds.
-<code style="white-space: nowrap">target/debug/build/</code> |  Output from [build scripts].
+<code style="white-space: nowrap">target/debug/deps/</code> | Dependencies and other artifacts.
+<code style="white-space: nowrap">target/debug/incremental/</code> | `rustc` [incremental output], a cache used to speed up subsequent builds.
+<code style="white-space: nowrap">target/debug/build/</code> | Output from [build scripts].
 
-### Dep-info files
+## Dep-info files
 
 Next to each compiled artifact is a file called a "dep info" file with a `.d`
 suffix. This file is a Makefile-like syntax that indicates all of the file
@@ -71,7 +77,7 @@ re-executed. The paths in the file are absolute by default. See the
 /path/to/myproj/target/debug/foo: /path/to/myproj/src/lib.rs /path/to/myproj/src/main.rs
 ```
 
-### Shared cache
+## Shared cache
 
 A third party tool, [sccache], can be used to share built dependencies across
 different workspaces.
@@ -92,6 +98,11 @@ configuration][config]. Refer to sccache documentation for more details.
 [build scripts]: ../reference/build-scripts.md
 [config]: ../reference/config.md
 [def-workspace]:  ../appendix/glossary.md#workspace  '"workspace" (glossary entry)'
+[target]: ../appendix/glossary.md#target '"target" (glossary entry)'
 [environment variable]: ../reference/environment-variables.md
 [incremental output]: ../reference/profiles.md#incremental
 [sccache]: https://github.com/mozilla/sccache
+[profile]: ../reference/profiles.md
+[binary executables]: ../reference/cargo-targets.md#binaries
+[library targets]: ../reference/cargo-targets.md#library
+[example targets]: ../reference/cargo-targets.md#examples

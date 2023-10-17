@@ -1,9 +1,8 @@
 # cargo-package(1)
 
-
 ## NAME
 
-cargo-package - Assemble the local package into a distributable tarball
+cargo-package --- Assemble the local package into a distributable tarball
 
 ## SYNOPSIS
 
@@ -42,6 +41,22 @@ fields in the manifest.
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
 
+### .cargo_vcs_info.json format
+
+Will generate a `.cargo_vcs_info.json` in the following format
+
+```javascript
+{
+ "git": {
+   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+ },
+ "path_in_vcs": ""
+}
+```
+
+`path_in_vcs` will be set to a repo-relative path for packages
+in subdirectories of the version control repository.
+
 ## OPTIONS
 
 ### Package Options
@@ -54,7 +69,7 @@ packaging and publishing.
 
 
 <dt class="option-term" id="option-cargo-package---no-verify"><a class="option-anchor" href="#option-cargo-package---no-verify"></a><code>--no-verify</code></dt>
-<dd class="option-desc">Don't verify the contents by building them.</dd>
+<dd class="option-desc">Don’t verify the contents by building them.</dd>
 
 
 <dt class="option-term" id="option-cargo-package---no-metadata"><a class="option-anchor" href="#option-cargo-package---no-metadata"></a><code>--no-metadata</code></dt>
@@ -68,15 +83,55 @@ or the license).</dd>
 
 </dl>
 
+### Package Selection
+
+By default, when no package selection options are given, the packages selected
+depend on the selected manifest file (based on the current working directory if
+`--manifest-path` is not given). If the manifest is the root of a workspace then
+the workspaces default members are selected, otherwise only the package defined
+by the manifest will be selected.
+
+The default members of a workspace can be set explicitly with the
+`workspace.default-members` key in the root manifest. If this is not set, a
+virtual workspace will include all workspace members (equivalent to passing
+`--workspace`), and a non-virtual workspace will include only the root crate itself.
+
+<dl>
+
+<dt class="option-term" id="option-cargo-package--p"><a class="option-anchor" href="#option-cargo-package--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-package---package"><a class="option-anchor" href="#option-cargo-package---package"></a><code>--package</code> <em>spec</em>…</dt>
+<dd class="option-desc">Package only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---workspace"><a class="option-anchor" href="#option-cargo-package---workspace"></a><code>--workspace</code></dt>
+<dd class="option-desc">Package all members in the workspace.</dd>
+
+
+
+
+<dt class="option-term" id="option-cargo-package---exclude"><a class="option-anchor" href="#option-cargo-package---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
+<dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
+<code>--workspace</code> flag. This flag may be specified multiple times and supports
+common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.</dd>
+
+
+</dl>
+
+
 ### Compilation Options
 
 <dl>
 
 <dt class="option-term" id="option-cargo-package---target"><a class="option-anchor" href="#option-cargo-package---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Package for the given architecture. The default is the host
-architecture. The general format of the triple is
+<dd class="option-desc">Package for the given architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets.</p>
+list of supported targets. This flag may be specified multiple times.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
@@ -88,8 +143,8 @@ target artifacts are placed in a separate directory. See the
 <dt class="option-term" id="option-cargo-package---target-dir"><a class="option-anchor" href="#option-cargo-package---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
-to <code>target</code> in the root of the workspace.</dd>
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
+Defaults to <code>target</code> in the root of the workspace.</dd>
 
 
 
@@ -97,22 +152,20 @@ to <code>target</code> in the root of the workspace.</dd>
 
 ### Feature Selection
 
-The feature flags allow you to control the enabled features for the "current"
-package. The "current" package is the package in the current directory, or the
-one specified in `--manifest-path`. If running in the root of a virtual
-workspace, then the default features are selected for all workspace members,
-or all features if `--all-features` is specified.
+The feature flags allow you to control which features are enabled. When no
+feature options are given, the `default` feature is activated for every
+selected package.
 
-When no feature options are given, the `default` feature is activated for
-every selected package.
+See [the features documentation](../reference/features.html#command-line-feature-options)
+for more details.
 
 <dl>
 
+<dt class="option-term" id="option-cargo-package--F"><a class="option-anchor" href="#option-cargo-package--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-package---features"><a class="option-anchor" href="#option-cargo-package---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of features to activate. These features only
-apply to the current directory's package. Features of direct dependencies
-may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax. This flag may be
-specified multiple times, which enables all specified features.</dd>
+<dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
+members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
+be specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-package---all-features"><a class="option-anchor" href="#option-cargo-package---all-features"></a><code>--all-features</code></dt>
@@ -120,7 +173,7 @@ specified multiple times, which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-package---no-default-features"><a class="option-anchor" href="#option-cargo-package---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Do not activate the <code>default</code> feature of the current directory's package.</dd>
+<dd class="option-desc">Do not activate the <code>default</code> feature of the selected packages.</dd>
 
 
 </dl>
@@ -170,7 +223,20 @@ offline.</p>
 <dt class="option-term" id="option-cargo-package---jobs"><a class="option-anchor" href="#option-cargo-package---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
-the number of CPUs.</dd>
+the number of logical CPUs. If negative, it sets the maximum number of
+parallel jobs to the number of logical CPUs plus provided value. If
+a string <code>default</code> is provided, it sets the value back to defaults.
+Should not be 0.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---keep-going"><a class="option-anchor" href="#option-cargo-package---keep-going"></a><code>--keep-going</code></dt>
+<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+the build on the first one that fails to build.</p>
+<p>For example if the current package depends on dependencies <code>fails</code> and <code>works</code>,
+one of which fails to build, <code>cargo package -j1</code> may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas <code>cargo package -j1 --keep-going</code> would definitely run both
+builds, even if the one run first fails.</dd>
 
 
 </dl>
@@ -180,7 +246,7 @@ the number of CPUs.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-package--v"><a class="option-anchor" href="#option-cargo-package--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-package---verbose"><a class="option-anchor" href="#option-cargo-package---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
+<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
 <a href="../reference/config.html">config value</a>.</dd>
@@ -188,7 +254,9 @@ May also be specified with the <code>term.verbose</code>
 
 <dt class="option-term" id="option-cargo-package--q"><a class="option-anchor" href="#option-cargo-package--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-package---quiet"><a class="option-anchor" href="#option-cargo-package---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">No output printed to stdout.</dd>
+<dd class="option-desc">Do not print cargo log messages.
+May also be specified with the <code>term.quiet</code>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-package---color"><a class="option-anchor" href="#option-cargo-package---color"></a><code>--color</code> <em>when</em></dt>
@@ -215,6 +283,23 @@ begins with <code>+</code>, it will be interpreted as a rustup toolchain name (s
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---config"><a class="option-anchor" href="#option-cargo-package---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-package--C"><a class="option-anchor" href="#option-cargo-package--C"></a><code>-C</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-package--h"><a class="option-anchor" href="#option-cargo-package--h"></a><code>-h</code></dt>

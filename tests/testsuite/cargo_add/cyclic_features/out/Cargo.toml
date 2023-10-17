@@ -1,0 +1,8 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[dependencies]
+test_cyclic_features = "0.1.1"

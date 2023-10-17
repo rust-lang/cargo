@@ -5,23 +5,34 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use anyhow::Context as _;
 use semver::Version;
 use serde::ser;
 use serde::Serialize;
 use url::Url;
 
-use crate::core::compiler::CrateType;
+use crate::core::compiler::rustdoc::RustdocScrapeExamples;
+use crate::core::compiler::{CompileKind, CrateType};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
-use crate::util::{short_hash, Config, Filesystem};
+use crate::util::{short_hash, Config, Filesystem, RustVersion};
 
 pub enum EitherManifest {
     Real(Manifest),
     Virtual(VirtualManifest),
+}
+
+impl EitherManifest {
+    pub(crate) fn workspace_config(&self) -> &WorkspaceConfig {
+        match *self {
+            EitherManifest::Real(ref r) => r.workspace_config(),
+            EitherManifest::Virtual(ref v) => v.workspace_config(),
+        }
+    }
 }
 
 /// Contains all the information about a package, as loaded from a `Cargo.toml`.
@@ -31,6 +42,8 @@ pub enum EitherManifest {
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
+    default_kind: Option<CompileKind>,
+    forced_kind: Option<CompileKind>,
     links: Option<String>,
     warnings: Warnings,
     exclude: Vec<String>,
@@ -39,17 +52,19 @@ pub struct Manifest {
     custom_metadata: Option<toml::Value>,
     profiles: Option<TomlProfiles>,
     publish: Option<Vec<String>>,
-    publish_lockfile: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
     original: Rc<TomlManifest>,
     unstable_features: Features,
     edition: Edition,
+    rust_version: Option<RustVersion>,
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
+    lint_rustflags: Vec<String>,
+    embedded: bool,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -97,6 +112,7 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>, // URL
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
+    pub rust_version: Option<RustVersion>,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -191,6 +207,8 @@ pub struct Target {
 struct TargetInner {
     kind: TargetKind,
     name: String,
+    // Note that `bin_name` is used for the cargo-feature `different_binary_name`
+    bin_name: Option<String>,
     // Note that the `src_path` here is excluded from the `Hash` implementation
     // as it's absolute currently and is otherwise a little too brittle for
     // causing rebuilds. Instead the hash for the path that we send to the
@@ -205,6 +223,7 @@ struct TargetInner {
     for_host: bool,
     proc_macro: bool,
     edition: Edition,
+    doc_scrape_examples: RustdocScrapeExamples,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -254,7 +273,7 @@ struct SerializedTarget<'a> {
     /// Serialized as a list of strings for historical reasons.
     kind: &'a TargetKind,
     /// Corresponds to `--crate-type` compiler attribute.
-    /// See https://doc.rust-lang.org/reference/linkage.html
+    /// See <https://doc.rust-lang.org/reference/linkage.html>
     crate_types: Vec<CrateType>,
     name: &'a str,
     src_path: Option<&'a PathBuf>,
@@ -262,7 +281,7 @@ struct SerializedTarget<'a> {
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
     /// Whether docs should be built for the target via `cargo doc`
-    /// See https://doc.rust-lang.org/cargo/commands/cargo-doc.html#target-selection
+    /// See <https://doc.rust-lang.org/cargo/commands/cargo-doc.html#target-selection>
     doc: bool,
     doctest: bool,
     /// Whether tests should be run for the target (`test` field in `Cargo.toml`)
@@ -285,7 +304,7 @@ impl ser::Serialize for Target {
             edition: &self.edition().to_string(),
             required_features: self
                 .required_features()
-                .map(|rf| rf.iter().map(|s| &**s).collect()),
+                .map(|rf| rf.iter().map(|s| s.as_str()).collect()),
             doc: self.documented(),
             doctest: self.doctested() && self.doctestable(),
             test: self.tested(),
@@ -347,6 +366,7 @@ compact_debug! {
             [debug_the_fields(
                 kind
                 name
+                bin_name
                 src_path
                 required_features
                 tested
@@ -357,6 +377,7 @@ compact_debug! {
                 for_host
                 proc_macro
                 edition
+                doc_scrape_examples
             )]
         }
     }
@@ -365,6 +386,8 @@ compact_debug! {
 impl Manifest {
     pub fn new(
         summary: Summary,
+        default_kind: Option<CompileKind>,
+        forced_kind: Option<CompileKind>,
         targets: Vec<Target>,
         exclude: Vec<String>,
         include: Vec<String>,
@@ -373,20 +396,24 @@ impl Manifest {
         custom_metadata: Option<toml::Value>,
         profiles: Option<TomlProfiles>,
         publish: Option<Vec<String>>,
-        publish_lockfile: bool,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         unstable_features: Features,
         edition: Edition,
+        rust_version: Option<RustVersion>,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
+        lint_rustflags: Vec<String>,
+        embedded: bool,
     ) -> Manifest {
         Manifest {
             summary,
+            default_kind,
+            forced_kind,
             targets,
             warnings: Warnings::new(),
             exclude,
@@ -401,17 +428,25 @@ impl Manifest {
             workspace,
             unstable_features,
             edition,
+            rust_version,
             original,
             im_a_teapot,
             default_run,
-            publish_lockfile,
             metabuild,
             resolve_behavior,
+            lint_rustflags,
+            embedded,
         }
     }
 
     pub fn dependencies(&self) -> &[Dependency] {
         self.summary.dependencies()
+    }
+    pub fn default_kind(&self) -> Option<CompileKind> {
+        self.default_kind
+    }
+    pub fn forced_kind(&self) -> Option<CompileKind> {
+        self.forced_kind
     }
     pub fn exclude(&self) -> &[String] {
         &self.exclude
@@ -468,6 +503,9 @@ impl Manifest {
     pub fn links(&self) -> Option<&str> {
         self.links.as_deref()
     }
+    pub fn is_embedded(&self) -> bool {
+        self.embedded
+    }
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {
         &self.workspace
@@ -485,6 +523,11 @@ impl Manifest {
         self.resolve_behavior
     }
 
+    /// `RUSTFLAGS` from the `[lints]` table
+    pub fn lint_rustflags(&self) -> &[String] {
+        self.lint_rustflags.as_slice()
+    }
+
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {
         Manifest {
             summary: self.summary.map_source(to_replace, replace_with),
@@ -496,11 +539,18 @@ impl Manifest {
         if self.im_a_teapot.is_some() {
             self.unstable_features
                 .require(Feature::test_dummy_unstable())
-                .chain_err(|| {
-                    anyhow::format_err!(
-                        "the `im-a-teapot` manifest key is unstable and may \
-                         not work properly in England"
-                    )
+                .with_context(|| {
+                    "the `im-a-teapot` manifest key is unstable and may \
+                     not work properly in England"
+                })?;
+        }
+
+        if self.default_kind.is_some() || self.forced_kind.is_some() {
+            self.unstable_features
+                .require(Feature::per_package_target())
+                .with_context(|| {
+                    "the `package.default-target` and `package.forced-target` \
+                     manifest keys are unstable and may not work properly"
                 })?;
         }
 
@@ -518,6 +568,10 @@ impl Manifest {
 
     pub fn edition(&self) -> Edition {
         self.edition
+    }
+
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        self.rust_version.as_ref()
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {
@@ -603,6 +657,7 @@ impl Target {
             inner: Arc::new(TargetInner {
                 kind: TargetKind::Bin,
                 name: String::new(),
+                bin_name: None,
                 src_path,
                 required_features: None,
                 doc: false,
@@ -610,6 +665,7 @@ impl Target {
                 harness: true,
                 for_host: false,
                 proc_macro: false,
+                doc_scrape_examples: RustdocScrapeExamples::Unset,
                 edition,
                 tested: true,
                 benched: true,
@@ -638,6 +694,7 @@ impl Target {
 
     pub fn bin_target(
         name: &str,
+        bin_name: Option<String>,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
         edition: Edition,
@@ -646,6 +703,7 @@ impl Target {
         target
             .set_kind(TargetKind::Bin)
             .set_name(name)
+            .set_binary_name(bin_name)
             .set_required_features(required_features)
             .set_doc(true);
         target
@@ -659,7 +717,8 @@ impl Target {
             .set_name(name)
             .set_for_host(true)
             .set_benched(false)
-            .set_tested(false);
+            .set_tested(false)
+            .set_doc_scrape_examples(RustdocScrapeExamples::Disabled);
         target
     }
 
@@ -670,7 +729,8 @@ impl Target {
             .set_name(name)
             .set_for_host(true)
             .set_benched(false)
-            .set_tested(false);
+            .set_tested(false)
+            .set_doc_scrape_examples(RustdocScrapeExamples::Disabled);
         target
     }
 
@@ -764,6 +824,9 @@ impl Target {
     pub fn edition(&self) -> Edition {
         self.inner.edition
     }
+    pub fn doc_scrape_examples(&self) -> RustdocScrapeExamples {
+        self.inner.doc_scrape_examples
+    }
     pub fn benched(&self) -> bool {
         self.inner.benched
     }
@@ -794,6 +857,13 @@ impl Target {
     pub fn is_cdylib(&self) -> bool {
         match self.kind() {
             TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Cdylib),
+            _ => false,
+        }
+    }
+
+    pub fn is_staticlib(&self) -> bool {
+        match self.kind() {
+            TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Staticlib),
             _ => false,
         }
     }
@@ -871,6 +941,13 @@ impl Target {
         Arc::make_mut(&mut self.inner).edition = edition;
         self
     }
+    pub fn set_doc_scrape_examples(
+        &mut self,
+        doc_scrape_examples: RustdocScrapeExamples,
+    ) -> &mut Target {
+        Arc::make_mut(&mut self.inner).doc_scrape_examples = doc_scrape_examples;
+        self
+    }
     pub fn set_harness(&mut self, harness: bool) -> &mut Target {
         Arc::make_mut(&mut self.inner).harness = harness;
         self
@@ -887,11 +964,17 @@ impl Target {
         Arc::make_mut(&mut self.inner).name = name.to_string();
         self
     }
+    pub fn set_binary_name(&mut self, bin_name: Option<String>) -> &mut Target {
+        Arc::make_mut(&mut self.inner).bin_name = bin_name;
+        self
+    }
     pub fn set_required_features(&mut self, required_features: Option<Vec<String>>) -> &mut Target {
         Arc::make_mut(&mut self.inner).required_features = required_features;
         self
     }
-
+    pub fn binary_filename(&self) -> Option<String> {
+        self.inner.bin_name.clone()
+    }
     pub fn description_named(&self) -> String {
         match self.kind() {
             TargetKind::Lib(..) => "lib".to_string(),
@@ -901,7 +984,7 @@ impl Target {
             TargetKind::ExampleLib(..) | TargetKind::ExampleBin => {
                 format!("example \"{}\"", self.name())
             }
-            TargetKind::CustomBuild => "custom-build".to_string(),
+            TargetKind::CustomBuild => "build script".to_string(),
         }
     }
 }

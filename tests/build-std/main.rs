@@ -13,7 +13,7 @@
 //! not catching any regressions that `tests/testsuite/standard_lib.rs` isn't
 //! already catching.
 //!
-//! All tests here should use `#[cargo_test(build_std)]` to indicate that
+//! All tests here should use `#[cargo_test(build_std_real)]` to indicate that
 //! boilerplate should be generated to require the nightly toolchain and the
 //! `CARGO_RUN_BUILD_STD_TESTS` env var to be set to actually run these tests.
 //! Otherwise the tests are skipped.
@@ -32,7 +32,7 @@ fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
         None => "-Zbuild-std".to_string(),
     };
     e.arg(arg);
-    e.masquerade_as_nightly_cargo();
+    e.masquerade_as_nightly_cargo(&["build-std"]);
 }
 
 // Helper methods used in the tests below
@@ -59,7 +59,7 @@ impl BuildStd for Execs {
     }
 }
 
-#[cargo_test(build_std)]
+#[cargo_test(build_std_real)]
 fn basic() {
     let p = project()
         .file(
@@ -105,7 +105,16 @@ fn basic() {
         .build();
 
     p.cargo("check").build_std().target_host().run();
-    p.cargo("build").build_std().target_host().run();
+    p.cargo("build")
+        .build_std()
+        .target_host()
+        // Importantly, this should not say [UPDATING]
+        // There have been multiple bugs where every build triggers and update.
+        .with_stderr(
+            "[COMPILING] foo v0.0.1 [..]\n\
+             [FINISHED] dev [..]",
+        )
+        .run();
     p.cargo("run").build_std().target_host().run();
     p.cargo("test").build_std().target_host().run();
 
@@ -118,7 +127,7 @@ fn basic() {
     assert_eq!(p.glob(deps_dir.join("*.dylib")).count(), 0);
 }
 
-#[cargo_test(build_std)]
+#[cargo_test(build_std_real)]
 fn cross_custom() {
     let p = project()
         .file(
@@ -161,7 +170,7 @@ fn cross_custom() {
         .run();
 }
 
-#[cargo_test(build_std)]
+#[cargo_test(build_std_real)]
 fn custom_test_framework() {
     let p = project()
         .file(

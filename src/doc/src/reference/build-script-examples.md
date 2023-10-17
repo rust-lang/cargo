@@ -1,4 +1,4 @@
-## Build Script Examples
+# Build Script Examples
 
 The following sections illustrate some examples of writing build scripts.
 
@@ -7,22 +7,22 @@ Check out the [`build-dependencies`
 keyword](https://crates.io/keywords/build-dependencies) to see what is
 available. The following is a sample of some popular crates[^†]:
 
-* [`bindgen`](https://crates.io/crates/bindgen) — Automatically generate Rust
+* [`bindgen`](https://crates.io/crates/bindgen) --- Automatically generate Rust
   FFI bindings to C libraries.
-* [`cc`](https://crates.io/crates/cc) — Compiles C/C++/assembly.
-* [`pkg-config`](https://crates.io/crates/pkg-config) — Detect system
+* [`cc`](https://crates.io/crates/cc) --- Compiles C/C++/assembly.
+* [`pkg-config`](https://crates.io/crates/pkg-config) --- Detect system
   libraries using the `pkg-config` utility.
-* [`cmake`](https://crates.io/crates/cmake) — Runs the `cmake` build tool to build a native library.
+* [`cmake`](https://crates.io/crates/cmake) --- Runs the `cmake` build tool to build a native library.
 * [`autocfg`](https://crates.io/crates/autocfg),
   [`rustc_version`](https://crates.io/crates/rustc_version),
-  [`version_check`](https://crates.io/crates/version_check) — These crates
+  [`version_check`](https://crates.io/crates/version_check) --- These crates
   provide ways to implement conditional compilation based on the current
   `rustc` such as the version of the compiler.
 
 [^†]: This list is not an endorsement. Evaluate your dependencies to see which
 is right for your project.
 
-### Code generation
+## Code generation
 
 Some Cargo packages need to have code generated just before they are compiled
 for various reasons. Here we’ll walk through a simple example which generates a
@@ -49,6 +49,7 @@ Here we can see that we have a `build.rs` build script and our binary in
 [package]
 name = "hello-from-generated-code"
 version = "0.1.0"
+edition = "2021"
 ```
 
 Let’s see what’s inside the build script:
@@ -119,7 +120,7 @@ from the build script itself.
 [concat-macro]: ../../std/macro.concat.html
 [env-macro]: ../../std/macro.env.html
 
-### Building a native library
+## Building a native library
 
 Sometimes it’s necessary to build some native C or C++ code as part of a
 package. This is another excellent use case of leveraging the build script to
@@ -147,7 +148,7 @@ Pretty similar to before! Next, the manifest:
 [package]
 name = "hello-world-from-c"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 ```
 
 For now we’re not going to use any build dependencies, so let’s take a look at
@@ -267,7 +268,7 @@ dependency purely for the build process and not for the crate itself at runtime.
 
 [`cc` crate]: https://crates.io/crates/cc
 
-### Linking to system libraries
+## Linking to system libraries
 
 This example demonstrates how to link a system library and how the build
 script is used to support this use case.
@@ -297,7 +298,7 @@ with `pkg-config` installed. Let's start by setting up the manifest:
 [package]
 name = "libz-sys"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 links = "z"
 
 [build-dependencies]
@@ -362,7 +363,7 @@ source][libz-source] for a more complete example.
 [`pkg-config` crate]: https://crates.io/crates/pkg-config
 [libz-source]: https://github.com/rust-lang/libz-sys
 
-### Using another `sys` crate
+## Using another `sys` crate
 
 When using the `links` key, crates may set metadata that can be read by other
 crates that depend on it. This provides a mechanism to communicate information
@@ -384,7 +385,7 @@ Here's an example:
 [package]
 name = "zuser"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 libz-sys = "1.0.25"
@@ -423,7 +424,7 @@ already installed.
 // … rest of code that makes use of zlib.
 ```
 
-### Conditional compilation
+## Conditional compilation
 
 A build script may emit [`rustc-cfg` instructions] which can enable conditions
 that can be checked at compile time. In this example, we'll take a look at how

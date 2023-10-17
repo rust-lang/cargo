@@ -40,62 +40,6 @@ macro_rules! deserialize_method {
     };
 }
 
-impl<'config> Deserializer<'config> {
-    /// This is a helper for getting a CV from a file or env var.
-    ///
-    /// If this returns CV::List, then don't look at the value. Handling lists
-    /// is deferred to ConfigSeqAccess.
-    fn get_cv_with_env(&self) -> Result<Option<CV>, ConfigError> {
-        // Determine if value comes from env, cli, or file, and merge env if
-        // possible.
-        let cv = self.config.get_cv(&self.key)?;
-        let env = self.config.env.get(self.key.as_env_key());
-        let env_def = Definition::Environment(self.key.as_env_key().to_string());
-        let use_env = match (&cv, env) {
-            (Some(cv), Some(_)) => env_def.is_higher_priority(cv.definition()),
-            (None, Some(_)) => true,
-            _ => false,
-        };
-
-        if !use_env {
-            return Ok(cv);
-        }
-
-        // Future note: If you ever need to deserialize a non-self describing
-        // map type, this should implement a starts_with check (similar to how
-        // ConfigMapAccess does).
-        let env = env.unwrap();
-        if env == "true" {
-            Ok(Some(CV::Boolean(true, env_def)))
-        } else if env == "false" {
-            Ok(Some(CV::Boolean(false, env_def)))
-        } else if let Ok(i) = env.parse::<i64>() {
-            Ok(Some(CV::Integer(i, env_def)))
-        } else if self.config.cli_unstable().advanced_env
-            && env.starts_with('[')
-            && env.ends_with(']')
-        {
-            // Parsing is deferred to ConfigSeqAccess.
-            Ok(Some(CV::List(Vec::new(), env_def)))
-        } else {
-            // Try to merge if possible.
-            match cv {
-                Some(CV::List(cv_list, _cv_def)) => {
-                    // Merging is deferred to ConfigSeqAccess.
-                    Ok(Some(CV::List(cv_list, env_def)))
-                }
-                _ => {
-                    // Note: CV::Table merging is not implemented, as env
-                    // vars do not support table values. In the future, we
-                    // could check for `{}`, and interpret it as TOML if
-                    // that seems useful.
-                    Ok(Some(CV::String(env.to_string(), env_def)))
-                }
-            }
-        }
-    }
-}
-
 impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     type Error = ConfigError;
 
@@ -103,7 +47,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        let cv = self.get_cv_with_env()?;
+        let cv = self.config.get_cv_with_env(&self.key)?;
         if let Some(cv) = cv {
             let res: (Result<V::Value, ConfigError>, Definition) = match cv {
                 CV::Integer(i, def) => (visitor.visit_i64(i), def),
@@ -136,7 +80,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        if self.config.has_key(&self.key, self.env_prefix_ok) {
+        if self.config.has_key(&self.key, self.env_prefix_ok)? {
             visitor.visit_some(self)
         } else {
             // Treat missing values as `None`.
@@ -271,10 +215,9 @@ impl<'config> ConfigMapAccess<'config> {
         if de.config.cli_unstable().advanced_env {
             // `CARGO_PROFILE_DEV_PACKAGE_`
             let env_prefix = format!("{}_", de.key.as_env_key());
-            for env_key in de.config.env.keys() {
-                if env_key.starts_with(&env_prefix) {
-                    // `CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL = 3`
-                    let rest = &env_key[env_prefix.len()..];
+            for env_key in de.config.env_keys() {
+                // `CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL = 3`
+                if let Some(rest) = env_key.strip_prefix(&env_prefix) {
                     // `rest = bar_OPT_LEVEL`
                     let part = rest.splitn(2, '_').next().unwrap();
                     // `part = "bar"`
@@ -321,7 +264,7 @@ impl<'config> ConfigMapAccess<'config> {
         for field in given_fields {
             let mut field_key = de.key.clone();
             field_key.push(field);
-            for env_key in de.config.env.keys() {
+            for env_key in de.config.env_keys() {
                 if env_key.starts_with(field_key.as_env_key()) {
                     fields.insert(KeyKind::Normal(field.to_string()));
                 }
@@ -440,7 +383,12 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
     {
         match self.list_iter.next() {
             // TODO: add `def` to error?
-            Some((value, _def)) => seed.deserialize(value.into_deserializer()).map(Some),
+            Some((value, def)) => {
+                // This might be a String or a Value<String>.
+                // ValueDeserializer will handle figuring out which one it is.
+                let maybe_value_de = ValueDeserializer::new_with_string(value, def);
+                seed.deserialize(maybe_value_de).map(Some)
+            }
             None => Ok(None),
         }
     }
@@ -456,7 +404,17 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
 struct ValueDeserializer<'config> {
     hits: u32,
     definition: Definition,
-    de: Deserializer<'config>,
+    /// The deserializer, used to actually deserialize a Value struct.
+    /// This is `None` if deserializing a string.
+    de: Option<Deserializer<'config>>,
+    /// A string value to deserialize.
+    ///
+    /// This is used for situations where you can't address a string via a
+    /// TOML key, such as a string inside an array. The `ConfigSeqAccess`
+    /// doesn't know if the type it should deserialize to is a `String` or
+    /// `Value<String>`, so `ValueDeserializer` needs to be able to handle
+    /// both.
+    str_value: Option<String>,
 }
 
 impl<'config> ValueDeserializer<'config> {
@@ -484,8 +442,18 @@ impl<'config> ValueDeserializer<'config> {
         Ok(ValueDeserializer {
             hits: 0,
             definition,
-            de,
+            de: Some(de),
+            str_value: None,
         })
+    }
+
+    fn new_with_string(s: String, definition: Definition) -> ValueDeserializer<'config> {
+        ValueDeserializer {
+            hits: 0,
+            definition,
+            de: None,
+            str_value: Some(s),
+        }
     }
 }
 
@@ -515,9 +483,14 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
         // If this is the first time around we deserialize the `value` field
         // which is the actual deserializer
         if self.hits == 1 {
-            return seed
-                .deserialize(self.de.clone())
-                .map_err(|e| e.with_key_context(&self.de.key, self.definition.clone()));
+            if let Some(de) = &self.de {
+                return seed
+                    .deserialize(de.clone())
+                    .map_err(|e| e.with_key_context(&de.key, self.definition.clone()));
+            } else {
+                return seed
+                    .deserialize(self.str_value.as_ref().unwrap().clone().into_deserializer());
+            }
         }
 
         // ... otherwise we're deserializing the `definition` field, so we need
@@ -527,10 +500,81 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
                 seed.deserialize(Tuple2Deserializer(0i32, path.to_string_lossy()))
             }
             Definition::Environment(env) => {
-                seed.deserialize(Tuple2Deserializer(1i32, env.as_ref()))
+                seed.deserialize(Tuple2Deserializer(1i32, env.as_str()))
             }
-            Definition::Cli => seed.deserialize(Tuple2Deserializer(2i32, "")),
+            Definition::Cli(path) => {
+                let str = path
+                    .as_ref()
+                    .map(|p| p.to_string_lossy())
+                    .unwrap_or_default();
+                seed.deserialize(Tuple2Deserializer(2i32, str))
+            }
         }
+    }
+}
+
+// Deserializer is only implemented to handle deserializing a String inside a
+// sequence (like `Vec<String>` or `Vec<Value<String>>`). `Value<String>` is
+// handled by deserialize_struct, and the plain `String` is handled by all the
+// other functions here.
+impl<'de, 'config> de::Deserializer<'de> for ValueDeserializer<'config> {
+    type Error = ConfigError;
+
+    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_str(&self.str_value.expect("string expected"))
+    }
+
+    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_string(self.str_value.expect("string expected"))
+    }
+
+    fn deserialize_struct<V>(
+        self,
+        name: &'static str,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        // Match on the magical struct name/field names that are passed in to
+        // detect when we're deserializing `Value<T>`.
+        //
+        // See more comments in `value.rs` for the protocol used here.
+        if name == value::NAME && fields == value::FIELDS {
+            return visitor.visit_map(self);
+        }
+        unimplemented!("only strings and Value can be deserialized from a sequence");
+    }
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_string(self.str_value.expect("string expected"))
+    }
+
+    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_unit()
+    }
+
+    serde::forward_to_deserialize_any! {
+        i8 i16 i32 i64
+        u8 u16 u32 u64
+        option
+        newtype_struct seq tuple tuple_struct map enum bool
+        f32 f64 char bytes
+        byte_buf unit unit_struct
+        identifier
     }
 }
 

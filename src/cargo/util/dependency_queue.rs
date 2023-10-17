@@ -149,19 +149,15 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     ///
     /// A package is ready to be built when it has 0 un-built dependencies. If
     /// `None` is returned then no packages are ready to be built.
-    pub fn dequeue(&mut self) -> Option<(N, V)> {
-        let next = self
+    pub fn dequeue(&mut self) -> Option<(N, V, usize)> {
+        let (key, priority) = self
             .dep_map
             .iter()
             .filter(|(_, (deps, _))| deps.is_empty())
-            .map(|(key, _)| key.clone())
-            .max_by_key(|k| self.priority[k]);
-        let key = match next {
-            Some(key) => key,
-            None => return None,
-        };
+            .map(|(key, _)| (key.clone(), self.priority[key]))
+            .max_by_key(|(_, priority)| *priority)?;
         let (_, data) = self.dep_map.remove(&key).unwrap();
-        Some((key, data))
+        Some((key, data, priority))
     }
 
     /// Returns `true` if there are remaining packages to be built.
@@ -185,9 +181,8 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     pub fn finish(&mut self, node: &N, edge: &E) -> Vec<&N> {
         // hashset<Node>
         let reverse_deps = self.reverse_dep_map.get(node).and_then(|map| map.get(edge));
-        let reverse_deps = match reverse_deps {
-            Some(deps) => deps,
-            None => return Vec::new(),
+        let Some(reverse_deps) = reverse_deps else {
+            return Vec::new();
         };
         let key = (node.clone(), edge.clone());
         let mut result = Vec::new();
@@ -217,19 +212,19 @@ mod test {
         q.queue(5, (), vec![(4, ()), (3, ())], 1);
         q.queue_finished();
 
-        assert_eq!(q.dequeue(), Some((1, ())));
-        assert_eq!(q.dequeue(), Some((3, ())));
+        assert_eq!(q.dequeue(), Some((1, (), 5)));
+        assert_eq!(q.dequeue(), Some((3, (), 4)));
         assert_eq!(q.dequeue(), None);
         q.finish(&3, &());
         assert_eq!(q.dequeue(), None);
         q.finish(&1, &());
-        assert_eq!(q.dequeue(), Some((2, ())));
+        assert_eq!(q.dequeue(), Some((2, (), 4)));
         assert_eq!(q.dequeue(), None);
         q.finish(&2, &());
-        assert_eq!(q.dequeue(), Some((4, ())));
+        assert_eq!(q.dequeue(), Some((4, (), 3)));
         assert_eq!(q.dequeue(), None);
         q.finish(&4, &());
-        assert_eq!(q.dequeue(), Some((5, ())));
+        assert_eq!(q.dequeue(), Some((5, (), 2)));
     }
 
     #[test]
@@ -242,16 +237,16 @@ mod test {
         q.queue(4, (), vec![(2, ()), (3, ())], 1);
         q.queue_finished();
 
-        assert_eq!(q.dequeue(), Some((3, ())));
-        assert_eq!(q.dequeue(), Some((1, ())));
+        assert_eq!(q.dequeue(), Some((3, (), 9)));
+        assert_eq!(q.dequeue(), Some((1, (), 4)));
         assert_eq!(q.dequeue(), None);
         q.finish(&3, &());
         assert_eq!(q.dequeue(), None);
         q.finish(&1, &());
-        assert_eq!(q.dequeue(), Some((2, ())));
+        assert_eq!(q.dequeue(), Some((2, (), 3)));
         assert_eq!(q.dequeue(), None);
         q.finish(&2, &());
-        assert_eq!(q.dequeue(), Some((4, ())));
+        assert_eq!(q.dequeue(), Some((4, (), 2)));
         assert_eq!(q.dequeue(), None);
         q.finish(&4, &());
         assert_eq!(q.dequeue(), None);

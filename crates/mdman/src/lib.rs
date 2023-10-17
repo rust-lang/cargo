@@ -64,11 +64,12 @@ pub fn convert(
 type EventIter<'a> = Box<dyn Iterator<Item = (Event<'a>, Range<usize>)> + 'a>;
 
 /// Creates a new markdown parser with the given input.
-pub(crate) fn md_parser(input: &str, url: Option<Url>) -> EventIter {
+pub(crate) fn md_parser(input: &str, url: Option<Url>) -> EventIter<'_> {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_FOOTNOTES);
     options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_SMART_PUNCTUATION);
     let parser = Parser::new_ext(input, options);
     let parser = parser.into_offset_iter();
     // Translate all links to include the base url.
@@ -96,7 +97,7 @@ fn join_url<'a>(base: Option<&Url>, dest: CowStr<'a>) -> CowStr<'a> {
                 let joined = base_url.join(&dest).unwrap_or_else(|e| {
                     panic!("failed to join URL `{}` to `{}`: {}", dest, base_url, e)
                 });
-                joined.into_string().into()
+                String::from(joined).into()
             }
         }
         None => dest,
