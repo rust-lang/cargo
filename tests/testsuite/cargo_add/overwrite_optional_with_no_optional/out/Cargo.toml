@@ -9,5 +9,5 @@ default = []
 other = ["your-face/nose"]
 
 [dependencies]
-your-face = { version = "99999.0.0" }
-my-package2 = { version = "0.4.1" }
+your-face = { version = "99999.0.0"}
+my-package2 = { version = "0.4.1"}

@@ -5,4 +5,4 @@ name = "cargo-list-test-fixture"
 version = "0.0.0"
 
 [dependencies]
-cargo-list-test-fixture-dependency = { version = "0.0.0", optional = true, path = "../dependency" }
+cargo-list-test-fixture-dependency = { version = "0.0.0", optional = true , path = "../dependency" }
