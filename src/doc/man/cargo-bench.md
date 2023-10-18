@@ -34,7 +34,7 @@ Benchmarks are built with the `--test` option to `rustc` which creates a
 special executable by linking your code with libtest. The executable
 automatically runs all functions annotated with the `#[bench]` attribute.
 Cargo passes the `--bench` flag to the test harness to tell it to run
-only benchmarks.
+only benchmarks, regardless of whether the harness is libtest or a custom harness.
 
 The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
