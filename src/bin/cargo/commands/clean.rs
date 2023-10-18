@@ -19,7 +19,6 @@ pub fn cli() -> Command {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_dry_run("Display what would be deleted without deleting anything")
-
         // NOTE: Not all of these options may get stabilized. Some of them are
         // very low-level details, and may not be something typical users need.
         .arg(
@@ -30,21 +29,23 @@ pub fn cli() -> Command {
             .hide(true)
             .value_name("KINDS")
             .value_parser(
-                PossibleValuesParser::new(["all", "download", "target", "shared-target"]).map(|x|
-                    match x.as_str() {
+                PossibleValuesParser::new(["all", "download", "target", "shared-target"]).map(
+                    |x| match x.as_str() {
                         "all" => AutoGcKind::All,
                         "download" => AutoGcKind::Download,
                         "target" => panic!("target is not yet implemented"),
                         "shared-target" => panic!("shared-target is not yet implemented"),
                         x => panic!("possible value out of sync with `{x}`"),
-                    }
-            ))
+                    },
+                ),
+            )
             .require_equals(true),
         )
         .arg(
             opt(
                 "max-src-age",
-                "Deletes source cache files that have not been used since the given age (unstable)",
+                "Deletes source cache files that have not been used \
+                since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -52,7 +53,8 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-crate-age",
-                "Deletes crate cache files that have not been used since the given age (unstable)",
+                "Deletes crate cache files that have not been used \
+                since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -60,7 +62,8 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-index-age",
-                "Deletes registry indexes that have not been used since the given age (unstable)",
+                "Deletes registry indexes that have not been used \
+                since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -68,7 +71,8 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-git-co-age",
-                "Deletes git dependency checkouts that have not been used since the given age (unstable)",
+                "Deletes git dependency checkouts that have not been used \
+                since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -76,7 +80,8 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-git-db-age",
-                "Deletes git dependency clones that have not been used since the given age (unstable)",
+                "Deletes git dependency clones that have not been used \
+                since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -84,12 +89,12 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-download-age",
-                "Deletes any downloaded cache data that has not been used since the given age (unstable)",
+                "Deletes any downloaded cache data that has not been used \
+                since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
         )
-
         .arg(
             opt(
                 "max-src-size",
@@ -107,11 +112,13 @@ pub fn cli() -> Command {
             .value_name("SIZE"),
         )
         .arg(
-            opt("max-git-size",
-                "Deletes git dependency caches until the cache is under the given size (unstable)"
+            opt(
+                "max-git-size",
+                "Deletes git dependency caches until the cache is under the given size (unstable)",
             )
             .hide(true)
-            .value_name("SIZE"))
+            .value_name("SIZE"),
+        )
         .arg(
             opt(
                 "max-download-size",
@@ -120,14 +127,14 @@ pub fn cli() -> Command {
             .hide(true)
             .value_name("DURATION"),
         )
-
         // These are unimplemented. Leaving here as a guide for how this is
         // intended to evolve. These will likely change, this is just a sketch
         // of ideas.
         .arg(
             opt(
                 "max-target-age",
-                "Deletes any build artifact files that have not been used since the given age (unstable) (UNIMPLEMENTED)",
+                "Deletes any build artifact files that have not been used \
+                since the given age (unstable) (UNIMPLEMENTED)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -136,7 +143,8 @@ pub fn cli() -> Command {
             // TODO: come up with something less wordy?
             opt(
                 "max-shared-target-age",
-                "Deletes any shared build artifact files that have not been used since the given age (unstable) (UNIMPLEMENTED)",
+                "Deletes any shared build artifact files that have not been used \
+                since the given age (unstable) (UNIMPLEMENTED)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -144,7 +152,8 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-target-size",
-                "Deletes build artifact files until the cache is under the given size (unstable) (UNIMPLEMENTED)",
+                "Deletes build artifact files until the cache is under the given size \
+                (unstable) (UNIMPLEMENTED)",
             )
             .hide(true)
             .value_name("SIZE"),
@@ -153,12 +162,12 @@ pub fn cli() -> Command {
             // TODO: come up with something less wordy?
             opt(
                 "max-shared-target-size",
-                "Deletes shared build artifact files until the cache is under the given size (unstable) (UNIMPLEMENTED)",
+                "Deletes shared build artifact files until the cache is under the given size \
+                (unstable) (UNIMPLEMENTED)",
             )
             .hide(true)
             .value_name("DURATION"),
         )
-
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help clean</>` for more detailed information.\n"
         ))
