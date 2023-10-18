@@ -17,8 +17,10 @@ We encourage people to discuss their design before hacking on code. This gives
 the Cargo team a chance to know your idea more. Sometimes after a discussion,
 we even find a way to solve the problem without coding! Typically, you
 [file an issue] or start a thread on the [internals forum] before submitting a
-pull request. Please read [the process] of how features and bugs are managed in
-Cargo.
+pull request.
+
+Please read [the process] of how features and bugs are managed in Cargo.
+**Only issues that have been explicitly marked as [accepted] will be reviewed.**
 
 ## Checkout the source
 
@@ -170,3 +172,4 @@ more information on how Cargo releases are made.
 [internals forum]: https://internals.rust-lang.org/c/tools-and-infrastructure/cargo
 [file an issue]: https://github.com/rust-lang/cargo/issues
 [the process]: index.md
+[accepted]: https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AS-accepted
