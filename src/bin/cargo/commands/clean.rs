@@ -60,7 +60,7 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-index-age",
-                "Deletes registry indexes that have not been used since then given age (unstable)",
+                "Deletes registry indexes that have not been used since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -68,7 +68,7 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-git-co-age",
-                "Deletes git dependency checkouts that have not been used since then given age (unstable)",
+                "Deletes git dependency checkouts that have not been used since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -76,7 +76,7 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-git-db-age",
-                "Deletes git dependency clones that have not been used since then given age (unstable)",
+                "Deletes git dependency clones that have not been used since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -84,7 +84,7 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-download-age",
-                "Deletes any downloaded cache data that has not been used since then given age (unstable)",
+                "Deletes any downloaded cache data that has not been used since the given age (unstable)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -108,7 +108,8 @@ pub fn cli() -> Command {
         )
         .arg(
             opt("max-git-size",
-                "Deletes git dependency caches until the cache is under the given size (unstable")
+                "Deletes git dependency caches until the cache is under the given size (unstable)"
+            )
             .hide(true)
             .value_name("SIZE"))
         .arg(
@@ -126,7 +127,7 @@ pub fn cli() -> Command {
         .arg(
             opt(
                 "max-target-age",
-                "Deletes any build artifact files that have not been used since then given age (unstable) (UNIMPLEMENTED)",
+                "Deletes any build artifact files that have not been used since the given age (unstable) (UNIMPLEMENTED)",
             )
             .hide(true)
             .value_name("DURATION"),
@@ -135,7 +136,7 @@ pub fn cli() -> Command {
             // TODO: come up with something less wordy?
             opt(
                 "max-shared-target-age",
-                "Deletes any shared build artifact files that have not been used since then given age (unstable) (UNIMPLEMENTED)",
+                "Deletes any shared build artifact files that have not been used since the given age (unstable) (UNIMPLEMENTED)",
             )
             .hide(true)
             .value_name("DURATION"),
