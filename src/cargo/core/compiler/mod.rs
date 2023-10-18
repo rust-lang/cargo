@@ -1167,39 +1167,32 @@ fn features_args(unit: &Unit) -> Vec<OsString> {
 ///
 /// [`check-cfg`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#check-cfg
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    if let Some((features, well_known_names, well_known_values, _output)) =
-        cx.bcx.config.cli_unstable().check_cfg
-    {
-        let mut args = Vec::with_capacity(unit.pkg.summary().features().len() * 2 + 4);
-        args.push(OsString::from("-Zunstable-options"));
+    if cx.bcx.config.cli_unstable().check_cfg {
+        // This generate something like this:
+        //  - cfg(feature, values())
+        //  - cfg(feature, values("foo", "bar"))
+        //
+        // NOTE: Despite only explicitly specifying `feature`, well known names and values
+        // are implicitly enabled when one or more `--check-cfg` argument is passed.
 
-        if features {
-            // This generate something like this:
-            //  - values(feature)
-            //  - values(feature, "foo", "bar")
-            let mut arg = OsString::from("values(feature");
-            for (&feat, _) in unit.pkg.summary().features() {
-                arg.push(", \"");
-                arg.push(&feat);
-                arg.push("\"");
+        let gross_cap_estimation = unit.pkg.summary().features().len() * 7 + 25;
+        let mut arg_feature = OsString::with_capacity(gross_cap_estimation);
+        arg_feature.push("cfg(feature, values(");
+        for (i, feature) in unit.pkg.summary().features().keys().enumerate() {
+            if i != 0 {
+                arg_feature.push(", ");
             }
-            arg.push(")");
-
-            args.push(OsString::from("--check-cfg"));
-            args.push(arg);
+            arg_feature.push("\"");
+            arg_feature.push(feature);
+            arg_feature.push("\"");
         }
+        arg_feature.push("))");
 
-        if well_known_names {
-            args.push(OsString::from("--check-cfg"));
-            args.push(OsString::from("names()"));
-        }
-
-        if well_known_values {
-            args.push(OsString::from("--check-cfg"));
-            args.push(OsString::from("values()"));
-        }
-
-        args
+        vec![
+            OsString::from("-Zunstable-options"),
+            OsString::from("--check-cfg"),
+            arg_feature,
+        ]
     } else {
         Vec::new()
     }
