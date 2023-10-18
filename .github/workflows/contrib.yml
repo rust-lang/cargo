@@ -27,8 +27,11 @@ jobs:
         echo `pwd`/mdbook >> $GITHUB_PATH
     - name: Deploy docs
       run: |
+        GENERATE_PY="$(pwd)/ci/generate.py"
+
         cd src/doc/contrib
         mdbook build
+
         # Override previous ref to avoid keeping history.
         git worktree add --orphan -B gh-pages gh-pages
         git config user.name "Deploy from CI"
@@ -36,5 +39,11 @@ jobs:
         cd gh-pages
         mv ../book contrib
         git add contrib
+
+        # Generate HTML for link redirections.
+        python3 "$GENERATE_PY"
+        git add *.html
+        git add CNAME
+
         git commit -m "Deploy $GITHUB_SHA to gh-pages"
         git push origin +gh-pages
