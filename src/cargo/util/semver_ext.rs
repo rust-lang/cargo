@@ -186,16 +186,25 @@ impl PartialVersion {
         }
     }
 
-    pub fn exact_req(&self) -> VersionReq {
-        VersionReq {
-            comparators: vec![Comparator {
-                op: semver::Op::Exact,
-                major: self.major,
-                minor: self.minor,
-                patch: self.patch,
-                pre: self.pre.as_ref().cloned().unwrap_or_default(),
-            }],
+    /// Check if this matches a version, including build metadata
+    ///
+    /// Build metadata does not affect version precedence but may be necessary for uniquely
+    /// identifying a package.
+    pub fn matches(&self, version: &Version) -> bool {
+        if !version.pre.is_empty() && self.pre.is_none() {
+            // Pre-release versions must be explicitly opted into, if for no other reason than to
+            // give us room to figure out and define the semantics
+            return false;
         }
+        self.major == version.major
+            && self.minor.map(|f| f == version.minor).unwrap_or(true)
+            && self.patch.map(|f| f == version.patch).unwrap_or(true)
+            && self.pre.as_ref().map(|f| f == &version.pre).unwrap_or(true)
+            && self
+                .build
+                .as_ref()
+                .map(|f| f == &version.build)
+                .unwrap_or(true)
     }
 }
 

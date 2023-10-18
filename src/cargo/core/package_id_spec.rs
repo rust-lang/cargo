@@ -176,8 +176,7 @@ impl PackageIdSpec {
         }
 
         if let Some(ref v) = self.version {
-            let req = v.exact_req();
-            if !req.matches(package_id.version()) {
+            if !v.matches(package_id.version()) {
                 return false;
             }
         }
@@ -444,15 +443,50 @@ mod tests {
     fn matching() {
         let url = Url::parse("https://example.com").unwrap();
         let sid = SourceId::for_registry(&url).unwrap();
-        let foo = PackageId::new("foo", "1.2.3", sid).unwrap();
-        let bar = PackageId::new("bar", "1.2.3", sid).unwrap();
 
+        let foo = PackageId::new("foo", "1.2.3", sid).unwrap();
         assert!(PackageIdSpec::parse("foo").unwrap().matches(foo));
-        assert!(!PackageIdSpec::parse("foo").unwrap().matches(bar));
+        assert!(!PackageIdSpec::parse("bar").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo:1.2.3").unwrap().matches(foo));
         assert!(!PackageIdSpec::parse("foo:1.2.2").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo@1.2.3").unwrap().matches(foo));
         assert!(!PackageIdSpec::parse("foo@1.2.2").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo@1.2").unwrap().matches(foo));
+
+        let meta = PackageId::new("meta", "1.2.3+hello", sid).unwrap();
+        assert!(PackageIdSpec::parse("meta").unwrap().matches(meta));
+        assert!(PackageIdSpec::parse("meta@1").unwrap().matches(meta));
+        assert!(PackageIdSpec::parse("meta@1.2").unwrap().matches(meta));
+        assert!(PackageIdSpec::parse("meta@1.2.3").unwrap().matches(meta));
+        assert!(!PackageIdSpec::parse("meta@1.2.3-alpha.0")
+            .unwrap()
+            .matches(meta));
+        assert!(PackageIdSpec::parse("meta@1.2.3+hello")
+            .unwrap()
+            .matches(meta));
+        assert!(!PackageIdSpec::parse("meta@1.2.3+bye")
+            .unwrap()
+            .matches(meta));
+
+        let pre = PackageId::new("pre", "1.2.3-alpha.0", sid).unwrap();
+        assert!(PackageIdSpec::parse("pre").unwrap().matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1").unwrap().matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1.2").unwrap().matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1.2.3").unwrap().matches(pre));
+        assert!(PackageIdSpec::parse("pre@1.2.3-alpha.0")
+            .unwrap()
+            .matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1.2.3-alpha.1")
+            .unwrap()
+            .matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1.2.3-beta.0")
+            .unwrap()
+            .matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1.2.3+hello")
+            .unwrap()
+            .matches(pre));
+        assert!(!PackageIdSpec::parse("pre@1.2.3-alpha.0+hello")
+            .unwrap()
+            .matches(pre));
     }
 }

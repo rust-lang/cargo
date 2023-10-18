@@ -1298,3 +1298,157 @@ fn override_plus_dep() {
         .with_stderr_contains("error: cyclic package dependency: [..]")
         .run();
 }
+
+#[cargo_test]
+fn override_generic_matching_other_versions() {
+    Package::new("bar", "0.1.0+a").publish();
+
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    bar = "0.1.0"
+
+                    [replace]
+                    "bar:0.1.0" = {{ git = '{}' }}
+                "#,
+                bar.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[..]`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..]/foo)`
+
+Caused by:
+  replacement specification `https://github.com/rust-lang/crates.io-index#bar@0.1.0` matched 0.1.0+a and tried to override it with 0.1.0
+  avoid matching unrelated packages by being more specific
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn override_respects_spec_metadata() {
+    Package::new("bar", "0.1.0+a").publish();
+
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0+a"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    bar = "0.1.0"
+
+                    [replace]
+                    "bar:0.1.0+notTheBuild" = {{ git = '{}' }}
+                "#,
+                bar.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] package replacement is not used: https://github.com/rust-lang/crates.io-index#bar@0.1.0+notTheBuild
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0+a (registry `dummy-registry`)
+[CHECKING] bar v0.1.0+a
+[CHECKING] foo v0.0.1 ([..]/foo)
+[..]
+[..]
+[..]
+[..]
+[..]
+[..]
+[..]
+error: could not compile `foo` (lib) due to previous error
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn override_spec_metadata_is_optional() {
+    Package::new("bar", "0.1.0+a").publish();
+
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0+a"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+
+                    [dependencies]
+                    bar = "0.1.0"
+
+                    [replace]
+                    "bar:0.1.0" = {{ git = '{}' }}
+                "#,
+                bar.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[..]`
+[CHECKING] bar v0.1.0+a (file://[..])
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
