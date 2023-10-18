@@ -731,8 +731,7 @@ unstable_cli_options!(
     #[serde(deserialize_with = "deserialize_build_std")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
-    #[serde(deserialize_with = "deserialize_check_cfg")]
-    check_cfg: Option<(/*features:*/ bool, /*well_known_names:*/ bool, /*well_known_values:*/ bool, /*output:*/ bool)> = ("Specify scope of compile-time checking of `cfg` names/values"),
+    check_cfg: bool = ("Enable compile-time checking of `cfg` names/values/features"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
@@ -842,20 +841,6 @@ where
     ))
 }
 
-fn deserialize_check_cfg<'de, D>(
-    deserializer: D,
-) -> Result<Option<(bool, bool, bool, bool)>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use serde::de::Error;
-    let Some(crates) = <Option<Vec<String>>>::deserialize(deserializer)? else {
-        return Ok(None);
-    };
-
-    parse_check_cfg(crates.into_iter()).map_err(D::Error::custom)
-}
-
 #[derive(Debug, Copy, Clone, Default, Deserialize)]
 pub struct GitoxideFeatures {
     /// All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
@@ -922,32 +907,6 @@ fn parse_gitoxide(
         }
     }
     Ok(Some(out))
-}
-
-fn parse_check_cfg(
-    it: impl Iterator<Item = impl AsRef<str>>,
-) -> CargoResult<Option<(bool, bool, bool, bool)>> {
-    let mut features = false;
-    let mut well_known_names = false;
-    let mut well_known_values = false;
-    let mut output = false;
-
-    for e in it {
-        match e.as_ref() {
-            "features" => features = true,
-            "names" => well_known_names = true,
-            "values" => well_known_values = true,
-            "output" => output = true,
-            _ => bail!("unstable check-cfg only takes `features`, `names`, `values` or `output` as valid inputs"),
-        }
-    }
-
-    Ok(Some((
-        features,
-        well_known_names,
-        well_known_values,
-        output,
-    )))
 }
 
 impl CliUnstable {
@@ -1107,7 +1066,7 @@ impl CliUnstable {
             }
             "build-std-features" => self.build_std_features = Some(parse_features(v)),
             "check-cfg" => {
-                self.check_cfg = v.map_or(Ok(None), |v| parse_check_cfg(v.split(',')))?
+                self.check_cfg = parse_empty(k, v)?;
             }
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,

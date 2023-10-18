@@ -137,10 +137,6 @@ fn parse_links_overrides(
     config: &Config,
 ) -> CargoResult<BTreeMap<String, BuildOutput>> {
     let mut links_overrides = BTreeMap::new();
-    let extra_check_cfg = match config.cli_unstable().check_cfg {
-        Some((_, _, _, output)) => output,
-        None => false,
-    };
 
     for (lib_name, value) in links {
         // Skip these keys, it shares the namespace with `TargetConfig`.
@@ -207,7 +203,7 @@ fn parse_links_overrides(
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-check-cfg" => {
-                    if extra_check_cfg {
+                    if config.cli_unstable().check_cfg {
                         let list = value.list(key)?;
                         output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
                     } else {
