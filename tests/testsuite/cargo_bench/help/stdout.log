@@ -1,10 +1,10 @@
 Execute all benchmarks of a local package
 
-Usage: cargo[EXE] bench [OPTIONS] [BENCHNAME] [-- [args]...]
+Usage: cargo[EXE] bench [OPTIONS] [BENCHNAME] [-- [ARGS]...]
 
 Arguments:
   [BENCHNAME]  If specified, only run benches containing this string in their names
-  [args]...    Arguments for the bench binary
+  [ARGS]...    Arguments for the bench binary
 
 Options:
       --no-run                Compile, but don't run benchmarks

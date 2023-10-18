@@ -1,9 +1,9 @@
 Remove a pushed crate from the index
 
-Usage: cargo[EXE] yank [OPTIONS] [crate]
+Usage: cargo[EXE] yank [OPTIONS] [CRATE]
 
 Arguments:
-  [crate]  
+  [CRATE]  
 
 Options:
       --version <VERSION>    The version to yank or un-yank

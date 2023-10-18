@@ -7,6 +7,7 @@ pub fn cli() -> Command {
         .about("Build a package's documentation, using specified custom flags.")
         .arg(
             Arg::new("args")
+                .value_name("ARGS")
                 .help("Extra rustdoc flags")
                 .num_args(0..)
                 .trailing_var_arg(true),

@@ -50,7 +50,7 @@ error: unexpected argument '--silent' found
 
   tip: a similar argument exists: '--quiet'
 
-Usage: cargo[EXE] run [OPTIONS] [args]...
+Usage: cargo[EXE] run [OPTIONS] [ARGS]...
 
 For more information, try '--help'.
 ",
@@ -65,7 +65,7 @@ error: unexpected argument '--silent' found
 
   tip: a similar argument exists: '--quiet'
 
-Usage: cargo[EXE] run [OPTIONS] [args]...
+Usage: cargo[EXE] run [OPTIONS] [ARGS]...
 
 For more information, try '--help'.
 ",

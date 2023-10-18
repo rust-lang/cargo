@@ -6,7 +6,7 @@ use cargo_credential::Secret;
 pub fn cli() -> Command {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
-        .arg(Arg::new("crate").action(ArgAction::Set))
+        .arg(Arg::new("crate").value_name("CRATE").action(ArgAction::Set))
         .arg(
             multi_opt(
                 "add",

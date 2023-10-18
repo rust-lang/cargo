@@ -5,7 +5,12 @@ use cargo::ops;
 pub fn cli() -> Command {
     subcommand("new")
         .about("Create a new cargo package at <path>")
-        .arg(Arg::new("path").action(ArgAction::Set).required(true))
+        .arg(
+            Arg::new("path")
+                .value_name("PATH")
+                .action(ArgAction::Set)
+                .required(true),
+        )
         .arg_new_opts()
         .arg_registry("Registry to use")
         .arg_quiet()

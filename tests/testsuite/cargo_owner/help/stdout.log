@@ -1,9 +1,9 @@
 Manage the owners of a crate on the registry
 
-Usage: cargo[EXE] owner [OPTIONS] [crate]
+Usage: cargo[EXE] owner [OPTIONS] [CRATE]
 
 Arguments:
-  [crate]  
+  [CRATE]  
 
 Options:
   -a, --add <LOGIN>          Name of a user or team to invite as an owner

@@ -1614,7 +1614,7 @@ fn inline_version_without_name() {
     cargo_process("install @0.1.1")
         .with_status(1)
         .with_stderr(
-            "error: invalid value '@0.1.1' for '[crate]...': missing crate name before '@'
+            "error: invalid value '@0.1.1' for '[CRATE[@<VER>]]...': missing crate name before '@'
 
 For more information, try '--help'.
 ",
@@ -1844,7 +1844,9 @@ fn install_empty_argument() {
     cargo_process("install")
         .arg("")
         .with_status(1)
-        .with_stderr_contains("[ERROR] invalid value '' for '[crate]...': crate name is empty")
+        .with_stderr_contains(
+            "[ERROR] invalid value '' for '[CRATE[@<VER>]]...': crate name is empty",
+        )
         .run();
 }
 
@@ -2455,7 +2457,7 @@ error: unexpected argument '--release' found
 
   tip: `--release` is the default for `cargo install`; instead `--debug` is supported
 
-Usage: cargo[EXE] install [OPTIONS] [crate]...
+Usage: cargo[EXE] install [OPTIONS] [CRATE[@<VER>]]...
 
 For more information, try '--help'.
 ",

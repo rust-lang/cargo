@@ -1,9 +1,9 @@
 Print a fully qualified package specification
 
-Usage: cargo[EXE] pkgid [OPTIONS] [spec]
+Usage: cargo[EXE] pkgid [OPTIONS] [SPEC]
 
 Arguments:
-  [spec]  
+  [SPEC]  
 
 Options:
   -q, --quiet               Do not print cargo log messages

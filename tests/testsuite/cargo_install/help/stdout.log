@@ -1,9 +1,9 @@
 Install a Rust binary. Default location is $HOME/.cargo/bin
 
-Usage: cargo[EXE] install [OPTIONS] [crate]...
+Usage: cargo[EXE] install [OPTIONS] [CRATE[@<VER>]]...
 
 Arguments:
-  [crate]...  
+  [CRATE[@<VER>]]...  Select the package from the given source
 
 Options:
       --version <VERSION>     Specify a version to install

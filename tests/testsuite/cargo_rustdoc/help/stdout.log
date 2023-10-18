@@ -1,9 +1,9 @@
 Build a package's documentation, using specified custom flags.
 
-Usage: cargo[EXE] rustdoc [OPTIONS] [args]...
+Usage: cargo[EXE] rustdoc [OPTIONS] [ARGS]...
 
 Arguments:
-  [args]...  Extra rustdoc flags
+  [ARGS]...  Extra rustdoc flags
 
 Options:
       --open                  Opens the docs in a browser after the operation
