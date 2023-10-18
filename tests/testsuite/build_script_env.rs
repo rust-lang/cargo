@@ -181,6 +181,22 @@ fn rustc_bootstrap() {
 }
 
 #[cargo_test]
+fn build_script_env_verbose() {
+    let build_rs = r#"
+        fn main() {}
+    "#;
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("verbose-build", "0.0.1"))
+        .file("src/lib.rs", "")
+        .file("build.rs", build_rs)
+        .build();
+
+    p.cargo("check -vv")
+        .with_stderr_contains("[RUNNING] `[..]CARGO=[..]build-script-build`")
+        .run();
+}
+
+#[cargo_test]
 #[cfg(target_arch = "x86_64")]
 fn build_script_sees_cfg_target_feature() {
     let build_rs = r#"

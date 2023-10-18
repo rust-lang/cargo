@@ -353,6 +353,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     );
     cmd.env_remove("RUSTFLAGS");
 
+    if cx.bcx.ws.config().extra_verbose() {
+        cmd.display_env_vars();
+    }
+
     // Gather the set of native dependencies that this package has along with
     // some other variables to close over.
     //
