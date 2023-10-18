@@ -12,7 +12,6 @@
 //! [`crate::core::global_cache_tracker`] module.
 
 use crate::core::global_cache_tracker::{self, GlobalCacheTracker};
-use crate::core::Verbosity;
 use crate::ops::CleanContext;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::{CargoResult, Config};
@@ -436,9 +435,7 @@ pub fn auto_gc(config: &Config) {
     }
 
     if let Err(e) = auto_gc_inner(config) {
-        if global_cache_tracker::is_silent_error(&e)
-            && config.shell().verbosity() != Verbosity::Verbose
-        {
+        if global_cache_tracker::is_silent_error(&e) && !config.extra_verbose() {
             tracing::warn!("failed to auto-clean cache data: {e:?}");
         } else {
             crate::display_warning_with_error(
