@@ -353,8 +353,7 @@ fn maybe_parse_time_span(span: &str) -> Option<Duration> {
     let Some(right_i) = span.find(|c: char| !c.is_ascii_digit()) else {
         return None;
     };
-    let left = &span[..right_i];
-    let mut right = &span[right_i..];
+    let (left, mut right) = span.split_at(right_i);
     if right.starts_with(' ') {
         right = &right[1..];
     }
