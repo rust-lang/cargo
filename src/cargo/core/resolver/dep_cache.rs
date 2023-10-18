@@ -173,11 +173,20 @@ impl<'a> RegistryQueryer<'a> {
                 )));
             }
 
-            // The dependency should be hard-coded to have the same name and an
-            // exact version requirement, so both of these assertions should
-            // never fail.
-            assert_eq!(s.version(), summary.version());
-            assert_eq!(s.name(), summary.name());
+            assert_eq!(
+                s.name(),
+                summary.name(),
+                "dependency should be hard coded to have the same name"
+            );
+            if s.version() != summary.version() {
+                return Poll::Ready(Err(anyhow::anyhow!(
+                    "replacement specification `{}` matched {} and tried to override it with {}\n\
+                     avoid matching unrelated packages by being more specific",
+                    spec,
+                    summary.version(),
+                    s.version(),
+                )));
+            }
 
             let replace = if s.source_id() == summary.source_id() {
                 debug!("Preventing\n{:?}\nfrom replacing\n{:?}", summary, s);
