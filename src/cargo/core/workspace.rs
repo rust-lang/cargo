@@ -1491,7 +1491,7 @@ impl<'cfg> Workspace<'cfg> {
                         // Check if `dep_name` is member of the workspace, but isn't associated with current package.
                         self.current_opt() != Some(member) && member.name() == *dep_name
                     });
-                    if is_member && specs.iter().any(|spec| spec.name() == *dep_name) {
+                    if is_member && specs.iter().any(|spec| spec.name() == dep_name.as_str()) {
                         member_specific_features
                             .entry(*dep_name)
                             .or_default()

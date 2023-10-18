@@ -208,7 +208,7 @@ pub struct TomlManifest {
     build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "build_dependencies")]
     build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    features: Option<BTreeMap<InternedString, Vec<InternedString>>>,
+    features: Option<BTreeMap<String, Vec<String>>>,
     target: Option<BTreeMap<String, TomlPlatform>>,
     replace: Option<BTreeMap<String, TomlDependency>>,
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
@@ -871,7 +871,17 @@ impl TomlManifest {
         let summary = Summary::new(
             pkgid,
             deps,
-            me.features.as_ref().unwrap_or(&empty_features),
+            &me.features
+                .as_ref()
+                .unwrap_or(&empty_features)
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        InternedString::new(k),
+                        v.iter().map(InternedString::from).collect(),
+                    )
+                })
+                .collect(),
             package.links.as_deref(),
             rust_version.clone(),
         )?;
@@ -1271,7 +1281,7 @@ impl TomlManifest {
                 );
             }
 
-            let mut dep = replacement.to_dependency(spec.name().as_str(), cx, None)?;
+            let mut dep = replacement.to_dependency(spec.name(), cx, None)?;
             let version = spec.version().ok_or_else(|| {
                 anyhow!(
                     "replacements must specify a version \
@@ -1353,7 +1363,7 @@ impl TomlManifest {
         self.profile.is_some()
     }
 
-    pub fn features(&self) -> Option<&BTreeMap<InternedString, Vec<InternedString>>> {
+    pub fn features(&self) -> Option<&BTreeMap<String, Vec<String>>> {
         self.features.as_ref()
     }
 }
@@ -1669,7 +1679,7 @@ impl InheritableFields {
 pub struct TomlPackage {
     edition: Option<MaybeWorkspaceString>,
     rust_version: Option<MaybeWorkspaceRustVersion>,
-    name: InternedString,
+    name: String,
     version: Option<MaybeWorkspaceSemverVersion>,
     authors: Option<MaybeWorkspaceVecString>,
     build: Option<StringOrBool>,
@@ -1715,7 +1725,7 @@ impl TomlPackage {
         source_id: SourceId,
         version: semver::Version,
     ) -> CargoResult<PackageId> {
-        PackageId::new(self.name, version, source_id)
+        PackageId::new(&self.name, version, source_id)
     }
 }
 
@@ -2631,10 +2641,10 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles(BTreeMap<InternedString, TomlProfile>);
+pub struct TomlProfiles(BTreeMap<String, TomlProfile>);
 
 impl TomlProfiles {
-    pub fn get_all(&self) -> &BTreeMap<InternedString, TomlProfile> {
+    pub fn get_all(&self) -> &BTreeMap<String, TomlProfile> {
         &self.0
     }
 
@@ -2664,7 +2674,7 @@ impl TomlProfiles {
 pub struct TomlProfile {
     pub opt_level: Option<TomlOptLevel>,
     pub lto: Option<StringOrBool>,
-    pub codegen_backend: Option<InternedString>,
+    pub codegen_backend: Option<String>,
     pub codegen_units: Option<u32>,
     pub debug: Option<TomlDebugInfo>,
     pub split_debuginfo: Option<String>,
@@ -2673,11 +2683,11 @@ pub struct TomlProfile {
     pub panic: Option<String>,
     pub overflow_checks: Option<bool>,
     pub incremental: Option<bool>,
-    pub dir_name: Option<InternedString>,
-    pub inherits: Option<InternedString>,
+    pub dir_name: Option<String>,
+    pub inherits: Option<String>,
     pub strip: Option<StringOrBool>,
     // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
-    pub rustflags: Option<Vec<InternedString>>,
+    pub rustflags: Option<Vec<String>>,
     // These two fields must be last because they are sub-tables, and TOML
     // requires all non-tables to be listed first.
     pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
@@ -2712,7 +2722,7 @@ impl TomlProfile {
         // Profile name validation
         Self::validate_name(name)?;
 
-        if let Some(dir_name) = self.dir_name {
+        if let Some(dir_name) = &self.dir_name {
             // This is disabled for now, as we would like to stabilize named
             // profiles without this, and then decide in the future if it is
             // needed. This helps simplify the UI a little.
@@ -2725,7 +2735,7 @@ impl TomlProfile {
         }
 
         // `inherits` validation
-        if matches!(self.inherits.map(|s| s.as_str()), Some("debug")) {
+        if matches!(self.inherits.as_deref(), Some("debug")) {
             bail!(
                 "profile.{}.inherits=\"debug\" should be profile.{}.inherits=\"dev\"",
                 name,
@@ -2915,8 +2925,8 @@ impl TomlProfile {
             self.lto = Some(v.clone());
         }
 
-        if let Some(v) = profile.codegen_backend {
-            self.codegen_backend = Some(v);
+        if let Some(v) = &profile.codegen_backend {
+            self.codegen_backend = Some(v.clone());
         }
 
         if let Some(v) = profile.codegen_units {
@@ -2979,11 +2989,11 @@ impl TomlProfile {
         }
 
         if let Some(v) = &profile.inherits {
-            self.inherits = Some(*v);
+            self.inherits = Some(v.clone());
         }
 
         if let Some(v) = &profile.dir_name {
-            self.dir_name = Some(*v);
+            self.dir_name = Some(v.clone());
         }
 
         if let Some(v) = &profile.strip {

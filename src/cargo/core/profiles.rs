@@ -104,7 +104,7 @@ impl Profiles {
         // Verify that the requested profile is defined *somewhere*.
         // This simplifies the API (no need for CargoResult), and enforces
         // assumptions about how config profiles are loaded.
-        profile_makers.get_profile_maker(requested_profile)?;
+        profile_makers.get_profile_maker(&requested_profile)?;
         Ok(profile_makers)
     }
 
@@ -142,21 +142,21 @@ impl Profiles {
             (
                 "bench",
                 TomlProfile {
-                    inherits: Some(InternedString::new("release")),
+                    inherits: Some(String::from("release")),
                     ..TomlProfile::default()
                 },
             ),
             (
                 "test",
                 TomlProfile {
-                    inherits: Some(InternedString::new("dev")),
+                    inherits: Some(String::from("dev")),
                     ..TomlProfile::default()
                 },
             ),
             (
                 "doc",
                 TomlProfile {
-                    inherits: Some(InternedString::new("dev")),
+                    inherits: Some(String::from("dev")),
                     ..TomlProfile::default()
                 },
             ),
@@ -173,7 +173,7 @@ impl Profiles {
         match &profile.dir_name {
             None => {}
             Some(dir_name) => {
-                self.dir_names.insert(name, dir_name.to_owned());
+                self.dir_names.insert(name, InternedString::new(dir_name));
             }
         }
 
@@ -212,12 +212,13 @@ impl Profiles {
         set: &mut HashSet<InternedString>,
         profiles: &BTreeMap<InternedString, TomlProfile>,
     ) -> CargoResult<ProfileMaker> {
-        let mut maker = match profile.inherits {
+        let mut maker = match &profile.inherits {
             Some(inherits_name) if inherits_name == "dev" || inherits_name == "release" => {
                 // These are the root profiles added in `add_root_profiles`.
-                self.get_profile_maker(inherits_name).unwrap().clone()
+                self.get_profile_maker(&inherits_name).unwrap().clone()
             }
             Some(inherits_name) => {
+                let inherits_name = InternedString::new(&inherits_name);
                 if !set.insert(inherits_name) {
                     bail!(
                         "profile inheritance loop detected with profile `{}` inheriting `{}`",
@@ -263,7 +264,7 @@ impl Profiles {
         unit_for: UnitFor,
         kind: CompileKind,
     ) -> Profile {
-        let maker = self.get_profile_maker(self.requested_profile).unwrap();
+        let maker = self.get_profile_maker(&self.requested_profile).unwrap();
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for.is_for_host());
 
         // Dealing with `panic=abort` and `panic=unwind` requires some special
@@ -325,7 +326,7 @@ impl Profiles {
     /// select for the package that was actually built.
     pub fn base_profile(&self) -> Profile {
         let profile_name = self.requested_profile;
-        let maker = self.get_profile_maker(profile_name).unwrap();
+        let maker = self.get_profile_maker(&profile_name).unwrap();
         maker.get_profile(None, /*is_member*/ true, /*is_for_host*/ false)
     }
 
@@ -372,9 +373,9 @@ impl Profiles {
     }
 
     /// Returns the profile maker for the given profile name.
-    fn get_profile_maker(&self, name: InternedString) -> CargoResult<&ProfileMaker> {
+    fn get_profile_maker(&self, name: &str) -> CargoResult<&ProfileMaker> {
         self.by_name
-            .get(&name)
+            .get(name)
             .ok_or_else(|| anyhow::format_err!("profile `{}` is not defined", name))
     }
 }
@@ -521,7 +522,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         None => {}
     }
     if toml.codegen_backend.is_some() {
-        profile.codegen_backend = toml.codegen_backend;
+        profile.codegen_backend = toml.codegen_backend.as_ref().map(InternedString::from);
     }
     if toml.codegen_units.is_some() {
         profile.codegen_units = toml.codegen_units;
@@ -553,7 +554,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.incremental = incremental;
     }
     if let Some(flags) = &toml.rustflags {
-        profile.rustflags = flags.clone();
+        profile.rustflags = flags.iter().map(InternedString::from).collect();
     }
     profile.strip = match toml.strip {
         Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
@@ -1162,7 +1163,11 @@ fn merge_config_profiles(
     requested_profile: InternedString,
 ) -> CargoResult<BTreeMap<InternedString, TomlProfile>> {
     let mut profiles = match ws.profiles() {
-        Some(profiles) => profiles.get_all().clone(),
+        Some(profiles) => profiles
+            .get_all()
+            .iter()
+            .map(|(k, v)| (InternedString::new(k), v.clone()))
+            .collect(),
         None => BTreeMap::new(),
     };
     // Set of profile names to check if defined in config only.
@@ -1174,7 +1179,7 @@ fn merge_config_profiles(
             profile.merge(&config_profile);
         }
         if let Some(inherits) = &profile.inherits {
-            check_to_add.insert(*inherits);
+            check_to_add.insert(InternedString::new(inherits));
         }
     }
     // Add the built-in profiles. This is important for things like `cargo
@@ -1188,10 +1193,10 @@ fn merge_config_profiles(
     while !check_to_add.is_empty() {
         std::mem::swap(&mut current, &mut check_to_add);
         for name in current.drain() {
-            if !profiles.contains_key(&name) {
+            if !profiles.contains_key(name.as_str()) {
                 if let Some(config_profile) = get_config_profile(ws, &name)? {
                     if let Some(inherits) = &config_profile.inherits {
-                        check_to_add.insert(*inherits);
+                        check_to_add.insert(InternedString::new(inherits));
                     }
                     profiles.insert(name, config_profile);
                 }

@@ -2,7 +2,6 @@
 
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::config::{self, Config, Definition, JobsConfig, SslVersionConfig, StringList};
-use cargo::util::interning::InternedString;
 use cargo::util::toml::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
 use cargo::CargoResult;
 use cargo_test_support::compare;
@@ -445,8 +444,8 @@ lto = false
         p,
         cargo_toml::TomlProfile {
             lto: Some(cargo_toml::StringOrBool::Bool(false)),
-            dir_name: Some(InternedString::new("without-lto")),
-            inherits: Some(InternedString::new("dev")),
+            dir_name: Some(String::from("without-lto")),
+            inherits: Some(String::from("dev")),
             ..Default::default()
         }
     );
@@ -1526,7 +1525,7 @@ fn all_profile_options() {
     let base_settings = cargo_toml::TomlProfile {
         opt_level: Some(cargo_toml::TomlOptLevel("0".to_string())),
         lto: Some(cargo_toml::StringOrBool::String("thin".to_string())),
-        codegen_backend: Some(InternedString::new("example")),
+        codegen_backend: Some(String::from("example")),
         codegen_units: Some(123),
         debug: Some(cargo_toml::TomlDebugInfo::Limited),
         split_debuginfo: Some("packed".to_string()),
@@ -1535,8 +1534,8 @@ fn all_profile_options() {
         panic: Some("abort".to_string()),
         overflow_checks: Some(true),
         incremental: Some(true),
-        dir_name: Some(InternedString::new("dir_name")),
-        inherits: Some(InternedString::new("debug")),
+        dir_name: Some(String::from("dir_name")),
+        inherits: Some(String::from("debug")),
         strip: Some(cargo_toml::StringOrBool::String("symbols".to_string())),
         package: None,
         build_override: None,
