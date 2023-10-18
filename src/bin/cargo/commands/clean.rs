@@ -47,8 +47,9 @@ pub fn cli() -> Command {
                 "Deletes source cache files that have not been used \
                 since the given age (unstable)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("DURATION")
+            .value_parser(parse_time_span)
+            .hide(true),
         )
         .arg(
             opt(
@@ -56,8 +57,9 @@ pub fn cli() -> Command {
                 "Deletes crate cache files that have not been used \
                 since the given age (unstable)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("DURATION")
+            .value_parser(parse_time_span)
+            .hide(true),
         )
         .arg(
             opt(
@@ -65,8 +67,9 @@ pub fn cli() -> Command {
                 "Deletes registry indexes that have not been used \
                 since the given age (unstable)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("DURATION")
+            .value_parser(parse_time_span)
+            .hide(true),
         )
         .arg(
             opt(
@@ -74,8 +77,9 @@ pub fn cli() -> Command {
                 "Deletes git dependency checkouts that have not been used \
                 since the given age (unstable)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("DURATION")
+            .value_parser(parse_time_span)
+            .hide(true),
         )
         .arg(
             opt(
@@ -83,8 +87,9 @@ pub fn cli() -> Command {
                 "Deletes git dependency clones that have not been used \
                 since the given age (unstable)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("DURATION")
+            .value_parser(parse_time_span)
+            .hide(true),
         )
         .arg(
             opt(
@@ -92,40 +97,45 @@ pub fn cli() -> Command {
                 "Deletes any downloaded cache data that has not been used \
                 since the given age (unstable)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("DURATION")
+            .value_parser(parse_time_span)
+            .hide(true),
         )
         .arg(
             opt(
                 "max-src-size",
                 "Deletes source cache files until the cache is under the given size (unstable)",
             )
-            .hide(true)
-            .value_name("SIZE"),
+            .value_name("SIZE")
+            .value_parser(parse_human_size)
+            .hide(true),
         )
         .arg(
             opt(
                 "max-crate-size",
                 "Deletes crate cache files until the cache is under the given size (unstable)",
             )
-            .hide(true)
-            .value_name("SIZE"),
+            .value_name("SIZE")
+            .value_parser(parse_human_size)
+            .hide(true),
         )
         .arg(
             opt(
                 "max-git-size",
                 "Deletes git dependency caches until the cache is under the given size (unstable)",
             )
-            .hide(true)
-            .value_name("SIZE"),
+            .value_name("SIZE")
+            .value_parser(parse_human_size)
+            .hide(true),
         )
         .arg(
             opt(
                 "max-download-size",
                 "Deletes downloaded cache data until the cache is under the given size (unstable)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("SIZE")
+            .value_parser(parse_human_size)
+            .hide(true),
         )
         // These are unimplemented. Leaving here as a guide for how this is
         // intended to evolve. These will likely change, this is just a sketch
@@ -136,8 +146,9 @@ pub fn cli() -> Command {
                 "Deletes any build artifact files that have not been used \
                 since the given age (unstable) (UNIMPLEMENTED)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("DURATION")
+            .value_parser(parse_time_span)
+            .hide(true),
         )
         .arg(
             // TODO: come up with something less wordy?
@@ -146,8 +157,9 @@ pub fn cli() -> Command {
                 "Deletes any shared build artifact files that have not been used \
                 since the given age (unstable) (UNIMPLEMENTED)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("DURATION")
+            .value_parser(parse_time_span)
+            .hide(true),
         )
         .arg(
             opt(
@@ -155,8 +167,9 @@ pub fn cli() -> Command {
                 "Deletes build artifact files until the cache is under the given size \
                 (unstable) (UNIMPLEMENTED)",
             )
-            .hide(true)
-            .value_name("SIZE"),
+            .value_name("SIZE")
+            .value_parser(parse_human_size)
+            .hide(true),
         )
         .arg(
             // TODO: come up with something less wordy?
@@ -165,8 +178,9 @@ pub fn cli() -> Command {
                 "Deletes shared build artifact files until the cache is under the given size \
                 (unstable) (UNIMPLEMENTED)",
             )
-            .hide(true)
-            .value_name("DURATION"),
+            .value_name("SIZE")
+            .value_parser(parse_human_size)
+            .hide(true),
         )
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help clean</>` for more detailed information.\n"
@@ -189,29 +203,25 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             config.cli_unstable().gc,
         )
     };
-    let unstable_cache_opt = |opt| -> CargoResult<Option<&str>> {
-        let arg = args.get_one::<String>(opt).map(String::as_str);
+    let unstable_size_opt = |opt| -> CargoResult<Option<u64>> {
+        let arg = args.get_one::<u64>(opt).copied();
         if arg.is_some() {
             unstable_gc(opt)?;
         }
         Ok(arg)
     };
-    let unstable_size_opt = |opt| -> CargoResult<Option<u64>> {
-        unstable_cache_opt(opt)?
-            .map(|s| parse_human_size(s))
-            .transpose()
-    };
     let unstable_duration_opt = |opt| -> CargoResult<Option<Duration>> {
-        unstable_cache_opt(opt)?
-            .map(|s| parse_time_span(s))
-            .transpose()
-    };
-    let unimplemented_opt = |opt| -> CargoResult<Option<&str>> {
-        let arg = args.get_one::<String>(opt).map(String::as_str);
+        let arg = args.get_one::<Duration>(opt).copied();
         if arg.is_some() {
+            unstable_gc(opt)?;
+        }
+        Ok(arg)
+    };
+    let unimplemented_opt = |opt| -> CargoResult<()> {
+        if args.contains_id(opt) {
             anyhow::bail!("option --{opt} is not yet implemented");
         }
-        Ok(None)
+        Ok(())
     };
     let unimplemented_size_opt = |opt| -> CargoResult<Option<u64>> {
         unimplemented_opt(opt)?;
