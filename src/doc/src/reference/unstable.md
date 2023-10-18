@@ -1080,34 +1080,14 @@ you are ok with dev-deps being build for `cargo doc`.
 * RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
 * Tracking Issue: [#10554](https://github.com/rust-lang/cargo/issues/10554)
 
-`-Z check-cfg` command line enables compile time checking of name and values in `#[cfg]`, `cfg!`,
-`#[link]` and `#[cfg_attr]` with the `rustc` and `rustdoc` unstable `--check-cfg` command line.
+`-Z check-cfg` command line enables compile time checking of Cargo features as well as `rustc`
+well known names and values in `#[cfg]`, `cfg!`, `#[link]` and `#[cfg_attr]` with the `rustc`
+and `rustdoc` unstable `--check-cfg` command line.
 
-It's values are:
- - `features`: enables features checking via `--check-cfg=values(feature, ...)`.
-    Note than this command line options will probably become the default when stabilizing.
- - `names`: enables well known names checking via `--check-cfg=names()`.
- - `values`: enables well known values checking via `--check-cfg=values()`.
- - `output`: enable the use of `rustc-check-cfg` in build script.
-
-For instance:
+You can use the flag like this:
 
 ```
-cargo check -Z unstable-options -Z check-cfg=features
-cargo check -Z unstable-options -Z check-cfg=names
-cargo check -Z unstable-options -Z check-cfg=values
-cargo check -Z unstable-options -Z check-cfg=features,names,values
-```
-
-Or for `output`:
-
-```rust,no_run
-// build.rs
-println!("cargo:rustc-check-cfg=names(foo, bar)");
-```
-
-```
-cargo check -Z unstable-options -Z check-cfg=output
+cargo check -Z unstable-options -Z check-cfg
 ```
 
 ### `cargo:rustc-check-cfg=CHECK_CFG`
@@ -1116,11 +1096,22 @@ The `rustc-check-cfg` instruction tells Cargo to pass the given value to the
 `--check-cfg` flag to the compiler. This may be used for compile-time
 detection of unexpected conditional compilation name and/or values.
 
-This can only be used in combination with `-Zcheck-cfg=output` otherwise it is ignored
+This can only be used in combination with `-Zcheck-cfg` otherwise it is ignored
 with a warning.
 
-If you want to integrate with Cargo features, use `-Zcheck-cfg=features` instead of
+If you want to integrate with Cargo features, only use `-Zcheck-cfg` instead of
 trying to do it manually with this option.
+
+You can use the instruction like this:
+
+```rust,no_run
+// build.rs
+println!("cargo:rustc-check-cfg=cfg(foo, bar)");
+```
+
+```
+cargo check -Z unstable-options -Z check-cfg
+```
 
 ## codegen-backend
 
