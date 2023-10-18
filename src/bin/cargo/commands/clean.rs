@@ -25,7 +25,7 @@ pub fn cli() -> Command {
         .arg(
             optional_opt(
                 "gc",
-                "Delete old and unused files (unstable) (comma separated): all, download, target, shared-target",
+                "Delete old and unused files (unstable) (comma separated)",
             )
             .hide(true)
             .value_name("KINDS")
