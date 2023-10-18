@@ -192,10 +192,9 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
                 let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
 
                 anyhow::format_err!(
-                    "no such command: `{}`{}\n\n\t\
-                    View all installed commands with `cargo --list`",
-                    cmd,
-                    did_you_mean
+                    "no such command: `{cmd}`{did_you_mean}\n\n\t\
+                    View all installed commands with `cargo --list`\n\t\
+                    Find a package to install `{cmd}` with `cargo search cargo-{cmd}`",
                 )
             };
 
