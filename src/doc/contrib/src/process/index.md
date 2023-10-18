@@ -8,11 +8,6 @@ process.
 
 Please read the guidelines below before working on an issue or new feature.
 
-**Due to limited review capacity, the Cargo team is not accepting new features
-or major changes at this time. Please consult with the team before opening a
-new PR. Only issues that have been explicitly marked as accepted will be
-reviewed.**
-
 [Working on Cargo]: working-on-cargo.md
 
 ## Mentorship
