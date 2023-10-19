@@ -116,7 +116,7 @@ enum Kind {
 /// directive that we found in a lockfile, if present.
 pub struct LockedPatchDependency {
     /// The original `Dependency` directive, except "locked" so it's version
-    /// requirement is `=foo` and its `SourceId` has a "precise" listed.
+    /// requirement is Locked to `foo` and its `SourceId` has a "precise" listed.
     pub dependency: Dependency,
     /// The `PackageId` that was previously found in a lock file which
     /// `dependency` matches.

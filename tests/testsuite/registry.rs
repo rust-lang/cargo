@@ -3600,4 +3600,55 @@ fn differ_only_by_metadata() {
 ",
         )
         .run();
+
+    Package::new("baz", "0.0.1+d").publish();
+
+    p.cargo("clean").run();
+    p.cargo("check")
+        .with_stderr_contains("[CHECKING] baz v0.0.1+b")
+        .run();
+}
+
+#[cargo_test]
+fn differ_only_by_metadata_with_lockfile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                baz = "=0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("baz", "0.0.1+a").publish();
+    Package::new("baz", "0.0.1+b").publish();
+    Package::new("baz", "0.0.1+c").publish();
+
+    p.cargo("update --package baz --precise 0.0.1+b")
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[..] baz v0.0.1+c -> v0.0.1+b
+",
+        )
+        .run();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1+b (registry `dummy-registry`)
+[CHECKING] baz v0.0.1+b
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
 }

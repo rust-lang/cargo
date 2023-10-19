@@ -1274,8 +1274,7 @@ impl TomlManifest {
                 replacement.unused_keys(),
                 &mut cx.warnings,
             );
-            dep.set_version_req(OptVersionReq::exact(&version))
-                .lock_version(&version);
+            dep.set_version_req(OptVersionReq::exact(&version));
             replace.push((spec, dep));
         }
         Ok(replace)
