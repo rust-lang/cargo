@@ -188,7 +188,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
 
-        // TODO(-Znext-lockfile-bump): set it to true when stabilizing
+        // TODO(-Znext-lockfile-bump): set it to true when the default is
         // lockfile v4, because we want Source ID serialization to be
         // consistent with lockfile.
         match self.manifest_reference.pretty_ref(false) {
