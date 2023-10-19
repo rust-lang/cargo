@@ -594,7 +594,13 @@ fn z_flags_rejected() {
     p.cargo("check -Zarg")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
-        .with_stderr("error: unknown `-Z` flag specified: arg")
+        .with_stderr(
+            r#"error: unknown `-Z` flag specified: arg
+
+For available unstable features, see https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
+If you intended to use an unstable rustc feature, try setting `RUSTFLAGS="-Zarg"`
+"#,
+        )
         .run();
 
     p.cargo("check -Zprint-im-a-teapot")
