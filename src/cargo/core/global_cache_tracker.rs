@@ -151,49 +151,6 @@ const UPDATE_RESOLUTION: u64 = 60 * 5;
 /// These are seconds since the Unix epoch.
 type Timestamp = u64;
 
-/// Tracking for the global shared cache (registry files, etc.).
-#[derive(Debug)]
-pub struct GlobalCacheTracker {
-    /// Connection to the SQLite database.
-    conn: Connection,
-    auto_gc_checked_this_session: bool,
-}
-
-/// This is a cache of modifications that will be saved to disk all at once
-/// via the [`DeferredGlobalLastUse::save`] method.
-///
-/// This is here to improve performance.
-#[derive(Debug)]
-pub struct DeferredGlobalLastUse {
-    /// Cache of registry keys, used for faster fetching.
-    ///
-    /// The key is the registry name (which is its directory name) and the
-    /// value is the `id` in the `registry_index` table.
-    registry_keys: HashMap<InternedString, i64>,
-    /// Cache of git keys, used for faster fetching.
-    ///
-    /// The key is the git db name (which is its directory name) and the value
-    /// is the `id` in the `git_db` table.
-    git_keys: HashMap<InternedString, i64>,
-
-    /// New registry index entries to insert.
-    registry_index_timestamps: HashMap<RegistryIndex, Timestamp>,
-    /// New registry `.crate` entries to insert.
-    registry_crate_timestamps: HashMap<RegistryCrate, Timestamp>,
-    /// New registry src directory entries to insert.
-    registry_src_timestamps: HashMap<RegistrySrc, Timestamp>,
-    /// New git db entries to insert.
-    git_db_timestamps: HashMap<GitDb, Timestamp>,
-    /// New git checkout entries to insert.
-    git_checkout_timestamps: HashMap<GitCheckout, Timestamp>,
-    /// This is used so that a warning about failing to update the database is
-    /// only displayed once.
-    save_err_has_warned: bool,
-    /// The current time, used to improve performance to avoid accessing the
-    /// clock hundreds of times.
-    now: Timestamp,
-}
-
 /// The key for a registry index entry stored in the database.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct RegistryIndex {
@@ -242,7 +199,7 @@ pub struct GitCheckout {
     pub size: Option<u64>,
 }
 
-/// Paths in the global cache.
+/// Filesystem paths in the global cache.
 ///
 /// Accessing these assumes a lock has already been acquired.
 struct BasePaths {
@@ -337,6 +294,22 @@ fn migrations() -> Vec<Migration> {
             Ok(())
         }),
     ]
+}
+
+/// Tracking for the global shared cache (registry files, etc.).
+///
+/// This is the interface to the global cache database, used for tracking and
+/// cleaning. See the [`crate::core::global_cache_tracker`] module docs for
+/// details.
+#[derive(Debug)]
+pub struct GlobalCacheTracker {
+    /// Connection to the SQLite database.
+    conn: Connection,
+    /// This is an optimization used to make sure cargo only checks if gc
+    /// needs to run once per session. This starts as `false`, and then the
+    /// first time it checks if automatic gc needs to run, it will be set to
+    /// `true`.
+    auto_gc_checked_this_session: bool,
 }
 
 impl GlobalCacheTracker {
@@ -1398,6 +1371,41 @@ macro_rules! insert_or_update_parent {
         }
         return Ok(());
     };
+}
+
+/// This is a cache of modifications that will be saved to disk all at once
+/// via the [`DeferredGlobalLastUse::save`] method.
+///
+/// This is here to improve performance.
+#[derive(Debug)]
+pub struct DeferredGlobalLastUse {
+    /// Cache of registry keys, used for faster fetching.
+    ///
+    /// The key is the registry name (which is its directory name) and the
+    /// value is the `id` in the `registry_index` table.
+    registry_keys: HashMap<InternedString, i64>,
+    /// Cache of git keys, used for faster fetching.
+    ///
+    /// The key is the git db name (which is its directory name) and the value
+    /// is the `id` in the `git_db` table.
+    git_keys: HashMap<InternedString, i64>,
+
+    /// New registry index entries to insert.
+    registry_index_timestamps: HashMap<RegistryIndex, Timestamp>,
+    /// New registry `.crate` entries to insert.
+    registry_crate_timestamps: HashMap<RegistryCrate, Timestamp>,
+    /// New registry src directory entries to insert.
+    registry_src_timestamps: HashMap<RegistrySrc, Timestamp>,
+    /// New git db entries to insert.
+    git_db_timestamps: HashMap<GitDb, Timestamp>,
+    /// New git checkout entries to insert.
+    git_checkout_timestamps: HashMap<GitCheckout, Timestamp>,
+    /// This is used so that a warning about failing to update the database is
+    /// only displayed once.
+    save_err_has_warned: bool,
+    /// The current time, used to improve performance to avoid accessing the
+    /// clock hundreds of times.
+    now: Timestamp,
 }
 
 impl DeferredGlobalLastUse {

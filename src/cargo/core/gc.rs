@@ -28,19 +28,59 @@ use anyhow::{bail, Context};
 use serde::Deserialize;
 use std::time::Duration;
 
-/// Garbage collector.
+/// Performs automatic garbage collection.
 ///
-/// See the module docs at [`crate::core::gc`] for more information on GC.
-pub struct Gc<'a, 'config> {
-    config: &'config Config,
-    global_cache_tracker: &'a mut GlobalCacheTracker,
-    /// A lock on the package cache.
-    ///
-    /// This is important to be held, since we don't want multiple cargos to
-    /// be allowed to write to the cache at the same time, or for others to
-    /// read while we are modifying the cache.
-    #[allow(dead_code)] // Held for drop.
-    lock: CacheLock<'config>,
+/// This is called in various places in Cargo where garbage collection should
+/// be performed automatically based on the config settings. The default
+/// behavior is to only clean once a day.
+///
+/// This should only be called in code paths for commands that are already
+/// doing a lot of work. It should only be called *after* crates are
+/// downloaded so that the last-use data is updated first.
+///
+/// It should be cheap to call this multiple times (subsequent calls are
+/// ignored), but try not to abuse that.
+pub fn auto_gc(config: &Config) {
+    if !config.cli_unstable().gc {
+        return;
+    }
+    if !config.network_allowed() {
+        // As a conservative choice, auto-gc is disabled when offline. If the
+        // user is indefinitely offline, we don't want to delete things they
+        // may later depend on.
+        tracing::trace!("running offline, auto gc disabled");
+        return;
+    }
+
+    if let Err(e) = auto_gc_inner(config) {
+        if global_cache_tracker::is_silent_error(&e) && !config.extra_verbose() {
+            tracing::warn!("failed to auto-clean cache data: {e:?}");
+        } else {
+            crate::display_warning_with_error(
+                "failed to auto-clean cache data",
+                &e,
+                &mut config.shell(),
+            );
+        }
+    }
+}
+
+fn auto_gc_inner(config: &Config) -> CargoResult<()> {
+    let _lock = match config.try_acquire_package_cache_lock(CacheLockMode::MutateExclusive)? {
+        Some(lock) => lock,
+        None => {
+            tracing::debug!("unable to acquire mutate lock, auto gc disabled");
+            return Ok(());
+        }
+    };
+    // This should not be called when there are pending deferred entries, so check that.
+    let deferred = config.deferred_global_last_use()?;
+    debug_assert!(deferred.is_empty());
+    let mut global_cache_tracker = config.global_cache_tracker()?;
+    let mut gc = Gc::new(config, &mut global_cache_tracker)?;
+    let mut clean_ctx = CleanContext::new(config);
+    gc.auto(&mut clean_ctx)?;
+    Ok(())
 }
 
 /// Automatic garbage collection settings from the `gc.auto` config table.
@@ -237,6 +277,21 @@ pub enum AutoGcKind {
     SharedTarget,
 }
 
+/// Garbage collector.
+///
+/// See the module docs at [`crate::core::gc`] for more information on GC.
+pub struct Gc<'a, 'config> {
+    config: &'config Config,
+    global_cache_tracker: &'a mut GlobalCacheTracker,
+    /// A lock on the package cache.
+    ///
+    /// This is important to be held, since we don't want multiple cargos to
+    /// be allowed to write to the cache at the same time, or for others to
+    /// read while we are modifying the cache.
+    #[allow(dead_code)] // Held for drop.
+    lock: CacheLock<'config>,
+}
+
 impl<'a, 'config> Gc<'a, 'config> {
     pub fn new(
         config: &'config Config,
@@ -419,61 +474,6 @@ pub fn parse_human_size(input: &str) -> CargoResult<u64> {
         .parse::<f64>()
         .with_context(|| format!("expected an integer or float, found `{}`", &cap[1]))?;
     Ok((num * factor) as u64)
-}
-
-/// Performs automatic garbage collection.
-///
-/// This is called in various places in Cargo where garbage collection should
-/// be performed automatically based on the config settings. The default
-/// behavior is to only clean once a day.
-///
-/// This should only be called in code paths for commands that are already
-/// doing a lot of work. It should only be called *after* crates are
-/// downloaded so that the last-use data is updated first.
-///
-/// It should be cheap to call this multiple times (subsequent calls are
-/// ignored), but try not to abuse that.
-pub fn auto_gc(config: &Config) {
-    if !config.cli_unstable().gc {
-        return;
-    }
-    if !config.network_allowed() {
-        // As a conservative choice, auto-gc is disabled when offline. If the
-        // user is indefinitely offline, we don't want to delete things they
-        // may later depend on.
-        tracing::trace!("running offline, auto gc disabled");
-        return;
-    }
-
-    if let Err(e) = auto_gc_inner(config) {
-        if global_cache_tracker::is_silent_error(&e) && !config.extra_verbose() {
-            tracing::warn!("failed to auto-clean cache data: {e:?}");
-        } else {
-            crate::display_warning_with_error(
-                "failed to auto-clean cache data",
-                &e,
-                &mut config.shell(),
-            );
-        }
-    }
-}
-
-fn auto_gc_inner(config: &Config) -> CargoResult<()> {
-    let _lock = match config.try_acquire_package_cache_lock(CacheLockMode::MutateExclusive)? {
-        Some(lock) => lock,
-        None => {
-            tracing::debug!("unable to acquire mutate lock, auto gc disabled");
-            return Ok(());
-        }
-    };
-    // This should not be called when there are pending deferred entries, so check that.
-    let deferred = config.deferred_global_last_use()?;
-    debug_assert!(deferred.is_empty());
-    let mut global_cache_tracker = config.global_cache_tracker()?;
-    let mut gc = Gc::new(config, &mut global_cache_tracker)?;
-    let mut clean_ctx = CleanContext::new(config);
-    gc.auto(&mut clean_ctx)?;
-    Ok(())
 }
 
 #[cfg(test)]
