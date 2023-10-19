@@ -197,7 +197,7 @@ tests</a> for more detail.</li>
 <li><code>bench</code> — Builds in the same was as the <a href="cargo-bench.html">cargo-bench(1)</a> command,
 similar to the <code>test</code> profile.</li>
 </ul>
-<p>See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+<p>See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---ignore-rust-version"><a class="option-anchor" href="#option-cargo-rustc---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>

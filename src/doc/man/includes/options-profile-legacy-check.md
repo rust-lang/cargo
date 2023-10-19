@@ -6,5 +6,5 @@ test mode which will enable checking tests and enable the `test` cfg option.
 See [rustc tests](https://doc.rust-lang.org/rustc/tests/index.html) for more
 detail.
 
-See the [the reference](../reference/profiles.html) for more details on profiles.
+See [the reference](../reference/profiles.html) for more details on profiles.
 {{/option}}

@@ -65,7 +65,7 @@ The `rustc` subcommand will treat the following named profiles with special beha
 * `bench` --- Builds in the same was as the {{man "cargo-bench" 1}} command,
   similar to the `test` profile.
 
-See the [the reference](../reference/profiles.html) for more details on profiles.
+See [the reference](../reference/profiles.html) for more details on profiles.
 {{/option}}
 
 {{> options-ignore-rust-version }}

@@ -278,7 +278,7 @@ See also the <code>--profile</code> option for choosing a specific profile by na
 test mode which will enable checking tests and enable the <code>test</code> cfg option.
 See <a href="https://doc.rust-lang.org/rustc/tests/index.html">rustc tests</a> for more
 detail.</p>
-<p>See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+<p>See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
 

@@ -161,7 +161,7 @@ OPTIONS
            the test cfg option. See rustc tests
            <https://doc.rust-lang.org/rustc/tests/index.html> for more detail.
 
-           See the the reference
+           See the reference
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 
