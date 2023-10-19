@@ -31,6 +31,7 @@ fn simple() {
 [..] foo v0.0.1 ([CWD])
 [..] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -69,6 +70,7 @@ fn doc_twice() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -103,6 +105,7 @@ fn doc_deps() {
 [..] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -151,6 +154,7 @@ fn doc_no_deps() {
 [CHECKING] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -284,6 +288,8 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo_lib/index.html
+[GENERATED] [CWD]/target/doc/foo_lib/index.html
 ",
         )
         .run();
@@ -398,6 +404,7 @@ fn doc_lib_bin_same_name_documents_lib() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -433,6 +440,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -478,6 +486,7 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -523,6 +532,7 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -567,7 +577,9 @@ fn doc_lib_bin_example_same_name_documents_named_example_when_requested() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/ex1/index.html
+",
         )
         .run();
 
@@ -620,7 +632,10 @@ fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/ex1/index.html
+[GENERATED] [CWD]/target/doc/ex2/index.html
+",
         )
         .run();
 
@@ -677,6 +692,7 @@ fn doc_dash_p() {
 [..] b v0.0.1 ([CWD]/b)
 [DOCUMENTING] a v0.0.1 ([CWD]/a)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/a/index.html
 ",
         )
         .run();
@@ -704,6 +720,7 @@ fn doc_all_exclude() {
             "\
 [DOCUMENTING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/bar/index.html
 ",
         )
         .run();
@@ -731,6 +748,7 @@ fn doc_all_exclude_glob() {
             "\
 [DOCUMENTING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/bar/index.html
 ",
         )
         .run();
@@ -918,6 +936,7 @@ fn doc_release() {
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc [..] src/lib.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -1006,6 +1025,7 @@ fn features() {
 [DOCUMENTING] bar v0.0.1 [..]
 [DOCUMENTING] foo v0.0.1 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -1020,6 +1040,7 @@ fn features() {
 [DOCUMENTING] bar v0.0.1 [..]
 [DOCUMENTING] foo v0.0.1 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -1032,6 +1053,7 @@ fn features() {
 [DOCUMENTING] bar v0.0.1 [..]
 [DOCUMENTING] foo v0.0.1 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -1202,6 +1224,7 @@ fn doc_virtual_manifest_one_project() {
             "\
 [DOCUMENTING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/bar/index.html
 ",
         )
         .run();
@@ -1229,6 +1252,7 @@ fn doc_virtual_manifest_glob() {
             "\
 [DOCUMENTING] baz v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/baz/index.html
 ",
         )
         .run();
@@ -1277,6 +1301,7 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] bar v0.1.0
 [DOCUMENTING] bar v0.1.0 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/bar/index.html
 ",
         )
         .run();
@@ -1639,6 +1664,7 @@ fn doc_cap_lints() {
 [CHECKING] a v0.5.0 ([..])
 [DOCUMENTING] foo v0.0.1 ([..])
 [FINISHED] dev [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -1903,6 +1929,7 @@ fn bin_private_items() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -1963,6 +1990,7 @@ fn bin_private_items_deps() {
 [CHECKING] bar v0.0.1 ([..])
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -1997,6 +2025,7 @@ fn crate_versions() {
 [DOCUMENTING] foo v1.2.4 [..]
 [RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 1.2.4`
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -2406,7 +2435,8 @@ fn doc_fingerprint_unusual_behavior() {
     p.cargo("doc")
         .with_stderr(
             "[DOCUMENTING] foo [..]\n\
-             [FINISHED] [..]",
+             [FINISHED] [..]\n\
+             [GENERATED] [CWD]/target/doc/foo/index.html",
         )
         .run();
     // This will delete somefile, but not .hidden.
@@ -2425,7 +2455,8 @@ fn doc_fingerprint_unusual_behavior() {
         .masquerade_as_nightly_cargo(&["skip-rustdoc-fingerprint"])
         .with_stderr(
             "[DOCUMENTING] foo [..]\n\
-             [FINISHED] [..]",
+             [FINISHED] [..]\n\
+             [GENERATED] [CWD]/target/doc/foo/index.html",
         )
         .run();
     // Should not have deleted anything.
@@ -2467,6 +2498,8 @@ fn lib_before_bin() {
 [RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]
 [RUNNING] `rustdoc --crate-type bin --crate-name somebin src/bin/somebin.rs [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
+[GENERATED] [CWD]/target/doc/somebin/index.html
 ",
         )
         .run();
@@ -2517,6 +2550,7 @@ fn doc_lib_false() {
 [CHECKING] foo v0.1.0 [..]
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/some_bin/index.html
 ",
         )
         .run();
@@ -2563,6 +2597,7 @@ fn doc_lib_false_dep() {
 [CHECKING] bar v0.1.0 [..]
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -2587,7 +2622,8 @@ fn link_to_private_item() {
     p.cargo("doc")
         .with_stderr(
             "[DOCUMENTING] foo [..]\n\
-             [FINISHED] [..]",
+             [FINISHED] [..]\n\
+             [GENERATED] [CWD]/target/doc/foo/index.html",
         )
         .run();
 }

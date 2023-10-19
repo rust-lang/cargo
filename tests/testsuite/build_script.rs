@@ -1471,6 +1471,7 @@ fn testing_and_such() {
 [DOCUMENTING] foo v0.5.0 ([CWD])
 [RUNNING] `rustdoc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();

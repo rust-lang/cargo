@@ -667,5 +667,6 @@ fn profile_selection_doc() {
 [DOCUMENTING] foo [..]
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ").run();
 }

@@ -137,6 +137,7 @@ fn doc_bin() {
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name bin1 [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/bin1/index.html
 ",
         )
         .run();
@@ -407,6 +408,7 @@ fn rustdoc_example() {
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name example1 [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/example1/index.html
 ",
         )
         .run();
@@ -421,6 +423,7 @@ fn rustdoc_bin() {
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name bin1 [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/bin1/index.html
 ",
         )
         .run();
@@ -435,6 +438,7 @@ fn rustdoc_bench() {
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name bench1 [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/bench1/index.html
 ",
         )
         .run();
@@ -449,6 +453,7 @@ fn rustdoc_test() {
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name test1 [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/test1/index.html
 ",
         )
         .run();

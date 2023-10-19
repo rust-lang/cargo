@@ -48,7 +48,10 @@ fn rerun() {
     p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").run();
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--cfg=foo")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr(
+            "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html",
+        )
         .run();
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--cfg=bar")
@@ -56,6 +59,7 @@ fn rerun() {
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();

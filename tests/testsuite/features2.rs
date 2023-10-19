@@ -1955,6 +1955,7 @@ fn doc_optional() {
 [CHECKING] bar v1.0.0
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();

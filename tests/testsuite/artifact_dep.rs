@@ -2152,6 +2152,7 @@ fn doc_lib_true() {
 [DOCUMENTING] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -2227,6 +2228,7 @@ fn rustdoc_works_on_libs_with_artifacts_and_lib_false() {
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
