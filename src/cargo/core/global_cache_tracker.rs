@@ -325,15 +325,15 @@ impl GlobalCacheTracker {
     /// The caller is responsible for locking the package cache with
     /// [`CacheLockMode::DownloadExclusive`] before calling this.
     pub fn new(config: &Config) -> CargoResult<GlobalCacheTracker> {
+        let db_path = Self::db_path(config);
+        // A package cache lock is required to ensure only one cargo is
+        // accessing at the same time. If there is concurrent access, we
+        // want to rely on cargo's own "Blocking" system (which can
+        // provide user feedback) rather than blocking inside sqlite
+        // (which by default has a short timeout).
+        let db_path =
+            config.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &db_path);
         let mut conn = if config.cli_unstable().gc {
-            let db_path = Self::db_path(config);
-            // A package cache lock is required to ensure only one cargo is
-            // accessing at the same time. If there is concurrent access, we
-            // want to rely on cargo's own "Blocking" system (which can
-            // provide user feedback) rather than blocking inside sqlite
-            // (which by default has a short timeout).
-            let db_path =
-                config.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &db_path);
             Connection::open(db_path)?
         } else {
             // To simplify things (so there aren't checks everywhere for being
