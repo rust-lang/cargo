@@ -716,8 +716,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if kind == QueryKind::Exact && dep.source_id().precise().is_some() && !self.ops.is_updated()
-        {
+        if kind == QueryKind::Exact && dep.source_id().has_precise() && !self.ops.is_updated() {
             debug!("attempting query without update");
             let mut called = false;
             ready!(self.index.query_inner(

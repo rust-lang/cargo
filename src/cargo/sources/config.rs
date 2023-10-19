@@ -199,7 +199,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             );
         }
 
-        if old_src.requires_precise() && id.precise().is_none() {
+        if old_src.requires_precise() && !id.has_precise() {
             bail!(
                 "\
 the source {orig} requires a lock file to be present first before it can be

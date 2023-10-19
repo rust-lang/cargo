@@ -332,7 +332,7 @@ impl SourceId {
     pub fn display_registry_name(self) -> String {
         if let Some(key) = self.inner.registry_key.as_ref().map(|k| k.key()) {
             key.into()
-        } else if self.precise().is_some() {
+        } else if self.has_precise() {
             // We remove `precise` here to retrieve an permissive version of
             // `SourceIdInner`, which may contain the registry name.
             self.with_precise(None).display_registry_name()
@@ -447,6 +447,16 @@ impl SourceId {
     /// Gets the value of the precise field.
     pub fn precise(self) -> Option<&'static str> {
         self.inner.precise.as_deref()
+    }
+
+    /// Check if the precise data field has bean set
+    pub fn has_precise(self) -> bool {
+        self.inner.precise.is_some()
+    }
+
+    /// Check if the precise data field has bean set to "Locked"
+    pub fn has_locked_precise(self) -> bool {
+        self.inner.precise.as_deref() == Some("locked")
     }
 
     /// Check if the precise data field stores information for this `name`
