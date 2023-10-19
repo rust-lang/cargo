@@ -20,19 +20,28 @@
 //! There is a single global [`GlobalCacheTracker`] and
 //! [`DeferredGlobalLastUse`] stored in [`Config`].
 //!
+//! The high-level interface for performing garbage collection is defined in
+//! the [`crate::core::gc`] module. The functions there are responsible for
+//! interacting with the [`GlobalCacheTracker`] to handle cleaning of global
+//! cache data.
+//!
 //! ## Automatic gc
 //!
 //! Some commands (primarily the build commands) will trigger an automatic
-//! deletion of files that haven't been used in a while. The interface for
-//! this is in the [`crate::core::gc`] module. The database tracks the last
-//! time an automatic gc was performed so that it is only done once per day
-//! for performance reasons.
+//! deletion of files that haven't been used in a while. The high-level
+//! interface for this is the [`crate::core::gc::auto_gc`] function.
+//!
+//! The [`GlobalCacheTracker`] database tracks the last time an automatic gc
+//! was performed so that it is only done once per day for performance
+//! reasons.
 //!
 //! ## Manual gc
 //!
 //! The user can perform a manual garbage collection with the `cargo clean`
 //! command. That command has a variety of options to specify what to delete.
-//! Manual gc supports deleting based on age or size or both.
+//! Manual gc supports deleting based on age or size or both. From a
+//! high-level, this is done by the [`crate::core::gc::Gc::gc`] method, which
+//! calls into [`GlobalCacheTracker`] to handle all the cleaning.
 //!
 //! ## Locking
 //!
@@ -46,6 +55,11 @@
 //! When garbage collection is being performed, the package cache lock must be
 //! in [`CacheLockMode::MutateExclusive`] to ensure no other cargo process is
 //! running. See [`crate::util::cache_lock`] for more detail on locking.
+//!
+//! When performing automatic gc, [`crate::core::gc::auto_gc`] will skip the
+//! GC if the package cache lock is already held by anything else. Automatic
+//! GC is intended to be opportunistic, and should impose as little disruption
+//! to the user as possible.
 //!
 //! ## Compatibility
 //!
@@ -63,6 +77,11 @@
 //! default value, or NULL). Adding tables should also be fine. Just don't do
 //! destructive things like removing a column, or changing the semantics of an
 //! existing column.
+//!
+//! Since users may run older versions of cargo that do not do cache tracking,
+//! the [`GlobalCacheTracker::sync_db_with_files`] method helps dealing with
+//! keeping the database in sync in the presence of older versions of cargo
+//! touching the cache directories.
 //!
 //! ## Performance
 //!
@@ -89,8 +108,9 @@
 //! limited capabilities, or on things like read-only mounts. The code here
 //! needs to gracefully handle as many situations as possible.
 //!
-//! The sections above about performance and locking are very relevant when
-//! considering different filesystems.
+//! See also the information in the [Performance](#performance) and
+//! [Locking](#locking) sections when considering different filesystems and
+//! their impact on performance and locking.
 //!
 //! There are checks for read-only filesystems, which is generally ignored.
 
@@ -673,13 +693,14 @@ impl GlobalCacheTracker {
     ///    is added to disk by an older version of cargo, and one of the mark
     ///    functions marked it without knowing the size).
     ///
-    /// This is only called by `cargo clean` when needed since it is an
-    /// expensive operation. Size computations are only done if `sync_size` is
-    /// set since that adds an even larger expense.
+    ///    Size computations are only done if `sync_size` is set since it can
+    ///    be a very expensive operation. This should only be set if the user
+    ///    requested to clean based on the cache size.
+    /// 4. Checks for orphaned files. For example, if there are `.crate` files
+    ///    associated with an index that does not exist.
     ///
-    /// Adds paths to `delete_paths` that should be removed since they are
-    /// orphaned (for example, deleting `.crate` files if the corresponding
-    /// index doesn't exist).
+    ///    These orphaned files will be added to `delete_paths` so that the
+    ///    caller can delete them.
     fn sync_db_with_files(
         conn: &Connection,
         config: &Config,

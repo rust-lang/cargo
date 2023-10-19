@@ -1,15 +1,23 @@
 //! Support for garbage collecting unused files from downloaded files or
 //! artifacts from the target directory.
 //!
+//! The [`Gc`] type provides the high-level interface for the
+//! garbage-collection system.
+//!
 //! Garbage collection can be done "automatically" by cargo, which it does by
 //! default once a day when running any command that does a lot of work (like
-//! `cargo build`).
+//! `cargo build`). The entry point for this is the [`auto_gc`] function,
+//! which handles some basic setup, creating the [`Gc`], and calling
+//! [`Gc::auto`].
 //!
 //! Garbage collection can also be done manually via the `cargo clean` command
-//! by passing any option that requests deleting unused files.
+//! by passing any option that requests deleting unused files. That is
+//! implemented by calling the [`Gc::gc`] method.
 //!
-//! Garbage collection is guided by the last-use tracking implemented in the
-//! [`crate::core::global_cache_tracker`] module.
+//! Garbage collection for the global cache is guided by the last-use tracking
+//! implemented in the [`crate::core::global_cache_tracker`] module. See that
+//! module documentation for an in-depth explanation of how global cache
+//! tracking works.
 
 use crate::core::global_cache_tracker::{self, GlobalCacheTracker};
 use crate::ops::CleanContext;
@@ -21,6 +29,8 @@ use serde::Deserialize;
 use std::time::Duration;
 
 /// Garbage collector.
+///
+/// See the module docs at [`crate::core::gc`] for more information on GC.
 pub struct Gc<'a, 'config> {
     config: &'config Config,
     global_cache_tracker: &'a mut GlobalCacheTracker,
