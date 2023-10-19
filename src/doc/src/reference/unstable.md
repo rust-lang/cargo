@@ -1386,7 +1386,7 @@ This will not affect any hard-coded paths in the source code, such as in strings
 
 ## gc
 
-* Tracking issue: TODO
+* Tracking Issue: [#12633](https://github.com/rust-lang/cargo/issues/12633)
 
 The `-Zgc` flag enables garbage-collection within cargo's global cache within the cargo home directory.
 This includes downloaded dependencies such as compressed `.crate` files, extracted `src` directories, registry index caches, and git dependencies.
