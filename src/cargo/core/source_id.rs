@@ -494,6 +494,14 @@ impl SourceId {
         })
     }
 
+    /// Creates a new `SourceId` from this source with the `precise` from some other `SourceId`.
+    pub fn with_precise_from(self, v: Self) -> SourceId {
+        SourceId::wrap(SourceIdInner {
+            precise: v.inner.precise.clone(),
+            ..(*self.inner).clone()
+        })
+    }
+
     /// When updating a lock file on a version using `cargo update --precise`
     /// the requested version is stored in the precise field.
     /// On a registry dependency we also need to keep track of the package that
