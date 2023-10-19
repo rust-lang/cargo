@@ -431,6 +431,7 @@ pub fn auto_gc(config: &Config) {
         // As a conservative choice, auto-gc is disabled when offline. If the
         // user is indefinitely offline, we don't want to delete things they
         // may later depend on.
+        tracing::trace!("running offline, auto gc disabled");
         return;
     }
 
