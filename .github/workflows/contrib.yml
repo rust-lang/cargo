@@ -43,6 +43,9 @@ jobs:
         # Generate HTML for link redirections.
         python3 "$GENERATE_PY"
         git add *.html
+        # WARN: The CNAME file is for GitHub to redirect requests to the custom domain.
+        # Missing this may entail security hazard and domain takeover.
+        # See <https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#securing-your-custom-domain>
         git add CNAME
 
         git commit -m "Deploy $GITHUB_SHA to gh-pages"
