@@ -1390,7 +1390,8 @@ This will not affect any hard-coded paths in the source code, such as in strings
 
 The `-Zgc` flag enables garbage-collection within cargo's global cache within the cargo home directory.
 This includes downloaded dependencies such as compressed `.crate` files, extracted `src` directories, registry index caches, and git dependencies.
-When `-Zgc` is present, cargo will track the last time any file was used, and then uses those timestamps to manually or automatically delete files that have not been used for a while.
+When `-Zgc` is present, cargo will track the last time any index and dependency was used,
+and then uses those timestamps to manually or automatically delete cache entries that have not been used for a while.
 
 ```sh
 cargo build -Zgc
@@ -1400,8 +1401,9 @@ cargo build -Zgc
 
 Automatic deletion happens on commands that are already doing a significant amount of work,
 such as all of the build commands (`cargo build`, `cargo test`, `cargo check`, etc.), and `cargo fetch`.
-Automatic deletion is only done once per day.
-Automatic deletion is disabled if cargo is offline such as with `--offline` or `--frozen` to avoid deleting files that may need to be used if you are offline for a long period of time.
+The deletion happens just after resolution and packages have been downloaded.
+Automatic deletion is only done once per day (see `gc.auto.frequency` to configure).
+Automatic deletion is disabled if cargo is offline such as with `--offline` or `--frozen` to avoid deleting artifacts that may need to be used if you are offline for a long period of time.
 
 #### Automatic gc configuration
 
