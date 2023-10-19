@@ -1097,7 +1097,10 @@ impl CliUnstable {
             "script" => self.script = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
-            _ => bail!("unknown `-Z` flag specified: {}", k),
+            _ => bail!("\
+            unknown `-Z` flag specified: {k}\n\n\
+            For available unstable features, see https://doc.rust-lang.org/nightly/cargo/reference/unstable.html\n\
+            If you intended to use an unstable rustc feature, try setting `RUSTFLAGS=\"-Z{k}\"`"),
         }
 
         Ok(())
