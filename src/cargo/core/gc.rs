@@ -363,7 +363,7 @@ fn maybe_parse_time_span(span: &str) -> Option<Duration> {
         "hour" | "hours" => 60 * 60,
         "day" | "days" => 24 * 60 * 60,
         "week" | "weeks" => 7 * 24 * 60 * 60,
-        "month" | "months" => 30 * 24 * 60 * 60,
+        "month" | "months" => 2_629_746, // average is 30.436875 days
         _ => return None,
     };
     Some(Duration::from_secs(factor * count))
@@ -478,7 +478,7 @@ mod tests {
         assert_eq!(maybe_parse_time_span("2 hours"), d(60 * 60 * 2));
         assert_eq!(maybe_parse_time_span("1 day"), d(60 * 60 * 24));
         assert_eq!(maybe_parse_time_span("2 weeks"), d(60 * 60 * 24 * 14));
-        assert_eq!(maybe_parse_time_span("6 months"), d(60 * 60 * 24 * 30 * 6));
+        assert_eq!(maybe_parse_time_span("6 months"), d(2_629_746 * 6));
 
         assert_eq!(parse_frequency("5 seconds").unwrap(), d(5));
         assert_eq!(parse_frequency("always").unwrap(), d(0));
