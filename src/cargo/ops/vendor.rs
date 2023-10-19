@@ -258,7 +258,7 @@ fn sync(
         } else {
             // Remove `precise` since that makes the source name very long,
             // and isn't needed to disambiguate multiple sources.
-            source_id.with_precise(None).as_url().to_string()
+            source_id.without_precise().as_url().to_string()
         };
 
         let source = if source_id.is_crates_io() {

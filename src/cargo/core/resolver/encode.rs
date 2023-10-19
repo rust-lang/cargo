@@ -776,7 +776,7 @@ pub fn encodable_package_id(
             }
         }
     }
-    let mut source = encodable_source_id(id_to_encode.with_precise(None), resolve_version);
+    let mut source = encodable_source_id(id_to_encode.without_precise(), resolve_version);
     if let Some(counts) = &state.counts {
         let version_counts = &counts[&id.name()];
         if version_counts[&id.version()] == 1 {

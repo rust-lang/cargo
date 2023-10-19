@@ -663,7 +663,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
         // Handle `cargo update --precise` here.
         let precise = source_id.precise_registry_version(name.as_str());
-        let summaries = summaries.filter(|s| match &precise {
+        let summaries = summaries.filter(|s| match precise {
             Some((current, requested)) => {
                 if req.matches(current) {
                     // Unfortunately crates.io allows versions to differ only
