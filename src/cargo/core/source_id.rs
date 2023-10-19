@@ -459,6 +459,11 @@ impl SourceId {
         self.inner.precise.as_deref() == Some("locked")
     }
 
+    /// Check if two sources have the same precise data field
+    pub fn has_same_precise_as(self, other: Self) -> bool {
+        self.inner.precise == other.inner.precise
+    }
+
     /// Check if the precise data field stores information for this `name`
     /// from a call to [SourceId::with_precise_registry_version].
     ///

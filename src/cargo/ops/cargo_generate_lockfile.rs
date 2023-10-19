@@ -230,7 +230,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     b[i..]
                         .iter()
                         .take_while(|b| a == b)
-                        .all(|b| a.source_id().precise() != b.source_id().precise())
+                        .all(|b| !a.source_id().has_same_precise_as(b.source_id()))
                 })
                 .cloned()
                 .collect()

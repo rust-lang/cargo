@@ -170,7 +170,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             // then we're done, otherwise we need to need to move forward
             // updating this source.
             Some((previous, _)) => {
-                if previous.precise() == namespace.precise() {
+                if previous.has_same_precise_as(namespace) {
                     debug!("load/match    {}", namespace);
                     return Ok(());
                 }
