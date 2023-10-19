@@ -1396,10 +1396,35 @@ When `-Zgc` is present, cargo will track the last time any file was used, and th
 cargo build -Zgc
 ```
 
+### Automatic garbage collection
+
 Automatic deletion happens on commands that are already doing a significant amount of work,
 such as all of the build commands (`cargo build`, `cargo test`, `cargo check`, etc.), and `cargo fetch`.
 Automatic deletion is only done once per day.
 Automatic deletion is disabled if cargo is offline such as with `--offline` or `--frozen` to avoid deleting files that may need to be used if you are offline for a long period of time.
+
+#### Automatic gc configuration
+
+The automatic gc behavior can be specified via a cargo configuration setting.
+The settings available are:
+
+```toml
+# The maximum frequency that automatic garbage collection happens.
+# Can be "never" to disable automatic-gc, or "always" to run on every command.
+frequency = "1 day"
+# Anything older than this duration will be deleted in the source cache.
+max-src-age = "1 month"
+# Anything older than this duration will be deleted in the compressed crate cache.
+max-crate-age = "3 months"
+# Any index older than this duration will be deleted from the index cache.
+max-index-age = "3 months"
+# Any git checkout older than this duration will be deleted from the checkout cache.
+max-git-co-age = "1 month"
+# Any git clone older than this duration will be deleted from the git cache.
+max-git-db-age = "3 months"
+```
+
+### Manual garbage collection with `cargo clean`
 
 Manual deletion can be done with the `cargo clean` command.
 Deletion of cache contents can be performed by passing one of the cache options:
@@ -1423,25 +1448,6 @@ A SIZE is specified in the form "N *suffix*" where *suffix* is B, kB, MB, GB, ki
 ```sh
 cargo clean --max-download-age=1week
 cargo clean --max-git-size=0 --max-download-size=100MB
-```
-
-The automatic gc behavior can be specified via a cargo configuration setting.
-The settings available are:
-
-```toml
-# The maximum frequency that automatic garbage collection happens.
-# Can be "never" to disable automatic-gc, or "always" to run on every command.
-frequency = "1 day"
-# Anything older than this duration will be deleted in the source cache.
-max-src-age = "1 month"
-# Anything older than this duration will be deleted in the compressed crate cache.
-max-crate-age = "3 months"
-# Any index older than this duration will be deleted from the index cache.
-max-index-age = "3 months"
-# Any git checkout older than this duration will be deleted from the checkout cache.
-max-git-co-age = "1 month"
-# Any git clone older than this duration will be deleted from the git cache.
-max-git-db-age = "3 months"
 ```
 
 # Stabilized and removed features
