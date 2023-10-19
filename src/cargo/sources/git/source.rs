@@ -89,13 +89,7 @@ impl<'cfg> GitSource<'cfg> {
 
         let remote = GitRemote::new(source_id.url());
         let manifest_reference = source_id.git_reference().unwrap().clone();
-        let locked_rev =
-            match source_id.precise() {
-                Some(s) => Some(git2::Oid::from_str(s).with_context(|| {
-                    format!("precise value for git is not a git revision: {}", s)
-                })?),
-                None => None,
-            };
+        let locked_rev = source_id.precise_git_oid()?;
         let ident = ident_shallow(
             &source_id,
             config
@@ -290,7 +284,9 @@ impl<'cfg> Source for GitSource<'cfg> {
             .join(short_id.as_str());
         db.copy_to(actual_rev, &checkout_path, self.config)?;
 
-        let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
+        let source_id = self
+            .source_id
+            .with_git_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
 
         self.path_source = Some(path_source);

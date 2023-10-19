@@ -145,7 +145,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 // Attempt to interpret the source name as an alt registry name
                 if let Ok(alt_id) = SourceId::alt_registry(self.config, name) {
                     debug!("following pointer to registry {}", name);
-                    break alt_id.with_precise(id.precise().map(str::to_string));
+                    break alt_id.with_precise_from(id);
                 }
                 bail!(
                     "could not find a configured source with the \
@@ -163,7 +163,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 }
                 None if id == cfg.id => return id.load(self.config, yanked_whitelist),
                 None => {
-                    break cfg.id.with_precise(id.precise().map(|s| s.to_string()));
+                    break cfg.id.with_precise_from(id);
                 }
             }
             debug!("following pointer to {}", name);
@@ -199,7 +199,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             );
         }
 
-        if old_src.requires_precise() && id.precise().is_none() {
+        if old_src.requires_precise() && !id.has_precise() {
             bail!(
                 "\
 the source {orig} requires a lock file to be present first before it can be

@@ -389,12 +389,8 @@ pub fn resolve_with_previous<'cfg>(
                         }) {
                             Some(id_using_default) => {
                                 let id_using_master = id_using_default.with_source_id(
-                                    dep.source_id().with_precise(
-                                        id_using_default
-                                            .source_id()
-                                            .precise()
-                                            .map(|s| s.to_string()),
-                                    ),
+                                    dep.source_id()
+                                        .with_precise_from(id_using_default.source_id()),
                                 );
 
                                 let mut locked_dep = dep.clone();
@@ -796,7 +792,7 @@ fn master_branch_git_source(id: PackageId, resolve: &Resolve) -> Option<PackageI
             let new_source =
                 SourceId::for_git(source.url(), GitReference::Branch("master".to_string()))
                     .unwrap()
-                    .with_precise(source.precise().map(|s| s.to_string()));
+                    .with_precise_from(source);
             return Some(id.with_source_id(new_source));
         }
     }

@@ -352,9 +352,7 @@ impl Dependency {
         // Only update the `precise` of this source to preserve other
         // information about dependency's source which may not otherwise be
         // tested during equality/hashing.
-        me.source_id = me
-            .source_id
-            .with_precise(id.source_id().precise().map(|s| s.to_string()));
+        me.source_id = me.source_id.with_precise_from(id.source_id());
         self
     }
 

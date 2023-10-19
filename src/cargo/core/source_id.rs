@@ -3,7 +3,8 @@ use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::sources::{GitSource, PathSource, RegistrySource};
-use crate::util::{config, CanonicalUrl, CargoResult, Config, IntoUrl, ToSemver};
+use crate::util::interning::InternedString;
+use crate::util::{config, CanonicalUrl, CargoResult, Config, IntoUrl};
 use anyhow::Context;
 use serde::de;
 use serde::ser;
@@ -50,12 +51,35 @@ struct SourceIdInner {
     /// The source kind.
     kind: SourceKind,
     /// For example, the exact Git revision of the specified branch for a Git Source.
-    precise: Option<String>,
+    precise: Option<Precise>,
     /// Name of the remote registry.
     ///
     /// WARNING: this is not always set when the name is not known,
     /// e.g. registry coming from `--index` or Cargo.lock
     registry_key: Option<KeyOf>,
+}
+
+#[derive(Eq, PartialEq, Clone, Debug, Hash)]
+enum Precise {
+    Locked,
+    Updated {
+        name: InternedString,
+        from: semver::Version,
+        to: semver::Version,
+    },
+    GitUrlFragment(String),
+}
+
+impl fmt::Display for Precise {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Precise::Locked => "locked".fmt(f),
+            Precise::Updated { name, from, to } => {
+                write!(f, "{name}={from}->{to}")
+            }
+            Precise::GitUrlFragment(s) => s.fmt(f),
+        }
+    }
 }
 
 /// The possible kinds of code source.
@@ -178,17 +202,15 @@ impl SourceId {
                 let precise = url.fragment().map(|s| s.to_owned());
                 url.set_fragment(None);
                 url.set_query(None);
-                Ok(SourceId::for_git(&url, reference)?.with_precise(precise))
+                Ok(SourceId::for_git(&url, reference)?.with_git_precise(precise))
             }
             "registry" => {
                 let url = url.into_url()?;
-                Ok(SourceId::new(SourceKind::Registry, url, None)?
-                    .with_precise(Some("locked".to_string())))
+                Ok(SourceId::new(SourceKind::Registry, url, None)?.with_locked_precise())
             }
             "sparse" => {
                 let url = string.into_url()?;
-                Ok(SourceId::new(SourceKind::SparseRegistry, url, None)?
-                    .with_precise(Some("locked".to_string())))
+                Ok(SourceId::new(SourceKind::SparseRegistry, url, None)?.with_locked_precise())
             }
             "path" => {
                 let url = url.into_url()?;
@@ -332,10 +354,10 @@ impl SourceId {
     pub fn display_registry_name(self) -> String {
         if let Some(key) = self.inner.registry_key.as_ref().map(|k| k.key()) {
             key.into()
-        } else if self.precise().is_some() {
+        } else if self.has_precise() {
             // We remove `precise` here to retrieve an permissive version of
             // `SourceIdInner`, which may contain the registry name.
-            self.with_precise(None).display_registry_name()
+            self.without_precise().display_registry_name()
         } else {
             url_display(self.url())
         }
@@ -444,37 +466,81 @@ impl SourceId {
         }
     }
 
-    /// Gets the value of the precise field.
-    pub fn precise(self) -> Option<&'static str> {
-        self.inner.precise.as_deref()
+    /// Check if the precise data field has bean set
+    pub fn has_precise(self) -> bool {
+        self.inner.precise.is_some()
+    }
+
+    /// Check if the precise data field has bean set to "locked"
+    pub fn has_locked_precise(self) -> bool {
+        self.inner.precise == Some(Precise::Locked)
+    }
+
+    /// Check if two sources have the same precise data field
+    pub fn has_same_precise_as(self, other: Self) -> bool {
+        self.inner.precise == other.inner.precise
     }
 
     /// Check if the precise data field stores information for this `name`
     /// from a call to [SourceId::with_precise_registry_version].
     ///
     /// If so return the version currently in the lock file and the version to be updated to.
-    /// If specified, our own source will have a precise version listed of the form
-    // `<pkg>=<p_req>-><f_req>` where `<pkg>` is the name of a crate on
-    // this source, `<p_req>` is the version installed and `<f_req>` is the
-    // version requested (argument to `--precise`).
     pub fn precise_registry_version(
         self,
-        name: &str,
-    ) -> Option<(semver::Version, semver::Version)> {
-        self.inner
-            .precise
-            .as_deref()
-            .and_then(|p| p.strip_prefix(name)?.strip_prefix('='))
-            .map(|p| {
-                let (current, requested) = p.split_once("->").unwrap();
-                (current.to_semver().unwrap(), requested.to_semver().unwrap())
-            })
+        pkg: &str,
+    ) -> Option<(&semver::Version, &semver::Version)> {
+        match &self.inner.precise {
+            Some(Precise::Updated { name, from, to }) if name == pkg => Some((from, to)),
+            _ => None,
+        }
+    }
+
+    pub fn precise_git_fragment(self) -> Option<&'static str> {
+        match &self.inner.precise {
+            Some(Precise::GitUrlFragment(s)) => Some(&s[..8]),
+            _ => None,
+        }
+    }
+
+    pub fn precise_git_oid(self) -> CargoResult<Option<git2::Oid>> {
+        Ok(match self.inner.precise.as_ref() {
+            Some(Precise::GitUrlFragment(s)) => {
+                Some(git2::Oid::from_str(s).with_context(|| {
+                    format!("precise value for git is not a git revision: {}", s)
+                })?)
+            }
+            _ => None,
+        })
     }
 
     /// Creates a new `SourceId` from this source with the given `precise`.
-    pub fn with_precise(self, v: Option<String>) -> SourceId {
+    pub fn with_git_precise(self, fragment: Option<String>) -> SourceId {
         SourceId::wrap(SourceIdInner {
-            precise: v,
+            precise: fragment.map(|f| Precise::GitUrlFragment(f)),
+            ..(*self.inner).clone()
+        })
+    }
+
+    /// Creates a new `SourceId` from this source without a `precise`.
+    pub fn without_precise(self) -> SourceId {
+        SourceId::wrap(SourceIdInner {
+            precise: None,
+            ..(*self.inner).clone()
+        })
+    }
+
+    /// Creates a new `SourceId` from this source without a `precise`.
+    pub fn with_locked_precise(self) -> SourceId {
+        SourceId::wrap(SourceIdInner {
+            precise: Some(Precise::Locked),
+            ..(*self.inner).clone()
+        })
+    }
+
+    /// Creates a new `SourceId` from this source with the `precise` from some other `SourceId`.
+    pub fn with_precise_from(self, v: Self) -> SourceId {
+        SourceId::wrap(SourceIdInner {
+            precise: v.inner.precise.clone(),
             ..(*self.inner).clone()
         })
     }
@@ -487,13 +553,21 @@ impl SourceId {
     /// The data can be read with [SourceId::precise_registry_version]
     pub fn with_precise_registry_version(
         self,
-        name: impl fmt::Display,
-        version: &semver::Version,
+        name: InternedString,
+        version: semver::Version,
         precise: &str,
     ) -> CargoResult<SourceId> {
-        semver::Version::parse(precise)
+        let precise = semver::Version::parse(precise)
             .with_context(|| format!("invalid version format for precise version `{precise}`"))?;
-        Ok(self.with_precise(Some(format!("{}={}->{}", name, version, precise))))
+
+        Ok(SourceId::wrap(SourceIdInner {
+            precise: Some(Precise::Updated {
+                name,
+                from: version,
+                to: precise,
+            }),
+            ..(*self.inner).clone()
+        }))
     }
 
     /// Returns `true` if the remote registry is the standard <https://crates.io>.
@@ -625,7 +699,8 @@ impl fmt::Display for SourceId {
                     write!(f, "?{}", pretty)?;
                 }
 
-                if let Some(ref s) = self.inner.precise {
+                if let Some(s) = &self.inner.precise {
+                    let s = s.to_string();
                     let len = cmp::min(s.len(), 8);
                     write!(f, "#{}", &s[..len])?;
                 }

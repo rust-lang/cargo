@@ -160,14 +160,6 @@ impl PackageId {
         self.inner.source_id
     }
 
-    pub fn with_precise(self, precise: Option<String>) -> PackageId {
-        PackageId::pure(
-            self.inner.name,
-            self.inner.version.clone(),
-            self.inner.source_id.with_precise(precise),
-        )
-    }
-
     pub fn with_source_id(self, source: SourceId) -> PackageId {
         PackageId::pure(self.inner.name, self.inner.version.clone(), source)
     }

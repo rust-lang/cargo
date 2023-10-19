@@ -215,7 +215,7 @@ impl InstallTracker {
                 let precise_equal = if source_id.is_git() {
                     // Git sources must have the exact same hash to be
                     // considered "fresh".
-                    dupe_pkg_id.source_id().precise() == source_id.precise()
+                    dupe_pkg_id.source_id().has_same_precise_as(source_id)
                 } else {
                     true
                 };
