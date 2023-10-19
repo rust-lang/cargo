@@ -1,0 +1,14 @@
+[package]
+name = "xxx"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.your-face]
+# Leading version
+version = "99999.0.0"  # Trailing version
+# Leading optional
+optional = true  # Trailing optional
+# Leading features
+features = []  # Trailing features
