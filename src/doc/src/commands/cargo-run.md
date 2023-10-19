@@ -111,7 +111,7 @@ See also the <code>--profile</code> option for choosing a specific profile by na
 
 <dt class="option-term" id="option-cargo-run---profile"><a class="option-anchor" href="#option-cargo-run---profile"></a><code>--profile</code> <em>name</em></dt>
 <dd class="option-desc">Run with the given profile.
-See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
 

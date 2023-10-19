@@ -278,7 +278,7 @@ target artifacts are placed in a separate directory. See the
 
 <dt class="option-term" id="option-cargo-bench---profile"><a class="option-anchor" href="#option-cargo-bench---profile"></a><code>--profile</code> <em>name</em></dt>
 <dd class="option-desc">Benchmark with the given profile.
-See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
 

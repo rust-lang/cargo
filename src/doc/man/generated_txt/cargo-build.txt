@@ -157,7 +157,7 @@ OPTIONS
            --profile option for choosing a specific profile by name.
 
        --profile name
-           Build with the given profile. See the the reference
+           Build with the given profile. See the reference
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 

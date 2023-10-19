@@ -165,7 +165,7 @@ OPTIONS
            o  bench — Builds in the same was as the cargo-bench(1) command,
               similar to the test profile.
 
-           See the the reference
+           See the reference
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 
