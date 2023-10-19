@@ -20,6 +20,7 @@ mod multiple_dev;
 mod no_arg;
 mod offline;
 mod optional_dep_feature;
+mod optional_dep_feature_formatting;
 mod optional_feature;
 mod package;
 mod remove_basic;

@@ -497,12 +497,7 @@ fn fix_feature_activations(
 
     // Remove found idx in revers order so we don't invalidate the idx.
     for idx in remove_list.iter().rev() {
-        feature_values.remove(*idx);
-    }
-    if !remove_list.is_empty() {
-        // HACK: Instead of cleaning up the users formatting from having removed a feature, we just
-        // re-format the whole feature list
-        feature_values.fmt();
+        remove_array_index(feature_values, *idx);
     }
 
     if status == DependencyStatus::Required {
@@ -545,4 +540,45 @@ fn non_existent_dependency_err(
     table: impl std::fmt::Display,
 ) -> anyhow::Error {
     anyhow::format_err!("the dependency `{name}` could not be found in `{table}`.")
+}
+
+fn remove_array_index(array: &mut toml_edit::Array, index: usize) {
+    let value = array.remove(index);
+
+    // Captures all lines before leading whitespace
+    let prefix_lines = value
+        .decor()
+        .prefix()
+        .and_then(|p| p.as_str().expect("spans removed").rsplit_once('\n'))
+        .map(|(lines, _current)| lines);
+    // Captures all lines after trailing whitespace, before the next comma
+    let suffix_lines = value
+        .decor()
+        .suffix()
+        .and_then(|p| p.as_str().expect("spans removed").split_once('\n'))
+        .map(|(_current, lines)| lines);
+    let mut merged_lines = String::new();
+    if let Some(prefix_lines) = prefix_lines {
+        merged_lines.push_str(prefix_lines);
+        merged_lines.push('\n');
+    }
+    if let Some(suffix_lines) = suffix_lines {
+        merged_lines.push_str(suffix_lines);
+        merged_lines.push('\n');
+    }
+
+    let next_index = index; // Since `index` was removed, that effectively auto-advances us
+    if let Some(next) = array.get_mut(next_index) {
+        let next_decor = next.decor_mut();
+        let next_prefix = next_decor
+            .prefix()
+            .map(|s| s.as_str().expect("spans removed"))
+            .unwrap_or_default();
+        merged_lines.push_str(next_prefix);
+        next_decor.set_prefix(merged_lines);
+    } else {
+        let trailing = array.trailing().as_str().expect("spans removed");
+        merged_lines.push_str(trailing);
+        array.set_trailing(merged_lines);
+    }
 }
