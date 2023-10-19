@@ -1409,6 +1409,10 @@ The automatic gc behavior can be specified via a cargo configuration setting.
 The settings available are:
 
 ```toml
+# Example config.toml file.
+
+# This table defines the behavior for automatic garbage collection.
+[gc.auto]
 # The maximum frequency that automatic garbage collection happens.
 # Can be "never" to disable automatic-gc, or "always" to run on every command.
 frequency = "1 day"
