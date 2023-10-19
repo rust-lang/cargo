@@ -36,6 +36,15 @@ warn_non_default_branch = true
 [assign.owners]
 "*" = ["@ehuss", "@epage", "@weihanglo"]
 
+
+[review-submitted] 
+reviewed_label = "S-waiting-on-author" 
+review_labels = ["S-waiting-on-review"]
+
+[review-requested]
+remove_labels = ["S-waiting-on-author"]
+add_labels = ["S-waiting-on-review"]
+
 [autolabel."A-build-execution"]
 trigger_files = [
   "src/cargo/core/compiler/compilation.rs",
