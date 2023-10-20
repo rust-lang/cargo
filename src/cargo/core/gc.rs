@@ -34,6 +34,8 @@ const DEFAULT_MAX_AGE_EXTRACTED: &str = "1 month";
 /// Default max ago to auto-clean cache data, which must be downloaded to
 /// recover.
 const DEFAULT_MAX_AGE_DOWNLOADED: &str = "3 months";
+/// How often auto-gc will run by default unless overridden in the config.
+const DEFAULT_AUTO_FREQUENCY: &str = "1 day";
 
 /// Performs automatic garbage collection.
 ///
@@ -326,7 +328,12 @@ impl<'a, 'config> Gc<'a, 'config> {
             .config
             .get::<Option<AutoConfig>>("gc.auto")?
             .unwrap_or_default();
-        let Some(freq) = parse_frequency(auto_config.frequency.as_deref().unwrap_or("1 day"))?
+        let Some(freq) = parse_frequency(
+            auto_config
+                .frequency
+                .as_deref()
+                .unwrap_or(DEFAULT_AUTO_FREQUENCY),
+        )?
         else {
             tracing::trace!(target: "gc", "auto gc disabled");
             return Ok(());
