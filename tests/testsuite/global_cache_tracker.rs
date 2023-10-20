@@ -201,12 +201,7 @@ See [..] for more information about the `{trimmed_opt}` flag.
             .run();
     }
 
-    for opt in [
-        "--max-target-age=0 day",
-        "--max-shared-target-age=0 day",
-        "--max-target-size=0",
-        "--max-shared-target-size=0",
-    ] {
+    for opt in ["--max-target-age=0 day", "--max-target-size=0"] {
         let trimmed_opt = opt.split('=').next().unwrap();
         p.cargo("clean")
             .arg(opt)

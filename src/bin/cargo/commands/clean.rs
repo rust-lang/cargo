@@ -29,15 +29,14 @@ pub fn cli() -> Command {
             .hide(true)
             .value_name("KINDS")
             .value_parser(
-                PossibleValuesParser::new(["all", "download", "target", "shared-target"]).map(
-                    |x| match x.as_str() {
+                PossibleValuesParser::new(["all", "download", "target"]).map(|x| {
+                    match x.as_str() {
                         "all" => AutoGcKind::All,
                         "download" => AutoGcKind::Download,
                         "target" => panic!("target is not yet implemented"),
-                        "shared-target" => panic!("shared-target is not yet implemented"),
                         x => panic!("possible value out of sync with `{x}`"),
-                    },
-                ),
+                    }
+                }),
             )
             .require_equals(true),
         )
@@ -151,31 +150,9 @@ pub fn cli() -> Command {
             .hide(true),
         )
         .arg(
-            // TODO: come up with something less wordy?
-            opt(
-                "max-shared-target-age",
-                "Deletes any shared build artifact files that have not been used \
-                since the given age (unstable) (UNIMPLEMENTED)",
-            )
-            .value_name("DURATION")
-            .value_parser(parse_time_span)
-            .hide(true),
-        )
-        .arg(
             opt(
                 "max-target-size",
                 "Deletes build artifact files until the cache is under the given size \
-                (unstable) (UNIMPLEMENTED)",
-            )
-            .value_name("SIZE")
-            .value_parser(parse_human_size)
-            .hide(true),
-        )
-        .arg(
-            // TODO: come up with something less wordy?
-            opt(
-                "max-shared-target-size",
-                "Deletes shared build artifact files until the cache is under the given size \
                 (unstable) (UNIMPLEMENTED)",
             )
             .value_name("SIZE")
@@ -255,9 +232,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         max_git_size: unstable_size_opt("max-git-size")?,
         max_download_size: unstable_size_opt("max-download-size")?,
         max_target_age: unimplemented_duration_opt("max-target-age")?,
-        max_shared_target_age: unimplemented_duration_opt("max-shared-target-age")?,
         max_target_size: unimplemented_size_opt("max-target-size")?,
-        max_shared_target_size: unimplemented_size_opt("max-shared-target-size")?,
     };
     let max_download_age = unstable_duration_opt("max-download-age")?;
     gc_opts.update_for_auto_gc(config, &gc, max_download_age)?;

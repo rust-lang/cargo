@@ -137,12 +137,8 @@ pub struct GcOpts {
 
     /// The `--max-target-age` CLI option (UNIMPLEMENTED).
     pub max_target_age: Option<Duration>,
-    /// The `--max-shared-target-age CLI option (UNIMPLEMENTED).
-    pub max_shared_target_age: Option<Duration>,
     /// The `--max-target-size` CLI option  (UNIMPLEMENTED).
     pub max_target_size: Option<u64>,
-    /// The `--max-shared-target-size` CLI option (UNIMPLEMENTED).
-    pub max_shared_target_size: Option<u64>,
 }
 
 impl GcOpts {
@@ -169,10 +165,7 @@ impl GcOpts {
 
     /// Returns whether any target directory cleaning options are set.
     pub fn is_target_opt_set(&self) -> bool {
-        self.max_target_size.is_some()
-            || self.max_target_age.is_some()
-            || self.max_shared_target_age.is_some()
-            || self.max_shared_target_size.is_some()
+        self.max_target_size.is_some() || self.max_target_age.is_some()
     }
 
     /// Updates the configuration of this [`GcOpts`] to incorporate the
@@ -256,7 +249,7 @@ impl GcOpts {
                         .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
                 )?;
             }
-            if matches!(kind, AutoGcKind::Target | AutoGcKind::SharedTarget) {
+            if matches!(kind, AutoGcKind::Target) {
                 bail!("target is unimplemented");
             }
         }
@@ -291,12 +284,6 @@ pub enum AutoGcKind {
     ///
     /// This corresponds to `cargo clean --gc=target`.
     Target,
-    /// Automatically clean only the shared target directory.
-    ///
-    /// THIS IS NOT IMPLEMENTED.
-    ///
-    /// This corresponds to `cargo clean --gc=shared-target`.
-    SharedTarget,
 }
 
 /// Garbage collector.
