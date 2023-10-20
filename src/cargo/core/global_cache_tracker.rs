@@ -296,6 +296,25 @@ fn migrations() -> Vec<Migration> {
     ]
 }
 
+/// Type for SQL columns that refer to the primary key of their parent table.
+///
+/// For example, `registry_crate.registry_id` refers to its parent `registry_index.id`.
+#[derive(Copy, Clone, Debug, PartialEq)]
+struct ParentId(i64);
+
+impl rusqlite::types::FromSql for ParentId {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        let i = i64::column_result(value)?;
+        Ok(ParentId(i))
+    }
+}
+
+impl rusqlite::types::ToSql for ParentId {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(rusqlite::types::ToSqlOutput::from(self.0))
+    }
+}
+
 /// Tracking for the global shared cache (registry files, etc.).
 ///
 /// This is the interface to the global cache database, used for tracking and
@@ -353,7 +372,7 @@ impl GlobalCacheTracker {
         conn: &Connection,
         table_name: &str,
         encoded_name: &str,
-    ) -> CargoResult<Option<i64>> {
+    ) -> CargoResult<Option<ParentId>> {
         let mut stmt =
             conn.prepare_cached(&format!("SELECT id FROM {table_name} WHERE name = ?"))?;
         match stmt.query_row([encoded_name], |row| row.get(0)) {
@@ -1349,7 +1368,7 @@ macro_rules! insert_or_update_parent {
             );
             let mut rows = select_stmt.query([parent.$encoded_name])?;
             let id = if let Some(row) = rows.next()? {
-                let id: i64 = row.get_unwrap(0);
+                let id: ParentId = row.get_unwrap(0);
                 let timestamp: Timestamp = row.get_unwrap(1);
                 if timestamp < new_timestamp - UPDATE_RESOLUTION {
                     update_stmt.execute(params![new_timestamp, id])?;
@@ -1383,12 +1402,12 @@ pub struct DeferredGlobalLastUse {
     ///
     /// The key is the registry name (which is its directory name) and the
     /// value is the `id` in the `registry_index` table.
-    registry_keys: HashMap<InternedString, i64>,
+    registry_keys: HashMap<InternedString, ParentId>,
     /// Cache of git keys, used for faster fetching.
     ///
     /// The key is the git db name (which is its directory name) and the value
     /// is the `id` in the `git_db` table.
-    git_keys: HashMap<InternedString, i64>,
+    git_keys: HashMap<InternedString, ParentId>,
 
     /// New registry index entries to insert.
     registry_index_timestamps: HashMap<RegistryIndex, Timestamp>,
@@ -1691,7 +1710,7 @@ impl DeferredGlobalLastUse {
         &mut self,
         conn: &Connection,
         encoded_registry_name: InternedString,
-    ) -> CargoResult<i64> {
+    ) -> CargoResult<ParentId> {
         match self.registry_keys.get(&encoded_registry_name) {
             Some(i) => Ok(*i),
             None => {
@@ -1713,7 +1732,11 @@ impl DeferredGlobalLastUse {
     /// cache, or getting it from the database.
     ///
     /// It is an error if the git db does not exist.
-    fn git_id(&mut self, conn: &Connection, encoded_git_name: InternedString) -> CargoResult<i64> {
+    fn git_id(
+        &mut self,
+        conn: &Connection,
+        encoded_git_name: InternedString,
+    ) -> CargoResult<ParentId> {
         match self.git_keys.get(&encoded_git_name) {
             Some(i) => Ok(*i),
             None => {
