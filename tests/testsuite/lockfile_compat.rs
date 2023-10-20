@@ -1216,23 +1216,23 @@ dependencies = [
 
     let cases = [
         // v1 is the default
-        ("1.37", None, 3),
+        ("1.37", None, 1),
         ("1.37", Some(1), 1),
         ("1.37", Some(2), 2),
         ("1.37", Some(3), 3),
         // v2 introduced
-        ("1.38", None, 3),
+        ("1.38", None, 1),
         // last version of v1 as the default
-        ("1.40", None, 3),
+        ("1.40", None, 1),
         // v2 is the default
-        ("1.41", None, 3),
+        ("1.41", None, 2),
         ("1.41", Some(1), 1),
         ("1.41", Some(2), 2),
         ("1.41", Some(3), 3),
         // v3 introduced
-        ("1.47", None, 3),
+        ("1.47", None, 2),
         // last version of v2 as the default
-        ("1.48", None, 3),
+        ("1.48", None, 2),
         // v3 is the default
         ("1.53", None, 3),
         ("1.53", Some(1), 1),

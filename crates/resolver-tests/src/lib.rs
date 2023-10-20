@@ -14,6 +14,7 @@ use std::time::Instant;
 use cargo::core::dependency::DepKind;
 use cargo::core::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::core::Resolve;
+use cargo::core::ResolveVersion;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::core::{GitReference, SourceId};
 use cargo::sources::source::QueryKind;
@@ -174,6 +175,7 @@ pub fn resolve_with_config_raw(
         &[],
         &mut registry,
         &version_prefs,
+        ResolveVersion::default(),
         Some(config),
     );
 

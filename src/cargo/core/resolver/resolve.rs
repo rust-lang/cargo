@@ -1,3 +1,6 @@
+use cargo_util_schemas::core::PartialVersion;
+use cargo_util_schemas::manifest::RustVersion;
+
 use super::encode::Metadata;
 use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, PackageIdSpecQuery, Summary, Target};
@@ -98,6 +101,40 @@ impl ResolveVersion {
     /// Update this when you're going to stabilize a new lockfile format.
     pub fn max_stable() -> ResolveVersion {
         ResolveVersion::V4
+    }
+
+    /// Gets the default lockfile version for the given Rust version.
+    pub fn with_rust_version(rust_version: Option<&RustVersion>) -> Self {
+        let Some(rust_version) = rust_version else {
+            return ResolveVersion::default();
+        };
+
+        let rust_1_41 = PartialVersion {
+            major: 1,
+            minor: Some(41),
+            patch: None,
+            pre: None,
+            build: None,
+        }
+        .try_into()
+        .expect("PartialVersion 1.41");
+        let rust_1_53 = PartialVersion {
+            major: 1,
+            minor: Some(53),
+            patch: None,
+            pre: None,
+            build: None,
+        }
+        .try_into()
+        .expect("PartialVersion 1.53");
+
+        if rust_version >= &rust_1_53 {
+            ResolveVersion::V3
+        } else if rust_version >= &rust_1_41 {
+            ResolveVersion::V2
+        } else {
+            ResolveVersion::V1
+        }
     }
 }
 

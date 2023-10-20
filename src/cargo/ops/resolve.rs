@@ -504,6 +504,7 @@ pub fn resolve_with_previous<'cfg>(
         &replace,
         registry,
         &version_prefs,
+        ResolveVersion::with_rust_version(ws.rust_version()),
         Some(ws.config()),
     )?;
     let patches: Vec<_> = registry
