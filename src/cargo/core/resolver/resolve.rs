@@ -88,6 +88,17 @@ pub enum ResolveVersion {
     V4,
 }
 
+impl ResolveVersion {
+    /// The maximum version of lockfile made into the stable channel.
+    ///
+    /// Any version larger than this needs `-Znext-lockfile-bump` to enable.
+    ///
+    /// Update this when you're going to stabilize a new lockfile format.
+    pub fn max_stable() -> ResolveVersion {
+        ResolveVersion::V3
+    }
+}
+
 impl Resolve {
     pub fn new(
         graph: Graph<PackageId, HashSet<Dependency>>,
