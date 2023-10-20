@@ -1225,7 +1225,7 @@ fn package_cache_lock_during_build() {
         .cargo("check -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .env("CARGO_GC_AUTO_FREQUENCY", "always")
-        .env("CARGO_LOG", "cargo::core::gc=debug")
+        .env("CARGO_LOG", "gc=debug")
         .with_stderr_contains("[UPDATING] `dummy-registry` index")
         .with_stderr_contains("[CHECKING] bar v1.0.0")
         .with_stderr_contains("[CHECKING] foo2 v0.1.0 [..]")

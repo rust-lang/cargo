@@ -55,13 +55,13 @@ pub fn auto_gc(config: &Config) {
         // As a conservative choice, auto-gc is disabled when offline. If the
         // user is indefinitely offline, we don't want to delete things they
         // may later depend on.
-        tracing::trace!("running offline, auto gc disabled");
+        tracing::trace!(target: "gc", "running offline, auto gc disabled");
         return;
     }
 
     if let Err(e) = auto_gc_inner(config) {
         if global_cache_tracker::is_silent_error(&e) && !config.extra_verbose() {
-            tracing::warn!("failed to auto-clean cache data: {e:?}");
+            tracing::warn!(target: "gc", "failed to auto-clean cache data: {e:?}");
         } else {
             crate::display_warning_with_error(
                 "failed to auto-clean cache data",
@@ -76,7 +76,7 @@ fn auto_gc_inner(config: &Config) -> CargoResult<()> {
     let _lock = match config.try_acquire_package_cache_lock(CacheLockMode::MutateExclusive)? {
         Some(lock) => lock,
         None => {
-            tracing::debug!("unable to acquire mutate lock, auto gc disabled");
+            tracing::debug!(target: "gc", "unable to acquire mutate lock, auto gc disabled");
             return Ok(());
         }
     };
@@ -341,7 +341,7 @@ impl<'a, 'config> Gc<'a, 'config> {
             .unwrap_or_default();
         let Some(freq) = parse_frequency(auto_config.frequency.as_deref().unwrap_or("1 day"))?
         else {
-            tracing::trace!("auto gc disabled");
+            tracing::trace!(target: "gc", "auto gc disabled");
             return Ok(());
         };
         if !self.global_cache_tracker.should_run_auto_gc(freq)? {

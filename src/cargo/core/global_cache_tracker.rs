@@ -512,7 +512,7 @@ impl GlobalCacheTracker {
     /// Returns whether or not an auto GC should be performed, compared to the
     /// last time it was recorded in the database.
     pub fn should_run_auto_gc(&mut self, frequency: Duration) -> CargoResult<bool> {
-        trace!("should_run_auto_gc");
+        trace!(target: "gc", "should_run_auto_gc");
         if self.auto_gc_checked_this_session {
             return Ok(false);
         }
@@ -520,7 +520,7 @@ impl GlobalCacheTracker {
             self.conn
                 .query_row("SELECT last_auto_gc FROM global_data", [], |row| row.get(0))?;
         let should_run = last_auto_gc + frequency.as_secs() < now();
-        trace!(
+        trace!(target: "gc",
             "last auto gc was {}, {}",
             last_auto_gc,
             if should_run { "running" } else { "skipping" }
@@ -559,7 +559,7 @@ impl GlobalCacheTracker {
             src: config.registry_source_path().into_path_unlocked(),
         };
         let now = now();
-        trace!("cleaning {gc_opts:?}");
+        trace!(target: "gc", "cleaning {gc_opts:?}");
         let tx = self.conn.transaction()?;
         let mut delete_paths = Vec::new();
         // This can be an expensive operation, so only perform it if necessary.
@@ -701,7 +701,7 @@ impl GlobalCacheTracker {
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
         let _p = crate::util::profile::start("global cache db sync");
-        debug!("starting db sync");
+        debug!(target: "gc", "starting db sync");
         // For registry_index and git_db, add anything that is missing in the db.
         Self::update_parent_for_missing_from_db(conn, REGISTRY_INDEX_TABLE, &base.index)?;
         Self::update_parent_for_missing_from_db(conn, GIT_DB_TABLE, &base.git_db)?;
@@ -797,7 +797,7 @@ impl GlobalCacheTracker {
         let _p = crate::util::profile::start(format!(
             "update parent db for missing from db {parent_table_name}"
         ));
-        trace!("checking for untracked parent to add to {parent_table_name}");
+        trace!(target: "gc", "checking for untracked parent to add to {parent_table_name}");
         let names = Self::names_from(base_path)?;
 
         let mut stmt = conn.prepare_cached(&format!(
@@ -824,7 +824,7 @@ impl GlobalCacheTracker {
         base_path: &Path,
     ) -> CargoResult<()> {
         let _p = crate::util::profile::start(format!("update db for removed {table_name}"));
-        trace!("checking for db entries to remove from {table_name}");
+        trace!(target: "gc", "checking for db entries to remove from {table_name}");
         let mut select_stmt = conn.prepare_cached(&format!(
             "SELECT {table_name}.rowid, {parent_table_name}.name, {table_name}.name
              FROM {parent_table_name}, {table_name}
@@ -855,7 +855,7 @@ impl GlobalCacheTracker {
         let _p = crate::util::profile::start(format!(
             "update db parent for removed from disk {parent_table_name}"
         ));
-        trace!("checking for db entries to remove from {parent_table_name}");
+        trace!(target: "gc", "checking for db entries to remove from {parent_table_name}");
         let mut select_stmt =
             conn.prepare_cached(&format!("SELECT rowid, name FROM {parent_table_name}"))?;
         let mut delete_stmt =
@@ -870,7 +870,7 @@ impl GlobalCacheTracker {
                 for child_base in child_base_paths {
                     let child_path = child_base.join(&id_name);
                     if child_path.exists() {
-                        debug!("removing orphaned path {child_path:?}");
+                        debug!(target: "gc", "removing orphaned path {child_path:?}");
                         delete_paths.push(child_path);
                     }
                 }
@@ -884,7 +884,7 @@ impl GlobalCacheTracker {
     /// cargo).
     fn populate_untracked_crate(conn: &Connection, base_path: &Path) -> CargoResult<()> {
         let _p = crate::util::profile::start("populate untracked crate");
-        trace!("populating untracked crate files");
+        trace!(target: "gc", "populating untracked crate files");
         let mut insert_stmt = conn.prepare_cached(
             "INSERT INTO registry_crate (registry_id, name, size, timestamp)
              VALUES (?1, ?2, ?3, ?4)
@@ -923,7 +923,7 @@ impl GlobalCacheTracker {
         populate_size: bool,
     ) -> CargoResult<()> {
         let _p = crate::util::profile::start(format!("populate untracked {table_name}"));
-        trace!("populating untracked files for {table_name}");
+        trace!(target: "gc", "populating untracked files for {table_name}");
         // Gather names (and make sure they are in the database).
         let id_names = Self::names_from(&base_path)?;
 
@@ -987,7 +987,7 @@ impl GlobalCacheTracker {
         base_path: &Path,
     ) -> CargoResult<()> {
         let _p = crate::util::profile::start(format!("update NULL sizes {table_name}"));
-        trace!("updating NULL size information in {table_name}");
+        trace!(target: "gc", "updating NULL size information in {table_name}");
         let mut null_stmt = conn.prepare_cached(&format!(
             "SELECT {table_name}.rowid, {table_name}.name, {parent_table_name}.name
              FROM {table_name}, {parent_table_name}
@@ -1024,7 +1024,7 @@ impl GlobalCacheTracker {
         base_path: &Path,
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        debug!("cleaning {table_name} since {max_age:?}");
+        debug!(target: "gc", "cleaning {table_name} since {max_age:?}");
         let mut stmt = conn.prepare_cached(&format!(
             "DELETE FROM {table_name} WHERE timestamp < ?1
                 RETURNING registry_id, name"
@@ -1054,7 +1054,7 @@ impl GlobalCacheTracker {
         base_path: &Path,
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        debug!("cleaning {table_name} till under {max_size:?}");
+        debug!(target: "gc", "cleaning {table_name} till under {max_size:?}");
         let total_size: u64 = conn.query_row(
             &format!("SELECT coalesce(SUM(size), 0) FROM {table_name}"),
             [],
@@ -1111,7 +1111,7 @@ impl GlobalCacheTracker {
         base: &BasePaths,
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        debug!("cleaning download till under {max_size:?}");
+        debug!(target: "gc", "cleaning download till under {max_size:?}");
 
         // This SQL statement selects from both registry_src and
         // registry_crate so that sorting of timestamps incorporates both of
@@ -1149,7 +1149,7 @@ impl GlobalCacheTracker {
             })?
             .collect::<Result<Vec<(i64, i64, String, String, u64)>, _>>()?;
         let mut total_size: u64 = rows.iter().map(|r| r.4).sum();
-        debug!("total download cache size appears to be {total_size}");
+        debug!(target: "gc", "total download cache size appears to be {total_size}");
         for (table, rowid, name, index_name, size) in rows {
             if total_size <= max_size {
                 break;
@@ -1177,7 +1177,7 @@ impl GlobalCacheTracker {
         base: &BasePaths,
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        debug!("cleaning git till under {max_size:?}");
+        debug!(target: "gc", "cleaning git till under {max_size:?}");
 
         // Collect all the sizes from git_db and git_checkouts, and then sort them by timestamp.
         let mut stmt = conn.prepare_cached("SELECT rowid, name, timestamp FROM git_db")?;
@@ -1224,7 +1224,7 @@ impl GlobalCacheTracker {
         let mut delete_co_stmt =
             conn.prepare_cached("DELETE FROM git_checkout WHERE rowid = ?1")?;
         let mut total_size: u64 = git_info.iter().map(|r| r.4).sum();
-        debug!("total git cache size appears to be {total_size}");
+        debug!(target: "gc", "total git cache size appears to be {total_size}");
         while let Some((_timestamp, rowid, db_name, name, size)) = git_info.pop() {
             if total_size <= max_size {
                 break;
@@ -1262,7 +1262,7 @@ impl GlobalCacheTracker {
         base: &BasePaths,
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        debug!("cleaning index since {max_age:?}");
+        debug!(target: "gc", "cleaning index since {max_age:?}");
         let mut stmt = conn.prepare_cached(
             "DELETE FROM registry_index WHERE timestamp < ?1
                 RETURNING name",
@@ -1287,7 +1287,7 @@ impl GlobalCacheTracker {
         base_path: &Path,
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        debug!("cleaning git co since {max_age:?}");
+        debug!(target: "gc", "cleaning git co since {max_age:?}");
         let mut stmt = conn.prepare_cached(
             "DELETE FROM git_checkout WHERE timestamp < ?1
                 RETURNING git_id, name",
@@ -1316,7 +1316,7 @@ impl GlobalCacheTracker {
         base: &BasePaths,
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        debug!("cleaning git db since {max_age:?}");
+        debug!(target: "gc", "cleaning git db since {max_age:?}");
         let mut stmt = conn.prepare_cached(
             "DELETE FROM git_db WHERE timestamp < ?1
                 RETURNING name",
@@ -1361,7 +1361,7 @@ macro_rules! insert_or_update_parent {
             " SET timestamp = ?1 WHERE id = ?2"
         ))?;
         for (parent, new_timestamp) in std::mem::take(&mut $self.$timestamps_field) {
-            trace!(
+            trace!(target: "gc",
                 concat!("insert ", $table_name, " {:?} {}"),
                 parent,
                 new_timestamp
@@ -1553,7 +1553,7 @@ impl DeferredGlobalLastUse {
     /// This will also clear the state of `self`.
     pub fn save(&mut self, tracker: &mut GlobalCacheTracker) -> CargoResult<()> {
         let _p = crate::util::profile::start("saving last-use data");
-        trace!("saving last-use data");
+        trace!(target: "gc", "saving last-use data");
         if self.is_empty() {
             return Ok(());
         }
@@ -1565,7 +1565,7 @@ impl DeferredGlobalLastUse {
         self.insert_registry_src_from_cache(&tx)?;
         self.insert_git_checkout_from_cache(&tx)?;
         tx.commit()?;
-        trace!("last-use save complete");
+        trace!(target: "gc", "last-use save complete");
         Ok(())
     }
 
@@ -1632,7 +1632,7 @@ impl DeferredGlobalLastUse {
     fn insert_registry_crate_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
         let registry_crate_timestamps = std::mem::take(&mut self.registry_crate_timestamps);
         for (registry_crate, timestamp) in registry_crate_timestamps {
-            trace!("insert registry crate {registry_crate:?} {timestamp}");
+            trace!(target: "gc", "insert registry crate {registry_crate:?} {timestamp}");
             let registry_id = self.registry_id(conn, registry_crate.encoded_registry_name)?;
             let mut stmt = conn.prepare_cached(
                 "INSERT INTO registry_crate (registry_id, name, size, timestamp)
@@ -1657,7 +1657,7 @@ impl DeferredGlobalLastUse {
     fn insert_registry_src_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
         let registry_src_timestamps = std::mem::take(&mut self.registry_src_timestamps);
         for (registry_src, timestamp) in registry_src_timestamps {
-            trace!("insert registry src {registry_src:?} {timestamp}");
+            trace!(target: "gc", "insert registry src {registry_src:?} {timestamp}");
             let registry_id = self.registry_id(conn, registry_src.encoded_registry_name)?;
             let mut stmt = conn.prepare_cached(
                 "INSERT INTO registry_src (registry_id, name, size, timestamp)
