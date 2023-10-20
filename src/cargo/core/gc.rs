@@ -28,6 +28,13 @@ use anyhow::{bail, Context};
 use serde::Deserialize;
 use std::time::Duration;
 
+/// Default max age to auto-clean extracted sources, which can be recovered
+/// without downloading anything.
+const DEFAULT_MAX_AGE_EXTRACTED: &str = "1 month";
+/// Default max ago to auto-clean cache data, which must be downloaded to
+/// recover.
+const DEFAULT_MAX_AGE_DOWNLOADED: &str = "3 months";
+
 /// Performs automatic garbage collection.
 ///
 /// This is called in various places in Cargo where garbage collection should
@@ -211,27 +218,42 @@ impl GcOpts {
                 self.max_src_age = newer_time_span_for_config(
                     self.max_src_age,
                     "gc.auto.max-src-age",
-                    auto_config.max_src_age.as_deref().unwrap_or("1 month"),
+                    auto_config
+                        .max_src_age
+                        .as_deref()
+                        .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
                 )?;
                 self.max_crate_age = newer_time_span_for_config(
                     self.max_crate_age,
                     "gc.auto.max-crate-age",
-                    auto_config.max_crate_age.as_deref().unwrap_or("3 months"),
+                    auto_config
+                        .max_crate_age
+                        .as_deref()
+                        .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
                 )?;
                 self.max_index_age = newer_time_span_for_config(
                     self.max_index_age,
                     "gc.auto.max-index-age",
-                    auto_config.max_index_age.as_deref().unwrap_or("3 months"),
+                    auto_config
+                        .max_index_age
+                        .as_deref()
+                        .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
                 )?;
                 self.max_git_co_age = newer_time_span_for_config(
                     self.max_git_co_age,
                     "gc.auto.max-git-co-age",
-                    auto_config.max_git_co_age.as_deref().unwrap_or("1 month"),
+                    auto_config
+                        .max_git_co_age
+                        .as_deref()
+                        .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
                 )?;
                 self.max_git_db_age = newer_time_span_for_config(
                     self.max_git_db_age,
                     "gc.auto.max-git-db-age",
-                    auto_config.max_git_db_age.as_deref().unwrap_or("3 months"),
+                    auto_config
+                        .max_git_db_age
+                        .as_deref()
+                        .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
                 )?;
             }
             if matches!(kind, AutoGcKind::Target | AutoGcKind::SharedTarget) {
