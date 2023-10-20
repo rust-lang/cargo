@@ -313,10 +313,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         // Hopefully this shouldn't incur too much of a performance hit since
         // most of this should already be in cache since it was just
         // extracted.
-        //
-        // !.git is used because clones typically use hardlinks for the git
-        // contents. TODO: Verify behavior on Windows.
-        let size = cargo_util::du(&checkout_path, &["!.git"])?;
+        let size = global_cache_tracker::du_git_checkout(&checkout_path)?;
         self.mark_used(Some(size))?;
         Ok(())
     }

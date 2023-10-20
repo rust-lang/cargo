@@ -1770,14 +1770,18 @@ pub fn is_silent_error(e: &anyhow::Error) -> bool {
     false
 }
 
-fn du(path: &Path, table_name: &str) -> CargoResult<u64> {
+/// Returns the disk usage for a git checkout directory.
+pub fn du_git_checkout(path: &Path) -> CargoResult<u64> {
     // !.git is used because clones typically use hardlinks for the git
     // contents. TODO: Verify behavior on Windows.
     // TODO: Or even better, switch to worktrees, and remove this.
-    let patterns = if table_name == GIT_CO_TABLE {
-        &["!.git"][..]
+    cargo_util::du(&path, &["!.git"])
+}
+
+fn du(path: &Path, table_name: &str) -> CargoResult<u64> {
+    if table_name == GIT_CO_TABLE {
+        du_git_checkout(path)
     } else {
-        &[][..]
-    };
-    cargo_util::du(&path, patterns)
+        cargo_util::du(&path, &[])
+    }
 }
