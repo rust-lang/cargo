@@ -160,12 +160,11 @@ impl CargoPathExt for Path {
     }
 
     fn ls_r(&self) -> Vec<PathBuf> {
-        let mut file_list: Vec<_> = walkdir::WalkDir::new(self)
+        walkdir::WalkDir::new(self)
+            .sort_by_file_name()
             .into_iter()
             .filter_map(|e| e.map(|e| e.path().to_owned()).ok())
-            .collect();
-        file_list.sort();
-        file_list
+            .collect()
     }
 
     fn move_in_time<F>(&self, travel_amount: F)
