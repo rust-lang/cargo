@@ -478,7 +478,7 @@ pub fn parse_human_size(input: &str) -> CargoResult<u64> {
             "kib" => 1024.0,
             "mib" => 1024.0 * 1024.0,
             "gib" => 1024.0 * 1024.0 * 1024.0,
-            s => panic!("suffix `{s}` out of sync with regex"),
+            s => unreachable!("suffix `{s}` out of sync with regex"),
         },
         None => {
             return cap[1]
