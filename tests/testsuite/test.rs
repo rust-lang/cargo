@@ -3881,6 +3881,8 @@ fn json_artifact_includes_test_flag() {
     p.cargo("test --lib -v --message-format=json")
         .with_json(
             r#"
+                {"reason":"compile-started","package_id":"foo 0.0.1 [..]"}
+
                 {
                     "reason":"compiler-artifact",
                     "profile": {
@@ -3924,6 +3926,8 @@ fn json_artifact_includes_executable_for_library_tests() {
     p.cargo("test --lib -v --no-run --message-format=json")
         .with_json(
             r#"
+                {"reason":"compile-started","package_id":"foo 0.0.1 [..]"}
+
                 {
                     "executable": "[..]/foo/target/debug/deps/foo-[..][EXE]",
                     "features": [],
@@ -3963,6 +3967,8 @@ fn json_artifact_includes_executable_for_integration_tests() {
     p.cargo("test -v --no-run --message-format=json --test integration_test")
         .with_json(
             r#"
+                {"reason":"compile-started","package_id":"foo 0.0.1 [..]"}
+
                 {
                     "executable": "[..]/foo/target/debug/deps/integration_test-[..][EXE]",
                     "features": [],

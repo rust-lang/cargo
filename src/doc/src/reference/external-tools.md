@@ -244,7 +244,7 @@ The "build-finished" message is emitted at the end of the build.
     /* Whether or not the build finished successfully. */
     "success": true,
 }
-````
+```
 
 This message can be helpful for tools to know when to stop reading JSON
 messages. Commands such as `cargo test` or `cargo run` can produce additional
@@ -256,6 +256,19 @@ executed by `cargo run`).
 > Note: There is experimental nightly-only support for JSON output for tests,
 > so additional test-specific JSON messages may begin arriving after the
 > "build-finished" message if that is enabled.
+
+### Compile started
+
+The "compile-started" message is emitted when a crate begins compiling.
+This corresponds to the ui's "Compiling <crate>" message.
+
+```javascript
+{
+    "reason": "compile-started",
+    /* The package getting compiled */
+    "package-id": "cargo 0.74.0"
+}
+```
 
 ## Custom subcommands
 

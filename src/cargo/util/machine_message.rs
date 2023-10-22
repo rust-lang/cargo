@@ -111,3 +111,14 @@ impl Message for BuildFinished {
         "build-finished"
     }
 }
+
+#[derive(Serialize)]
+pub struct CompileStarted {
+    pub package_id: PackageId,
+}
+
+impl Message for CompileStarted {
+    fn reason(&self) -> &str {
+        "compile-started"
+    }
+}

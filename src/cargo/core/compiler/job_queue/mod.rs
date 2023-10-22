@@ -565,7 +565,13 @@ impl<'cfg> DrainState<'cfg> {
                 // NOTE: An error here will drop the job without starting it.
                 // That should be OK, since we want to exit as soon as
                 // possible during an error.
-                self.note_working_on(cx.bcx.config, cx.bcx.ws.root(), &unit, job.freshness())?;
+                self.note_working_on(
+                    cx.bcx.config,
+                    cx.bcx.ws.root(),
+                    &unit,
+                    job.freshness(),
+                    cx.bcx.build_config.emit_json(),
+                )?;
             }
             self.run(&unit, job, cx, scope);
         }
@@ -1096,6 +1102,7 @@ impl<'cfg> DrainState<'cfg> {
         ws_root: &Path,
         unit: &Unit,
         fresh: &Freshness,
+        json: bool,
     ) -> CargoResult<()> {
         if (self.compiled.contains(&unit.pkg.package_id())
             && !unit.mode.is_doc()
@@ -1129,6 +1136,13 @@ impl<'cfg> DrainState<'cfg> {
                     if unit.mode.is_check() {
                         config.shell().status("Checking", &unit.pkg)?;
                     } else {
+                        if json {
+                            let msg = machine_message::CompileStarted {
+                                package_id: unit.pkg.package_id(),
+                            }
+                            .to_json_string();
+                            _ = writeln!(config.shell().out(), "{msg}");
+                        }
                         config.shell().status("Compiling", &unit.pkg)?;
                     }
                 }

@@ -278,6 +278,8 @@ fn check_msg_format_json() {
         .build();
 
     let output = r#"
+{"reason":"compile-started","package_id":"foo 0.0.1 [..]"}
+
 {
     "reason": "compiler-artifact",
     "package_id": "foo 0.0.1 [..]",

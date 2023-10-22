@@ -1644,6 +1644,8 @@ fn json_artifact_includes_executable_for_benchmark() {
     p.cargo("bench --no-run --message-format=json")
         .with_json(
             r#"
+                {"reason":"compile-started","package_id":"foo 0.0.1 [..]"}
+
                 {
                     "executable": "[..]/foo/target/release/deps/benchmark-[..][EXE]",
                     "features": [],

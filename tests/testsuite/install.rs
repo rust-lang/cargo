@@ -103,6 +103,8 @@ fn simple_with_message_format() {
         )
         .with_json(
             r#"
+            {"reason":"compile-started","package_id":"foo 0.0.1 [..]"}
+
             {
                 "reason": "compiler-artifact",
                 "package_id": "foo 0.0.1 ([..])",
