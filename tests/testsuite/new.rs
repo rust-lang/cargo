@@ -451,6 +451,7 @@ fn non_ascii_name() {
             "\
 [WARNING] the name `Привет` contains non-ASCII characters
 Non-ASCII crate names are not supported by Rust.
+[WARNING] the name `Привет` is not snake_case or kebab-case which is recommended for package names, consider `привет`
 [CREATED] binary (application) `Привет` package
 ",
         )
@@ -496,6 +497,29 @@ or change the name in Cargo.toml with:
     name = \"a¼\"
     path = \"src/main.rs\"
 
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn non_snake_case_name() {
+    cargo_process("new UPPERcase_name")
+        .with_stderr(
+            "\
+[WARNING] the name `UPPERcase_name` is not snake_case or kebab-case which is recommended for package names, consider `uppercase_name`
+[CREATED] binary (application) `UPPERcase_name` package
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn kebab_case_name_is_accepted() {
+    cargo_process("new kebab-case-is-valid")
+        .with_stderr(
+            "\
+[CREATED] binary (application) `kebab-case-is-valid` package
 ",
         )
         .run();
