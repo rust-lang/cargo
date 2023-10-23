@@ -72,12 +72,6 @@ fn install_the_same_version_twice() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
-[INSTALLING] foo v0.0.1
-[COMPILING] foo v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
-[REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
-[REPLACED] package `foo v0.0.1` with `foo v0.0.1` (executable `foo[EXE]`)
-     Summary Successfully installed foo, foo!
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
