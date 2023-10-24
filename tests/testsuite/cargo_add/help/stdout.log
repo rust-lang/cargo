@@ -54,6 +54,11 @@ Options:
       --color <WHEN>
           Coloring: auto, always, never
 
+      --warnings <warnings>
+          Warning behavior
+          
+          [possible values: error, warn, ignore]
+
       --config <KEY=VALUE>
           Override a configuration value
 
