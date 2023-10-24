@@ -140,6 +140,7 @@ use crate::core::compiler::future_incompat::{
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, Shell, TargetKind};
+use crate::util::config::WarningHandling;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::errors::AlreadyPrintedError;
 use crate::util::machine_message::{self, Message as _};
@@ -314,8 +315,10 @@ impl<'cfg> DiagDedupe<'cfg> {
             return Ok(false);
         }
         let mut shell = self.config.shell();
-        shell.print_ansi_stderr(diag.as_bytes())?;
-        shell.err().write_all(b"\n")?;
+        if shell.warnings() != WarningHandling::Ignore {
+            shell.print_ansi_stderr(diag.as_bytes())?;
+            shell.err().write_all(b"\n")?;
+        }
         Ok(true)
     }
 }

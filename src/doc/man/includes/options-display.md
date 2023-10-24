@@ -22,3 +22,14 @@ Control when colored output is used. Valid values:
 May also be specified with the `term.color`
 [config value](../reference/config.html).
 {{/option}}
+
+{{#option "`--warnings`"}}
+Overrides how warnings are handled. Valid values:
+
+* `warn` (default): warnings are displayed and do not fail the operation.
+* `error`: if any warnings are encountered an error will be emitted at the of the operation.
+* `ignore`: warnings will be silently ignored.
+
+May also be specified with the `term.warnings`
+[config value](../reference/config.html).
+{{/option}}

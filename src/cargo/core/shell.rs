@@ -5,6 +5,7 @@ use std::io::IsTerminal;
 use anstream::AutoStream;
 use anstyle::Style;
 
+use crate::util::config::WarningHandling;
 use crate::util::errors::CargoResult;
 use crate::util::style::*;
 
@@ -57,6 +58,10 @@ pub struct Shell {
     /// Flag that indicates the current line needs to be cleared before
     /// printing. Used when a progress bar is currently displayed.
     needs_clear: bool,
+    /// How warning should be handled.
+    warnings: WarningHandling,
+    /// The number of warnings so far.
+    warning_count: usize,
 }
 
 impl fmt::Debug for Shell {
@@ -115,6 +120,8 @@ impl Shell {
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            warnings: WarningHandling::Warn,
+            warning_count: 0,
         }
     }
 
@@ -124,6 +131,8 @@ impl Shell {
             output: ShellOut::Write(AutoStream::never(out)), // strip all formatting on write
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            warnings: WarningHandling::Warn,
+            warning_count: 0,
         }
     }
 
@@ -263,10 +272,13 @@ impl Shell {
 
     /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        match self.verbosity {
-            Verbosity::Quiet => Ok(()),
-            _ => self.print(&"warning", Some(&message), &WARN, false),
+        self.warning_count += 1;
+        if matches!(self.verbosity, Verbosity::Quiet)
+            || matches!(self.warnings, WarningHandling::Ignore)
+        {
+            return Ok(());
         }
+        self.print(&"warning", Some(&message), &WARN, false)
     }
 
     /// Prints a cyan 'note' message.
@@ -282,6 +294,31 @@ impl Shell {
     /// Gets the verbosity of the shell.
     pub fn verbosity(&self) -> Verbosity {
         self.verbosity
+    }
+
+    /// Updates how warnings are handled.
+    pub fn set_warnings(&mut self, warnings: WarningHandling) {
+        self.warnings = warnings;
+    }
+
+    /// Gets the warning handling behavior.
+    pub fn warnings(&self) -> WarningHandling {
+        self.warnings
+    }
+
+    /// Emit an error if any warnings have been seen.
+    pub fn error_for_warnings(&self) -> CargoResult<()> {
+        if self.warning_count > 0 && self.warnings == WarningHandling::Error {
+            let quiet_note = if self.verbosity == Verbosity::Quiet {
+                " (note that verbosity is set to quiet, which may hide warnings)"
+            } else {
+                ""
+            };
+            anyhow::bail!(
+                "warnings detected and warnings are disallowed by configuration{quiet_note}"
+            );
+        }
+        Ok(())
     }
 
     /// Updates the color choice (always, never, or auto) from a string..
