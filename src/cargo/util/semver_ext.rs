@@ -8,6 +8,8 @@ pub enum OptVersionReq {
     Req(VersionReq),
     /// The exact locked version and the original version requirement.
     Locked(Version, VersionReq),
+    /// The exact requested version and the original version requirement.
+    UpdatePrecise(Version, VersionReq),
 }
 
 pub trait VersionExt {
@@ -53,7 +55,7 @@ impl OptVersionReq {
     pub fn is_exact(&self) -> bool {
         match self {
             OptVersionReq::Any => false,
-            OptVersionReq::Req(req) => {
+            OptVersionReq::Req(req) | OptVersionReq::UpdatePrecise(_, req) => {
                 req.comparators.len() == 1 && {
                     let cmp = &req.comparators[0];
                     cmp.op == Op::Exact && cmp.minor.is_some() && cmp.patch.is_some()
@@ -69,8 +71,24 @@ impl OptVersionReq {
         let version = version.clone();
         *self = match self {
             Any => Locked(version, VersionReq::STAR),
-            Req(req) => Locked(version, req.clone()),
-            Locked(_, req) => Locked(version, req.clone()),
+            Req(req) | Locked(_, req) | UpdatePrecise(_, req) => Locked(version, req.clone()),
+        };
+    }
+
+    pub fn update_precise(&mut self, version: &Version) {
+        assert!(
+            self.matches(version),
+            "cannot update_precise {} to {}",
+            self,
+            version
+        );
+        use OptVersionReq::*;
+        let version = version.clone();
+        *self = match self {
+            Any => UpdatePrecise(version, VersionReq::STAR),
+            Req(req) | Locked(_, req) | UpdatePrecise(_, req) => {
+                UpdatePrecise(version, req.clone())
+            }
         };
     }
 
@@ -100,6 +118,23 @@ impl OptVersionReq {
                 // we should not silently use `1.0.0+foo` even though they have the same version.
                 v == version
             }
+            OptVersionReq::UpdatePrecise(v, _) => {
+                // This is used for the `--precise` field of cargo update.
+                //
+                // Unfortunately crates.io allowed versions to differ only
+                // by build metadata. This shouldn't be allowed, but since
+                // it is, this will honor it if requested.
+                //
+                // In that context we treat a requirement that does not have
+                // build metadata as allowing any metadata. But, if a requirement
+                // has build metadata, then we only allow it to match the exact
+                // metadata.
+                v.major == version.major
+                    && v.minor == version.minor
+                    && v.patch == version.patch
+                    && v.pre == version.pre
+                    && (v.build == version.build || v.build.is_empty())
+            }
         }
     }
 }
@@ -108,8 +143,9 @@ impl Display for OptVersionReq {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             OptVersionReq::Any => f.write_str("*"),
-            OptVersionReq::Req(req) => Display::fmt(req, f),
-            OptVersionReq::Locked(_, req) => Display::fmt(req, f),
+            OptVersionReq::Req(req)
+            | OptVersionReq::Locked(_, req)
+            | OptVersionReq::UpdatePrecise(_, req) => Display::fmt(req, f),
         }
     }
 }
