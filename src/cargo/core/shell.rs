@@ -340,13 +340,6 @@ impl Shell {
         }
     }
 
-    /// Write a styled fragment
-    ///
-    /// Caller is responsible for deciding whether [`Shell::verbosity`] is affects output.
-    pub fn write_stdout(&mut self, fragment: impl fmt::Display, color: &Style) -> CargoResult<()> {
-        self.output.write_stdout(fragment, color)
-    }
-
     /// Prints a message to stderr and translates ANSI escape code into console colors.
     pub fn print_ansi_stderr(&mut self, message: &[u8]) -> CargoResult<()> {
         if self.needs_clear {
@@ -406,17 +399,6 @@ impl ShellOut {
             None => write!(buffer, " ")?,
         }
         self.stderr().write_all(&buffer)?;
-        Ok(())
-    }
-
-    /// Write a styled fragment
-    fn write_stdout(&mut self, fragment: impl fmt::Display, style: &Style) -> CargoResult<()> {
-        let style = style.render();
-        let reset = anstyle::Reset.render();
-
-        let mut buffer = Vec::new();
-        write!(buffer, "{style}{}{reset}", fragment)?;
-        self.stdout().write_all(&buffer)?;
         Ok(())
     }
 
