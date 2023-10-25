@@ -11,6 +11,7 @@
 - [Design Principles](./design.md)
 - [Implementing a Change](./implementation/index.md)
     - [Architecture](./implementation/architecture.md)
+    - [New packages](./implementation/packages.md)
     - [New subcommands](./implementation/subcommands.md)
     - [Console Output](./implementation/console.md)
     - [Filesystem](./implementation/filesystem.md)
