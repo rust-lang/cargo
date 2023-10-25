@@ -98,7 +98,6 @@ use cargo_util::{paths, registry::make_dep_path};
 use semver::Version;
 use serde::Deserialize;
 use std::borrow::Cow;
-use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -632,11 +631,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         f: &mut dyn FnMut(IndexSummary),
         online: bool,
     ) -> Poll<CargoResult<()>> {
-        let source_id = self.source_id;
-
-        let summaries = ready!(self.summaries(name, req, load))?;
-
-        let summaries = summaries
+        ready!(self.summaries(name, &req, load))?
             // First filter summaries for `--offline`. If we're online then
             // everything is a candidate, otherwise if we're offline we're only
             // going to consider candidates which are actually present on disk.
@@ -657,35 +652,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             // Next filter out all yanked packages. Some yanked packages may
             // leak through if they're in a whitelist (aka if they were
             // previously in `Cargo.lock`
-            .filter(|s| !s.is_yanked() || yanked_whitelist.contains(&s.package_id()));
-
-        // Handle `cargo update --precise` here.
-        let precise = source_id.precise_registry_version(name.as_str());
-        let summaries = summaries.filter(|s| match precise {
-            Some((current, requested)) => {
-                if req.matches(current) {
-                    // Unfortunately crates.io allows versions to differ only
-                    // by build metadata. This shouldn't be allowed, but since
-                    // it is, this will honor it if requested. However, if not
-                    // specified, then ignore it.
-                    let s_vers = s.package_id().version();
-                    match (s_vers.build.is_empty(), requested.build.is_empty()) {
-                        (true, true) => s_vers == requested,
-                        (true, false) => false,
-                        (false, true) => {
-                            // Compare disregarding the metadata.
-                            s_vers.cmp_precedence(requested) == Ordering::Equal
-                        }
-                        (false, false) => s_vers == requested,
-                    }
-                } else {
-                    true
-                }
-            }
-            None => true,
-        });
-
-        summaries.for_each(f);
+            .filter(|s| !s.is_yanked() || yanked_whitelist.contains(&s.package_id()))
+            .for_each(f);
         Poll::Ready(Ok(()))
     }
 

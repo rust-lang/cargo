@@ -712,16 +712,27 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        // If this is a precise dependency, then it came from a lock file and in
+        let mut req = dep.version_req().clone();
+
+        // Handle `cargo update --precise` here.
+        if let Some((_, requested)) = self
+            .source_id
+            .precise_registry_version(dep.package_name().as_str())
+            .filter(|(c, _)| req.matches(c))
+        {
+            req.update_precise(&requested);
+        }
+
+        // If this is a locked dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if kind == QueryKind::Exact && dep.source_id().has_precise() && !self.ops.is_updated() {
+        if kind == QueryKind::Exact && req.is_locked() && !self.ops.is_updated() {
             debug!("attempting query without update");
             let mut called = false;
             ready!(self.index.query_inner(
                 dep.package_name(),
-                dep.version_req(),
+                &req,
                 &mut *self.ops,
                 &self.yanked_whitelist,
                 &mut |s| {
@@ -742,7 +753,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             let mut called = false;
             ready!(self.index.query_inner(
                 dep.package_name(),
-                dep.version_req(),
+                &req,
                 &mut *self.ops,
                 &self.yanked_whitelist,
                 &mut |s| {
@@ -779,7 +790,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                         .index
                         .query_inner(
                             name_permutation,
-                            dep.version_req(),
+                            &req,
                             &mut *self.ops,
                             &self.yanked_whitelist,
                             f,
