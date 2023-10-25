@@ -99,7 +99,7 @@ use semver::Version;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::Path;
@@ -573,8 +573,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         name: InternedString,
         req: &OptVersionReq,
         load: &mut dyn RegistryData,
-        yanked_whitelist: &HashSet<PackageId>,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         if self.config.offline() {
             // This should only return `Poll::Ready(Ok(()))` if there is at least 1 match.
@@ -591,31 +590,15 @@ impl<'cfg> RegistryIndex<'cfg> {
             let callback = &mut |s: IndexSummary| {
                 if !s.is_offline() {
                     called = true;
-                    f(s.into_summary());
+                    f(s);
                 }
             };
-            ready!(self.query_inner_with_online(
-                name,
-                req,
-                load,
-                yanked_whitelist,
-                callback,
-                false
-            )?);
+            ready!(self.query_inner_with_online(name, req, load, callback, false)?);
             if called {
                 return Poll::Ready(Ok(()));
             }
         }
-        self.query_inner_with_online(
-            name,
-            req,
-            load,
-            yanked_whitelist,
-            &mut |s| {
-                f(s.into_summary());
-            },
-            true,
-        )
+        self.query_inner_with_online(name, req, load, f, true)
     }
 
     /// Inner implementation of [`Self::query_inner`]. Returns the number of
@@ -627,7 +610,6 @@ impl<'cfg> RegistryIndex<'cfg> {
         name: InternedString,
         req: &OptVersionReq,
         load: &mut dyn RegistryData,
-        yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(IndexSummary),
         online: bool,
     ) -> Poll<CargoResult<()>> {
@@ -649,10 +631,6 @@ impl<'cfg> RegistryIndex<'cfg> {
                     IndexSummary::Offline(s.as_summary().clone())
                 }
             })
-            // Next filter out all yanked packages. Some yanked packages may
-            // leak through if they're in a whitelist (aka if they were
-            // previously in `Cargo.lock`
-            .filter(|s| !s.is_yanked() || yanked_whitelist.contains(&s.package_id()))
             .for_each(f);
         Poll::Ready(Ok(()))
     }
