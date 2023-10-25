@@ -511,6 +511,10 @@ package-name = "my-awesome-android-app"
 assets = "path/to/static"
 ```
 
+You'll need to look in the documentation for your tool to see how to use this field.
+For Rust Projects that use `package.metadata` tables, see:
+- [docs.rs](https://docs.rs/about/metadata)
+
 There is a similar table at the workspace level at
 [`workspace.metadata`][workspace-metadata]. While cargo does not specify a
 format for the content of either of these tables, it is suggested that
