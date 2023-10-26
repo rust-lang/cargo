@@ -947,12 +947,17 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
         return Ok(());
     }
 
+    let stderr = shell.err();
+    let good = style::GOOD.render();
+    let error = style::ERROR.render();
+    let reset = anstyle::Reset.render();
+
     let (activated, deactivated) = dep.features();
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
         let suffix = format_features_version_suffix(&dep);
 
-        shell.write_stderr(format_args!("{prefix}Features{suffix}:\n"), &style::NOP)?;
+        writeln!(stderr, "{prefix}Features{suffix}:")?;
 
         const MAX_FEATURE_PRINTS: usize = 30;
         let total_activated = activated.len();
@@ -960,28 +965,18 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 
         if total_activated <= MAX_FEATURE_PRINTS {
             for feat in activated {
-                shell.write_stderr(&prefix, &style::NOP)?;
-                shell.write_stderr('+', &style::GOOD)?;
-                shell.write_stderr(format_args!(" {feat}\n"), &style::NOP)?;
+                writeln!(stderr, "{prefix}{good}+{reset} {feat}")?;
             }
         } else {
-            shell.write_stderr(
-                format_args!("{prefix}{total_activated} activated features\n"),
-                &style::NOP,
-            )?;
+            writeln!(stderr, "{prefix}{total_activated} activated features")?;
         }
 
         if total_activated + total_deactivated <= MAX_FEATURE_PRINTS {
             for feat in deactivated {
-                shell.write_stderr(&prefix, &style::NOP)?;
-                shell.write_stderr('-', &style::ERROR)?;
-                shell.write_stderr(format_args!(" {feat}\n"), &style::NOP)?;
+                writeln!(stderr, "{prefix}{error}-{reset} {feat}")?;
             }
         } else {
-            shell.write_stderr(
-                format_args!("{prefix}{total_deactivated} deactivated features\n"),
-                &style::NOP,
-            )?;
+            writeln!(stderr, "{prefix}{total_deactivated} deactivated features")?;
         }
     }
 
