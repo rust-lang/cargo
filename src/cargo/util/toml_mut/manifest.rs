@@ -367,17 +367,31 @@ impl LocalManifest {
     pub fn remove_from_table(&mut self, table_path: &[String], name: &str) -> CargoResult<()> {
         let parent_table = self.get_table_mut(table_path)?;
 
-        let dep = parent_table
-            .get_mut(name)
-            .filter(|t| !t.is_none())
-            .ok_or_else(|| non_existent_dependency_err(name, table_path.join(".")))?;
+        match parent_table.get_mut(name).filter(|t| !t.is_none()) {
+            Some(dep) => {
+                // remove the dependency
+                *dep = toml_edit::Item::None;
 
-        // remove the dependency
-        *dep = toml_edit::Item::None;
+                // remove table if empty
+                if parent_table.as_table_like().unwrap().is_empty() {
+                    *parent_table = toml_edit::Item::None;
+                }
+            }
+            None => {
+                // Search in other tables.
+                let sections = self.get_sections();
+                let found_table_path = sections.iter().find_map(|(t, i)| {
+                    let table_path: Vec<String> =
+                        t.to_table().iter().map(|s| s.to_string()).collect();
+                    i.get(name).is_some().then(|| table_path.join("."))
+                });
 
-        // remove table if empty
-        if parent_table.as_table_like().unwrap().is_empty() {
-            *parent_table = toml_edit::Item::None;
+                return Err(non_existent_dependency_err(
+                    name,
+                    table_path.join("."),
+                    found_table_path,
+                ));
+            }
         }
 
         Ok(())
@@ -537,9 +551,14 @@ fn non_existent_table_err(table: impl std::fmt::Display) -> anyhow::Error {
 
 fn non_existent_dependency_err(
     name: impl std::fmt::Display,
-    table: impl std::fmt::Display,
+    search_table: impl std::fmt::Display,
+    found_table: Option<impl std::fmt::Display>,
 ) -> anyhow::Error {
-    anyhow::format_err!("the dependency `{name}` could not be found in `{table}`.")
+    let mut msg = format!("the dependency `{name}` could not be found in `{search_table}`");
+    if let Some(found_table) = found_table {
+        msg.push_str(&format!("; it is present in `{found_table}`",));
+    }
+    anyhow::format_err!(msg)
 }
 
 fn remove_array_index(array: &mut toml_edit::Array, index: usize) {
