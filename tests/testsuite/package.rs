@@ -3095,3 +3095,40 @@ src/main.rs
         &[],
     );
 }
+
+#[cargo_test]
+fn versionless_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+warning: manifest has no license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+   Packaging foo v0.0.0 ([CWD])
+   Verifying foo v0.0.0 ([CWD])
+   Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
+    Finished dev [unoptimized + debuginfo] target(s) in [..]s
+    Packaged 4 files, [..]B ([..]B compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.0.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
+}

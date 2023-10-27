@@ -1496,3 +1496,26 @@ fn check_unused_manifest_keys() {
         )
         .run();
 }
+
+#[cargo_test]
+fn versionless_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}

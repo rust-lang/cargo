@@ -550,11 +550,17 @@ impl TomlManifest {
         let version = package
             .version
             .clone()
-            .resolve("version", || inherit()?.version())?;
+            .map(|version| version.resolve("version", || inherit()?.version()))
+            .transpose()?;
 
-        package.version = MaybeWorkspace::Defined(version.clone());
+        package.version = version.clone().map(MaybeWorkspace::Defined);
 
-        let pkgid = package.to_package_id(source_id, version)?;
+        let pkgid = package.to_package_id(
+            source_id,
+            version
+                .clone()
+                .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
+        )?;
 
         let edition = if let Some(edition) = package.edition.clone() {
             let edition: Edition = edition
@@ -1006,8 +1012,13 @@ impl TomlManifest {
         let publish = match publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
-            None | Some(VecStringOrBool::Bool(true)) => None,
+            Some(VecStringOrBool::Bool(true)) => None,
+            None => version.is_none().then_some(vec![]),
         };
+
+        if version.is_none() && publish != Some(vec![]) {
+            bail!("`package.publish` requires `package.version` be specified");
+        }
 
         if summary.features().contains_key("default-features") {
             warnings.push(
@@ -1659,8 +1670,7 @@ pub struct TomlPackage {
     edition: Option<MaybeWorkspaceString>,
     rust_version: Option<MaybeWorkspaceRustVersion>,
     name: InternedString,
-    #[serde(deserialize_with = "version_trim_whitespace")]
-    version: MaybeWorkspaceSemverVersion,
+    version: Option<MaybeWorkspaceSemverVersion>,
     authors: Option<MaybeWorkspaceVecString>,
     build: Option<StringOrBool>,
     metabuild: Option<StringOrVec>,
@@ -1707,22 +1717,6 @@ impl TomlPackage {
     ) -> CargoResult<PackageId> {
         PackageId::new(self.name, version, source_id)
     }
-}
-
-fn version_trim_whitespace<'de, D>(deserializer: D) -> Result<MaybeWorkspaceSemverVersion, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    UntaggedEnumVisitor::new()
-        .expecting("SemVer version")
-        .string(
-            |value| match value.trim().parse().map_err(de::Error::custom) {
-                Ok(parsed) => Ok(MaybeWorkspace::Defined(parsed)),
-                Err(e) => Err(e),
-            },
-        )
-        .map(|value| value.deserialize().map(MaybeWorkspace::Workspace))
-        .deserialize(deserializer)
 }
 
 /// This Trait exists to make [`MaybeWorkspace::Workspace`] generic. It makes deserialization of
@@ -1793,6 +1787,23 @@ impl<T, W: WorkspaceInherit> MaybeWorkspace<T, W> {
 
 //. This already has a `Deserialize` impl from version_trim_whitespace
 type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
+impl<'de> de::Deserialize<'de> for MaybeWorkspaceSemverVersion {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("SemVer version")
+            .string(
+                |value| match value.trim().parse().map_err(de::Error::custom) {
+                    Ok(parsed) => Ok(MaybeWorkspace::Defined(parsed)),
+                    Err(e) => Err(e),
+                },
+            )
+            .map(|value| value.deserialize().map(MaybeWorkspace::Workspace))
+            .deserialize(d)
+    }
+}
 
 type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {

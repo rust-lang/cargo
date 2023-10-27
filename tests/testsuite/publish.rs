@@ -420,7 +420,7 @@ fn unpublishable_crate() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -794,7 +794,7 @@ fn publish_empty_list() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -1020,7 +1020,7 @@ fn block_publish_no_registry() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -3002,5 +3002,34 @@ Caused by:
 ",
         )
         .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn versionless_package() {
+    // Use local registry for faster test times since no publish will occur
+    let registry = registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr(
+            "\
+error: `foo` cannot be published.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+",
+        )
         .run();
 }
