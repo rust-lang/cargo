@@ -58,6 +58,28 @@ fn simple() {
 }
 
 #[cargo_test]
+fn install_the_same_version_twice() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
 fn toolchain() {
     pkg("foo", "0.0.1");
 

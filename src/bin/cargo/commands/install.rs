@@ -9,6 +9,7 @@ use cargo::util::IntoUrl;
 use cargo::util::ToSemver;
 use cargo::util::VersionReqExt;
 use cargo::CargoResult;
+use itertools::Itertools;
 use semver::VersionReq;
 
 use cargo_util::paths;
@@ -119,6 +120,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .get_many::<CrateVersion>("crate")
         .unwrap_or_default()
         .cloned()
+        .dedup_by(|x, y| x == y)
         .map(|(krate, local_version)| resolve_crate(krate, local_version, version))
         .collect::<crate::CargoResult<Vec<_>>>()?;
 
