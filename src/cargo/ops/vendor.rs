@@ -37,15 +37,18 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
         if vendor_config.source.is_empty() {
             crate::drop_eprintln!(config, "There is no dependency to vendor in this project.");
         } else {
+            let vendor_config = toml::to_string_pretty(&vendor_config)?;
             crate::drop_eprint!(
                 config,
                 "To use vendored sources, add this to your .cargo/config.toml for this project:\n\n"
             );
-            crate::drop_print!(
-                config,
-                "{}",
-                &toml::to_string_pretty(&vendor_config).unwrap()
-            );
+            crate::drop_print!(config, "{vendor_config}");
+            let mut f = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(opts.destination.join("vendor-config.toml"))?;
+            let _ = f.write(vendor_config.as_bytes())?;
         }
     }
 
