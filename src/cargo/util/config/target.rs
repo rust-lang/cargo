@@ -208,7 +208,7 @@ fn parse_links_overrides(
                         output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
                     } else {
                         config.shell().warn(format!(
-                            "target config `{}.{}` requires -Zcheck-cfg=output flag",
+                            "target config `{}.{}` requires -Zcheck-cfg flag",
                             target_key, key
                         ))?;
                     }

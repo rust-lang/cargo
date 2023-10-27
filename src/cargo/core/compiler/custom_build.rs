@@ -803,7 +803,7 @@ impl BuildOutput {
                     if extra_check_cfg {
                         check_cfgs.push(value.to_string());
                     } else {
-                        warnings.push(format!("cargo:{} requires -Zcheck-cfg=output flag", key));
+                        warnings.push(format!("cargo:{} requires -Zcheck-cfg flag", key));
                     }
                 }
                 "rustc-env" => {
