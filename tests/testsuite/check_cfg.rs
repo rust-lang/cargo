@@ -354,6 +354,41 @@ fn build_script_override() {
         .run();
 }
 
+#[cargo_test]
+fn build_script_override_feature_gate() {
+    let target = cargo_test_support::rustc_host();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                links = "a"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [target.{}.a]
+                    rustc-check-cfg = ["cfg(foo)"]
+                "#,
+                target
+            ),
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_contains(
+            "warning: target config[..]rustc-check-cfg[..] requires -Zcheck-cfg flag",
+        )
+        .run();
+}
+
 #[cargo_test(nightly, reason = "--check-cfg is unstable")]
 fn build_script_test() {
     let p = project()
@@ -406,6 +441,34 @@ fn build_script_test() {
         .with_stdout_contains("test test_bar ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
         .masquerade_as_nightly_cargo(&["check-cfg"])
+        .run();
+}
+
+#[cargo_test]
+fn build_script_feature_gate() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"fn main() { 
+                println!("cargo:rustc-check-cfg=cfg(foo)");
+                println!("cargo:rustc-cfg=foo");
+            }"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_contains("warning[..]cargo:rustc-check-cfg requires -Zcheck-cfg flag")
+        .with_status(0)
         .run();
 }
 
@@ -465,5 +528,34 @@ fn config_invalid() {
         .masquerade_as_nightly_cargo(&["check-cfg"])
         .with_stderr_contains("error:[..]`unstable.check-cfg` expected true/false[..]")
         .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn config_feature_gate() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [features]
+                f_a = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [unstable]
+                check-cfg = true
+            "#,
+        )
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_does_not_contain("--check-cfg")
         .run();
 }
