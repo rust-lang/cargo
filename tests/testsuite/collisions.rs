@@ -202,6 +202,7 @@ fn collision_doc_multiple_versions() {
 [DOCUMENTING] bar v2.0.0
 [FINISHED] [..]
 [DOCUMENTING] foo v0.1.0 [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -384,6 +385,7 @@ fn collision_doc_profile_split() {
 [DOCUMENTING] pm v0.1.0 [..]
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -430,6 +432,7 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] bar v1.0.0
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -478,6 +481,7 @@ fn collision_doc_target() {
 [CHECKING] bar v1.0.0
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/[..]/doc/foo/index.html
 ",
         )
         .run();
@@ -545,6 +549,8 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] foo-macro v1.0.0 [..]
 [DOCUMENTING] abc v1.0.0 [..]
 [FINISHED] [..]
+[GENERATED] [CWD]/target/doc/abc/index.html
+[GENERATED] [CWD]/target/doc/foo_macro/index.html
 ")
         .run();
 }
