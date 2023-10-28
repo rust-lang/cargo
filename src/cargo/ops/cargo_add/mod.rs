@@ -31,6 +31,7 @@ use crate::util::toml_mut::dependency::MaybeWorkspace;
 use crate::util::toml_mut::dependency::PathSource;
 use crate::util::toml_mut::dependency::Source;
 use crate::util::toml_mut::dependency::WorkspaceSource;
+use crate::util::toml_mut::is_sorted;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::RustVersion;
@@ -1002,22 +1003,6 @@ fn format_features_version_suffix(dep: &DependencyUI) -> String {
     } else {
         "".to_owned()
     }
-}
-
-// Based on Iterator::is_sorted from nightly std; remove in favor of that when stabilized.
-fn is_sorted(mut it: impl Iterator<Item = impl PartialOrd>) -> bool {
-    let Some(mut last) = it.next() else {
-        return true;
-    };
-
-    for curr in it {
-        if curr < last {
-            return false;
-        }
-        last = curr;
-    }
-
-    true
 }
 
 fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Dependency> {
