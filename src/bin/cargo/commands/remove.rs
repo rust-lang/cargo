@@ -286,7 +286,7 @@ fn spec_has_match(
     config: &Config,
 ) -> CargoResult<bool> {
     for dep in dependencies {
-        if spec.name().as_str() != &dep.name {
+        if spec.name() != &dep.name {
             continue;
         }
 
