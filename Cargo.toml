@@ -85,6 +85,7 @@ serde_json = "1.0.108"
 sha1 = "0.10.6"
 sha2 = "0.10.8"
 shell-escape = "0.1.5"
+supports-hyperlinks = "2.1.0"
 snapbox = { version = "0.4.14", features = ["diff", "path"] }
 syn = { version = "2.0.38", features = ["extra-traits", "full"] }
 tar = { version = "0.4.40", default-features = false }
@@ -173,6 +174,7 @@ serde_ignored.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 sha1.workspace = true
 shell-escape.workspace = true
+supports-hyperlinks.workspace = true
 syn.workspace = true
 tar.workspace = true
 tempfile.workspace = true

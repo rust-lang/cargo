@@ -180,6 +180,7 @@ metadata_key2 = "value"
 quiet = false          # whether cargo output is quiet
 verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
+hyperlinks = true      # whether cargo inserts links into output
 progress.when = 'auto' # whether cargo shows progress bar
 progress.width = 80    # width of progress bar
 ```
@@ -1270,6 +1271,13 @@ Controls whether or not colored output is used in the terminal. Possible values:
 * `never`: Never display colors.
 
 Can be overridden with the `--color` command-line option.
+
+#### `term.hyperlinks`
+* Type: bool
+* Default: auto-detect
+* Environment: `CARGO_TERM_HYPERLINKS`
+
+Controls whether or not hyperlinks are used in the terminal.
 
 #### `term.progress.when`
 * Type: string

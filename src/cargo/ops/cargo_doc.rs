@@ -35,7 +35,11 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
                 cfg.map(|path_args| (path_args.path.resolve_program(ws.config()), path_args.args))
             };
             let mut shell = ws.config().shell();
-            shell.status("Opening", path.display())?;
+            let link = shell.err_file_hyperlink(&path);
+            shell.status(
+                "Opening",
+                format!("{}{}{}", link.open(), path.display(), link.close()),
+            )?;
             open_docs(&path, &mut shell, config_browser, ws.config())?;
         }
     } else {
@@ -47,7 +51,11 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
                     .join("index.html");
                 if path.exists() {
                     let mut shell = ws.config().shell();
-                    shell.status("Generated", path.display())?;
+                    let link = shell.err_file_hyperlink(&path);
+                    shell.status(
+                        "Generated",
+                        format!("{}{}{}", link.open(), path.display(), link.close()),
+                    )?;
                 }
             }
         }
