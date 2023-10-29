@@ -1,3 +1,5 @@
+[workspace]
+members = ["foo"]
 [workspace.package]
 authors = ["Rustaceans"]
 description = "foo"

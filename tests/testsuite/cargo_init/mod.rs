@@ -42,3 +42,4 @@ mod simple_hg_ignore_exists;
 mod simple_lib;
 mod unknown_flags;
 mod with_argument;
+mod workspace_add_member;

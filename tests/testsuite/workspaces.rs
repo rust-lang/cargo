@@ -1046,7 +1046,7 @@ fn members_include_path_deps() {
 }
 
 #[cargo_test]
-fn new_warns_you_this_will_not_work() {
+fn new_creates_members_list() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1063,20 +1063,7 @@ fn new_warns_you_this_will_not_work() {
     let p = p.build();
 
     p.cargo("new --lib bar")
-        .with_stderr(
-            "\
-warning: compiling this new package may not work due to invalid workspace configuration
-
-current package believes it's in a workspace when it's not:
-current: [..]
-workspace: [..]
-
-this may be fixable by ensuring that this crate is depended on by the workspace \
-root: [..]
-[..]
-[CREATED] library `bar` package
-",
-        )
+        .with_stderr("     Created library `bar` package")
         .run();
 }
 
