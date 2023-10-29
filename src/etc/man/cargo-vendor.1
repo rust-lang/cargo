@@ -14,8 +14,10 @@ the vendor directory specified by \fB<path>\fR will contain all remote sources f
 dependencies specified. Additional manifests beyond the default one can be
 specified with the \fB\-s\fR option.
 .sp
-The \fBcargo vendor\fR command will also print out the configuration necessary
-to use the vendored sources, which you will need to add to \fB\&.cargo/config.toml\fR\&.
+The configuration necessary to use the vendored sources would be printed to
+stdout after \fBcargo vendor\fR completes the vendoring process.
+You will need to add or redirect it to your Cargo configuration file,
+which is usually \fB\&.cargo/config.toml\fR locally for the current package.
 .SH "OPTIONS"
 .SS "Vendor Options"
 .sp
@@ -202,6 +204,16 @@ cargo vendor third\-party/vendor
 .RS 4
 .nf
 cargo vendor \-s ../path/to/Cargo.toml
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 4.\h'+01'Vendor and redirect the necessary vendor configs to a config file.
+.sp
+.RS 4
+.nf
+cargo vendor > path/to/my/cargo/config.toml
 .fi
 .RE
 .RE

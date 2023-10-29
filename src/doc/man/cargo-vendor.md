@@ -16,8 +16,10 @@ the vendor directory specified by `<path>` will contain all remote sources from
 dependencies specified. Additional manifests beyond the default one can be
 specified with the `-s` option.
 
-The `cargo vendor` command will also print out the configuration necessary
-to use the vendored sources, which you will need to add to `.cargo/config.toml`.
+The configuration necessary to use the vendored sources would be printed to
+stdout after `cargo vendor` completes the vendoring process.
+You will need to add or redirect it to your Cargo configuration file,
+which is usually `.cargo/config.toml` locally for the current package.
 
 ## OPTIONS
 
@@ -87,6 +89,10 @@ only a subset of the packages have changed.
 3. Vendor the current workspace as well as another to "vendor"
 
        cargo vendor -s ../path/to/Cargo.toml
+
+4. Vendor and redirect the necessary vendor configs to a config file.
+
+       cargo vendor > path/to/my/cargo/config.toml
 
 ## SEE ALSO
 {{man "cargo" 1}}
