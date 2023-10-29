@@ -3,7 +3,6 @@
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#search
 
 use std::cmp;
-use std::iter::repeat;
 
 use anyhow::Context as _;
 use url::Url;
@@ -35,7 +34,7 @@ pub fn search(
         .map(|krate| format!("{} = \"{}\"", krate.name, krate.max_version))
         .collect::<Vec<String>>();
 
-    let description_margin = names.iter().map(|s| s.len() + 4).max().unwrap_or_default();
+    let description_margin = names.iter().map(|s| s.len()).max().unwrap_or_default() + 4;
 
     let description_length = cmp::max(80, 128 - description_margin);
 
@@ -53,12 +52,7 @@ pub fn search(
 
     for (name, description) in names.into_iter().zip(descriptions) {
         let line = match description {
-            Some(desc) => {
-                let space = repeat(' ')
-                    .take(description_margin - name.len())
-                    .collect::<String>();
-                name + &space + "# " + &desc
-            }
+            Some(desc) => format!("{name: <description_margin$}# {desc}"),
             None => name,
         };
         let mut fragments = line.split(query).peekable();
