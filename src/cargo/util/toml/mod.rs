@@ -2096,6 +2096,7 @@ pub struct TomlWorkspaceDependency {
     default_features2: Option<bool>,
     optional: Option<bool>,
     public: Option<bool>,
+
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
@@ -2321,6 +2322,7 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     lib: Option<bool>,
     /// A platform name, like `x86_64-apple-darwin`
     target: Option<String>,
+
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
