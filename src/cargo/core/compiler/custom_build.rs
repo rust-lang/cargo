@@ -307,6 +307,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         cmd.env("CARGO_MANIFEST_LINKS", links);
     }
 
+    if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {
+        cmd.env("CARGO_TRIM_PATHS", trim_paths.to_string());
+    }
+
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
     for feat in &unit.features {
