@@ -489,9 +489,43 @@ break the build.
 The following illustrates some problems you may experience, and some possible
 solutions.
 
+### Why was a dependency included?
+
+Say you see dependency `rand` in the `cargo check` output but don't think its needed and want to understand why its being pulled in.
+
+You can run
+```console
+$ cargo tree --workspace --target all --all-features --invert rand
+rand v0.8.5
+└── ...
+
+rand v0.8.5
+└── ...
+```
+
+You might identify that it was an activated feature that caused `rand` to show up.  To figure out which package activated the feature, you can add the `--edges features`
+```console
+$ cargo tree --workspace --target all --all-features --edges features --invert rand
+rand v0.8.5
+└── ...
+
+rand v0.8.5
+└── ...
+```
+
 ### Unexpected dependency duplication
 
-The resolver algorithm may converge on a solution that includes two copies of a
+You see multiple instances of `rand` when you run
+```console
+$ cargo tree --workspace --target all --all-features --duplicates
+rand v0.7.3
+└── ...
+
+rand v0.8.5
+└── ...
+```
+
+The resolver algorithm has converged on a solution that includes two copies of a
 dependency when one would suffice. For example:
 
 ```toml
@@ -517,6 +551,17 @@ But, if you run into this situation, the [`cargo update`] command with the
 
 [`cargo update`]: ../commands/cargo-update.md
 
+### Why wasn't a newer version selected?
+
+Say you noticed that the latest version of a dependency wasn't selected when you ran:
+```console
+$ cargo update
+```
+You can enable some extra logging to see why this happened:
+```console
+$ env CARGO_LOG=cargo::core::resolver=trace cargo update
+```
+**Note:** Cargo log targets and levels may change over time.
 
 ### SemVer-breaking patch release breaks the build
 
