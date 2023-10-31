@@ -1532,9 +1532,9 @@ fn unique_build_targets(
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
+    exclude: Option<Vec<String>>,
     #[serde(rename = "default-members")]
     default_members: Option<Vec<String>>,
-    exclude: Option<Vec<String>>,
     resolver: Option<String>,
     metadata: Option<toml::Value>,
 
