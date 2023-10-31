@@ -1709,7 +1709,7 @@ pub struct TomlPackage {
 
     metadata: Option<toml::Value>,
 
-    // Provide a helpful error message for a common user error.
+    /// Provide a helpful error message for a common user error.
     #[serde(rename = "cargo-features", skip_serializing)]
     _invalid_cargo_features: Option<InvalidCargoFeatures>,
 }
