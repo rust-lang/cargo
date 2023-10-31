@@ -511,3 +511,69 @@ fn object_works() {
     assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
     assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
 }
+
+// TODO: might want to move to test/testsuite/build_script.rs once stabilized.
+#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+fn custom_build_env_var_trim_paths() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "")
+        .build();
+
+    let test_cases = [
+        ("[]", "none"),
+        ("\"all\"", "all"),
+        ("\"diagnostics\"", "diagnostics"),
+        ("\"macro\"", "macro"),
+        ("\"none\"", "none"),
+        ("\"object\"", "object"),
+        ("false", "none"),
+        ("true", "all"),
+        (
+            r#"["diagnostics", "macro", "object"]"#,
+            "diagnostics,macro,object",
+        ),
+    ];
+
+    for (opts, expected) in test_cases {
+        p.change_file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [profile.dev]
+                trim-paths = {opts}
+                "#
+            ),
+        );
+
+        p.change_file(
+            "build.rs",
+            &format!(
+                r#"
+                fn main() {{
+                    assert_eq!(
+                        std::env::var("CARGO_TRIM_PATHS").unwrap().as_str(),
+                        "{expected}",
+                    );
+                }}
+                "#
+            ),
+        );
+
+        p.cargo("build -Ztrim-paths")
+            .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+            .run();
+    }
+}
