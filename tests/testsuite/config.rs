@@ -2,6 +2,8 @@
 
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::config::{self, Config, Definition, JobsConfig, SslVersionConfig, StringList};
+use cargo::util::toml::TomlTrimPaths;
+use cargo::util::toml::TomlTrimPathsValue;
 use cargo::util::toml::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
 use cargo::CargoResult;
 use cargo_test_support::compare;
@@ -1540,6 +1542,7 @@ fn all_profile_options() {
         package: None,
         build_override: None,
         rustflags: None,
+        trim_paths: None,
     };
     let mut overrides = BTreeMap::new();
     let key = cargo_toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());
@@ -1726,4 +1729,64 @@ jobs = 2
         JobsConfig::String(_) => panic!("Did not except an integer."),
         JobsConfig::Integer(v) => assert_eq!(v, 2),
     }
+}
+
+#[cargo_test]
+fn trim_paths_parsing() {
+    let config = ConfigBuilder::new().build();
+    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    assert_eq!(p.trim_paths, None);
+
+    let test_cases = [
+        (TomlTrimPathsValue::Diagnostics.into(), "diagnostics"),
+        (TomlTrimPathsValue::Macro.into(), "macro"),
+        (TomlTrimPathsValue::Object.into(), "object"),
+    ];
+    for (expected, val) in test_cases {
+        // env
+        let config = ConfigBuilder::new()
+            .env("CARGO_PROFILE_DEV_TRIM_PATHS", val)
+            .build();
+        let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+        assert_eq!(trim_paths, expected, "failed to parse {val}");
+
+        // config.toml
+        let config = ConfigBuilder::new()
+            .config_arg(format!("profile.dev.trim-paths='{val}'"))
+            .build();
+        let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+        assert_eq!(trim_paths, expected, "failed to parse {val}");
+    }
+
+    let test_cases = [(TomlTrimPaths::none(), false), (TomlTrimPaths::All, true)];
+
+    for (expected, val) in test_cases {
+        // env
+        let config = ConfigBuilder::new()
+            .env("CARGO_PROFILE_DEV_TRIM_PATHS", format!("{val}"))
+            .build();
+        let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+        assert_eq!(trim_paths, expected, "failed to parse {val}");
+
+        // config.toml
+        let config = ConfigBuilder::new()
+            .config_arg(format!("profile.dev.trim-paths={val}"))
+            .build();
+        let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+        assert_eq!(trim_paths, expected, "failed to parse {val}");
+    }
+
+    let expected = vec![
+        TomlTrimPathsValue::Diagnostics,
+        TomlTrimPathsValue::Macro,
+        TomlTrimPathsValue::Object,
+    ]
+    .into();
+    let val = r#"["diagnostics", "macro", "object"]"#;
+    // config.toml
+    let config = ConfigBuilder::new()
+        .config_arg(format!("profile.dev.trim-paths={val}"))
+        .build();
+    let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+    assert_eq!(trim_paths, expected, "failed to parse {val}");
 }

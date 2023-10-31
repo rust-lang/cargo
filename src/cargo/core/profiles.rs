@@ -24,8 +24,11 @@
 use crate::core::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
+use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
 use crate::util::interning::InternedString;
+use crate::util::toml::TomlTrimPaths;
+use crate::util::toml::TomlTrimPathsValue;
 use crate::util::toml::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
@@ -80,7 +83,9 @@ impl Profiles {
             rustc_host,
         };
 
-        Self::add_root_profiles(&mut profile_makers, &profiles);
+        let trim_paths_enabled = ws.unstable_features().is_enabled(Feature::trim_paths())
+            || config.cli_unstable().trim_paths;
+        Self::add_root_profiles(&mut profile_makers, &profiles, trim_paths_enabled);
 
         // Merge with predefined profiles.
         use std::collections::btree_map::Entry;
@@ -123,6 +128,7 @@ impl Profiles {
     fn add_root_profiles(
         profile_makers: &mut Profiles,
         profiles: &BTreeMap<InternedString, TomlProfile>,
+        trim_paths_enabled: bool,
     ) {
         profile_makers.by_name.insert(
             InternedString::new("dev"),
@@ -131,7 +137,10 @@ impl Profiles {
 
         profile_makers.by_name.insert(
             InternedString::new("release"),
-            ProfileMaker::new(Profile::default_release(), profiles.get("release").cloned()),
+            ProfileMaker::new(
+                Profile::default_release(trim_paths_enabled),
+                profiles.get("release").cloned(),
+            ),
         );
     }
 
@@ -556,6 +565,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(flags) = &toml.rustflags {
         profile.rustflags = flags.iter().map(InternedString::from).collect();
     }
+    if let Some(trim_paths) = &toml.trim_paths {
+        profile.trim_paths = Some(trim_paths.clone());
+    }
     profile.strip = match toml.strip {
         Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
         None | Some(StringOrBool::Bool(false)) => Strip::None,
@@ -599,6 +611,9 @@ pub struct Profile {
     #[serde(skip_serializing_if = "Vec::is_empty")] // remove when `rustflags` is stablized
     // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
     pub rustflags: Vec<InternedString>,
+    // remove when `-Ztrim-paths` is stablized
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trim_paths: Option<TomlTrimPaths>,
 }
 
 impl Default for Profile {
@@ -619,6 +634,7 @@ impl Default for Profile {
             panic: PanicStrategy::Unwind,
             strip: Strip::None,
             rustflags: vec![],
+            trim_paths: None,
         }
     }
 }
@@ -628,7 +644,7 @@ compact_debug! {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let (default, default_name) = match self.name.as_str() {
                 "dev" => (Profile::default_dev(), "default_dev()"),
-                "release" => (Profile::default_release(), "default_release()"),
+                "release" => (Profile::default_release(false), "default_release()"),
                 _ => (Profile::default(), "default()"),
             };
             [debug_the_fields(
@@ -647,6 +663,7 @@ compact_debug! {
                 panic
                 strip
                 rustflags
+                trim_paths
             )]
         }
     }
@@ -688,11 +705,13 @@ impl Profile {
     }
 
     /// Returns a built-in `release` profile.
-    fn default_release() -> Profile {
+    fn default_release(trim_paths_enabled: bool) -> Profile {
+        let trim_paths = trim_paths_enabled.then(|| TomlTrimPathsValue::Object.into());
         Profile {
             name: InternedString::new("release"),
             root: ProfileRoot::Release,
             opt_level: InternedString::new("3"),
+            trim_paths,
             ..Profile::default()
         }
     }
@@ -713,6 +732,7 @@ impl Profile {
             self.rpath,
             (self.incremental, self.panic, self.strip),
             &self.rustflags,
+            &self.trim_paths,
         )
     }
 }

@@ -496,6 +496,9 @@ features! {
 
      // Support for 2024 edition.
     (unstable, edition2024, "", "reference/unstable.html#edition-2024"),
+
+    // Allow setting trim-paths in a profile to control the sanitisation of file paths in build outputs.
+    (unstable, trim_paths, "", "reference/unstable.html#profile-trim-paths-option"),
 }
 
 pub struct Feature {
@@ -755,6 +758,7 @@ unstable_cli_options!(
     separate_nightlies: bool = (HIDDEN),
     skip_rustdoc_fingerprint: bool = (HIDDEN),
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
+    trim_paths: bool = ("Enable the `trim-paths` option in profiles"),
     unstable_options: bool = ("Allow the usage of unstable options"),
 );
 
@@ -1089,6 +1093,7 @@ impl CliUnstable {
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
+            "trim-paths" => self.trim_paths = parse_empty(k, v)?,
             "publish-timeout" => self.publish_timeout = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "rustdoc-scrape-examples" => self.rustdoc_scrape_examples = parse_empty(k, v)?,

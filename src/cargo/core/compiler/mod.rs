@@ -94,6 +94,7 @@ use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::toml::TomlDebugInfo;
+use crate::util::toml::TomlTrimPaths;
 use crate::util::{add_path_args, internal, iter_join_onto, profile};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
 use rustfix::diagnostics::Applicability;
@@ -950,6 +951,7 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
         incremental,
         strip,
         rustflags: profile_rustflags,
+        trim_paths,
         ..
     } = unit.profile.clone();
     let test = unit.mode.is_any_test();
@@ -1026,6 +1028,10 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
                 cmd.arg("-C").arg(format!("split-debuginfo={split}"));
             }
         }
+    }
+
+    if let Some(trim_paths) = trim_paths {
+        trim_paths_args(cmd, cx, unit, &trim_paths)?;
     }
 
     cmd.args(unit.pkg.manifest().lint_rustflags());
@@ -1160,6 +1166,74 @@ fn features_args(unit: &Unit) -> Vec<OsString> {
     }
 
     args
+}
+
+/// Generates the `--remap-path-scope` and `--remap-path-prefix` for [RFC 3127].
+/// See also unstable feature [`-Ztrim-paths`].
+///
+/// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
+/// [`-Ztrim-paths`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-trim-paths-option
+fn trim_paths_args(
+    cmd: &mut ProcessBuilder,
+    cx: &Context<'_, '_>,
+    unit: &Unit,
+    trim_paths: &TomlTrimPaths,
+) -> CargoResult<()> {
+    if trim_paths.is_none() {
+        return Ok(());
+    }
+
+    // feature gate was checked during mainfest/config parsing.
+    cmd.arg("-Zunstable-options");
+    cmd.arg(format!("-Zremap-path-scope={trim_paths}"));
+
+    let sysroot_remap = {
+        let sysroot = &cx.bcx.target_data.info(unit.kind).sysroot;
+        let mut remap = OsString::from("--remap-path-prefix=");
+        remap.push(sysroot);
+        remap.push("/lib/rustlib/src/rust"); // See also `detect_sysroot_src_path()`.
+        remap.push("=");
+        remap.push("/rustc/");
+        // This remap logic aligns with rustc:
+        // <https://github.com/rust-lang/rust/blob/c2ef3516/src/bootstrap/src/lib.rs#L1113-L1116>
+        if let Some(commit_hash) = cx.bcx.rustc().commit_hash.as_ref() {
+            remap.push(commit_hash);
+        } else {
+            remap.push(cx.bcx.rustc().version.to_string());
+        }
+        remap
+    };
+    cmd.arg(sysroot_remap);
+
+    let package_remap = {
+        let pkg_root = unit.pkg.root();
+        let ws_root = cx.bcx.ws.root();
+        let is_local = unit.pkg.package_id().source_id().is_path();
+        let mut remap = OsString::from("--remap-path-prefix=");
+        // Remapped to path relative to workspace root:
+        //
+        // * path dependencies under workspace root directory
+        //
+        // Remapped to `<pkg>-<version>`
+        //
+        // * registry dependencies
+        // * git dependencies
+        // * path dependencies outside workspace root directory
+        if is_local && pkg_root.strip_prefix(ws_root).is_ok() {
+            remap.push(ws_root);
+            remap.push("="); // empty to remap to relative paths.
+        } else {
+            remap.push(pkg_root);
+            remap.push("=");
+            remap.push(unit.pkg.name());
+            remap.push("-");
+            remap.push(unit.pkg.version().to_string());
+        }
+        remap
+    };
+    cmd.arg(package_remap);
+
+    Ok(())
 }
 
 /// Generates the `--check-cfg` arguments for the `unit`.
