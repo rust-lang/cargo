@@ -192,29 +192,29 @@ fn warn_on_deprecated(new_path: &str, name: &str, kind: &str, warnings: &mut Vec
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlManifest {
-    cargo_features: Option<Vec<String>>,
-    package: Option<Box<TomlPackage>>,
-    project: Option<Box<TomlPackage>>,
-    profile: Option<TomlProfiles>,
-    lib: Option<TomlLibTarget>,
-    bin: Option<Vec<TomlBinTarget>>,
-    example: Option<Vec<TomlExampleTarget>>,
-    test: Option<Vec<TomlTestTarget>>,
-    bench: Option<Vec<TomlTestTarget>>,
-    dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub cargo_features: Option<Vec<String>>,
+    pub package: Option<Box<TomlPackage>>,
+    pub project: Option<Box<TomlPackage>>,
+    pub profile: Option<TomlProfiles>,
+    pub lib: Option<TomlLibTarget>,
+    pub bin: Option<Vec<TomlBinTarget>>,
+    pub example: Option<Vec<TomlExampleTarget>>,
+    pub test: Option<Vec<TomlTestTarget>>,
+    pub bench: Option<Vec<TomlTestTarget>>,
+    pub dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    features: Option<BTreeMap<String, Vec<String>>>,
-    target: Option<BTreeMap<String, TomlPlatform>>,
-    replace: Option<BTreeMap<String, TomlDependency>>,
-    patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
-    workspace: Option<TomlWorkspace>,
-    badges: Option<MaybeWorkspaceBtreeMap>,
-    lints: Option<MaybeWorkspaceLints>,
+    pub build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub features: Option<BTreeMap<String, Vec<String>>>,
+    pub target: Option<BTreeMap<String, TomlPlatform>>,
+    pub replace: Option<BTreeMap<String, TomlDependency>>,
+    pub patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
+    pub workspace: Option<TomlWorkspace>,
+    pub badges: Option<MaybeWorkspaceBtreeMap>,
+    pub lints: Option<MaybeWorkspaceLints>,
 }
 
 impl TomlManifest {
@@ -1532,16 +1532,16 @@ fn unique_build_targets(
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlWorkspace {
-    members: Option<Vec<String>>,
-    exclude: Option<Vec<String>>,
-    default_members: Option<Vec<String>>,
-    resolver: Option<String>,
-    metadata: Option<toml::Value>,
+    pub members: Option<Vec<String>>,
+    pub exclude: Option<Vec<String>>,
+    pub default_members: Option<Vec<String>>,
+    pub resolver: Option<String>,
+    pub metadata: Option<toml::Value>,
 
     // Properties that can be inherited by members.
-    package: Option<InheritableFields>,
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
-    lints: Option<TomlLints>,
+    pub package: Option<InheritableFields>,
+    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
+    pub lints: Option<TomlLints>,
 }
 
 /// A group of fields that are inheritable by members of the workspace
@@ -1551,31 +1551,31 @@ pub struct InheritableFields {
     // We use skip here since it will never be present when deserializing
     // and we don't want it present when serializing
     #[serde(skip)]
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(skip)]
-    lints: Option<TomlLints>,
+    pub lints: Option<TomlLints>,
 
-    version: Option<semver::Version>,
-    authors: Option<Vec<String>>,
-    description: Option<String>,
-    homepage: Option<String>,
-    documentation: Option<String>,
-    readme: Option<StringOrBool>,
-    keywords: Option<Vec<String>>,
-    categories: Option<Vec<String>>,
-    license: Option<String>,
-    license_file: Option<String>,
-    repository: Option<String>,
-    publish: Option<VecStringOrBool>,
-    edition: Option<String>,
-    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
-    exclude: Option<Vec<String>>,
-    include: Option<Vec<String>>,
-    rust_version: Option<RustVersion>,
+    pub version: Option<semver::Version>,
+    pub authors: Option<Vec<String>>,
+    pub description: Option<String>,
+    pub homepage: Option<String>,
+    pub documentation: Option<String>,
+    pub readme: Option<StringOrBool>,
+    pub keywords: Option<Vec<String>>,
+    pub categories: Option<Vec<String>>,
+    pub license: Option<String>,
+    pub license_file: Option<String>,
+    pub repository: Option<String>,
+    pub publish: Option<VecStringOrBool>,
+    pub edition: Option<String>,
+    pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    pub exclude: Option<Vec<String>>,
+    pub include: Option<Vec<String>>,
+    pub rust_version: Option<RustVersion>,
     // We use skip here since it will never be present when deserializing
     // and we don't want it present when serializing
     #[serde(skip)]
-    ws_root: PathBuf,
+    pub ws_root: PathBuf,
 }
 
 /// Defines simple getter methods for inheritable fields.
@@ -1673,44 +1673,44 @@ impl InheritableFields {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlPackage {
-    edition: Option<MaybeWorkspaceString>,
-    rust_version: Option<MaybeWorkspaceRustVersion>,
-    name: String,
-    version: Option<MaybeWorkspaceSemverVersion>,
-    authors: Option<MaybeWorkspaceVecString>,
-    build: Option<StringOrBool>,
-    metabuild: Option<StringOrVec>,
-    default_target: Option<String>,
-    forced_target: Option<String>,
-    links: Option<String>,
-    exclude: Option<MaybeWorkspaceVecString>,
-    include: Option<MaybeWorkspaceVecString>,
-    publish: Option<MaybeWorkspaceVecStringOrBool>,
-    workspace: Option<String>,
-    im_a_teapot: Option<bool>,
-    autobins: Option<bool>,
-    autoexamples: Option<bool>,
-    autotests: Option<bool>,
-    autobenches: Option<bool>,
-    default_run: Option<String>,
+    pub edition: Option<MaybeWorkspaceString>,
+    pub rust_version: Option<MaybeWorkspaceRustVersion>,
+    pub name: String,
+    pub version: Option<MaybeWorkspaceSemverVersion>,
+    pub authors: Option<MaybeWorkspaceVecString>,
+    pub build: Option<StringOrBool>,
+    pub metabuild: Option<StringOrVec>,
+    pub default_target: Option<String>,
+    pub forced_target: Option<String>,
+    pub links: Option<String>,
+    pub exclude: Option<MaybeWorkspaceVecString>,
+    pub include: Option<MaybeWorkspaceVecString>,
+    pub publish: Option<MaybeWorkspaceVecStringOrBool>,
+    pub workspace: Option<String>,
+    pub im_a_teapot: Option<bool>,
+    pub autobins: Option<bool>,
+    pub autoexamples: Option<bool>,
+    pub autotests: Option<bool>,
+    pub autobenches: Option<bool>,
+    pub default_run: Option<String>,
 
     // Package metadata.
-    description: Option<MaybeWorkspaceString>,
-    homepage: Option<MaybeWorkspaceString>,
-    documentation: Option<MaybeWorkspaceString>,
-    readme: Option<MaybeWorkspaceStringOrBool>,
-    keywords: Option<MaybeWorkspaceVecString>,
-    categories: Option<MaybeWorkspaceVecString>,
-    license: Option<MaybeWorkspaceString>,
-    license_file: Option<MaybeWorkspaceString>,
-    repository: Option<MaybeWorkspaceString>,
-    resolver: Option<String>,
+    pub description: Option<MaybeWorkspaceString>,
+    pub homepage: Option<MaybeWorkspaceString>,
+    pub documentation: Option<MaybeWorkspaceString>,
+    pub readme: Option<MaybeWorkspaceStringOrBool>,
+    pub keywords: Option<MaybeWorkspaceVecString>,
+    pub categories: Option<MaybeWorkspaceVecString>,
+    pub license: Option<MaybeWorkspaceString>,
+    pub license_file: Option<MaybeWorkspaceString>,
+    pub repository: Option<MaybeWorkspaceString>,
+    pub resolver: Option<String>,
 
-    metadata: Option<toml::Value>,
+    pub metadata: Option<toml::Value>,
 
     /// Provide a helpful error message for a common user error.
     #[serde(rename = "cargo-features", skip_serializing)]
-    _invalid_cargo_features: Option<InvalidCargoFeatures>,
+    pub _invalid_cargo_features: Option<InvalidCargoFeatures>,
 }
 
 impl TomlPackage {
@@ -1790,7 +1790,7 @@ impl<T, W: WorkspaceInherit> MaybeWorkspace<T, W> {
 }
 
 //. This already has a `Deserialize` impl from version_trim_whitespace
-type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
+pub type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceSemverVersion {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -1809,7 +1809,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceSemverVersion {
     }
 }
 
-type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
+pub type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -1844,7 +1844,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
     }
 }
 
-type MaybeWorkspaceRustVersion = MaybeWorkspace<RustVersion, TomlWorkspaceField>;
+pub type MaybeWorkspaceRustVersion = MaybeWorkspace<RustVersion, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -1880,7 +1880,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
     }
 }
 
-type MaybeWorkspaceVecString = MaybeWorkspace<Vec<String>, TomlWorkspaceField>;
+pub type MaybeWorkspaceVecString = MaybeWorkspace<Vec<String>, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -1915,7 +1915,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
     }
 }
 
-type MaybeWorkspaceStringOrBool = MaybeWorkspace<StringOrBool, TomlWorkspaceField>;
+pub type MaybeWorkspaceStringOrBool = MaybeWorkspace<StringOrBool, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -1959,7 +1959,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
     }
 }
 
-type MaybeWorkspaceVecStringOrBool = MaybeWorkspace<VecStringOrBool, TomlWorkspaceField>;
+pub type MaybeWorkspaceVecStringOrBool = MaybeWorkspace<VecStringOrBool, TomlWorkspaceField>;
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -2003,7 +2003,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
     }
 }
 
-type MaybeWorkspaceBtreeMap =
+pub type MaybeWorkspaceBtreeMap =
     MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>, TomlWorkspaceField>;
 
 impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
@@ -2031,7 +2031,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
 #[serde(rename_all = "kebab-case")]
 pub struct TomlWorkspaceField {
     #[serde(deserialize_with = "bool_no_false")]
-    workspace: bool,
+    pub workspace: bool,
 }
 
 impl WorkspaceInherit for TomlWorkspaceField {
@@ -2053,7 +2053,7 @@ fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool,
     }
 }
 
-type MaybeWorkspaceDependency = MaybeWorkspace<TomlDependency, TomlWorkspaceDependency>;
+pub type MaybeWorkspaceDependency = MaybeWorkspace<TomlDependency, TomlWorkspaceDependency>;
 
 impl MaybeWorkspaceDependency {
     fn unused_keys(&self) -> Vec<String> {
@@ -2089,18 +2089,18 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceDependency {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlWorkspaceDependency {
-    workspace: bool,
-    features: Option<Vec<String>>,
-    default_features: Option<bool>,
+    pub workspace: bool,
+    pub features: Option<Vec<String>>,
+    pub default_features: Option<bool>,
     #[serde(rename = "default_features")]
-    default_features2: Option<bool>,
-    optional: Option<bool>,
-    public: Option<bool>,
+    pub default_features2: Option<bool>,
+    pub optional: Option<bool>,
+    pub public: Option<bool>,
 
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    unused_keys: BTreeMap<String, toml::Value>,
+    pub unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl TomlWorkspaceDependency {
@@ -2292,41 +2292,41 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct DetailedTomlDependency<P: Clone = String> {
-    version: Option<String>,
-    registry: Option<String>,
+    pub version: Option<String>,
+    pub registry: Option<String>,
     /// The URL of the `registry` field.
     /// This is an internal implementation detail. When Cargo creates a
     /// package, it replaces `registry` with `registry-index` so that the
     /// manifest contains the correct URL. All users won't have the same
     /// registry names configured, so Cargo can't rely on just the name for
     /// crates published by other users.
-    registry_index: Option<String>,
+    pub registry_index: Option<String>,
     // `path` is relative to the file it appears in. If that's a `Cargo.toml`, it'll be relative to
     // that TOML file, and if it's a `.cargo/config` file, it'll be relative to that file.
-    path: Option<P>,
-    git: Option<String>,
-    branch: Option<String>,
-    tag: Option<String>,
-    rev: Option<String>,
-    features: Option<Vec<String>>,
-    optional: Option<bool>,
-    default_features: Option<bool>,
+    pub path: Option<P>,
+    pub git: Option<String>,
+    pub branch: Option<String>,
+    pub tag: Option<String>,
+    pub rev: Option<String>,
+    pub features: Option<Vec<String>>,
+    pub optional: Option<bool>,
+    pub default_features: Option<bool>,
     #[serde(rename = "default_features")]
-    default_features2: Option<bool>,
-    package: Option<String>,
-    public: Option<bool>,
+    pub default_features2: Option<bool>,
+    pub package: Option<String>,
+    pub public: Option<bool>,
 
     /// One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.
-    artifact: Option<StringOrVec>,
+    pub artifact: Option<StringOrVec>,
     /// If set, the artifact should also be a dependency
-    lib: Option<bool>,
+    pub lib: Option<bool>,
     /// A platform name, like `x86_64-apple-darwin`
-    target: Option<String>,
+    pub target: Option<String>,
 
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    unused_keys: BTreeMap<String, toml::Value>,
+    pub unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl DetailedTomlDependency {
@@ -2638,7 +2638,7 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles(BTreeMap<String, TomlProfile>);
+pub struct TomlProfiles(pub BTreeMap<String, TomlProfile>);
 
 impl TomlProfiles {
     pub fn get_all(&self) -> &BTreeMap<String, TomlProfile> {
@@ -3295,39 +3295,39 @@ impl fmt::Display for TomlTrimPathsValue {
     }
 }
 
-type TomlLibTarget = TomlTarget;
-type TomlBinTarget = TomlTarget;
-type TomlExampleTarget = TomlTarget;
-type TomlTestTarget = TomlTarget;
-type TomlBenchTarget = TomlTarget;
+pub type TomlLibTarget = TomlTarget;
+pub type TomlBinTarget = TomlTarget;
+pub type TomlExampleTarget = TomlTarget;
+pub type TomlTestTarget = TomlTarget;
+pub type TomlBenchTarget = TomlTarget;
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
-struct TomlTarget {
-    name: Option<String>,
+pub struct TomlTarget {
+    pub name: Option<String>,
 
     // The intention was to only accept `crate-type` here but historical
     // versions of Cargo also accepted `crate_type`, so look for both.
-    crate_type: Option<Vec<String>>,
+    pub crate_type: Option<Vec<String>>,
     #[serde(rename = "crate_type")]
-    crate_type2: Option<Vec<String>>,
+    pub crate_type2: Option<Vec<String>>,
 
-    path: Option<PathValue>,
+    pub path: Option<PathValue>,
     // Note that `filename` is used for the cargo-feature `different_binary_name`
-    filename: Option<String>,
-    test: Option<bool>,
-    doctest: Option<bool>,
-    bench: Option<bool>,
-    doc: Option<bool>,
-    plugin: Option<bool>,
-    doc_scrape_examples: Option<bool>,
+    pub filename: Option<String>,
+    pub test: Option<bool>,
+    pub doctest: Option<bool>,
+    pub bench: Option<bool>,
+    pub doc: Option<bool>,
+    pub plugin: Option<bool>,
+    pub doc_scrape_examples: Option<bool>,
     #[serde(rename = "proc-macro")]
-    proc_macro_raw: Option<bool>,
+    pub proc_macro_raw: Option<bool>,
     #[serde(rename = "proc_macro")]
-    proc_macro_raw2: Option<bool>,
-    harness: Option<bool>,
-    required_features: Option<Vec<String>>,
-    edition: Option<String>,
+    pub proc_macro_raw2: Option<bool>,
+    pub harness: Option<bool>,
+    pub required_features: Option<Vec<String>>,
+    pub edition: Option<String>,
 }
 
 impl TomlTarget {
@@ -3385,14 +3385,14 @@ impl TomlTarget {
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
-struct TomlPlatform {
-    dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+pub struct TomlPlatform {
+    pub dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -3401,9 +3401,9 @@ struct TomlPlatform {
 pub struct MaybeWorkspaceLints {
     #[serde(skip_serializing_if = "is_false")]
     #[serde(deserialize_with = "bool_no_false", default)]
-    workspace: bool,
+    pub workspace: bool,
     #[serde(flatten)]
-    lints: TomlLints,
+    pub lints: TomlLints,
 }
 
 fn is_false(b: &bool) -> bool {
@@ -3472,9 +3472,9 @@ impl TomlLint {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlLintConfig {
-    level: TomlLintLevel,
+    pub level: TomlLintLevel,
     #[serde(default)]
-    priority: i8,
+    pub priority: i8,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -3498,8 +3498,7 @@ impl TomlLintLevel {
 }
 
 #[derive(Copy, Clone, Debug)]
-#[non_exhaustive]
-struct InvalidCargoFeatures {}
+pub struct InvalidCargoFeatures {}
 
 impl<'de> de::Deserialize<'de> for InvalidCargoFeatures {
     fn deserialize<D>(_d: D) -> Result<Self, D::Error>
@@ -3533,7 +3532,7 @@ impl ResolveToPath for ConfigRelativePath {
 /// A StringOrVec can be parsed from either a TOML string or array,
 /// but is always stored as a vector.
 #[derive(Clone, Debug, Serialize, Eq, PartialEq, PartialOrd, Ord)]
-pub struct StringOrVec(Vec<String>);
+pub struct StringOrVec(pub Vec<String>);
 
 impl StringOrVec {
     pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, String> {
@@ -3594,7 +3593,7 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
 }
 
 #[derive(Clone)]
-struct PathValue(PathBuf);
+pub struct PathValue(pub PathBuf);
 
 impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
