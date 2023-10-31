@@ -135,7 +135,7 @@ separated with a comma, e.g., `>= 1.2, < 1.5`.
 > Avoid constraining the upper bound of a version to be anything less than the
 > next semver incompatible version
 > (e.g. avoid `">=2.0, <2.4"`) as other packages in the dependency tree may
-> require a newer version, leading to an unresolvable error (see #6584).
+> require a newer version, leading to an unresolvable error (see [#9029]).
 > Consider whether controlling the version in your [`Cargo.lock`] would be more
 > appropriate.
 >
@@ -152,7 +152,7 @@ separated with a comma, e.g., `>= 1.2, < 1.5`.
 
 [`Cargo.lock`]: ../guide/cargo-toml-vs-cargo-lock.md
 [#2222]: https://github.com/rust-lang/cargo/issues/2222
-[#6584]: https://github.com/rust-lang/cargo/issues/6584
+[#9029]: https://github.com/rust-lang/cargo/issues/9029
 [#10599]: https://github.com/rust-lang/cargo/issues/10599
 
 ## Specifying dependencies from other registries
