@@ -1530,25 +1530,23 @@ fn unique_build_targets(
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
-    #[serde(rename = "default-members")]
-    default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
+    default_members: Option<Vec<String>>,
     resolver: Option<String>,
+    metadata: Option<toml::Value>,
 
     // Properties that can be inherited by members.
     package: Option<InheritableFields>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
     lints: Option<TomlLints>,
-
-    // Note that this field must come last due to the way toml serialization
-    // works which requires tables to be emitted after all values.
-    metadata: Option<toml::Value>,
 }
 
 /// A group of fields that are inheritable by members of the workspace
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct InheritableFields {
     // We use skip here since it will never be present when deserializing
     // and we don't want it present when serializing
@@ -1566,7 +1564,6 @@ pub struct InheritableFields {
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
     license: Option<String>,
-    #[serde(rename = "license-file")]
     license_file: Option<String>,
     repository: Option<String>,
     publish: Option<VecStringOrBool>,
@@ -1574,7 +1571,6 @@ pub struct InheritableFields {
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
-    #[serde(rename = "rust-version")]
     rust_version: Option<RustVersion>,
     // We use skip here since it will never be present when deserializing
     // and we don't want it present when serializing
@@ -1710,13 +1706,11 @@ pub struct TomlPackage {
     repository: Option<MaybeWorkspaceString>,
     resolver: Option<String>,
 
-    // Provide a helpful error message for a common user error.
+    metadata: Option<toml::Value>,
+
+    /// Provide a helpful error message for a common user error.
     #[serde(rename = "cargo-features", skip_serializing)]
     _invalid_cargo_features: Option<InvalidCargoFeatures>,
-
-    // Note that this field must come last due to the way toml serialization
-    // works which requires tables to be emitted after all values.
-    metadata: Option<toml::Value>,
 }
 
 impl TomlPackage {
@@ -2034,6 +2028,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
 }
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct TomlWorkspaceField {
     #[serde(deserialize_with = "bool_no_false")]
     workspace: bool,
@@ -2064,7 +2059,7 @@ impl MaybeWorkspaceDependency {
     fn unused_keys(&self) -> Vec<String> {
         match self {
             MaybeWorkspaceDependency::Defined(d) => d.unused_keys(),
-            MaybeWorkspaceDependency::Workspace(w) => w.other.keys().cloned().collect(),
+            MaybeWorkspaceDependency::Workspace(w) => w.unused_keys.keys().cloned().collect(),
         }
     }
 }
@@ -2101,10 +2096,11 @@ pub struct TomlWorkspaceDependency {
     default_features2: Option<bool>,
     optional: Option<bool>,
     public: Option<bool>,
+
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    other: BTreeMap<String, toml::Value>,
+    unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl TomlWorkspaceDependency {
@@ -2212,7 +2208,7 @@ impl TomlDependency {
     fn unused_keys(&self) -> Vec<String> {
         match self {
             TomlDependency::Simple(_) => vec![],
-            TomlDependency::Detailed(detailed) => detailed.other.keys().cloned().collect(),
+            TomlDependency::Detailed(detailed) => detailed.unused_keys.keys().cloned().collect(),
         }
     }
 }
@@ -2326,10 +2322,11 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     lib: Option<bool>,
     /// A platform name, like `x86_64-apple-darwin`
     target: Option<String>,
+
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    other: BTreeMap<String, toml::Value>,
+    unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl DetailedTomlDependency {
@@ -2635,7 +2632,7 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
             artifact: Default::default(),
             lib: Default::default(),
             target: Default::default(),
-            other: Default::default(),
+            unused_keys: Default::default(),
         }
     }
 }
@@ -3383,13 +3380,12 @@ impl TomlTarget {
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 struct TomlPlatform {
     dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    #[serde(rename = "build-dependencies")]
     build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "build_dependencies")]
     build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    #[serde(rename = "dev-dependencies")]
     dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "dev_dependencies")]
     dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
@@ -3397,6 +3393,7 @@ struct TomlPlatform {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(expecting = "a lints table")]
+#[serde(rename_all = "kebab-case")]
 pub struct MaybeWorkspaceLints {
     #[serde(skip_serializing_if = "is_false")]
     #[serde(deserialize_with = "bool_no_false", default)]
