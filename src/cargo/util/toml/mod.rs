@@ -1536,15 +1536,12 @@ pub struct TomlWorkspace {
     default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
     resolver: Option<String>,
+    metadata: Option<toml::Value>,
 
     // Properties that can be inherited by members.
     package: Option<InheritableFields>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
     lints: Option<TomlLints>,
-
-    // Note that this field must come last due to the way toml serialization
-    // works which requires tables to be emitted after all values.
-    metadata: Option<toml::Value>,
 }
 
 /// A group of fields that are inheritable by members of the workspace
@@ -1710,13 +1707,11 @@ pub struct TomlPackage {
     repository: Option<MaybeWorkspaceString>,
     resolver: Option<String>,
 
+    metadata: Option<toml::Value>,
+
     // Provide a helpful error message for a common user error.
     #[serde(rename = "cargo-features", skip_serializing)]
     _invalid_cargo_features: Option<InvalidCargoFeatures>,
-
-    // Note that this field must come last due to the way toml serialization
-    // works which requires tables to be emitted after all values.
-    metadata: Option<toml::Value>,
 }
 
 impl TomlPackage {
