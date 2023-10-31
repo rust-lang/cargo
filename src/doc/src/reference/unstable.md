@@ -94,7 +94,7 @@ For the latest nightly, see the [nightly version] of this page.
     * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
     * [Edition 2024](#edition-2024) — Adds support for the 2024 Edition.
-    * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitisation of file paths in build outputs.
+    * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
 * Information and metadata
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -1292,7 +1292,7 @@ edition that may break your build.
 * Tracking Issue: [rust-lang/cargo#12137](https://github.com/rust-lang/cargo/issues/12137)
 * Tracking Rustc Issue: [rust-lang/rust#111540](https://github.com/rust-lang/rust/issues/111540)
 
-This adds a new profile setting to control how paths are sanitised in the resulting binary.
+This adds a new profile setting to control how paths are sanitized in the resulting binary.
 This can be enabled like so:
 
 ```toml
@@ -1369,6 +1369,19 @@ if it isn't, then they will show up as `/rustc/[rustc commit hash]/library/...`
 Paths to all other source files will not be affected.
 
 This will not affect any hard-coded paths in the source code, such as in strings.
+
+#### Environment variable
+
+*as a new entry of ["Environment variables Cargo sets for build scripts"](./environment-variables.md#environment-variables-cargo-sets-for-crates)*
+
+* `CARGO_TRIM_PATHS` --- The value of `trim-paths` profile option.
+    `false`, `"none"`, and empty arrays would be converted to `none`.
+    `true` and `"all"` become `all`.
+    Values in a non-empty array would be joined into a comma-separated list.
+    If the build script introduces absolute paths to built artifacts (such as by invoking a compiler),
+    the user may request them to be sanitized in different types of artifacts.
+    Common paths requiring sanitization include `OUT_DIR` and `CARGO_MANIFEST_DIR`,
+    plus any other introduced by the build script, such as include directories.
 
 # Stabilized and removed features
 
