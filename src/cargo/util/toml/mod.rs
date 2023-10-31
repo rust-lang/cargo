@@ -2064,7 +2064,7 @@ impl MaybeWorkspaceDependency {
     fn unused_keys(&self) -> Vec<String> {
         match self {
             MaybeWorkspaceDependency::Defined(d) => d.unused_keys(),
-            MaybeWorkspaceDependency::Workspace(w) => w.other.keys().cloned().collect(),
+            MaybeWorkspaceDependency::Workspace(w) => w.unused_keys.keys().cloned().collect(),
         }
     }
 }
@@ -2104,7 +2104,7 @@ pub struct TomlWorkspaceDependency {
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    other: BTreeMap<String, toml::Value>,
+    unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl TomlWorkspaceDependency {
@@ -2212,7 +2212,7 @@ impl TomlDependency {
     fn unused_keys(&self) -> Vec<String> {
         match self {
             TomlDependency::Simple(_) => vec![],
-            TomlDependency::Detailed(detailed) => detailed.other.keys().cloned().collect(),
+            TomlDependency::Detailed(detailed) => detailed.unused_keys.keys().cloned().collect(),
         }
     }
 }
@@ -2329,7 +2329,7 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    other: BTreeMap<String, toml::Value>,
+    unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl DetailedTomlDependency {
@@ -2635,7 +2635,7 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
             artifact: Default::default(),
             lib: Default::default(),
             target: Default::default(),
-            other: Default::default(),
+            unused_keys: Default::default(),
         }
     }
 }
