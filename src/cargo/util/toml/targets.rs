@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
-use super::{
+use super::schema::{
     PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
     TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };

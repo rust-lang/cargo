@@ -4,7 +4,7 @@
 
 use cargo::util::network::http::http_handle;
 use cargo::util::network::http::needs_custom_http_transport;
-use cargo::util::toml::StringOrVec;
+use cargo::util::toml::schema::StringOrVec;
 use cargo::util::CliError;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
 use cargo_util::{ProcessBuilder, ProcessError};

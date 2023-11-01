@@ -7,7 +7,7 @@ use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::is_rustup;
 use crate::util::restricted_names::is_glob_pattern;
-use crate::util::toml::{StringOrVec, TomlProfile};
+use crate::util::toml::schema::{StringOrVec, TomlProfile};
 use crate::util::validate_package_name;
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
