@@ -373,7 +373,7 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  URLs need to specify the path to the repository
+  URL \"git://host.xz\" does not specify a path to a repository
 "
     } else {
         "\
