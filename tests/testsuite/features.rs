@@ -1144,6 +1144,61 @@ fn activating_feature_activates_dep() {
 }
 
 #[cargo_test]
+fn activating_feature_does_not_activate_transitive_dev_dependency() {
+    let p = project()
+        .no_manifest()
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.0"
+                edition = "2021"
+
+                [features]
+                f = ["b/f"]
+
+                [dependencies]
+                b = { path = "../b" }
+            "#,
+        )
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.0.0"
+                edition = "2021"
+
+                [features]
+                f = ["c/f"]
+
+                [dev-dependencies]
+                c = { path = "../c" }
+            "#,
+        )
+        .file(
+            "c/Cargo.toml",
+            r#"
+                [package]
+                name = "c"
+                version = "0.0.0"
+                edition = "2021"
+
+                [features]
+                f = []
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file("b/src/lib.rs", "")
+        .file("c/src/lib.rs", "compile_error!")
+        .build();
+
+    p.cargo("check --manifest-path a/Cargo.toml --features f")
+        .run();
+}
+
+#[cargo_test]
 fn dep_feature_in_cmd_line() {
     let p = project()
         .file(
