@@ -1024,7 +1024,7 @@ fn cmd_metadata_with_embedded() {
                 "default_run": null,
                 "name": "script",
                 "version": "0.0.0",
-                "id": "script[..]",
+                "id": "path+file:[..]foo#script@0.0.0",
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
@@ -1062,18 +1062,18 @@ fn cmd_metadata_with_embedded() {
                 "publish": []
             }
         ],
-        "workspace_members": ["script 0.0.0 (path+file:[..]foo)"],
-        "workspace_default_members": ["script 0.0.0 (path+file:[..]foo)"],
+        "workspace_members": ["path+file:[..]foo#script@0.0.0"],
+        "workspace_default_members": ["path+file:[..]foo#script@0.0.0"],
         "resolve": {
             "nodes": [
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "script 0.0.0 (path+file:[..]foo)"
+                    "id": "path+file:[..]foo#script@0.0.0"
                 }
             ],
-            "root": "script 0.0.0 (path+file:[..]foo)"
+            "root": "path+file:[..]foo#script@0.0.0"
         },
         "target_directory": "[ROOT]/home/.cargo/target/[..]",
         "version": 1,
@@ -1112,7 +1112,7 @@ fn cmd_read_manifest_with_embedded() {
     "repository": null,
     "rust_version": null,
     "version":"0.0.0",
-    "id":"script[..]0.0.0[..](path+file://[..]/foo)",
+    "id":"path+file://[..]/foo#script@0.0.0",
     "keywords": [],
     "license": null,
     "license_file": null,
