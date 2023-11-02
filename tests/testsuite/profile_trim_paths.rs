@@ -166,6 +166,41 @@ fn multiple_options() {
 }
 
 #[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+fn profile_merge_works() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [profile.dev]
+                trim-paths = ["macro"]
+
+                [profile.custom]
+                inherits = "dev"
+                trim-paths = ["diagnostics"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v -Ztrim-paths --profile custom")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc [..]\
+    -Zremap-path-scope=macro \
+    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..] \
+    --remap-path-prefix=[CWD]= [..]
+[FINISHED] custom [..]",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
 fn registry_dependency() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
