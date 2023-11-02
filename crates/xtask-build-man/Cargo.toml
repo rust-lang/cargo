@@ -1,0 +1,8 @@
+[package]
+name = "xtask-build-man"
+version = "0.0.0"
+rust-version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]

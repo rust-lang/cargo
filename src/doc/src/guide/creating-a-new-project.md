@@ -1,4 +1,4 @@
-## Creating a New Package
+# Creating a New Package
 
 To start a new [package][def-package] with Cargo, use `cargo new`:
 

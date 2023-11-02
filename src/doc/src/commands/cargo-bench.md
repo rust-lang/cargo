@@ -1,8 +1,5 @@
 # cargo-bench(1)
 
-
-
-
 ## NAME
 
 cargo-bench --- Execute benchmarks of a package
@@ -33,7 +30,7 @@ Benchmarks are built with the `--test` option to `rustc` which creates a
 special executable by linking your code with libtest. The executable
 automatically runs all functions annotated with the `#[bench]` attribute.
 Cargo passes the `--bench` flag to the test harness to tell it to run
-only benchmarks.
+only benchmarks, regardless of whether the harness is libtest or a custom harness.
 
 The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
@@ -143,10 +140,16 @@ following targets of the selected packages:
 
 The default behavior can be changed by setting the `bench` flag for the target
 in the manifest settings. Setting examples to `bench = true` will build and
-run the example as a benchmark. Setting targets to `bench = false` will stop
-them from being benchmarked by default. Target selection options that take a
-target by name ignore the `bench` flag and will always benchmark the given
+run the example as a benchmark, replacing the example's `main` function with
+the libtest harness.
+
+Setting targets to `bench = false` will stop them from being bencharmked by
+default. Target selection options that take a target by name (such as
+`--example foo`) ignore the `bench` flag and will always benchmark the given
 target.
+
+See [Configuring a target](../reference/cargo-targets.html#configuring-a-target)
+for more information on per-target settings.
 
 Binary targets are automatically built if there is an integration test or
 benchmark being selected to benchmark. This allows an integration
@@ -275,7 +278,7 @@ target artifacts are placed in a separate directory. See the
 
 <dt class="option-term" id="option-cargo-bench---profile"><a class="option-anchor" href="#option-cargo-bench---profile"></a><code>--profile</code> <em>name</em></dt>
 <dd class="option-desc">Benchmark with the given profile.
-See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
 
@@ -438,7 +441,12 @@ See the <a href="../reference/config.html#command-line-overrides">command-line o
 <dt class="option-term" id="option-cargo-bench--C"><a class="option-anchor" href="#option-cargo-bench--C"></a><code>-C</code> <em>PATH</em></dt>
 <dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
-the directories searched for discovering <code>.cargo/config.toml</code>, for example.</dd>
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-bench--h"><a class="option-anchor" href="#option-cargo-bench--h"></a><code>-h</code></dt>
@@ -465,17 +473,20 @@ Rust test harness runs benchmarks serially in a single thread.
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of logical CPUs. If negative, it sets the maximum number of
-parallel jobs to the number of logical CPUs plus provided value.
+parallel jobs to the number of logical CPUs plus provided value. If
+a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</dd>
 
 
-<dt class="option-term" id="option-cargo-bench---keep-going"><a class="option-anchor" href="#option-cargo-bench---keep-going"></a><code>--keep-going</code></dt>
-<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-<code>-Zunstable-options</code>.</dd>
-
-
 </dl>
+
+While `cargo bench` involves compilation, it does not provide a `--keep-going`
+flag. Use `--no-fail-fast` to run as many benchmarks as possible without
+stopping at the first failure. To "compile" as many benchmarks as possible, use
+`--benches` to build benchmark binaries separately. For example:
+
+    cargo build --benches --release --keep-going
+    cargo bench --no-fail-fast
 
 ## ENVIRONMENT
 

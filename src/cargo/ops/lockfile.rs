@@ -2,26 +2,24 @@ use std::io::prelude::*;
 
 use crate::core::{resolver, Resolve, ResolveVersion, Workspace};
 use crate::util::errors::CargoResult;
-use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 
 use anyhow::Context as _;
 
 pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
-    if !ws.root().join("Cargo.lock").exists() {
+    let lock_root = lock_root(ws);
+    if !lock_root.as_path_unlocked().join("Cargo.lock").exists() {
         return Ok(None);
     }
 
-    let root = Filesystem::new(ws.root().to_path_buf());
-    let mut f = root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file")?;
+    let mut f = lock_root.open_ro_shared("Cargo.lock", ws.config(), "Cargo.lock file")?;
 
     let mut s = String::new();
     f.read_to_string(&mut s)
         .with_context(|| format!("failed to read file: {}", f.path().display()))?;
 
     let resolve = (|| -> CargoResult<Option<Resolve>> {
-        let resolve: toml::Table = cargo_toml::parse_document(&s, f.path(), ws.config())?;
-        let v: resolver::EncodableResolve = resolve.try_into()?;
+        let v: resolver::EncodableResolve = toml::from_str(&s)?;
         Ok(Some(v.into_resolve(&s, ws)?))
     })()
     .with_context(|| format!("failed to parse lock file at: {}", f.path().display()))?;
@@ -30,12 +28,12 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
 
 /// Generate a toml String of Cargo.lock from a Resolve.
 pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<String> {
-    let (_orig, out, _ws_root) = resolve_to_string_orig(ws, resolve);
+    let (_orig, out, _lock_root) = resolve_to_string_orig(ws, resolve);
     Ok(out)
 }
 
 pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<()> {
-    let (orig, mut out, ws_root) = resolve_to_string_orig(ws, resolve);
+    let (orig, mut out, lock_root) = resolve_to_string_orig(ws, resolve);
 
     // If the lock file contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
@@ -55,7 +53,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
             "the lock file {} needs to be updated but {} was passed to prevent this\n\
              If you want to try to generate the lock file without accessing the network, \
              remove the {} flag and use --offline instead.",
-            ws.root().to_path_buf().join("Cargo.lock").display(),
+            lock_root.as_path_unlocked().join("Cargo.lock").display(),
             flag,
             flag
         );
@@ -66,20 +64,32 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     // out lock file updates as they're otherwise already updated, and changes
     // which don't touch dependencies won't seemingly spuriously update the lock
     // file.
-    if resolve.version() < ResolveVersion::default() {
-        resolve.set_version(ResolveVersion::default());
+    let default_version = ResolveVersion::default();
+    let current_version = resolve.version();
+    let next_lockfile_bump = ws.config().cli_unstable().next_lockfile_bump;
+
+    if current_version < default_version {
+        resolve.set_version(default_version);
         out = serialize_resolve(resolve, orig.as_deref());
+    } else if current_version > ResolveVersion::max_stable() && !next_lockfile_bump {
+        // The next version hasn't yet stabilized.
+        anyhow::bail!("lock file version `{current_version:?}` requires `-Znext-lockfile-bump`")
     }
 
     // Ok, if that didn't work just write it out
-    ws_root
-        .open_rw("Cargo.lock", ws.config(), "Cargo.lock file")
+    lock_root
+        .open_rw_exclusive_create("Cargo.lock", ws.config(), "Cargo.lock file")
         .and_then(|mut f| {
             f.file().set_len(0)?;
             f.write_all(out.as_bytes())?;
             Ok(())
         })
-        .with_context(|| format!("failed to write {}", ws.root().join("Cargo.lock").display()))?;
+        .with_context(|| {
+            format!(
+                "failed to write {}",
+                lock_root.as_path_unlocked().join("Cargo.lock").display()
+            )
+        })?;
     Ok(())
 }
 
@@ -88,15 +98,15 @@ fn resolve_to_string_orig(
     resolve: &mut Resolve,
 ) -> (Option<String>, String, Filesystem) {
     // Load the original lock file if it exists.
-    let ws_root = Filesystem::new(ws.root().to_path_buf());
-    let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
+    let lock_root = lock_root(ws);
+    let orig = lock_root.open_ro_shared("Cargo.lock", ws.config(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
         let mut s = String::new();
         f.read_to_string(&mut s)?;
         Ok(s)
     });
     let out = serialize_resolve(resolve, orig.as_deref().ok());
-    (orig.ok(), out, ws_root)
+    (orig.ok(), out, lock_root)
 }
 
 fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
@@ -225,5 +235,13 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
         out.push('\n');
     } else if dep.contains_key("replace") {
         out.push_str(&format!("replace = {}\n\n", &dep["replace"]));
+    }
+}
+
+fn lock_root(ws: &Workspace<'_>) -> Filesystem {
+    if ws.root_maybe().is_embedded() {
+        ws.target_dir()
+    } else {
+        Filesystem::new(ws.root().to_owned())
     }
 }

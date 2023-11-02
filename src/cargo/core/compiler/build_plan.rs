@@ -86,10 +86,7 @@ impl Invocation {
             );
         }
         for (var, value) in cmd.get_envs() {
-            let value = match value {
-                Some(s) => s,
-                None => continue,
-            };
+            let Some(value) = value else { continue };
             self.env.insert(
                 var.clone(),
                 value

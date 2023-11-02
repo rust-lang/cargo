@@ -14,15 +14,94 @@ The yank command removes a previously published crate\[cq]s version from the
 server\[cq]s index. This command does not delete any data, and the crate will
 still be available for download via the registry\[cq]s download link.
 .sp
-Note that existing crates locked to a yanked version will still be able to
-download the yanked version to use it. Cargo will, however, not allow any new
-crates to be locked to any yanked version.
+Cargo will not use a yanked version for any new project or checkout without a
+pre\-existing lockfile, and will generate an error if there are no longer
+any compatible versions for your crate.
 .sp
 This command requires you to be authenticated with either the \fB\-\-token\fR option
 or using \fBcargo\-login\fR(1).
 .sp
 If the crate name is not specified, it will use the package name from the
 current directory.
+.SS "How yank works"
+For example, the \fBfoo\fR crate published version \fB1.5.0\fR and another crate \fBbar\fR
+declared a dependency on version \fBfoo = "1.5"\fR\&. Now \fBfoo\fR releases a new, but
+not semver compatible, version \fB2.0.0\fR, and finds a critical issue with \fB1.5.0\fR\&.
+If \fB1.5.0\fR is yanked, no new project or checkout without an existing lockfile
+will be able to use crate \fBbar\fR as it relies on \fB1.5\fR\&.
+.sp
+In this case, the maintainers of \fBfoo\fR should first publish a semver compatible
+version such as \fB1.5.1\fR prior to yanking \fB1.5.0\fR so that \fBbar\fR and all projects
+that depend on \fBbar\fR will continue to work.
+.sp
+As another example, consider a crate \fBbar\fR with published versions \fB1.5.0\fR,
+\fB1.5.1\fR, \fB1.5.2\fR, \fB2.0.0\fR and \fB3.0.0\fR\&. The following table identifies the
+versions cargo could use in the absence of a lockfile for different SemVer
+requirements, following a given release being yanked:
+
+.TS
+allbox tab(:);
+lt lt lt lt.
+T{
+Yanked Version / SemVer requirement
+T}:T{
+\fBbar = "1.5.0"\fR
+T}:T{
+\fBbar = "=1.5.0"\fR
+T}:T{
+\fBbar = "2.0.0"\fR
+T}
+T{
+\fB1.5.0\fR
+T}:T{
+Use either \fB1.5.1\fR or \fB1.5.2\fR
+T}:T{
+\fBReturn Error\fR
+T}:T{
+Use \fB2.0.0\fR
+T}
+T{
+\fB1.5.1\fR
+T}:T{
+Use either \fB1.5.0\fR or \fB1.5.2\fR
+T}:T{
+Use \fB1.5.0\fR
+T}:T{
+Use \fB2.0.0\fR
+T}
+T{
+\fB2.0.0\fR
+T}:T{
+Use either \fB1.5.0\fR, \fB1.5.1\fR or \fB1.5.2\fR
+T}:T{
+Use \fB1.5.0\fR
+T}:T{
+\fBReturn Error\fR
+T}
+.TE
+.sp
+.SS "When to yank"
+Crates should only be yanked in exceptional circumstances, for example, an
+accidental publish, an unintentional SemVer breakages, or a significantly
+broken and unusable crate. In the case of security vulnerabilities, \fIRustSec\fR <https://rustsec.org/>
+is typically a less disruptive mechanism to inform users and encourage them
+to upgrade, and avoids the possibility of significant downstream disruption
+irrespective of susceptibility to the vulnerability in question.
+.sp
+A common workflow is to yank a crate having already published a semver
+compatible version, to reduce the probability of preventing dependent
+crates from compiling.
+.sp
+When addressing copyright, licensing, or personal data issues with a published
+crate, simply yanking it may not suffice. In such cases, contact the maintainers
+of the registry you used. For crates.io, refer to their \fIpolicies\fR <https://crates.io/policies> and contact
+them at <help@crates.io>\&.
+.sp
+If credentials have been leaked, the recommended course of action is to revoke
+them immediately. Once a crate has been published, it is impossible to determine
+if the leaked credentials have been copied. Yanking the crate only prevents new
+users from downloading it, but cannot stop those who have already downloaded it
+from keeping or even spreading the leaked credentials.
 .SH "OPTIONS"
 .SS "Yank Options"
 .sp
@@ -123,7 +202,13 @@ See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/
 .RS 4
 Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
-the directories searched for discovering \fB\&.cargo/config.toml\fR, for example.
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

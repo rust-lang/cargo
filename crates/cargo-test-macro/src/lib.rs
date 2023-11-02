@@ -1,5 +1,3 @@
-extern crate proc_macro;
-
 use proc_macro::*;
 use std::process::Command;
 use std::sync::Once;

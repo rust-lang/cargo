@@ -25,22 +25,24 @@ struct ResolveInfo<'cfg> {
 fn do_resolve<'cfg>(config: &'cfg Config, ws_root: &Path) -> ResolveInfo<'cfg> {
     let requested_kinds = [CompileKind::Host];
     let ws = Workspace::new(&ws_root.join("Cargo.toml"), config).unwrap();
-    let target_data = RustcTargetData::new(&ws, &requested_kinds).unwrap();
+    let mut target_data = RustcTargetData::new(&ws, &requested_kinds).unwrap();
     let cli_features = CliFeatures::from_command_line(&[], false, true).unwrap();
     let pkgs = cargo::ops::Packages::Default;
     let specs = pkgs.to_package_id_specs(&ws).unwrap();
     let has_dev_units = HasDevUnits::Yes;
     let force_all_targets = ForceAllTargets::No;
+    let max_rust_version = None;
     // Do an initial run to download anything necessary so that it does
     // not confuse criterion's warmup.
     let ws_resolve = cargo::ops::resolve_ws_with_opts(
         &ws,
-        &target_data,
+        &mut target_data,
         &requested_kinds,
         &cli_features,
         &specs,
         has_dev_units,
         force_all_targets,
+        max_rust_version,
     )
     .unwrap();
     ResolveInfo {
@@ -82,6 +84,7 @@ fn resolve_ws(c: &mut Criterion) {
                 force_all_targets,
                 ..
             } = lazy_info.get_or_insert_with(|| do_resolve(&config, &ws_root));
+            let max_rust_version = None;
             b.iter(|| {
                 cargo::ops::resolve_ws_with_opts(
                     ws,
@@ -91,6 +94,7 @@ fn resolve_ws(c: &mut Criterion) {
                     specs,
                     *has_dev_units,
                     *force_all_targets,
+                    max_rust_version,
                 )
                 .unwrap();
             })

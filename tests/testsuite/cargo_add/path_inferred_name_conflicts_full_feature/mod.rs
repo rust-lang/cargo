@@ -2,12 +2,12 @@ use cargo_test_support::compare::assert_ui;
 use cargo_test_support::prelude::*;
 use cargo_test_support::Project;
 
-use crate::cargo_add::init_registry;
 use cargo_test_support::curr_dir;
 
 #[cargo_test]
 fn case() {
-    init_registry();
+    cargo_test_support::registry::init();
+
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = project.root();
     let cwd = project_root.join("primary");

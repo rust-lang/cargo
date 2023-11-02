@@ -1,0 +1,15 @@
+[package]
+name = "xtask-bump-check"
+version = "0.0.0"
+rust-version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+cargo.workspace = true
+cargo-util.workspace = true
+clap.workspace = true
+git2.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

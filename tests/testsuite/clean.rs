@@ -272,7 +272,7 @@ fn clean_doc() {
 
     assert!(doc_path.is_dir());
 
-    p.cargo("clean --doc").run();
+    p.cargo("clean --doc").with_stderr("[REMOVED] [..]").run();
 
     assert!(!doc_path.is_dir());
     assert!(p.build_dir().is_dir());
@@ -414,9 +414,10 @@ fn clean_verbose() {
     if cfg!(target_os = "macos") {
         // Rust 1.69 has changed so that split-debuginfo=unpacked includes unpacked for rlibs.
         for obj in p.glob("target/debug/deps/bar-*.o") {
-            expected.push_str(&format!("[REMOVING] [..]{}", obj.unwrap().display()));
+            expected.push_str(&format!("[REMOVING] [..]{}\n", obj.unwrap().display()));
         }
     }
+    expected.push_str("[REMOVED] [..] files, [..] total\n");
     p.cargo("clean -p bar --verbose")
         .with_stderr_unordered(&expected)
         .run();
@@ -569,10 +570,10 @@ fn assert_all_clean(build_dir: &Path) {
 }
 
 #[cargo_test]
-fn clean_spec_multiple() {
+fn clean_spec_version() {
     // clean -p foo where foo matches multiple versions
-    Package::new("bar", "1.0.0").publish();
-    Package::new("bar", "2.0.0").publish();
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
 
     let p = project()
         .file(
@@ -583,8 +584,8 @@ fn clean_spec_multiple() {
             version = "0.1.0"
 
             [dependencies]
-            bar1 = {version="1.0", package="bar"}
-            bar2 = {version="2.0", package="bar"}
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
             "#,
         )
         .file("src/lib.rs", "")
@@ -604,10 +605,121 @@ error: package ID specification `baz` did not match any packages
         )
         .run();
 
-    p.cargo("clean -p bar:1.0.0")
+    p.cargo("clean -p bar:0.1.0")
         .with_stderr(
-            "warning: version qualifier in `-p bar:1.0.0` is ignored, \
-            cleaning all versions of `bar` found",
+            "warning: version qualifier in `-p bar:0.1.0` is ignored, \
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files, [..] total",
+        )
+        .run();
+    let mut walker = walkdir::WalkDir::new(p.build_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name().to_str().unwrap();
+            n.starts_with("bar") || n.starts_with("libbar")
+        });
+    if let Some(e) = walker.next() {
+        panic!("{:?} was not cleaned", e.path());
+    }
+}
+
+#[cargo_test]
+fn clean_spec_partial_version() {
+    // clean -p foo where foo matches multiple versions
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    // Check suggestion for bad pkgid.
+    p.cargo("clean -p baz")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `baz` did not match any packages
+
+<tab>Did you mean `bar`?
+",
+        )
+        .run();
+
+    p.cargo("clean -p bar:0.1")
+        .with_stderr(
+            "warning: version qualifier in `-p bar:0.1` is ignored, \
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files, [..] total",
+        )
+        .run();
+    let mut walker = walkdir::WalkDir::new(p.build_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name().to_str().unwrap();
+            n.starts_with("bar") || n.starts_with("libbar")
+        });
+    if let Some(e) = walker.next() {
+        panic!("{:?} was not cleaned", e.path());
+    }
+}
+
+#[cargo_test]
+fn clean_spec_partial_version_ambiguous() {
+    // clean -p foo where foo matches multiple versions
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar1 = {version="0.1", package="bar"}
+            bar2 = {version="0.2", package="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    // Check suggestion for bad pkgid.
+    p.cargo("clean -p baz")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package ID specification `baz` did not match any packages
+
+<tab>Did you mean `bar`?
+",
+        )
+        .run();
+
+    p.cargo("clean -p bar:0")
+        .with_stderr(
+            "warning: version qualifier in `-p bar:0` is ignored, \
+            cleaning all versions of `bar` found\n\
+            [REMOVED] [..] files, [..] total",
         )
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
@@ -671,5 +783,74 @@ fn clean_spec_reserved() {
 [FINISHED] [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn clean_dry_run() {
+    // Basic `clean --dry-run` test.
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let ls_r = || -> Vec<_> {
+        let mut file_list: Vec<_> = walkdir::WalkDir::new(p.build_dir())
+            .into_iter()
+            .filter_map(|e| e.map(|e| e.path().to_owned()).ok())
+            .collect();
+        file_list.sort();
+        file_list
+    };
+
+    // Start with no files.
+    p.cargo("clean --dry-run")
+        .with_stdout("")
+        .with_stderr(
+            "[SUMMARY] 0 files\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
+        .run();
+    p.cargo("check").run();
+    let before = ls_r();
+    p.cargo("clean --dry-run")
+        .with_stderr(
+            "[SUMMARY] [..] files, [..] total\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
+        .run();
+    // Verify it didn't delete anything.
+    let after = ls_r();
+    assert_eq!(before, after);
+    let expected = cargo::util::iter_join(before.iter().map(|p| p.to_str().unwrap()), "\n");
+    eprintln!("{expected}");
+    // Verify the verbose output.
+    p.cargo("clean --dry-run -v")
+        .with_stdout_unordered(expected)
+        .with_stderr(
+            "[SUMMARY] [..] files, [..] total\n\
+             [WARNING] no files deleted due to --dry-run",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn doc_with_package_selection() {
+    // --doc with -p
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("clean --doc -p foo")
+        .with_status(101)
+        .with_stderr("error: --doc cannot be used with -p")
         .run();
 }

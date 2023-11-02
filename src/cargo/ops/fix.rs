@@ -46,10 +46,10 @@ use std::{env, fs, str};
 
 use anyhow::{bail, Context as _};
 use cargo_util::{exit_status_to_string, is_simple_exit_code, paths, ProcessBuilder};
-use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 use semver::Version;
+use tracing::{debug, trace, warn};
 
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
@@ -243,22 +243,26 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     // 2018 without `resolver` set must be V1
     assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
     let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
-    let target_data = RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
-    let resolve_differences = |has_dev_units| -> CargoResult<(WorkspaceResolve<'_>, DiffMap)> {
+    let mut target_data =
+        RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
+    let mut resolve_differences = |has_dev_units| -> CargoResult<(WorkspaceResolve<'_>, DiffMap)> {
+        let max_rust_version = ws.rust_version();
+
         let ws_resolve = ops::resolve_ws_with_opts(
             ws,
-            &target_data,
+            &mut target_data,
             &opts.compile_opts.build_config.requested_kinds,
             &opts.compile_opts.cli_features,
             &specs,
             has_dev_units,
             crate::core::resolver::features::ForceAllTargets::No,
+            max_rust_version,
         )?;
 
         let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);
         let v2_features = FeatureResolver::resolve(
             ws,
-            &target_data,
+            &mut target_data,
             &ws_resolve.targeted_resolve,
             &ws_resolve.pkg_set,
             &opts.compile_opts.cli_features,
@@ -916,15 +920,12 @@ impl FixArgs {
     /// Validates the edition, and sends a message indicating what is being
     /// done. Returns a flag indicating whether this fix should be run.
     fn can_run_rustfix(&self, config: &Config) -> CargoResult<bool> {
-        let to_edition = match self.prepare_for_edition {
-            Some(s) => s,
-            None => {
-                return Message::Fixing {
-                    file: self.file.display().to_string(),
-                }
-                .post(config)
-                .and(Ok(true));
+        let Some(to_edition) = self.prepare_for_edition else {
+            return Message::Fixing {
+                file: self.file.display().to_string(),
             }
+            .post(config)
+            .and(Ok(true));
         };
         // Unfortunately determining which cargo targets are being built
         // isn't easy, and each target can be a different edition. The

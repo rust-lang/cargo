@@ -1,17 +1,17 @@
 #![allow(clippy::all)]
 
 use std::collections::BTreeMap;
-use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{Cursor, SeekFrom};
 use std::time::Instant;
 
-use anyhow::{bail, format_err, Context, Result};
 use curl::easy::{Easy, List};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use url::Url;
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Registry {
     /// The base URL for issuing API requests.
@@ -38,6 +38,10 @@ pub struct Crate {
     pub max_version: String,
 }
 
+/// This struct is serialized as JSON and sent as metadata ahead of the crate
+/// tarball when publishing crates to a crate registry like crates.io.
+///
+/// see <https://doc.rust-lang.org/cargo/reference/registry-web-api.html#publish>
 #[derive(Serialize, Deserialize)]
 pub struct NewCrate {
     pub name: String,
@@ -57,6 +61,7 @@ pub struct NewCrate {
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
+    pub rust_version: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -72,6 +77,16 @@ pub struct NewCrateDependency {
     pub registry: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub explicit_name_in_toml: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artifact: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bindep_target: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub lib: bool,
+}
+
+fn is_false(x: &bool) -> bool {
+    *x == false
 }
 
 #[derive(Deserialize)]
@@ -124,67 +139,62 @@ struct Crates {
     meta: TotalCrates,
 }
 
-#[derive(Debug)]
-pub enum ResponseError {
-    Curl(curl::Error),
+/// Error returned when interacting with a registry.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    /// Error from libcurl.
+    #[error(transparent)]
+    Curl(#[from] curl::Error),
+
+    /// Error from seriailzing the request payload and deserializing the
+    /// response body (like response body didn't match expected structure).
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+
+    /// Error from IO. Mostly from reading the tarball to upload.
+    #[error("failed to seek tarball")]
+    Io(#[from] std::io::Error),
+
+    /// Response body was not valid utf8.
+    #[error("invalid response body from server")]
+    Utf8(#[from] std::string::FromUtf8Error),
+
+    /// Error from API response containing JSON field `errors.details`.
+    #[error(
+        "the remote server responded with an error{}: {}",
+        status(*code),
+        errors.join(", "),
+    )]
     Api {
         code: u32,
+        headers: Vec<String>,
         errors: Vec<String>,
     },
+
+    /// Error from API response which didn't have pre-programmed `errors.details`.
+    #[error(
+        "failed to get a 200 OK response, got {code}\nheaders:\n\t{}\nbody:\n{body}",
+        headers.join("\n\t"),
+    )]
     Code {
         code: u32,
         headers: Vec<String>,
         body: String,
     },
-    Other(anyhow::Error),
-}
 
-impl std::error::Error for ResponseError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            ResponseError::Curl(..) => None,
-            ResponseError::Api { .. } => None,
-            ResponseError::Code { .. } => None,
-            ResponseError::Other(e) => Some(e.as_ref()),
-        }
-    }
-}
+    /// Reason why the token was invalid.
+    #[error("{0}")]
+    InvalidToken(&'static str),
 
-impl fmt::Display for ResponseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ResponseError::Curl(e) => write!(f, "{}", e),
-            ResponseError::Api { code, errors } => {
-                f.write_str("the remote server responded with an error")?;
-                if *code != 200 {
-                    write!(f, " (status {} {})", code, reason(*code))?;
-                };
-                write!(f, ": {}", errors.join(", "))
-            }
-            ResponseError::Code {
-                code,
-                headers,
-                body,
-            } => write!(
-                f,
-                "failed to get a 200 OK response, got {}\n\
-                 headers:\n\
-                 \t{}\n\
-                 body:\n\
-                 {}",
-                code,
-                headers.join("\n\t"),
-                body
-            ),
-            ResponseError::Other(..) => write!(f, "invalid response from server"),
-        }
-    }
-}
-
-impl From<curl::Error> for ResponseError {
-    fn from(error: curl::Error) -> Self {
-        ResponseError::Curl(error)
-    }
+    /// Server was unavailable and timeouted. Happened when uploading a way
+    /// too large tarball to crates.io.
+    #[error(
+        "Request timed out after 30 seconds. If you're trying to \
+         upload a crate it may be too large. If the crate is under \
+         10MB in size, you can email help@crates.io for assistance.\n\
+         Total size was {0}."
+    )]
+    Timeout(u64),
 }
 
 impl Registry {
@@ -199,7 +209,7 @@ impl Registry {
     /// let mut handle = Easy::new();
     /// // If connecting to crates.io, a user-agent is required.
     /// handle.useragent("my_crawler (example.com/info)");
-    /// let mut reg = Registry::new_handle(String::from("https://crates.io"), None, handle);
+    /// let mut reg = Registry::new_handle(String::from("https://crates.io"), None, handle, true);
     /// ```
     pub fn new_handle(
         host: String,
@@ -217,6 +227,14 @@ impl Registry {
 
     pub fn set_token(&mut self, token: Option<String>) {
         self.token = token;
+    }
+
+    fn token(&self) -> Result<&str> {
+        let token = self.token.as_ref().ok_or_else(|| {
+            Error::InvalidToken("no upload token found, please run `cargo login`")
+        })?;
+        check_token(token)?;
+        Ok(token)
     }
 
     pub fn host(&self) -> &str {
@@ -260,12 +278,8 @@ impl Registry {
         // This checks the length using seeking instead of metadata, because
         // on some filesystems, getting the metadata will fail because
         // the file was renamed in ops::package.
-        let tarball_len = tarball
-            .seek(SeekFrom::End(0))
-            .with_context(|| "failed to seek tarball")?;
-        tarball
-            .seek(SeekFrom::Start(0))
-            .with_context(|| "failed to seek tarball")?;
+        let tarball_len = tarball.seek(SeekFrom::End(0))?;
+        tarball.seek(SeekFrom::Start(0))?;
         let header = {
             let mut w = Vec::new();
             w.extend(&(json.len() as u32).to_le_bytes());
@@ -278,34 +292,24 @@ impl Registry {
 
         let url = format!("{}/api/v1/crates/new", self.host);
 
-        let token = match self.token.as_ref() {
-            Some(s) => s,
-            None => bail!("no upload token found, please run `cargo login`"),
-        };
         self.handle.put(true)?;
         self.handle.url(&url)?;
         self.handle.in_filesize(size as u64)?;
         let mut headers = List::new();
         headers.append("Accept: application/json")?;
-        headers.append(&format!("Authorization: {}", token))?;
+        headers.append(&format!("Authorization: {}", self.token()?))?;
         self.handle.http_headers(headers)?;
 
         let started = Instant::now();
         let body = self
             .handle(&mut |buf| body.read(buf).unwrap_or(0))
             .map_err(|e| match e {
-                ResponseError::Code { code, .. }
+                Error::Code { code, .. }
                     if code == 503
                         && started.elapsed().as_secs() >= 29
                         && self.host_is_crates_io() =>
                 {
-                    format_err!(
-                        "Request timed out after 30 seconds. If you're trying to \
-                         upload a crate it may be too large. If the crate is under \
-                         10MB in size, you can email help@crates.io for assistance.\n\
-                         Total size was {}.",
-                        tarball_len
-                    )
+                    Error::Timeout(tarball_len)
                 }
                 _ => e.into(),
             })?;
@@ -390,12 +394,7 @@ impl Registry {
         headers.append("Content-Type: application/json")?;
 
         if self.auth_required || authorized == Auth::Authorized {
-            let token = match self.token.as_ref() {
-                Some(s) => s,
-                None => bail!("no upload token found, please run `cargo login`"),
-            };
-            check_token(token)?;
-            headers.append(&format!("Authorization: {}", token))?;
+            headers.append(&format!("Authorization: {}", self.token()?))?;
         }
         self.handle.http_headers(headers)?;
         match body {
@@ -409,10 +408,7 @@ impl Registry {
         }
     }
 
-    fn handle(
-        &mut self,
-        read: &mut dyn FnMut(&mut [u8]) -> usize,
-    ) -> std::result::Result<String, ResponseError> {
+    fn handle(&mut self, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result<String> {
         let mut headers = Vec::new();
         let mut body = Vec::new();
         {
@@ -426,33 +422,43 @@ impl Registry {
                 // Headers contain trailing \r\n, trim them to make it easier
                 // to work with.
                 let s = String::from_utf8_lossy(data).trim().to_string();
+                // Don't let server sneak extra lines anywhere.
+                if s.contains('\n') {
+                    return true;
+                }
                 headers.push(s);
                 true
             })?;
             handle.perform()?;
         }
 
-        let body = match String::from_utf8(body) {
-            Ok(body) => body,
-            Err(..) => {
-                return Err(ResponseError::Other(format_err!(
-                    "response body was not valid utf-8"
-                )))
-            }
-        };
+        let body = String::from_utf8(body)?;
         let errors = serde_json::from_str::<ApiErrorList>(&body)
             .ok()
             .map(|s| s.errors.into_iter().map(|s| s.detail).collect::<Vec<_>>());
 
         match (self.handle.response_code()?, errors) {
             (0, None) | (200, None) => Ok(body),
-            (code, Some(errors)) => Err(ResponseError::Api { code, errors }),
-            (code, None) => Err(ResponseError::Code {
+            (code, Some(errors)) => Err(Error::Api {
+                code,
+                headers,
+                errors,
+            }),
+            (code, None) => Err(Error::Code {
                 code,
                 headers,
                 body,
             }),
         }
+    }
+}
+
+fn status(code: u32) -> String {
+    if code == 200 {
+        String::new()
+    } else {
+        let reason = reason(code);
+        format!(" (status {code} {reason})")
     }
 }
 
@@ -519,19 +525,20 @@ pub fn is_url_crates_io(url: &str) -> bool {
 /// registries only create tokens in that format so that is as less restricted as possible.
 pub fn check_token(token: &str) -> Result<()> {
     if token.is_empty() {
-        bail!("please provide a non-empty token");
+        return Err(Error::InvalidToken("please provide a non-empty token"));
     }
     if token.bytes().all(|b| {
-        b >= 32 // undefined in ISO-8859-1, in ASCII/ UTF-8 not-printable character
-        && b < 128 // utf-8: the first bit signals a multi-byte character
-        && b != 127 // 127 is a control character in ascii and not in ISO 8859-1
-        || b == b't' // tab is also allowed (even when < 32)
+        // This is essentially the US-ASCII limitation of
+        // https://www.rfc-editor.org/rfc/rfc9110#name-field-values. That is,
+        // visible ASCII characters (0x21-0x7e), space, and tab. We want to be
+        // able to pass this in an HTTP header without encoding.
+        b >= 32 && b < 127 || b == b'\t'
     }) {
         Ok(())
     } else {
-        Err(anyhow::anyhow!(
+        Err(Error::InvalidToken(
             "token contains invalid characters.\nOnly printable ISO-8859-1 characters \
-             are allowed as it is sent in a HTTPS header."
+             are allowed as it is sent in a HTTPS header.",
         ))
     }
 }

@@ -18,12 +18,12 @@ pub fn cli() -> Command {
     clap::Command::new("add")
         .about("Add dependencies to a Cargo.toml manifest file")
         .override_usage(
-            "\
-       cargo add [OPTIONS] <DEP>[@<VERSION>] ...
-       cargo add [OPTIONS] --path <PATH> ...
-       cargo add [OPTIONS] --git <URL> ..."
-        )
-        .after_help("Run `cargo help add` for more detailed information.\n")
+            color_print::cstr!("\
+       <cyan,bold>cargo add</> <cyan>[OPTIONS] <<DEP>>[@<<VERSION>>] ...</>
+       <cyan,bold>cargo add</> <cyan>[OPTIONS]</> <cyan,bold>--path</> <cyan><<PATH>> ...</>
+       <cyan,bold>cargo add</> <cyan>[OPTIONS]</> <cyan,bold>--git</> <cyan><<URL>> ...</>"
+        ))
+        .after_help(color_print::cstr!("Run `<cyan,bold>cargo help add</>` for more detailed information.\n"))
         .group(clap::ArgGroup::new("selected").multiple(true).required(true))
         .args([
             clap::Arg::new("crates")
@@ -72,11 +72,15 @@ The package will be removed from your features.")
 Example uses:
 - Depending on multiple versions of a crate
 - Depend on crates with the same name from different registries"),
+            flag(
+                "ignore-rust-version",
+                "Ignore `rust-version` specification in packages (unstable)"
+            ),
         ])
-        .arg_manifest_path()
+        .arg_manifest_path_without_unsupported_path_tip()
         .arg_package("Package to modify")
-        .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
+        .arg_quiet()
         .next_help_heading("Source")
         .args([
             clap::Arg::new("path")
@@ -188,12 +192,24 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let dependencies = parse_dependencies(config, args)?;
 
+    let ignore_rust_version = args.flag("ignore-rust-version");
+    if ignore_rust_version && !config.cli_unstable().msrv_policy {
+        return Err(CliError::new(
+            anyhow::format_err!(
+                "`--ignore-rust-version` is unstable; pass `-Zmsrv-policy` to enable support for it"
+            ),
+            101,
+        ));
+    }
+    let honor_rust_version = !ignore_rust_version;
+
     let options = AddOptions {
         config,
         spec,
         dependencies,
         section,
         dry_run,
+        honor_rust_version,
     };
     add(&ws, &options)?;
 
@@ -226,7 +242,20 @@ fn parse_dependencies(config: &Config, matches: &ArgMatches) -> CargoResult<Vec<
         .flatten()
         .map(|c| (Some(c.clone()), None))
         .collect::<IndexMap<_, _>>();
+
     let mut infer_crate_name = false;
+
+    for (crate_name, _) in crates.iter() {
+        let crate_name = crate_name.as_ref().unwrap();
+
+        if let Some(toolchain) = crate_name.strip_prefix("+") {
+            anyhow::bail!(
+                "invalid character `+` in dependency name: `+{toolchain}`
+    Use `cargo +{toolchain} add` if you meant to use the `{toolchain}` toolchain."
+            );
+        }
+    }
+
     if crates.is_empty() {
         if path.is_some() || git.is_some() {
             crates.insert(None, None);

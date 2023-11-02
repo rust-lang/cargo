@@ -117,7 +117,10 @@ fn rustc_bootstrap() {
     "#;
     let p = project()
         .file("Cargo.toml", &basic_manifest("has-dashes", "0.0.1"))
-        .file("src/lib.rs", "#![feature(rustc_attrs)]")
+        .file(
+            "src/lib.rs",
+            "#![allow(internal_features)] #![feature(rustc_attrs)]",
+        )
         .file("build.rs", build_rs)
         .build();
     // RUSTC_BOOTSTRAP unset on stable should error
@@ -134,12 +137,12 @@ fn rustc_bootstrap() {
         // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")
-        .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .with_stderr_contains("warning: has-dashes@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
     // RUSTC_BOOTSTRAP set to the name of the library should warn
     p.cargo("check")
         .env("RUSTC_BOOTSTRAP", "has_dashes")
-        .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .with_stderr_contains("warning: has-dashes@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
     // RUSTC_BOOTSTRAP set to some random value should error
     p.cargo("check")
@@ -154,7 +157,10 @@ fn rustc_bootstrap() {
     // Tests for binaries instead of libraries
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
-        .file("src/main.rs", "#![feature(rustc_attrs)] fn main() {}")
+        .file(
+            "src/main.rs",
+            "#![allow(internal_features)] #![feature(rustc_attrs)] fn main() {}",
+        )
         .file("build.rs", build_rs)
         .build();
     // nightly should warn when there's no library whether or not RUSTC_BOOTSTRAP is set
@@ -163,7 +169,7 @@ fn rustc_bootstrap() {
         // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")
-        .with_stderr_contains("warning: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
+        .with_stderr_contains("warning: foo@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .run();
     // RUSTC_BOOTSTRAP conditionally set when there's no library should error (regardless of the value)
     p.cargo("check")
@@ -171,6 +177,22 @@ fn rustc_bootstrap() {
         .with_stderr_contains("error: Cannot set `RUSTC_BOOTSTRAP=1` [..]")
         .with_stderr_contains("help: [..] set the environment variable `RUSTC_BOOTSTRAP=1` [..]")
         .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn build_script_env_verbose() {
+    let build_rs = r#"
+        fn main() {}
+    "#;
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("verbose-build", "0.0.1"))
+        .file("src/lib.rs", "")
+        .file("build.rs", build_rs)
+        .build();
+
+    p.cargo("check -vv")
+        .with_stderr_contains("[RUNNING] `[..]CARGO=[..]build-script-build`")
         .run();
 }
 

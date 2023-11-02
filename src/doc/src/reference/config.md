@@ -1,10 +1,10 @@
-## Configuration
+# Configuration
 
 This document explains how Cargo’s configuration system works, as well as
 available keys or configuration. For configuration of a package through its
 manifest, see the [manifest format](manifest.md).
 
-### Hierarchical structure
+## Hierarchical structure
 
 Cargo allows local configuration for a particular package as well as global
 configuration. It looks for configuration files in the current directory and
@@ -28,7 +28,8 @@ with a configuration file in your home directory.
 If a key is specified in multiple config files, the values will get merged
 together. Numbers, strings, and booleans will use the value in the deeper
 config directory taking precedence over ancestor directories, where the
-home directory is the lowest priority. Arrays will be joined together.
+home directory is the lowest priority. Arrays will be joined together
+with higher precedence items being placed later in the merged array.
 
 At present, when being invoked from a workspace, Cargo does not read config
 files from crates within the workspace. i.e. if a workspace has two crates in
@@ -43,7 +44,7 @@ those configuration files if it is invoked from the workspace root
 > and is the preferred form. If both files exist, Cargo will use the file
 > without the extension.
 
-### Configuration format
+## Configuration format
 
 Configuration files are written in the [TOML format][toml] (like the
 manifest), with simple key-value pairs inside of sections (tables). The
@@ -125,6 +126,7 @@ inherits = "dev"         # Inherits settings from [profile.dev].
 opt-level = 0            # Optimization level.
 debug = true             # Include debug info.
 split-debuginfo = '...'  # Debug info splitting behavior.
+strip = "none"           # Removes symbols or debuginfo.
 debug-assertions = true  # Enables debug assertions.
 overflow-checks = true   # Enables runtime integer overflow checks.
 lto = false              # Sets link-time optimization.
@@ -182,7 +184,7 @@ progress.when = 'auto' # whether cargo shows progress bar
 progress.width = 80    # width of progress bar
 ```
 
-### Environment variables
+## Environment variables
 
 Cargo can also be configured through environment variables in addition to the
 TOML configuration files. For each configuration key of the form `foo.bar` the
@@ -201,7 +203,7 @@ supported due to [technical issues](https://github.com/rust-lang/cargo/issues/54
 In addition to the system above, Cargo recognizes a few other specific
 [environment variables][env].
 
-### Command-line overrides
+## Command-line overrides
 
 Cargo also accepts arbitrary configuration overrides through the
 `--config` command-line option. The argument should be in TOML syntax of
@@ -241,7 +243,7 @@ configuration files that Cargo should use for a specific invocation.
 Options from configuration files loaded this way follow the same
 precedence rules as other options specified directly with `--config`.
 
-### Config-relative paths
+## Config-relative paths
 
 Paths in config files may be absolute, relative, or a bare name without any path separators.
 Paths for executables without a path separator will use the `PATH` environment variable to search for the executable.
@@ -278,7 +280,7 @@ runner = "foo"  # Searches `PATH` for `foo`.
 directory = "vendor"
 ```
 
-### Executable paths with arguments
+## Executable paths with arguments
 
 Some Cargo commands invoke external programs, which can be configured as a path
 and some number of arguments.
@@ -292,11 +294,13 @@ run, they will be passed after the last specified argument in the value of an
 option of this format. If the specified program does not have path separators,
 Cargo will search `PATH` for its executable.
 
-### Credentials
+## Credentials
 
 Configuration values with sensitive information are stored in the
 `$CARGO_HOME/credentials.toml` file. This file is automatically created and updated
-by [`cargo login`]. It follows the same format as Cargo config files.
+by [`cargo login`] and [`cargo logout`] when using the `cargo:token` credential provider.
+
+It follows the same format as Cargo config files.
 
 ```toml
 [registry]
@@ -317,14 +321,20 @@ be specified with environment variables of the form
 `CARGO_REGISTRIES_<name>_TOKEN` where `<name>` is the name of the registry in
 all capital letters.
 
-### Configuration keys
+> **Note:** Cargo also reads and writes credential files without the `.toml`
+> extension, such as `.cargo/credentials`. Support for the `.toml` extension
+> was added in version 1.39. In version 1.68, Cargo writes to the file with the
+> extension by default. However, for backward compatibility reason, when both
+> files exist, Cargo will read and write the file without the extension.
+
+## Configuration keys
 
 This section documents all configuration keys. The description for keys with
 variable parts are annotated with angled brackets like `target.<triple>` where
 the `<triple>` part can be any [target triple] like
 `target.x86_64-pc-windows-msvc`.
 
-#### `paths`
+### `paths`
 * Type: array of strings (paths)
 * Default: none
 * Environment: not supported
@@ -333,7 +343,7 @@ An array of paths to local packages which are to be used as overrides for
 dependencies. For more information see the [Overriding Dependencies
 guide](overriding-dependencies.md#paths-overrides).
 
-#### `[alias]`
+### `[alias]`
 * Type: string or array of strings
 * Default: see below
 * Environment: `CARGO_ALIAS_<name>`
@@ -365,29 +375,30 @@ rr = "run --release"
 recursive_example = "rr --example recursions"
 ```
 
-#### `[build]`
+### `[build]`
 
 The `[build]` table controls build-time operations and compiler settings.
 
-##### `build.jobs`
-* Type: integer
+#### `build.jobs`
+* Type: integer or string
 * Default: number of logical CPUs
 * Environment: `CARGO_BUILD_JOBS`
 
 Sets the maximum number of compiler processes to run in parallel. If negative,
 it sets the maximum number of compiler processes to the number of logical CPUs
-plus provided value. Should not be 0.
+plus provided value. Should not be 0. If a string `default` is provided, it sets
+the value back to defaults.
 
 Can be overridden with the `--jobs` CLI option.
 
-##### `build.rustc`
+#### `build.rustc`
 * Type: string (program path)
 * Default: "rustc"
 * Environment: `CARGO_BUILD_RUSTC` or `RUSTC`
 
 Sets the executable to use for `rustc`.
 
-##### `build.rustc-wrapper`
+#### `build.rustc-wrapper`
 * Type: string (program path)
 * Default: none
 * Environment: `CARGO_BUILD_RUSTC_WRAPPER` or `RUSTC_WRAPPER`
@@ -396,7 +407,7 @@ Sets a wrapper to execute instead of `rustc`. The first argument passed to the
 wrapper is the path to the actual executable to use
 (i.e., `build.rustc`, if that is set, or `"rustc"` otherwise).
 
-##### `build.rustc-workspace-wrapper`
+#### `build.rustc-workspace-wrapper`
 * Type: string (program path)
 * Default: none
 * Environment: `CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER` or `RUSTC_WORKSPACE_WRAPPER`
@@ -406,14 +417,14 @@ The first argument passed to the wrapper is the path to the actual
 executable to use (i.e., `build.rustc`, if that is set, or `"rustc"` otherwise).
 It affects the filename hash so that artifacts produced by the wrapper are cached separately.
 
-##### `build.rustdoc`
+#### `build.rustdoc`
 * Type: string (program path)
 * Default: "rustdoc"
 * Environment: `CARGO_BUILD_RUSTDOC` or `RUSTDOC`
 
 Sets the executable to use for `rustdoc`.
 
-##### `build.target`
+#### `build.target`
 * Type: string or array of strings
 * Default: host platform
 * Environment: `CARGO_BUILD_TARGET`
@@ -433,7 +444,7 @@ Can be overridden with the `--target` CLI option.
 target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 ```
 
-##### `build.target-dir`
+#### `build.target-dir`
 * Type: string (path)
 * Default: "target"
 * Environment: `CARGO_BUILD_TARGET_DIR` or `CARGO_TARGET_DIR`
@@ -443,7 +454,7 @@ is a directory named `target` located at the root of the workspace.
 
 Can be overridden with the `--target-dir` CLI option.
 
-##### `build.rustflags`
+#### `build.rustflags`
 * Type: string or array of strings
 * Default: none
 * Environment: `CARGO_BUILD_RUSTFLAGS` or `CARGO_ENCODED_RUSTFLAGS` or `RUSTFLAGS`
@@ -480,7 +491,7 @@ appropriate profile setting.
 > flags you specify. This is an area where Cargo may not always be backwards
 > compatible.
 
-##### `build.rustdocflags`
+#### `build.rustdocflags`
 * Type: string or array of strings
 * Default: none
 * Environment: `CARGO_BUILD_RUSTDOCFLAGS` or `CARGO_ENCODED_RUSTDOCFLAGS` or `RUSTDOCFLAGS`
@@ -497,7 +508,7 @@ order, with the first one being used:
 
 Additional flags may also be passed with the [`cargo rustdoc`] command.
 
-##### `build.incremental`
+#### `build.incremental`
 * Type: bool
 * Default: from profile
 * Environment: `CARGO_BUILD_INCREMENTAL` or `CARGO_INCREMENTAL`
@@ -510,7 +521,7 @@ The `CARGO_INCREMENTAL` environment variable can be set to `1` to force enable
 incremental compilation for all profiles, or `0` to disable it. This env var
 overrides the config setting.
 
-##### `build.dep-info-basedir`
+#### `build.dep-info-basedir`
 * Type: string (path)
 * Default: none
 * Environment: `CARGO_BUILD_DEP_INFO_BASEDIR`
@@ -524,15 +535,35 @@ The setting itself is a config-relative path. So, for example, a value of
 `"."` would strip all paths starting with the parent directory of the `.cargo`
 directory.
 
-##### `build.pipelining`
+#### `build.pipelining`
 
 This option is deprecated and unused. Cargo always has pipelining enabled.
 
-#### `[doc]`
+### `[credential-alias]`
+* Type: string or array of strings
+* Default: empty
+* Environment: `CARGO_CREDENTIAL_ALIAS_<name>`
+
+The `[credential-alias]` table defines credential provider aliases.
+These aliases can be referenced as an element of the `registry.global-credential-providers`
+array, or as a credential provider for a specific registry
+under `registries.<NAME>.credential-provider`.
+
+If specified as a string, the value will be split on spaces into path and arguments.
+
+For example, to define an alias called `my-alias`:
+
+```toml
+[credential-alias]
+my-alias = ["/usr/bin/cargo-credential-example", "--argument", "value", "--flag"]
+```
+See [Registry Authentication](registry-authentication.md) for more information.
+
+### `[doc]`
 
 The `[doc]` table defines options for the [`cargo doc`] command.
 
-##### `doc.browser`
+#### `doc.browser`
 
 * Type: string or array of strings ([program path with args])
 * Default: `BROWSER` environment variable, or, if that is missing,
@@ -542,19 +573,19 @@ This option sets the browser to be used by [`cargo doc`], overriding the
 `BROWSER` environment variable when opening documentation with the `--open`
 option.
 
-#### `[cargo-new]`
+### `[cargo-new]`
 
 The `[cargo-new]` table defines defaults for the [`cargo new`] command.
 
-##### `cargo-new.name`
+#### `cargo-new.name`
 
 This option is deprecated and unused.
 
-##### `cargo-new.email`
+#### `cargo-new.email`
 
 This option is deprecated and unused.
 
-##### `cargo-new.vcs`
+#### `cargo-new.vcs`
 * Type: string
 * Default: "git" or "none"
 * Environment: `CARGO_CARGO_NEW_VCS`
@@ -602,25 +633,25 @@ Controls how often we display a notification to the terminal when a future incom
 * `always` (default): Always display a notification when a command (e.g. `cargo build`) produces a future incompat report
 * `never`: Never display a notification
 
-#### `[http]`
+### `[http]`
 
 The `[http]` table defines settings for HTTP behavior. This includes fetching
 crate dependencies and accessing remote git repositories.
 
-##### `http.debug`
+#### `http.debug`
 * Type: boolean
 * Default: false
 * Environment: `CARGO_HTTP_DEBUG`
 
 If `true`, enables debugging of HTTP requests. The debug information can be
-seen by setting the `CARGO_LOG=cargo::ops::registry=debug` environment
-variable (or use `trace` for even more information).
+seen by setting the `CARGO_LOG=network=debug` environment
+variable (or use `network=trace` for even more information).
 
 Be wary when posting logs from this output in a public location. The output
 may include headers with authentication tokens which you don't want to leak!
 Be sure to review logs before posting them.
 
-##### `http.proxy`
+#### `http.proxy`
 * Type: string
 * Default: none
 * Environment: `CARGO_HTTP_PROXY` or `HTTPS_PROXY` or `https_proxy` or `http_proxy`
@@ -631,14 +662,14 @@ setting in your global git configuration. If none of those are set, the
 `HTTPS_PROXY` or `https_proxy` environment variables set the proxy for HTTPS
 requests, and `http_proxy` sets it for HTTP requests.
 
-##### `http.timeout`
+#### `http.timeout`
 * Type: integer
 * Default: 30
 * Environment: `CARGO_HTTP_TIMEOUT` or `HTTP_TIMEOUT`
 
 Sets the timeout for each HTTP request, in seconds.
 
-##### `http.cainfo`
+#### `http.cainfo`
 * Type: string (path)
 * Default: none
 * Environment: `CARGO_HTTP_CAINFO`
@@ -646,7 +677,7 @@ Sets the timeout for each HTTP request, in seconds.
 Path to a Certificate Authority (CA) bundle file, used to verify TLS
 certificates. If not specified, Cargo attempts to use the system certificates.
 
-##### `http.check-revoke`
+#### `http.check-revoke`
 * Type: boolean
 * Default: true (Windows) false (all others)
 * Environment: `CARGO_HTTP_CHECK_REVOKE`
@@ -654,7 +685,7 @@ certificates. If not specified, Cargo attempts to use the system certificates.
 This determines whether or not TLS certificate revocation checks should be
 performed. This only works on Windows.
 
-##### `http.ssl-version`
+#### `http.ssl-version`
 * Type: string or min/max table
 * Default: none
 * Environment: `CARGO_HTTP_SSL_VERSION`
@@ -670,7 +701,7 @@ range of TLS versions to use.
 The default is a minimum version of "tlsv1.0" and a max of the newest version
 supported on your platform, typically "tlsv1.3".
 
-##### `http.low-speed-limit`
+#### `http.low-speed-limit`
 * Type: integer
 * Default: 10
 * Environment: `CARGO_HTTP_LOW_SPEED_LIMIT`
@@ -680,7 +711,7 @@ transfer speed in bytes per second is below the given value for
 [`http.timeout`](#httptimeout) seconds (default 30 seconds), then the
 connection is considered too slow and Cargo will abort and retry.
 
-##### `http.multiplexing`
+#### `http.multiplexing`
 * Type: boolean
 * Default: true
 * Environment: `CARGO_HTTP_MULTIPLEXING`
@@ -690,7 +721,7 @@ This allows multiple requests to use the same connection, usually improving
 performance when fetching multiple files. If `false`, Cargo will use HTTP 1.1
 without pipelining.
 
-##### `http.user-agent`
+#### `http.user-agent`
 * Type: string
 * Default: Cargo's version
 * Environment: `CARGO_HTTP_USER_AGENT`
@@ -698,11 +729,11 @@ without pipelining.
 Specifies a custom user-agent header to use. The default if not specified is a
 string that includes Cargo's version.
 
-#### `[install]`
+### `[install]`
 
 The `[install]` table defines defaults for the [`cargo install`] command.
 
-##### `install.root`
+#### `install.root`
 * Type: string (path)
 * Default: Cargo's home directory
 * Environment: `CARGO_INSTALL_ROOT`
@@ -718,18 +749,18 @@ your home directory).
 
 Can be overridden with the `--root` command-line option.
 
-#### `[net]`
+### `[net]`
 
 The `[net]` table controls networking configuration.
 
-##### `net.retry`
+#### `net.retry`
 * Type: integer
 * Default: 3
 * Environment: `CARGO_NET_RETRY`
 
 Number of times to retry possibly spurious network errors.
 
-##### `net.git-fetch-with-cli`
+#### `net.git-fetch-with-cli`
 * Type: boolean
 * Default: false
 * Environment: `CARGO_NET_GIT_FETCH_WITH_CLI`
@@ -743,7 +774,7 @@ requirements that Cargo does not support. See [Git
 Authentication](../appendix/git-authentication.md) for more information about
 setting up git authentication.
 
-##### `net.offline`
+#### `net.offline`
 * Type: boolean
 * Default: false
 * Environment: `CARGO_NET_OFFLINE`
@@ -754,11 +785,11 @@ needed, and generate an error if it encounters a network error.
 
 Can be overridden with the `--offline` command-line option.
 
-##### `net.ssh`
+#### `net.ssh`
 
 The `[net.ssh]` table contains settings for SSH connections.
 
-##### `net.ssh.known-hosts`
+#### `net.ssh.known-hosts`
 * Type: array of strings
 * Default: see description
 * Environment: not supported
@@ -789,7 +820,7 @@ for more details.
 
 [github-keys]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
 
-#### `[patch]`
+### `[patch]`
 
 Just as you can override dependencies using [`[patch]` in
 `Cargo.toml`](overriding-dependencies.md#the-patch-section), you can
@@ -814,7 +845,7 @@ lowest precedence.
 Relative `path` dependencies in such a `[patch]` section are resolved
 relative to the configuration file they appear in.
 
-#### `[profile]`
+### `[profile]`
 
 The `[profile]` table can be used to globally change profile settings, and
 override settings specified in `Cargo.toml`. It has the same syntax and
@@ -823,104 +854,118 @@ details about the options.
 
 [Profiles chapter]: profiles.md
 
-##### `[profile.<name>.build-override]`
+#### `[profile.<name>.build-override]`
 * Environment: `CARGO_PROFILE_<name>_BUILD_OVERRIDE_<key>`
 
 The build-override table overrides settings for build scripts, proc macros,
 and their dependencies. It has the same keys as a normal profile. See the
 [overrides section](profiles.md#overrides) for more details.
 
-##### `[profile.<name>.package.<name>]`
+#### `[profile.<name>.package.<name>]`
 * Environment: not supported
 
 The package table overrides settings for specific packages. It has the same
 keys as a normal profile, minus the `panic`, `lto`, and `rpath` settings. See
 the [overrides section](profiles.md#overrides) for more details.
 
-##### `profile.<name>.codegen-units`
+#### `profile.<name>.codegen-units`
 * Type: integer
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_CODEGEN_UNITS`
 
 See [codegen-units](profiles.md#codegen-units).
 
-##### `profile.<name>.debug`
+#### `profile.<name>.debug`
 * Type: integer or boolean
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_DEBUG`
 
 See [debug](profiles.md#debug).
 
-##### `profile.<name>.split-debuginfo`
+#### `profile.<name>.split-debuginfo`
 * Type: string
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_SPLIT_DEBUGINFO`
 
 See [split-debuginfo](profiles.md#split-debuginfo).
 
-##### `profile.<name>.debug-assertions`
+#### `profile.<name>.strip`
+* Type: string or boolean
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_STRIP`
+
+See [strip](profiles.md#strip).
+
+#### `profile.<name>.debug-assertions`
 * Type: boolean
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_DEBUG_ASSERTIONS`
 
 See [debug-assertions](profiles.md#debug-assertions).
 
-##### `profile.<name>.incremental`
+#### `profile.<name>.incremental`
 * Type: boolean
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_INCREMENTAL`
 
 See [incremental](profiles.md#incremental).
 
-##### `profile.<name>.lto`
+#### `profile.<name>.lto`
 * Type: string or boolean
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_LTO`
 
 See [lto](profiles.md#lto).
 
-##### `profile.<name>.overflow-checks`
+#### `profile.<name>.overflow-checks`
 * Type: boolean
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_OVERFLOW_CHECKS`
 
 See [overflow-checks](profiles.md#overflow-checks).
 
-##### `profile.<name>.opt-level`
+#### `profile.<name>.opt-level`
 * Type: integer or string
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_OPT_LEVEL`
 
 See [opt-level](profiles.md#opt-level).
 
-##### `profile.<name>.panic`
+#### `profile.<name>.panic`
 * Type: string
-* default: See profile docs.
+* Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_PANIC`
 
 See [panic](profiles.md#panic).
 
-##### `profile.<name>.rpath`
+#### `profile.<name>.rpath`
 * Type: boolean
-* default: See profile docs.
+* Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_RPATH`
 
 See [rpath](profiles.md#rpath).
 
+#### `profile.<name>.strip`
+* Type: string
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_STRIP`
 
-#### `[registries]`
+See [strip](profiles.md#strip).
+
+
+### `[registries]`
 
 The `[registries]` table is used for specifying additional [registries]. It
 consists of a sub-table for each named registry.
 
-##### `registries.<name>.index`
+#### `registries.<name>.index`
 * Type: string (url)
 * Default: none
 * Environment: `CARGO_REGISTRIES_<name>_INDEX`
 
 Specifies the URL of the index for the registry.
 
-##### `registries.<name>.token`
+#### `registries.<name>.token`
 * Type: string
 * Default: none
 * Environment: `CARGO_REGISTRIES_<name>_TOKEN`
@@ -931,7 +976,23 @@ commands like [`cargo publish`] that require authentication.
 
 Can be overridden with the `--token` command-line option.
 
-##### `registries.crates-io.protocol`
+#### `registries.<name>.credential-provider`
+* Type: string or array of path and arguments
+* Default: none
+* Environment: `CARGO_REGISTRIES_<name>_CREDENTIAL_PROVIDER`
+
+Specifies the credential provider for the given registry. If not set, the
+providers in [`registry.global-credential-providers`](#registryglobal-credential-providers)
+will be used.
+
+If specified as a string, path and arguments will be split on spaces. For
+paths or arguments that contain spaces, use an array.
+
+If the value exists in the [`[credential-alias]`](#credential-alias) table, the alias will be used.
+
+See [Registry Authentication](registry-authentication.md) for more information.
+
+#### `registries.crates-io.protocol`
 * Type: string
 * Default: `sparse`
 * Environment: `CARGO_REGISTRIES_CRATES_IO_PROTOCOL`
@@ -945,16 +1006,16 @@ This can result in a significant performance improvement for resolving new depen
 
 More information about registry protocols may be found in the [Registries chapter](registries.md).
 
-#### `[registry]`
+### `[registry]`
 
 The `[registry]` table controls the default registry used when one is not
 specified.
 
-##### `registry.index`
+#### `registry.index`
 
 This value is no longer accepted and should not be used.
 
-##### `registry.default`
+#### `registry.default`
 * Type: string
 * Default: `"crates-io"`
 * Environment: `CARGO_REGISTRY_DEFAULT`
@@ -964,7 +1025,23 @@ by default for registry commands like [`cargo publish`].
 
 Can be overridden with the `--registry` command-line option.
 
-##### `registry.token`
+#### `registry.credential-provider`
+* Type: string or array of path and arguments
+* Default: none
+* Environment: `CARGO_REGISTRY_CREDENTIAL_PROVIDER`
+
+Specifies the credential provider for [crates.io]. If not set, the
+providers in [`registry.global-credential-providers`](#registryglobal-credential-providers)
+will be used.
+
+If specified as a string, path and arguments will be split on spaces. For
+paths or arguments that contain spaces, use an array.
+
+If the value exists in the `[credential-alias]` table, the alias will be used.
+
+See [Registry Authentication](registry-authentication.md) for more information.
+
+#### `registry.token`
 * Type: string
 * Default: none
 * Environment: `CARGO_REGISTRY_TOKEN`
@@ -975,49 +1052,64 @@ commands like [`cargo publish`] that require authentication.
 
 Can be overridden with the `--token` command-line option.
 
-#### `[source]`
+#### `registry.global-credential-providers`
+* Type: array
+* Default: `["cargo:token"]`
+* Environment: `CARGO_REGISTRY_GLOBAL_CREDENTIAL_PROVIDERS`
+
+Specifies the list of global credential providers. If credential provider is not set
+for a specific registry using `registries.<name>.credential-provider`, Cargo will use
+the credential providers in this list. Providers toward the end of the list have precedence.
+
+Path and arguments are split on spaces. If the path or arguments contains spaces, the credential
+provider should be defined in the [`[credential-alias]`](#credential-alias) table and
+referenced here by its alias.
+
+See [Registry Authentication](registry-authentication.md) for more information.
+
+### `[source]`
 
 The `[source]` table defines the registry sources available. See [Source
 Replacement] for more information. It consists of a sub-table for each named
 source. A source should only define one kind (directory, registry,
 local-registry, or git).
 
-##### `source.<name>.replace-with`
+#### `source.<name>.replace-with`
 * Type: string
 * Default: none
 * Environment: not supported
 
 If set, replace this source with the given named source or named registry.
 
-##### `source.<name>.directory`
+#### `source.<name>.directory`
 * Type: string (path)
 * Default: none
 * Environment: not supported
 
 Sets the path to a directory to use as a directory source.
 
-##### `source.<name>.registry`
+#### `source.<name>.registry`
 * Type: string (url)
 * Default: none
 * Environment: not supported
 
 Sets the URL to use for a registry source.
 
-##### `source.<name>.local-registry`
+#### `source.<name>.local-registry`
 * Type: string (path)
 * Default: none
 * Environment: not supported
 
 Sets the path to a directory to use as a local registry source.
 
-##### `source.<name>.git`
+#### `source.<name>.git`
 * Type: string (url)
 * Default: none
 * Environment: not supported
 
 Sets the URL to use for a git repository source.
 
-##### `source.<name>.branch`
+#### `source.<name>.branch`
 * Type: string
 * Default: none
 * Environment: not supported
@@ -1026,7 +1118,7 @@ Sets the branch name to use for a git repository.
 
 If none of `branch`, `tag`, or `rev` is set, defaults to the `master` branch.
 
-##### `source.<name>.tag`
+#### `source.<name>.tag`
 * Type: string
 * Default: none
 * Environment: not supported
@@ -1035,7 +1127,7 @@ Sets the tag name to use for a git repository.
 
 If none of `branch`, `tag`, or `rev` is set, defaults to the `master` branch.
 
-##### `source.<name>.rev`
+#### `source.<name>.rev`
 * Type: string
 * Default: none
 * Environment: not supported
@@ -1045,7 +1137,7 @@ Sets the [revision] to use for a git repository.
 If none of `branch`, `tag`, or `rev` is set, defaults to the `master` branch.
 
 
-#### `[target]`
+### `[target]`
 
 The `[target]` table is used for specifying settings for specific platform
 targets. It consists of a sub-table which is either a [platform triple][target triple] 
@@ -1071,11 +1163,11 @@ to view), values set by [build scripts], and extra `--cfg` flags passed to
 If using a target spec JSON file, the [`<triple>`] value is the filename stem.
 For example `--target foo/bar.json` would match `[target.bar]`.
 
-##### `target.<triple>.ar`
+#### `target.<triple>.ar`
 
 This option is deprecated and unused.
 
-##### `target.<triple>.linker`
+#### `target.<triple>.linker`
 * Type: string (program path)
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_LINKER`
@@ -1083,7 +1175,13 @@ This option is deprecated and unused.
 Specifies the linker which is passed to `rustc` (via [`-C linker`]) when the
 [`<triple>`] is being compiled for. By default, the linker is not overridden.
 
-##### `target.<triple>.runner`
+#### `target.<cfg>.linker`
+This is similar to the [target linker](#targettriplelinker), but using
+a [`cfg()` expression]. If both a [`<triple>`] and `<cfg>` runner match,
+the `<triple>` will take precedence. It is an error if more than one
+`<cfg>` runner matches the current target.
+
+#### `target.<triple>.runner`
 * Type: string or array of strings ([program path with args])
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_RUNNER`
@@ -1093,14 +1191,14 @@ executed by invoking the specified runner with the actual executable passed as
 an argument. This applies to [`cargo run`], [`cargo test`] and [`cargo bench`]
 commands. By default, compiled executables are executed directly.
 
-##### `target.<cfg>.runner`
+#### `target.<cfg>.runner`
 
 This is similar to the [target runner](#targettriplerunner), but using
 a [`cfg()` expression]. If both a [`<triple>`] and `<cfg>` runner match,
 the `<triple>` will take precedence. It is an error if more than one
 `<cfg>` runner matches the current target.
 
-##### `target.<triple>.rustflags`
+#### `target.<triple>.rustflags`
 * Type: string or array of strings
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_RUSTFLAGS`
@@ -1111,13 +1209,13 @@ The value may be an array of strings or a space-separated string.
 See [`build.rustflags`](#buildrustflags) for more details on the different
 ways to specific extra flags.
 
-##### `target.<cfg>.rustflags`
+#### `target.<cfg>.rustflags`
 
 This is similar to the [target rustflags](#targettriplerustflags), but
 using a [`cfg()` expression]. If several `<cfg>` and [`<triple>`] entries
 match the current target, the flags are joined together.
 
-##### `target.<triple>.<links>`
+#### `target.<triple>.<links>`
 
 The links sub-table provides a way to [override a build script]. When
 specified, the build script for the given `links` library will not be
@@ -1135,11 +1233,11 @@ metadata_key1 = "value"
 metadata_key2 = "value"
 ```
 
-#### `[term]`
+### `[term]`
 
 The `[term]` table controls terminal output and interaction.
 
-##### `term.quiet`
+#### `term.quiet`
 * Type: boolean
 * Default: false
 * Environment: `CARGO_TERM_QUIET`
@@ -1149,7 +1247,7 @@ Controls whether or not log messages are displayed by Cargo.
 Specifying the `--quiet` flag will override and force quiet output.
 Specifying the `--verbose` flag will override and disable quiet output.
 
-##### `term.verbose`
+#### `term.verbose`
 * Type: boolean
 * Default: false
 * Environment: `CARGO_TERM_VERBOSE`
@@ -1159,7 +1257,7 @@ Controls whether or not extra detailed messages are displayed by Cargo.
 Specifying the `--quiet` flag will override and disable verbose output.
 Specifying the `--verbose` flag will override and force verbose output.
 
-##### `term.color`
+#### `term.color`
 * Type: string
 * Default: "auto"
 * Environment: `CARGO_TERM_COLOR`
@@ -1173,7 +1271,7 @@ Controls whether or not colored output is used in the terminal. Possible values:
 
 Can be overridden with the `--color` command-line option.
 
-##### `term.progress.when`
+#### `term.progress.when`
 * Type: string
 * Default: "auto"
 * Environment: `CARGO_TERM_PROGRESS_WHEN`
@@ -1184,7 +1282,7 @@ Controls whether or not progress bar is shown in the terminal. Possible values:
 * `always`: Always show progress bar.
 * `never`: Never show progress bar.
 
-##### `term.progress.width`
+#### `term.progress.width`
 * Type: integer
 * Default: none
 * Environment: `CARGO_TERM_PROGRESS_WIDTH`
@@ -1193,6 +1291,7 @@ Sets the width for progress bar.
 
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo login`]: ../commands/cargo-login.md
+[`cargo logout`]: ../commands/cargo-logout.md
 [`cargo doc`]: ../commands/cargo-doc.md
 [`cargo new`]: ../commands/cargo-new.md
 [`cargo publish`]: ../commands/cargo-publish.md

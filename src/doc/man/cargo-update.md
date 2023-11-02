@@ -6,7 +6,7 @@ cargo-update --- Update dependencies as recorded in the local lock file
 
 ## SYNOPSIS
 
-`cargo update` [_options_]
+`cargo update` [_options_] _spec_
 
 ## DESCRIPTION
 
@@ -20,26 +20,26 @@ latest available versions.
 
 {{#options}}
 
-{{#option "`-p` _spec_..." "`--package` _spec_..." }}
+{{#option "_spec_..." }}
 Update only the specified packages. This flag may be specified
 multiple times. See {{man "cargo-pkgid" 1}} for the SPEC format.
 
-If packages are specified with the `-p` flag, then a conservative update of
+If packages are specified with _spec_, then a conservative update of
 the lockfile will be performed. This means that only the dependency specified
 by SPEC will be updated. Its transitive dependencies will be updated only if
 SPEC cannot be updated without updating dependencies.  All other dependencies
 will remain locked at their currently recorded versions.
 
-If `-p` is not specified, all dependencies are updated.
+If _spec_ is not specified, all dependencies are updated.
 {{/option}}
 
-{{#option "`--aggressive`" }}
-When used with `-p`, dependencies of _spec_ are forced to update as well.
+{{#option "`--recursive`" }}
+When used with _spec_, dependencies of _spec_ are forced to update as well.
 Cannot be used with `--precise`.
 {{/option}}
 
 {{#option "`--precise` _precise_" }}
-When used with `-p`, allows you to specify a specific version number to set
+When used with _spec_, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).
 {{/option}}
@@ -87,11 +87,11 @@ Displays what would be updated, but doesn't actually write the lockfile.
 
 2. Update only specific dependencies:
 
-       cargo update -p foo -p bar
+       cargo update foo bar
 
 3. Set a specific dependency to a specific version:
 
-       cargo update -p foo --precise 1.2.3
+       cargo update foo --precise 1.2.3
 
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}

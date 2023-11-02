@@ -1,0 +1,7 @@
+error: unexpected argument '--flag' found
+
+  tip: to pass '--flag' as a value, use '-- --flag'
+
+Usage: cargo[EXE] init <PATH>
+
+For more information, try '--help'.

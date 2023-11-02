@@ -19,7 +19,7 @@ the [`JobQueue`] as it processes each message.
 [`Shell`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/shell.rs
 [`Config`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/util/config/mod.rs
 [`drop_print`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/util/config/mod.rs#L1820-L1848
-[`JobQueue`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/job_queue.rs
+[`JobQueue`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/job_queue/mod.rs
 
 ## Errors
 

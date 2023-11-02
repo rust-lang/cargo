@@ -1,9 +1,10 @@
 [package]
 name = "home"
-version = "0.5.4" # also update `html_root_url` in `src/lib.rs`
-authors = [ "Brian Anderson <andersrb@gmail.com>" ]
+version = "0.5.8"
+authors = ["Brian Anderson <andersrb@gmail.com>"]
+rust-version = "1.70.0"  # MSRV:3
 documentation = "https://docs.rs/home"
-edition = "2018"
+edition.workspace = true
 include = [
     "/src",
     "/Cargo.toml",
@@ -11,10 +12,9 @@ include = [
     "/LICENSE-*",
     "/README.md",
 ]
-license = "MIT OR Apache-2.0"
-readme = "README.md"
-repository = "https://github.com/brson/home"
-description = "Shared definitions of home directories"
+license.workspace = true
+repository = "https://github.com/rust-lang/cargo"
+description = "Shared definitions of home directories."
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.45.0", features = ["Win32_Foundation", "Win32_UI_Shell"] }
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_UI_Shell"] }

@@ -3,24 +3,27 @@ use crate::core::resolver::features::{CliFeatures, HasDevUnits};
 use crate::core::{PackageId, PackageIdSpec};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::config::Config;
+use crate::util::style;
 use crate::util::CargoResult;
-use anyhow::Context;
-use log::debug;
+use anstyle::Style;
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet};
-use termcolor::Color::{self, Cyan, Green, Red, Yellow};
+use tracing::debug;
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
     pub to_update: Vec<String>,
     pub precise: Option<&'a str>,
-    pub aggressive: bool,
+    pub recursive: bool,
     pub dry_run: bool,
     pub workspace: bool,
 }
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
+    let max_rust_version = ws.rust_version();
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
@@ -30,14 +33,15 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
         None,
         &[],
         true,
+        max_rust_version,
     )?;
     ops::write_pkg_lockfile(ws, &mut resolve)?;
     Ok(())
 }
 
 pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
-    if opts.aggressive && opts.precise.is_some() {
-        anyhow::bail!("cannot specify both aggressive and precise simultaneously")
+    if opts.recursive && opts.precise.is_some() {
+        anyhow::bail!("cannot specify both recursive and precise simultaneously")
     }
 
     if ws.members().count() == 0 {
@@ -46,7 +50,11 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
     // Updates often require a lot of modifications to the registry, so ensure
     // that we're synchronized against other Cargos.
-    let _lock = ws.config().acquire_package_cache_lock()?;
+    let _lock = ws
+        .config()
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+
+    let max_rust_version = ws.rust_version();
 
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
@@ -67,6 +75,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         None,
                         &[],
                         true,
+                        max_rust_version,
                     )?
                 }
             }
@@ -83,27 +92,27 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     } else {
         let mut sources = Vec::new();
         for name in opts.to_update.iter() {
-            let dep = previous_resolve.query(name)?;
-            if opts.aggressive {
-                fill_with_deps(&previous_resolve, dep, &mut to_avoid, &mut HashSet::new());
+            let pid = previous_resolve.query(name)?;
+            if opts.recursive {
+                fill_with_deps(&previous_resolve, pid, &mut to_avoid, &mut HashSet::new());
             } else {
-                to_avoid.insert(dep);
+                to_avoid.insert(pid);
                 sources.push(match opts.precise {
                     Some(precise) => {
                         // TODO: see comment in `resolve.rs` as well, but this
                         //       seems like a pretty hokey reason to single out
                         //       the registry as well.
-                        let precise = if dep.source_id().is_registry() {
-                            semver::Version::parse(precise).with_context(|| {
-                                format!("invalid version format for precise version `{}`", precise)
-                            })?;
-                            format!("{}={}->{}", dep.name(), dep.version(), precise)
+                        if pid.source_id().is_registry() {
+                            pid.source_id().with_precise_registry_version(
+                                pid.name(),
+                                pid.version().clone(),
+                                precise,
+                            )?
                         } else {
-                            precise.to_string()
-                        };
-                        dep.source_id().with_precise(Some(precise))
+                            pid.source_id().with_git_precise(Some(precise.to_string()))
+                        }
                     }
-                    None => dep.source_id().with_precise(None),
+                    None => pid.source_id().without_precise(),
                 });
             }
             if let Ok(unused_id) =
@@ -125,10 +134,11 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         Some(&to_avoid),
         &[],
         true,
+        max_rust_version,
     )?;
 
     // Summarize what is changing for the user.
-    let print_change = |status: &str, msg: String, color: Color| {
+    let print_change = |status: &str, msg: String, color: &Style| {
         opts.config.shell().status_with_color(status, msg, color)
     };
     for (removed, added) in compare_dependency_graphs(&previous_resolve, &resolve) {
@@ -137,23 +147,27 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 format!(
                     "{} -> #{}",
                     removed[0],
-                    &added[0].source_id().precise().unwrap()[..8]
+                    &added[0].source_id().precise_git_fragment().unwrap()
                 )
             } else {
                 format!("{} -> v{}", removed[0], added[0].version())
             };
 
-            if removed[0].version() > added[0].version() {
-                print_change("Downgrading", msg, Yellow)?;
+            // If versions differ only in build metadata, we call it an "update"
+            // regardless of whether the build metadata has gone up or down.
+            // This metadata is often stuff like git commit hashes, which are
+            // not meaningfully ordered.
+            if removed[0].version().cmp_precedence(added[0].version()) == Ordering::Greater {
+                print_change("Downgrading", msg, &style::WARN)?;
             } else {
-                print_change("Updating", msg, Green)?;
+                print_change("Updating", msg, &style::GOOD)?;
             }
         } else {
             for package in removed.iter() {
-                print_change("Removing", format!("{}", package), Red)?;
+                print_change("Removing", format!("{}", package), &style::ERROR)?;
             }
             for package in added.iter() {
-                print_change("Adding", format!("{}", package), Cyan)?;
+                print_change("Adding", format!("{}", package), &style::NOTE)?;
             }
         }
     }
@@ -198,9 +212,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 .filter(|a| {
                     // If this package ID is not found in `b`, then it's definitely
                     // in the subtracted set.
-                    let i = match b.binary_search(a) {
-                        Ok(i) => i,
-                        Err(..) => return true,
+                    let Ok(i) = b.binary_search(a) else {
+                        return true;
                     };
 
                     // If we've found `a` in `b`, then we iterate over all instances
@@ -217,7 +230,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     b[i..]
                         .iter()
                         .take_while(|b| a == b)
-                        .all(|b| a.source_id().precise() != b.source_id().precise())
+                        .all(|b| !a.source_id().has_same_precise_as(b.source_id()))
                 })
                 .cloned()
                 .collect()

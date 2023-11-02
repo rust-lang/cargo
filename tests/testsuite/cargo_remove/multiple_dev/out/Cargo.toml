@@ -17,4 +17,4 @@ toml = "0.1"
 clippy = "0.4"
 
 [features]
-std = ["semver/std"]
+std = [ "semver/std"]

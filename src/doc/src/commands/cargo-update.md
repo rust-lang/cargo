@@ -6,7 +6,7 @@ cargo-update --- Update dependencies as recorded in the local lock file
 
 ## SYNOPSIS
 
-`cargo update` [_options_]
+`cargo update` [_options_] _spec_
 
 ## DESCRIPTION
 
@@ -20,25 +20,24 @@ latest available versions.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-update--p"><a class="option-anchor" href="#option-cargo-update--p"></a><code>-p</code> <em>spec</em>…</dt>
-<dt class="option-term" id="option-cargo-update---package"><a class="option-anchor" href="#option-cargo-update---package"></a><code>--package</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-update-spec…"><a class="option-anchor" href="#option-cargo-update-spec…"></a><em>spec</em>…</dt>
 <dd class="option-desc">Update only the specified packages. This flag may be specified
 multiple times. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC format.</p>
-<p>If packages are specified with the <code>-p</code> flag, then a conservative update of
+<p>If packages are specified with <em>spec</em>, then a conservative update of
 the lockfile will be performed. This means that only the dependency specified
 by SPEC will be updated. Its transitive dependencies will be updated only if
 SPEC cannot be updated without updating dependencies.  All other dependencies
 will remain locked at their currently recorded versions.</p>
-<p>If <code>-p</code> is not specified, all dependencies are updated.</dd>
+<p>If <em>spec</em> is not specified, all dependencies are updated.</dd>
 
 
-<dt class="option-term" id="option-cargo-update---aggressive"><a class="option-anchor" href="#option-cargo-update---aggressive"></a><code>--aggressive</code></dt>
-<dd class="option-desc">When used with <code>-p</code>, dependencies of <em>spec</em> are forced to update as well.
+<dt class="option-term" id="option-cargo-update---recursive"><a class="option-anchor" href="#option-cargo-update---recursive"></a><code>--recursive</code></dt>
+<dd class="option-desc">When used with <em>spec</em>, dependencies of <em>spec</em> are forced to update as well.
 Cannot be used with <code>--precise</code>.</dd>
 
 
 <dt class="option-term" id="option-cargo-update---precise"><a class="option-anchor" href="#option-cargo-update---precise"></a><code>--precise</code> <em>precise</em></dt>
-<dd class="option-desc">When used with <code>-p</code>, allows you to specify a specific version number to set
+<dd class="option-desc">When used with <em>spec</em>, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).</dd>
 
@@ -147,7 +146,12 @@ See the <a href="../reference/config.html#command-line-overrides">command-line o
 <dt class="option-term" id="option-cargo-update--C"><a class="option-anchor" href="#option-cargo-update--C"></a><code>-C</code> <em>PATH</em></dt>
 <dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
-the directories searched for discovering <code>.cargo/config.toml</code>, for example.</dd>
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-update--h"><a class="option-anchor" href="#option-cargo-update--h"></a><code>-h</code></dt>
@@ -182,11 +186,11 @@ details on environment variables that Cargo reads.
 
 2. Update only specific dependencies:
 
-       cargo update -p foo -p bar
+       cargo update foo bar
 
 3. Set a specific dependency to a specific version:
 
-       cargo update -p foo --precise 1.2.3
+       cargo update foo --precise 1.2.3
 
 ## SEE ALSO
 [cargo(1)](cargo.html), [cargo-generate-lockfile(1)](cargo-generate-lockfile.html)

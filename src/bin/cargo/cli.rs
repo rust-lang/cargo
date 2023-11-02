@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Context as _};
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
-use cargo::{self, drop_print, drop_println, CliResult, Config};
-use clap::{Arg, ArgMatches};
+use cargo::{self, drop_print, drop_println, CargoResult, CliResult, Config};
+use clap::{builder::UnknownArgumentValueParser, Arg, ArgMatches};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -12,17 +12,9 @@ use std::fmt::Write;
 use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
+use crate::util::is_rustup;
 use cargo::core::features::HIDDEN;
-
-lazy_static::lazy_static! {
-    // Maps from commonly known external commands (not builtin to cargo) to their
-    // description, for the help page. Reserved for external subcommands that are
-    // core within the rust ecosystem (esp ones that might become internal in the future).
-    static ref KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS: HashMap<&'static str, &'static str> = HashMap::from([
-        ("clippy", "Checks a package to catch common mistakes and improve your Rust code."),
-        ("fmt", "Formats all bin and lib files of the current crate using rustfmt."),
-    ]);
-}
+use cargo::util::style;
 
 pub fn main(config: &mut LazyConfig) -> CliResult {
     let args = cli().try_get_matches()?;
@@ -31,6 +23,23 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
     // This must be completed before config is initialized
     assert_eq!(config.is_init(), false);
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
+        // This is a temporary hack. This cannot access `Config`, so this is a bit messy.
+        // This does not properly parse `-Z` flags that appear after the subcommand.
+        // The error message is not as helpful as the standard one.
+        let nightly_features_allowed = matches!(&*features::channel(), "nightly" | "dev");
+        if !nightly_features_allowed
+            || (nightly_features_allowed
+                && !args
+                    .get_many("unstable-features")
+                    .map(|mut z| z.any(|value: &String| value == "unstable-options"))
+                    .unwrap_or(false))
+        {
+            return Err(anyhow::format_err!(
+                "the `-C` flag is unstable, \
+                 pass `-Z unstable-options` on the nightly channel to enable it"
+            )
+            .into());
+        }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
     }
 
@@ -111,15 +120,28 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
     }
 
     if expanded_args.flag("list") {
+        // Maps from commonly known external commands (not builtin to cargo)
+        // to their description, for the help page. Reserved for external
+        // subcommands that are core within the rust ecosystem (esp ones that
+        // might become internal in the future).
+        let known_external_command_descriptions = HashMap::from([
+            (
+                "clippy",
+                "Checks a package to catch common mistakes and improve your Rust code.",
+            ),
+            (
+                "fmt",
+                "Formats all bin and lib files of the current crate using rustfmt.",
+            ),
+        ]);
         drop_println!(config, "Installed Commands:");
         for (name, command) in list_commands(config) {
-            let known_external_desc = KNOWN_EXTERNAL_COMMAND_DESCRIPTIONS.get(name.as_str());
+            let known_external_desc = known_external_command_descriptions.get(name.as_str());
             match command {
                 CommandInfo::BuiltIn { about } => {
                     assert!(
                         known_external_desc.is_none(),
-                        "KNOWN_EXTERNAL_COMMANDS shouldn't contain builtin \"{}\"",
-                        name
+                        "known_external_commands shouldn't contain builtin `{name}`",
                     );
                     let summary = about.unwrap_or_default();
                     let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
@@ -155,10 +177,11 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
             return Ok(());
         }
     };
-    config_configure(config, &expanded_args, subcommand_args, global_args)?;
+    let exec = Exec::infer(cmd)?;
+    config_configure(config, &expanded_args, subcommand_args, global_args, &exec)?;
     super::init_git(config);
 
-    execute_subcommand(config, cmd, subcommand_args)
+    exec.exec(config, subcommand_args)
 }
 
 pub fn get_version_string(is_verbose: bool) -> String {
@@ -238,7 +261,7 @@ fn expand_aliases(
     args: ArgMatches,
     mut already_expanded: Vec<String>,
 ) -> Result<(ArgMatches, GlobalArgs), CliError> {
-    if let Some((cmd, args)) = args.subcommand() {
+    if let Some((cmd, sub_args)) = args.subcommand() {
         let exec = commands::builtin_exec(cmd);
         let aliased_cmd = super::aliased_command(config, cmd);
 
@@ -254,7 +277,7 @@ fn expand_aliases(
                 // Here we ignore errors from aliasing as we already favor built-in command,
                 // and alias doesn't involve in this context.
 
-                if let Some(values) = args.get_many::<OsString>("") {
+                if let Some(values) = sub_args.get_many::<OsString>("") {
                     // Command is built-in and is not conflicting with alias, but contains ignored values.
                     return Err(anyhow::format_err!(
                         "\
@@ -285,17 +308,34 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
                     ))?;
                     }
                 }
+                if commands::run::is_manifest_command(cmd) {
+                    if config.cli_unstable().script {
+                        return Ok((args, GlobalArgs::default()));
+                    } else {
+                        config.shell().warn(format_args!(
+                            "\
+user-defined alias `{cmd}` has the appearance of a manifest-command
+This was previously accepted but will be phased out when `-Zscript` is stabilized.
+For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>."
+                        ))?;
+                    }
+                }
 
                 let mut alias = alias
                     .into_iter()
                     .map(|s| OsString::from(s))
                     .collect::<Vec<_>>();
-                alias.extend(args.get_many::<OsString>("").unwrap_or_default().cloned());
+                alias.extend(
+                    sub_args
+                        .get_many::<OsString>("")
+                        .unwrap_or_default()
+                        .cloned(),
+                );
                 // new_args strips out everything before the subcommand, so
                 // capture those global options now.
                 // Note that an alias to an external command will not receive
                 // these arguments. That may be confusing, but such is life.
-                let global_args = GlobalArgs::new(args);
+                let global_args = GlobalArgs::new(sub_args);
                 let new_args = cli().no_binary_name(true).try_get_matches_from(alias)?;
 
                 let new_cmd = new_args.subcommand_name().expect("subcommand is required");
@@ -326,12 +366,26 @@ fn config_configure(
     args: &ArgMatches,
     subcommand_args: &ArgMatches,
     global_args: GlobalArgs,
+    exec: &Exec,
 ) -> CliResult {
     let arg_target_dir = &subcommand_args.value_of_path("target-dir", config);
-    let verbose = global_args.verbose + args.verbose();
+    let mut verbose = global_args.verbose + args.verbose();
     // quiet is unusual because it is redefined in some subcommands in order
     // to provide custom help text.
-    let quiet = args.flag("quiet") || subcommand_args.flag("quiet") || global_args.quiet;
+    let mut quiet = args.flag("quiet") || subcommand_args.flag("quiet") || global_args.quiet;
+    if matches!(exec, Exec::Manifest(_)) && !quiet {
+        // Verbosity is shifted quieter for `Exec::Manifest` as it is can be used as if you ran
+        // `cargo install` and we especially shouldn't pollute programmatic output.
+        //
+        // For now, interactive output has the same default output as `cargo run` but that is
+        // subject to change.
+        if let Some(lower) = verbose.checked_sub(1) {
+            verbose = lower;
+        } else if !config.shell().is_err_tty() {
+            // Don't pollute potentially-scripted output
+            quiet = true;
+        }
+    }
     let global_color = global_args.color; // Extract so it can take reference.
     let color = args
         .get_one::<String>("color")
@@ -362,19 +416,65 @@ fn config_configure(
     Ok(())
 }
 
-fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatches) -> CliResult {
-    if let Some(exec) = commands::builtin_exec(cmd) {
-        return exec(config, subcommand_args);
+enum Exec {
+    Builtin(commands::Exec),
+    Manifest(String),
+    External(String),
+}
+
+impl Exec {
+    /// Precedence isn't the most obvious from this function because
+    /// - Some is determined by `expand_aliases`
+    /// - Some is enforced by `avoid_ambiguity_between_builtins_and_manifest_commands`
+    ///
+    /// In actuality, it is:
+    /// 1. built-ins xor manifest-command
+    /// 2. aliases
+    /// 3. external subcommands
+    fn infer(cmd: &str) -> CargoResult<Self> {
+        if let Some(exec) = commands::builtin_exec(cmd) {
+            Ok(Self::Builtin(exec))
+        } else if commands::run::is_manifest_command(cmd) {
+            Ok(Self::Manifest(cmd.to_owned()))
+        } else {
+            Ok(Self::External(cmd.to_owned()))
+        }
     }
 
-    let mut ext_args: Vec<&OsStr> = vec![OsStr::new(cmd)];
-    ext_args.extend(
-        subcommand_args
-            .get_many::<OsString>("")
-            .unwrap_or_default()
-            .map(OsString::as_os_str),
-    );
-    super::execute_external_subcommand(config, cmd, &ext_args)
+    fn exec(self, config: &mut Config, subcommand_args: &ArgMatches) -> CliResult {
+        match self {
+            Self::Builtin(exec) => exec(config, subcommand_args),
+            Self::Manifest(cmd) => {
+                let ext_path = super::find_external_subcommand(config, &cmd);
+                if !config.cli_unstable().script && ext_path.is_some() {
+                    config.shell().warn(format_args!(
+                        "\
+external subcommand `{cmd}` has the appearance of a manifest-command
+This was previously accepted but will be phased out when `-Zscript` is stabilized.
+For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.",
+                    ))?;
+                    Self::External(cmd).exec(config, subcommand_args)
+                } else {
+                    let ext_args: Vec<OsString> = subcommand_args
+                        .get_many::<OsString>("")
+                        .unwrap_or_default()
+                        .cloned()
+                        .collect();
+                    commands::run::exec_manifest_command(config, &cmd, &ext_args)
+                }
+            }
+            Self::External(cmd) => {
+                let mut ext_args = vec![OsStr::new(&cmd)];
+                ext_args.extend(
+                    subcommand_args
+                        .get_many::<OsString>("")
+                        .unwrap_or_default()
+                        .map(OsString::as_os_str),
+                );
+                super::execute_external_subcommand(config, &cmd, &ext_args)
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -413,55 +513,73 @@ impl GlobalArgs {
 }
 
 pub fn cli() -> Command {
-    // ALLOWED: `RUSTUP_HOME` should only be read from process env, otherwise
-    // other tools may point to executables from incompatible distributions.
-    #[allow(clippy::disallowed_methods)]
-    let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
-    let usage = if is_rustup {
-        "cargo [+toolchain] [OPTIONS] [COMMAND]"
+    let usage = if is_rustup() {
+        color_print::cstr!("<cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>")
     } else {
-        "cargo [OPTIONS] [COMMAND]"
+        color_print::cstr!("<cyan,bold>cargo</> <cyan>[OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>")
     };
+
+    let styles = {
+        clap::builder::styling::Styles::styled()
+            .header(style::HEADER)
+            .usage(style::USAGE)
+            .literal(style::LITERAL)
+            .placeholder(style::PLACEHOLDER)
+            .error(style::ERROR)
+            .valid(style::VALID)
+            .invalid(style::INVALID)
+    };
+
     Command::new("cargo")
+        // Subcommands all count their args' display order independently (from 0),
+        // which makes their args interspersed with global args. This puts global args last.
+        //
+        // We also want these to come before auto-generated `--help`
+        .next_display_order(800)
         .allow_external_subcommands(true)
-        // Doesn't mix well with our list of common cargo commands.  See clap-rs/clap#3108 for
-        // opening clap up to allow us to style our help template
-        .disable_colored_help(true)
+        .styles(styles)
         // Provide a custom help subcommand for calling into man pages
         .disable_help_subcommand(true)
         .override_usage(usage)
-        .help_template(
+        .help_template(color_print::cstr!(
             "\
 Rust's package manager
 
-Usage: {usage}
+<green,bold>Usage:</> {usage}
 
-Options:
+<green,bold>Options:</>
 {options}
 
-Some common cargo commands are (see all commands with --list):
-    build, b    Compile the current package
-    check, c    Analyze the current package and report errors, but don't build object files
-    clean       Remove the target directory
-    doc, d      Build this package's and its dependencies' documentation
-    new         Create a new cargo package
-    init        Create a new cargo package in an existing directory
-    add         Add dependencies to a manifest file
-    remove      Remove dependencies from a manifest file
-    run, r      Run a binary or example of the local package
-    test, t     Run the tests
-    bench       Run the benchmarks
-    update      Update dependencies listed in Cargo.lock
-    search      Search registry for crates
-    publish     Package and upload this package to the registry
-    install     Install a Rust binary. Default location is $HOME/.cargo/bin
-    uninstall   Uninstall a Rust binary
+<green,bold>Commands:</>
+    <cyan,bold>build</>, <cyan,bold>b</>    Compile the current package
+    <cyan,bold>check</>, <cyan,bold>c</>    Analyze the current package and report errors, but don't build object files
+    <cyan,bold>clean</>       Remove the target directory
+    <cyan,bold>doc</>, <cyan,bold>d</>      Build this package's and its dependencies' documentation
+    <cyan,bold>new</>         Create a new cargo package
+    <cyan,bold>init</>        Create a new cargo package in an existing directory
+    <cyan,bold>add</>         Add dependencies to a manifest file
+    <cyan,bold>remove</>      Remove dependencies from a manifest file
+    <cyan,bold>run</>, <cyan,bold>r</>      Run a binary or example of the local package
+    <cyan,bold>test</>, <cyan,bold>t</>     Run the tests
+    <cyan,bold>bench</>       Run the benchmarks
+    <cyan,bold>update</>      Update dependencies listed in Cargo.lock
+    <cyan,bold>search</>      Search registry for crates
+    <cyan,bold>publish</>     Package and upload this package to the registry
+    <cyan,bold>install</>     Install a Rust binary. Default location is $HOME/.cargo/bin
+    <cyan,bold>uninstall</>   Uninstall a Rust binary
+    <cyan>...</>         See all commands with <cyan,bold>--list</>
 
-See 'cargo help <command>' for more information on a specific command.\n",
-        )
+See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a specific command.\n",
+        ))
         .arg(flag("version", "Print version info and exit").short('V'))
         .arg(flag("list", "List installed commands"))
-        .arg(opt("explain", "Run `rustc --explain CODE`").value_name("CODE"))
+        .arg(
+            opt(
+                "explain",
+                "Provide a detailed explanation of a rustc error message",
+            )
+            .value_name("CODE"),
+        )
         .arg(
             opt(
                 "verbose",
@@ -479,24 +597,50 @@ See 'cargo help <command>' for more information on a specific command.\n",
         )
         .arg(
             Arg::new("directory")
-                .help("Change to DIRECTORY before doing anything")
+                .help("Change to DIRECTORY before doing anything (nightly-only)")
                 .short('C')
                 .value_name("DIRECTORY")
                 .value_hint(clap::ValueHint::DirPath)
                 .value_parser(clap::builder::ValueParser::path_buf()),
         )
-        .arg(flag("frozen", "Require Cargo.lock and cache are up to date").global(true))
-        .arg(flag("locked", "Require Cargo.lock is up to date").global(true))
-        .arg(flag("offline", "Run without accessing the network").global(true))
-        .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
         .arg(
-            Arg::new("unstable-features")
-                .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
-                .short('Z')
-                .value_name("FLAG")
-                .action(ArgAction::Append)
+            flag("frozen", "Require Cargo.lock and cache are up to date")
+                .help_heading(heading::MANIFEST_OPTIONS)
                 .global(true),
         )
+        .arg(
+            flag("locked", "Require Cargo.lock is up to date")
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .global(true),
+        )
+        .arg(
+            flag("offline", "Run without accessing the network")
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .global(true),
+        )
+        // Better suggestion for the unsupported short config flag.
+        .arg( Arg::new("unsupported-short-config-flag")
+            .help("")
+            .short('c')
+            .value_parser(UnknownArgumentValueParser::suggest_arg("--config"))
+            .action(ArgAction::SetTrue)
+            .global(true)
+            .hide(true))
+        .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
+        // Better suggestion for the unsupported lowercase unstable feature flag.
+        .arg( Arg::new("unsupported-lowercase-unstable-feature-flag")
+            .help("")
+            .short('z')
+            .value_parser(UnknownArgumentValueParser::suggest_arg("-Z"))
+            .action(ArgAction::SetTrue)
+            .global(true)
+            .hide(true))
+        .arg(Arg::new("unstable-features")
+            .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
+            .short('Z')
+            .value_name("FLAG")
+            .action(ArgAction::Append)
+            .global(true))
         .subcommands(commands::builtin())
 }
 
@@ -546,4 +690,15 @@ impl LazyConfig {
 #[test]
 fn verify_cli() {
     cli().debug_assert();
+}
+
+#[test]
+fn avoid_ambiguity_between_builtins_and_manifest_commands() {
+    for cmd in commands::builtin() {
+        let name = cmd.get_name();
+        assert!(
+            !commands::run::is_manifest_command(&name),
+            "built-in command {name} is ambiguous with manifest-commands"
+        )
+    }
 }

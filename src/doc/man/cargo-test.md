@@ -1,7 +1,8 @@
 # cargo-test(1)
-{{*set actionverb="Test"}}
-{{*set nouns="tests"}}
-{{*set multitarget=true}}
+{{~*set command="test"}}
+{{~*set actionverb="Test"}}
+{{~*set nouns="tests"}}
+{{~*set multitarget=true}}
 
 ## NAME
 
@@ -59,11 +60,18 @@ on writing doc tests.
 
 ### Working directory of tests
 
-The working directory of every test is set to the root directory of the package 
-the test belongs to.
-Setting the working directory of tests to the package's root directory makes it 
+The working directory when running each unit and integration test is set to the
+root directory of the package the test belongs to.
+Setting the working directory of tests to the package's root directory makes it
 possible for tests to reliably access the package's files using relative paths,
 regardless from where `cargo test` was executed from.
+
+For documentation tests, the working directory when invoking `rustdoc` is set to
+the workspace root directory, and is also the directory `rustdoc` uses as the
+compilation directory of each documentation test.
+The working directory when running each documentation test is set to the root
+directory of the package the test belongs to, and is controlled via `rustdoc`'s
+`--test-run-directory` option.
 
 ## OPTIONS
 
@@ -89,12 +97,19 @@ following targets of the selected packages:
 
 The default behavior can be changed by setting the `test` flag for the target
 in the manifest settings. Setting examples to `test = true` will build and run
-the example as a test. Setting targets to `test = false` will stop them from
-being tested by default. Target selection options that take a target by name
+the example as a test, replacing the example's `main` function with the
+libtest harness. If you don't want the `main` function replaced, also include
+`harness = false`, in which case the example will be built and executed as-is.
+
+Setting targets to `test = false` will stop them from being tested by default.
+Target selection options that take a target by name (such as `--example foo`)
 ignore the `test` flag and will always test the given target.
 
 Doc tests for libraries may be disabled by setting `doctest = false` for the
 library in the manifest.
+
+See [Configuring a target](../reference/cargo-targets.html#configuring-a-target)
+for more information on per-target settings.
 
 {{> options-targets-bin-auto-built }}
 
@@ -172,10 +187,17 @@ includes an option to control the number of threads used:
 {{#options}}
 
 {{> options-jobs }}
-{{> options-keep-going }}
 {{> options-future-incompat }}
 
 {{/options}}
+
+While `cargo test` involves compilation, it does not provide a `--keep-going`
+flag. Use `--no-fail-fast` to run as many tests as possible without stopping at
+the first failure. To "compile" as many tests as possible, use `--tests` to
+build test binaries separately. For example:
+
+    cargo build --tests --keep-going
+    cargo test --tests --no-fail-fast
 
 {{> section-environment }}
 

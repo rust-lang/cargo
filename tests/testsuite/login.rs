@@ -27,14 +27,15 @@ fn setup_new_credentials_at(config: PathBuf) {
     ));
 }
 
-fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
+/// Asserts whether or not the token is set to the given value for the given registry.
+pub fn check_token(expected_token: Option<&str>, registry: Option<&str>) {
     let credentials = credentials_toml();
     assert!(credentials.is_file());
 
     let contents = fs::read_to_string(&credentials).unwrap();
     let toml: toml::Table = contents.parse().unwrap();
 
-    let token = match registry {
+    let actual_token = match registry {
         // A registry has been provided, so check that the token exists in a
         // table for the registry.
         Some(registry) => toml
@@ -54,10 +55,15 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
             }),
     };
 
-    if let Some(token_val) = token {
-        token_val == expected_token
-    } else {
-        false
+    match (actual_token, expected_token) {
+        (None, None) => {}
+        (Some(actual), Some(expected)) => assert_eq!(actual, expected),
+        (None, Some(expected)) => {
+            panic!("expected `{registry:?}` to be `{expected}`, but was not set")
+        }
+        (Some(actual), None) => {
+            panic!("expected `{registry:?}` to be unset, but was set to `{actual}`")
+        }
     }
 }
 
@@ -75,10 +81,10 @@ fn registry_credentials() {
     cargo_process("login --registry").arg(reg).arg(TOKEN).run();
 
     // Ensure that we have not updated the default token
-    assert!(check_token(ORIGINAL_TOKEN, None));
+    check_token(Some(ORIGINAL_TOKEN), None);
 
     // Also ensure that we get the new token for the registry
-    assert!(check_token(TOKEN, Some(reg)));
+    check_token(Some(TOKEN), Some(reg));
 
     let reg2 = "alternative2";
     cargo_process("login --registry")
@@ -88,9 +94,9 @@ fn registry_credentials() {
 
     // Ensure not overwriting 1st alternate registry token with
     // 2nd alternate registry token (see rust-lang/cargo#7701).
-    assert!(check_token(ORIGINAL_TOKEN, None));
-    assert!(check_token(TOKEN, Some(reg)));
-    assert!(check_token(TOKEN2, Some(reg2)));
+    check_token(Some(ORIGINAL_TOKEN), None);
+    check_token(Some(TOKEN), Some(reg));
+    check_token(Some(TOKEN2), Some(reg2));
 }
 
 #[cargo_test]
@@ -103,12 +109,14 @@ fn empty_login_token() {
 
     cargo_process("login")
         .replace_crates_io(registry.index_url())
-        .with_stdout("please paste the token found on [..]/me below")
         .with_stdin("\t\n")
         .with_stderr(
             "\
 [UPDATING] crates.io index
-[ERROR] please provide a non-empty token
+[ERROR] credential provider `cargo:token` failed action `login`
+
+Caused by:
+  please provide a non-empty token
 ",
         )
         .with_status(101)
@@ -119,7 +127,10 @@ fn empty_login_token() {
         .arg("")
         .with_stderr(
             "\
-[ERROR] please provide a non-empty token
+[ERROR] credential provider `cargo:token` failed action `login`
+
+Caused by:
+  please provide a non-empty token
 ",
         )
         .with_status(101)
@@ -134,93 +145,65 @@ fn invalid_login_token() {
         .build();
     setup_new_credentials();
 
-    let check = |stdin: &str, stderr: &str| {
+    let check = |stdin: &str, stderr: &str, status: i32| {
         cargo_process("login")
             .replace_crates_io(registry.index_url())
-            .with_stdout("please paste the token found on [..]/me below")
             .with_stdin(stdin)
             .with_stderr(stderr)
-            .with_status(101)
+            .with_status(status)
             .run();
     };
 
+    let invalid = |stdin: &str| {
+        check(
+            stdin,
+            "[ERROR] credential provider `cargo:token` failed action `login`
+
+Caused by:
+  token contains invalid characters.
+  Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+            101,
+        )
+    };
+    let valid = |stdin: &str| check(stdin, "[LOGIN] token for `crates-io` saved", 0);
+
+    // Update config.json so that the rest of the tests don't need to care
+    // whether or not `Updating` is printed.
     check(
-        "😄",
+        "test",
         "\
 [UPDATING] crates.io index
-[ERROR] token contains invalid characters.
-Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+[LOGIN] token for `crates-io` saved
+",
+        0,
     );
-    check(
-        "\u{0016}",
-        "\
-[ERROR] token contains invalid characters.
-Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
-    );
-    check(
-        "\u{0000}",
-        "\
-[ERROR] token contains invalid characters.
-Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
-    );
-    check(
-        "你好",
-        "\
-[ERROR] token contains invalid characters.
-Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+
+    invalid("😄");
+    invalid("\u{0016}");
+    invalid("\u{0000}");
+    invalid("你好");
+    valid("foo\tbar");
+    valid("foo bar");
+    valid(
+        r##"!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~"##,
     );
 }
 
 #[cargo_test]
 fn bad_asymmetric_token_args() {
+    let registry = RegistryBuilder::new()
+        .credential_provider(&["cargo:paseto"])
+        .no_configure_token()
+        .build();
+
     // These cases are kept brief as the implementation is covered by clap, so this is only smoke testing that we have clap configured correctly.
-    cargo_process("login --key-subject=foo tok")
-        .with_stderr_contains(
-            "error: the argument '--key-subject <SUBJECT>' cannot be used with '[token]'",
-        )
-        .with_status(1)
-        .run();
-
-    cargo_process("login --generate-keypair tok")
-        .with_stderr_contains(
-            "error: the argument '--generate-keypair' cannot be used with '[token]'",
-        )
-        .with_status(1)
-        .run();
-
-    cargo_process("login --secret-key tok")
-        .with_stderr_contains("error: the argument '--secret-key' cannot be used with '[token]'")
-        .with_status(1)
-        .run();
-
-    cargo_process("login --generate-keypair --secret-key")
-        .with_stderr_contains(
-            "error: the argument '--generate-keypair' cannot be used with '--secret-key'",
-        )
-        .with_status(1)
-        .run();
-}
-
-#[cargo_test]
-fn asymmetric_requires_nightly() {
-    let registry = registry::init();
-    cargo_process("login --key-subject=foo")          
+    cargo_process("login -Zasymmetric-token -- --key-subject")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .replace_crates_io(registry.index_url())
+        .with_stderr_contains(
+            "  error: a value is required for '--key-subject <SUBJECT>' but none was supplied",
+        )
         .with_status(101)
-        .with_stderr_contains("[ERROR] the `key-subject` flag is unstable, pass `-Z registry-auth` to enable it\n\
-            See https://github.com/rust-lang/cargo/issues/10519 for more information about the `key-subject` flag.")
-        .run();
-    cargo_process("login --generate-keypair")
-        .replace_crates_io(registry.index_url())
-        .with_status(101)
-        .with_stderr_contains("[ERROR] the `generate-keypair` flag is unstable, pass `-Z registry-auth` to enable it\n\
-            See https://github.com/rust-lang/cargo/issues/10519 for more information about the `generate-keypair` flag.")
-        .run();
-    cargo_process("login --secret-key")
-        .replace_crates_io(registry.index_url())
-        .with_status(101)
-        .with_stderr_contains("[ERROR] the `secret-key` flag is unstable, pass `-Z registry-auth` to enable it\n\
-            See https://github.com/rust-lang/cargo/issues/10519 for more information about the `secret-key` flag.")
         .run();
 }
 
@@ -236,6 +219,28 @@ fn login_with_no_cargo_dir() {
         .run();
     let credentials = fs::read_to_string(credentials_toml()).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"foo\"\n");
+}
+
+#[cargo_test]
+fn login_with_asymmetric_token_and_subject_on_stdin() {
+    let registry = RegistryBuilder::new()
+        .credential_provider(&["cargo:paseto"])
+        .no_configure_token()
+        .build();
+    let credentials = credentials_toml();
+    cargo_process("login -v -Z asymmetric-token -- --key-subject=foo")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr_contains(
+            "\
+k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
+        )
+        .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
+        .run();
+    let credentials = fs::read_to_string(&credentials).unwrap();
+    assert!(credentials.starts_with("[registry]\n"));
+    assert!(credentials.contains("secret-key-subject = \"foo\"\n"));
+    assert!(credentials.contains("secret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n"));
 }
 
 #[cargo_test]
@@ -267,7 +272,6 @@ fn login_with_token_on_stdin() {
         .run();
     cargo_process("login")
         .replace_crates_io(registry.index_url())
-        .with_stdout("please paste the token found on [..]/me below")
         .with_stdin("some token")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
@@ -275,90 +279,68 @@ fn login_with_token_on_stdin() {
 }
 
 #[cargo_test]
-fn login_with_asymmetric_token_and_subject_on_stdin() {
-    let registry = registry::init();
-    let credentials = credentials_toml();
-    fs::remove_file(&credentials).unwrap();
-    cargo_process("login --key-subject=foo --secret-key -v -Z registry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
-        .replace_crates_io(registry.index_url())
-        .with_stdout(
-            "\
-        please paste the API secret key below
-k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
-        )
-        .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
-        .run();
-    let credentials = fs::read_to_string(&credentials).unwrap();
-    assert!(credentials.starts_with("[registry]\n"));
-    assert!(credentials.contains("secret-key-subject = \"foo\"\n"));
-    assert!(credentials.contains("secret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n"));
-}
-
-#[cargo_test]
 fn login_with_asymmetric_token_on_stdin() {
-    let registry = registry::init();
+    let _registry = RegistryBuilder::new()
+        .credential_provider(&["cargo:paseto"])
+        .alternative()
+        .no_configure_token()
+        .build();
     let credentials = credentials_toml();
-    fs::remove_file(&credentials).unwrap();
-    cargo_process("login --secret-key -v -Z registry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
-        .replace_crates_io(registry.index_url())
-        .with_stdout(
+    cargo_process("login -v -Z asymmetric-token --registry alternative")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
+        .with_stderr(
             "\
-    please paste the API secret key below
+[UPDATING] [..]
+[CREDENTIAL] cargo:paseto login alternative
 k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
         )
         .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
-    assert_eq!(credentials, "[registry]\nsecret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n");
-}
-
-#[cargo_test]
-fn login_with_asymmetric_key_subject_without_key() {
-    let registry = registry::init();
-    let credentials = credentials_toml();
-    fs::remove_file(&credentials).unwrap();
-    cargo_process("login --key-subject=foo -Z registry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
-        .replace_crates_io(registry.index_url())
-        .with_stderr_contains("error: need a secret_key to set a key_subject")
-        .with_status(101)
-        .run();
-
-    // ok so add a secret_key to the credentials
-    cargo_process("login --secret-key -v -Z registry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
-        .replace_crates_io(registry.index_url())
-        .with_stdout(
-            "please paste the API secret key below
-k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
-        )
-        .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
-        .run();
-
-    // and then it should work
-    cargo_process("login --key-subject=foo -Z registry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
-        .replace_crates_io(registry.index_url())
-        .run();
-
-    let credentials = fs::read_to_string(&credentials).unwrap();
-    assert!(credentials.starts_with("[registry]\n"));
-    assert!(credentials.contains("secret-key-subject = \"foo\"\n"));
-    assert!(credentials.contains("secret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n"));
+    assert_eq!(credentials, "[registries.alternative]\nsecret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n");
 }
 
 #[cargo_test]
 fn login_with_generate_asymmetric_token() {
-    let registry = registry::init();
+    let _registry = RegistryBuilder::new()
+        .credential_provider(&["cargo:paseto"])
+        .alternative()
+        .no_configure_token()
+        .build();
     let credentials = credentials_toml();
-    fs::remove_file(&credentials).unwrap();
-    cargo_process("login --generate-keypair -Z registry-auth")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
-        .replace_crates_io(registry.index_url())
-        .with_stdout("k3.public.[..]")
+    cargo_process("login -Z asymmetric-token --registry alternative")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
+        .with_stderr("[UPDATING] `alternative` index\nk3.public.[..]")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert!(credentials.contains("secret-key = \"k3.secret."));
+}
+
+#[cargo_test]
+fn default_registry_configured() {
+    // When registry.default is set, login should use that one when
+    // --registry is not used.
+    let _alternative = RegistryBuilder::new().alternative().build();
+    let cargo_home = paths::home().join(".cargo");
+    cargo_util::paths::append(
+        &cargo_home.join("config"),
+        br#"
+            [registry]
+            default = "alternative"
+        "#,
+    )
+    .unwrap();
+
+    cargo_process("login")
+        .arg("a-new-token")
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+[LOGIN] token for `alternative` saved
+",
+        )
+        .run();
+
+    check_token(None, None);
+    check_token(Some("a-new-token"), Some("alternative"));
 }

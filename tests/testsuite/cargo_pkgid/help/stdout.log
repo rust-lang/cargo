@@ -1,0 +1,25 @@
+Print a fully qualified package specification
+
+Usage: cargo[EXE] pkgid [OPTIONS] [SPEC]
+
+Arguments:
+  [SPEC]  
+
+Options:
+  -q, --quiet               Do not print cargo log messages
+  -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>        Coloring: auto, always, never
+      --config <KEY=VALUE>  Override a configuration value
+  -Z <FLAG>                 Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Argument to get the package ID specifier for
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help pkgid` for more detailed information.

@@ -1,0 +1,124 @@
+Add dependencies to a Cargo.toml manifest file
+
+Usage: cargo add [OPTIONS] <DEP>[@<VERSION>] ...
+       cargo add [OPTIONS] --path <PATH> ...
+       cargo add [OPTIONS] --git <URL> ...
+
+Arguments:
+  [DEP_ID]...
+          Reference to a package to add as a dependency
+          
+          You can reference a package by:
+          - `<name>`, like `cargo add serde` (latest version will be used)
+          - `<name>@<version-req>`, like `cargo add serde@1` or `cargo add serde@=1.0.38`
+
+Options:
+      --no-default-features
+          Disable the default features
+
+      --default-features
+          Re-enable the default features
+
+  -F, --features <FEATURES>
+          Space or comma separated list of features to activate
+
+      --optional
+          Mark the dependency as optional
+          
+          The package name will be exposed as feature of your crate.
+
+      --no-optional
+          Mark the dependency as required
+          
+          The package will be removed from your features.
+
+      --rename <NAME>
+          Rename the dependency
+          
+          Example uses:
+          - Depending on multiple versions of a crate
+          - Depend on crates with the same name from different registries
+
+      --ignore-rust-version
+          Ignore `rust-version` specification in packages (unstable)
+
+  -n, --dry-run
+          Don't actually write the manifest
+
+  -q, --quiet
+          Do not print cargo log messages
+
+  -v, --verbose...
+          Use verbose output (-vv very verbose/build.rs output)
+
+      --color <WHEN>
+          Coloring: auto, always, never
+
+      --config <KEY=VALUE>
+          Override a configuration value
+
+  -Z <FLAG>
+          Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Manifest Options:
+      --manifest-path <PATH>
+          Path to Cargo.toml
+
+      --frozen
+          Require Cargo.lock and cache are up to date
+
+      --locked
+          Require Cargo.lock is up to date
+
+      --offline
+          Run without accessing the network
+
+Package Selection:
+  -p, --package [<SPEC>]
+          Package to modify
+
+Source:
+      --path <PATH>
+          Filesystem path to local crate to add
+
+      --git <URI>
+          Git repository location
+          
+          Without any other information, cargo will use latest commit on the main branch.
+
+      --branch <BRANCH>
+          Git branch to download the crate from
+
+      --tag <TAG>
+          Git tag to download the crate from
+
+      --rev <REV>
+          Git reference to download the crate from
+          
+          This is the catch all, handling hashes to named references in remote repositories.
+
+      --registry <NAME>
+          Package registry for this dependency
+
+Section:
+      --dev
+          Add as development dependency
+          
+          Dev-dependencies are not used when compiling a package for building, but are used for
+          compiling tests, examples, and benchmarks.
+          
+          These dependencies are not propagated to other packages which depend on this package.
+
+      --build
+          Add as build dependency
+          
+          Build-dependencies are the only dependencies available for use by build scripts
+          (`build.rs` files).
+
+      --target <TARGET>
+          Add as dependency to the given target platform
+
+Run `cargo help add` for more detailed information.

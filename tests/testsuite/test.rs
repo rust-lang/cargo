@@ -387,11 +387,12 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-[..]thread '[..]' panicked at 'assertion failed:[..]",
+[..]thread '[..]' panicked at [..]",
         )
-        .with_stdout_contains("[..]`(left == right)`[..]")
-        .with_stdout_contains("[..]left: `\"hello\"`,[..]")
-        .with_stdout_contains("[..]right: `\"nope\"`[..]")
+        .with_stdout_contains("[..]assertion [..]failed[..]")
+        .with_stdout_contains("[..]left == right[..]")
+        .with_stdout_contains("[..]left: [..]\"hello\"[..]")
+        .with_stdout_contains("[..]right: [..]\"nope\"[..]")
         .with_stdout_contains("[..]src/main.rs:12[..]")
         .with_stdout_contains(
             "\
@@ -437,10 +438,10 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-[..]thread '[..]' panicked at 'assertion failed: false', \
-      tests/footest.rs:1[..]
+[..]thread '[..]' panicked at [..]tests/footest.rs:1:[..]
 ",
         )
+        .with_stdout_contains("[..]assertion failed[..]")
         .with_stdout_contains(
             "\
 failures:
@@ -473,10 +474,10 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-[..]thread '[..]' panicked at 'assertion failed: false', \
-      src/lib.rs:1[..]
+[..]thread '[..]' panicked at [..]src/lib.rs:1:[..]
 ",
         )
+        .with_stdout_contains("[..]assertion failed[..]")
         .with_stdout_contains(
             "\
 failures:
@@ -4793,6 +4794,21 @@ error: test failed, to rerun pass `--test t2`
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
+note: test exited abnormally; to see the full output pass --nocapture to the harness.
+",
+        )
+        .with_status(4)
+        .run();
+
+    p.cargo("test --test t2 -- --nocapture")
+        .with_stderr(
+            "\
+[FINISHED] test [..]
+[RUNNING] tests/t2.rs (target/debug/deps/t2[..])
+error: test failed, to rerun pass `--test t2`
+
+Caused by:
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
 ",
         )
         .with_status(4)
@@ -4810,11 +4826,41 @@ error: test failed, to rerun pass `--test t2`
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
+note: test exited abnormally; to see the full output pass --nocapture to the harness.
 error: 2 targets failed:
     `--test t1`
     `--test t2`
 ",
         )
         .with_status(101)
+        .run();
+
+    p.cargo("test --no-fail-fast -- --nocapture")
+    .with_stderr_does_not_contain("test exited abnormally; to see the full output pass --nocapture to the harness.")
+    .with_stderr_contains("[..]thread 't' panicked [..] tests/t1[..]")
+    .with_stderr_contains("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace")
+    .with_stderr_contains("[..]process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)")
+    .with_status(101)
+    .run();
+}
+
+#[cargo_test]
+fn cargo_test_print_env_verbose() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("test -vv")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name foo[..]`
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name foo[..]`
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] [CWD]/target/debug/deps/foo-[..][EXE]`
+[DOCTEST] foo
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustdoc --crate-type lib --crate-name foo[..]",
+        )
         .run();
 }

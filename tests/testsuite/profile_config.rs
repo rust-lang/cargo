@@ -1,5 +1,6 @@
 //! Tests for profiles defined in config files.
 
+use cargo::util::toml::TomlDebugInfo;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project};
@@ -266,7 +267,7 @@ fn profile_config_all_options() {
             -C panic=abort \
             -C lto[..]\
             -C codegen-units=2 \
-            -C debuginfo=2 \
+            -C debuginfo=2 [..]\
             -C debug-assertions=on \
             -C overflow-checks=off [..]\
             -C rpath [..]\
@@ -369,7 +370,7 @@ fn profile_config_mixed_types() {
 
 #[cargo_test]
 fn named_config_profile() {
-    // Exercises config named profies.
+    // Exercises config named profiles.
     // foo -> middle -> bar -> dev
     // middle exists in Cargo.toml, the others in .cargo/config
     use super::config::ConfigBuilder;
@@ -426,7 +427,7 @@ fn named_config_profile() {
     let ws = Workspace::new(&paths::root().join("Cargo.toml"), &config).unwrap();
     let profiles = Profiles::new(&ws, profile_name).unwrap();
 
-    let crates_io = cargo::core::source::SourceId::crates_io(&config).unwrap();
+    let crates_io = cargo::core::SourceId::crates_io(&config).unwrap();
     let a_pkg = PackageId::new("a", "0.1.0", crates_io).unwrap();
     let dep_pkg = PackageId::new("dep", "0.1.0", crates_io).unwrap();
 
@@ -436,7 +437,7 @@ fn named_config_profile() {
     assert_eq!(p.name, "foo");
     assert_eq!(p.codegen_units, Some(2)); // "foo" from config
     assert_eq!(p.opt_level, "1"); // "middle" from manifest
-    assert_eq!(p.debuginfo.to_option(), Some(1)); // "bar" from config
+    assert_eq!(p.debuginfo.into_inner(), TomlDebugInfo::Limited); // "bar" from config
     assert_eq!(p.debug_assertions, true); // "dev" built-in (ignore build-override)
     assert_eq!(p.overflow_checks, true); // "dev" built-in (ignore package override)
 
@@ -445,7 +446,7 @@ fn named_config_profile() {
     assert_eq!(bo.name, "foo");
     assert_eq!(bo.codegen_units, Some(6)); // "foo" build override from config
     assert_eq!(bo.opt_level, "0"); // default to zero
-    assert_eq!(bo.debuginfo.to_option(), Some(1)); // SAME as normal
+    assert_eq!(bo.debuginfo.into_inner(), TomlDebugInfo::Limited); // SAME as normal
     assert_eq!(bo.debug_assertions, false); // "foo" build override from manifest
     assert_eq!(bo.overflow_checks, true); // SAME as normal
 
@@ -454,7 +455,7 @@ fn named_config_profile() {
     assert_eq!(po.name, "foo");
     assert_eq!(po.codegen_units, Some(7)); // "foo" package override from config
     assert_eq!(po.opt_level, "1"); // SAME as normal
-    assert_eq!(po.debuginfo.to_option(), Some(1)); // SAME as normal
+    assert_eq!(po.debuginfo.into_inner(), TomlDebugInfo::Limited); // SAME as normal
     assert_eq!(po.debug_assertions, true); // SAME as normal
     assert_eq!(po.overflow_checks, false); // "middle" package override from manifest
 }
@@ -508,12 +509,13 @@ fn test_with_dev_profile() {
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] somedep v1.0.0
-[RUNNING] `rustc --crate-name somedep [..]-C debuginfo=0[..]
+[RUNNING] `rustc --crate-name somedep [..]
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..]-C debuginfo=0[..]
+[RUNNING] `rustc --crate-name foo [..]
 [FINISHED] [..]
 [EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
         )
+        .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
         .run();
 }

@@ -201,6 +201,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": "https://github.com/example/example",
+          "rust_version": "1.60",
           "vers": "1.2.3"
           }
         "#,
@@ -376,6 +377,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.2.0"
           }
         "#,
@@ -503,6 +505,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.2.0"
           }
         "#,
@@ -734,6 +737,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": "README.md",
           "readme_file": "../README.md",
           "repository": "https://github.com/example/example",
+          "rust_version": "1.60",
           "vers": "1.2.3"
           }
         "#,
@@ -917,6 +921,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.2.0"
           }
         "#,
@@ -1229,8 +1234,11 @@ fn error_workspace_false() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
+  TOML parse error at line 7, column 41
+    |
+  7 |             description = { workspace = false }
+    |                                         ^^^^^
   `workspace` cannot be false
-  in `package.description.workspace`
 ",
         )
         .run();
@@ -1269,7 +1277,9 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .with_stderr(
             "\
 [WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.dependencies.dep.workspace
-[WARNING] [CWD]/Cargo.toml: dependency (dep) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
+[WARNING] [CWD]/Cargo.toml: dependency (dep) specified without providing a local path, Git repository, version, \
+or workspace dependency to use. \
+This will be considered an error in future versions
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `dep` found
 location searched: registry `crates-io`
@@ -1313,9 +1323,6 @@ fn error_malformed_workspace_root() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
-
-Caused by:
-  [..]
 
 Caused by:
   [..]
@@ -1589,7 +1596,9 @@ fn cannot_inherit_in_patch() {
         .with_stderr(
             "\
 [WARNING] [CWD]/Cargo.toml: unused manifest key: patch.crates-io.bar.workspace
-[WARNING] [CWD]/Cargo.toml: dependency (bar) specified without providing a local path, Git repository, or version to use. This will be considered an error in future versions
+[WARNING] [CWD]/Cargo.toml: dependency (bar) specified without providing a local path, Git repository, version, \
+or workspace dependency to use. \
+This will be considered an error in future versions
 [UPDATING] `dummy-registry` index
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
 

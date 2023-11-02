@@ -1,0 +1,47 @@
+Run a binary or example of the local package
+
+Usage: cargo[EXE] run [OPTIONS] [ARGS]...
+
+Arguments:
+  [ARGS]...  Arguments for the binary or example to run
+
+Options:
+      --ignore-rust-version   Ignore `rust-version` specification in packages
+      --message-format <FMT>  Error format
+  -q, --quiet                 Do not print cargo log messages
+  -v, --verbose...            Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>          Coloring: auto, always, never
+      --config <KEY=VALUE>    Override a configuration value
+  -Z <FLAG>                   Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                              details
+  -h, --help                  Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Package with the target to run
+
+Target Selection:
+      --bin [<NAME>]      Name of the bin target to run
+      --example [<NAME>]  Name of the example target to run
+
+Feature Selection:
+  -F, --features <FEATURES>  Space or comma separated list of features to activate
+      --all-features         Activate all available features
+      --no-default-features  Do not activate the `default` feature
+
+Compilation Options:
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error
+  -r, --release                 Build artifacts in release mode, with optimizations
+      --profile <PROFILE-NAME>  Build artifacts with the specified profile
+      --target [<TRIPLE>]       Build for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+      --unit-graph              Output build graph in JSON (unstable)
+      --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help run` for more detailed information.

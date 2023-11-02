@@ -111,6 +111,34 @@ fn simple_doc() {
 }
 
 #[cargo_test]
+fn simple_doc_open() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let t1 = cross_compile::alternate();
+    let t2 = rustc_host();
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file("src/lib.rs", "//! empty lib")
+        .build();
+
+    p.cargo("doc")
+        .arg("--open")
+        .arg("--target")
+        .arg(&t1)
+        .arg("--target")
+        .arg(&t2)
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v1.0.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[ERROR] only one `--target` argument is supported",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn simple_check() {
     if cross_compile::disabled() {
         return;

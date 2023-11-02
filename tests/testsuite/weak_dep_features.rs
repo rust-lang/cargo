@@ -601,6 +601,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.1.0"
           }
         "#,

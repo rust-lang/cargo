@@ -35,8 +35,8 @@ fn get_target() -> String {
         .expect("rustc failed to run");
     let stdout = String::from_utf8(output.stdout).unwrap();
     for line in stdout.lines() {
-        if line.starts_with("host: ") {
-            return String::from(&line[6..]);
+        if let Some(line) = line.strip_prefix("host: ") {
+            return String::from(line);
         }
     }
     panic!("Failed to find host: {}", stdout);

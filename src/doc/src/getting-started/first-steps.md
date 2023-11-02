@@ -1,4 +1,4 @@
-## First Steps with Cargo
+# First Steps with Cargo
 
 This section provides a quick sense for the `cargo` command line tool. We
 demonstrate its ability to generate a new [***package***][def-package] for us,
@@ -73,7 +73,7 @@ $ cargo run
 Hello, world!
 ```
 
-### Going further
+## Going further
 
 For more details on using Cargo, check out the [Cargo Guide](../guide/index.md)
 

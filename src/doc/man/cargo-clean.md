@@ -1,6 +1,7 @@
 # cargo-clean(1)
-{{*set actionverb="Clean"}}
-{{*set multitarget=true}}
+{{~*set command="clean"}}
+{{~*set actionverb="Clean"}}
+{{~*set multitarget=true}}
 
 ## NAME
 
@@ -34,6 +35,11 @@ multiple times. See {{man "cargo-pkgid" 1}} for the SPEC format.
 ### Clean Options
 
 {{#options}}
+
+{{#option "`--dry-run`" }}
+Displays a summary of what would be deleted without deleting anything.
+Use with `--verbose` to display the actual files that would be deleted.
+{{/option}}
 
 {{#option "`--doc`" }}
 This option will cause `cargo clean` to remove only the `doc` directory in

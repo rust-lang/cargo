@@ -4,6 +4,7 @@ use cargo_test_support::{basic_manifest, project};
 use std::fs;
 
 const MINIMAL_LIB: &str = r#"
+#![allow(internal_features)]
 #![feature(no_core)]
 #![feature(lang_items)]
 #![no_core]
@@ -80,6 +81,7 @@ fn custom_target_dependency() {
         .file(
             "src/lib.rs",
             r#"
+                #![allow(internal_features)]
                 #![feature(no_core)]
                 #![feature(lang_items)]
                 #![feature(auto_traits)]
@@ -114,6 +116,8 @@ fn custom_target_dependency() {
 }
 
 #[cargo_test(nightly, reason = "requires features no_core, lang_items")]
+// This is randomly crashing in lld. See https://github.com/rust-lang/rust/issues/115985
+#[cfg_attr(all(windows, target_env = "gnu"), ignore = "windows-gnu lld crashing")]
 fn custom_bin_target() {
     let p = project()
         .file(

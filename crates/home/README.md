@@ -1,5 +1,5 @@
 [![Documentation](https://docs.rs/home/badge.svg)](https://docs.rs/home)
-[![Crates.io](https://img.shields.io/crates/v/home.svg)](https://crates.io/crates/home)
+[![crates.io](https://img.shields.io/crates/v/home.svg)](https://crates.io/crates/home)
 
 Canonical definitions of `home_dir`, `cargo_home`, and `rustup_home`.
 
@@ -12,7 +12,7 @@ incorrect because it considers the `HOME` environment variable on
 Windows. This causes surprising situations where a Rust program will
 behave differently depending on whether it is run under a Unix
 emulation environment like Cygwin or MinGW. Neither Cargo nor rustup
-use the standard libraries definition - they use the definition here.
+use the standard library's definition - they use the definition here.
 
 This crate further provides two functions, `cargo_home` and
 `rustup_home`, which are the canonical way to determine the location

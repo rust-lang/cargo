@@ -1,4 +1,4 @@
-## Publishing on crates.io
+# Publishing on crates.io
 
 Once you've got a library that you'd like to share with the world, it's time to
 publish it on [crates.io]! Publishing a crate is when a specific
@@ -8,14 +8,14 @@ Take care when publishing a crate, because a publish is **permanent**. The
 version can never be overwritten, and the code cannot be deleted. There is no
 limit to the number of versions which can be published, however.
 
-### Before your first publish
+## Before your first publish
 
 First things first, you’ll need an account on [crates.io] to acquire
 an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
-account (required for now). You will also need to verify your email address on the
-[Account Settings](https://crates.io/me) page. Once that is done create an API token,
-make sure you copy it. Once you leave the page you will not be able to see it
-again.
+account (required for now). You will also need to provide and verify your email
+address on the [Account Settings](https://crates.io/settings/profile) page. Once
+that is done [create an API token](https://crates.io/settings/tokens), make sure
+you copy it. Once you leave the page you will not be able to see it again.
 
 Then run the [`cargo login`] command.
 
@@ -34,7 +34,11 @@ This command will inform Cargo of your API token and store it locally in your
 shared with anyone else. If it leaks for any reason, you should revoke it
 immediately.
 
-### Before publishing a new crate
+> **Note**: The [`cargo logout`] command can be used to remove the token from
+> `credentials.toml`. This can be useful if you no longer need it stored on
+> the local machine.
+
+## Before publishing a new crate
 
 Keep in mind that crate names on [crates.io] are allocated on a first-come-first-serve
 basis. Once a crate name is taken, it cannot be used for another crate.
@@ -56,7 +60,7 @@ though they are not required.
 If you are publishing a library, you may also want to consult the [Rust API
 Guidelines].
 
-#### Packaging a crate
+### Packaging a crate
 
 The next step is to package up your crate and upload it to [crates.io]. For
 this we’ll use the [`cargo publish`] subcommand. This command performs the following
@@ -115,7 +119,7 @@ include = [
 ]
 ```
 
-### Uploading the crate
+## Uploading the crate
 
 When you are ready to publish, use the [`cargo publish`] command
 to upload to [crates.io]:
@@ -126,19 +130,32 @@ $ cargo publish
 
 And that’s it, you’ve now published your first crate!
 
-### Publishing a new version of an existing crate
+## Publishing a new version of an existing crate
 
 In order to release a new version, change [the `version` value](manifest.md#the-version-field) specified in your `Cargo.toml` manifest.
 Keep in mind [the SemVer rules](semver.md) which provide guidelines on what is a compatible change.
 Then run [`cargo publish`] as described above to upload the new version.
 
-### Managing a crates.io-based crate
+> **Recommendation:** Consider the full release process and automate what you can.
+>
+> Each version should include:
+> - A changelog entry, preferably [manually curated](https://keepachangelog.com/en/1.0.0/) though a generated one is better than nothing
+> - A [git tag](https://git-scm.com/book/en/v2/Git-Basics-Tagging) pointing to the published commit
+>
+> Examples of third-party tools that are representative of different workflows include (in alphabetical order):
+> - [cargo-release](https://crates.io/crates/cargo-release)
+> - [cargo-smart-release](https://crates.io/crates/cargo-smart-release)
+> - [release-plz](https://crates.io/crates/release-plz)
+>
+> For more, see [crates.io](https://crates.io/search?q=cargo%20release).
+
+## Managing a crates.io-based crate
 
 Management of crates is primarily done through the command line `cargo` tool
 rather than the [crates.io] web interface. For this, there are a few subcommands
 to manage a crate.
 
-#### `cargo yank`
+### `cargo yank`
 
 Occasions may arise where you publish a version of a crate that actually ends up
 being broken for one reason or another (syntax error, forgot to include a file,
@@ -162,7 +179,7 @@ goal. Essentially a yank means that all packages with a `Cargo.lock` will not
 break, while any future `Cargo.lock` files generated will not list the yanked
 version.
 
-#### `cargo owner`
+### `cargo owner`
 
 A crate is often developed by more than one person, or the primary maintainer
 may change over time! The owner of a crate is the only person allowed to publish
@@ -194,7 +211,7 @@ The syntax for teams is currently `github:org:team` (see examples above).
 In order to invite a team as an owner one must be a member of that team. No
 such restriction applies to removing a team as an owner.
 
-### GitHub permissions
+## GitHub permissions
 
 Team membership is not something GitHub provides simple public access to, and it
 is likely for you to encounter the following message when working with them:
@@ -246,7 +263,7 @@ the “Grant Access” button next to its name:
 
 ![Authentication Access Control](../images/auth-level-acl.png)
 
-#### Troubleshooting GitHub team access errors
+### Troubleshooting GitHub team access errors
 
 When trying to add a GitHub team as crate owner, you may see an error like:
 
@@ -264,6 +281,7 @@ request the org owner to do so.
 
 [Rust API Guidelines]: https://rust-lang.github.io/api-guidelines/
 [`cargo login`]: ../commands/cargo-login.md
+[`cargo logout`]: ../commands/cargo-logout.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`categories`]: manifest.md#the-categories-field

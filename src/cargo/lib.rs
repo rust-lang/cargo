@@ -1,13 +1,3 @@
-// For various reasons, some idioms are still allow'ed, but we would like to
-// test and enforce them.
-#![warn(rust_2018_idioms)]
-// Due to some of the default clippy lints being somewhat subjective and not
-// necessarily an improvement, we prefer to not use them at this time.
-#![allow(clippy::all)]
-#![warn(clippy::disallowed_methods)]
-#![warn(clippy::self_named_module_files)]
-#![allow(rustdoc::private_intra_doc_links)]
-
 //! # Cargo as a library
 //!
 //! There are two places you can find API documentation of cargo-the-library,
@@ -17,7 +7,7 @@
 //! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo>: targeted at cargo contributors
 //!   - Updated on each update of the `cargo` submodule in `rust-lang/rust`
 //!
-//! **WARNING:** Using Cargo as a library has drawbacks, particulary the API is unstable,
+//! **WARNING:** Using Cargo as a library has drawbacks, particularly the API is unstable,
 //! and there is no clear path to stabilize it soon at the time of writing.  See [The Cargo Book:
 //! External tools] for more on this topic.
 //!
@@ -37,7 +27,7 @@
 //! - [`core::compiler`]:
 //!   This is the code responsible for running `rustc` and `rustdoc`.
 //!   - [`core::compiler::build_context`]:
-//!     The [`BuildContext`]['core::compiler::BuildContext] is the result of the "front end" of the
+//!     The [`BuildContext`][core::compiler::BuildContext] is the result of the "front end" of the
 //!     build process. This contains the graph of work to perform and any settings necessary for
 //!     `rustc`. After this is built, the next stage of building is handled in
 //!     [`Context`][core::compiler::Context].
@@ -48,8 +38,8 @@
 //!   - [`core::compiler::fingerprint`]:
 //!     The `fingerprint` module contains all the code that handles detecting
 //!     if a crate needs to be recompiled.
-//! - [`core::source`]:
-//!   The [`core::Source`] trait is an abstraction over different sources of packages.
+//! - [`sources::source`]:
+//!   The [`sources::source::Source`] trait is an abstraction over different sources of packages.
 //!   Sources are uniquely identified by a [`core::SourceId`]. Sources are implemented in the [`sources`]
 //!   directory.
 //! - [`util`]:
@@ -86,11 +76,9 @@
 //! - [`cargo-test-macro`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-macro)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_macro/index.html)):
 //!   This is the `#[cargo_test]` proc-macro used by the test suite to define tests.
-//! - [`credential`](https://github.com/rust-lang/cargo/tree/master/crates/credential)
+//! - [`credential`](https://github.com/rust-lang/cargo/tree/master/credential)
 //!   This subdirectory contains several packages for implementing the
-//!   experimental
-//!   [credential-process](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#credential-process)
-//!   feature.
+//!   [credential providers](https://doc.rust-lang.org/nightly/cargo/reference/registry-authentication.html).
 //! - [`mdman`](https://github.com/rust-lang/cargo/tree/master/crates/mdman)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/mdman/index.html)):
 //!   This is a utility for generating cargo's man pages. See [Building the man
@@ -141,10 +129,24 @@
 //! [The Cargo Book]: https://doc.rust-lang.org/cargo/
 //! [Cargo Contributor Guide]: https://doc.crates.io/contrib/
 
+// TODO: consider removing these lint attributes when `-Zlints` hits stable.
+// For various reasons, some idioms are still allow'ed, but we would like to
+// test and enforce them.
+#![warn(rust_2018_idioms)]
+// Due to some of the default clippy lints being somewhat subjective and not
+// necessarily an improvement, we prefer to not use them at this time.
+#![allow(clippy::all)]
+#![warn(clippy::disallowed_methods)]
+#![warn(clippy::self_named_module_files)]
+#![warn(clippy::print_stdout)]
+#![warn(clippy::print_stderr)]
+#![warn(clippy::dbg_macro)]
+#![allow(rustdoc::private_intra_doc_links)]
+
 use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
 use anyhow::Error;
-use log::debug;
+use tracing::debug;
 
 pub use crate::util::errors::{AlreadyPrintedError, InternalError, VerboseError};
 pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, Config};

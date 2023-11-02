@@ -5,11 +5,9 @@ use cargo_test_support::git;
 use cargo_test_support::project;
 use cargo_test_support::CargoCommand;
 
-use crate::cargo_remove::init_registry;
-
 #[cargo_test]
 fn case() {
-    init_registry();
+    cargo_test_support::registry::init();
 
     let git_project1 = git::new("bar1", |project| {
         project
@@ -19,6 +17,13 @@ fn case() {
     .url();
 
     let git_project2 = git::new("bar2", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+            .file("src/lib.rs", "")
+    })
+    .url();
+
+    let git_project3 = git::new("bar3", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
             .file("src/lib.rs", "")
@@ -40,7 +45,7 @@ fn case() {
                  bar = {{ git = \"{git_project1}\" }}\n\
                  \n\
                  [patch.\"{git_project1}\"]\n\
-                 bar = {{ git = \"{git_project2}\" }}\n\
+                 bar = {{ git = \"{git_project3}\" }}\n\
                  \n\
                  [patch.crates-io]\n\
                  bar = {{ git = \"{git_project2}\" }}\n",

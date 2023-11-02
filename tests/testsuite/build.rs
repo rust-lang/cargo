@@ -136,6 +136,52 @@ fn incremental_config() {
 }
 
 #[cargo_test]
+fn cargo_compile_with_redundant_default_mode() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build --debug")
+        .with_stderr(
+            "\
+error: unexpected argument '--debug' found
+
+  tip: `--debug` is the default for `cargo build`; instead `--release` is supported
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
+fn cargo_compile_with_unsupported_short_config_flag() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build -c net.git-fetch-with-cli=true")
+        .with_stderr(
+            "\
+error: unexpected argument '-c' found
+
+  tip: a similar argument exists: '--config'
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_with_workspace_excluded() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -160,6 +206,54 @@ fn cargo_compile_manifest_path() {
 }
 
 #[cargo_test]
+fn cargo_compile_with_wrong_manifest_path_flag() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build --path foo/Cargo.toml")
+        .cwd(p.root().parent().unwrap())
+        .with_stderr(
+            "\
+error: unexpected argument '--path' found
+
+  tip: a similar argument exists: '--manifest-path'
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
+fn chdir_gated() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .build();
+    p.cargo("-C foo build")
+        .cwd(p.root().parent().unwrap())
+        .with_stderr(
+            "error: the `-C` flag is unstable, \
+            pass `-Z unstable-options` on the nightly channel to enable it",
+        )
+        .with_status(101)
+        .run();
+    // No masquerade should also fail.
+    p.cargo("-C foo -Z unstable-options build")
+        .cwd(p.root().parent().unwrap())
+        .with_stderr(
+            "error: the `-C` flag is unstable, \
+            pass `-Z unstable-options` on the nightly channel to enable it",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_directory_not_cwd() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -167,10 +261,38 @@ fn cargo_compile_directory_not_cwd() {
         .file(".cargo/config.toml", &"")
         .build();
 
-    p.cargo("-C foo build")
+    p.cargo("-Zunstable-options -C foo build")
+        .masquerade_as_nightly_cargo(&["chdir"])
         .cwd(p.root().parent().unwrap())
         .run();
     assert!(p.bin("foo").is_file());
+}
+
+#[cargo_test]
+fn cargo_compile_with_unsupported_short_unstable_feature_flag() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file(".cargo/config.toml", &"")
+        .build();
+
+    p.cargo("-zunstable-options -C foo build")
+        .masquerade_as_nightly_cargo(&["chdir"])
+        .cwd(p.root().parent().unwrap())
+        .with_stderr(
+            "\
+error: unexpected argument '-z' found
+
+  tip: a similar argument exists: '-Z'
+
+Usage: cargo [..][OPTIONS] [COMMAND]
+       cargo [..][OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
 }
 
 #[cargo_test]
@@ -181,7 +303,8 @@ fn cargo_compile_directory_not_cwd_with_invalid_config() {
         .file(".cargo/config.toml", &"!")
         .build();
 
-    p.cargo("-C foo build")
+    p.cargo("-Zunstable-options -C foo build")
+        .masquerade_as_nightly_cargo(&["chdir"])
         .cwd(p.root().parent().unwrap())
         .with_status(101)
         .with_stderr_contains(
@@ -233,9 +356,6 @@ fn cargo_compile_with_invalid_manifest2() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 3, column 23
     |
   3 |                 foo = bar
@@ -256,9 +376,6 @@ fn cargo_compile_with_invalid_manifest3() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 1, column 5
@@ -320,8 +437,11 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 4, column 19
+    |
+  4 |         version = \"1.0\"
+    |                   ^^^^^
   unexpected end of input while parsing minor version number
-  in `package.version`
 ",
         )
         .run();
@@ -419,7 +539,7 @@ fn cargo_compile_with_forbidden_bin_target_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  the binary target name `build` is forbidden, it conflicts with with cargo's build directory names
+  the binary target name `build` is forbidden, it conflicts with cargo's build directory names
 ",
         )
         .run();
@@ -1308,13 +1428,13 @@ fn cargo_default_env_metadata_env_var() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type dylib \
         --emit=[..]link \
-        -C prefer-dynamic[..]-C debuginfo=2 \
+        -C prefer-dynamic[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]-C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -1336,13 +1456,13 @@ fn cargo_default_env_metadata_env_var() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type dylib \
         --emit=[..]link \
-        -C prefer-dynamic[..]-C debuginfo=2 \
+        -C prefer-dynamic[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]-C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -2027,7 +2147,7 @@ fn verbose_build() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]-C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -3010,9 +3130,6 @@ Caused by:
   could not parse TOML configuration in `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 1, column 6
     |
   1 | this is not valid toml
@@ -3859,7 +3976,7 @@ fn compiler_json_error_format() {
                 },
                 "profile": {
                     "debug_assertions": true,
-                    "debuginfo": null,
+                    "debuginfo": 0,
                     "opt_level": "0",
                     "overflow_checks": true,
                     "test": false
@@ -4048,7 +4165,7 @@ fn message_format_json_forward_stderr() {
                     },
                     "profile":{
                         "debug_assertions":false,
-                        "debuginfo":null,
+                        "debuginfo":0,
                         "opt_level":"3",
                         "overflow_checks": false,
                         "test":false
@@ -4147,6 +4264,30 @@ fn cargo_build_empty_target() {
 }
 
 #[cargo_test]
+fn cargo_build_with_unsupported_short_target_flag() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -t")
+        .arg("")
+        .with_stderr(
+            "\
+error: unexpected argument '-t' found
+
+  tip: a similar argument exists: '--target'
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
 fn build_all_workspace() {
     let p = project()
         .file(
@@ -4208,6 +4349,43 @@ fn build_all_exclude() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_build_with_unsupported_short_exclude_flag() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("build --workspace -x baz")
+        .with_stderr(
+            "\
+error: unexpected argument '-x' found
+
+  tip: a similar argument exists: '--exclude'
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
         .run();
 }
 
@@ -5406,7 +5584,7 @@ fn targets_selected_all() {
         // Unit tests.
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
-             -C debuginfo=2 --test [..]",
+             -C debuginfo=2 [..]--test [..]",
         )
         .run();
 }
@@ -5423,7 +5601,7 @@ fn all_targets_no_lib() {
         // Unit tests.
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
-             -C debuginfo=2 --test [..]",
+             -C debuginfo=2 [..]--test [..]",
         )
         .run();
 }
@@ -5540,6 +5718,8 @@ fn good_jobs() {
     p.cargo("build --jobs 1").run();
 
     p.cargo("build --jobs -1").run();
+
+    p.cargo("build --jobs default").run();
 }
 
 #[cargo_test]
@@ -5573,8 +5753,8 @@ fn invalid_jobs() {
         .run();
 
     p.cargo("build --jobs over9000")
-        .with_status(1)
-        .with_stderr("error: Invalid value: could not parse `over9000` as a number")
+        .with_status(101)
+        .with_stderr("error: could not parse `over9000`. Number of parallel jobs should be `default` or a number.")
         .run();
 }
 
@@ -5894,7 +6074,7 @@ fn build_lib_only() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]-C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`

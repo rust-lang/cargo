@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use super::{fingerprint, Context, FileFlavor, Unit};
 use crate::util::{internal, CargoResult};
 use cargo_util::paths;
-use log::debug;
+use tracing::debug;
 
 /// Bacially just normalizes a given path and converts it to a string.
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {

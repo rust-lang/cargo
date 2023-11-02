@@ -75,6 +75,8 @@ function render_pipeline_graph() {
   ctx.translate(X_LINE, MARGIN);
 
   // Compute x,y coordinate of each block.
+  // We also populate a map with the count of each unit name to disambiguate if necessary
+  const unitCount = new Map();
   UNIT_COORDS = {};
   for (i=0; i<units.length; i++) {
     let unit = units[i];
@@ -86,6 +88,9 @@ function render_pipeline_graph() {
     }
     let width = Math.max(px_per_sec * unit.duration, 1.0);
     UNIT_COORDS[unit.i] = {x, y, width, rmeta_x};
+
+    const count = unitCount.get(unit.name) || 0;
+    unitCount.set(unit.name, count + 1);
   }
 
   // Draw the blocks.
@@ -111,7 +116,10 @@ function render_pipeline_graph() {
     ctx.textAlign = 'start';
     ctx.textBaseline = 'middle';
     ctx.font = '14px sans-serif';
-    const label = `${unit.name}${unit.target} ${unit.duration}s`;
+
+    const labelName = (unitCount.get(unit.name) || 0) > 1 ? `${unit.name} (v${unit.version})${unit.target}` : `${unit.name}${unit.target}`;
+    const label = `${labelName}: ${unit.duration}s`;
+
     const text_info = ctx.measureText(label);
     const label_x = Math.min(x + 5.0, canvas_width - text_info.width - X_LINE);
     ctx.fillText(label, label_x, y + BOX_HEIGHT / 2);

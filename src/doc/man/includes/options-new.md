@@ -11,7 +11,7 @@ Create a package with a library target (`src/lib.rs`).
 
 {{#option "`--edition` _edition_" }}
 Specify the Rust edition to use. Default is 2021.
-Possible values: 2015, 2018, 2021
+Possible values: 2015, 2018, 2021, 2024
 {{/option}}
 
 {{#option "`--name` _name_" }}

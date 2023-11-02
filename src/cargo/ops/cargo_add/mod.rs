@@ -12,28 +12,29 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use indexmap::IndexSet;
 use itertools::Itertools;
-use termcolor::Color::Green;
-use termcolor::Color::Red;
-use termcolor::ColorSpec;
 use toml_edit::Item as TomlItem;
 
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
 use crate::core::FeatureValue;
 use crate::core::Package;
-use crate::core::QueryKind;
 use crate::core::Registry;
 use crate::core::Shell;
 use crate::core::Summary;
 use crate::core::Workspace;
+use crate::sources::source::QueryKind;
+use crate::util::cache_lock::CacheLockMode;
+use crate::util::style;
 use crate::util::toml_mut::dependency::Dependency;
 use crate::util::toml_mut::dependency::GitSource;
 use crate::util::toml_mut::dependency::MaybeWorkspace;
 use crate::util::toml_mut::dependency::PathSource;
 use crate::util::toml_mut::dependency::Source;
 use crate::util::toml_mut::dependency::WorkspaceSource;
+use crate::util::toml_mut::is_sorted;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
+use crate::util::RustVersion;
 use crate::CargoResult;
 use crate::Config;
 use crate_spec::CrateSpec;
@@ -51,6 +52,8 @@ pub struct AddOptions<'a> {
     pub section: DepTable,
     /// Act as if dependencies will be added
     pub dry_run: bool,
+    /// Whether the minimum supported Rust version should be considered during resolution
+    pub honor_rust_version: bool,
 }
 
 /// Add dependencies to a manifest
@@ -76,7 +79,9 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
     let mut registry = PackageRegistry::new(options.config)?;
 
     let deps = {
-        let _lock = options.config.acquire_package_cache_lock()?;
+        let _lock = options
+            .config
+            .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
         registry.lock_patches();
         options
             .dependencies
@@ -86,7 +91,9 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                     &manifest,
                     raw,
                     workspace,
+                    &options.spec,
                     &options.section,
+                    options.honor_rust_version,
                     options.config,
                     &mut registry,
                 )
@@ -256,7 +263,9 @@ fn resolve_dependency(
     manifest: &LocalManifest,
     arg: &DepOp,
     ws: &Workspace<'_>,
+    spec: &Package,
     section: &DepTable,
+    honor_rust_version: bool,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<DependencyUI> {
@@ -368,7 +377,14 @@ fn resolve_dependency(
             }
             dependency = dependency.set_source(src);
         } else {
-            let latest = get_latest_dependency(&dependency, false, config, registry)?;
+            let latest = get_latest_dependency(
+                spec,
+                &dependency,
+                false,
+                honor_rust_version,
+                config,
+                registry,
+            )?;
 
             if dependency.name != latest.name {
                 config.shell().warn(format!(
@@ -490,9 +506,7 @@ fn get_existing_dependency(
         })
         .collect();
     possible.sort_by_key(|(key, _)| *key);
-    let (key, dep) = if let Some(item) = possible.pop() {
-        item
-    } else {
+    let Some((key, dep)) = possible.pop() else {
         return Ok(None);
     };
     let mut dep = dep?;
@@ -518,8 +532,10 @@ fn get_existing_dependency(
 }
 
 fn get_latest_dependency(
+    spec: &Package,
     dependency: &Dependency,
     _flag_allow_prerelease: bool,
+    honor_rust_version: bool,
     config: &Config,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<Dependency> {
@@ -529,7 +545,7 @@ fn get_latest_dependency(
             unreachable!("registry dependencies required, found a workspace dependency");
         }
         MaybeWorkspace::Other(query) => {
-            let possibilities = loop {
+            let mut possibilities = loop {
                 match registry.query_vec(&query, QueryKind::Fuzzy) {
                     std::task::Poll::Ready(res) => {
                         break res?;
@@ -537,19 +553,70 @@ fn get_latest_dependency(
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
             };
-            let latest = possibilities
-                .iter()
-                .max_by_key(|s| {
-                    // Fallback to a pre-release if no official release is available by sorting them as
-                    // less.
-                    let stable = s.version().pre.is_empty();
-                    (stable, s.version())
-                })
-                .ok_or_else(|| {
-                    anyhow::format_err!(
-                        "the crate `{dependency}` could not be found in registry index."
-                    )
-                })?;
+
+            possibilities.sort_by_key(|s| {
+                // Fallback to a pre-release if no official release is available by sorting them as
+                // less.
+                let stable = s.version().pre.is_empty();
+                (stable, s.version().clone())
+            });
+
+            let mut latest = possibilities.last().ok_or_else(|| {
+                anyhow::format_err!(
+                    "the crate `{dependency}` could not be found in registry index."
+                )
+            })?;
+
+            if config.cli_unstable().msrv_policy && honor_rust_version {
+                fn parse_msrv(comp: &RustVersion) -> (u64, u64, u64) {
+                    (comp.major, comp.minor.unwrap_or(0), comp.patch.unwrap_or(0))
+                }
+
+                if let Some(req_msrv) = spec.rust_version().map(parse_msrv) {
+                    let msrvs = possibilities
+                        .iter()
+                        .map(|s| (s, s.rust_version().map(parse_msrv)))
+                        .collect::<Vec<_>>();
+
+                    // Find the latest version of the dep which has a compatible rust-version. To
+                    // determine whether or not one rust-version is compatible with another, we
+                    // compare the lowest possible versions they could represent, and treat
+                    // candidates without a rust-version as compatible by default.
+                    let (latest_msrv, _) = msrvs
+                        .iter()
+                        .filter(|(_, v)| v.map(|msrv| req_msrv >= msrv).unwrap_or(true))
+                        .last()
+                        .ok_or_else(|| {
+                            // Failing that, try to find the highest version with the lowest
+                            // rust-version to report to the user.
+                            let lowest_candidate = msrvs
+                                .iter()
+                                .min_set_by_key(|(_, v)| v)
+                                .iter()
+                                .map(|(s, _)| s)
+                                .max_by_key(|s| s.version());
+                            rust_version_incompat_error(
+                                &dependency.name,
+                                spec.rust_version().unwrap(),
+                                lowest_candidate.copied(),
+                            )
+                        })?;
+
+                    if latest_msrv.version() < latest.version() {
+                        config.shell().warn(format_args!(
+                            "ignoring `{dependency}@{latest_version}` (which has a rust-version of \
+                             {latest_rust_version}) to satisfy this package's rust-version of \
+                             {rust_version} (use `--ignore-rust-version` to override)",
+                            latest_version = latest.version(),
+                            latest_rust_version = latest.rust_version().unwrap(),
+                            rust_version = spec.rust_version().unwrap(),
+                        ))?;
+
+                        latest = latest_msrv;
+                    }
+                }
+            }
+
             let mut dep = Dependency::from(latest);
             if let Some(reg_name) = dependency.registry.as_deref() {
                 dep = dep.set_registry(reg_name);
@@ -557,6 +624,31 @@ fn get_latest_dependency(
             Ok(dep)
         }
     }
+}
+
+fn rust_version_incompat_error(
+    dep: &str,
+    rust_version: &RustVersion,
+    lowest_rust_version: Option<&Summary>,
+) -> anyhow::Error {
+    let mut error_msg = format!(
+        "could not find version of crate `{dep}` that satisfies this package's rust-version of \
+         {rust_version}\n\
+         help: use `--ignore-rust-version` to override this behavior"
+    );
+
+    if let Some(lowest) = lowest_rust_version {
+        // rust-version must be present for this candidate since it would have been selected as
+        // compatible previously if it weren't.
+        let version = lowest.version();
+        let rust_version = lowest.rust_version().unwrap();
+        error_msg.push_str(&format!(
+            "\nnote: the lowest rust-version available for `{dep}` is {rust_version}, used in \
+             version {version}"
+        ));
+    }
+
+    anyhow::format_err!(error_msg)
 }
 
 fn select_package(
@@ -855,61 +947,62 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
     if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
         return Ok(());
     }
+
+    let stderr = shell.err();
+    let good = style::GOOD.render();
+    let error = style::ERROR.render();
+    let reset = anstyle::Reset.render();
+
     let (activated, deactivated) = dep.features();
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
-        let suffix = if let Some(version) = &dep.available_version {
-            let mut version = version.clone();
-            version.build = Default::default();
-            let version = version.to_string();
-            // Avoid displaying the version if it will visually look like the version req that we
-            // showed earlier
-            let version_req = dep
-                .version()
-                .and_then(|v| semver::VersionReq::parse(v).ok())
-                .and_then(|v| precise_version(&v));
-            if version_req.as_deref() != Some(version.as_str()) {
-                format!(" as of v{version}")
-            } else {
-                "".to_owned()
+        let suffix = format_features_version_suffix(&dep);
+
+        writeln!(stderr, "{prefix}Features{suffix}:")?;
+
+        const MAX_FEATURE_PRINTS: usize = 30;
+        let total_activated = activated.len();
+        let total_deactivated = deactivated.len();
+
+        if total_activated <= MAX_FEATURE_PRINTS {
+            for feat in activated {
+                writeln!(stderr, "{prefix}{good}+{reset} {feat}")?;
             }
         } else {
-            "".to_owned()
-        };
-        shell.write_stderr(
-            format_args!("{}Features{}:\n", prefix, suffix),
-            &ColorSpec::new(),
-        )?;
-        for feat in activated {
-            shell.write_stderr(&prefix, &ColorSpec::new())?;
-            shell.write_stderr('+', &ColorSpec::new().set_bold(true).set_fg(Some(Green)))?;
-            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
+            writeln!(stderr, "{prefix}{total_activated} activated features")?;
         }
-        for feat in deactivated {
-            shell.write_stderr(&prefix, &ColorSpec::new())?;
-            shell.write_stderr('-', &ColorSpec::new().set_bold(true).set_fg(Some(Red)))?;
-            shell.write_stderr(format_args!(" {}\n", feat), &ColorSpec::new())?;
+
+        if total_activated + total_deactivated <= MAX_FEATURE_PRINTS {
+            for feat in deactivated {
+                writeln!(stderr, "{prefix}{error}-{reset} {feat}")?;
+            }
+        } else {
+            writeln!(stderr, "{prefix}{total_deactivated} deactivated features")?;
         }
     }
 
     Ok(())
 }
 
-// Based on Iterator::is_sorted from nightly std; remove in favor of that when stabilized.
-fn is_sorted(mut it: impl Iterator<Item = impl PartialOrd>) -> bool {
-    let mut last = match it.next() {
-        Some(e) => e,
-        None => return true,
-    };
-
-    for curr in it {
-        if curr < last {
-            return false;
+fn format_features_version_suffix(dep: &DependencyUI) -> String {
+    if let Some(version) = &dep.available_version {
+        let mut version = version.clone();
+        version.build = Default::default();
+        let version = version.to_string();
+        // Avoid displaying the version if it will visually look like the version req that we
+        // showed earlier
+        let version_req = dep
+            .version()
+            .and_then(|v| semver::VersionReq::parse(v).ok())
+            .and_then(|v| precise_version(&v));
+        if version_req.as_deref() != Some(version.as_str()) {
+            format!(" as of v{version}")
+        } else {
+            "".to_owned()
         }
-        last = curr;
+    } else {
+        "".to_owned()
     }
-
-    true
 }
 
 fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Dependency> {

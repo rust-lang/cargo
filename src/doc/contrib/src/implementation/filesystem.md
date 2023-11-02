@@ -17,5 +17,5 @@ its best to handle them. Some examples of issues to deal with:
   fractional part of the time stamp.
 * Symlinks are not always supported, particularly on Windows.
 
-[`fingerprint`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/fingerprint.rs
+[`fingerprint`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/fingerprint/mod.rs
 [`fs::canonicalize`]: https://doc.rust-lang.org/std/fs/fn.canonicalize.html

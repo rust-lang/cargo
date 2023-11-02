@@ -27,9 +27,8 @@ pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph) -> CargoResult<
         if !validated.insert(unit.pkg.package_id()) {
             continue;
         }
-        let lib = match unit.pkg.manifest().links() {
-            Some(lib) => lib,
-            None => continue,
+        let Some(lib) = unit.pkg.manifest().links() else {
+            continue;
         };
         if let Some(&prev) = links.get(lib) {
             let prev_path = resolve

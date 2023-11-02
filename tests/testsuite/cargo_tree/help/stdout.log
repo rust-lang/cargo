@@ -1,0 +1,45 @@
+Display a tree visualization of a dependency graph
+
+Usage: cargo[EXE] tree [OPTIONS]
+
+Options:
+  -q, --quiet               Do not print cargo log messages
+  -e, --edges <KINDS>       The kinds of dependencies to display (features, normal, build, dev, all,
+                            no-normal, no-build, no-dev, no-proc-macro)
+  -i, --invert [<SPEC>]     Invert the tree direction and focus on the given package
+      --prune <SPEC>        Prune the given package from the display of the dependency tree
+      --depth <DEPTH>       Maximum display depth of the dependency tree
+      --prefix <PREFIX>     Change the prefix (indentation) of how each entry is displayed [default:
+                            indent] [possible values: depth, indent, none]
+      --no-dedupe           Do not de-duplicate (repeats all shared dependencies)
+  -d, --duplicates          Show only dependencies which come in multiple versions (implies -i)
+      --charset <CHARSET>   Character set to use in output [default: utf8] [possible values: utf8,
+                            ascii]
+  -f, --format <FORMAT>     Format string used for printing dependencies [default: {p}]
+  -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>        Coloring: auto, always, never
+      --config <KEY=VALUE>  Override a configuration value
+  -Z <FLAG>                 Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Package to be used as the root of the tree
+      --workspace         Display the tree for all packages in the workspace
+      --exclude <SPEC>    Exclude specific workspace members
+
+Feature Selection:
+  -F, --features <FEATURES>  Space or comma separated list of features to activate
+      --all-features         Activate all available features
+      --no-default-features  Do not activate the `default` feature
+
+Compilation Options:
+      --target [<TRIPLE>]  Filter dependencies matching the given target-triple (default host
+                           platform). Pass `all` to include all targets.
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help tree` for more detailed information.

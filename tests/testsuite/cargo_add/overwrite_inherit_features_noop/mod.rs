@@ -6,6 +6,8 @@ use cargo_test_support::curr_dir;
 
 #[cargo_test]
 fn case() {
+    cargo_test_support::registry::init();
+
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = project.root();
     let cwd = &project_root;

@@ -5,7 +5,6 @@ use cargo::ops::{self, PackageOpts};
 pub fn cli() -> Command {
     subcommand("package")
         .about("Assemble the local package into a distributable tarball")
-        .arg_quiet()
         .arg(
             flag(
                 "list",
@@ -25,21 +24,31 @@ pub fn cli() -> Command {
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
-        .arg_target_triple("Build for the target triple")
-        .arg_target_dir()
-        .arg_features()
+        .arg_quiet()
         .arg_package_spec_no_all(
             "Package(s) to assemble",
             "Assemble all packages in the workspace",
             "Don't assemble specified packages",
         )
+        .arg_features()
+        .arg_target_triple("Build for the target triple")
+        .arg_target_dir()
+        .arg_parallel()
         .arg_manifest_path()
-        .arg_jobs()
-        .after_help("Run `cargo help package` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help package</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
+    if ws.root_maybe().is_embedded() {
+        return Err(anyhow::format_err!(
+            "{} is unsupported by `cargo package`",
+            ws.root_manifest().display()
+        )
+        .into());
+    }
     let specs = args.packages_from_flags()?;
 
     ops::package(
@@ -51,7 +60,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             check_metadata: !args.flag("no-metadata"),
             allow_dirty: args.flag("allow-dirty"),
             to_package: specs,
-            targets: args.targets(),
+            targets: args.targets()?,
             jobs: args.jobs()?,
             keep_going: args.keep_going(),
             cli_features: args.cli_features()?,

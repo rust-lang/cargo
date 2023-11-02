@@ -43,7 +43,9 @@ pub fn builtin() -> Vec<Command> {
     ]
 }
 
-pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResult> {
+pub type Exec = fn(&mut Config, &ArgMatches) -> CliResult;
+
+pub fn builtin_exec(cmd: &str) -> Option<Exec> {
     let f = match cmd {
         "add" => add::exec,
         "bench" => bench::exec,

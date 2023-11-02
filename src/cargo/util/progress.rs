@@ -160,9 +160,8 @@ impl<'cfg> Progress<'cfg> {
     /// This may not actually update the display if `tick` is being called too
     /// quickly.
     pub fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
-        let s = match &mut self.state {
-            Some(s) => s,
-            None => return Ok(()),
+        let Some(s) = &mut self.state else {
+            return Ok(());
         };
 
         // Don't update too often as it can cause excessive performance loss
@@ -340,9 +339,8 @@ impl Format {
             ProgressStyle::Indeterminate => String::new(),
         };
         let extra_len = stats.len() + 2 /* [ and ] */ + 15 /* status header */;
-        let display_width = match self.width().checked_sub(extra_len) {
-            Some(n) => n,
-            None => return None,
+        let Some(display_width) = self.width().checked_sub(extra_len) else {
+            return None;
         };
 
         let mut string = String::with_capacity(self.max_width);

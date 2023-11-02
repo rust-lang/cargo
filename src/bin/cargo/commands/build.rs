@@ -7,13 +7,15 @@ pub fn cli() -> Command {
         // subcommand aliases are handled in aliased_command()
         // .alias("b")
         .about("Compile a local package and all of its dependencies")
+        .arg_ignore_rust_version()
+        .arg_future_incompat_report()
+        .arg_message_format()
         .arg_quiet()
         .arg_package_spec(
             "Package to build (see `cargo help pkgid`)",
             "Build all packages in the workspace",
             "Exclude packages from the build",
         )
-        .arg_jobs()
         .arg_targets_all(
             "Build only this package's library",
             "Build only the specified binary",
@@ -26,26 +28,21 @@ pub fn cli() -> Command {
             "Build all benches",
             "Build all targets",
         )
-        .arg_release("Build artifacts in release mode, with optimizations")
-        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
+        .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_redundant_default_mode("debug", "build", "release")
+        .arg_profile("Build artifacts with the specified profile")
+        .arg_parallel()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg(
-            opt(
-                "out-dir",
-                "Copy final artifacts to this directory (unstable)",
-            )
-            .value_name("PATH"),
-        )
-        .arg_manifest_path()
-        .arg_ignore_rust_version()
-        .arg_message_format()
+        .arg_out_dir()
         .arg_build_plan()
         .arg_unit_graph()
-        .arg_future_incompat_report()
         .arg_timings()
-        .after_help("Run `cargo help build` for more detailed information.\n")
+        .arg_manifest_path()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help build</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

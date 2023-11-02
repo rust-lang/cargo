@@ -14,7 +14,8 @@ use super::death;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env, sleep_ms,
+    basic_lib_manifest, basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env,
+    sleep_ms,
 };
 
 #[cargo_test]
@@ -2785,7 +2786,7 @@ fn verify_source_before_recompile() {
         "vendor/bar/src/lib.rs",
         r#"compile_error!("You shall not pass!");"#,
     );
-    // Should ignore modifed sources without any recompile.
+    // Should ignore modified sources without any recompile.
     p.cargo("check --verbose")
         .with_stderr(
             "\
@@ -2798,7 +2799,7 @@ fn verify_source_before_recompile() {
 
     // Add a `RUSTFLAGS` to trigger a recompile.
     //
-    // Cargo should refuse to build because of checksum verfication failure.
+    // Cargo should refuse to build because of checksum verification failure.
     // Cargo shouldn't recompile dependency `bar`.
     p.cargo("check --verbose")
         .env("RUSTFLAGS", "-W warnings")
@@ -2813,4 +2814,63 @@ directory sources are not [..]
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn skip_mtime_check_in_selected_cargo_home_subdirs() {
+    let p = project()
+        .at("cargo_home/registry/foo")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .build();
+    let project_root = p.root();
+    let cargo_home = project_root.parent().unwrap().parent().unwrap();
+    p.cargo("check -v")
+        .env("CARGO_HOME", &cargo_home)
+        .with_stderr(
+            "\
+[CHECKING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]
+[FINISHED] dev [..]",
+        )
+        .run();
+    p.change_file("src/lib.rs", "illegal syntax");
+    p.cargo("check -v")
+        .env("CARGO_HOME", &cargo_home)
+        .with_stderr(
+            "\
+[FRESH] foo v0.5.0 ([CWD])
+[FINISHED] dev [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn use_mtime_cache_in_cargo_home() {
+    let p = project()
+        .at("cargo_home/foo")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .build();
+    let project_root = p.root();
+    let cargo_home = project_root.parent().unwrap();
+    p.cargo("check -v")
+        .env("CARGO_HOME", &cargo_home)
+        .with_stderr(
+            "\
+[CHECKING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]
+[FINISHED] dev [..]",
+        )
+        .run();
+    p.change_file("src/lib.rs", "illegal syntax");
+    p.cargo("check -v")
+        .env("CARGO_HOME", &cargo_home)
+        .with_stderr(
+            "\
+[DIRTY] foo v0.5.0 ([CWD]): [..]
+[CHECKING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]",
+        )
+        .run_expect_error();
 }

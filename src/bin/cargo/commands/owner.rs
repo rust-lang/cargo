@@ -1,7 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops::{self, OwnersOptions};
-use cargo::util::auth::Secret;
+use cargo_credential::Secret;
 
 pub fn cli() -> Command {
     subcommand("owner")
@@ -79,16 +79,19 @@ pub fn cli() -> Command {
                     ),
             ),
         ])
-        .arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
+        .arg_index("Registry index URL to modify owners for")
+        .arg_registry("Registry to modify owners for")
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
-        .after_help("Run `cargo help owner` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help owner</>` for more detailed information.\n"
+        ))
 }
 
-fn for_subcommand_add_arg(com: Command) -> Command {
-    com.arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
+fn for_subcommand_add_arg(command: Command) -> Command {
+    command
+        .arg_index("Registry index URL to modify owners for")
+        .arg_registry("Registry to modify owners for")
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -128,11 +131,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             .get_one::<String>("token")
             .cloned()
             .map(Secret::from),
-        index: common_args.get_one::<String>("index").cloned(),
+        reg_or_index: args.registry_or_index(config)?,
         to_add: to_add,
         to_remove: to_remove,
         list: list,
-        registry: common_args.registry(config)?,
     };
 
     ops::modify_owners(config, &opts)?;

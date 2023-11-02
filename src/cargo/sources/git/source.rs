@@ -1,45 +1,107 @@
-use crate::core::source::{MaybePackage, QueryKind, Source, SourceId};
+//! See [GitSource].
+
 use crate::core::GitReference;
+use crate::core::SourceId;
 use crate::core::{Dependency, Package, PackageId, Summary};
 use crate::sources::git::utils::GitRemote;
+use crate::sources::source::MaybePackage;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::Config;
 use anyhow::Context;
 use cargo_util::paths::exclude_from_backups_and_indexing;
-use log::trace;
 use std::fmt::{self, Debug, Formatter};
 use std::task::Poll;
+use tracing::trace;
 use url::Url;
 
+/// `GitSource` contains one or more packages gathering from a Git repository.
+/// Under the hood it uses [`PathSource`] to discover packages inside the
+/// repository.
+///
+/// ## Filesystem layout
+///
+/// During a successful `GitSource` download, at least two Git repositories are
+/// created: one is the shared Git database of this remote, and the other is the
+/// Git checkout to a specific revision, which contains the actual files to be
+/// compiled. Multiple checkouts can be cloned from a single Git database.
+///
+/// Those repositories are located at Cargo's Git cache directory
+/// `$CARGO_HOME/git`. The file tree of the cache directory roughly looks like:
+///
+/// ```text
+/// $CARGO_HOME/git/
+/// ├── checkouts/
+/// │  ├── gimli-a0d193bd15a5ed96/
+/// │  │  ├── 8e73ef0/     # Git short ID for a certain revision
+/// │  │  ├── a2a4b78/
+/// │  │  └── e33d1ac/
+/// │  ├── log-c58e1db3de7c154d-shallow/
+/// │  │  └── 11eda98/
+/// └── db/
+///    ├── gimli-a0d193bd15a5ed96/
+///    └── log-c58e1db3de7c154d-shallow/
+/// ```
+///
+/// For more on Git cache directory, see ["Cargo Home"] in The Cargo Book.
+///
+/// For more on the directory format `<pkg>-<hash>[-shallow]`, see [`ident`]
+/// and [`ident_shallow`].
+///
+/// ## Locked to a revision
+///
+/// Once a `GitSource` is fetched, it will resolve to a specific commit revision.
+/// This is often mentioned as "locked revision" (`locked_rev`) throughout the
+/// codebase. The revision is written into `Cargo.lock`. This is essential since
+/// we want to ensure a package can compiles with the same set of files when
+/// a `Cargo.lock` is present. With the `locked_rev` provided, `GitSource` can
+/// precisely fetch the same revision from the Git repository.
+///
+/// ["Cargo Home"]: https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#directories
 pub struct GitSource<'cfg> {
+    /// The git remote which we're going to fetch from.
     remote: GitRemote,
+    /// The Git reference from the manifest file.
     manifest_reference: GitReference,
+    /// The revision which a git source is locked to.
+    /// This is expected to be set after the Git repository is fetched.
     locked_rev: Option<git2::Oid>,
+    /// The unique identifier of this source.
     source_id: SourceId,
+    /// The underlying path source to discover packages inside the Git repository.
     path_source: Option<PathSource<'cfg>>,
+    /// The identifier of this source for Cargo's Git cache directory.
+    /// See [`ident`] for more.
     ident: String,
     config: &'cfg Config,
+    /// Disables status messages.
     quiet: bool,
 }
 
 impl<'cfg> GitSource<'cfg> {
+    /// Creates a git source for the given [`SourceId`].
     pub fn new(source_id: SourceId, config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
-        let ident = ident(&source_id);
+        let manifest_reference = source_id.git_reference().unwrap().clone();
+        let locked_rev = source_id.precise_git_oid()?;
+        let ident = ident_shallow(
+            &source_id,
+            config
+                .cli_unstable()
+                .gitoxide
+                .map_or(false, |gix| gix.fetch && gix.shallow_deps),
+        );
 
         let source = GitSource {
             remote,
-            manifest_reference: source_id.git_reference().unwrap().clone(),
-            locked_rev: match source_id.precise() {
-                Some(s) => Some(git2::Oid::from_str(s).with_context(|| {
-                    format!("precise value for git is not a git revision: {}", s)
-                })?),
-                None => None,
-            },
+            manifest_reference,
+            locked_rev,
             source_id,
             path_source: None,
             ident,
@@ -50,10 +112,14 @@ impl<'cfg> GitSource<'cfg> {
         Ok(source)
     }
 
+    /// Gets the remote repository URL.
     pub fn url(&self) -> &Url {
         self.remote.url()
     }
 
+    /// Returns the packages discovered by this source. It may fetch the Git
+    /// repository as well as walk the filesystem if package information
+    /// haven't yet updated.
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {
             self.invalidate_cache();
@@ -63,6 +129,8 @@ impl<'cfg> GitSource<'cfg> {
     }
 }
 
+/// Create an identifier from a URL,
+/// essentially turning `proto://host/path/repo` into `repo-<hash-of-url>`.
 fn ident(id: &SourceId) -> String {
     let ident = id
         .canonical_url()
@@ -76,11 +144,28 @@ fn ident(id: &SourceId) -> String {
     format!("{}-{}", ident, short_hash(id.canonical_url()))
 }
 
+/// Like [`ident()`], but appends `-shallow` to it, turning
+/// `proto://host/path/repo` into `repo-<hash-of-url>-shallow`.
+///
+/// It's important to separate shallow from non-shallow clones for reasons of
+/// backwards compatibility --- older cargo's aren't necessarily handling
+/// shallow clones correctly.
+fn ident_shallow(id: &SourceId, is_shallow: bool) -> String {
+    let mut ident = ident(id);
+    if is_shallow {
+        ident.push_str("-shallow");
+    }
+    ident
+}
+
 impl<'cfg> Debug for GitSource<'cfg> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
 
-        match self.manifest_reference.pretty_ref() {
+        // TODO(-Znext-lockfile-bump): set it to true when stabilizing
+        // lockfile v4, because we want Source ID serialization to be
+        // consistent with lockfile.
+        match self.manifest_reference.pretty_ref(false) {
             Some(s) => write!(f, " ({})", s),
             None => Ok(()),
         }
@@ -122,7 +207,9 @@ impl<'cfg> Source for GitSource<'cfg> {
         // Ignore errors creating it, in case this is a read-only filesystem:
         // perhaps the later operations can succeed anyhow.
         let _ = git_fs.create_dir();
-        let git_path = self.config.assert_package_cache_locked(&git_fs);
+        let git_path = self
+            .config
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &git_fs);
 
         // Before getting a checkout, make sure that `<cargo_home>/git` is
         // marked as excluded from indexing and backups. Older versions of Cargo
@@ -195,10 +282,11 @@ impl<'cfg> Source for GitSource<'cfg> {
             .join("checkouts")
             .join(&self.ident)
             .join(short_id.as_str());
-        let parent_remote_url = self.url();
-        db.copy_to(actual_rev, &checkout_path, self.config, parent_remote_url)?;
+        db.copy_to(actual_rev, &checkout_path, self.config)?;
 
-        let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
+        let source_id = self
+            .source_id
+            .with_git_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
 
         self.path_source = Some(path_source);

@@ -1,5 +1,6 @@
 use cargo::core::dependency::DepKind;
 use cargo::core::PackageIdSpec;
+use cargo::core::Resolve;
 use cargo::core::Workspace;
 use cargo::ops::cargo_remove::remove;
 use cargo::ops::cargo_remove::RemoveOptions;
@@ -24,10 +25,8 @@ pub fn cli() -> clap::Command {
             .num_args(1..)
             .value_name("DEP_ID")
             .help("Dependencies to be removed")])
-        .arg_package("Package to remove from")
-        .arg_manifest_path()
-        .arg_quiet()
         .arg_dry_run("Don't actually write the manifest")
+        .arg_quiet()
         .next_help_heading("Section")
         .args([
             clap::Arg::new("dev")
@@ -35,20 +34,25 @@ pub fn cli() -> clap::Command {
                 .conflicts_with("build")
                 .action(clap::ArgAction::SetTrue)
                 .group("section")
-                .help("Remove as development dependency"),
+                .help("Remove from dev-dependencies"),
             clap::Arg::new("build")
                 .long("build")
                 .conflicts_with("dev")
                 .action(clap::ArgAction::SetTrue)
                 .group("section")
-                .help("Remove as build dependency"),
+                .help("Remove from build-dependencies"),
             clap::Arg::new("target")
                 .long("target")
                 .num_args(1)
                 .value_name("TARGET")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
-                .help("Remove as dependency from the given target platform"),
+                .help("Remove from target-dependencies"),
         ])
+        .arg_package("Package to remove from")
+        .arg_manifest_path()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help remove</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -109,9 +113,24 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
         // Reload the workspace since we've changed dependencies
         let ws = args.workspace(config)?;
-        resolve_ws(&ws)?;
-    }
+        let resolve = {
+            // HACK: Avoid unused patch warnings by temporarily changing the verbosity.
+            // In rare cases, this might cause index update messages to not show up
+            let verbosity = ws.config().shell().verbosity();
+            ws.config()
+                .shell()
+                .set_verbosity(cargo::core::Verbosity::Quiet);
+            let resolve = resolve_ws(&ws);
+            ws.config().shell().set_verbosity(verbosity);
+            resolve?.1
+        };
 
+        // Attempt to gc unused patches and re-resolve if anything is removed
+        if gc_unused_patches(&workspace, &resolve)? {
+            let ws = args.workspace(config)?;
+            resolve_ws(&ws)?;
+        }
+    }
     Ok(())
 }
 
@@ -200,7 +219,6 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
     //
     // Example tables:
     // - profile.dev.package.foo
-    // - profile.release.package."*"
     // - profile.release.package."foo:2.1.0"
     if let Some(toml_edit::Item::Table(profile_section_table)) = manifest.get_mut("profile") {
         profile_section_table.set_implicit(true);
@@ -215,39 +233,20 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
                     package_table.set_implicit(true);
 
                     for (key, item) in package_table.iter_mut() {
+                        let key = key.get();
+                        // Skip globs. Can't do anything with them.
+                        // For example, profile.release.package."*".
+                        if crate::util::restricted_names::is_glob_pattern(key) {
+                            continue;
+                        }
                         if !spec_has_match(
-                            &PackageIdSpec::parse(key.get())?,
+                            &PackageIdSpec::parse(key)?,
                             &dependencies,
                             workspace.config(),
                         )? {
                             *item = toml_edit::Item::None;
                             is_modified = true;
                         }
-                    }
-                }
-            }
-        }
-    }
-
-    // Clean up the patch section
-    if let Some(toml_edit::Item::Table(patch_section_table)) = manifest.get_mut("patch") {
-        patch_section_table.set_implicit(true);
-
-        // The key in each of the subtables is a source (either a registry or a URL)
-        for (source, item) in patch_section_table.iter_mut() {
-            if let toml_edit::Item::Table(patch_table) = item {
-                patch_table.set_implicit(true);
-
-                for (key, item) in patch_table.iter_mut() {
-                    let package_name =
-                        Dependency::from_toml(&workspace.root_manifest(), key.get(), item)?.name;
-                    if !source_has_match(
-                        &package_name,
-                        source.get(),
-                        &dependencies,
-                        workspace.config(),
-                    )? {
-                        *item = toml_edit::Item::None;
                     }
                 }
             }
@@ -271,7 +270,10 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
     }
 
     if is_modified {
-        cargo_util::paths::write(workspace.root_manifest(), manifest.to_string().as_bytes())?;
+        cargo_util::paths::write_atomic(
+            workspace.root_manifest(),
+            manifest.to_string().as_bytes(),
+        )?;
     }
 
     Ok(())
@@ -284,12 +286,12 @@ fn spec_has_match(
     config: &Config,
 ) -> CargoResult<bool> {
     for dep in dependencies {
-        if spec.name().as_str() != &dep.name {
+        if spec.name() != &dep.name {
             continue;
         }
 
         let version_matches = match (spec.version(), dep.version()) {
-            (Some(v), Some(vq)) => semver::VersionReq::parse(vq)?.matches(v),
+            (Some(v), Some(vq)) => semver::VersionReq::parse(vq)?.matches(&v),
             (Some(_), None) => false,
             (None, None | Some(_)) => true,
         };
@@ -310,35 +312,46 @@ fn spec_has_match(
     Ok(false)
 }
 
-/// Check whether or not a source (URL or registry name) matches any non-workspace dependencies.
-fn source_has_match(
-    name: &str,
-    source: &str,
-    dependencies: &[Dependency],
-    config: &Config,
-) -> CargoResult<bool> {
-    for dep in dependencies {
-        if &dep.name != name {
-            continue;
-        }
+/// Removes unused patches from the manifest
+fn gc_unused_patches(workspace: &Workspace<'_>, resolve: &Resolve) -> CargoResult<bool> {
+    let mut manifest: toml_edit::Document =
+        cargo_util::paths::read(workspace.root_manifest())?.parse()?;
+    let mut modified = false;
 
-        match dep.source_id(config)? {
-            MaybeWorkspace::Other(source_id) => {
-                if source_id.is_registry() {
-                    if source_id.display_registry_name() == source
-                        || source_id.url().as_str() == source
+    // Clean up the patch section
+    if let Some(toml_edit::Item::Table(patch_section_table)) = manifest.get_mut("patch") {
+        patch_section_table.set_implicit(true);
+
+        for (_, item) in patch_section_table.iter_mut() {
+            if let toml_edit::Item::Table(patch_table) = item {
+                patch_table.set_implicit(true);
+
+                for (key, item) in patch_table.iter_mut() {
+                    let dep = Dependency::from_toml(&workspace.root_manifest(), key.get(), item)?;
+
+                    // Generate a PackageIdSpec url for querying
+                    let url = if let MaybeWorkspace::Other(source_id) =
+                        dep.source_id(workspace.config())?
                     {
-                        return Ok(true);
-                    }
-                } else if source_id.is_git() {
-                    if source_id.url().as_str() == source {
-                        return Ok(true);
+                        format!("{}#{}", source_id.url(), dep.name)
+                    } else {
+                        continue;
+                    };
+
+                    if PackageIdSpec::query_str(&url, resolve.unused_patches().iter().cloned())
+                        .is_ok()
+                    {
+                        *item = toml_edit::Item::None;
+                        modified = true;
                     }
                 }
             }
-            MaybeWorkspace::Workspace(_) => {}
         }
     }
 
-    Ok(false)
+    if modified {
+        cargo_util::paths::write(workspace.root_manifest(), manifest.to_string().as_bytes())?;
+    }
+
+    Ok(modified)
 }

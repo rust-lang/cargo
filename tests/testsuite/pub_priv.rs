@@ -197,3 +197,52 @@ Caused by:
         )
         .run()
 }
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn workspace_dep_made_public() {
+    Package::new("foo1", "0.1.0")
+        .file("src/lib.rs", "pub struct FromFoo;")
+        .publish();
+    Package::new("foo2", "0.1.0")
+        .file("src/lib.rs", "pub struct FromFoo;")
+        .publish();
+    Package::new("foo3", "0.1.0")
+        .file("src/lib.rs", "pub struct FromFoo;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [workspace.dependencies]
+                foo1 = "0.1.0"
+                foo2 = { version = "0.1.0", public = true }
+                foo3 = { version = "0.1.0", public = false }
+
+                [dependencies]
+                foo1 = { workspace = true, public = true }
+                foo2 = { workspace = true }
+                foo3 = { workspace = true, public = true }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+                #![deny(exported_private_dependencies)]
+                pub fn use_priv1(_: foo1::FromFoo) {}
+                pub fn use_priv2(_: foo2::FromFoo) {}
+                pub fn use_priv3(_: foo3::FromFoo) {}
+            ",
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .run()
+}

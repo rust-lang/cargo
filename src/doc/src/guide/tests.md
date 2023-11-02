@@ -1,4 +1,4 @@
-## Tests
+# Tests
 
 Cargo can run your tests with the `cargo test` command. Cargo looks for tests
 to run in two places: in each of your `src` files and any tests in `tests/`.

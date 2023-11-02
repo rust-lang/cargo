@@ -1,9 +1,11 @@
 use crate::core::compiler::{BuildConfig, MessageFormat, TimingOutput};
 use crate::core::resolver::CliFeatures;
 use crate::core::{Edition, Workspace};
+use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
+use crate::util::is_rustup;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::toml::{StringOrVec, TomlProfile};
 use crate::util::validate_package_name;
@@ -14,7 +16,9 @@ use crate::util::{
 use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;
+use clap::builder::UnknownArgumentValueParser;
 use std::ffi::{OsStr, OsString};
+use std::path::Path;
 use std::path::PathBuf;
 
 pub use crate::core::compiler::CompileMode;
@@ -22,6 +26,17 @@ pub use crate::{CliError, CliResult, Config};
 pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
 
 pub use clap::Command;
+
+use super::config::JobsConfig;
+use super::IntoUrl;
+
+pub mod heading {
+    pub const PACKAGE_SELECTION: &str = "Package Selection";
+    pub const TARGET_SELECTION: &str = "Target Selection";
+    pub const FEATURE_SELECTION: &str = "Feature Selection";
+    pub const COMPILATION_OPTIONS: &str = "Compilation Options";
+    pub const MANIFEST_OPTIONS: &str = "Manifest Options";
+}
 
 pub trait CommandExt: Sized {
     fn _arg(self, arg: Arg) -> Self;
@@ -34,8 +49,10 @@ pub trait CommandExt: Sized {
         all: &'static str,
         exclude: &'static str,
     ) -> Self {
-        self.arg_package_spec_no_all(package, all, exclude)
-            ._arg(flag("all", "Alias for --workspace (deprecated)"))
+        self.arg_package_spec_no_all(package, all, exclude)._arg(
+            flag("all", "Alias for --workspace (deprecated)")
+                .help_heading(heading::PACKAGE_SELECTION),
+        )
     }
 
     /// Variant of arg_package_spec that does not include the `--all` flag
@@ -47,34 +64,73 @@ pub trait CommandExt: Sized {
         all: &'static str,
         exclude: &'static str,
     ) -> Self {
+        let unsupported_short_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--exclude");
+            Arg::new("unsupported-short-exclude-flag")
+                .help("")
+                .short('x')
+                .value_parser(value_parser)
+                .action(ArgAction::SetTrue)
+                .hide(true)
+        };
         self.arg_package_spec_simple(package)
-            ._arg(flag("workspace", all))
-            ._arg(multi_opt("exclude", "SPEC", exclude))
+            ._arg(flag("workspace", all).help_heading(heading::PACKAGE_SELECTION))
+            ._arg(multi_opt("exclude", "SPEC", exclude).help_heading(heading::PACKAGE_SELECTION))
+            ._arg(unsupported_short_arg)
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
-        self._arg(optional_multi_opt("package", "SPEC", package).short('p'))
+        self._arg(
+            optional_multi_opt("package", "SPEC", package)
+                .short('p')
+                .help_heading(heading::PACKAGE_SELECTION),
+        )
     }
 
     fn arg_package(self, package: &'static str) -> Self {
         self._arg(
             optional_opt("package", package)
                 .short('p')
-                .value_name("SPEC"),
+                .value_name("SPEC")
+                .help_heading(heading::PACKAGE_SELECTION),
+        )
+    }
+
+    fn arg_parallel(self) -> Self {
+        self.arg_jobs()._arg(
+            flag(
+                "keep-going",
+                "Do not abort the build as soon as there is an error",
+            )
+            .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
 
     fn arg_jobs(self) -> Self {
         self._arg(
-            opt("jobs", "Number of parallel jobs, defaults to # of CPUs")
+            opt("jobs", "Number of parallel jobs, defaults to # of CPUs.")
                 .short('j')
                 .value_name("N")
-                .allow_hyphen_values(true),
+                .allow_hyphen_values(true)
+                .help_heading(heading::COMPILATION_OPTIONS),
         )
-        ._arg(flag(
-            "keep-going",
-            "Do not abort the build as soon as there is an error (unstable)",
-        ))
+    }
+
+    fn arg_unsupported_keep_going(self) -> Self {
+        let msg = "use `--no-fail-fast` to run as many tests as possible regardless of failure";
+        let value_parser = UnknownArgumentValueParser::suggest(msg);
+        self._arg(flag("keep-going", "").value_parser(value_parser).hide(true))
+    }
+
+    fn arg_redundant_default_mode(
+        self,
+        default_mode: &'static str,
+        command: &'static str,
+        supported_mode: &'static str,
+    ) -> Self {
+        let msg = format!("`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported");
+        let value_parser = UnknownArgumentValueParser::suggest(msg);
+        self._arg(flag(default_mode, "").value_parser(value_parser).hide(true))
     }
 
     fn arg_targets_all(
@@ -91,11 +147,13 @@ pub trait CommandExt: Sized {
         all: &'static str,
     ) -> Self {
         self.arg_targets_lib_bin_example(lib, bin, bins, example, examples)
-            ._arg(optional_multi_opt("test", "NAME", test))
-            ._arg(flag("tests", tests))
-            ._arg(optional_multi_opt("bench", "NAME", bench))
-            ._arg(flag("benches", benches))
-            ._arg(flag("all-targets", all))
+            ._arg(flag("tests", tests).help_heading(heading::TARGET_SELECTION))
+            ._arg(optional_multi_opt("test", "NAME", test).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("benches", benches).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("bench", "NAME", bench).help_heading(heading::TARGET_SELECTION),
+            )
+            ._arg(flag("all-targets", all).help_heading(heading::TARGET_SELECTION))
     }
 
     fn arg_targets_lib_bin_example(
@@ -106,11 +164,14 @@ pub trait CommandExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(flag("lib", lib))
-            ._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(flag("bins", bins))
-            ._arg(optional_multi_opt("example", "NAME", example))
-            ._arg(flag("examples", examples))
+        self._arg(flag("lib", lib).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
+            ._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
     }
 
     fn arg_targets_bins_examples(
@@ -120,15 +181,21 @@ pub trait CommandExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(flag("bins", bins))
-            ._arg(optional_multi_opt("example", "NAME", example))
-            ._arg(flag("examples", examples))
+        self._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
+            ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
     }
 
     fn arg_targets_bin_example(self, bin: &'static str, example: &'static str) -> Self {
-        self._arg(optional_multi_opt("bin", "NAME", bin))
-            ._arg(optional_multi_opt("example", "NAME", example))
+        self._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("example", "NAME", example)
+                    .help_heading(heading::TARGET_SELECTION),
+            )
     }
 
     fn arg_features(self) -> Self {
@@ -138,21 +205,36 @@ pub trait CommandExt: Sized {
                 "FEATURES",
                 "Space or comma separated list of features to activate",
             )
-            .short('F'),
+            .short('F')
+            .help_heading(heading::FEATURE_SELECTION),
         )
-        ._arg(flag("all-features", "Activate all available features"))
-        ._arg(flag(
-            "no-default-features",
-            "Do not activate the `default` feature",
-        ))
+        ._arg(
+            flag("all-features", "Activate all available features")
+                .help_heading(heading::FEATURE_SELECTION),
+        )
+        ._arg(
+            flag(
+                "no-default-features",
+                "Do not activate the `default` feature",
+            )
+            .help_heading(heading::FEATURE_SELECTION),
+        )
     }
 
     fn arg_release(self, release: &'static str) -> Self {
-        self._arg(flag("release", release).short('r'))
+        self._arg(
+            flag("release", release)
+                .short('r')
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_profile(self, profile: &'static str) -> Self {
-        self._arg(opt("profile", profile).value_name("PROFILE-NAME"))
+        self._arg(
+            opt("profile", profile)
+                .value_name("PROFILE-NAME")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_doc(self, doc: &'static str) -> Self {
@@ -160,17 +242,50 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(multi_opt("target", "TRIPLE", target))
+        let unsupported_short_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--target");
+            Arg::new("unsupported-short-target-flag")
+                .help("")
+                .short('t')
+                .value_parser(value_parser)
+                .action(ArgAction::SetTrue)
+                .hide(true)
+        };
+        self._arg(
+            optional_multi_opt("target", "TRIPLE", target)
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
+        ._arg(unsupported_short_arg)
     }
 
     fn arg_target_dir(self) -> Self {
         self._arg(
-            opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"),
+            opt("target-dir", "Directory for all generated artifacts")
+                .value_name("DIRECTORY")
+                .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
 
     fn arg_manifest_path(self) -> Self {
-        self._arg(opt("manifest-path", "Path to Cargo.toml").value_name("PATH"))
+        // We use `--manifest-path` instead of `--path`.
+        let unsupported_path_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--manifest-path");
+            flag("unsupported-path-flag", "")
+                .long("path")
+                .value_parser(value_parser)
+                .hide(true)
+        };
+        self.arg_manifest_path_without_unsupported_path_tip()
+            ._arg(unsupported_path_arg)
+    }
+
+    // `cargo add` has a `--path` flag to install a crate from a local path.
+    fn arg_manifest_path_without_unsupported_path_tip(self) -> Self {
+        self._arg(
+            opt("manifest-path", "Path to Cargo.toml")
+                .value_name("PATH")
+                .help_heading(heading::MANIFEST_OPTIONS),
+        )
     }
 
     fn arg_message_format(self) -> Self {
@@ -178,14 +293,17 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_build_plan(self) -> Self {
-        self._arg(flag(
-            "build-plan",
-            "Output the build plan in JSON (unstable)",
-        ))
+        self._arg(
+            flag("build-plan", "Output the build plan in JSON (unstable)")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_unit_graph(self) -> Self {
-        self._arg(flag("unit-graph", "Output build graph in JSON (unstable)"))
+        self._arg(
+            flag("unit-graph", "Output build graph in JSON (unstable)")
+                .help_heading(heading::COMPILATION_OPTIONS),
+        )
     }
 
     fn arg_new_opts(self) -> Self {
@@ -193,8 +311,7 @@ pub trait CommandExt: Sized {
             opt(
                 "vcs",
                 "Initialize a new repository for the given version \
-                 control system (git, hg, pijul, or fossil) or do not \
-                 initialize any version control at all (none), overriding \
+                 control system, overriding \
                  a global configuration.",
             )
             .value_name("VCS")
@@ -216,12 +333,21 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_index(self) -> Self {
-        self._arg(opt("index", "Registry index URL to upload the package to").value_name("INDEX"))
+    fn arg_registry(self, help: &'static str) -> Self {
+        self._arg(opt("registry", help).value_name("REGISTRY"))
+    }
+
+    fn arg_index(self, help: &'static str) -> Self {
+        // Always conflicts with `--registry`.
+        self._arg(
+            opt("index", help)
+                .value_name("INDEX")
+                .conflicts_with("registry"),
+        )
     }
 
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
-        self._arg(flag("dry-run", dry_run))
+        self._arg(flag("dry-run", dry_run).short('n'))
     }
 
     fn arg_ignore_rust_version(self) -> Self {
@@ -239,6 +365,18 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_quiet(self) -> Self {
+        let unsupported_silent_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--quiet");
+            flag("silent", "")
+                .short('s')
+                .value_parser(value_parser)
+                .hide(true)
+        };
+        self.arg_quiet_without_unknown_silent_arg_tip()
+            ._arg(unsupported_silent_arg)
+    }
+
+    fn arg_quiet_without_unknown_silent_arg_tip(self) -> Self {
         self._arg(flag("quiet", "Do not print cargo log messages").short('q'))
     }
 
@@ -249,8 +387,30 @@ pub trait CommandExt: Sized {
                 "Timing output formats (unstable) (comma separated): html, json",
             )
             .value_name("FMTS")
-            .require_equals(true),
+            .require_equals(true)
+            .help_heading(heading::COMPILATION_OPTIONS),
         )
+    }
+
+    fn arg_out_dir(self) -> Self {
+        let unsupported_short_arg = {
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--out-dir");
+            Arg::new("unsupported-short-out-dir-flag")
+                .help("")
+                .short('O')
+                .value_parser(value_parser)
+                .action(ArgAction::SetTrue)
+                .hide(true)
+        };
+        self._arg(
+            opt(
+                "out-dir",
+                "Copy final artifacts to this directory (unstable)",
+            )
+            .value_name("PATH")
+            .help_heading(heading::COMPILATION_OPTIONS),
+        )
+        ._arg(unsupported_short_arg)
     }
 }
 
@@ -337,22 +497,7 @@ pub trait ArgMatchesExt {
     }
 
     fn root_manifest(&self, config: &Config) -> CargoResult<PathBuf> {
-        if let Some(path) = self.value_of_path("manifest-path", config) {
-            // In general, we try to avoid normalizing paths in Cargo,
-            // but in this particular case we need it to fix #3586.
-            let path = paths::normalize_path(&path);
-            if !path.ends_with("Cargo.toml") {
-                anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
-            }
-            if !path.exists() {
-                anyhow::bail!(
-                    "manifest path `{}` does not exist",
-                    self._value_of("manifest-path").unwrap()
-                )
-            }
-            return Ok(path);
-        }
-        find_root_manifest_for_wd(config.cwd())
+        root_manifest(self._value_of("manifest-path").map(Path::new), config)
     }
 
     fn workspace<'a>(&self, config: &'a Config) -> CargoResult<Workspace<'a>> {
@@ -364,8 +509,16 @@ pub trait ArgMatchesExt {
         Ok(ws)
     }
 
-    fn jobs(&self) -> CargoResult<Option<i32>> {
-        self.value_of_i32("jobs")
+    fn jobs(&self) -> CargoResult<Option<JobsConfig>> {
+        let arg = match self._value_of("jobs") {
+            None => None,
+            Some(arg) => match arg.parse::<i32>() {
+                Ok(j) => Some(JobsConfig::Integer(j)),
+                Err(_) => Some(JobsConfig::String(arg.to_string())),
+            },
+        };
+
+        Ok(arg)
     }
 
     fn verbose(&self) -> u32 {
@@ -377,11 +530,23 @@ pub trait ArgMatchesExt {
     }
 
     fn keep_going(&self) -> bool {
-        self.flag("keep-going")
+        self.maybe_flag("keep-going")
     }
 
-    fn targets(&self) -> Vec<String> {
-        self._values_of("target")
+    fn targets(&self) -> CargoResult<Vec<String>> {
+        if self.is_present_with_zero_values("target") {
+            let cmd = if is_rustup() {
+                "rustup target list"
+            } else {
+                "rustc --print target-list"
+            };
+            bail!(
+                "\"--target\" takes a target architecture as an argument.
+
+Run `{cmd}` to see possible targets."
+            );
+        }
+        Ok(self._values_of("target"))
     }
 
     fn get_profile_name(
@@ -399,7 +564,7 @@ pub trait ArgMatchesExt {
             (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
-                if self.flag("release") {
+                if self.maybe_flag("release") {
                     config.shell().warn(
                         "the `--release` flag should not be specified with the `--profile` flag\n\
                          The `--release` flag will be ignored.\n\
@@ -423,7 +588,11 @@ pub trait ArgMatchesExt {
             )
         };
 
-        let name = match (self.flag("release"), self.flag("debug"), specified_profile) {
+        let name = match (
+            self.maybe_flag("release"),
+            self.maybe_flag("debug"),
+            specified_profile,
+        ) {
             (false, false, None) => default,
             (true, _, None | Some("release")) => "release",
             (true, _, Some(name)) => return Err(conflict("release", "release", name)),
@@ -530,7 +699,7 @@ pub trait ArgMatchesExt {
             config,
             self.jobs()?,
             self.keep_going(),
-            &self.targets(),
+            &self.targets()?,
             mode,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
@@ -566,11 +735,6 @@ pub trait ArgMatchesExt {
             }
         }
 
-        if build_config.keep_going {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--keep-going", 10496)?;
-        }
         if build_config.build_plan {
             config
                 .cli_unstable()
@@ -664,29 +828,32 @@ pub trait ArgMatchesExt {
         )
     }
 
-    fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
+    fn registry_or_index(&self, config: &Config) -> CargoResult<Option<RegistryOrIndex>> {
         let registry = self._value_of("registry");
         let index = self._value_of("index");
         let result = match (registry, index) {
-            (None, None) => config.default_registry()?,
-            (None, Some(_)) => {
-                // If --index is set, then do not look at registry.default.
-                None
-            }
+            (None, None) => config.default_registry()?.map(RegistryOrIndex::Registry),
+            (None, Some(i)) => Some(RegistryOrIndex::Index(i.into_url()?)),
             (Some(r), None) => {
                 validate_package_name(r, "registry name", "")?;
-                Some(r.to_string())
+                Some(RegistryOrIndex::Registry(r.to_string()))
             }
             (Some(_), Some(_)) => {
-                bail!("both `--index` and `--registry` should not be set at the same time")
+                // Should be guarded by clap
+                unreachable!("both `--index` and `--registry` should not be set at the same time")
             }
         };
         Ok(result)
     }
 
-    fn index(&self) -> CargoResult<Option<String>> {
-        let index = self._value_of("index").map(|s| s.to_string());
-        Ok(index)
+    fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
+        match self._value_of("registry").map(|s| s.to_string()) {
+            None => config.default_registry(),
+            Some(registry) => {
+                validate_package_name(&registry, "registry name", "")?;
+                Ok(Some(registry))
+            }
+        }
     }
 
     fn check_optional_opts(
@@ -723,6 +890,8 @@ pub trait ArgMatchesExt {
 
     fn flag(&self, name: &str) -> bool;
 
+    fn maybe_flag(&self, name: &str) -> bool;
+
     fn _value_of(&self, name: &str) -> Option<&str>;
 
     fn _values_of(&self, name: &str) -> Vec<String>;
@@ -741,6 +910,17 @@ impl<'a> ArgMatchesExt for ArgMatches {
         ignore_unknown(self.try_get_one::<bool>(name))
             .copied()
             .unwrap_or(false)
+    }
+
+    // This works around before an upstream fix in clap for `UnknownArgumentValueParser` accepting
+    // generics arguments. `flag()` cannot be used with `--keep-going` at this moment due to
+    // <https://github.com/clap-rs/clap/issues/5081>.
+    fn maybe_flag(&self, name: &str) -> bool {
+        self.try_get_one::<bool>(name)
+            .ok()
+            .flatten()
+            .copied()
+            .unwrap_or_default()
     }
 
     fn _value_of(&self, name: &str) -> Option<&str> {
@@ -780,6 +960,33 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
 
 pub fn values_os(args: &ArgMatches, name: &str) -> Vec<OsString> {
     args._values_of_os(name)
+}
+
+pub fn root_manifest(manifest_path: Option<&Path>, config: &Config) -> CargoResult<PathBuf> {
+    if let Some(manifest_path) = manifest_path {
+        let path = config.cwd().join(manifest_path);
+        // In general, we try to avoid normalizing paths in Cargo,
+        // but in this particular case we need it to fix #3586.
+        let path = paths::normalize_path(&path);
+        if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
+            anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
+        }
+        if !path.exists() {
+            anyhow::bail!("manifest path `{}` does not exist", manifest_path.display())
+        }
+        if path.is_dir() {
+            anyhow::bail!(
+                "manifest path `{}` is a directory but expected a file",
+                manifest_path.display()
+            )
+        }
+        if crate::util::toml::is_embedded(&path) && !config.cli_unstable().script {
+            anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())
+        }
+        Ok(path)
+    } else {
+        find_root_manifest_for_wd(config.cwd())
+    }
 }
 
 #[track_caller]

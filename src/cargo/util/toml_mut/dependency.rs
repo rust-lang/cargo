@@ -225,62 +225,72 @@ impl Dependency {
                 (key.to_owned(), None)
             };
 
-            let source: Source =
-                if let Some(git) = table.get("git") {
-                    let mut src = GitSource::new(
-                        git.as_str()
-                            .ok_or_else(|| invalid_type(key, "git", git.type_name(), "string"))?,
-                    );
-                    if let Some(value) = table.get("branch") {
-                        src = src.set_branch(value.as_str().ok_or_else(|| {
+            let source: Source = if let Some(git) = table.get("git") {
+                let mut src = GitSource::new(
+                    git.as_str()
+                        .ok_or_else(|| invalid_type(key, "git", git.type_name(), "string"))?,
+                );
+                if let Some(value) = table.get("branch") {
+                    src =
+                        src.set_branch(value.as_str().ok_or_else(|| {
                             invalid_type(key, "branch", value.type_name(), "string")
                         })?);
-                    }
-                    if let Some(value) = table.get("tag") {
-                        src = src.set_tag(value.as_str().ok_or_else(|| {
+                }
+                if let Some(value) = table.get("tag") {
+                    src =
+                        src.set_tag(value.as_str().ok_or_else(|| {
                             invalid_type(key, "tag", value.type_name(), "string")
                         })?);
-                    }
-                    if let Some(value) = table.get("rev") {
-                        src = src.set_rev(value.as_str().ok_or_else(|| {
+                }
+                if let Some(value) = table.get("rev") {
+                    src =
+                        src.set_rev(value.as_str().ok_or_else(|| {
                             invalid_type(key, "rev", value.type_name(), "string")
                         })?);
-                    }
-                    if let Some(value) = table.get("version") {
-                        src = src.set_version(value.as_str().ok_or_else(|| {
-                            invalid_type(key, "version", value.type_name(), "string")
-                        })?);
-                    }
-                    src.into()
-                } else if let Some(path) = table.get("path") {
-                    let path = crate_root
+                }
+                if let Some(value) = table.get("version") {
+                    src = src.set_version(value.as_str().ok_or_else(|| {
+                        invalid_type(key, "version", value.type_name(), "string")
+                    })?);
+                }
+                src.into()
+            } else if let Some(path) = table.get("path") {
+                let path =
+                    crate_root
                         .join(path.as_str().ok_or_else(|| {
                             invalid_type(key, "path", path.type_name(), "string")
                         })?);
-                    let mut src = PathSource::new(path);
-                    if let Some(value) = table.get("version") {
-                        src = src.set_version(value.as_str().ok_or_else(|| {
-                            invalid_type(key, "version", value.type_name(), "string")
-                        })?);
-                    }
-                    src.into()
-                } else if let Some(version) = table.get("version") {
-                    let src = RegistrySource::new(version.as_str().ok_or_else(|| {
+                let mut src = PathSource::new(path);
+                if let Some(value) = table.get("version") {
+                    src = src.set_version(value.as_str().ok_or_else(|| {
+                        invalid_type(key, "version", value.type_name(), "string")
+                    })?);
+                }
+                src.into()
+            } else if let Some(version) = table.get("version") {
+                let src =
+                    RegistrySource::new(version.as_str().ok_or_else(|| {
                         invalid_type(key, "version", version.type_name(), "string")
                     })?);
-                    src.into()
-                } else if let Some(workspace) = table.get("workspace") {
-                    let workspace_bool = workspace.as_bool().ok_or_else(|| {
-                        invalid_type(key, "workspace", workspace.type_name(), "bool")
-                    })?;
-                    if !workspace_bool {
-                        anyhow::bail!("`{key}.workspace = false` is unsupported")
-                    }
-                    let src = WorkspaceSource::new();
-                    src.into()
-                } else {
-                    anyhow::bail!("Unrecognized dependency source for `{key}`");
-                };
+                src.into()
+            } else if let Some(workspace) = table.get("workspace") {
+                let workspace_bool = workspace
+                    .as_bool()
+                    .ok_or_else(|| invalid_type(key, "workspace", workspace.type_name(), "bool"))?;
+                if !workspace_bool {
+                    anyhow::bail!("`{key}.workspace = false` is unsupported")
+                }
+                let src = WorkspaceSource::new();
+                src.into()
+            } else {
+                let mut msg = format!("unrecognized dependency source for `{key}`");
+                if table.is_empty() {
+                    msg.push_str(
+                        ", expected a local path, Git repository, version, or workspace dependency to be specified",
+                    );
+                }
+                anyhow::bail!(msg);
+            };
             let registry = if let Some(value) = table.get("registry") {
                 Some(
                     value
@@ -454,7 +464,7 @@ impl Dependency {
         } else if let Some(table) = item.as_table_like_mut() {
             match &self.source {
                 Some(Source::Registry(src)) => {
-                    table.insert("version", toml_edit::value(src.version.as_str()));
+                    overwrite_value(table, "version", src.version.as_str());
 
                     for key in ["path", "git", "branch", "tag", "rev", "workspace"] {
                         table.remove(key);
@@ -462,9 +472,9 @@ impl Dependency {
                 }
                 Some(Source::Path(src)) => {
                     let relpath = path_field(crate_root, &src.path);
-                    table.insert("path", toml_edit::value(relpath));
+                    overwrite_value(table, "path", relpath);
                     if let Some(r) = src.version.as_deref() {
-                        table.insert("version", toml_edit::value(r));
+                        overwrite_value(table, "version", r);
                     } else {
                         table.remove("version");
                     }
@@ -474,24 +484,24 @@ impl Dependency {
                     }
                 }
                 Some(Source::Git(src)) => {
-                    table.insert("git", toml_edit::value(src.git.as_str()));
+                    overwrite_value(table, "git", src.git.as_str());
                     if let Some(branch) = src.branch.as_deref() {
-                        table.insert("branch", toml_edit::value(branch));
+                        overwrite_value(table, "branch", branch);
                     } else {
                         table.remove("branch");
                     }
                     if let Some(tag) = src.tag.as_deref() {
-                        table.insert("tag", toml_edit::value(tag));
+                        overwrite_value(table, "tag", tag);
                     } else {
                         table.remove("tag");
                     }
                     if let Some(rev) = src.rev.as_deref() {
-                        table.insert("rev", toml_edit::value(rev));
+                        overwrite_value(table, "rev", rev);
                     } else {
                         table.remove("rev");
                     }
                     if let Some(r) = src.version.as_deref() {
-                        table.insert("version", toml_edit::value(r));
+                        overwrite_value(table, "version", r);
                     } else {
                         table.remove("version");
                     }
@@ -501,7 +511,7 @@ impl Dependency {
                     }
                 }
                 Some(Source::Workspace(_)) => {
-                    table.insert("workspace", toml_edit::value(true));
+                    overwrite_value(table, "workspace", true);
                     table.set_dotted(true);
                     key.fmt();
                     for key in [
@@ -523,7 +533,7 @@ impl Dependency {
             }
             if table.contains_key("version") {
                 if let Some(r) = self.registry.as_deref() {
-                    table.insert("registry", toml_edit::value(r));
+                    overwrite_value(table, "registry", r);
                 } else {
                     table.remove("registry");
                 }
@@ -532,11 +542,11 @@ impl Dependency {
             }
 
             if self.rename.is_some() {
-                table.insert("package", toml_edit::value(self.name.as_str()));
+                overwrite_value(table, "package", self.name.as_str());
             }
             match self.default_features {
                 Some(v) => {
-                    table.insert("default-features", toml_edit::value(v));
+                    overwrite_value(table, "default-features", v);
                 }
                 None => {
                     table.remove("default-features");
@@ -554,27 +564,38 @@ impl Dependency {
                     })
                     .unwrap_or_default();
                 features.extend(new_features.iter().map(|s| s.as_str()));
-                let features = toml_edit::value(features.into_iter().collect::<toml_edit::Value>());
+                let features = features.into_iter().collect::<toml_edit::Value>();
                 table.set_dotted(false);
-                table.insert("features", features);
+                overwrite_value(table, "features", features);
             } else {
                 table.remove("features");
             }
             match self.optional {
                 Some(v) => {
                     table.set_dotted(false);
-                    table.insert("optional", toml_edit::value(v));
+                    overwrite_value(table, "optional", v);
                 }
                 None => {
                     table.remove("optional");
                 }
             }
-
-            table.fmt();
         } else {
             unreachable!("Invalid dependency type: {}", item.type_name());
         }
     }
+}
+
+fn overwrite_value(
+    table: &mut dyn toml_edit::TableLike,
+    key: &str,
+    value: impl Into<toml_edit::Value>,
+) {
+    let mut value = value.into();
+    let existing = table.entry(key).or_insert_with(|| Default::default());
+    if let Some(existing_value) = existing.as_value() {
+        *value.decor_mut() = existing_value.decor().clone();
+    }
+    *existing = toml_edit::Item::Value(value);
 }
 
 fn invalid_type(dep: &str, key: &str, actual: &str, expected: &str) -> anyhow::Error {
@@ -871,7 +892,11 @@ impl GitSource {
 impl std::fmt::Display for GitSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let git_ref = self.git_ref();
-        if let Some(pretty_ref) = git_ref.pretty_ref() {
+
+        // TODO(-Znext-lockfile-bump): set it to true when stabilizing
+        // lockfile v4, because we want Source ID serialization to be
+        // consistent with lockfile.
+        if let Some(pretty_ref) = git_ref.pretty_ref(false) {
             write!(f, "{}?{}", self.git, pretty_ref)
         } else {
             write!(f, "{}", self.git)

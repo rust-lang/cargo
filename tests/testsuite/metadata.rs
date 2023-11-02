@@ -65,6 +65,7 @@ fn cargo_metadata_simple() {
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -164,6 +165,7 @@ crate-type = ["lib", "staticlib"]
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -257,6 +259,7 @@ optional_feat = []
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -587,6 +590,9 @@ fn cargo_metadata_with_deps_and_version() {
         "workspace_members": [
             "foo 0.5.0 (path+file:[..]foo)"
         ],
+        "workspace_default_members": [
+            "foo 0.5.0 (path+file:[..]foo)"
+        ],
         "workspace_root": "[..]/foo",
         "metadata": null
     }"#,
@@ -666,6 +672,9 @@ name = "ex"
             }
         ],
         "workspace_members": [
+            "foo 0.1.0 (path+file:[..]foo)"
+        ],
+        "workspace_default_members": [
             "foo 0.1.0 (path+file:[..]foo)"
         ],
         "resolve": {
@@ -761,6 +770,9 @@ crate-type = ["rlib", "dylib"]
             }
         ],
         "workspace_members": [
+            "foo 0.1.0 (path+file:[..]foo)"
+        ],
+         "workspace_default_members": [
             "foo 0.1.0 (path+file:[..]foo)"
         ],
         "resolve": {
@@ -892,6 +904,7 @@ fn workspace_metadata() {
             }
         ],
         "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
+        "workspace_default_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
         "resolve": {
             "nodes": [
                 {
@@ -1119,6 +1132,11 @@ fn workspace_metadata_with_dependencies_no_deps() {
             }
         ],
         "workspace_members": [
+            "bar 0.5.0 (path+file:[..]bar)",
+            "artifact 0.5.0 (path+file:[..]/foo/artifact)",
+            "baz 0.5.0 (path+file:[..]baz)"
+        ],
+        "workspace_default_members": [
             "bar 0.5.0 (path+file:[..]bar)",
             "artifact 0.5.0 (path+file:[..]/foo/artifact)",
             "baz 0.5.0 (path+file:[..]baz)"
@@ -1755,6 +1773,12 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
                 "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
               ],
+              "workspace_default_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+              ],
               "workspace_root": "[..]/foo"
             }
     "#,
@@ -1797,8 +1821,11 @@ fn cargo_metadata_with_invalid_authors_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "", expected a vector of strings or workspace
-  in `package.authors`"#,
+  TOML parse error at line 3, column 27
+    |
+  3 |                 authors = ""
+    |                           ^^
+  invalid type: string "", expected a vector of strings or workspace"#,
         )
         .run();
 }
@@ -1822,8 +1849,11 @@ fn cargo_metadata_with_invalid_version_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: integer `1`, expected SemVer version
-  in `package.version`"#,
+  TOML parse error at line 3, column 27
+    |
+  3 |                 version = 1
+    |                           ^
+  invalid type: integer `1`, expected SemVer version"#,
         )
         .run();
 }
@@ -1847,8 +1877,11 @@ fn cargo_metadata_with_invalid_publish_field() {
             r#"[ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  invalid type: string "foo", expected a boolean, a vector of strings, or workspace
-  in `package.publish`"#,
+  TOML parse error at line 3, column 27
+    |
+  3 |                 publish = "foo"
+    |                           ^^^^^
+  invalid type: string "foo", expected a boolean, a vector of strings, or workspace"#,
         )
         .run();
 }
@@ -1953,6 +1986,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "documentation": null
     }],
     "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
+    "workspace_default_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
     "resolve": null,
     "target_directory": "[..]foo/target",
     "version": 1,
@@ -2147,6 +2181,7 @@ fn package_metadata() {
             }
         ],
         "workspace_members": ["foo[..]"],
+        "workspace_default_members": ["foo[..]"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -2222,6 +2257,7 @@ fn package_publish() {
             }
         ],
         "workspace_members": ["foo[..]"],
+        "workspace_default_members": ["foo[..]"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -2317,6 +2353,9 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "workspace_members": [
                     "bar 0.5.0 (path+file:[..])"
                 ],
+                "workspace_default_members": [
+                    "bar 0.5.0 (path+file:[..])"
+                ],
                 "workspace_root": "[..]",
                 "metadata": null
             }
@@ -2403,6 +2442,9 @@ fn package_edition_2018() {
                 "target_directory": "[..]",
                 "version": 1,
                 "workspace_members": [
+                    "foo 0.1.0 (path+file:[..])"
+                ],
+                "workspace_default_members": [
                     "foo 0.1.0 (path+file:[..])"
                 ],
                 "workspace_root": "[..]",
@@ -2551,6 +2593,9 @@ fn target_edition_2018() {
                 "target_directory": "[..]",
                 "version": 1,
                 "workspace_members": [
+                    "foo 0.1.0 (path+file:[..])"
+                ],
+                "workspace_default_members": [
                     "foo 0.1.0 (path+file:[..])"
                 ],
                 "workspace_root": "[..]",
@@ -2789,6 +2834,9 @@ fn rename_dependency() {
     "workspace_members": [
         "foo 0.0.1[..]"
     ],
+    "workspace_default_members": [
+        "foo 0.0.1[..]"
+    ],
     "workspace_root": "[..]",
     "metadata": null
 }"#,
@@ -2889,6 +2937,9 @@ fn metadata_links() {
               "workspace_members": [
                 "foo 0.5.0 [..]"
               ],
+              "workspace_default_members": [
+                "foo 0.5.0 [..]"
+              ],
               "workspace_root": "[..]/foo",
               "metadata": null
             }
@@ -2977,6 +3028,9 @@ fn deps_with_bin_only() {
                 }
               ],
               "workspace_members": [
+                "foo 0.1.0 ([..])"
+              ],
+              "workspace_default_members": [
                 "foo 0.1.0 ([..])"
               ],
               "resolve": {
@@ -3358,6 +3412,9 @@ fn filter_platform() {
   "workspace_members": [
     "foo 0.1.0 (path+file:[..]foo)"
   ],
+  "workspace_default_members": [
+    "foo 0.1.0 (path+file:[..]foo)"
+  ],
   "resolve": {
     "nodes": [
       {
@@ -3477,6 +3534,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -3558,6 +3616,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -3642,6 +3701,7 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": "{...}",
+  "workspace_default_members": "{...}",
   "resolve": {
     "nodes": [
       {
@@ -3756,6 +3816,7 @@ fn dep_kinds() {
             {
               "packages": "{...}",
               "workspace_members": "{...}",
+              "workspace_default_members": "{...}",
               "target_directory": "{...}",
               "version": 1,
               "workspace_root": "{...}",
@@ -3871,6 +3932,7 @@ fn dep_kinds_workspace() {
             {
               "packages": "{...}",
               "workspace_members": "{...}",
+              "workspace_default_members": "{...}",
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_root": "[..]/foo",
@@ -4184,8 +4246,295 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                 "artifact 0.5.0 (path+file://[..]/foo/artifact)",
                 "baz 0.5.0 (path+file://[..]/foo/baz)"
               ],
+              "workspace_default_members": [
+                "bar 0.5.0 (path+file://[..]/foo/bar)",
+                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                "baz 0.5.0 (path+file://[..]/foo/baz)"
+              ],
               "workspace_root": "[..]/foo"
             }
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn versionless_packages() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+
+                [dependencies]
+                foobar = "0.0.1"
+                baz = { path = "../baz/" }
+           "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+
+                [dependencies]
+                foobar = "0.0.1"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+    Package::new("foobar", "0.0.1").publish();
+
+    p.cargo("metadata -q --format-version 1")
+        .with_json(
+            r#"
+{
+  "packages": [
+    {
+      "name": "bar",
+      "version": "0.0.0",
+      "id": "bar 0.0.0 [..]",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "baz",
+          "source": null,
+          "req": "*",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null,
+          "path": "[..]/baz"
+        },
+        {
+          "name": "foobar",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^0.0.1",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "bar",
+          "src_path": "[..]/bar/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/bar/Cargo.toml",
+      "metadata": null,
+      "publish": [],
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "baz",
+      "version": "0.0.0",
+      "id": "baz 0.0.0 [..]",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "foobar",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^0.0.1",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "baz",
+          "src_path": "[..]/baz/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/baz/Cargo.toml",
+      "metadata": null,
+      "publish": [],
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "foobar",
+      "version": "0.0.1",
+      "id": "foobar 0.0.1 [..]",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "dependencies": [],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "foobar",
+          "src_path": "[..]/foobar-0.0.1/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/foobar-0.0.1/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    }
+  ],
+  "workspace_members": [
+    "bar 0.0.0 [..]",
+    "baz 0.0.0 [..]"
+  ],
+  "workspace_default_members": [
+    "bar 0.0.0 [..]",
+    "baz 0.0.0 [..]"
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "bar 0.0.0 [..]",
+        "dependencies": [
+          "baz 0.0.0 [..]",
+          "foobar 0.0.1 [..]"
+        ],
+        "deps": [
+          {
+            "name": "baz",
+            "pkg": "baz 0.0.0 [..]",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          },
+          {
+            "name": "foobar",
+            "pkg": "foobar 0.0.1 [..]",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "baz 0.0.0 [..]",
+        "dependencies": [
+          "foobar 0.0.1 [..]"
+        ],
+        "deps": [
+          {
+            "name": "foobar",
+            "pkg": "foobar 0.0.1 [..]",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "foobar 0.0.1 [..]",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": null
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_root": "[..]",
+  "metadata": null
+}
 "#,
         )
         .run();

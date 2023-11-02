@@ -132,7 +132,7 @@ OPTIONS
            --profile option for choosing a specific profile by name.
 
        --profile name
-           Document with the given profile. See the the reference
+           Document with the given profile. See the reference
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 
@@ -274,7 +274,14 @@ OPTIONS
            Changes the current working directory before executing any specified
            operations. This affects things like where cargo looks by default
            for the project manifest (Cargo.toml), as well as the directories
-           searched for discovering .cargo/config.toml, for example.
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
 
        -h, --help
            Prints help information.
@@ -290,12 +297,19 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of logical CPUs. If negative, it sets the maximum number
            of parallel jobs to the number of logical CPUs plus provided value.
+           If a string default is provided, it sets the value back to defaults.
            Should not be 0.
 
        --keep-going
            Build as many crates in the dependency graph as possible, rather
            than aborting the build on the first one that fails to build.
-           Unstable, requires -Zunstable-options.
+
+           For example if the current package depends on dependencies fails and
+           works, one of which fails to build, cargo doc -j1 may or may not
+           build the one that succeeds (depending on which one of the two
+           builds Cargo picked to run first), whereas cargo doc -j1
+           --keep-going would definitely run both builds, even if the one run
+           first fails.
 
 ENVIRONMENT
        See the reference

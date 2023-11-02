@@ -1,14 +1,5 @@
 //! Canonical definitions of `home_dir`, `cargo_home`, and `rustup_home`.
 //!
-//! This provides the definition of `home_dir` used by Cargo and
-//! rustup, as well functions to find the correct value of
-//! `CARGO_HOME` and `RUSTUP_HOME`.
-//!
-//! See also the [`dirs`](https://docs.rs/dirs) crate.
-//!
-//! _Note that as of 2019/08/06 it appears that cargo uses this crate. And
-//! rustup has used this crate since 2019/08/21._
-//!
 //! The definition of `home_dir` provided by the standard library is
 //! incorrect because it considers the `HOME` environment variable on
 //! Windows. This causes surprising situations where a Rust program
@@ -17,15 +8,16 @@
 //! rustup use the standard libraries definition - they use the
 //! definition here.
 //!
-//! This crate further provides two functions, `cargo_home` and
+//! This crate provides two additional functions, `cargo_home` and
 //! `rustup_home`, which are the canonical way to determine the
-//! location that Cargo and rustup store their data.
+//! location that Cargo and rustup use to store their data.
+//! The `env` module contains utilities for mocking the process environment
+//! by Cargo and rustup.
 //!
 //! See also this [discussion].
 //!
 //! [discussion]: https://github.com/rust-lang/rust/pull/46799#issuecomment-361156935
 
-#![doc(html_root_url = "https://docs.rs/home/0.5.4")]
 #![deny(rust_2018_idioms)]
 
 pub mod env;
@@ -36,29 +28,34 @@ mod windows;
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Returns the path of the current user's home directory if known.
+/// Returns the path of the current user's home directory using environment
+/// variables or OS-specific APIs.
 ///
 /// # Unix
 ///
 /// Returns the value of the `HOME` environment variable if it is set
-/// and not equal to the empty string. Otherwise, it tries to determine the
-/// home directory by invoking the `getpwuid_r` function on the UID of the
-/// current user.
+/// **even** if it is an empty string. Otherwise, it tries to determine the
+/// home directory by invoking the [`getpwuid_r`][getpwuid] function with
+/// the UID of the current user.
+///
+/// [getpwuid]: https://linux.die.net/man/3/getpwuid_r
 ///
 /// # Windows
 ///
-/// Returns the value of the `USERPROFILE` environment variable if it
-/// is set and not equal to the empty string. If both do not exist,
-/// [`SHGetFolderPathW`][msdn] is used to return the appropriate path.
+/// Returns the value of the `USERPROFILE` environment variable if it is set
+/// **and** it is not an empty string. Otherwise, it tries to determine the
+/// home directory by invoking the [`SHGetFolderPathW`][shgfp] function with
+/// [`CSIDL_PROFILE`][csidl].
 ///
-/// [msdn]: https://docs.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderpathw
+/// [shgfp]: https://docs.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderpathw
+/// [csidl]: https://learn.microsoft.com/en-us/windows/win32/shell/csidl
 ///
 /// # Examples
 ///
 /// ```
 /// match home::home_dir() {
-///     Some(path) => println!("{}", path.display()),
-///     None => println!("Impossible to get your home dir!"),
+///     Some(path) if !path.as_os_str().is_empty() => println!("{}", path.display()),
+///     _ => println!("Unable to get your home dir!"),
 /// }
 /// ```
 pub fn home_dir() -> Option<PathBuf> {

@@ -1,0 +1,7 @@
+error: unexpected argument '--keep-going' found
+
+  tip: use `--no-fail-fast` to run as many tests as possible regardless of failure
+
+Usage: cargo[EXE] bench [OPTIONS] [BENCHNAME] [-- [ARGS]...]
+
+For more information, try '--help'.

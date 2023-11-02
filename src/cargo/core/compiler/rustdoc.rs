@@ -112,7 +112,7 @@ pub fn add_root_urls(
 ) -> CargoResult<()> {
     let config = cx.bcx.config;
     if !config.cli_unstable().rustdoc_map {
-        log::debug!("`doc.extern-map` ignored, requires -Zrustdoc-map flag");
+        tracing::debug!("`doc.extern-map` ignored, requires -Zrustdoc-map flag");
         return Ok(());
     }
     let map = config.doc_extern_map()?;
@@ -125,7 +125,7 @@ pub fn add_root_urls(
             if let Ok(index_url) = config.get_registry_index(name) {
                 Some((name, index_url))
             } else {
-                log::warn!(
+                tracing::warn!(
                     "`doc.extern-map.{}` specifies a registry that is not defined",
                     name
                 );
@@ -181,7 +181,7 @@ pub fn add_root_urls(
                 })?;
                 Some(url.to_string())
             } else {
-                log::warn!(
+                tracing::warn!(
                     "`doc.extern-map.std` is \"local\", but local docs don't appear to exist at {}",
                     html_root.display()
                 );

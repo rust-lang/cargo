@@ -1,4 +1,4 @@
-## Workspaces
+# Workspaces
 
 A *workspace* is a collection of one or more packages, called *workspace
 members*, that are managed together.
@@ -24,12 +24,13 @@ In the `Cargo.toml`, the `[workspace]` table supports the following sections:
   * [`default-members`](#the-default-members-field) --- Packages to operate on when a specific package wasn't selected.
   * [`package`](#the-package-table) --- Keys for inheriting in packages.
   * [`dependencies`](#the-dependencies-table) --- Keys for inheriting in package dependencies.
+  * [`lints`](#the-lints-table) --- Keys for inheriting in package lints.
   * [`metadata`](#the-metadata-table) --- Extra settings for external tools.
 * [`[patch]`](overriding-dependencies.md#the-patch-section) --- Override dependencies.
 * [`[replace]`](overriding-dependencies.md#the-replace-section) --- Override dependencies (deprecated).
 * [`[profile]`](profiles.md) --- Compiler settings and optimizations.
 
-### The `[workspace]` section
+## The `[workspace]` section
 
 To create a workspace, you add the `[workspace]` table to a `Cargo.toml`:
 ```toml
@@ -40,7 +41,7 @@ To create a workspace, you add the `[workspace]` table to a `Cargo.toml`:
 At minimum, a workspace has to have a member, either with a root package or as
 a virtual manifest.
 
-#### Root package
+### Root package
 
 If the [`[workspace]` section](#the-workspace-section) is added to a
 `Cargo.toml` that already defines a `[package]`, the package is
@@ -56,8 +57,7 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
-<a id="virtual-manifest"></a>
-#### Virtual workspace
+### Virtual workspace
 
 Alternatively, a `Cargo.toml` file can be created with a `[workspace]` section
 but without a [`[package]` section][package]. This is called a *virtual
@@ -68,6 +68,7 @@ you want to keep all the packages organized in separate directories.
 # [PROJECT_DIR]/Cargo.toml
 [workspace]
 members = ["hello_world"]
+resolver = "2"
 ```
 
 ```toml
@@ -75,10 +76,16 @@ members = ["hello_world"]
 [package]
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
+edition = "2021"     # the edition, will have no effect on a resolver used in the workspace
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
-### The `members` and `exclude` fields 
+Note that in a virtual manifest the [`resolver = "2"`](resolver.md#resolver-versions)
+should be specified manually. It is usually deduced from the [`package.edition`][package-edition]
+field which is absent in virtual manifests and the edition field of a member
+won't affect the resolver used by the workspace.
+
+## The `members` and `exclude` fields 
 
 The `members` and `exclude` fields define which packages are members of
 the workspace:
@@ -108,7 +115,7 @@ manifest key can be used in member crates to point at a workspace's root to
 override this automatic search. The manual setting can be useful if the member
 is not inside a subdirectory of the workspace root.
 
-#### Package selection
+### Package selection
 
 In a workspace, package-related Cargo commands like [`cargo build`] can use
 the `-p` / `--package` or `--workspace` command-line flags to determine which
@@ -118,7 +125,7 @@ a [virtual workspace](#virtual-workspace), it will apply to all members (as if
 `--workspace` were specified on the command-line).  See also
 [`default-members`](#the-default-members-field).
 
-### The `default-members` field
+## The `default-members` field
 
 The optional `default-members` key can be specified to set the members to
 operate on when in the workspace root and the package selection flags are not
@@ -132,7 +139,7 @@ default-members = ["path/to/member2", "path/to/member3/foo"]
 
 When specified, `default-members` must expand to a subset of `members`.
 
-### The `package` table
+## The `package` table
 
 The `workspace.package` table is where you define keys that can be
 inherited by members of a workspace. These keys can be inherited by
@@ -177,7 +184,7 @@ description.workspace = true
 documentation.workspace = true
 ```
 
-### The `dependencies` table
+## The `dependencies` table
 
 The `workspace.dependencies` table is where you define dependencies to be
 inherited by members of a workspace.
@@ -216,7 +223,34 @@ cc.workspace = true
 rand.workspace = true
 ```
 
-### The `metadata` table
+## The `lints` table
+
+The `workspace.lints` table is where you define lint configuration to be inherited by members of a workspace.
+
+Specifying a workspace lint configuration is similar to package lints.
+
+Example:
+
+```toml
+# [PROJECT_DIR]/Cargo.toml
+[workspace]
+members = ["crates/*"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+```
+
+```toml
+# [PROJECT_DIR]/crates/bar/Cargo.toml
+[package]
+name = "bar"
+version = "0.1.0"
+
+[lints]
+workspace = true
+```
+
+## The `metadata` table
 
 The `workspace.metadata` table is ignored by Cargo and will not be warned
 about. This section can be used for tools that would like to store workspace
@@ -242,6 +276,7 @@ if that makes sense for the tool in question.
 [package]: manifest.md#the-package-section
 [`Cargo.lock`]: ../guide/cargo-toml-vs-cargo-lock.md
 [package-metadata]: manifest.md#the-metadata-table
+[package-edition]: manifest.md#the-edition-field
 [output directory]: ../guide/build-cache.md
 [patch]: overriding-dependencies.md#the-patch-section
 [replace]: overriding-dependencies.md#the-replace-section
@@ -253,3 +288,17 @@ if that makes sense for the tool in question.
 [specifying-dependencies]: specifying-dependencies.md
 [features]: features.md
 [inheriting-a-dependency-from-a-workspace]: specifying-dependencies.md#inheriting-a-dependency-from-a-workspace
+
+<script>
+(function() {
+    var fragments = {
+        "#virtual-manifest": "workspaces.html#virtual-workspace",
+    };
+    var target = fragments[window.location.hash];
+    if (target) {
+        var url = window.location.toString();
+        var base = url.substring(0, url.lastIndexOf('/'));
+        window.location.replace(base + "/" + target);
+    }
+})();
+</script>

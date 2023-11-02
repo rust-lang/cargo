@@ -4,7 +4,7 @@ use cargo::ops::{self, TestOptions};
 pub fn cli() -> Command {
     subcommand("bench")
         .about("Execute all benchmarks of a local package")
-        .arg_quiet()
+        .next_display_order(0)
         .arg(
             Arg::new("BENCHNAME")
                 .action(ArgAction::Set)
@@ -12,9 +12,23 @@ pub fn cli() -> Command {
         )
         .arg(
             Arg::new("args")
+                .value_name("ARGS")
                 .help("Arguments for the bench binary")
                 .num_args(0..)
                 .last(true),
+        )
+        .arg(flag("no-run", "Compile, but don't run benchmarks"))
+        .arg(flag(
+            "no-fail-fast",
+            "Run all benchmarks regardless of failure",
+        ))
+        .arg_ignore_rust_version()
+        .arg_message_format()
+        .arg_quiet()
+        .arg_package_spec(
+            "Package to run benchmarks for",
+            "Benchmark all packages in the workspace",
+            "Exclude packages from the benchmark",
         )
         .arg_targets_all(
             "Benchmark only this package's library",
@@ -28,31 +42,23 @@ pub fn cli() -> Command {
             "Benchmark all benches",
             "Benchmark all targets",
         )
-        .arg(flag("no-run", "Compile, but don't run benchmarks"))
-        .arg_package_spec(
-            "Package to run benchmarks for",
-            "Benchmark all packages in the workspace",
-            "Exclude packages from the benchmark",
-        )
-        .arg_jobs()
-        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
+        .arg_jobs()
+        .arg_unsupported_keep_going()
+        .arg_profile("Build artifacts with the specified profile")
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg_manifest_path()
-        .arg_ignore_rust_version()
-        .arg_message_format()
-        .arg(flag(
-            "no-fail-fast",
-            "Run all benchmarks regardless of failure",
-        ))
         .arg_unit_graph()
         .arg_timings()
-        .after_help("Run `cargo help bench` for more detailed information.\n")
+        .arg_manifest_path()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help bench</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
+
     let mut compile_opts = args.compile_options(
         config,
         CompileMode::Bench,

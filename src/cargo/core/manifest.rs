@@ -19,7 +19,7 @@ use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
-use crate::util::{short_hash, Config, Filesystem};
+use crate::util::{short_hash, Config, Filesystem, RustVersion};
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -58,11 +58,13 @@ pub struct Manifest {
     original: Rc<TomlManifest>,
     unstable_features: Features,
     edition: Edition,
-    rust_version: Option<String>,
+    rust_version: Option<RustVersion>,
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
+    lint_rustflags: Vec<String>,
+    embedded: bool,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -110,6 +112,7 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>, // URL
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
+    pub rust_version: Option<RustVersion>,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -398,12 +401,14 @@ impl Manifest {
         workspace: WorkspaceConfig,
         unstable_features: Features,
         edition: Edition,
-        rust_version: Option<String>,
+        rust_version: Option<RustVersion>,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
+        lint_rustflags: Vec<String>,
+        embedded: bool,
     ) -> Manifest {
         Manifest {
             summary,
@@ -429,6 +434,8 @@ impl Manifest {
             default_run,
             metabuild,
             resolve_behavior,
+            lint_rustflags,
+            embedded,
         }
     }
 
@@ -496,6 +503,9 @@ impl Manifest {
     pub fn links(&self) -> Option<&str> {
         self.links.as_deref()
     }
+    pub fn is_embedded(&self) -> bool {
+        self.embedded
+    }
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {
         &self.workspace
@@ -511,6 +521,11 @@ impl Manifest {
     /// Returns `None` if it is not specified.
     pub fn resolve_behavior(&self) -> Option<ResolveBehavior> {
         self.resolve_behavior
+    }
+
+    /// `RUSTFLAGS` from the `[lints]` table
+    pub fn lint_rustflags(&self) -> &[String] {
+        self.lint_rustflags.as_slice()
     }
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {
@@ -555,8 +570,8 @@ impl Manifest {
         self.edition
     }
 
-    pub fn rust_version(&self) -> Option<&str> {
-        self.rust_version.as_deref()
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        self.rust_version.as_ref()
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {

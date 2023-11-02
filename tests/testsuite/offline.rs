@@ -3,6 +3,7 @@
 use cargo_test_support::{
     basic_manifest, git, main_file, path2url, project,
     registry::{Package, RegistryBuilder},
+    Execs,
 };
 use std::fs;
 
@@ -377,6 +378,15 @@ fn update_offline_not_cached_git() {
 
 #[cargo_test]
 fn cargo_compile_offline_with_cached_git_dep() {
+    compile_offline_with_cached_git_dep(false)
+}
+
+#[cargo_test]
+fn gitoxide_cargo_compile_offline_with_cached_git_dep_shallow_dep() {
+    compile_offline_with_cached_git_dep(true)
+}
+
+fn compile_offline_with_cached_git_dep(shallow: bool) {
     let git_project = git::new("dep1", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
@@ -420,7 +430,17 @@ fn cargo_compile_offline_with_cached_git_dep() {
         )
         .file("src/main.rs", "fn main(){}")
         .build();
-    prj.cargo("build").run();
+    let maybe_use_shallow = |mut cargo: Execs| -> Execs {
+        if shallow {
+            cargo
+                .arg("-Zgitoxide=fetch,shallow-deps")
+                .masquerade_as_nightly_cargo(&[
+                    "unstable features must be available for -Z gitoxide",
+                ]);
+        }
+        cargo
+    };
+    maybe_use_shallow(prj.cargo("build")).run();
 
     prj.change_file(
         "Cargo.toml",
@@ -438,7 +458,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
             rev2
         ),
     );
-    prj.cargo("build").run();
+    maybe_use_shallow(prj.cargo("build")).run();
 
     let p = project()
         .file(
@@ -463,15 +483,15 @@ fn cargo_compile_offline_with_cached_git_dep() {
 
     let git_root = git_project.root();
 
-    p.cargo("build --offline")
-        .with_stderr(format!(
-            "\
+    let mut cargo = p.cargo("build --offline");
+    cargo.with_stderr(format!(
+        "\
 [COMPILING] dep1 v0.5.0 ({}#[..])
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-            path2url(git_root),
-        ))
-        .run();
+        path2url(git_root),
+    ));
+    maybe_use_shallow(cargo).run();
 
     assert!(p.bin("foo").is_file());
 
@@ -496,7 +516,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         ),
     );
 
-    p.cargo("build --offline").run();
+    maybe_use_shallow(p.cargo("build --offline")).run();
     p.process(&p.bin("foo"))
         .with_stdout("hello from cached git repo rev1\n")
         .run();
@@ -653,7 +673,7 @@ fn main(){
         .with_stdout("1.2.9")
         .run();
     // updates happen without updating the index
-    p2.cargo("update -p present_dep --precise 1.2.3 --offline")
+    p2.cargo("update present_dep --precise 1.2.3 --offline")
         .with_status(0)
         .with_stderr(
             "\
@@ -686,7 +706,7 @@ fn main(){
         .run();
 
     // No v1.2.8 loaded into the cache so expect failure.
-    p2.cargo("update -p present_dep --precise 1.2.8 --offline")
+    p2.cargo("update present_dep --precise 1.2.8 --offline")
         .with_status(101)
         .with_stderr(
             "\

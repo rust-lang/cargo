@@ -80,6 +80,23 @@ pub enum ResolveVersion {
     /// V3 by default staring in 1.53.
     #[default]
     V3,
+    /// Unstable. Will collect a certain amount of changes and then go.
+    ///
+    /// Changes made:
+    ///
+    /// * SourceId URL serialization is aware of URL encoding.
+    V4,
+}
+
+impl ResolveVersion {
+    /// The maximum version of lockfile made into the stable channel.
+    ///
+    /// Any version larger than this needs `-Znext-lockfile-bump` to enable.
+    ///
+    /// Update this when you're going to stabilize a new lockfile format.
+    pub fn max_stable() -> ResolveVersion {
+        ResolveVersion::V3
+    }
 }
 
 impl Resolve {

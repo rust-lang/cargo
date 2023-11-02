@@ -1,4 +1,4 @@
-## Profiles
+# Profiles
 
 Profiles provide a way to alter the compiler settings, influencing things like
 optimizations and debugging symbols.
@@ -28,11 +28,11 @@ the settings from `Cargo.toml`.
 
 [config]: config.md
 
-### Profile settings
+## Profile settings
 
 The following is a list of settings that can be controlled in a profile.
 
-#### opt-level
+### opt-level
 
 The `opt-level` setting controls the [`-C opt-level` flag] which controls the level
 of optimization. Higher optimization levels may produce faster runtime code at
@@ -60,23 +60,29 @@ techniques.
 [`-C opt-level` flag]: ../../rustc/codegen-options/index.html#opt-level
 [Profile Guided Optimization]: ../../rustc/profile-guided-optimization.html
 
-#### debug
+### debug
 
 The `debug` setting controls the [`-C debuginfo` flag] which controls the
 amount of debug information included in the compiled binary.
 
 The valid options are:
 
-* `0` or `false`: no debug info at all
-* `1`: line tables only
-* `2` or `true`: full debug info
+* `0`, `false`, or `"none"`: no debug info at all, default for [`release`](#release)
+* `"line-directives-only"`: line info directives only. For the nvptx* targets this enables [profiling]. For other use cases, `line-tables-only` is the better, more compatible choice.
+* `"line-tables-only"`: line tables only. Generates the minimal amount of debug info for backtraces with filename/line number info, but not anything else, i.e. no variable or function parameter info.
+* `1` or `"limited"`: debug info without type or variable-level information. Generates more detailed module-level info than `line-tables-only`.
+* `2`, `true`, or `"full"`: full debug info, default for [`dev`](#dev)
+
+For more information on what each option does see `rustc`'s docs on [debuginfo].
 
 You may wish to also configure the [`split-debuginfo`](#split-debuginfo) option
 depending on your needs as well.
 
 [`-C debuginfo` flag]: ../../rustc/codegen-options/index.html#debuginfo
+[debuginfo]: ../../rustc/codegen-options/index.html#debuginfo
+[profiling]: https://reviews.llvm.org/D46061
 
-#### split-debuginfo
+### split-debuginfo
 
 The `split-debuginfo` setting controls the [`-C split-debuginfo` flag] which
 controls whether debug information, if generated, is either placed in the
@@ -90,10 +96,14 @@ split-debuginfo` flag] and is platform-specific. Some options are only
 available on the [nightly channel]. The Cargo default may change in the future
 once more testing has been performed, and support for DWARF is stabilized.
 
+Be aware that Cargo and rustc have different defaults for this option. This
+option exists to allow Cargo to experiment on different combinations of flags
+thus providing better debugging and developer experience.
+
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [`-C split-debuginfo` flag]: ../../rustc/codegen-options/index.html#split-debuginfo
 
-#### strip
+### strip
 
 The `strip` option controls the [`-C strip` flag], which directs rustc to
 strip either symbols or debuginfo from a binary. This can be enabled like so:
@@ -115,7 +125,7 @@ equivalent to `strip = "none"` and disables `strip` completely.
 
 [`-C strip` flag]: ../../rustc/codegen-options/index.html#strip
 
-#### debug-assertions
+### debug-assertions
 
 The `debug-assertions` setting controls the [`-C debug-assertions` flag] which
 turns `cfg(debug_assertions)` [conditional compilation] on or off. Debug
@@ -133,7 +143,7 @@ The valid options are:
 [conditional compilation]: ../../reference/conditional-compilation.md#debug_assertions
 [`debug_assert!` macro]: ../../std/macro.debug_assert.html
 
-#### overflow-checks
+### overflow-checks
 
 The `overflow-checks` setting controls the [`-C overflow-checks` flag] which
 controls the behavior of [runtime integer overflow]. When overflow-checks are
@@ -147,11 +157,12 @@ The valid options are:
 [`-C overflow-checks` flag]: ../../rustc/codegen-options/index.html#overflow-checks
 [runtime integer overflow]: ../../reference/expressions/operator-expr.md#overflow
 
-#### lto
+### lto
 
-The `lto` setting controls the [`-C lto` flag] which controls LLVM's [link
-time optimizations]. LTO can produce better optimized code, using
-whole-program analysis, at the cost of longer linking time.
+The `lto` setting controls `rustc`'s [`-C lto`], [`-C linker-plugin-lto`], and
+[`-C embed-bitcode`] options, which control LLVM's [link time optimizations].
+LTO can produce better optimized code, using whole-program analysis, at the cost
+of longer linking time.
 
 The valid options are:
 
@@ -165,14 +176,18 @@ The valid options are:
   similar to "fat".
 * `"off"`: Disables LTO.
 
-See also the [`-C linker-plugin-lto`] `rustc` flag for cross-language LTO.
+See the [linker-plugin-lto chapter] if you are interested in cross-language LTO.
+This is not yet supported natively in Cargo, but can be performed via
+`RUSTFLAGS`.
 
-[`-C lto` flag]: ../../rustc/codegen-options/index.html#lto
+[`-C lto`]: ../../rustc/codegen-options/index.html#lto
 [link time optimizations]: https://llvm.org/docs/LinkTimeOptimization.html
 [`-C linker-plugin-lto`]: ../../rustc/codegen-options/index.html#linker-plugin-lto
+[`-C embed-bitcode`]: ../../rustc/codegen-options/index.html#embed-bitcode
+[linker-plugin-lto chapter]: ../../rustc/linker-plugin-lto.html
 ["thin" LTO]: http://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html
 
-#### panic
+### panic
 
 The `panic` setting controls the [`-C panic` flag] which controls which panic
 strategy to use.
@@ -196,7 +211,7 @@ dependencies will also be forced to build with the `unwind` strategy.
 [`-C panic` flag]: ../../rustc/codegen-options/index.html#panic
 [`panic-abort-tests`]: unstable.md#panic-abort-tests
 
-#### incremental
+### incremental
 
 The `incremental` setting controls the [`-C incremental` flag] which controls
 whether or not incremental compilation is enabled. Incremental compilation
@@ -219,7 +234,7 @@ The incremental value can be overridden globally with the `CARGO_INCREMENTAL`
 [environment variable]: environment-variables.md
 [`build.incremental`]: config.md#buildincremental
 
-#### codegen-units
+### codegen-units
 
 The `codegen-units` setting controls the [`-C codegen-units` flag] which
 controls how many "code generation units" a crate will be split into. More
@@ -233,7 +248,7 @@ non-incremental builds.
 
 [`-C codegen-units` flag]: ../../rustc/codegen-options/index.html#codegen-units
 
-#### rpath
+### rpath
 
 The `rpath` setting controls the [`-C rpath` flag] which controls
 whether or not [`rpath`] is enabled.
@@ -241,9 +256,9 @@ whether or not [`rpath`] is enabled.
 [`-C rpath` flag]: ../../rustc/codegen-options/index.html#rpath
 [`rpath`]: https://en.wikipedia.org/wiki/Rpath
 
-### Default profiles
+## Default profiles
 
-#### dev
+### dev
 
 The `dev` profile is used for normal development and debugging. It is the
 default for build commands like [`cargo build`], and is used for `cargo install --debug`.
@@ -255,6 +270,7 @@ The default settings for the `dev` profile are:
 opt-level = 0
 debug = true
 split-debuginfo = '...'  # Platform-specific.
+strip = "none"
 debug-assertions = true
 overflow-checks = true
 lto = false
@@ -264,7 +280,7 @@ codegen-units = 256
 rpath = false
 ```
 
-#### release
+### release
 
 The `release` profile is intended for optimized artifacts used for releases
 and in production. This profile is used when the `--release` flag is used, and
@@ -277,6 +293,7 @@ The default settings for the `release` profile are:
 opt-level = 3
 debug = false
 split-debuginfo = '...'  # Platform-specific.
+strip = "none"
 debug-assertions = false
 overflow-checks = false
 lto = false
@@ -286,17 +303,17 @@ codegen-units = 16
 rpath = false
 ```
 
-#### test
+### test
 
 The `test` profile is the default profile used by [`cargo test`].
 The `test` profile inherits the settings from the [`dev`](#dev) profile.
 
-#### bench
+### bench
 
 The `bench` profile is the default profile used by [`cargo bench`].
 The `bench` profile inherits the settings from the [`release`](#release) profile.
 
-#### Build Dependencies
+### Build Dependencies
 
 To compile quickly, all profiles, by default, do not optimize build
 dependencies (build scripts, proc macros, and their dependencies), and avoid
@@ -324,7 +341,7 @@ debug = true
 Build dependencies otherwise inherit settings from the active profile in use, as
 described in [Profile selection](#profile-selection).
 
-### Custom profiles
+## Custom profiles
 
 In addition to the built-in profiles, additional custom profiles can be
 defined. These may be useful for setting up multiple workflows and build
@@ -354,7 +371,7 @@ output would go into the `target/release-lto` directory.
 
 [`target` directory]: ../guide/build-cache.md
 
-### Profile selection
+## Profile selection
 
 The profile used depends on the command, the command-line flags like
 `--release` or `--profile`, and the package (in the case of
@@ -388,7 +405,7 @@ The profile for specific packages can be specified with
 [`cargo rustc`]: ../commands/cargo-rustc.md
 [`cargo test`]: ../commands/cargo-test.md
 
-### Overrides
+## Overrides
 
 Profile settings can be overridden for specific packages and build-time
 crates. To override the settings for a specific package, use the `package`
@@ -440,7 +457,7 @@ match wins):
 
 Overrides cannot specify the `panic`, `lto`, or `rpath` settings.
 
-#### Overrides and generics
+### Overrides and generics
 
 The location where generic code is instantiated will influence the
 optimization settings used for that generic code. This can cause subtle

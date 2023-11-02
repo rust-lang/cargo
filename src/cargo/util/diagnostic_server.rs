@@ -4,30 +4,21 @@
 use std::collections::HashSet;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 use anyhow::{Context, Error};
 use cargo_util::ProcessBuilder;
-use log::warn;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 use crate::core::Edition;
 use crate::util::errors::CargoResult;
 use crate::util::Config;
 
 const DIAGNOSTICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
-const PLEASE_REPORT_THIS_BUG: &str =
-    "This likely indicates a bug in either rustc or cargo itself,\n\
-     and we would appreciate a bug report! You're likely to see \n\
-     a number of compiler warnings after this message which cargo\n\
-     attempted to fix but failed. If you could open an issue at\n\
-     https://github.com/rust-lang/rust/issues\n\
-     quoting the full output of this command we'd be very appreciative!\n\
-     Note that you may be able to make some more progress in the near-term\n\
-     fixing code with the `--broken-code` flag\n\n\
-     ";
 
 #[derive(Deserialize, Serialize, Hash, Eq, PartialEq, Clone)]
 pub enum Message {
@@ -83,15 +74,27 @@ impl Message {
     }
 }
 
+/// A printer that will print diagnostics messages to the shell.
 pub struct DiagnosticPrinter<'a> {
+    /// The config to get the shell to print to.
     config: &'a Config,
+    /// An optional wrapper to be used in addition to `rustc.wrapper` for workspace crates.
+    /// This is used to get the correct bug report URL. For instance,
+    /// if `clippy-driver` is set as the value for the wrapper,
+    /// then the correct bug report URL for `clippy` can be obtained.
+    workspace_wrapper: &'a Option<PathBuf>,
+    // A set of messages that have already been printed.
     dedupe: HashSet<Message>,
 }
 
 impl<'a> DiagnosticPrinter<'a> {
-    pub fn new(config: &'a Config) -> DiagnosticPrinter<'a> {
+    pub fn new(
+        config: &'a Config,
+        workspace_wrapper: &'a Option<PathBuf>,
+    ) -> DiagnosticPrinter<'a> {
         DiagnosticPrinter {
             config,
+            workspace_wrapper,
             dedupe: HashSet::new(),
         }
     }
@@ -128,7 +131,12 @@ impl<'a> DiagnosticPrinter<'a> {
                     "The full error message was:\n\n> {}\n\n",
                     message,
                 )?;
-                write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                let issue_link = get_bug_report_url(self.workspace_wrapper);
+                write!(
+                    self.config.shell().err(),
+                    "{}",
+                    gen_please_report_this_bug_text(issue_link)
+                )?;
                 Ok(())
             }
             Message::FixFailed {
@@ -159,7 +167,12 @@ impl<'a> DiagnosticPrinter<'a> {
                     }
                     writeln!(self.config.shell().err())?;
                 }
-                write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                let issue_link = get_bug_report_url(self.workspace_wrapper);
+                write!(
+                    self.config.shell().err(),
+                    "{}",
+                    gen_please_report_this_bug_text(issue_link)
+                )?;
                 if !errors.is_empty() {
                     writeln!(
                         self.config.shell().err(),
@@ -216,6 +229,31 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
             }
         }
     }
+}
+
+fn gen_please_report_this_bug_text(url: &str) -> String {
+    format!(
+        "This likely indicates a bug in either rustc or cargo itself,\n\
+     and we would appreciate a bug report! You're likely to see \n\
+     a number of compiler warnings after this message which cargo\n\
+     attempted to fix but failed. If you could open an issue at\n\
+     {}\n\
+     quoting the full output of this command we'd be very appreciative!\n\
+     Note that you may be able to make some more progress in the near-term\n\
+     fixing code with the `--broken-code` flag\n\n\
+     ",
+        url
+    )
+}
+
+fn get_bug_report_url(rustc_workspace_wrapper: &Option<PathBuf>) -> &str {
+    let clippy = std::ffi::OsStr::new("clippy-driver");
+    let issue_link = match rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem()) {
+        Some(wrapper) if wrapper == clippy => "https://github.com/rust-lang/rust-clippy/issues",
+        _ => "https://github.com/rust-lang/rust/issues",
+    };
+
+    issue_link
 }
 
 #[derive(Debug)]

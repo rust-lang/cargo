@@ -127,11 +127,38 @@ module].
 
 ## crates.io publishing
 
-Cargo's library is published to [crates.io] as part of the stable release
-process. This is handled by the [Release team] as part of their process. There
-is a [`publish.py` script] that in theory should help with this process. The
-test and build tool crates aren't published.
+Cargo's library and its related dependencies (like `cargo-util`) are published
+to [crates.io] as part of the 6-week stable release process by the [Release
+team]. There is a [`publish.py` script] that is used by the Release team's
+automation scripts (see <https://github.com/rust-lang/simpleinfra/>) to handle
+determining which packages to publish. The test and build tool crates aren't
+published. This runs on the specific git commit associated with the cargo
+submodule in the `stable` branch in `rust-lang/rust` at the time of release.
 
+On very rare cases, the Cargo team may decide to manually publish a new
+release to [crates.io]. For example, this may be necessary if there is a
+problem with the current version that only affects API users, and does not
+affect the `cargo` binary shipped in the stable release. In this situation,
+PRs should be merged to the associated stable release branch in the cargo repo
+(like `rust-1.70.0`) that fix the issue and bump the patch version of the
+affected package. Then someone with permissions (currently a subset of the
+Cargo team, or the Release team) should publish it manually using `cargo
+publish`.
+
+Some packages are not published automatically because they are not part of the
+Rust release train. These currently include all of the [`credential`] packages
+and the [`home`] package. These are published manually on an as-needed or
+as-requested basis by whoever has permissions (currently [@ehuss] or the
+Release/Infra team).
+
+In the future, these manual publishing options should be integrated with
+GitHub Actions so that any team member can trigger them. Likely that should
+involve getting Infra to create scoped tokens that can be added as GitHub
+Secrets, and setting up GitHub Actions workflows with the appropriate
+permissions which can be manually triggered to launch a release.
+
+[`home`]: https://github.com/rust-lang/cargo/tree/master/crates/home
+[`credential`]: https://github.com/rust-lang/cargo/tree/master/credential
 [`publish.py` script]: https://github.com/rust-lang/cargo/blob/master/publish.py
 
 ## Beta backports

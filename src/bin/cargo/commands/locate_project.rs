@@ -6,8 +6,7 @@ use serde::Serialize;
 pub fn cli() -> Command {
     subcommand("locate-project")
         .about("Print a JSON representation of a Cargo.toml file's location")
-        .arg_quiet()
-        .arg_manifest_path()
+        .arg(flag("workspace", "Locate Cargo.toml of the workspace root"))
         .arg(
             opt(
                 "message-format",
@@ -15,8 +14,11 @@ pub fn cli() -> Command {
             )
             .value_name("FMT"),
         )
-        .arg(flag("workspace", "Locate Cargo.toml of the workspace root"))
-        .after_help("Run `cargo help locate-project` for more detailed information.\n")
+        .arg_quiet()
+        .arg_manifest_path()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help locate-project</>` for more detailed information.\n"
+        ))
 }
 
 #[derive(Serialize)]

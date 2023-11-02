@@ -66,7 +66,7 @@ fn opt_level_override_0() {
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -99,7 +99,7 @@ fn debug_override_1() {
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]\
-        -C debuginfo=1 \
+        -C debuginfo=1 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -136,7 +136,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level={level}[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C debug-assertions=on \
         -C metadata=[..] \
         --out-dir [..] \
@@ -211,7 +211,7 @@ fn top_level_overrides_deps() {
         --emit=[..]link \
         -C prefer-dynamic \
         -C opt-level=1[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/release/deps \
         -L dependency=[CWD]/target/release/deps`
@@ -219,7 +219,7 @@ fn top_level_overrides_deps() {
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level=1[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps \
@@ -467,10 +467,11 @@ fn debug_0_report() {
         .with_stderr(
             "\
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C debuginfo=0 [..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]
 [FINISHED] dev [unoptimized] target(s) in [..]
 ",
         )
+        .with_stderr_does_not_contain("-C debuginfo")
         .run();
 }
 
@@ -740,5 +741,44 @@ Caused by:
   for more information about the status of this feature.
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn debug_options_valid() {
+    let build = |option| {
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "foo"
+                    authors = []
+                    version = "0.0.0"
+
+                    [profile.dev]
+                    debug = "{option}"
+                "#
+                ),
+            )
+            .file("src/main.rs", "fn main() {}")
+            .build();
+
+        p.cargo("build -v")
+    };
+
+    for (option, cli) in [
+        ("line-directives-only", "line-directives-only"),
+        ("line-tables-only", "line-tables-only"),
+        ("limited", "1"),
+        ("full", "2"),
+    ] {
+        build(option)
+            .with_stderr_contains(&format!("[RUNNING] `rustc [..]-C debuginfo={cli} [..]"))
+            .run();
+    }
+    build("none")
+        .with_stderr_does_not_contain("[..]-C debuginfo[..]")
         .run();
 }

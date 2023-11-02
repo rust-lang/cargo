@@ -543,7 +543,9 @@ fn clean_custom_dirname() {
     assert!(!p.build_dir().join("release").is_dir());
 
     // This should clean 'other'
-    p.cargo("clean --profile=other").with_stderr("").run();
+    p.cargo("clean --profile=other")
+        .with_stderr("[REMOVED] [..] files, [..] total")
+        .run();
     assert!(p.build_dir().join("debug").is_dir());
     assert!(!p.build_dir().join("other").is_dir());
 }

@@ -8,6 +8,7 @@ use crate::core::compiler::{BuildContext, Context, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
+use crate::util::style;
 use crate::util::{CargoResult, Config};
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -122,7 +123,7 @@ impl<'cfg> Timings<'cfg> {
             match State::current() {
                 Ok(state) => Some(state),
                 Err(e) => {
-                    log::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
+                    tracing::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
                     None
                 }
             }
@@ -193,9 +194,8 @@ impl<'cfg> Timings<'cfg> {
         // `id` may not always be active. "fresh" units unconditionally
         // generate `Message::Finish`, but this active map only tracks dirty
         // units.
-        let unit_time = match self.active.get_mut(&id) {
-            Some(ut) => ut,
-            None => return,
+        let Some(unit_time) = self.active.get_mut(&id) else {
+            return;
         };
         let t = self.start.elapsed().as_secs_f64();
         unit_time.rmeta_time = Some(t - unit_time.start);
@@ -211,9 +211,8 @@ impl<'cfg> Timings<'cfg> {
             return;
         }
         // See note above in `unit_rmeta_finished`, this may not always be active.
-        let mut unit_time = match self.active.remove(&id) {
-            Some(ut) => ut,
-            None => return,
+        let Some(mut unit_time) = self.active.remove(&id) else {
+            return;
         };
         let t = self.start.elapsed().as_secs_f64();
         unit_time.duration = t - unit_time.start;
@@ -264,9 +263,8 @@ impl<'cfg> Timings<'cfg> {
         if !self.enabled {
             return;
         }
-        let prev = match &mut self.last_cpu_state {
-            Some(state) => state,
-            None => return,
+        let Some(prev) = &mut self.last_cpu_state else {
+            return;
         };
         // Don't take samples too frequently, even if requested.
         let now = Instant::now();
@@ -276,7 +274,7 @@ impl<'cfg> Timings<'cfg> {
         let current = match State::current() {
             Ok(s) => s,
             Err(e) => {
-                log::info!("failed to get CPU state: {:?}", e);
+                tracing::info!("failed to get CPU state: {:?}", e);
                 return;
             }
         };
@@ -352,7 +350,7 @@ impl<'cfg> Timings<'cfg> {
         paths::link_or_copy(&filename, &unstamped_filename)?;
         self.config
             .shell()
-            .status_with_color("Timing", msg, termcolor::Color::Cyan)?;
+            .status_with_color("Timing", msg, &style::NOTE)?;
         Ok(())
     }
 

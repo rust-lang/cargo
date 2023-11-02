@@ -1,24 +1,28 @@
-//! Implementation of configuration for various sources
+//! Implementation of configuration for various sources.
 //!
 //! This module will parse the various `source.*` TOML configuration keys into a
 //! structure usable by Cargo itself. Currently this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
-use crate::core::{GitReference, PackageId, Source, SourceId};
+use crate::core::{GitReference, PackageId, SourceId};
+use crate::sources::source::Source;
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::config::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
 use crate::util::{Config, IntoUrl};
 use anyhow::{bail, Context as _};
-use log::debug;
 use std::collections::{HashMap, HashSet};
+use tracing::debug;
 use url::Url;
 
+/// Represents the entire [`[source]` replacement table][1] in Cargo configuration.
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/config.html#source
 #[derive(Clone)]
 pub struct SourceConfigMap<'cfg> {
     /// Mapping of source name to the toml configuration.
     cfgs: HashMap<String, SourceConfig>,
-    /// Mapping of `SourceId` to the source name.
+    /// Mapping of [`SourceId`] to the source name.
     id2name: HashMap<SourceId, String>,
     config: &'cfg Config,
 }
@@ -67,6 +71,8 @@ struct SourceConfig {
 }
 
 impl<'cfg> SourceConfigMap<'cfg> {
+    /// Like [`SourceConfigMap::empty`] but includes sources from source
+    /// replacement configurations.
     pub fn new(config: &'cfg Config) -> CargoResult<SourceConfigMap<'cfg>> {
         let mut base = SourceConfigMap::empty(config)?;
         let sources: Option<HashMap<String, SourceConfigDef>> = config.get("source")?;
@@ -78,6 +84,8 @@ impl<'cfg> SourceConfigMap<'cfg> {
         Ok(base)
     }
 
+    /// Creates the default set of sources that doesn't take `[source]`
+    /// replacement into account.
     pub fn empty(config: &'cfg Config) -> CargoResult<SourceConfigMap<'cfg>> {
         let mut base = SourceConfigMap {
             cfgs: HashMap::new(),
@@ -112,11 +120,14 @@ impl<'cfg> SourceConfigMap<'cfg> {
         Ok(base)
     }
 
+    /// Returns the `Config` this source config map is associated with.
     pub fn config(&self) -> &'cfg Config {
         self.config
     }
 
-    /// Get the `Source` for a given `SourceId`.
+    /// Gets the [`Source`] for a given [`SourceId`].
+    ///
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn load(
         &self,
         id: SourceId,
@@ -124,30 +135,26 @@ impl<'cfg> SourceConfigMap<'cfg> {
     ) -> CargoResult<Box<dyn Source + 'cfg>> {
         debug!("loading: {}", id);
 
-        let mut name = match self.id2name.get(&id) {
-            Some(name) => name,
-            None => return id.load(self.config, yanked_whitelist),
+        let Some(mut name) = self.id2name.get(&id) else {
+            return id.load(self.config, yanked_whitelist);
         };
         let mut cfg_loc = "";
         let orig_name = name;
         let new_id = loop {
-            let cfg = match self.cfgs.get(name) {
-                Some(cfg) => cfg,
-                None => {
-                    // Attempt to interpret the source name as an alt registry name
-                    if let Ok(alt_id) = SourceId::alt_registry(self.config, name) {
-                        debug!("following pointer to registry {}", name);
-                        break alt_id.with_precise(id.precise().map(str::to_string));
-                    }
-                    bail!(
-                        "could not find a configured source with the \
+            let Some(cfg) = self.cfgs.get(name) else {
+                // Attempt to interpret the source name as an alt registry name
+                if let Ok(alt_id) = SourceId::alt_registry(self.config, name) {
+                    debug!("following pointer to registry {}", name);
+                    break alt_id.with_precise_from(id);
+                }
+                bail!(
+                    "could not find a configured source with the \
                      name `{}` when attempting to lookup `{}` \
                      (configuration in `{}`)",
-                        name,
-                        orig_name,
-                        cfg_loc
-                    );
-                }
+                    name,
+                    orig_name,
+                    cfg_loc
+                );
             };
             match &cfg.replace_with {
                 Some((s, c)) => {
@@ -156,7 +163,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 }
                 None if id == cfg.id => return id.load(self.config, yanked_whitelist),
                 None => {
-                    break cfg.id.with_precise(id.precise().map(|s| s.to_string()));
+                    break cfg.id.with_precise_from(id);
                 }
             }
             debug!("following pointer to {}", name);
@@ -192,7 +199,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             );
         }
 
-        if old_src.requires_precise() && id.precise().is_none() {
+        if old_src.requires_precise() && !id.has_precise() {
             bail!(
                 "\
 the source {orig} requires a lock file to be present first before it can be
@@ -208,6 +215,7 @@ restore the source replacement configuration to continue the build
         Ok(Box::new(ReplacedSource::new(id, new_id, new_src)))
     }
 
+    /// Adds a source config with an associated name.
     fn add(&mut self, name: &str, cfg: SourceConfig) -> CargoResult<()> {
         if let Some(old_name) = self.id2name.insert(cfg.id, name.to_string()) {
             // The user is allowed to redefine the built-in crates-io
@@ -226,11 +234,12 @@ restore the source replacement configuration to continue the build
         Ok(())
     }
 
+    /// Adds a source config from TOML definition.
     fn add_config(&mut self, name: String, def: SourceConfigDef) -> CargoResult<()> {
         let mut srcs = Vec::new();
         if let Some(registry) = def.registry {
             let url = url(&registry, &format!("source.{}.registry", name))?;
-            srcs.push(SourceId::for_alt_registry(&url, &name)?);
+            srcs.push(SourceId::for_source_replacement_registry(&url, &name)?);
         }
         if let Some(local_registry) = def.local_registry {
             let path = local_registry.resolve_path(self.config);

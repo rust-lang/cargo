@@ -294,7 +294,9 @@ fn find_closest_dont_correct_nonsense() {
             "\
 [ERROR] no such command: `there-is-no-way-that-there-is-a-command-close-to-this`
 
-<tab>View all installed commands with `cargo --list`",
+<tab>View all installed commands with `cargo --list`
+<tab>Find a package to install `there-is-no-way-that-there-is-a-command-close-to-this` with `cargo search cargo-there-is-no-way-that-there-is-a-command-close-to-this`
+",
         )
         .run();
 }
@@ -307,7 +309,9 @@ fn displays_subcommand_on_error() {
             "\
 [ERROR] no such command: `invalid-command`
 
-<tab>View all installed commands with `cargo --list`",
+<tab>View all installed commands with `cargo --list`
+<tab>Find a package to install `invalid-command` with `cargo search cargo-invalid-command`
+",
         )
         .run();
 }
@@ -529,7 +533,9 @@ error: no such command: `bluid`
 
 <tab>Did you mean `build`?
 
-<tab>View all installed commands with `cargo --list`",
+<tab>View all installed commands with `cargo --list`
+<tab>Find a package to install `bluid` with `cargo search cargo-bluid`
+",
         )
         .run();
 }

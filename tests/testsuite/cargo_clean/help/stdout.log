@@ -1,0 +1,30 @@
+Remove artifacts that cargo has generated in the past
+
+Usage: cargo[EXE] clean [OPTIONS]
+
+Options:
+      --doc                 Whether or not to clean just the documentation directory
+  -q, --quiet               Do not print cargo log messages
+  -n, --dry-run             Display what would be deleted without deleting anything
+  -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>        Coloring: auto, always, never
+      --config <KEY=VALUE>  Override a configuration value
+  -Z <FLAG>                 Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Package to clean artifacts for
+
+Compilation Options:
+  -r, --release                 Whether or not to clean release artifacts
+      --profile <PROFILE-NAME>  Clean artifacts of the specified profile
+      --target [<TRIPLE>]       Target triple to clean output for
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help clean` for more detailed information.

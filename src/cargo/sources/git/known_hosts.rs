@@ -1,5 +1,8 @@
 //! SSH host key validation support.
 //!
+//! The only public item in this module is [`certificate_check`],
+//! which provides a callback to [`git2::RemoteCallbacks::certificate_check`].
+//!
 //! A primary goal with this implementation is to provide user-friendly error
 //! messages, guiding them to understand the issue and how to resolve it.
 //!
@@ -339,7 +342,7 @@ fn check_ssh_known_hosts(
             };
             match parse_known_hosts_line(&line_value.val, location) {
                 Some(known_host) => known_hosts.push(known_host),
-                None => log::warn!(
+                None => tracing::warn!(
                     "failed to parse known host {} from {}",
                     line_value.val,
                     line_value.definition
@@ -408,7 +411,7 @@ fn check_ssh_known_hosts_loaded(
     // fingerprints (see FingerprintHash ssh config option). Here we only
     // support SHA256.
     let mut remote_fingerprint = cargo_util::Sha256::new();
-    remote_fingerprint.update(remote_host_key.clone());
+    remote_fingerprint.update(remote_host_key);
     let remote_fingerprint = STANDARD_NO_PAD.encode(remote_fingerprint.finish());
     let remote_host_key_encoded = STANDARD.encode(remote_host_key);
 

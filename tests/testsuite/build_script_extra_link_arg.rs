@@ -204,7 +204,7 @@ fn cdylib_link_arg_transitive() {
 [COMPILING] bar v1.0.0 [..]
 [RUNNING] `rustc --crate-name build_script_build bar/build.rs [..]
 [RUNNING] `[..]build-script-build[..]
-warning: cargo:rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
+warning: bar@1.0.0: cargo:rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
 ([ROOT]/foo/bar), but that package does not contain a cdylib target
 
 Allowing this was an unintended change in the 1.50 release, and may become an error in \

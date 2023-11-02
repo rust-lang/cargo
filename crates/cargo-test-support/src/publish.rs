@@ -131,8 +131,11 @@ pub fn validate_crate_contents(
             (name, contents)
         })
         .collect();
-    assert!(expected_crate_name.ends_with(".crate"));
-    let base_crate_name = Path::new(&expected_crate_name[..expected_crate_name.len() - 6]);
+    let base_crate_name = Path::new(
+        expected_crate_name
+            .strip_suffix(".crate")
+            .expect("must end with .crate"),
+    );
     let actual_files: HashSet<PathBuf> = files.keys().cloned().collect();
     let expected_files: HashSet<PathBuf> = expected_files
         .iter()
@@ -165,6 +168,7 @@ pub(crate) fn create_index_line(
     features: crate::registry::FeatureMap,
     yanked: bool,
     links: Option<String>,
+    rust_version: Option<&str>,
     v: Option<u32>,
 ) -> String {
     // This emulates what crates.io does to retain backwards compatibility.
@@ -184,6 +188,9 @@ pub(crate) fn create_index_line(
     }
     if let Some(v) = v {
         json["v"] = serde_json::json!(v);
+    }
+    if let Some(rust_version) = rust_version {
+        json["rust_version"] = serde_json::json!(rust_version);
     }
 
     json.to_string()

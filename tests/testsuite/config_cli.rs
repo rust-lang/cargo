@@ -143,11 +143,9 @@ fn merges_array() {
         .env("CARGO_BUILD_RUSTFLAGS", "--env1 --env2")
         .config_arg("build.rustflags = ['--cli']")
         .build();
-    // The order of cli/env is a little questionable here, but would require
-    // much more complex merging logic.
     assert_eq!(
         config.get::<Vec<String>>("build.rustflags").unwrap(),
-        ["--file", "--cli", "--env1", "--env2"]
+        ["--file", "--env1", "--env2", "--cli"]
     );
 
     // With advanced-env.
@@ -158,7 +156,7 @@ fn merges_array() {
         .build();
     assert_eq!(
         config.get::<Vec<String>>("build.rustflags").unwrap(),
-        ["--file", "--cli", "--env"]
+        ["--file", "--env", "--cli"]
     );
 
     // Merges multiple instances.
@@ -202,7 +200,7 @@ fn string_list_array() {
             .get::<cargo::util::config::StringList>("build.rustflags")
             .unwrap()
             .as_slice(),
-        ["--file", "--cli", "--env1", "--env2"]
+        ["--file", "--env1", "--env2", "--cli"]
     );
 
     // With advanced-env.
@@ -216,7 +214,7 @@ fn string_list_array() {
             .get::<cargo::util::config::StringList>("build.rustflags")
             .unwrap()
             .as_slice(),
-        ["--file", "--cli", "--env"]
+        ["--file", "--env", "--cli"]
     );
 }
 

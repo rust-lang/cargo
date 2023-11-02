@@ -5,11 +5,18 @@ use cargo::ops;
 pub fn cli() -> Command {
     subcommand("init")
         .about("Create a new cargo package in an existing directory")
-        .arg_quiet()
-        .arg(Arg::new("path").action(ArgAction::Set).default_value("."))
-        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .arg(
+            Arg::new("path")
+                .value_name("PATH")
+                .action(ArgAction::Set)
+                .default_value("."),
+        )
         .arg_new_opts()
-        .after_help("Run `cargo help init` for more detailed information.\n")
+        .arg_registry("Registry to use")
+        .arg_quiet()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help init</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

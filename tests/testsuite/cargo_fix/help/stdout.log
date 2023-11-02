@@ -1,0 +1,60 @@
+Automatically fix lint warnings reported by rustc
+
+Usage: cargo[EXE] fix [OPTIONS]
+
+Options:
+      --edition               Fix in preparation for the next edition
+      --edition-idioms        Fix warnings to migrate to the idioms of an edition
+      --broken-code           Fix code even if it already has compiler errors
+      --allow-no-vcs          Fix code even if a VCS was not detected
+      --allow-dirty           Fix code even if the working directory is dirty
+      --allow-staged          Fix code even if the working directory has staged changes
+      --ignore-rust-version   Ignore `rust-version` specification in packages
+      --message-format <FMT>  Error format
+  -q, --quiet                 Do not print cargo log messages
+  -v, --verbose...            Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>          Coloring: auto, always, never
+      --config <KEY=VALUE>    Override a configuration value
+  -Z <FLAG>                   Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                              details
+  -h, --help                  Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Package(s) to fix
+      --workspace         Fix all packages in the workspace
+      --exclude <SPEC>    Exclude packages from the fixes
+      --all               Alias for --workspace (deprecated)
+
+Target Selection:
+      --lib               Fix only this package's library
+      --bins              Fix all binaries
+      --bin [<NAME>]      Fix only the specified binary
+      --examples          Fix all examples
+      --example [<NAME>]  Fix only the specified example
+      --tests             Fix all tests
+      --test [<NAME>]     Fix only the specified test target
+      --benches           Fix all benches
+      --bench [<NAME>]    Fix only the specified bench target
+      --all-targets       Fix all targets (default)
+
+Feature Selection:
+  -F, --features <FEATURES>  Space or comma separated list of features to activate
+      --all-features         Activate all available features
+      --no-default-features  Do not activate the `default` feature
+
+Compilation Options:
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error
+  -r, --release                 Fix artifacts in release mode, with optimizations
+      --profile <PROFILE-NAME>  Build artifacts with the specified profile
+      --target [<TRIPLE>]       Fix for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+      --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help fix` for more detailed information.
