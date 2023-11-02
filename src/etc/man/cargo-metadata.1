@@ -36,8 +36,8 @@ keeps metadata evolving without stagnation.
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'\fBChanging opaque representations\fR \[em] The inner representations of some
-fields are implementation details. For example, fields related to \[lq]Package ID\[rq]
-or \[lq]Source ID\[rq] are treated as opaque identifiers to differentiate packages or
+fields are implementation details. For example, fields related to
+\[lq]Source ID\[rq] are treated as opaque identifiers to differentiate packages or
 sources. Consumers shouldn\[cq]t rely on those representations unless specified.
 .RE
 .SS "JSON format"
@@ -332,6 +332,12 @@ The JSON output has the following format:
     }
 }
 .fi
+.RE
+.sp
+Notes:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'For \fB"id"\fR field syntax, see \fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html> in the reference.
 .RE
 .SH "OPTIONS"
 .SS "Output Options"

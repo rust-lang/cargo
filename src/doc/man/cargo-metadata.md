@@ -34,8 +34,8 @@ considersed as incompatible:
 * **Adding new values for enum-like fields** — Same as adding new fields. It
   keeps metadata evolving without stagnation.
 * **Changing opaque representations** — The inner representations of some
-  fields are implementation details. For example, fields related to "Package ID"
-  or "Source ID" are treated as opaque identifiers to differentiate packages or
+  fields are implementation details. For example, fields related to
+  "Source ID" are treated as opaque identifiers to differentiate packages or
   sources. Consumers shouldn't rely on those representations unless specified.
 
 ### JSON format
@@ -53,8 +53,8 @@ The JSON output has the following format:
             "name": "my-package",
             /* The version of the package. */
             "version": "0.1.0",
-            /* The Package ID, an opaque and unique identifier for referring to the
-               package. See "Compatibility" above for the stability guarantee.
+            /* The Package ID for referring to the
+               package within the document and as the `--package` argument to many commands
             */
             "id": "file:///path/to/my-package#0.1.0",
             /* The license value from the manifest, or null. */
@@ -330,6 +330,11 @@ The JSON output has the following format:
     }
 }
 ````
+
+Notes:
+- For `"id"` field syntax, see [Package ID Specifications] in the reference.
+
+[Package ID Specifications]: ../reference/pkgid-spec.html
 
 ## OPTIONS
 
