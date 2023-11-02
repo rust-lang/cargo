@@ -192,7 +192,7 @@ fn profile_merge_works() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
-    -Zremap-path-scope=macro \
+    -Zremap-path-scope=diagnostics \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..] \
     --remap-path-prefix=[CWD]= [..]
 [FINISHED] custom [..]",
