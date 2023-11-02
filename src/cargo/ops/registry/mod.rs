@@ -4,7 +4,7 @@
 
 mod login;
 mod logout;
-pub mod owner;
+mod owner;
 mod publish;
 mod search;
 mod yank;
