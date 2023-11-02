@@ -3007,6 +3007,10 @@ impl TomlProfile {
         if let Some(v) = &profile.strip {
             self.strip = Some(v.clone());
         }
+
+        if let Some(v) = &profile.trim_paths {
+            self.trim_paths = Some(v.clone())
+        }
     }
 }
 
