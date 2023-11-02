@@ -138,7 +138,7 @@ pub fn certificate_check(
     let Some(host_key) = cert.as_hostkey() else {
         // Return passthrough for TLS X509 certificates to use whatever validation
         // was done in git2.
-        return Ok(CertificateCheckStatus::CertificatePassthrough)
+        return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
     // If a nonstandard port is in use, check for that first.
     // The fallback to check without a port is handled in the HostKeyNotFound handler.
@@ -608,10 +608,18 @@ impl KnownHost {
 }
 
 fn hashed_hostname_matches(host: &str, hashed: &str) -> bool {
-    let Some((b64_salt, b64_host)) = hashed.split_once('|') else { return false; };
-    let Ok(salt) = STANDARD.decode(b64_salt) else { return false; };
-    let Ok(hashed_host) = STANDARD.decode(b64_host) else { return false; };
-    let Ok(mut mac) = hmac::Hmac::<sha1::Sha1>::new_from_slice(&salt) else { return false; };
+    let Some((b64_salt, b64_host)) = hashed.split_once('|') else {
+        return false;
+    };
+    let Ok(salt) = STANDARD.decode(b64_salt) else {
+        return false;
+    };
+    let Ok(hashed_host) = STANDARD.decode(b64_host) else {
+        return false;
+    };
+    let Ok(mut mac) = hmac::Hmac::<sha1::Sha1>::new_from_slice(&salt) else {
+        return false;
+    };
     mac.update(host.as_bytes());
     let result = mac.finalize().into_bytes();
     hashed_host == &result[..]

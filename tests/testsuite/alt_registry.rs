@@ -760,7 +760,7 @@ fn no_api() {
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("owner --registry alternative --list")
+    p.cargo("owner list --registry alternative")
         .with_status(101)
         .with_stderr_contains(&err)
         .run();
@@ -1376,16 +1376,6 @@ fn both_index_and_default() {
             .with_stderr("[ERROR] invalid url `index_url`: relative URL without a base")
             .run();
     }
-}
-
-#[cargo_test]
-fn owner_add_index_and_default() {
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("owner add someone --index=index_url")
-        .env("CARGO_REGISTRY_DEFAULT", "undefined")
-        .with_status(101)
-        .with_stderr("[ERROR] invalid url `index_url`: relative URL without a base")
-        .run();
 }
 
 #[cargo_test]

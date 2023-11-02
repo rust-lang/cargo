@@ -784,7 +784,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 impl<'cfg> Downloads<'cfg> {
     fn tick(&self) -> CargoResult<()> {
         let mut progress = self.progress.borrow_mut();
-        let Some(progress) = progress.as_mut() else { return Ok(()); };
+        let Some(progress) = progress.as_mut() else {
+            return Ok(());
+        };
 
         // Since the sparse protocol discovers dependencies as it goes,
         // it's not possible to get an accurate progress indication.
