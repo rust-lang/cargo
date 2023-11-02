@@ -1144,6 +1144,61 @@ fn activating_feature_activates_dep() {
 }
 
 #[cargo_test]
+fn activating_feature_does_not_activate_transitive_dev_dependency() {
+    let p = project()
+        .no_manifest()
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.0"
+                edition = "2021"
+
+                [features]
+                f = ["b/f"]
+
+                [dependencies]
+                b = { path = "../b" }
+            "#,
+        )
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.0.0"
+                edition = "2021"
+
+                [features]
+                f = ["c/f"]
+
+                [dev-dependencies]
+                c = { path = "../c" }
+            "#,
+        )
+        .file(
+            "c/Cargo.toml",
+            r#"
+                [package]
+                name = "c"
+                version = "0.0.0"
+                edition = "2021"
+
+                [features]
+                f = []
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file("b/src/lib.rs", "")
+        .file("c/src/lib.rs", "compile_error!")
+        .build();
+
+    p.cargo("check --manifest-path a/Cargo.toml --features f")
+        .run();
+}
+
+#[cargo_test]
 fn dep_feature_in_cmd_line() {
     let p = project()
         .file(
@@ -1937,8 +1992,8 @@ fn nonexistent_required_features() {
 }
 
 #[cargo_test]
-fn invalid_feature_names_warning() {
-    // Warnings for more restricted feature syntax.
+fn invalid_feature_names_error() {
+    // Errors for more restricted feature syntax.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1948,72 +2003,57 @@ fn invalid_feature_names_warning() {
                 version = "0.1.0"
 
                 [features]
-                # Some valid, but unusual names, shouldn't warn.
-                "c++17" = []
-                "128bit" = []
-                "_foo" = []
-                "feat-name" = []
-                "feat_name" = []
-                "foo.bar" = []
-
-                # Invalid names.
+                # Invalid start character.
                 "+foo" = []
-                "-foo" = []
-                ".foo" = []
-                "foo:bar" = []
-                "foo?" = []
-                "?foo" = []
-                "ⒶⒷⒸ" = []
-                "a¼" = []
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
-    // Unfortunately the warnings are duplicated due to the Summary being
-    // loaded twice (once in the Workspace, and once in PackageRegistry) and
-    // Cargo does not have a de-duplication system. This should probably be
-    // OK, since I'm not expecting this to affect anyone.
     p.cargo("check")
-        .with_stderr("\
-[WARNING] invalid character `+` in feature `+foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `-` in feature `-foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `.` in feature `.foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `?` in feature `?foo` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `¼` in feature `a¼` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `:` in feature `foo:bar` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `?` in feature `foo?` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `Ⓐ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `Ⓑ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[WARNING] invalid character `Ⓒ` in feature `ⒶⒷⒸ` in package foo v0.1.0 ([ROOT]/foo), characters must be Unicode XID characters, `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, and please leave a comment if this will be a problem for your project.
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  invalid character `+` in feature `+foo` in package foo v0.1.0 ([ROOT]/foo), \
+  the first character must be a Unicode XID start character or digit \
+  (most letters or `_` or `0` to `9`)
+",
+        )
+        .run();
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [features]
+            # Invalid continue character.
+            "a&b" = []
+        "#,
+    );
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  invalid character `&` in feature `a&b` in package foo v0.1.0 ([ROOT]/foo), \
+  characters must be Unicode XID characters, `+`, or `.` \
+  (numbers, `+`, `-`, `_`, `.`, or most letters)
+",
+        )
         .run();
 }
 
 #[cargo_test]
-fn invalid_feature_names_error() {
+fn invalid_feature_name_slash_error() {
     // Errors for more restricted feature syntax.
     let p = project()
         .file(

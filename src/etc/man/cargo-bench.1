@@ -32,7 +32,7 @@ Benchmarks are built with the \fB\-\-test\fR option to \fBrustc\fR which creates
 special executable by linking your code with libtest. The executable
 automatically runs all functions annotated with the \fB#[bench]\fR attribute.
 Cargo passes the \fB\-\-bench\fR flag to the test harness to tell it to run
-only benchmarks.
+only benchmarks, regardless of whether the harness is libtest or a custom harness.
 .sp
 The libtest harness may be disabled by setting \fBharness = false\fR in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fR
@@ -145,10 +145,16 @@ available)
 .sp
 The default behavior can be changed by setting the \fBbench\fR flag for the target
 in the manifest settings. Setting examples to \fBbench = true\fR will build and
-run the example as a benchmark. Setting targets to \fBbench = false\fR will stop
-them from being benchmarked by default. Target selection options that take a
-target by name ignore the \fBbench\fR flag and will always benchmark the given
+run the example as a benchmark, replacing the example\[cq]s \fBmain\fR function with
+the libtest harness.
+.sp
+Setting targets to \fBbench = false\fR will stop them from being bencharmked by
+default. Target selection options that take a target by name (such as
+\fB\-\-example foo\fR) ignore the \fBbench\fR flag and will always benchmark the given
 target.
+.sp
+See \fIConfiguring a target\fR <https://doc.rust\-lang.org/cargo/reference/cargo\-targets.html#configuring\-a\-target>
+for more information on per\-target settings.
 .sp
 Binary targets are automatically built if there is an integration test or
 benchmark being selected to benchmark. This allows an integration
@@ -276,7 +282,7 @@ target artifacts are placed in a separate directory. See the
 \fB\-\-profile\fR \fIname\fR
 .RS 4
 Benchmark with the given profile.
-See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
 .RE
 .sp
 \fB\-\-ignore\-rust\-version\fR
@@ -461,7 +467,13 @@ See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/
 .RS 4
 Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
-the directories searched for discovering \fB\&.cargo/config.toml\fR, for example.
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 
@@ -485,15 +497,21 @@ Rust test harness runs benchmarks serially in a single thread.
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of logical CPUs. If negative, it sets the maximum number of
-parallel jobs to the number of logical CPUs plus provided value.
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
 Should not be 0.
 .RE
 .sp
-\fB\-\-keep\-going\fR
+While \fBcargo bench\fR involves compilation, it does not provide a \fB\-\-keep\-going\fR
+flag. Use \fB\-\-no\-fail\-fast\fR to run as many benchmarks as possible without
+stopping at the first failure. To \[lq]compile\[rq] as many benchmarks as possible, use
+\fB\-\-benches\fR to build benchmark binaries separately. For example:
+.sp
 .RS 4
-Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-\fB\-Zunstable\-options\fR\&.
+.nf
+cargo build \-\-benches \-\-release \-\-keep\-going
+cargo bench \-\-no\-fail\-fast
+.fi
 .RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for

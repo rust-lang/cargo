@@ -41,7 +41,8 @@ _cargo()
 	local opt_pkg='-p --package'
 	local opt_feat='-F --features --all-features --no-default-features'
 	local opt_mani='--manifest-path'
-	local opt_parallel='-j --jobs --keep-going'
+	local opt_jobs='-j --jobs'
+	local opt_parallel="$opt_jobs --keep-going"
 	local opt_force='-f --force'
 	local opt_sync='-s --sync'
 	local opt_lock='--frozen --locked --offline'
@@ -49,7 +50,7 @@ _cargo()
 
 	local opt___nocmd="$opt_common -V --version --list --explain"
 	local opt__add="$opt_common -p --package --features --default-features --no-default-features $opt_mani --optional --no-optional --rename --dry-run --path --git --branch --tag --rev --registry --dev --build --target"
-	local opt__bench="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_parallel $opt_targets --message-format --target --no-run --no-fail-fast --target-dir --ignore-rust-version"
+	local opt__bench="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --no-run --no-fail-fast --target-dir --ignore-rust-version"
 	local opt__build="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_parallel $opt_targets --message-format --target --release --profile --target-dir --ignore-rust-version"
 	local opt__b="$opt__build"
 	local opt__check="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_parallel $opt_targets --message-format --target --release --profile --target-dir --ignore-rust-version"
@@ -82,11 +83,11 @@ _cargo()
 	local opt__rustc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_parallel $opt_targets -L --crate-type --extern --message-format --profile --target --release --target-dir --ignore-rust-version"
 	local opt__rustdoc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_parallel $opt_targets --message-format --target --release --open --target-dir --profile --ignore-rust-version"
 	local opt__search="$opt_common $opt_lock --limit --index --registry"
-	local opt__test="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_parallel $opt_targets --message-format --doc --target --no-run --release --no-fail-fast --target-dir --profile --ignore-rust-version"
+	local opt__test="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --doc --target --no-run --release --no-fail-fast --target-dir --profile --ignore-rust-version"
 	local opt__t="$opt__test"
 	local opt__tree="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock --target -i --invert --prefix --no-dedupe --duplicates -d --charset -f --format -e --edges"
 	local opt__uninstall="$opt_common $opt_lock $opt_pkg --bin --root"
-	local opt__update="$opt_common $opt_mani $opt_lock $opt_pkg --aggressive --precise --dry-run"
+	local opt__update="$opt_common $opt_mani $opt_lock $opt_pkg --aggressive --recursive --precise --dry-run"
 	local opt__vendor="$opt_common $opt_mani $opt_lock $opt_sync --no-delete --respect-source-config --versioned-dirs"
 	local opt__verify_project="$opt_common $opt_mani $opt_lock"
 	local opt__version="$opt_common $opt_lock"
@@ -249,15 +250,11 @@ _get_examples(){
 }
 
 _get_targets(){
-	local result=()
-	local targets=$(rustup target list)
-	while read line
-	do
-		if [[ "$line" =~ default|installed ]]; then
-			result+=("${line%% *}")
-		fi
-	done <<< "$targets"
-	echo "${result[@]}"
+	if command -v rustup >/dev/null 2>/dev/null; then
+	  rustup target list --installed
+	else
+	  rustc --print target-list
+	fi
 }
 
 _toolchains(){

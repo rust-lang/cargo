@@ -12,7 +12,7 @@ use std::path::Path;
 type FormatterRef<'a> = &'a (dyn Formatter + Send + Sync);
 
 /// Processes the handlebars template at the given file.
-pub fn expand(file: &Path, formatter: FormatterRef) -> Result<String, Error> {
+pub fn expand(file: &Path, formatter: FormatterRef<'_>) -> Result<String, Error> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(true);
     handlebars.register_helper("lower", Box::new(lower));
@@ -174,10 +174,10 @@ impl HelperDef for ManLinkHelper<'_> {
 ///
 /// This sets a variable to a value within the template context.
 fn set_decorator(
-    d: &Decorator,
-    _: &Handlebars,
+    d: &Decorator<'_, '_>,
+    _: &Handlebars<'_>,
     _ctx: &Context,
-    rc: &mut RenderContext,
+    rc: &mut RenderContext<'_, '_>,
 ) -> Result<(), RenderError> {
     let data_to_set = d.hash();
     for (k, v) in data_to_set {
@@ -187,7 +187,7 @@ fn set_decorator(
 }
 
 /// Sets a variable to a value within the context.
-fn set_in_context(rc: &mut RenderContext, key: &str, value: serde_json::Value) {
+fn set_in_context(rc: &mut RenderContext<'_, '_>, key: &str, value: serde_json::Value) {
     let mut ctx = match rc.context() {
         Some(c) => (*c).clone(),
         None => Context::wraps(serde_json::Value::Object(serde_json::Map::new())).unwrap(),
@@ -201,7 +201,7 @@ fn set_in_context(rc: &mut RenderContext, key: &str, value: serde_json::Value) {
 }
 
 /// Removes a variable from the context.
-fn remove_from_context(rc: &mut RenderContext, key: &str) {
+fn remove_from_context(rc: &mut RenderContext<'_, '_>, key: &str) {
     let ctx = rc.context().expect("cannot remove from null context");
     let mut ctx = (*ctx).clone();
     if let serde_json::Value::Object(m) = ctx.data_mut() {

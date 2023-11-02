@@ -1,0 +1,20 @@
+Generate and display various kinds of reports
+
+Usage: cargo[EXE] report [OPTIONS] <COMMAND>
+
+Commands:
+  future-incompatibilities  Reports any crates which will eventually stop compiling
+
+Options:
+  -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>        Coloring: auto, always, never
+      --config <KEY=VALUE>  Override a configuration value
+  -Z <FLAG>                 Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                Print help
+
+Manifest Options:
+      --frozen   Require Cargo.lock and cache are up to date
+      --locked   Require Cargo.lock is up to date
+      --offline  Run without accessing the network
+
+Run `cargo help report` for more detailed information.

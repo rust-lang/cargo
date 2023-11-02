@@ -166,7 +166,7 @@ impl Layout {
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
         // compile.
-        let lock = dest.open_rw(".cargo-lock", ws.config(), "build directory")?;
+        let lock = dest.open_rw_exclusive_create(".cargo-lock", ws.config(), "build directory")?;
         let root = root.into_path_unlocked();
         let dest = dest.into_path_unlocked();
         let deps = dest.join("deps");

@@ -27,8 +27,14 @@ which registries you are allowed to publish to.
 .RE
 .sp
 .RS 4
-\h'-04' 3.\h'+01'Upload the crate to the registry. Note that the server will perform
-additional checks on the crate.
+\h'-04' 3.\h'+01'Upload the crate to the registry. The server will perform additional
+checks on the crate. 
+.RE
+.sp
+.RS 4
+\h'-04' 4.\h'+01'The client will poll waiting for the package to appear in the index,
+and may timeout. In that case, you will need to check for completion
+manually. This timeout does not affect the upload.
 .RE
 .sp
 This command requires you to be authenticated with either the \fB\-\-token\fR option
@@ -184,15 +190,21 @@ May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of logical CPUs. If negative, it sets the maximum number of
-parallel jobs to the number of logical CPUs plus provided value.
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
 Should not be 0.
 .RE
 .sp
 \fB\-\-keep\-going\fR
 .RS 4
 Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-\fB\-Zunstable\-options\fR\&.
+the build on the first one that fails to build.
+.sp
+For example if the current package depends on dependencies \fBfails\fR and \fBworks\fR,
+one of which fails to build, \fBcargo publish \-j1\fR may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas \fBcargo publish \-j1 \-\-keep\-going\fR would definitely run both
+builds, even if the one run first fails.
 .RE
 .SS "Display Options"
 .sp
@@ -255,7 +267,13 @@ See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/
 .RS 4
 Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
-the directories searched for discovering \fB\&.cargo/config.toml\fR, for example.
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

@@ -366,6 +366,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -438,6 +439,33 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
 }
 
 #[cargo_test]
+fn cargo_registries_crates_io_protocol() {
+    let _ = RegistryBuilder::new()
+        .no_configure_token()
+        .alternative()
+        .build();
+    // Should not produce a warning due to the registries.crates-io.protocol = 'sparse' configuration
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            "[registries.crates-io]
+            protocol = 'sparse'",
+        )
+        .build();
+
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+error: no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn publish_to_alt_registry() {
     let _reg = RegistryBuilder::new()
         .http_api()
@@ -488,6 +516,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -580,6 +609,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             "repository": null,
             "homepage": null,
             "documentation": null,
+            "rust_version": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -872,6 +902,9 @@ fn alt_reg_metadata() {
                 "workspace_members": [
                     "foo 0.0.1 (path+file:[..]/foo)"
                 ],
+                "workspace_default_members": [
+                    "foo 0.0.1 (path+file:[..]/foo)"
+                ],
                 "resolve": null,
                 "target_directory": "[..]/foo/target",
                 "version": 1,
@@ -1072,6 +1105,9 @@ fn alt_reg_metadata() {
                 "workspace_members": [
                     "foo 0.0.1 (path+file:[..]/foo)"
                 ],
+                "workspace_default_members": [
+                    "foo 0.0.1 (path+file:[..]/foo)"
+                ],
                 "resolve": "{...}",
                 "target_directory": "[..]/foo/target",
                 "version": 1,
@@ -1235,6 +1271,9 @@ fn unknown_registry() {
               "workspace_members": [
                 "foo 0.0.1 (path+file://[..]/foo)"
               ],
+              "workspace_default_members": [
+                "foo 0.0.1 (path+file://[..]/foo)"
+              ],
               "resolve": "{...}",
               "target_directory": "[..]/foo/target",
               "version": 1,
@@ -1350,10 +1389,9 @@ fn both_index_and_registry() {
         p.cargo(cmd)
             .arg("--registry=foo")
             .arg("--index=foo")
-            .with_status(101)
-            .with_stderr(
-                "[ERROR] both `--index` and `--registry` \
-                should not be set at the same time",
+            .with_status(1)
+            .with_stderr_contains(
+                "error: the argument '--registry <REGISTRY>' cannot be used with '--index <INDEX>'",
             )
             .run();
     }
@@ -1476,4 +1514,45 @@ fn publish_with_transitive_dep() {
         .file("src/lib.rs", "")
         .build();
     p2.cargo("publish").run();
+}
+
+#[cargo_test]
+fn warn_for_unused_fields() {
+    let _ = RegistryBuilder::new()
+        .no_configure_token()
+        .alternative()
+        .build();
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            "[registry]
+            unexpected-field = 'foo'
+            [registries.alternative]
+            unexpected-field = 'foo'
+            ",
+        )
+        .build();
+
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+[WARNING] unused config key `registries.alternative.unexpected-field` in `[..]config.toml`
+[ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+        )
+        .run();
+
+    p.cargo("publish --registry crates-io")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[WARNING] unused config key `registry.unexpected-field` in `[..]config.toml`
+[ERROR] no token found, please run `cargo login`
+or use environment variable CARGO_REGISTRY_TOKEN",
+        )
+        .run();
 }

@@ -453,10 +453,8 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
             krate, krate_info, line, line2, stderr
         );
     }
-    let actual_lto = if let Some(index) = line.find("-C lto=") {
-        let s = &line[index..];
-        let end = s.find(' ').unwrap();
-        let mode = &line[index..index + end];
+    let actual_lto = if let Some((_, line)) = line.split_once("-C lto=") {
+        let mode = line.splitn(2, ' ').next().unwrap();
         if mode == "off" {
             Lto::Off
         } else {

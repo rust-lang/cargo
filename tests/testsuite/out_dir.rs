@@ -281,6 +281,29 @@ fn cargo_build_out_dir() {
     );
 }
 
+#[cargo_test]
+fn unsupported_short_out_dir_flag() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .build();
+
+    p.cargo("build -Z unstable-options -O")
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .with_stderr(
+            "\
+error: unexpected argument '-O' found
+
+  tip: a similar argument exists: '--out-dir'
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
 fn check_dir_contents(
     out_dir: &Path,
     expected_linux: &[&str],

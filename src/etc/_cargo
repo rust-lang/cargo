@@ -45,9 +45,13 @@ _cargo() {
         '(--bench --bin --example --lib)--test=[specify test name]:test name'
     )
 
-    parallel=(
+    jobs=(
         '(-j --jobs)'{-j+,--jobs=}'[specify number of parallel jobs]:jobs [# of CPUs]'
-        '--keep-going[do not abort build on first error]'
+    )
+
+    parallel=(
+        "${jobs[@]}"
+        '--keep-going[do not abort build on first build error]'
     )
 
     features=(
@@ -87,7 +91,7 @@ _cargo() {
                         '*:args:_default'
                         ;;
                 bench)
-                    _arguments -s -A "^--" $common $parallel $features $msgfmt $triple $target $manifest \
+                    _arguments -s -A "^--" $common $jobs $features $msgfmt $triple $target $manifest \
                         "${command_scope_spec[@]}" \
                         '--all-targets[benchmark all targets]' \
                         "--no-run[compile but don't run]" \
@@ -297,7 +301,7 @@ _cargo() {
                         ;;
 
                 test | t)
-                    _arguments -s -S $common $parallel $features $msgfmt $triple $target $manifest \
+                    _arguments -s -S $common $jobs $features $msgfmt $triple $target $manifest \
                         '--test=[test name]: :_cargo_test_names' \
                         '--no-fail-fast[run all tests regardless of failure]' \
                         '--no-run[compile but do not run]' \
@@ -338,9 +342,11 @@ _cargo() {
                 update)
                     _arguments -s -S $common $manifest \
                         '--aggressive=[force dependency update]' \
+                        '--recursive=[force dependency update]' \
                         "--dry-run[don't actually write the lockfile]" \
                         '(-p --package)'{-p+,--package=}'[specify package to update]:package:_cargo_package_names' \
-                        '--precise=[update single dependency to precise release]:release'
+                        '--precise=[update single dependency to precise release]:release' \
+                        '*:package:_cargo_package_names'
                         ;;
 
                 verify-project)
@@ -402,9 +408,15 @@ _cargo_cmds() {
 }
 
 _cargo_target_triple() {
-    local -a targets
-	targets=( ${(f)"$(rustc --print target-list)"} )
-	_describe 'target triple' targets
+    local -a result
+
+    if (( $+commands[rustup] )); then
+        result=( ${(f)"$(rustup target list --installed)"} )
+    else
+        result=( ${(f)"$(rustc --print target-list)"} )
+    fi
+
+    _describe 'target triple' result
 }
 
 #FIXME: Disabled until fixed

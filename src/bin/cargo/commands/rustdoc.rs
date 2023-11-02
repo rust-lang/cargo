@@ -5,9 +5,9 @@ use crate::command_prelude::*;
 pub fn cli() -> Command {
     subcommand("rustdoc")
         .about("Build a package's documentation, using specified custom flags.")
-        .arg_quiet()
         .arg(
             Arg::new("args")
+                .value_name("ARGS")
                 .help("Extra rustdoc flags")
                 .num_args(0..)
                 .trailing_var_arg(true),
@@ -16,8 +16,10 @@ pub fn cli() -> Command {
             "open",
             "Opens the docs in a browser after the operation",
         ))
+        .arg_ignore_rust_version()
+        .arg_message_format()
+        .arg_quiet()
         .arg_package("Package to document")
-        .arg_jobs()
         .arg_targets_all(
             "Build only this package's library",
             "Build only the specified binary",
@@ -30,17 +32,18 @@ pub fn cli() -> Command {
             "Build all benches",
             "Build all targets",
         )
+        .arg_features()
+        .arg_parallel()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg_manifest_path()
-        .arg_message_format()
         .arg_unit_graph()
-        .arg_ignore_rust_version()
         .arg_timings()
-        .after_help("Run `cargo help rustdoc` for more detailed information.\n")
+        .arg_manifest_path()
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help rustdoc</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

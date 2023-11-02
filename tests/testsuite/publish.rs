@@ -25,6 +25,7 @@ const CLEAN_FOO_JSON: &str = r#"
         "readme": null,
         "readme_file": null,
         "repository": "foo",
+        "rust_version": null,
         "vers": "0.0.1"
     }
 "#;
@@ -49,6 +50,7 @@ fn validate_upload_foo() {
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.0.1"
           }
         "#,
@@ -77,6 +79,7 @@ fn validate_upload_li() {
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": "1.69",
           "vers": "0.0.1"
           }
         "#,
@@ -191,8 +194,8 @@ fn simple_publish_with_asymmetric() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify -Zregistry-auth --registry dummy-registry")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
+    p.cargo("publish --no-verify -Zasymmetric-token --registry dummy-registry")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -335,7 +338,7 @@ fn git_deps() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish -v --no-verify")
+    p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr(
@@ -417,7 +420,7 @@ fn unpublishable_crate() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -791,7 +794,7 @@ fn publish_empty_list() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -919,6 +922,48 @@ You may press ctrl-c [..]
 }
 
 #[cargo_test]
+fn publish_failed_with_index_and_only_allowed_registry() {
+    let registry = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project().build();
+
+    let _ = repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                publish = ["alternative"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .arg("--index")
+        .arg(registry.index_url().as_str())
+        .with_status(101)
+        .with_stderr(
+            "\
+[NOTE] Found `alternative` as only allowed registry. Publishing to it automatically.
+[ERROR] command-line argument --index requires --token to be specified
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn publish_fail_with_no_registry_specified() {
     let p = project().build();
 
@@ -975,7 +1020,7 @@ fn block_publish_no_registry() {
         .with_stderr(
             "\
 [ERROR] `foo` cannot be published.
-`package.publish` is set to `false` or an empty list in Cargo.toml and prevents publishing.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 ",
         )
         .run();
@@ -1270,6 +1315,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.0.1"
           }
         "#,
@@ -1469,6 +1515,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": null,
+          "rust_version": null,
           "vers": "0.1.0"
           }
         "#,
@@ -1581,6 +1628,7 @@ You may press ctrl-c [..]
           "readme": null,
           "readme_file": null,
           "repository": "foo",
+          "rust_version": null,
           "vers": "0.1.0"
         }
         "#,
@@ -1756,6 +1804,9 @@ fn publish_with_missing_readme() {
         .with_stderr(&format!(
             "\
 [UPDATING] [..]
+[WARNING] readme `foo.md` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.1.0 [..]
@@ -1914,6 +1965,7 @@ Caused by:
   headers:
   <tab>HTTP/1.1 400
   <tab>Content-Length: 7
+  <tab>Connection: close
   <tab>
   body:
   go away
@@ -2014,10 +2066,10 @@ fn api_other_error() {
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
 Caused by:
-  invalid response from server
+  invalid response body from server
 
 Caused by:
-  response body was not valid utf-8
+  invalid utf-8 sequence of [..]
 ",
         )
         .run();
@@ -2046,6 +2098,7 @@ fn in_package_workspace() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                rust-version = "1.69"
                 description = "li"
                 license = "MIT"
             "#,
@@ -2148,6 +2201,7 @@ fn in_package_workspace_with_members_with_features_old() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                rust-version = "1.69"
                 description = "li"
                 license = "MIT"
             "#,
@@ -2243,6 +2297,7 @@ fn in_virtual_workspace_with_p() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                rust-version = "1.69"
                 description = "li"
                 license = "MIT"
             "#,
@@ -2566,6 +2621,8 @@ fn wait_for_first_publish_underscore() {
     // Counter for number of tries before the package is "published"
     let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
     let arc2 = arc.clone();
+    let misses = Arc::new(Mutex::new(Vec::new()));
+    let misses2 = misses.clone();
 
     // Registry returns an invalid response.
     let registry = registry::RegistryBuilder::new()
@@ -2578,6 +2635,14 @@ fn wait_for_first_publish_underscore() {
                 server.not_found(req)
             } else {
                 server.index(req)
+            }
+        })
+        .not_found_handler(move |req, _| {
+            misses.lock().unwrap().push(req.url.to_string());
+            Response {
+                body: b"not found".to_vec(),
+                code: 404,
+                headers: vec![],
             }
         })
         .build();
@@ -2621,6 +2686,13 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
     let lock = arc2.lock().unwrap();
     assert_eq!(*lock, 2);
     drop(lock);
+    {
+        let misses = misses2.lock().unwrap();
+        assert!(
+            misses.len() == 1,
+            "should only have 1 not found URL; instead found {misses:?}"
+        );
+    }
 
     let p = project()
         .file(
@@ -2890,4 +2962,74 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         .build();
 
     p.cargo("check").with_status(0).run();
+}
+
+#[cargo_test]
+fn invalid_token() {
+    // Checks publish behavior with an invalid token.
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .env("CARGO_REGISTRY_TOKEN", "\x16")
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [..]
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+error: failed to publish to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  token contains invalid characters.
+  Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn versionless_package() {
+    // Use local registry for faster test times since no publish will occur
+    let registry = registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr(
+            "\
+error: `foo` cannot be published.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+",
+        )
+        .run();
 }

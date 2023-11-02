@@ -1,0 +1,53 @@
+Build a package's documentation
+
+Usage: cargo[EXE] doc [OPTIONS]
+
+Options:
+      --open                    Opens the docs in a browser after the operation
+      --no-deps                 Don't build documentation for dependencies
+      --document-private-items  Document private items
+      --ignore-rust-version     Ignore `rust-version` specification in packages
+      --message-format <FMT>    Error format
+  -q, --quiet                   Do not print cargo log messages
+  -v, --verbose...              Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>            Coloring: auto, always, never
+      --config <KEY=VALUE>      Override a configuration value
+  -Z <FLAG>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                                details
+  -h, --help                    Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Package to document
+      --workspace         Document all packages in the workspace
+      --exclude <SPEC>    Exclude packages from the build
+      --all               Alias for --workspace (deprecated)
+
+Feature Selection:
+  -F, --features <FEATURES>  Space or comma separated list of features to activate
+      --all-features         Activate all available features
+      --no-default-features  Do not activate the `default` feature
+
+Target Selection:
+      --lib               Document only this package's library
+      --bins              Document all binaries
+      --bin [<NAME>]      Document only the specified binary
+      --examples          Document all examples
+      --example [<NAME>]  Document only the specified example
+
+Compilation Options:
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error
+  -r, --release                 Build artifacts in release mode, with optimizations
+      --profile <PROFILE-NAME>  Build artifacts with the specified profile
+      --target [<TRIPLE>]       Build for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+      --unit-graph              Output build graph in JSON (unstable)
+      --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help doc` for more detailed information.

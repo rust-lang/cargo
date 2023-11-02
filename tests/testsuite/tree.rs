@@ -1086,6 +1086,59 @@ fn duplicates_with_target() {
 }
 
 #[cargo_test]
+fn duplicates_with_proc_macro() {
+    Package::new("dupe-dep", "1.0.0").publish();
+    Package::new("dupe-dep", "2.0.0").publish();
+    Package::new("proc", "1.0.0")
+        .proc_macro(true)
+        .dep("dupe-dep", "1.0")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            proc = "1.0"
+            dupe-dep = "2.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+├── dupe-dep v2.0.0
+└── proc v1.0.0 (proc-macro)
+    └── dupe-dep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree --duplicates")
+        .with_stdout(
+            "\
+dupe-dep v1.0.0
+└── proc v1.0.0 (proc-macro)
+    └── foo v0.1.0 ([..]/foo)
+
+dupe-dep v2.0.0
+└── foo v0.1.0 ([..]/foo)
+",
+        )
+        .run();
+
+    p.cargo("tree --duplicates --edges no-proc-macro")
+        .with_stdout("")
+        .run();
+}
+
+#[cargo_test]
 fn charset() {
     let p = make_simple_proj();
     p.cargo("tree --charset ascii")
@@ -1540,8 +1593,6 @@ somedep v1.0.0
             "\
 somedep v1.0.0
 └── foo v0.1.0 ([..]/foo)
-
-somedep v1.0.0
 ",
         )
         .run();
@@ -1624,7 +1675,7 @@ fn ambiguous_name() {
         .with_stderr_contains(
             "\
 error: There are multiple `dep` packages in your project, and the specification `dep` is ambiguous.
-Please re-run this command with `-p <spec>` where `<spec>` is one of the following:
+Please re-run this command with one of the following specifications:
   dep@1.0.0
   dep@2.0.0
 ",

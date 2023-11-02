@@ -6,8 +6,8 @@ use crate::messages::raw_rustc_output;
 use cargo_test_support::install::exe;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::tools;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, git, project};
+use cargo_test_support::{tools, wrapped_clippy_driver};
 
 #[cargo_test]
 fn check_success() {
@@ -861,8 +861,7 @@ fn check_keep_going() {
         .build();
 
     // Due to -j1, without --keep-going only one of the two bins would be built.
-    foo.cargo("check -j1 --keep-going -Zunstable-options")
-        .masquerade_as_nightly_cargo(&["keep-going"])
+    foo.cargo("check -j1 --keep-going")
         .with_status(101)
         .with_stderr_contains("error: ONE")
         .with_stderr_contains("error: TWO")
@@ -1416,25 +1415,6 @@ fn check_fixable_mixed() {
 
 #[cargo_test]
 fn check_fixable_warning_for_clippy() {
-    // A wrapper around `rustc` instead of calling `clippy`
-    let clippy_driver = project()
-        .at(cargo_test_support::paths::global_root().join("clippy-driver"))
-        .file("Cargo.toml", &basic_manifest("clippy-driver", "0.0.1"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                let mut args = std::env::args_os();
-                let _me = args.next().unwrap();
-                let rustc = args.next().unwrap();
-                let status = std::process::Command::new(rustc).args(args).status().unwrap();
-                std::process::exit(status.code().unwrap_or(1));
-            }
-            "#,
-        )
-        .build();
-    clippy_driver.cargo("build").run();
-
     let foo = project()
         .file(
             "Cargo.toml",
@@ -1452,10 +1432,7 @@ fn check_fixable_warning_for_clippy() {
 
     foo.cargo("check")
         // We can't use `clippy` so we use a `rustc` workspace wrapper instead
-        .env(
-            "RUSTC_WORKSPACE_WRAPPER",
-            clippy_driver.bin("clippy-driver"),
-        )
+        .env("RUSTC_WORKSPACE_WRAPPER", wrapped_clippy_driver())
         .with_stderr_contains("[..] (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)")
         .run();
 }
@@ -1514,6 +1491,29 @@ fn check_unused_manifest_keys() {
 [CHECKING] [..]
 [CHECKING] [..]
 [CHECKING] bar v0.2.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn versionless_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )

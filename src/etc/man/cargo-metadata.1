@@ -11,13 +11,37 @@ cargo\-metadata \[em] Machine\-readable metadata about the current package
 Output JSON to stdout containing information about the workspace members and
 resolved dependencies of the current package.
 .sp
-It is recommended to include the \fB\-\-format\-version\fR flag to future\-proof
-your code to ensure the output is in the format you are expecting.
+The format of the output is subject to change in futures versions of Cargo. It
+is recommended to include the \fB\-\-format\-version\fR flag to future\-proof your code
+to ensure the output is in the format you are expecting. For more on the
+expectations, see \[lq]Compatibility\[rq]\&.
 .sp
 See the \fIcargo_metadata crate\fR <https://crates.io/crates/cargo_metadata>
 for a Rust API for reading the metadata.
 .SH "OUTPUT FORMAT"
-The output has the following format:
+.SS "Compatibility"
+Within the same output format version, the compatibility is maintained, except
+some scenarios. The following is a non\-exhaustive list of changes that are not
+considersed as incompatible:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBAdding new fields\fR \[em] New fields will be added when needed. Reserving this
+helps Cargo evolve without bumping the format version too often.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBAdding new values for enum\-like fields\fR \[em] Same as adding new fields. It
+keeps metadata evolving without stagnation.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBChanging opaque representations\fR \[em] The inner representations of some
+fields are implementation details. For example, fields related to \[lq]Package ID\[rq]
+or \[lq]Source ID\[rq] are treated as opaque identifiers to differentiate packages or
+sources. Consumers shouldn\[cq]t rely on those representations unless specified.
+.RE
+.SS "JSON format"
+The JSON output has the following format:
 .sp
 .RS 4
 .nf
@@ -31,7 +55,9 @@ The output has the following format:
             "name": "my\-package",
             /* The version of the package. */
             "version": "0.1.0",
-            /* The Package ID, a unique identifier for referring to the package. */
+            /* The Package ID, an opaque and unique identifier for referring to the
+               package. See "Compatibility" above for the stability guarantee.
+            */
             "id": "my\-package 0.1.0 (path+file:///path/to/my\-package)",
             /* The license value from the manifest, or null. */
             "license": "MIT/Apache\-2.0",
@@ -39,14 +65,25 @@ The output has the following format:
             "license_file": "LICENSE",
             /* The description value from the manifest, or null. */
             "description": "Package description.",
-            /* The source ID of the package. This represents where
-               a package is retrieved from.
+            /* The source ID of the package, an "opaque" identifier representing
+               where a package is retrieved from. See "Compatibility" above for
+               the stability guarantee.
+
                This is null for path dependencies and workspace members.
+
                For other dependencies, it is a string with the format:
                \- "registry+URL" for registry\-based dependencies.
                  Example: "registry+https://github.com/rust\-lang/crates.io\-index"
                \- "git+URL" for git\-based dependencies.
                  Example: "git+https://github.com/rust\-lang/cargo?rev=5e85ba14aaa20f8133863373404cb0af69eeef2c#5e85ba14aaa20f8133863373404cb0af69eeef2c"
+               \- "sparse+URL" for dependencies from a sparse registry
+                 Example: "sparse+https://my\-sparse\-registry.org"
+
+               The value after the `+` is not explicitly defined, and may change
+               between versions of Cargo and may not directly correlate to other
+               things, such as registry definitions in a config file. New source
+               kinds may be added in the future which will have different `+`
+               prefixed identifiers.
             */
             "source": null,
             /* Array of dependencies declared in the package's manifest. */
@@ -207,6 +244,12 @@ The output has the following format:
        Each entry is the Package ID for the package.
     */
     "workspace_members": [
+        "my\-package 0.1.0 (path+file:///path/to/my\-package)",
+    ],
+    /* Array of default members of the workspace.
+       Each entry is the Package ID for the package.
+    */
+    "workspace_default_members": [
         "my\-package 0.1.0 (path+file:///path/to/my\-package)",
     ],
     // The resolved dependency graph for the entire workspace. The enabled
@@ -437,7 +480,13 @@ See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/
 .RS 4
 Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
-the directories searched for discovering \fB\&.cargo/config.toml\fR, for example.
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

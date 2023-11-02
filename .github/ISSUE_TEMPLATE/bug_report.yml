@@ -1,6 +1,6 @@
 name: Bug Report
 description: Create a report to help us improve
-labels: ["C-bug"]
+labels: ["C-bug", "S-triage"]
 body:
   - type: markdown
     attributes:

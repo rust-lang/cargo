@@ -16,17 +16,17 @@ use crate::core::resolver::{
     ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
     VersionPreferences,
 };
-use crate::core::{
-    Dependency, FeatureValue, PackageId, PackageIdSpec, QueryKind, Registry, Summary,
-};
+use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
+use crate::sources::source::QueryKind;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::RustVersion;
 
 use anyhow::Context as _;
-use log::debug;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 use std::task::Poll;
+use tracing::debug;
 
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
@@ -36,6 +36,7 @@ pub struct RegistryQueryer<'a> {
     /// versions first. That allows `cargo update -Z minimal-versions` which will
     /// specify minimum dependency versions to be used.
     minimal_versions: bool,
+    max_rust_version: Option<RustVersion>,
     /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_minimal_version`)
     registry_cache: HashMap<(Dependency, bool), Poll<Rc<Vec<Summary>>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
@@ -57,12 +58,14 @@ impl<'a> RegistryQueryer<'a> {
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
         minimal_versions: bool,
+        max_rust_version: Option<&RustVersion>,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
             version_prefs,
             minimal_versions,
+            max_rust_version: max_rust_version.cloned(),
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
@@ -112,7 +115,10 @@ impl<'a> RegistryQueryer<'a> {
 
         let mut ret = Vec::new();
         let ready = self.registry.query(dep, QueryKind::Exact, &mut |s| {
-            ret.push(s);
+            if self.max_rust_version.is_none() || s.rust_version() <= self.max_rust_version.as_ref()
+            {
+                ret.push(s);
+            }
         })?;
         if ready.is_pending() {
             self.registry_cache
@@ -123,11 +129,10 @@ impl<'a> RegistryQueryer<'a> {
             let mut potential_matches = self
                 .replacements
                 .iter()
-                .filter(|&&(ref spec, _)| spec.matches(summary.package_id()));
+                .filter(|(spec, _)| spec.matches(summary.package_id()));
 
-            let &(ref spec, ref dep) = match potential_matches.next() {
-                None => continue,
-                Some(replacement) => replacement,
+            let Some((spec, dep)) = potential_matches.next() else {
+                continue;
             };
             debug!(
                 "found an override for {} {}",
@@ -168,11 +173,20 @@ impl<'a> RegistryQueryer<'a> {
                 )));
             }
 
-            // The dependency should be hard-coded to have the same name and an
-            // exact version requirement, so both of these assertions should
-            // never fail.
-            assert_eq!(s.version(), summary.version());
-            assert_eq!(s.name(), summary.name());
+            assert_eq!(
+                s.name(),
+                summary.name(),
+                "dependency should be hard coded to have the same name"
+            );
+            if s.version() != summary.version() {
+                return Poll::Ready(Err(anyhow::anyhow!(
+                    "replacement specification `{}` matched {} and tried to override it with {}\n\
+                     avoid matching unrelated packages by being more specific",
+                    spec,
+                    summary.version(),
+                    s.version(),
+                )));
+            }
 
             let replace = if s.source_id() == summary.source_id() {
                 debug!("Preventing\n{:?}\nfrom replacing\n{:?}", summary, s);
@@ -183,7 +197,7 @@ impl<'a> RegistryQueryer<'a> {
             let matched_spec = spec.clone();
 
             // Make sure no duplicates
-            if let Some(&(ref spec, _)) = potential_matches.next() {
+            if let Some((spec, _)) = potential_matches.next() {
                 return Poll::Ready(Err(anyhow::anyhow!(
                     "overlapping replacement specifications found:\n\n  \
                      * {}\n  * {}\n\nboth specifications match: {}",
@@ -273,7 +287,7 @@ impl<'a> RegistryQueryer<'a> {
         // dependencies with more candidates. This way if the dependency with
         // only one candidate can't be resolved we don't have to do a bunch of
         // work before we figure that out.
-        deps.sort_by_key(|&(_, ref a, _)| a.len());
+        deps.sort_by_key(|(_, a, _)| a.len());
 
         let out = Rc::new((used_features, Rc::new(deps)));
 
@@ -455,7 +469,12 @@ impl Requirements<'_> {
                 .iter()
                 .any(|dep| dep.name_in_toml() == package && dep.is_optional())
         {
-            self.require_feature(package)?;
+            // This optional dependency may not have an implicit feature of
+            // the same name if the `dep:` syntax is used to avoid creating
+            // that implicit feature.
+            if self.summary.features().contains_key(&package) {
+                self.require_feature(package)?;
+            }
         }
         self.deps.entry(package).or_default().insert(feat);
         Ok(())
@@ -471,9 +490,8 @@ impl Requirements<'_> {
             return Ok(());
         }
 
-        let fvs = match self.summary.features().get(&feat) {
-            Some(fvs) => fvs,
-            None => return Err(RequirementError::MissingFeature(feat)),
+        let Some(fvs) = self.summary.features().get(&feat) else {
+            return Err(RequirementError::MissingFeature(feat));
         };
 
         for fv in fvs {
@@ -520,10 +538,9 @@ impl RequirementError {
                             summary.package_id(),
                             feat
                         )),
-                        Some(p) => ActivateError::Conflict(
-                            p,
-                            ConflictReason::MissingFeatures(feat.to_string()),
-                        ),
+                        Some(p) => {
+                            ActivateError::Conflict(p, ConflictReason::MissingFeatures(feat))
+                        }
                     };
                 }
                 if deps.iter().any(|dep| dep.is_optional()) {
@@ -564,10 +581,9 @@ impl RequirementError {
                     )),
                     // This code path currently isn't used, since `foo/bar`
                     // and `dep:` syntax is not allowed in a dependency.
-                    Some(p) => ActivateError::Conflict(
-                        p,
-                        ConflictReason::MissingFeatures(dep_name.to_string()),
-                    ),
+                    Some(p) => {
+                        ActivateError::Conflict(p, ConflictReason::MissingFeatures(dep_name))
+                    }
                 }
             }
             RequirementError::Cycle(feat) => ActivateError::Fatal(anyhow::format_err!(

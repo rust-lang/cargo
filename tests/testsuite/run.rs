@@ -1,6 +1,8 @@
 //! Tests for the `cargo run` command.
 
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, Project};
+use cargo_test_support::{
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, project, Project,
+};
 use cargo_util::paths::dylib_path_envvar;
 
 #[cargo_test]
@@ -32,6 +34,43 @@ fn quiet_arg() {
     p.cargo("run --quiet")
         .with_stderr("")
         .with_stdout("hello")
+        .run();
+}
+
+#[cargo_test]
+fn unsupported_silent_arg() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("run -s")
+        .with_stderr(
+            "\
+error: unexpected argument '--silent' found
+
+  tip: a similar argument exists: '--quiet'
+
+Usage: cargo[EXE] run [OPTIONS] [ARGS]...
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+
+    p.cargo("run --silent")
+        .with_stderr(
+            "\
+error: unexpected argument '--silent' found
+
+  tip: a similar argument exists: '--quiet'
+
+Usage: cargo[EXE] run [OPTIONS] [ARGS]...
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
         .run();
 }
 
@@ -777,14 +816,14 @@ fast2",
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs [..]--crate-type lib \
         --emit=[..]link[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/debug/deps \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs [..]--crate-type bin \
         --emit=[..]link[..]\
-        -C debuginfo=2 \
+        -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/debug/examples \
         -L dependency=[CWD]/target/debug/deps \
@@ -1414,6 +1453,24 @@ fn default_run_workspace() {
         .build();
 
     p.cargo("run").with_stdout("run-a").run();
+}
+
+#[cargo_test]
+fn print_env_verbose() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("src/main.rs", r#"fn main() {println!("run-a");}"#)
+        .build();
+
+    p.cargo("run -vv")
+        .with_stderr(
+            "\
+[COMPILING] a v0.0.1 ([CWD])
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name a[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] target/debug/a[EXE]`",
+        )
+        .run();
 }
 
 #[cargo_test]

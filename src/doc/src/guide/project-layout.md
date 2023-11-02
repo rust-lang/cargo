@@ -1,4 +1,4 @@
-## Package Layout
+# Package Layout
 
 Cargo uses conventions for file placement to make it easy to dive into a new
 Cargo [package][def-package]:

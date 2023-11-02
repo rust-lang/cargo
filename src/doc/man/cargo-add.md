@@ -1,7 +1,7 @@
 # cargo-add(1)
-
-{{*set actionverb="Add"}}
-{{*set nouns="adds"}}
+{{~*set command="add"}}
+{{~*set actionverb="Add"}}
+{{~*set nouns="adds"}}
 
 ## NAME
 
@@ -121,6 +121,15 @@ activate](../reference/features.html#dependency-features). When adding multiple
 crates, the features for a specific crate may be enabled with
 `package-name/feature-name` syntax. This flag may be specified multiple times,
 which enables all specified features.
+{{/option}}
+
+{{#option "`--ignore-rust-version`" }}
+Ignore `rust-version` specification in packages.
+
+This option is unstable and available only on the
+[nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
+and requires the `-Z unstable-options` flag to enable.
+See <https://github.com/rust-lang/cargo/issues/5579> for more information.
 {{/option}}
 
 {{/options}}

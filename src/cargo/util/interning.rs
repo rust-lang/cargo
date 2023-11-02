@@ -1,4 +1,5 @@
 use serde::{Serialize, Serializer};
+use serde_untagged::UntaggedEnumVisitor;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -10,14 +11,9 @@ use std::path::Path;
 use std::ptr;
 use std::str;
 use std::sync::Mutex;
+use std::sync::OnceLock;
 
-fn leak(s: String) -> &'static str {
-    Box::leak(s.into_boxed_str())
-}
-
-lazy_static::lazy_static! {
-    static ref STRING_CACHE: Mutex<HashSet<&'static str>> = Mutex::new(HashSet::new());
-}
+static STRING_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
 pub struct InternedString {
@@ -64,9 +60,9 @@ impl Eq for InternedString {}
 
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
-        let mut cache = STRING_CACHE.lock().unwrap();
+        let mut cache = STRING_CACHE.get_or_init(Default::default).lock().unwrap();
         let s = cache.get(str).cloned().unwrap_or_else(|| {
-            let s = leak(str.to_string());
+            let s = str.to_string().leak();
             cache.insert(s);
             s
         });
@@ -155,28 +151,14 @@ impl Serialize for InternedString {
     }
 }
 
-struct InternedStringVisitor;
-
 impl<'de> serde::Deserialize<'de> for InternedString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        deserializer.deserialize_str(InternedStringVisitor)
-    }
-}
-
-impl<'de> serde::de::Visitor<'de> for InternedStringVisitor {
-    type Value = InternedString;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("an String like thing")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        Ok(InternedString::new(v))
+        UntaggedEnumVisitor::new()
+            .expecting("an String like thing")
+            .string(|value| Ok(InternedString::new(value)))
+            .deserialize(deserializer)
     }
 }

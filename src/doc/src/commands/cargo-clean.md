@@ -1,7 +1,5 @@
 # cargo-clean(1)
 
-
-
 ## NAME
 
 cargo-clean --- Remove generated artifacts
@@ -35,6 +33,11 @@ multiple times. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC f
 ### Clean Options
 
 <dl>
+
+<dt class="option-term" id="option-cargo-clean---dry-run"><a class="option-anchor" href="#option-cargo-clean---dry-run"></a><code>--dry-run</code></dt>
+<dd class="option-desc">Displays a summary of what would be deleted without deleting anything.
+Use with <code>--verbose</code> to display the actual files that would be deleted.</dd>
+
 
 <dt class="option-term" id="option-cargo-clean---doc"><a class="option-anchor" href="#option-cargo-clean---doc"></a><code>--doc</code></dt>
 <dd class="option-desc">This option will cause <code>cargo clean</code> to remove only the <code>doc</code> directory in
@@ -159,7 +162,12 @@ See the <a href="../reference/config.html#command-line-overrides">command-line o
 <dt class="option-term" id="option-cargo-clean--C"><a class="option-anchor" href="#option-cargo-clean--C"></a><code>-C</code> <em>PATH</em></dt>
 <dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
-the directories searched for discovering <code>.cargo/config.toml</code>, for example.</dd>
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-clean--h"><a class="option-anchor" href="#option-cargo-clean--h"></a><code>-h</code></dt>

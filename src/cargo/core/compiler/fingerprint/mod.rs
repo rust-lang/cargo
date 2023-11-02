@@ -1,8 +1,11 @@
-//! # Fingerprints
+//! Tracks changes to determine if something needs to be recompiled.
 //!
 //! This module implements change-tracking so that Cargo can know whether or
 //! not something needs to be recompiled. A Cargo [`Unit`] can be either "dirty"
 //! (needs to be recompiled) or "fresh" (it does not need to be recompiled).
+//!
+//! ## Mechanisms affecting freshness
+//!
 //! There are several mechanisms that influence a Unit's freshness:
 //!
 //! - The [`Fingerprint`] is a hash, saved to the filesystem in the
@@ -75,6 +78,7 @@
 //! [`Lto`] flags                              | ✓           | ✓
 //! config settings[^5]                        | ✓           |
 //! is_std                                     |             | ✓
+//! `[lints]` table[^6]                        | ✓           |
 //!
 //! [^1]: Build script and bin dependencies are not included.
 //!
@@ -85,6 +89,8 @@
 //!
 //! [^5]: Config settings that are not otherwise captured anywhere else.
 //!       Currently, this is only `doc.extern-map`.
+//!
+//! [^6]: Via [`Manifest::lint_rustflags`][crate::core::Manifest::lint_rustflags]
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,
@@ -360,16 +366,16 @@ use std::time::SystemTime;
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use filetime::FileTime;
-use log::{debug, info};
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
+use tracing::{debug, info};
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
-use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::{self, try_canonicalize};
 use crate::util::{internal, path_args, profile, StableHasher};
 use crate::{Config, CARGO_ENV};
 
@@ -805,9 +811,8 @@ impl LocalFingerprint {
             // rustc.
             LocalFingerprint::CheckDepInfo { dep_info } => {
                 let dep_info = target_root.join(dep_info);
-                let info = match parse_dep_info(pkg_root, target_root, &dep_info)? {
-                    Some(info) => info,
-                    None => return Ok(Some(StaleItem::MissingFile(dep_info))),
+                let Some(info) = parse_dep_info(pkg_root, target_root, &dep_info)? else {
+                    return Ok(Some(StaleItem::MissingFile(dep_info)));
                 };
                 for (key, previous) in info.env.iter() {
                     let current = if key == CARGO_ENV {
@@ -1032,16 +1037,16 @@ impl Fingerprint {
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.name != b.name {
                 return DirtyReason::UnitDependencyNameChanged {
-                    old: b.name.clone(),
-                    new: a.name.clone(),
+                    old: b.name,
+                    new: a.name,
                 };
             }
 
             if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
                 return DirtyReason::UnitDependencyInfoChanged {
-                    new_name: a.name.clone(),
+                    new_name: a.name,
                     new_fingerprint: a.fingerprint.hash_u64(),
-                    old_name: b.name.clone(),
+                    old_name: b.name,
                     old_fingerprint: b.fingerprint.hash_u64(),
                 };
             }
@@ -1097,16 +1102,12 @@ impl Fingerprint {
         }
 
         let opt_max = mtimes.iter().max_by_key(|kv| kv.1);
-        let (max_path, max_mtime) = match opt_max {
-            Some(mtime) => mtime,
-
+        let Some((max_path, max_mtime)) = opt_max else {
             // We had no output files. This means we're an overridden build
             // script and we're just always up to date because we aren't
             // watching the filesystem.
-            None => {
-                self.fs_status = FsStatus::UpToDate { mtimes };
-                return Ok(());
-            }
+            self.fs_status = FsStatus::UpToDate { mtimes };
+            return Ok(());
         };
         debug!(
             "max output mtime for {:?} is {:?} {}",
@@ -1121,9 +1122,7 @@ impl Fingerprint {
                 | FsStatus::StaleItem(_)
                 | FsStatus::StaleDependency { .. }
                 | FsStatus::StaleDepFingerprint { .. } => {
-                    self.fs_status = FsStatus::StaleDepFingerprint {
-                        name: dep.name.clone(),
-                    };
+                    self.fs_status = FsStatus::StaleDepFingerprint { name: dep.name };
                     return Ok(());
                 }
             };
@@ -1165,7 +1164,7 @@ impl Fingerprint {
                 );
 
                 self.fs_status = FsStatus::StaleDependency {
-                    name: dep.name.clone(),
+                    name: dep.name,
                     dep_mtime: *dep_mtime,
                     max_mtime: *max_mtime,
                 };
@@ -1414,12 +1413,13 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         unit.mode,
         cx.bcx.extra_args_for(unit),
         cx.lto[unit],
+        unit.pkg.manifest().lint_rustflags(),
     ));
     // Include metadata since it is exposed as environment variables.
     let m = unit.pkg.manifest().metadata();
     let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
     let mut config = StableHasher::new();
-    if let Some(linker) = cx.bcx.linker(unit.kind) {
+    if let Some(linker) = cx.compilation.target_linker(unit.kind) {
         linker.hash(&mut config);
     }
     if unit.mode.is_doc() && cx.bcx.config.cli_unstable().rustdoc_map {
@@ -1764,7 +1764,7 @@ fn compare_old_fingerprint(
 
 /// Logs the result of fingerprint comparison.
 ///
-/// TODO: Obsolete and mostly superceded by [`DirtyReason`]. Could be removed.
+/// TODO: Obsolete and mostly superseded by [`DirtyReason`]. Could be removed.
 fn log_compare(unit: &Unit, compare: &CargoResult<Option<DirtyReason>>) {
     match compare {
         Ok(None) => {}
@@ -1801,16 +1801,12 @@ pub fn parse_dep_info(
     target_root: &Path,
     dep_info: &Path,
 ) -> CargoResult<Option<RustcDepInfo>> {
-    let data = match paths::read_bytes(dep_info) {
-        Ok(data) => data,
-        Err(_) => return Ok(None),
+    let Ok(data) = paths::read_bytes(dep_info) else {
+        return Ok(None);
     };
-    let info = match EncodedDepInfo::parse(&data) {
-        Some(info) => info,
-        None => {
-            log::warn!("failed to parse cargo's dep-info at {:?}", dep_info);
-            return Ok(None);
-        }
+    let Some(info) = EncodedDepInfo::parse(&data) else {
+        tracing::warn!("failed to parse cargo's dep-info at {:?}", dep_info);
+        return Ok(None);
     };
     let mut ret = RustcDepInfo::default();
     ret.env = info.env;
@@ -1824,7 +1820,7 @@ pub fn parse_dep_info(
     Ok(Some(ret))
 }
 
-/// Calcuates the fingerprint of a unit thats contains no dep-info files.
+/// Calculates the fingerprint of a unit thats contains no dep-info files.
 fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
     let sources = bcx.packages.sources();
@@ -1845,26 +1841,37 @@ where
     I: IntoIterator,
     I::Item: AsRef<Path>,
 {
-    let reference_mtime = match paths::mtime(reference) {
-        Ok(mtime) => mtime,
-        Err(..) => return Some(StaleItem::MissingFile(reference.to_path_buf())),
+    let Ok(reference_mtime) = paths::mtime(reference) else {
+        return Some(StaleItem::MissingFile(reference.to_path_buf()));
+    };
+
+    let skipable_dirs = if let Ok(cargo_home) = home::cargo_home() {
+        let skipable_dirs: Vec<_> = ["git", "registry"]
+            .into_iter()
+            .map(|subfolder| cargo_home.join(subfolder))
+            .collect();
+        Some(skipable_dirs)
+    } else {
+        None
     };
 
     for path in paths {
         let path = path.as_ref();
 
-        // Assuming anything in cargo_home is immutable (see also #9455 about marking it readonly)
-        // which avoids rebuilds when CI caches $CARGO_HOME/registry/{index, cache} and
-        // $CARGO_HOME/git/db across runs, keeping the content the same but changing the mtime.
-        if let Ok(true) = home::cargo_home().map(|home| path.starts_with(home)) {
-            continue;
+        // Assuming anything in cargo_home/{git, registry} is immutable
+        // (see also #9455 about marking the src directory readonly) which avoids rebuilds when CI
+        // caches $CARGO_HOME/registry/{index, cache} and $CARGO_HOME/git/db across runs, keeping
+        // the content the same but changing the mtime.
+        if let Some(ref skipable_dirs) = skipable_dirs {
+            if skipable_dirs.iter().any(|dir| path.starts_with(dir)) {
+                continue;
+            }
         }
         let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(v) => {
-                let mtime = match paths::mtime_recursive(path) {
-                    Ok(mtime) => mtime,
-                    Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
+                let Ok(mtime) = paths::mtime_recursive(path) else {
+                    return Some(StaleItem::MissingFile(path.to_path_buf()));
                 };
                 *v.insert(mtime)
             }
@@ -1951,8 +1958,8 @@ pub fn translate_dep_info(
 ) -> CargoResult<()> {
     let depinfo = parse_rustc_dep_info(rustc_dep_info)?;
 
-    let target_root = target_root.canonicalize()?;
-    let pkg_root = pkg_root.canonicalize()?;
+    let target_root = try_canonicalize(target_root)?;
+    let pkg_root = try_canonicalize(pkg_root)?;
     let mut on_disk_info = EncodedDepInfo::default();
     on_disk_info.env = depinfo.env;
 
@@ -1995,7 +2002,7 @@ pub fn translate_dep_info(
         // If canonicalization fails, just use the abs path. There is currently
         // a bug where --remap-path-prefix is affecting .d files, causing them
         // to point to non-existent paths.
-        let canon_file = abs_file.canonicalize().unwrap_or_else(|_| abs_file.clone());
+        let canon_file = try_canonicalize(&abs_file).unwrap_or_else(|_| abs_file.clone());
 
         let (ty, path) = if let Ok(stripped) = canon_file.strip_prefix(&target_root) {
             (DepInfoPathType::TargetRootRelative, stripped)
@@ -2136,9 +2143,8 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
     for line in contents.lines() {
         if let Some(rest) = line.strip_prefix("# env-dep:") {
             let mut parts = rest.splitn(2, '=');
-            let env_var = match parts.next() {
-                Some(s) => s,
-                None => continue,
+            let Some(env_var) = parts.next() else {
+                continue;
             };
             let env_val = match parts.next() {
                 Some(s) => Some(unescape_env(s)?),

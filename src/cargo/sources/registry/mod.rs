@@ -2,13 +2,47 @@
 //!
 //! # What's a Registry?
 //!
-//! Registries are central locations where packages can be uploaded to,
+//! [Registries] are central locations where packages can be uploaded to,
 //! discovered, and searched for. The purpose of a registry is to have a
 //! location that serves as permanent storage for versions of a crate over time.
 //!
-//! Compared to git sources, a registry provides many packages as well as many
-//! versions simultaneously. Git sources can also have commits deleted through
-//! rebasings where registries cannot have their versions deleted.
+//! Compared to git sources (see [`GitSource`]), a registry provides many
+//! packages as well as many versions simultaneously. Git sources can also
+//! have commits deleted through rebasings where registries cannot have their
+//! versions deleted.
+//!
+//! In Cargo, [`RegistryData`] is an abstraction over each kind of actual
+//! registry, and [`RegistrySource`] connects those implementations to
+//! [`Source`] trait. Two prominent features these abstractions provide are
+//!
+//! * A way to query the metadata of a package from a registry. The metadata
+//!   comes from the index.
+//! * A way to download package contents (a.k.a source files) that are required
+//!   when building the package itself.
+//!
+//! We'll cover each functionality later.
+//!
+//! [Registries]: https://doc.rust-lang.org/nightly/cargo/reference/registries.html
+//! [`GitSource`]: super::GitSource
+//!
+//! # Different Kinds of Registries
+//!
+//! Cargo provides multiple kinds of registries. Each of them serves the index
+//! and package contents in a slightly different way. Namely,
+//!
+//! * [`LocalRegistry`] --- Serves the index and package contents entirely on
+//!   a local filesystem.
+//! * [`RemoteRegistry`] --- Serves the index ahead of time from a Git
+//!   repository, and package contents are downloaded as needed.
+//! * [`HttpRegistry`] --- Serves both the index and package contents on demand
+//!   over a HTTP-based registry API. This is the default starting from 1.70.0.
+//!
+//! Each registry has its own [`RegistryData`] implementation, and can be
+//! created from either [`RegistrySource::local`] or [`RegistrySource::remote`].
+//!
+//! [`LocalRegistry`]: local::LocalRegistry
+//! [`RemoteRegistry`]: remote::RemoteRegistry
+//! [`HttpRegistry`]: http_remote::HttpRegistry
 //!
 //! # The Index of a Registry
 //!
@@ -20,36 +54,16 @@
 //! available on a registry, what versions are available, and what the
 //! dependencies for each version is.
 //!
-//! One method of doing so would be having the registry expose an HTTP endpoint
-//! which can be queried with a list of packages and a response of their
-//! dependencies and versions is returned. This is somewhat inefficient however
-//! as we may have to hit the endpoint many times and we may have already
-//! queried for much of the data locally already (for other packages, for
-//! example). This also involves inventing a transport format between the
-//! registry and Cargo itself, so this route was not taken.
+//! To solve the problem, a registry must provide an index of package metadata.
+//! The index of a registry is essentially an easily query-able version of the
+//! registry's database for a list of versions of a package as well as a list
+//! of dependencies for each version. The exact format of the index is
+//! described later.
 //!
-//! Instead, Cargo communicates with registries through a git repository
-//! referred to as the Index. The Index of a registry is essentially an easily
-//! query-able version of the registry's database for a list of versions of a
-//! package as well as a list of dependencies for each version.
+//! See the [`index`] module for topics about the management, parsing, caching,
+//! and versioning for the on-disk index.
 //!
-//! Using git to host this index provides a number of benefits:
-//!
-//! * The entire index can be stored efficiently locally on disk. This means
-//!   that all queries of a registry can happen locally and don't need to touch
-//!   the network.
-//!
-//! * Updates of the index are quite efficient. Using git buys incremental
-//!   updates, compressed transmission, etc for free. The index must be updated
-//!   each time we need fresh information from a registry, but this is one
-//!   update of a git repository that probably hasn't changed a whole lot so
-//!   it shouldn't be too expensive.
-//!
-//!   Additionally, each modification to the index is just appending a line at
-//!   the end of a file (the exact format is described later). This means that
-//!   the commits for an index are quite small and easily applied/compressible.
-//!
-//! ## The format of the Index
+//! ## The Format of The Index
 //!
 //! The index is a store for the list of versions for all packages known, so its
 //! format on disk is optimized slightly to ensure that `ls registry` doesn't
@@ -59,9 +73,12 @@
 //! about the format of the registry:
 //!
 //! 1. Each crate will have one file corresponding to it. Each version for a
-//!    crate will just be a line in this file.
+//!    crate will just be a line in this file (see [`IndexPackage`] for its
+//!    representation).
 //! 2. There will be two tiers of directories for crate names, under which
 //!    crates corresponding to those tiers will be located.
+//!    (See [`cargo_util::registry::make_dep_path`] for the implementation of
+//!    this layout hierarchy.)
 //!
 //! As an example, this is an example hierarchy of an index:
 //!
@@ -99,26 +116,30 @@
 //! The purpose of this layout is to hopefully cut down on `ls` sizes as well as
 //! efficient lookup based on the crate name itself.
 //!
-//! ## Crate files
+//! See [The Cargo Book: Registry Index][registry-index] for the public
+//! interface on the index format.
+//!
+//! [registry-index]: https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html
+//!
+//! ## The Index Files
 //!
 //! Each file in the index is the history of one crate over time. Each line in
 //! the file corresponds to one version of a crate, stored in JSON format (see
-//! the `RegistryPackage` structure below).
+//! the [`IndexPackage`] structure).
 //!
-//! As new versions are published, new lines are appended to this file. The only
-//! modifications to this file that should happen over time are yanks of a
-//! particular version.
+//! As new versions are published, new lines are appended to this file. **The
+//! only modifications to this file that should happen over time are yanks of a
+//! particular version.**
 //!
 //! # Downloading Packages
 //!
-//! The purpose of the Index was to provide an efficient method to resolve the
-//! dependency graph for a package. So far we only required one network
-//! interaction to update the registry's repository (yay!). After resolution has
-//! been performed, however we need to download the contents of packages so we
-//! can read the full manifest and build the source code.
+//! The purpose of the index was to provide an efficient method to resolve the
+//! dependency graph for a package. After resolution has been performed, we need
+//! to download the contents of packages so we can read the full manifest and
+//! build the source code.
 //!
-//! To accomplish this, this source's `download` method will make an HTTP
-//! request per-package requested to download tarballs into a local cache. These
+//! To accomplish this, [`RegistryData::download`] will "make" an HTTP request
+//! per-package requested to download tarballs into a local cache. These
 //! tarballs will then be unpacked into a destination folder.
 //!
 //! Note that because versions uploaded to the registry are frozen forever that
@@ -128,7 +149,8 @@
 //!
 //! # Filesystem Hierarchy
 //!
-//! Overall, the `$HOME/.cargo` looks like this when talking about the registry:
+//! Overall, the `$HOME/.cargo` looks like this when talking about the registry
+//! (remote registries, specifically):
 //!
 //! ```notrust
 //! # A folder under which all registry metadata is hosted (similar to
@@ -144,8 +166,8 @@
 //!         registry2-<hash>/
 //!         ...
 //!
-//!     # This folder is a cache for all downloaded tarballs from a registry.
-//!     # Once downloaded and verified, a tarball never changes.
+//!     # This folder is a cache for all downloaded tarballs (`.crate` file)
+//!     # from a registry. Once downloaded and verified, a tarball never changes.
 //!     cache/
 //!         registry1-<hash>/<pkg>-<version>.crate
 //!         ...
@@ -153,59 +175,71 @@
 //!     # Location in which all tarballs are unpacked. Each tarball is known to
 //!     # be frozen after downloading, so transitively this folder is also
 //!     # frozen once its unpacked (it's never unpacked again)
+//!     # CAVEAT: They are not read-only. See rust-lang/cargo#9455.
 //!     src/
 //!         registry1-<hash>/<pkg>-<version>/...
 //!         ...
 //! ```
+//!
+//! [`IndexPackage`]: index::IndexPackage
 
-use std::borrow::Cow;
-use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Write};
+use std::io;
+use std::io::Read;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::task::Poll;
+use std::task::{ready, Poll};
 
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
 use flate2::read::GzDecoder;
-use log::debug;
-use semver::Version;
 use serde::Deserialize;
+use serde::Serialize;
 use tar::Archive;
+use tracing::debug;
 
-use crate::core::dependency::{DepKind, Dependency};
-use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, QueryKind, Source, SourceId, Summary};
+use crate::core::dependency::Dependency;
+use crate::core::{Package, PackageId, SourceId, Summary};
+use crate::sources::source::MaybePackage;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::hex;
 use crate::util::interning::InternedString;
-use crate::util::into_url::IntoUrl;
 use crate::util::network::PollExt;
-use crate::util::{
-    restricted_names, CargoResult, Config, Filesystem, LimitErrorReader, OptVersionReq,
-};
+use crate::util::{restricted_names, CargoResult, Config, Filesystem, LimitErrorReader};
 
+/// The `.cargo-ok` file is used to track if the source is already unpacked.
+/// See [`RegistrySource::unpack_package`] for more.
+///
+/// Not to be confused with `.cargo-ok` file in git sources.
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
+
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
 pub const CRATES_IO_HTTP_INDEX: &str = "sparse+https://index.crates.io/";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
 pub const CRATES_IO_DOMAIN: &str = "crates.io";
-const CRATE_TEMPLATE: &str = "{crate}";
-const VERSION_TEMPLATE: &str = "{version}";
-const PREFIX_TEMPLATE: &str = "{prefix}";
-const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
-const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
-const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024;
-const MAX_COMPRESSION_RATIO: usize = 20; // 20:1
 
-/// A "source" for a local (see `local::LocalRegistry`) or remote (see
-/// `remote::RemoteRegistry`) registry.
+/// The content inside `.cargo-ok`.
+/// See [`RegistrySource::unpack_package`] for more.
+#[derive(Deserialize, Serialize)]
+struct LockMetadata {
+    /// The version of `.cargo-ok` file
+    v: u32,
+}
+
+/// A [`Source`] implementation for a local or a remote registry.
 ///
-/// This contains common functionality that is shared between the two registry
-/// kinds, with the registry-specific logic implemented as part of the
+/// This contains common functionality that is shared between each registry
+/// kind, with the registry-specific logic implemented as part of the
 /// [`RegistryData`] trait referenced via the `ops` field.
+///
+/// For general concepts of registries, see the [module-level documentation](crate::sources::registry).
 pub struct RegistrySource<'cfg> {
+    /// The unique identifier of this source.
     source_id: SourceId,
     /// The path where crate files are extracted (`$CARGO_HOME/registry/src/$REG-HASH`).
     src_path: Filesystem,
@@ -219,13 +253,25 @@ pub struct RegistrySource<'cfg> {
     /// yanked.
     ///
     /// This is populated from the entries in `Cargo.lock` to ensure that
-    /// `cargo update -p somepkg` won't unlock yanked entries in `Cargo.lock`.
+    /// `cargo update somepkg` won't unlock yanked entries in `Cargo.lock`.
     /// Otherwise, the resolver would think that those entries no longer
     /// exist, and it would trigger updates to unrelated packages.
     yanked_whitelist: HashSet<PackageId>,
 }
 
-/// The `config.json` file stored in the index.
+/// The [`config.json`] file stored in the index.
+///
+/// The config file may look like:
+///
+/// ```json
+/// {
+///     "dl": "https://example.com/api/{crate}/{version}/download",
+///     "api": "https://example.com/api",
+///     "auth-required": false             # unstable feature (RFC 3139)
+/// }
+/// ```
+///
+/// [`config.json`]: https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct RegistryConfig {
@@ -241,10 +287,13 @@ pub struct RegistryConfig {
     /// crate's sha256 checksum.
     ///
     /// For backwards compatibility, if the string does not contain any
-    /// markers (`{crate}`, `{version}`, `{prefix}`, or ``{lowerprefix}`), it
+    /// markers (`{crate}`, `{version}`, `{prefix}`, or `{lowerprefix}`), it
     /// will be extended with `/{crate}/{version}/download` to
     /// support registries like crates.io which were created before the
     /// templating setup was created.
+    ///
+    /// For more on the template of the download URL, see [Index Configuration](
+    /// https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration).
     pub dl: String,
 
     /// API endpoint for the registry. This is what's actually hit to perform
@@ -252,174 +301,11 @@ pub struct RegistryConfig {
     /// If this is None, the registry does not support API commands.
     pub api: Option<String>,
 
-    /// Whether all operations require authentication.
+    /// Whether all operations require authentication. See [RFC 3139].
+    ///
+    /// [RFC 3139]: https://rust-lang.github.io/rfcs/3139-cargo-alternative-registry-auth.html
     #[serde(default)]
     pub auth_required: bool,
-}
-
-/// The maximum version of the `v` field in the index this version of cargo
-/// understands.
-pub(crate) const INDEX_V_MAX: u32 = 2;
-
-/// A single line in the index representing a single version of a package.
-#[derive(Deserialize)]
-pub struct RegistryPackage<'a> {
-    name: InternedString,
-    vers: Version,
-    #[serde(borrow)]
-    deps: Vec<RegistryDependency<'a>>,
-    features: BTreeMap<InternedString, Vec<InternedString>>,
-    /// This field contains features with new, extended syntax. Specifically,
-    /// namespaced features (`dep:`) and weak dependencies (`pkg?/feat`).
-    ///
-    /// This is separated from `features` because versions older than 1.19
-    /// will fail to load due to not being able to parse the new syntax, even
-    /// with a `Cargo.lock` file.
-    features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
-    cksum: String,
-    /// If `true`, Cargo will skip this version when resolving.
-    ///
-    /// This was added in 2014. Everything in the crates.io index has this set
-    /// now, so this probably doesn't need to be an option anymore.
-    yanked: Option<bool>,
-    /// Native library name this package links to.
-    ///
-    /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
-    /// can be `None` if published before then.
-    links: Option<InternedString>,
-    /// The schema version for this entry.
-    ///
-    /// If this is None, it defaults to version 1. Entries with unknown
-    /// versions are ignored.
-    ///
-    /// Version `2` format adds the `features2` field.
-    ///
-    /// This provides a method to safely introduce changes to index entries
-    /// and allow older versions of cargo to ignore newer entries it doesn't
-    /// understand. This is honored as of 1.51, so unfortunately older
-    /// versions will ignore it, and potentially misinterpret version 2 and
-    /// newer entries.
-    ///
-    /// The intent is that versions older than 1.51 will work with a
-    /// pre-existing `Cargo.lock`, but they may not correctly process `cargo
-    /// update` or build a lock from scratch. In that case, cargo may
-    /// incorrectly select a new package that uses a new index format. A
-    /// workaround is to downgrade any packages that are incompatible with the
-    /// `--precise` flag of `cargo update`.
-    v: Option<u32>,
-}
-
-#[test]
-fn escaped_char_in_json() {
-    let _: RegistryPackage<'_> = serde_json::from_str(
-        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#,
-    )
-    .unwrap();
-    let _: RegistryPackage<'_> = serde_json::from_str(
-        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{"test":["k","q"]},"links":"a-sys"}"#
-    ).unwrap();
-
-    // Now we add escaped cher all the places they can go
-    // these are not valid, but it should error later than json parsing
-    let _: RegistryPackage<'_> = serde_json::from_str(
-        r#"{
-        "name":"This name has a escaped cher in it \n\t\" ",
-        "vers":"0.0.1",
-        "deps":[{
-            "name": " \n\t\" ",
-            "req": " \n\t\" ",
-            "features": [" \n\t\" "],
-            "optional": true,
-            "default_features": true,
-            "target": " \n\t\" ",
-            "kind": " \n\t\" ",
-            "registry": " \n\t\" "
-        }],
-        "cksum":"bae3",
-        "features":{"test \n\t\" ":["k \n\t\" ","q \n\t\" "]},
-        "links":" \n\t\" "}"#,
-    )
-    .unwrap();
-}
-
-/// A dependency as encoded in the index JSON.
-#[derive(Deserialize)]
-struct RegistryDependency<'a> {
-    name: InternedString,
-    #[serde(borrow)]
-    req: Cow<'a, str>,
-    features: Vec<InternedString>,
-    optional: bool,
-    default_features: bool,
-    target: Option<Cow<'a, str>>,
-    kind: Option<Cow<'a, str>>,
-    registry: Option<Cow<'a, str>>,
-    package: Option<InternedString>,
-    public: Option<bool>,
-}
-
-impl<'a> RegistryDependency<'a> {
-    /// Converts an encoded dependency in the registry to a cargo dependency
-    pub fn into_dep(self, default: SourceId) -> CargoResult<Dependency> {
-        let RegistryDependency {
-            name,
-            req,
-            mut features,
-            optional,
-            default_features,
-            target,
-            kind,
-            registry,
-            package,
-            public,
-        } = self;
-
-        let id = if let Some(registry) = &registry {
-            SourceId::for_registry(&registry.into_url()?)?
-        } else {
-            default
-        };
-
-        let mut dep = Dependency::parse(package.unwrap_or(name), Some(&req), id)?;
-        if package.is_some() {
-            dep.set_explicit_name_in_toml(name);
-        }
-        let kind = match kind.as_deref().unwrap_or("") {
-            "dev" => DepKind::Development,
-            "build" => DepKind::Build,
-            _ => DepKind::Normal,
-        };
-
-        let platform = match target {
-            Some(target) => Some(target.parse()?),
-            None => None,
-        };
-
-        // All dependencies are private by default
-        let public = public.unwrap_or(false);
-
-        // Unfortunately older versions of cargo and/or the registry ended up
-        // publishing lots of entries where the features array contained the
-        // empty feature, "", inside. This confuses the resolution process much
-        // later on and these features aren't actually valid, so filter them all
-        // out here.
-        features.retain(|s| !s.is_empty());
-
-        // In index, "registry" is null if it is from the same index.
-        // In Cargo.toml, "registry" is None if it is from the default
-        if !id.is_crates_io() {
-            dep.set_registry_id(id);
-        }
-
-        dep.set_optional(optional)
-            .set_default_features(default_features)
-            .set_features(features)
-            .set_platform(platform)
-            .set_kind(kind)
-            .set_public(public);
-
-        Ok(dep)
-    }
 }
 
 /// Result from loading data from a registry.
@@ -430,6 +316,7 @@ pub enum LoadResponse {
     /// The cache is out of date. Returned data should be used.
     Data {
         raw_data: Vec<u8>,
+        /// Version of this data to determine whether it is out of date.
         index_version: Option<String>,
     },
 
@@ -437,10 +324,11 @@ pub enum LoadResponse {
     NotFound,
 }
 
-/// An abstract interface to handle both a local (see `local::LocalRegistry`)
-/// and remote (see `remote::RemoteRegistry`) registry.
+/// An abstract interface to handle both a local and and remote registry.
 ///
-/// This allows [`RegistrySource`] to abstractly handle both registry kinds.
+/// This allows [`RegistrySource`] to abstractly handle each registry kind.
+///
+/// For general concepts of registries, see the [module-level documentation](crate::sources::registry).
 pub trait RegistryData {
     /// Performs initialization for the registry.
     ///
@@ -451,14 +339,15 @@ pub trait RegistryData {
     /// Returns the path to the index.
     ///
     /// Note that different registries store the index in different formats
-    /// (remote=git, local=files).
+    /// (remote = git, http & local = files).
     fn index_path(&self) -> &Filesystem;
 
     /// Loads the JSON for a specific named package from the index.
     ///
     /// * `root` is the root path to the index.
     /// * `path` is the relative path to the package to load (like `ca/rg/cargo`).
-    /// * `index_version` is the version of the requested crate data currently in cache.
+    /// * `index_version` is the version of the requested crate data currently
+    ///    in cache. This is useful for checking if a local cache is outdated.
     fn load(
         &mut self,
         root: &Path,
@@ -549,20 +438,38 @@ mod index;
 mod local;
 mod remote;
 
-fn short_name(id: SourceId) -> String {
+/// Generates a unique name for [`SourceId`] to have a unique path to put their
+/// index files.
+fn short_name(id: SourceId, is_shallow: bool) -> String {
     let hash = hex::short_hash(&id);
     let ident = id.url().host_str().unwrap_or("").to_string();
-    format!("{}-{}", ident, hash)
+    let mut name = format!("{}-{}", ident, hash);
+    if is_shallow {
+        name.push_str("-shallow");
+    }
+    name
 }
 
 impl<'cfg> RegistrySource<'cfg> {
+    /// Creates a [`Source`] of a "remote" registry.
+    /// It could be either an HTTP-based [`http_remote::HttpRegistry`] or
+    /// a Git-based [`remote::RemoteRegistry`].
+    ///
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn remote(
         source_id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
     ) -> CargoResult<RegistrySource<'cfg>> {
         assert!(source_id.is_remote_registry());
-        let name = short_name(source_id);
+        let name = short_name(
+            source_id,
+            config
+                .cli_unstable()
+                .gitoxide
+                .map_or(false, |gix| gix.fetch && gix.shallow_index)
+                && !source_id.is_sparse(),
+        );
         let ops = if source_id.is_sparse() {
             Box::new(http_remote::HttpRegistry::new(source_id, config, &name)?) as Box<_>
         } else {
@@ -578,17 +485,27 @@ impl<'cfg> RegistrySource<'cfg> {
         ))
     }
 
+    /// Creates a [`Source`] of a local registry, with [`local::LocalRegistry`] under the hood.
+    ///
+    /// * `path` --- The root path of a local registry on the file system.
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn local(
         source_id: SourceId,
         path: &Path,
         yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
     ) -> RegistrySource<'cfg> {
-        let name = short_name(source_id);
+        let name = short_name(source_id, false);
         let ops = local::LocalRegistry::new(path, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
     }
 
+    /// Creates a source of a registry. This is a inner helper function.
+    ///
+    /// * `name` --- Name of a path segment which may affect where `.crate`
+    ///   tarballs, the registry index and cache are stored. Expect to be unique.
+    /// * `ops` --- The underlying [`RegistryData`] type.
+    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     fn new(
         source_id: SourceId,
         config: &'cfg Config,
@@ -606,7 +523,7 @@ impl<'cfg> RegistrySource<'cfg> {
         }
     }
 
-    /// Decode the configuration stored within the registry.
+    /// Decode the [configuration](RegistryConfig) stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
     pub fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
@@ -617,70 +534,84 @@ impl<'cfg> RegistrySource<'cfg> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
+    ///
+    /// # History of interruption detection with `.cargo-ok` file
+    ///
+    /// Cargo has always included a `.cargo-ok` file ([`PACKAGE_SOURCE_LOCK`])
+    /// to detect if extraction was interrupted, but it was originally empty.
+    ///
+    /// In 1.34, Cargo was changed to create the `.cargo-ok` file before it
+    /// started extraction to implement fine-grained locking. After it was
+    /// finished extracting, it wrote two bytes to indicate it was complete.
+    /// It would use the length check to detect if it was possibly interrupted.
+    ///
+    /// In 1.36, Cargo changed to not use fine-grained locking, and instead used
+    /// a global lock. The use of `.cargo-ok` was no longer needed for locking
+    /// purposes, but was kept to detect when extraction was interrupted.
+    ///
+    /// In 1.49, Cargo changed to not create the `.cargo-ok` file before it
+    /// started extraction to deal with `.crate` files that inexplicably had
+    /// a `.cargo-ok` file in them.
+    ///
+    /// In 1.64, Cargo changed to detect `.crate` files with `.cargo-ok` files
+    /// in them in response to [CVE-2022-36113], which dealt with malicious
+    /// `.crate` files making `.cargo-ok` a symlink causing cargo to write "ok"
+    /// to any arbitrary file on the filesystem it has permission to.
+    ///
+    /// In 1.71, `.cargo-ok` changed to contain a JSON `{ v: 1 }` to indicate
+    /// the version of it. A failure of parsing will result in a heavy-hammer
+    /// approach that unpacks the `.crate` file again. This is in response to a
+    /// security issue that the unpacking didn't respect umask on Unix systems.
+    ///
+    /// This is all a long-winded way of explaining the circumstances that might
+    /// cause a directory to contain a `.cargo-ok` file that is empty or
+    /// otherwise corrupted. Either this was extracted by a version of Rust
+    /// before 1.34, in which case everything should be fine. However, an empty
+    /// file created by versions 1.36 to 1.49 indicates that the extraction was
+    /// interrupted and that we need to start again.
+    ///
+    /// Another possibility is that the filesystem is simply corrupted, in
+    /// which case deleting the directory might be the safe thing to do. That
+    /// is probably unlikely, though.
+    ///
+    /// To be safe, we deletes the directory and starts over again if an empty
+    /// `.cargo-ok` file is found.
+    ///
+    /// [CVE-2022-36113]: https://blog.rust-lang.org/2022/09/14/cargo-cves.html#arbitrary-file-corruption-cve-2022-36113
     fn unpack_package(&self, pkg: PackageId, tarball: &File) -> CargoResult<PathBuf> {
-        // The `.cargo-ok` file is used to track if the source is already
-        // unpacked.
         let package_dir = format!("{}-{}", pkg.name(), pkg.version());
         let dst = self.src_path.join(&package_dir);
         let path = dst.join(PACKAGE_SOURCE_LOCK);
-        let path = self.config.assert_package_cache_locked(&path);
+        let path = self
+            .config
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
         let unpack_dir = path.parent().unwrap();
-        match path.metadata() {
-            Ok(meta) if meta.len() > 0 => return Ok(unpack_dir.to_path_buf()),
-            Ok(_meta) => {
-                // The `.cargo-ok` file is not in a state we expect it to be
-                // (with two bytes containing "ok").
-                //
-                // Cargo has always included a `.cargo-ok` file to detect if
-                // extraction was interrupted, but it was originally empty.
-                //
-                // In 1.34, Cargo was changed to create the `.cargo-ok` file
-                // before it started extraction to implement fine-grained
-                // locking. After it was finished extracting, it wrote two
-                // bytes to indicate it was complete. It would use the length
-                // check to detect if it was possibly interrupted.
-                //
-                // In 1.36, Cargo changed to not use fine-grained locking, and
-                // instead used a global lock. The use of `.cargo-ok` was no
-                // longer needed for locking purposes, but was kept to detect
-                // when extraction was interrupted.
-                //
-                // In 1.49, Cargo changed to not create the `.cargo-ok` file
-                // before it started extraction to deal with `.crate` files
-                // that inexplicably had a `.cargo-ok` file in them.
-                //
-                // In 1.64, Cargo changed to detect `.crate` files with
-                // `.cargo-ok` files in them in response to CVE-2022-36113,
-                // which dealt with malicious `.crate` files making
-                // `.cargo-ok` a symlink causing cargo to write "ok" to any
-                // arbitrary file on the filesystem it has permission to.
-                //
-                // This is all a long-winded way of explaining the
-                // circumstances that might cause a directory to contain a
-                // `.cargo-ok` file that is empty or otherwise corrupted.
-                // Either this was extracted by a version of Rust before 1.34,
-                // in which case everything should be fine. However, an empty
-                // file created by versions 1.36 to 1.49 indicates that the
-                // extraction was interrupted and that we need to start again.
-                //
-                // Another possibility is that the filesystem is simply
-                // corrupted, in which case deleting the directory might be
-                // the safe thing to do. That is probably unlikely, though.
-                //
-                // To be safe, this deletes the directory and starts over
-                // again.
-                log::warn!("unexpected length of {path:?}, clearing cache");
-                paths::remove_dir_all(dst.as_path_unlocked())?;
-            }
+        match fs::read_to_string(path) {
+            Ok(ok) => match serde_json::from_str::<LockMetadata>(&ok) {
+                Ok(lock_meta) if lock_meta.v == 1 => {
+                    return Ok(unpack_dir.to_path_buf());
+                }
+                _ => {
+                    if ok == "ok" {
+                        tracing::debug!("old `ok` content found, clearing cache");
+                    } else {
+                        tracing::warn!("unrecognized .cargo-ok content, clearing cache: {ok}");
+                    }
+                    // See comment of `unpack_package` about why removing all stuff.
+                    paths::remove_dir_all(dst.as_path_unlocked())?;
+                }
+            },
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-            Err(e) => anyhow::bail!("failed to access package completion {path:?}: {e}"),
+            Err(e) => anyhow::bail!("unable to read .cargo-ok file at {path:?}: {e}"),
         }
         dst.create_dir()?;
         let mut tar = {
             let size_limit = max_unpack_size(self.config, tarball.metadata()?.len());
             let gz = GzDecoder::new(tarball);
             let gz = LimitErrorReader::new(gz, size_limit);
-            Archive::new(gz)
+            let mut tar = Archive::new(gz);
+            set_mask(&mut tar);
+            tar
         };
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
@@ -735,11 +666,19 @@ impl<'cfg> RegistrySource<'cfg> {
             .write(true)
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
-        write!(ok, "ok")?;
+
+        let lock_meta = LockMetadata { v: 1 };
+        write!(ok, "{}", serde_json::to_string(&lock_meta).unwrap())?;
 
         Ok(unpack_dir.to_path_buf())
     }
 
+    /// Turns the downloaded `.crate` tarball file into a [`Package`].
+    ///
+    /// This unconditionally sets checksum for the returned package, so it
+    /// should only be called after doing integrity check. That is to say,
+    /// you need to call either [`RegistryData::download`] or
+    /// [`RegistryData::finish_download`] before calling this method.
     fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
@@ -753,19 +692,14 @@ impl<'cfg> RegistrySource<'cfg> {
 
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
-        let req = OptVersionReq::exact(package.version());
-        let summary_with_cksum = self
+        let cksum = self
             .index
-            .summaries(package.name(), &req, &mut *self.ops)?
+            .hash(package, &mut *self.ops)
             .expect("a downloaded dep now pending!?")
-            .map(|s| s.summary.clone())
-            .next()
             .expect("summary not found");
-        if let Some(cksum) = summary_with_cksum.checksum() {
-            pkg.manifest_mut()
-                .summary_mut()
-                .set_checksum(cksum.to_string());
-        }
+        pkg.manifest_mut()
+            .summary_mut()
+            .set_checksum(cksum.to_string());
 
         Ok(pkg)
     }
@@ -778,44 +712,92 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         kind: QueryKind,
         f: &mut dyn FnMut(Summary),
     ) -> Poll<CargoResult<()>> {
-        // If this is a precise dependency, then it came from a lock file and in
+        let mut req = dep.version_req().clone();
+
+        // Handle `cargo update --precise` here.
+        if let Some((_, requested)) = self
+            .source_id
+            .precise_registry_version(dep.package_name().as_str())
+            .filter(|(c, _)| req.matches(c))
+        {
+            req.update_precise(&requested);
+        }
+
+        // If this is a locked dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
-        if kind == QueryKind::Exact && dep.source_id().precise().is_some() && !self.ops.is_updated()
-        {
+        if kind == QueryKind::Exact && req.is_locked() && !self.ops.is_updated() {
             debug!("attempting query without update");
             let mut called = false;
-            let pend =
-                self.index
-                    .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                        if dep.matches(&s) {
-                            called = true;
-                            f(s);
-                        }
-                    })?;
-            if pend.is_pending() {
-                return Poll::Pending;
-            }
+            ready!(self
+                .index
+                .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
+                    if dep.matches(s.as_summary()) {
+                        // We are looking for a package from a lock file so we do not care about yank
+                        called = true;
+                        f(s.into_summary());
+                    }
+                },))?;
             if called {
-                return Poll::Ready(Ok(()));
+                Poll::Ready(Ok(()))
             } else {
                 debug!("falling back to an update");
                 self.invalidate_cache();
-                return Poll::Pending;
+                Poll::Pending
+            }
+        } else {
+            let mut called = false;
+            ready!(self
+                .index
+                .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
+                    let matched = match kind {
+                        QueryKind::Exact => dep.matches(s.as_summary()),
+                        QueryKind::Fuzzy => true,
+                    };
+                    // Next filter out all yanked packages. Some yanked packages may
+                    // leak through if they're in a whitelist (aka if they were
+                    // previously in `Cargo.lock`
+                    if matched
+                        && (!s.is_yanked() || self.yanked_whitelist.contains(&s.package_id()))
+                    {
+                        f(s.into_summary());
+                        called = true;
+                    }
+                }))?;
+            if called {
+                return Poll::Ready(Ok(()));
+            }
+            let mut any_pending = false;
+            if kind == QueryKind::Fuzzy {
+                // Attempt to handle misspellings by searching for a chain of related
+                // names to the original name. The resolver will later
+                // reject any candidates that have the wrong name, and with this it'll
+                // along the way produce helpful "did you mean?" suggestions.
+                // For now we only try the canonical lysing `-` to `_` and vice versa.
+                // More advanced fuzzy searching become in the future.
+                for name_permutation in [
+                    dep.package_name().replace('-', "_"),
+                    dep.package_name().replace('_', "-"),
+                ] {
+                    let name_permutation = InternedString::new(&name_permutation);
+                    if name_permutation == dep.package_name() {
+                        continue;
+                    }
+                    any_pending |= self
+                        .index
+                        .query_inner(name_permutation, &req, &mut *self.ops, &mut |s| {
+                            f(s.into_summary());
+                        })?
+                        .is_pending();
+                }
+            }
+            if any_pending {
+                Poll::Pending
+            } else {
+                Poll::Ready(Ok(()))
             }
         }
-
-        self.index
-            .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
-                let matched = match kind {
-                    QueryKind::Exact => dep.matches(&s),
-                    QueryKind::Fuzzy => true,
-                };
-                if matched {
-                    f(s);
-                }
-            })
     }
 
     fn supports_checksums(&self) -> bool {
@@ -907,8 +889,13 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 }
 
+impl RegistryConfig {
+    /// File name of [`RegistryConfig`].
+    const NAME: &'static str = "config.json";
+}
+
 /// Get the maximum upack size that Cargo permits
-/// based on a given `size of your compressed file.
+/// based on a given `size` of your compressed file.
 ///
 /// Returns the larger one between `size * max compression ratio`
 /// and a fixed max unpacked size.
@@ -928,6 +915,9 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 fn max_unpack_size(config: &Config, size: u64) -> u64 {
     const SIZE_VAR: &str = "__CARGO_TEST_MAX_UNPACK_SIZE";
     const RATIO_VAR: &str = "__CARGO_TEST_MAX_UNPACK_RATIO";
+    const MAX_UNPACK_SIZE: u64 = 512 * 1024 * 1024; // 512 MiB
+    const MAX_COMPRESSION_RATIO: usize = 20; // 20:1
+
     let max_unpack_size = if cfg!(debug_assertions) && config.get_env(SIZE_VAR).is_ok() {
         // For integration test only.
         config
@@ -952,26 +942,15 @@ fn max_unpack_size(config: &Config, size: u64) -> u64 {
     u64::max(max_unpack_size, size * max_compression_ratio as u64)
 }
 
-fn make_dep_prefix(name: &str) -> String {
-    match name.len() {
-        1 => String::from("1"),
-        2 => String::from("2"),
-        3 => format!("3/{}", &name[..1]),
-        _ => format!("{}/{}", &name[0..2], &name[2..4]),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::make_dep_prefix;
-
-    #[test]
-    fn dep_prefix() {
-        assert_eq!(make_dep_prefix("a"), "1");
-        assert_eq!(make_dep_prefix("ab"), "2");
-        assert_eq!(make_dep_prefix("abc"), "3/a");
-        assert_eq!(make_dep_prefix("Abc"), "3/A");
-        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
-        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
-    }
+/// Set the current [`umask`] value for the given tarball. No-op on non-Unix
+/// platforms.
+///
+/// On Windows, tar only looks at user permissions and tries to set the "read
+/// only" attribute, so no-op as well.
+///
+/// [`umask`]: https://man7.org/linux/man-pages/man2/umask.2.html
+#[allow(unused_variables)]
+fn set_mask<R: Read>(tar: &mut Archive<R>) {
+    #[cfg(unix)]
+    tar.set_mask(crate::util::get_umask());
 }

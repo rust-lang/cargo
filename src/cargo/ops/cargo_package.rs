@@ -13,6 +13,8 @@ use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
+use crate::util::config::JobsConfig;
 use crate::util::errors::CargoResult;
 use crate::util::toml::TomlManifest;
 use crate::util::{self, human_readable_bytes, restricted_names, Config, FileLock};
@@ -21,9 +23,10 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
-use log::debug;
 use serde::Serialize;
 use tar::{Archive, Builder, EntryType, Header, HeaderMode};
+use tracing::debug;
+use unicase::Ascii as UncasedAscii;
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -31,7 +34,7 @@ pub struct PackageOpts<'cfg> {
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
-    pub jobs: Option<i32>,
+    pub jobs: Option<JobsConfig>,
     pub keep_going: bool,
     pub to_package: ops::Packages,
     pub targets: Vec<String>,
@@ -126,11 +129,11 @@ pub fn package_one(
         super::check_dep_has_version(dep, false)?;
     }
 
-    let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
+    let filename = pkg.package_id().tarball_name();
     let dir = ws.target_dir().join("package");
     let mut dst = {
         let tmp = format!(".{}", filename);
-        dir.open_rw(&tmp, config, "package scratch space")?
+        dir.open_rw_exclusive_create(&tmp, config, "package scratch space")?
     };
 
     // Package up and test a temporary tarball and only move it to the final
@@ -198,7 +201,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
                 check_metadata: opts.check_metadata,
                 allow_dirty: opts.allow_dirty,
                 verify: opts.verify,
-                jobs: opts.jobs,
+                jobs: opts.jobs.clone(),
                 keep_going: opts.keep_going,
                 to_package: ops::Packages::Default,
                 targets: opts.targets.clone(),
@@ -226,62 +229,88 @@ fn build_ar_list(
     src_files: Vec<PathBuf>,
     vcs_info: Option<VcsInfo>,
 ) -> CargoResult<Vec<ArchiveFile>> {
-    let mut result = Vec::new();
+    let mut result = HashMap::new();
     let root = pkg.root();
-    for src_file in src_files {
-        let rel_path = src_file.strip_prefix(&root)?.to_path_buf();
-        check_filename(&rel_path, &mut ws.config().shell())?;
-        let rel_str = rel_path
-            .to_str()
-            .ok_or_else(|| {
-                anyhow::format_err!("non-utf8 path in source directory: {}", rel_path.display())
-            })?
-            .to_string();
-        match rel_str.as_ref() {
-            "Cargo.toml" => {
-                result.push(ArchiveFile {
-                    rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
-                    rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
-                    contents: FileContents::OnDisk(src_file),
-                });
-                result.push(ArchiveFile {
-                    rel_path,
-                    rel_str,
-                    contents: FileContents::Generated(GeneratedFile::Manifest),
-                });
-            }
+
+    for src_file in &src_files {
+        let rel_path = src_file.strip_prefix(&root)?;
+        check_filename(rel_path, &mut ws.config().shell())?;
+        let rel_str = rel_path.to_str().ok_or_else(|| {
+            anyhow::format_err!("non-utf8 path in source directory: {}", rel_path.display())
+        })?;
+        match rel_str {
             "Cargo.lock" => continue,
             VCS_INFO_FILE | ORIGINAL_MANIFEST_FILE => anyhow::bail!(
                 "invalid inclusion of reserved file name {} in package source",
                 rel_str
             ),
             _ => {
-                result.push(ArchiveFile {
-                    rel_path,
-                    rel_str,
-                    contents: FileContents::OnDisk(src_file),
-                });
+                result
+                    .entry(UncasedAscii::new(rel_str))
+                    .or_insert_with(Vec::new)
+                    .push(ArchiveFile {
+                        rel_path: rel_path.to_owned(),
+                        rel_str: rel_str.to_owned(),
+                        contents: FileContents::OnDisk(src_file.clone()),
+                    });
             }
         }
     }
+
+    // Ensure we normalize for case insensitive filesystems (like on Windows) by removing the
+    // existing entry, regardless of case, and adding in with the correct case
+    if result.remove(&UncasedAscii::new("Cargo.toml")).is_some() {
+        result
+            .entry(UncasedAscii::new(ORIGINAL_MANIFEST_FILE))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
+                rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
+                contents: FileContents::OnDisk(pkg.manifest_path().to_owned()),
+            });
+        result
+            .entry(UncasedAscii::new("Cargo.toml"))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from("Cargo.toml"),
+                rel_str: "Cargo.toml".to_string(),
+                contents: FileContents::Generated(GeneratedFile::Manifest),
+            });
+    } else {
+        ws.config().shell().warn(&format!(
+            "no `Cargo.toml` file found when packaging `{}` (note the case of the file name).",
+            pkg.name()
+        ))?;
+    }
+
     if pkg.include_lockfile() {
-        result.push(ArchiveFile {
-            rel_path: PathBuf::from("Cargo.lock"),
-            rel_str: "Cargo.lock".to_string(),
-            contents: FileContents::Generated(GeneratedFile::Lockfile),
-        });
+        let rel_str = "Cargo.lock";
+        result
+            .entry(UncasedAscii::new(rel_str))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from(rel_str),
+                rel_str: rel_str.to_string(),
+                contents: FileContents::Generated(GeneratedFile::Lockfile),
+            });
     }
     if let Some(vcs_info) = vcs_info {
-        result.push(ArchiveFile {
-            rel_path: PathBuf::from(VCS_INFO_FILE),
-            rel_str: VCS_INFO_FILE.to_string(),
-            contents: FileContents::Generated(GeneratedFile::VcsInfo(vcs_info)),
-        });
+        let rel_str = VCS_INFO_FILE;
+        result
+            .entry(UncasedAscii::new(rel_str))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from(rel_str),
+                rel_str: rel_str.to_string(),
+                contents: FileContents::Generated(GeneratedFile::VcsInfo(vcs_info)),
+            });
     }
+
+    let mut result = result.into_values().flatten().collect();
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
         let abs_file_path = paths::normalize_path(&pkg.root().join(license_path));
-        if abs_file_path.exists() {
+        if abs_file_path.is_file() {
             check_for_file_and_add(
                 "license-file",
                 license_path,
@@ -291,26 +320,16 @@ fn build_ar_list(
                 ws,
             )?;
         } else {
-            let rel_msg = if license_path.is_absolute() {
-                "".to_string()
-            } else {
-                format!(" (relative to `{}`)", pkg.root().display())
-            };
-            ws.config().shell().warn(&format!(
-                "license-file `{}` does not appear to exist{}.\n\
-                Please update the license-file setting in the manifest at `{}`\n\
-                This may become a hard error in the future.",
-                license_path.display(),
-                rel_msg,
-                pkg.manifest_path().display()
-            ))?;
+            warn_on_nonexistent_file(&pkg, &license_path, "license-file", &ws)?;
         }
     }
     if let Some(readme) = &pkg.manifest().metadata().readme {
         let readme_path = Path::new(readme);
         let abs_file_path = paths::normalize_path(&pkg.root().join(readme_path));
-        if abs_file_path.exists() {
+        if abs_file_path.is_file() {
             check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
+        } else {
+            warn_on_nonexistent_file(&pkg, &readme_path, "readme", &ws)?;
         }
     }
     result.sort_unstable_by(|a, b| a.rel_path.cmp(&b.rel_path));
@@ -342,10 +361,7 @@ fn check_for_file_and_add(
         Err(_) => {
             // The file exists somewhere outside of the package.
             let file_name = file_path.file_name().unwrap();
-            if result
-                .iter()
-                .any(|ar| ar.rel_path.file_name().unwrap() == file_name)
-            {
+            if result.iter().any(|ar| ar.rel_path == file_name) {
                 ws.config().shell().warn(&format!(
                     "{} `{}` appears to be a path outside of the package, \
                             but there is already a file named `{}` in the root of the package. \
@@ -369,6 +385,27 @@ fn check_for_file_and_add(
     Ok(())
 }
 
+fn warn_on_nonexistent_file(
+    pkg: &Package,
+    path: &Path,
+    manifest_key_name: &'static str,
+    ws: &Workspace<'_>,
+) -> CargoResult<()> {
+    let rel_msg = if path.is_absolute() {
+        "".to_string()
+    } else {
+        format!(" (relative to `{}`)", pkg.root().display())
+    };
+    ws.config().shell().warn(&format!(
+        "{manifest_key_name} `{}` does not appear to exist{}.\n\
+                Please update the {manifest_key_name} setting in the manifest at `{}`\n\
+                This may become a hard error in the future.",
+        path.display(),
+        rel_msg,
+        pkg.manifest_path().display()
+    ))
+}
+
 /// Construct `Cargo.lock` for the package to be published.
 fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     let config = ws.config();
@@ -384,8 +421,10 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     let package_root = orig_pkg.root();
     let source_id = orig_pkg.package_id().source_id();
     let (manifest, _nested_paths) =
-        TomlManifest::to_real_manifest(&toml_manifest, source_id, package_root, config)?;
+        TomlManifest::to_real_manifest(&toml_manifest, false, source_id, package_root, config)?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
+
+    let max_rust_version = new_pkg.rust_version().cloned();
 
     // Regenerate Cargo.lock using the old one as a guide.
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
@@ -399,6 +438,7 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
         None,
         &[],
         true,
+        max_rust_version.as_ref(),
     )?;
     let pkg_set = ops::get_resolved_packages(&new_resolve, tmp_reg)?;
 
@@ -767,7 +807,7 @@ pub fn check_yanked(
 ) -> CargoResult<()> {
     // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
-    let _lock = config.acquire_package_cache_lock()?;
+    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     let mut sources = pkg_set.sources_mut();
     let mut pending: Vec<PackageId> = resolve.iter().collect();
@@ -853,7 +893,7 @@ fn run_verify(
         &ops::CompileOptions {
             build_config: BuildConfig::new(
                 config,
-                opts.jobs,
+                opts.jobs.clone(),
                 opts.keep_going,
                 &opts.targets,
                 CompileMode::Build,
@@ -955,17 +995,15 @@ fn report_hash_difference(orig: &HashMap<PathBuf, u64>, after: &HashMap<PathBuf,
 // To help out in situations like this, issue about weird filenames when
 // packaging as a "heads up" that something may not work on other platforms.
 fn check_filename(file: &Path, shell: &mut Shell) -> CargoResult<()> {
-    let name = match file.file_name() {
-        Some(name) => name,
-        None => return Ok(()),
+    let Some(name) = file.file_name() else {
+        return Ok(());
     };
-    let name = match name.to_str() {
-        Some(name) => name,
-        None => anyhow::bail!(
+    let Some(name) = name.to_str() else {
+        anyhow::bail!(
             "path does not have a unicode filename which may not unpack \
              on all platforms: {}",
             file.display()
-        ),
+        )
     };
     let bad_chars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
     if let Some(c) = bad_chars.iter().find(|c| name.contains(**c)) {

@@ -4,15 +4,18 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
-use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Target, Workspace};
+use crate::core::{
+    Dependency, Edition, Package, PackageId, PackageIdSpec, SourceId, Target, Workspace,
+};
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
+use crate::sources::source::Source;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
-use crate::util::{Config, Filesystem, Rustc, ToSemver, VersionReqExt};
+use crate::util::{Config, Filesystem, Rustc};
 use crate::{drop_println, ops};
 
-use anyhow::{bail, format_err, Context as _};
+use anyhow::{bail, Context as _};
 use cargo_util::paths;
 use itertools::Itertools;
 use semver::VersionReq;
@@ -36,12 +39,12 @@ impl Drop for Transaction {
     }
 }
 
-struct InstallablePackage<'cfg, 'a> {
+struct InstallablePackage<'cfg> {
     config: &'cfg Config,
     opts: ops::CompileOptions,
     root: Filesystem,
     source_id: SourceId,
-    vers: Option<&'a str>,
+    vers: Option<VersionReq>,
     force: bool,
     no_track: bool,
 
@@ -51,7 +54,7 @@ struct InstallablePackage<'cfg, 'a> {
     target: String,
 }
 
-impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
+impl<'cfg> InstallablePackage<'cfg> {
     // Returns pkg to install. None if pkg is already installed
     pub fn new(
         config: &'cfg Config,
@@ -60,12 +63,13 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         krate: Option<&str>,
         source_id: SourceId,
         from_cwd: bool,
-        vers: Option<&'a str>,
-        original_opts: &'a ops::CompileOptions,
+        vers: Option<&VersionReq>,
+        original_opts: &ops::CompileOptions,
         force: bool,
         no_track: bool,
         needs_update_if_source_is_index: bool,
-    ) -> CargoResult<Option<InstallablePackage<'cfg, 'a>>> {
+        current_rust_version: Option<&semver::Version>,
+    ) -> CargoResult<Option<Self>> {
         if let Some(name) = krate {
             if name == "." {
                 bail!(
@@ -80,8 +84,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         let pkg = {
             let dep = {
                 if let Some(krate) = krate {
-                    let vers = if let Some(vers_flag) = vers {
-                        Some(parse_semver_flag(vers_flag)?.to_string())
+                    let vers = if let Some(vers) = vers {
+                        Some(vers.to_string())
                     } else if source_id.is_registry() {
                         // Avoid pre-release versions from crate.io
                         // unless explicitly asked for
@@ -102,6 +106,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                     dep,
                     |git: &mut GitSource<'_>| git.read_packages(),
                     config,
+                    current_rust_version,
                 )?
             } else if source_id.is_path() {
                 let mut src = path_source(source_id, config)?;
@@ -139,6 +144,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                     dep,
                     |path: &mut PathSource<'_>| path.read_packages(),
                     config,
+                    current_rust_version,
                 )?
             } else if let Some(dep) = dep {
                 let mut source = map.load(source_id, &HashSet::new())?;
@@ -158,7 +164,13 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
                     config.shell().status("Ignored", &msg)?;
                     return Ok(None);
                 }
-                select_dep_pkg(&mut source, dep, config, needs_update_if_source_is_index)?
+                select_dep_pkg(
+                    &mut source,
+                    dep,
+                    config,
+                    needs_update_if_source_is_index,
+                    current_rust_version,
+                )?
             } else {
                 bail!(
                     "must specify a crate to install from \
@@ -168,14 +180,8 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             }
         };
 
-        // When we build this package, we want to build the *specified* package only,
-        // and avoid building e.g. workspace default-members instead. Do so by constructing
-        // specialized compile options specific to the identified package.
-        // See test `path_install_workspace_root_despite_default_members`.
-        let mut opts = original_opts.clone();
-        opts.spec = Packages::Packages(vec![pkg.name().to_string()]);
-
-        let (ws, rustc, target) = make_ws_rustc_target(config, &opts, &source_id, pkg.clone())?;
+        let (ws, rustc, target) =
+            make_ws_rustc_target(config, &original_opts, &source_id, pkg.clone())?;
         // If we're installing in --locked mode and there's no `Cargo.lock` published
         // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
         if config.locked() && !ws.root().join("Cargo.lock").exists() {
@@ -191,6 +197,17 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
         } else {
             ws.current()?.clone()
         };
+
+        // When we build this package, we want to build the *specified* package only,
+        // and avoid building e.g. workspace default-members instead. Do so by constructing
+        // specialized compile options specific to the identified package.
+        // See test `path_install_workspace_root_despite_default_members`.
+        let mut opts = original_opts.clone();
+        // For cargo install tracking, we retain the source git url in `pkg`, but for the build spec
+        // we need to unconditionally use `ws.current()` to correctly address the path where we
+        // locally cloned that repo.
+        let pkgidspec = PackageIdSpec::from_package_id(ws.current()?.package_id());
+        opts.spec = Packages::Packages(vec![pkgidspec.to_string()]);
 
         if from_cwd {
             if pkg.manifest().edition() == Edition::Edition2015 {
@@ -227,7 +244,7 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
             opts,
             root,
             source_id,
-            vers,
+            vers: vers.cloned(),
             force,
             no_track,
 
@@ -313,7 +330,9 @@ impl<'cfg, 'a> InstallablePackage<'cfg, 'a> {
 
             format!(
                 "failed to compile `{}`, intermediate artifacts can be \
-                 found at `{}`",
+                 found at `{}`.\nTo reuse those artifacts with a future \
+                 compilation, set the environment variable \
+                 `CARGO_TARGET_DIR` to that path.",
                 self.pkg,
                 self.ws.target_dir().display()
             )
@@ -595,7 +614,7 @@ Consider enabling some of the needed features by passing, e.g., `--features=\"{e
 pub fn install(
     config: &Config,
     root: Option<&str>,
-    krates: Vec<(&str, Option<&str>)>,
+    krates: Vec<(String, Option<VersionReq>)>,
     source_id: SourceId,
     from_cwd: bool,
     opts: &ops::CompileOptions,
@@ -606,14 +625,40 @@ pub fn install(
     let dst = root.join("bin").into_path_unlocked();
     let map = SourceConfigMap::new(config)?;
 
+    let current_rust_version = if opts.honor_rust_version {
+        let rustc = config.load_global_rustc(None)?;
+
+        // Remove any pre-release identifiers for easier comparison
+        let current_version = &rustc.version;
+        let untagged_version = semver::Version::new(
+            current_version.major,
+            current_version.minor,
+            current_version.patch,
+        );
+        Some(untagged_version)
+    } else {
+        None
+    };
+
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
         let (krate, vers) = krates
-            .into_iter()
+            .iter()
             .next()
-            .map(|(k, v)| (Some(k), v))
+            .map(|(k, v)| (Some(k.as_str()), v.as_ref()))
             .unwrap_or((None, None));
         let installable_pkg = InstallablePackage::new(
-            config, root, map, krate, source_id, from_cwd, vers, opts, force, no_track, true,
+            config,
+            root,
+            map,
+            krate,
+            source_id,
+            from_cwd,
+            vers,
+            opts,
+            force,
+            no_track,
+            true,
+            current_rust_version.as_ref(),
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
@@ -628,7 +673,7 @@ pub fn install(
         let mut did_update = false;
 
         let pkgs_to_install: Vec<_> = krates
-            .into_iter()
+            .iter()
             .filter_map(|(krate, vers)| {
                 let root = root.clone();
                 let map = map.clone();
@@ -636,14 +681,15 @@ pub fn install(
                     config,
                     root,
                     map,
-                    Some(krate),
+                    Some(krate.as_str()),
                     source_id,
                     from_cwd,
-                    vers,
+                    vers.as_ref(),
                     opts,
                     force,
                     no_track,
                     !did_update,
+                    current_rust_version.as_ref(),
                 ) {
                     Ok(Some(installable_pkg)) => {
                         did_update = true;
@@ -651,12 +697,12 @@ pub fn install(
                     }
                     Ok(None) => {
                         // Already installed
-                        succeeded.push(krate);
+                        succeeded.push(krate.as_str());
                         None
                     }
                     Err(e) => {
                         crate::display_error(&e, &mut config.shell());
-                        failed.push(krate);
+                        failed.push(krate.as_str());
                         // We assume an update was performed if we got an error.
                         did_update = true;
                         None
@@ -763,7 +809,7 @@ where
     // expensive network call in the case that the package is already installed.
     // If this fails, the caller will possibly do an index update and try again, this is just a
     // best-effort check to see if we can avoid hitting the network.
-    if let Ok(pkg) = select_dep_pkg(source, dep, config, false) {
+    if let Ok(pkg) = select_dep_pkg(source, dep, config, false, None) {
         let (_ws, rustc, target) =
             make_ws_rustc_target(config, opts, &source.source_id(), pkg.clone())?;
         if let Ok(true) = is_installed(&pkg, config, opts, &rustc, &target, root, dst, force) {
@@ -794,54 +840,6 @@ fn make_ws_rustc_target<'cfg>(
     };
 
     Ok((ws, rustc, target))
-}
-
-/// Parses x.y.z as if it were =x.y.z, and gives CLI-specific error messages in the case of invalid
-/// values.
-fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
-    // If the version begins with character <, >, =, ^, ~ parse it as a
-    // version range, otherwise parse it as a specific version
-    let first = v
-        .chars()
-        .next()
-        .ok_or_else(|| format_err!("no version provided for the `--version` flag"))?;
-
-    let is_req = "<>=^~".contains(first) || v.contains('*');
-    if is_req {
-        match v.parse::<VersionReq>() {
-            Ok(v) => Ok(v),
-            Err(_) => bail!(
-                "the `--version` provided, `{}`, is \
-                     not a valid semver version requirement\n\n\
-                     Please have a look at \
-                     https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html \
-                     for the correct format",
-                v
-            ),
-        }
-    } else {
-        match v.to_semver() {
-            Ok(v) => Ok(VersionReq::exact(&v)),
-            Err(e) => {
-                let mut msg = format!(
-                    "the `--version` provided, `{}`, is \
-                         not a valid semver version: {}\n",
-                    v, e
-                );
-
-                // If it is not a valid version but it is a valid version
-                // requirement, add a note to the warning
-                if v.parse::<VersionReq>().is_ok() {
-                    msg.push_str(&format!(
-                        "\nif you want to specify semver range, \
-                             add an explicit qualifier, like ^{}",
-                        v
-                    ));
-                }
-                bail!(msg);
-            }
-        }
-    }
 }
 
 /// Display a list of installed binaries.

@@ -1,7 +1,5 @@
 # cargo-install(1)
 
-
-
 ## NAME
 
 cargo-install --- Build and install a Rust binary
@@ -18,7 +16,7 @@ cargo-install --- Build and install a Rust binary
 This command manages Cargo's local set of installed binary crates. Only
 packages which have executable `[[bin]]` or `[[example]]` targets can be
 installed, and all executables are installed into the installation root's
-`bin` folder.
+`bin` folder. By default only binaries, not examples, are installed.
 
 The installation root is determined, in order of precedence:
 
@@ -150,7 +148,7 @@ same time.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---bins"><a class="option-anchor" href="#option-cargo-install---bins"></a><code>--bins</code></dt>
-<dd class="option-desc">Install all binaries.</dd>
+<dd class="option-desc">Install all binaries. This is the default behavior.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---example"><a class="option-anchor" href="#option-cargo-install---example"></a><code>--example</code> <em>name</em>…</dt>
@@ -238,13 +236,13 @@ is specified.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---debug"><a class="option-anchor" href="#option-cargo-install---debug"></a><code>--debug</code></dt>
-<dd class="option-desc">Build with the <code>dev</code> profile instead the <code>release</code> profile.
+<dd class="option-desc">Build with the <code>dev</code> profile instead of the <code>release</code> profile.
 See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---profile"><a class="option-anchor" href="#option-cargo-install---profile"></a><code>--profile</code> <em>name</em></dt>
 <dd class="option-desc">Install with the given profile.
-See the <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
 
@@ -312,14 +310,19 @@ offline.</p>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of logical CPUs. If negative, it sets the maximum number of
-parallel jobs to the number of logical CPUs plus provided value.
+parallel jobs to the number of logical CPUs plus provided value. If
+a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---keep-going"><a class="option-anchor" href="#option-cargo-install---keep-going"></a><code>--keep-going</code></dt>
 <dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-<code>-Zunstable-options</code>.</dd>
+the build on the first one that fails to build.</p>
+<p>For example if the current package depends on dependencies <code>fails</code> and <code>works</code>,
+one of which fails to build, <code>cargo install -j1</code> may or may not build the
+one that succeeds (depending on which one of the two builds Cargo picked to run
+first), whereas <code>cargo install -j1 --keep-going</code> would definitely run both
+builds, even if the one run first fails.</dd>
 
 
 </dl>
@@ -402,7 +405,12 @@ See the <a href="../reference/config.html#command-line-overrides">command-line o
 <dt class="option-term" id="option-cargo-install--C"><a class="option-anchor" href="#option-cargo-install--C"></a><code>-C</code> <em>PATH</em></dt>
 <dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
-the directories searched for discovering <code>.cargo/config.toml</code>, for example.</dd>
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-install--h"><a class="option-anchor" href="#option-cargo-install--h"></a><code>-h</code></dt>

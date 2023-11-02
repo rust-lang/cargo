@@ -5,7 +5,9 @@ use cargo::drop_println;
 pub fn cli() -> Command {
     subcommand("report")
         .about("Generate and display various kinds of reports")
-        .after_help("Run `cargo help report` for more detailed information.\n")
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help report</>` for more detailed information.\n"
+        ))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
@@ -42,7 +44,7 @@ fn report_future_incompatibilities(config: &Config, args: &ArgMatches) -> CliRes
         .value_of_u32("id")?
         .unwrap_or_else(|| reports.last_id());
     let krate = args.get_one::<String>("package").map(String::as_str);
-    let report = reports.get_report(id, config, krate)?;
+    let report = reports.get_report(id, krate)?;
     drop_println!(config, "{}", REPORT_PREAMBLE);
     drop(config.shell().print_ansi_stdout(report.as_bytes()));
     Ok(())

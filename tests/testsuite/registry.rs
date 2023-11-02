@@ -4,7 +4,7 @@ use cargo::core::SourceId;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{
-    self, registry_path, Dependency, Package, RegistryBuilder, TestRegistry,
+    self, registry_path, Dependency, Package, RegistryBuilder, Response, TestRegistry,
 };
 use cargo_test_support::{basic_manifest, project};
 use cargo_test_support::{git, install::cargo_home, t};
@@ -807,7 +807,7 @@ required by package `foo v0.0.1 ([..])`
         )
         .run();
 
-    p.cargo("update -p baz")
+    p.cargo("update baz")
         .with_stderr_contains(
             "\
 [UPDATING] `[..]` index
@@ -952,7 +952,7 @@ fn update_lockfile() {
     Package::new("bar", "0.0.3").publish();
     paths::home().join(".cargo/registry").rm_rf();
     println!("0.0.2 update");
-    p.cargo("update -p bar --precise 0.0.2")
+    p.cargo("update bar --precise 0.0.2")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -975,7 +975,7 @@ fn update_lockfile() {
         .run();
 
     println!("0.0.3 update");
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1000,7 +1000,7 @@ fn update_lockfile() {
     println!("new dependencies update");
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
     Package::new("spam", "0.2.5").publish();
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1012,7 +1012,7 @@ fn update_lockfile() {
 
     println!("new dependencies update");
     Package::new("bar", "0.0.5").publish();
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1433,7 +1433,7 @@ fn update_transitive_dependency() {
 
     Package::new("b", "0.1.1").publish();
 
-    p.cargo("update -pb")
+    p.cargo("update b")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1504,7 +1504,7 @@ fn update_backtracking_ok() {
         .dep("cookie", "0.1.0")
         .publish();
 
-    p.cargo("update -p hyper")
+    p.cargo("update hyper")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1555,7 +1555,7 @@ fn update_multiple_packages() {
     Package::new("b", "0.1.1").publish();
     Package::new("c", "0.1.1").publish();
 
-    p.cargo("update -pa -pb")
+    p.cargo("update a b")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1565,7 +1565,7 @@ fn update_multiple_packages() {
         )
         .run();
 
-    p.cargo("update -pb -pc")
+    p.cargo("update b c")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -1671,7 +1671,7 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
         .publish();
 
     p.cargo("generate-lockfile").run();
-    p.cargo("update -pfoobar --precise=0.2.0").run();
+    p.cargo("update foobar --precise=0.2.0").run();
 }
 
 #[cargo_test]
@@ -1756,12 +1756,12 @@ fn use_semver_package_incorrectly() {
         .with_status(101)
         .with_stderr(
             "\
-error: no matching package found
-searched package name: `a`
-prerelease package needs to be specified explicitly
-a = { version = \"0.1.1-alpha.0\" }
+error: failed to select a version for the requirement `a = \"^0.1\"`
+candidate versions found which didn't match: 0.1.1-alpha.0
 location searched: [..]
 required by package `b v0.1.0 ([..])`
+if you are looking for the prerelease package it needs to be specified explicitly
+    a = { version = \"0.1.1-alpha.0\" }
 ",
         )
         .run();
@@ -2546,7 +2546,7 @@ fn package_lock_inside_package_is_overwritten() {
         .join("bar-0.0.1")
         .join(".cargo-ok");
 
-    assert_eq!(ok.metadata().unwrap().len(), 2);
+    assert_eq!(ok.metadata().unwrap().len(), 7);
 }
 
 #[cargo_test]
@@ -2586,7 +2586,7 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
     let librs = pkg_root.join("src/lib.rs");
 
     // Is correctly overwritten and doesn't affect the file linked to
-    assert_eq!(ok.metadata().unwrap().len(), 2);
+    assert_eq!(ok.metadata().unwrap().len(), 7);
     assert_eq!(fs::read_to_string(librs).unwrap(), "pub fn f() {}");
 }
 
@@ -2604,7 +2604,9 @@ fn ignores_unknown_index_version_git() {
 fn ignores_unknown_index_version() {
     // If the version field is not understood, it is ignored.
     Package::new("bar", "1.0.0").publish();
-    Package::new("bar", "1.0.1").schema_version(9999).publish();
+    Package::new("bar", "1.0.1")
+        .schema_version(u32::MAX)
+        .publish();
 
     let p = project()
         .file(
@@ -2626,6 +2628,41 @@ fn ignores_unknown_index_version() {
             "foo v0.1.0 [..]\n\
              └── bar v1.0.0\n\
             ",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn unknown_index_version_error() {
+    // If the version field is not understood, it is ignored.
+    Package::new("bar", "1.0.1")
+        .schema_version(u32::MAX)
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[ERROR] no matching package named `bar` found
+location searched: registry `crates-io`
+required by package `foo v0.1.0 ([CWD])`
+",
         )
         .run();
 }
@@ -2743,10 +2780,10 @@ fn sparse_retry_single() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]`, got 500
+warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]` (127.0.0.1), got 500
 body:
 internal server error
-warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `[..]`, got 500
+warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `[..]` (127.0.0.1), got 500
 body:
 internal server error
 [DOWNLOADING] crates ...
@@ -2816,7 +2853,7 @@ fn sparse_retry_multiple() {
                 &mut expected,
                 "warning: spurious network error ({remain} tries remaining): \
                 failed to get successful HTTP response from \
-                `http://127.0.0.1:[..]/{ab}/{cd}/{name}`, got 500\n\
+                `http://127.0.0.1:[..]/{ab}/{cd}/{name}` (127.0.0.1), got 500\n\
                 body:\n\
                 internal server error\n"
             )
@@ -2876,10 +2913,12 @@ fn dl_retry_single() {
         .with_stderr("\
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-warning: spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 500
+warning: spurious network error (3 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 500
 body:
 internal server error
-warning: spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`, got 500
+warning: spurious network error (2 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 500
 body:
 internal server error
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -2954,7 +2993,7 @@ fn dl_retry_multiple() {
                 &mut expected,
                 "warning: spurious network error ({remain} tries remaining): \
                 failed to get successful HTTP response from \
-                `http://127.0.0.1:[..]/dl/{name}/1.0.0/download`, got 500\n\
+                `http://127.0.0.1:[..]/dl/{name}/1.0.0/download` (127.0.0.1), got 500\n\
                 body:\n\
                 internal server error\n"
             )
@@ -3133,5 +3172,483 @@ fn corrupted_ok_overwritten() {
     fs::write(&ok, "").unwrap();
     assert_eq!(fs::read_to_string(&ok).unwrap(), "");
     p.cargo("fetch").with_stderr("").run();
-    assert_eq!(fs::read_to_string(&ok).unwrap(), "ok");
+    assert_eq!(fs::read_to_string(&ok).unwrap(), r#"{"v":1}"#);
+}
+
+#[cargo_test]
+fn not_found_permutations() {
+    // Test for querying permutations for a missing dependency.
+    let misses = Arc::new(Mutex::new(Vec::new()));
+    let misses2 = misses.clone();
+    let _registry = RegistryBuilder::new()
+        .http_index()
+        .not_found_handler(move |req, _server| {
+            let mut misses = misses2.lock().unwrap();
+            misses.push(req.url.path().to_string());
+            Response {
+                code: 404,
+                headers: vec![],
+                body: b"not found".to_vec(),
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                a-b_c = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+error: no matching package named `a-b_c` found
+location searched: registry `crates-io`
+required by package `foo v0.0.1 ([ROOT]/foo)`
+",
+        )
+        .run();
+    let mut misses = misses.lock().unwrap();
+    misses.sort();
+    assert_eq!(
+        &*misses,
+        &[
+            "/index/a-/b-/a-b-c",
+            "/index/a-/b_/a-b_c",
+            "/index/a_/b_/a_b_c"
+        ]
+    );
+}
+
+#[cargo_test]
+fn default_auth_error() {
+    // Check for the error message for an authentication error when default is set.
+    let crates_io = RegistryBuilder::new().http_api().build();
+    let _alternative = RegistryBuilder::new().http_api().alternative().build();
+
+    paths::home().join(".cargo/credentials.toml").rm_rf();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Test output before setting the default.
+    p.cargo("publish --no-verify")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+error: no token found, please run `cargo login`
+or use environment variable CARGO_REGISTRY_TOKEN
+",
+        )
+        .with_status(101)
+        .run();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+error: no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+",
+        )
+        .with_status(101)
+        .run();
+
+    // Test the output with the default.
+    cargo_util::paths::append(
+        &cargo_home().join("config"),
+        br#"
+            [registry]
+            default = "alternative"
+        "#,
+    )
+    .unwrap();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+error: no token found for `alternative`, please run `cargo login --registry alternative`
+or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+",
+        )
+        .with_status(101)
+        .run();
+
+    p.cargo("publish --no-verify --registry crates-io")
+        .replace_crates_io(crates_io.index_url())
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+error: no token found, please run `cargo login --registry crates-io`
+or use environment variable CARGO_REGISTRY_TOKEN
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+const SAMPLE_HEADERS: &[&str] = &[
+    "x-amz-cf-pop: SFO53-P2",
+    "x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==",
+    "x-cache: Hit from cloudfront",
+    "server: AmazonS3",
+    "x-amz-version-id: pvsJYY_JGsWiSETZvLJKb7DeEW5wWq1W",
+    "x-amz-server-side-encryption: AES256",
+    "content-type: text/plain",
+    "via: 1.1 bcbc5b46216015493e082cfbcf77ef10.cloudfront.net (CloudFront)",
+];
+
+#[cargo_test]
+fn debug_header_message_index() {
+    // The error message should include some headers for debugging purposes.
+    let _server = RegistryBuilder::new()
+        .http_index()
+        .add_responder("/index/3/b/bar", |_, _| Response {
+            code: 503,
+            headers: SAMPLE_HEADERS.iter().map(|s| s.to_string()).collect(),
+            body: b"Please slow down".to_vec(),
+        })
+        .build();
+    Package::new("bar", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch").with_status(101).with_stderr("\
+[UPDATING] `dummy-registry` index
+warning: spurious network error (3 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
+body:
+Please slow down
+warning: spurious network error (2 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
+body:
+Please slow down
+warning: spurious network error (1 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
+body:
+Please slow down
+error: failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to query replaced source registry `crates-io`
+
+Caused by:
+  download of 3/b/bar failed
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
+  debug headers:
+  x-amz-cf-pop: SFO53-P2
+  x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+  x-cache: Hit from cloudfront
+  body:
+  Please slow down
+").run();
+}
+
+#[cargo_test]
+fn debug_header_message_dl() {
+    // Same as debug_header_message_index, but for the dl endpoint which goes
+    // through a completely different code path.
+    let _server = RegistryBuilder::new()
+        .http_index()
+        .add_responder("/dl/bar/1.0.0/download", |_, _| Response {
+            code: 503,
+            headers: SAMPLE_HEADERS.iter().map(|s| s.to_string()).collect(),
+            body: b"Please slow down".to_vec(),
+        })
+        .build();
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch").with_status(101).with_stderr("\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+warning: spurious network error (3 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
+body:
+Please slow down
+warning: spurious network error (2 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
+body:
+Please slow down
+warning: spurious network error (1 tries remaining): \
+    failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
+body:
+Please slow down
+error: failed to download from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
+  debug headers:
+  x-amz-cf-pop: SFO53-P2
+  x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+  x-cache: Hit from cloudfront
+  body:
+  Please slow down
+").run();
+}
+
+#[cfg(unix)]
+#[cargo_test]
+fn set_mask_during_unpacking() {
+    use std::os::unix::fs::MetadataExt;
+
+    Package::new("bar", "1.0.0")
+        .file_with_mode("example.sh", 0o777, "#!/bin/sh")
+        .file_with_mode("src/lib.rs", 0o666, "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+",
+        )
+        .run();
+    let src_file_path = |path: &str| {
+        glob::glob(
+            paths::home()
+                .join(".cargo/registry/src/*/bar-1.0.0/")
+                .join(path)
+                .to_str()
+                .unwrap(),
+        )
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+    };
+
+    let umask = cargo::util::get_umask();
+    let metadata = fs::metadata(src_file_path("src/lib.rs")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o666 & !umask);
+    let metadata = fs::metadata(src_file_path("example.sh")).unwrap();
+    assert_eq!(metadata.mode() & 0o777, 0o777 & !umask);
+}
+
+#[cargo_test]
+fn unpack_again_when_cargo_ok_is_unrecognized() {
+    Package::new("bar", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+",
+        )
+        .run();
+
+    let src_file_path = |path: &str| {
+        glob::glob(
+            paths::home()
+                .join(".cargo/registry/src/*/bar-1.0.0/")
+                .join(path)
+                .to_str()
+                .unwrap(),
+        )
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+    };
+
+    // Change permissions to simulate the old behavior not respecting umask.
+    let lib_rs = src_file_path("src/lib.rs");
+    let cargo_ok = src_file_path(".cargo-ok");
+    let mut perms = fs::metadata(&lib_rs).unwrap().permissions();
+    assert!(!perms.readonly());
+    perms.set_readonly(true);
+    fs::set_permissions(&lib_rs, perms).unwrap();
+    let ok = fs::read_to_string(&cargo_ok).unwrap();
+    assert_eq!(&ok, r#"{"v":1}"#);
+
+    p.cargo("fetch").with_stderr("").run();
+
+    // Without changing `.cargo-ok`, a unpack won't be triggered.
+    let perms = fs::metadata(&lib_rs).unwrap().permissions();
+    assert!(perms.readonly());
+
+    // Write "ok" to simulate the old behavior and trigger the unpack again.
+    fs::write(&cargo_ok, "ok").unwrap();
+
+    p.cargo("fetch").with_stderr("").run();
+
+    // Permission has been restored and `.cargo-ok` is in the new format.
+    let perms = fs::metadata(lib_rs).unwrap().permissions();
+    assert!(!perms.readonly());
+    let ok = fs::read_to_string(&cargo_ok).unwrap();
+    assert_eq!(&ok, r#"{"v":1}"#);
+}
+
+#[cargo_test]
+fn differ_only_by_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                baz = "=0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("baz", "0.0.1+b").publish();
+    Package::new("baz", "0.0.1+c").yanked(true).publish();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1+b (registry `dummy-registry`)
+[CHECKING] baz v0.0.1+b
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+
+    Package::new("baz", "0.0.1+d").publish();
+
+    p.cargo("clean").run();
+    p.cargo("check")
+        .with_stderr_contains("[CHECKING] baz v0.0.1+b")
+        .run();
+}
+
+#[cargo_test]
+fn differ_only_by_metadata_with_lockfile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                baz = "=0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("baz", "0.0.1+a").publish();
+    Package::new("baz", "0.0.1+b").publish();
+    Package::new("baz", "0.0.1+c").publish();
+
+    p.cargo("update --package baz --precise 0.0.1+b")
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[..] baz v0.0.1+c -> v0.0.1+b
+",
+        )
+        .run();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1+b (registry `dummy-registry`)
+[CHECKING] baz v0.0.1+b
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
 }

@@ -17,10 +17,12 @@ We encourage people to discuss their design before hacking on code. This gives
 the Cargo team a chance to know your idea more. Sometimes after a discussion,
 we even find a way to solve the problem without coding! Typically, you
 [file an issue] or start a thread on the [internals forum] before submitting a
-pull request. Please read [the process] of how features and bugs are managed in
-Cargo.
+pull request.
 
-## Checkout out the source
+Please read [the process] of how features and bugs are managed in Cargo.
+**Only issues that have been explicitly marked as [accepted] will be reviewed.**
+
+## Checkout the source
 
 We use the "fork and pull" model [described here][development-models], where
 contributors push changes to their personal fork and [create pull requests] to
@@ -135,7 +137,7 @@ More information about these commands can be found at the [shortcuts documentati
 [`S-waiting-on-review`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-review
 [`S-waiting-on-author`]: https://github.com/rust-lang/cargo/labels/S-waiting-on-author
 [`@rustbot`]: https://github.com/rustbot
-[shortcuts documentation]: https://github.com/rust-lang/triagebot/wiki/Shortcuts
+[shortcuts documentation]: https://forge.rust-lang.org/triagebot/shortcuts.html
 
 ## The merging process
 
@@ -170,3 +172,4 @@ more information on how Cargo releases are made.
 [internals forum]: https://internals.rust-lang.org/c/tools-and-infrastructure/cargo
 [file an issue]: https://github.com/rust-lang/cargo/issues
 [the process]: index.md
+[accepted]: https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AS-accepted

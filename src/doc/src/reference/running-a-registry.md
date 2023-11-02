@@ -1,4 +1,4 @@
-## Running a Registry
+# Running a Registry
 
 A minimal registry can be implemented by having a git repository that contains
 an index, and a server that contains the compressed `.crate` files created by

@@ -1,0 +1,39 @@
+Assemble the local package into a distributable tarball
+
+Usage: cargo[EXE] package [OPTIONS]
+
+Options:
+  -l, --list                Print files included in a package without making one
+      --no-verify           Don't verify the contents by building them
+      --no-metadata         Ignore warnings about a lack of human-usable metadata
+      --allow-dirty         Allow dirty working directories to be packaged
+  -q, --quiet               Do not print cargo log messages
+  -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>        Coloring: auto, always, never
+      --config <KEY=VALUE>  Override a configuration value
+  -Z <FLAG>                 Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Package(s) to assemble
+      --workspace         Assemble all packages in the workspace
+      --exclude <SPEC>    Don't assemble specified packages
+
+Feature Selection:
+  -F, --features <FEATURES>  Space or comma separated list of features to activate
+      --all-features         Activate all available features
+      --no-default-features  Do not activate the `default` feature
+
+Compilation Options:
+      --target [<TRIPLE>]       Build for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help package` for more detailed information.

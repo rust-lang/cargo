@@ -1359,7 +1359,7 @@ Caused by:
   failed to parse the `edition` key
 
 Caused by:
-  supported edition values are `2015`, `2018`, or `2021`, but `chicken` is unknown
+  supported edition values are `2015`, `2018`, `2021`, or `2024`, but `chicken` is unknown
 "
             .to_string(),
         )
@@ -1391,7 +1391,7 @@ Caused by:
   failed to parse the `edition` key
 
 Caused by:
-  this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, and `2021` editions.
+  this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, `2021`, and `2024` editions.
 "
             .to_string(),
         )
@@ -1772,6 +1772,142 @@ fn exclude_dot_files_and_directories_by_default() {
          src/lib.rs\n\
          ",
     );
+}
+
+#[cargo_test]
+fn empty_readme_path() {
+    // Warn but don't fail if `readme` is empty.
+    // Issue #11522.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            readme = ""
+            license = "MIT"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] readme `` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn invalid_readme_path() {
+    // Warn but don't fail if `readme` path is invalid.
+    // Issue #11522.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            readme = "DOES-NOT-EXIST"
+            license = "MIT"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] readme `DOES-NOT-EXIST` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn readme_or_license_file_is_dir() {
+    // Test warning when `readme` or `license-file` is a directory, not a file.
+    // Issue #11522.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            readme = "./src"
+            license-file = "./src"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] license-file `./src` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[WARNING] readme `./src` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn empty_license_file_path() {
+    // Warn but don't fail if license-file is empty.
+    // Issue #11522.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            license-file = ""
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] manifest has no license or license-file.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[WARNING] license-file `` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -2400,6 +2536,91 @@ See [..]
 }
 
 #[cargo_test]
+fn workspace_noconflict_readme() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("README.md", "workspace readme")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                repository = "https://github.com/bar/bar"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                readme = "../README.md"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/example/README.md", "# example readmdBar")
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD]/[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_conflict_readme() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("README.md", "workspace readme")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                repository = "https://github.com/bar/bar"
+                authors = []
+                license = "MIT"
+                description = "bar"
+                readme = "../README.md"
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/README.md", "# workspace member: Bar")
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+warning: readme `../README.md` appears to be a path outside of the package, but there is already a file named `README.md` in the root of the package. The archived crate will contain the copy in the root of the package. Update the readme to point to the path relative to the root of the package to remove this warning.
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD]/[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn workspace_overrides_resolver() {
     let p = project()
         .file(
@@ -2760,5 +2981,154 @@ src/main.rs.bak
             ("src/main.rs", &main_rs_contents),
             ("src/main.rs.bak", &main_rs_contents),
         ],
+    );
+}
+
+#[cargo_test]
+#[cfg(windows)] // windows is the platform that is most consistently configured for case insensitive filesystems
+fn normalize_case() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("src/bar.txt", "") // should be ignored when packaging
+        .build();
+    // Workaround `project()` making a `Cargo.toml` on our behalf
+    std::fs::remove_file(p.root().join("Cargo.toml")).unwrap();
+    std::fs::write(
+        p.root().join("cargo.toml"),
+        r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#,
+    )
+    .unwrap();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
+}
+
+#[cargo_test]
+#[cfg(target_os = "linux")] // linux is generally configured to be case sensitive
+fn mixed_case() {
+    let manifest = r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+            "#;
+    let p = project()
+        .file("Cargo.toml", manifest)
+        .file("cargo.toml", manifest)
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("src/bar.txt", "") // should be ignored when packaging
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("package").with_stdout("").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
+}
+
+#[cargo_test]
+fn versionless_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+warning: manifest has no license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+   Packaging foo v0.0.0 ([CWD])
+   Verifying foo v0.0.0 ([CWD])
+   Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
+    Finished dev [unoptimized + debuginfo] target(s) in [..]s
+    Packaged 4 files, [..]B ([..]B compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.0.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
     );
 }

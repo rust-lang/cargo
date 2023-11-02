@@ -1,4 +1,37 @@
-use super::{fingerprint, Context, Job, LinkType, Unit, Work};
+//! How to execute a build script and parse its output.
+//!
+//! ## Preparing a build script run
+//!
+//! A [build script] is an optional Rust script Cargo will run before building
+//! your package. As of this writing, two kinds of special [`Unit`]s will be
+//! constructed when there is a build script in a package.
+//!
+//! * Build script compilation --- This unit is generally the same as units
+//!   that would compile other Cargo targets. It will recursively creates units
+//!   of its dependencies. One biggest difference is that the [`Unit`] of
+//!   compiling a build script is flagged as [`TargetKind::CustomBuild`].
+//! * Build script executaion --- During the construction of the [`UnitGraph`],
+//!   Cargo inserts a [`Unit`] with [`CompileMode::RunCustomBuild`]. This unit
+//!   depends on the unit of compiling the associated build script, to ensure
+//!   the executable is available before running. The [`Work`] of running the
+//!   build script is prepared in the function [`prepare`].
+//!
+//! ## Running a build script
+//!
+//! When running a build script, Cargo is aware of the progress and the result
+//! of a build script. Standard output is the chosen interprocess communication
+//! between Cargo and build script processes. A set of strings is defined for
+//! that purpose. These strings, a.k.a. instructions, are interpreted by
+//! [`BuildOutput::parse`] and stored in [`Context::build_script_outputs`].
+//! The entire execution work is constructed by [`build_work`].
+//!
+//! [build script]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html
+//! [`TargetKind::CustomBuild`]: crate::core::manifest::TargetKind::CustomBuild
+//! [`UnitGraph`]: super::unit_graph::UnitGraph
+//! [`CompileMode::RunCustomBuild`]: super::CompileMode
+//! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
+
+use super::{fingerprint, Context, Job, Unit, Work};
 use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
@@ -15,6 +48,10 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
+/// A build script instruction that tells Cargo to display a warning after the
+/// build script has finished running. Read [the doc] for more.
+///
+/// [the doc]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargo-warning
 const CARGO_WARNING: &str = "cargo:warning=";
 
 /// Contains the parsed output of a custom build script.
@@ -25,7 +62,7 @@ pub struct BuildOutput {
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
     /// Linker arguments suitable to be passed to `-C link-arg=<args>`
-    pub linker_args: Vec<(LinkType, String)>,
+    pub linker_args: Vec<(LinkArgTarget, String)>,
     /// Various `--cfg` flags to pass to the compiler.
     pub cfgs: Vec<String>,
     /// Various `--check-cfg` flags to pass to the compiler.
@@ -63,7 +100,7 @@ pub struct BuildScriptOutputs {
 
 /// Linking information for a `Unit`.
 ///
-/// See `build_map` for more details.
+/// See [`build_map`] for more details.
 #[derive(Default)]
 pub struct BuildScripts {
     /// List of build script outputs this Unit needs to include for linking. Each
@@ -96,7 +133,8 @@ pub struct BuildScripts {
     pub plugins: BTreeSet<(PackageId, Metadata)>,
 }
 
-/// Dependency information as declared by a build script.
+/// Dependency information as declared by a build script that might trigger
+/// a recompile of itself.
 #[derive(Debug)]
 pub struct BuildDeps {
     /// Absolute path to the file in the target directory that stores the
@@ -106,6 +144,47 @@ pub struct BuildDeps {
     pub rerun_if_changed: Vec<PathBuf>,
     /// Environment variables that trigger a rebuild if they change.
     pub rerun_if_env_changed: Vec<String>,
+}
+
+/// Represents one of the instructions from `cargo:rustc-link-arg-*` build
+/// script instruction family.
+///
+/// In other words, indicates targets that custom linker arguments applies to.
+///
+/// See the [build script documentation][1] for more.
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-link-argflag
+#[derive(Clone, Hash, Debug, PartialEq, Eq)]
+pub enum LinkArgTarget {
+    /// Represents `cargo:rustc-link-arg=FLAG`.
+    All,
+    /// Represents `cargo:rustc-cdylib-link-arg=FLAG`.
+    Cdylib,
+    /// Represents `cargo:rustc-link-arg-bins=FLAG`.
+    Bin,
+    /// Represents `cargo:rustc-link-arg-bin=BIN=FLAG`.
+    SingleBin(String),
+    /// Represents `cargo:rustc-link-arg-tests=FLAG`.
+    Test,
+    /// Represents `cargo:rustc-link-arg-benches=FLAG`.
+    Bench,
+    /// Represents `cargo:rustc-link-arg-examples=FLAG`.
+    Example,
+}
+
+impl LinkArgTarget {
+    /// Checks if this link type applies to a given [`Target`].
+    pub fn applies_to(&self, target: &Target) -> bool {
+        match self {
+            LinkArgTarget::All => true,
+            LinkArgTarget::Cdylib => target.is_cdylib(),
+            LinkArgTarget::Bin => target.is_bin(),
+            LinkArgTarget::SingleBin(name) => target.is_bin() && target.name() == name,
+            LinkArgTarget::Test => target.is_test(),
+            LinkArgTarget::Bench => target.is_bench(),
+            LinkArgTarget::Example => target.is_exe_example(),
+        }
+    }
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
@@ -130,6 +209,8 @@ pub fn prepare(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     }
 }
 
+/// Emits the output of a build script as a [`machine_message::BuildScript`]
+/// JSON string to standard output.
 fn emit_build_output(
     state: &JobState<'_, '_>,
     output: &BuildOutput,
@@ -155,6 +236,14 @@ fn emit_build_output(
     Ok(())
 }
 
+/// Constructs the unit of work of running a build script.
+///
+/// The construction includes:
+///
+/// * Set environment variables for the build script run.
+/// * Create the output dir (`OUT_DIR`) for the build script output.
+/// * Determine if the build script needs a re-run.
+/// * Run the build script and store its output.
 fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     assert!(unit.mode.is_run_custom_build());
     let bcx = &cx.bcx;
@@ -192,7 +281,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         .env("NUM_JOBS", &bcx.jobs().to_string())
         .env("TARGET", bcx.target_data.short_name(&unit.kind))
         .env("DEBUG", debug.to_string())
-        .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
+        .env("OPT_LEVEL", &unit.profile.opt_level)
         .env(
             "PROFILE",
             match unit.profile.root {
@@ -210,15 +299,16 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         cmd.env(&var, value);
     }
 
-    if let Some(linker) = &bcx.target_data.target_config(unit.kind).linker {
-        cmd.env(
-            "RUSTC_LINKER",
-            linker.val.clone().resolve_program(bcx.config),
-        );
+    if let Some(linker) = &cx.compilation.target_linker(unit.kind) {
+        cmd.env("RUSTC_LINKER", linker);
     }
 
     if let Some(links) = unit.pkg.manifest().links() {
         cmd.env("CARGO_MANIFEST_LINKS", links);
+    }
+
+    if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {
+        cmd.env("CARGO_TRIM_PATHS", trim_paths.to_string());
     }
 
     // Be sure to pass along all enabled features for this package, this is the
@@ -267,6 +357,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     );
     cmd.env_remove("RUSTFLAGS");
 
+    if cx.bcx.ws.config().extra_verbose() {
+        cmd.display_env_vars();
+    }
+
     // Gather the set of native dependencies that this package has along with
     // some other variables to close over.
     //
@@ -313,10 +407,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     paths::create_dir_all(&script_out_dir)?;
 
     let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
-    let extra_check_cfg = match cx.bcx.config.cli_unstable().check_cfg {
-        Some((_, _, _, output)) => output,
-        None => false,
-    };
+    let extra_check_cfg = cx.bcx.config.cli_unstable().check_cfg;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
     // Need a separate copy for the fresh closure.
     let targets_fresh = targets.clone();
@@ -357,7 +448,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                     ))
                 })?;
                 let data = &script_output.metadata;
-                for &(ref key, ref value) in data.iter() {
+                for (key, value) in data.iter() {
                     cmd.env(
                         &format!("DEP_{}_{}", super::envify(&name), super::envify(key)),
                         value,
@@ -517,6 +608,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     Ok(job)
 }
 
+/// When a build script run fails, store only warnings and nuke other outputs,
+/// as they are likely broken.
 fn insert_warnings_in_build_outputs(
     build_script_outputs: Arc<Mutex<BuildScriptOutputs>>,
     id: PackageId,
@@ -534,6 +627,7 @@ fn insert_warnings_in_build_outputs(
 }
 
 impl BuildOutput {
+    /// Like [`BuildOutput::parse`] but from a file path.
     pub fn parse_file(
         path: &Path,
         library_name: Option<String>,
@@ -557,9 +651,13 @@ impl BuildOutput {
         )
     }
 
-    // Parses the output of a script.
-    // The `pkg_descr` is used for error messages.
-    // The `library_name` is used for determining if RUSTC_BOOTSTRAP should be allowed.
+    /// Parses the output instructions of a build script.
+    ///
+    /// * `pkg_descr` --- for error messages
+    /// * `library_name` --- for determining if `RUSTC_BOOTSTRAP` should be allowed
+    /// * `extra_check_cfg` --- for unstable feature [`-Zcheck-cfg`]
+    ///
+    /// [`-Zcheck-cfg`]: https://doc.rust-lang.org/cargo/reference/unstable.html#check-cfg
     pub fn parse(
         input: &[u8],
         // Takes String instead of InternedString so passing `unit.pkg.name()` will give a compile error.
@@ -588,22 +686,24 @@ impl BuildOutput {
                 Ok(line) => line.trim(),
                 Err(..) => continue,
             };
-            let mut iter = line.splitn(2, ':');
-            if iter.next() != Some("cargo") {
-                // skip this line since it doesn't start with "cargo:"
-                continue;
-            }
-            let data = match iter.next() {
-                Some(val) => val,
-                None => continue,
+            let data = match line.split_once(':') {
+                Some(("cargo", val)) => {
+                    if val.starts_with(":") {
+                        // Line started with `cargo::`.
+                        bail!("unsupported output in {whence}: `{line}`\n\
+                            Found a `cargo::key=value` build directive which is reserved for future use.\n\
+                            Either change the directive to `cargo:key=value` syntax (note the single `:`) or upgrade your version of Rust.\n\
+                            See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+                            for more information about build script outputs.");
+                    }
+                    val
+                }
+                _ => continue,
             };
 
             // getting the `key=value` part of the line
-            let mut iter = data.splitn(2, '=');
-            let key = iter.next();
-            let value = iter.next();
-            let (key, value) = match (key, value) {
-                (Some(a), Some(b)) => (a, b.trim_end()),
+            let (key, value) = match data.split_once('=') {
+                Some((a,b)) => (a, b.trim_end()),
                 // Line started with `cargo:` but didn't match `key=value`.
                 _ => bail!("invalid output in {}: `{}`\n\
                     Expected a line with `cargo:key=value` with an `=` character, \
@@ -656,15 +756,13 @@ impl BuildOutput {
                             key, pkg_descr
                         ));
                     }
-                    linker_args.push((LinkType::Cdylib, value))
+                    linker_args.push((LinkArgTarget::Cdylib, value))
                 }
                 "rustc-link-arg-bins" => {
-                    check_and_add_target!("bin", Target::is_bin, LinkType::Bin);
+                    check_and_add_target!("bin", Target::is_bin, LinkArgTarget::Bin);
                 }
                 "rustc-link-arg-bin" => {
-                    let mut parts = value.splitn(2, '=');
-                    let bin_name = parts.next().unwrap().to_string();
-                    let arg = parts.next().ok_or_else(|| {
+                    let (bin_name, arg) = value.split_once('=').ok_or_else(|| {
                         anyhow::format_err!(
                             "invalid instruction `cargo:{}={}` from {}\n\
                                 The instruction should have the form cargo:{}=BIN=ARG",
@@ -687,26 +785,29 @@ impl BuildOutput {
                             bin_name
                         );
                     }
-                    linker_args.push((LinkType::SingleBin(bin_name), arg.to_string()));
+                    linker_args.push((
+                        LinkArgTarget::SingleBin(bin_name.to_owned()),
+                        arg.to_string(),
+                    ));
                 }
                 "rustc-link-arg-tests" => {
-                    check_and_add_target!("test", Target::is_test, LinkType::Test);
+                    check_and_add_target!("test", Target::is_test, LinkArgTarget::Test);
                 }
                 "rustc-link-arg-benches" => {
-                    check_and_add_target!("benchmark", Target::is_bench, LinkType::Bench);
+                    check_and_add_target!("benchmark", Target::is_bench, LinkArgTarget::Bench);
                 }
                 "rustc-link-arg-examples" => {
-                    check_and_add_target!("example", Target::is_example, LinkType::Example);
+                    check_and_add_target!("example", Target::is_example, LinkArgTarget::Example);
                 }
                 "rustc-link-arg" => {
-                    linker_args.push((LinkType::All, value));
+                    linker_args.push((LinkArgTarget::All, value));
                 }
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-check-cfg" => {
                     if extra_check_cfg {
                         check_cfgs.push(value.to_string());
                     } else {
-                        warnings.push(format!("cargo:{} requires -Zcheck-cfg=output flag", key));
+                        warnings.push(format!("cargo:{} requires -Zcheck-cfg flag", key));
                     }
                 }
                 "rustc-env" => {
@@ -731,7 +832,7 @@ impl BuildOutput {
                                 None => return false,
                                 Some(n) => n,
                             };
-                            // ALLOWED: the process of rustc boostrapping reads this through
+                            // ALLOWED: the process of rustc bootstrapping reads this through
                             // `std::env`. We should make the behavior consistent. Also, we
                             // don't advertise this for bypassing nightly.
                             #[allow(clippy::disallowed_methods)]
@@ -781,6 +882,9 @@ impl BuildOutput {
         })
     }
 
+    /// Parses [`cargo:rustc-flags`] instruction.
+    ///
+    /// [`cargo:rustc-flags`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-flagsflags
     pub fn parse_rustc_flags(
         value: &str,
         whence: &str,
@@ -826,17 +930,20 @@ impl BuildOutput {
         Ok((library_paths, library_links))
     }
 
+    /// Parses [`cargo:rustc-env`] instruction.
+    ///
+    /// [`cargo:rustc-env`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#rustc-env
     pub fn parse_rustc_env(value: &str, whence: &str) -> CargoResult<(String, String)> {
-        let mut iter = value.splitn(2, '=');
-        let name = iter.next();
-        let val = iter.next();
-        match (name, val) {
-            (Some(n), Some(v)) => Ok((n.to_owned(), v.to_owned())),
-            _ => bail!("Variable rustc-env has no value in {}: {}", whence, value),
+        match value.split_once('=') {
+            Some((n, v)) => Ok((n.to_owned(), v.to_owned())),
+            _ => bail!("Variable rustc-env has no value in {whence}: {value}"),
         }
     }
 }
 
+/// Prepares the Rust script for the unstable feature [metabuild].
+///
+/// [metabuild]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild
 fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> CargoResult<()> {
     let mut output = Vec::new();
     let available_deps = cx.unit_deps(unit);
@@ -866,6 +973,8 @@ fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> Carg
 }
 
 impl BuildDeps {
+    /// Creates a build script dependency information from a previous
+    /// build script output path and the content.
     pub fn new(output_file: &Path, output: Option<&BuildOutput>) -> BuildDeps {
         BuildDeps {
             build_script_output: output_file.to_path_buf(),
@@ -881,22 +990,27 @@ impl BuildDeps {
     }
 }
 
-/// Computes several maps in `Context`:
-/// - `build_scripts`: A map that tracks which build scripts each package
+/// Computes several maps in [`Context`].
+///
+/// - [`build_scripts`]: A map that tracks which build scripts each package
 ///   depends on.
-/// - `build_explicit_deps`: Dependency statements emitted by build scripts
+/// - [`build_explicit_deps`]: Dependency statements emitted by build scripts
 ///   from a previous run.
-/// - `build_script_outputs`: Pre-populates this with any overridden build
+/// - [`build_script_outputs`]: Pre-populates this with any overridden build
 ///   scripts.
 ///
-/// The important one here is `build_scripts`, which for each `(package,
-/// metadata)` stores a `BuildScripts` object which contains a list of
-/// dependencies with build scripts that the unit should consider when
-/// linking. For example this lists all dependencies' `-L` flags which need to
-/// be propagated transitively.
+/// The important one here is [`build_scripts`], which for each `(package,
+/// metadata)` stores a [`BuildScripts`] object which contains a list of
+/// dependencies with build scripts that the unit should consider when linking.
+/// For example this lists all dependencies' `-L` flags which need to be
+/// propagated transitively.
 ///
 /// The given set of units to this function is the initial set of
 /// targets/profiles which are being built.
+///
+/// [`build_scripts`]: Context::build_scripts
+/// [`build_explicit_deps`]: Context::build_explicit_deps
+/// [`build_script_outputs`]: Context::build_script_outputs
 pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
     let mut ret = HashMap::new();
     for unit in &cx.bcx.roots {
@@ -943,7 +1057,6 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
             add_to_link(&mut ret, unit.pkg.package_id(), script_meta);
         }
 
-        // Load any dependency declarations from a previous run.
         if unit.mode.is_run_custom_build() {
             parse_previous_explicit_deps(cx, unit);
         }
@@ -982,6 +1095,7 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
         }
     }
 
+    /// Load any dependency declarations from a previous build script run.
     fn parse_previous_explicit_deps(cx: &mut Context<'_, '_>, unit: &Unit) {
         let script_run_dir = cx.files().build_script_run_dir(unit);
         let output_file = script_run_dir.join("output");
@@ -1013,10 +1127,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
-            match cx.bcx.config.cli_unstable().check_cfg {
-                Some((_, _, _, output)) => output,
-                None => false,
-            },
+            cx.bcx.config.cli_unstable().check_cfg,
             cx.bcx.config.nightly_features_allowed,
             unit.pkg.targets(),
         )

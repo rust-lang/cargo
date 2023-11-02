@@ -33,10 +33,30 @@ typically created when a PR is close to being merged, or soon after it is
 merged. Use the [tracking issue template] when creating a tracking issue.
 
 Larger features should also get a new label in the issue tracker so that when
-issues are filed, they can be easily tied together.
+issues are filed, they can be easily tied together. Typically this would be
+one of the `Z-` prefixed labels for nightly features.
+
+When opening a tracking issue, be sure to also add an `S-` status label to
+indicate what needs to happen for it to move forward:
+
+* [S-needs-mentor] --- The feature isn't yet implemented, and needs a Cargo
+  team member to commit to helping guide and review the implementation.
+* [S-accepted] --- The feature isn't yet implemented, and has a Cargo team
+  member willing to help review the implementation.
+* [S-waiting-on-feedback] --- After the feature has been implemented, this
+  label indicates that it is waiting on community feedback for bugs or design
+  concerns.
+
+Tracking issues may have multiple status labels if necessary, for example if
+something is only partially implemented, it may have both
+[S-waiting-on-feedback] (for what is implemented) and [S-needs-mentor] or
+[S-accepted] to finish the rest of the work.
 
 [tracking issue]: https://github.com/rust-lang/cargo/labels/C-tracking-issue
 [tracking issue template]: https://github.com/rust-lang/cargo/issues/new?labels=C-tracking-issue&template=tracking_issue.md
+[S-needs-mentor]: https://github.com/rust-lang/cargo/labels/S-needs-mentor
+[S-accepted]: https://github.com/rust-lang/cargo/labels/S-accepted
+[S-waiting-on-feedback]: https://github.com/rust-lang/cargo/labels/S-waiting-on-feedback
 
 ## Pre-Stabilization 
 

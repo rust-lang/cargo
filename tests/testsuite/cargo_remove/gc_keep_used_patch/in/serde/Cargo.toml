@@ -1,0 +1,9 @@
+# serde/Cargo.toml
+
+[package]
+name = "serde"
+version = "1.0.0"
+
+[dependencies]
+serde_derive = { path = "../serde_derive" }
+

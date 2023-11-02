@@ -126,7 +126,7 @@ fn run_unit_tests(
         script_meta,
     } in compilation.tests.iter()
     {
-        let (exe_display, cmd) = cmd_builds(
+        let (exe_display, mut cmd) = cmd_builds(
             config,
             cwd,
             unit,
@@ -136,6 +136,11 @@ fn run_unit_tests(
             compilation,
             "unittests",
         )?;
+
+        if config.extra_verbose() {
+            cmd.display_env_vars();
+        }
+
         config
             .shell()
             .concise(|shell| shell.status("Running", &exe_display))?;
@@ -149,7 +154,7 @@ fn run_unit_tests(
                 unit: unit.clone(),
                 kind: test_kind,
             };
-            report_test_error(ws, &options.compile_opts, &unit_err, e);
+            report_test_error(ws, test_args, &options.compile_opts, &unit_err, e);
             errors.push(unit_err);
             if !options.no_fail_fast {
                 return Err(CliError::code(code));
@@ -172,7 +177,6 @@ fn run_doc_tests(
     let config = ws.config();
     let mut errors = Vec::new();
     let doctest_xcompile = config.cli_unstable().doctest_xcompile;
-    let doctest_in_workspace = config.cli_unstable().doctest_in_workspace;
 
     for doctest_info in &compilation.to_doc_test {
         let Doctest {
@@ -215,15 +219,9 @@ fn run_doc_tests(
         p.arg("--crate-name").arg(&unit.target.crate_name());
         p.arg("--test");
 
-        if doctest_in_workspace {
-            add_path_args(ws, unit, &mut p);
-            // FIXME(swatinem): remove the `unstable-options` once rustdoc stabilizes the `test-run-directory` option
-            p.arg("-Z").arg("unstable-options");
-            p.arg("--test-run-directory")
-                .arg(unit.pkg.root().to_path_buf());
-        } else {
-            p.arg(unit.target.src_path().path().unwrap());
-        }
+        add_path_args(ws, unit, &mut p);
+        p.arg("--test-run-directory")
+            .arg(unit.pkg.root().to_path_buf());
 
         if let CompileKind::Target(target) = unit.kind {
             // use `rustc_target()` to properly handle JSON target paths
@@ -267,22 +265,29 @@ fn run_doc_tests(
             p.arg("--test-args").arg("--quiet");
         }
 
+        p.args(unit.pkg.manifest().lint_rustflags());
+
         p.args(args);
 
         if *unstable_opts {
             p.arg("-Zunstable-options");
         }
 
+        if config.extra_verbose() {
+            p.display_env_vars();
+        }
+
         config
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;
+
         if let Err(e) = p.exec() {
             let code = fail_fast_code(&e);
             let unit_err = UnitTestError {
                 unit: unit.clone(),
                 kind: TestKind::Doctest,
             };
-            report_test_error(ws, &options.compile_opts, &unit_err, e);
+            report_test_error(ws, test_args, &options.compile_opts, &unit_err, e);
             errors.push(unit_err);
             if !options.no_fail_fast {
                 return Err(CliError::code(code));
@@ -414,6 +419,7 @@ fn no_fail_fast_err(
 /// Displays an error on the console about a test failure.
 fn report_test_error(
     ws: &Workspace<'_>,
+    test_args: &[&str],
     opts: &ops::CompileOptions,
     unit_err: &UnitTestError,
     test_error: anyhow::Error,
@@ -427,13 +433,23 @@ fn report_test_error(
     let mut err = format_err!("{}, to rerun pass `{}`", which, unit_err.cli_args(ws, opts));
     // Don't show "process didn't exit successfully" for simple errors.
     // libtest exits with 101 for normal errors.
-    let is_simple = test_error
+    let (is_simple, executed) = test_error
         .downcast_ref::<ProcessError>()
         .and_then(|proc_err| proc_err.code)
-        .map_or(false, |code| code == 101);
+        .map_or((false, false), |code| (code == 101, true));
+
     if !is_simple {
         err = test_error.context(err);
     }
 
     crate::display_error(&err, &mut ws.config().shell());
+
+    let harness: bool = unit_err.unit.target.harness();
+    let nocapture: bool = test_args.contains(&"--nocapture");
+
+    if !is_simple && executed && harness && !nocapture {
+        drop(ws.config().shell().note(
+            "test exited abnormally; to see the full output pass --nocapture to the harness.",
+        ));
+    }
 }

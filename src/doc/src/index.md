@@ -7,8 +7,7 @@ dependencies, compiles your packages, makes distributable packages, and uploads 
 [crates.io], the Rust community’s [*package registry*][def-package-registry]. You can contribute
 to this book on [GitHub].
 
-
-### Sections
+## Sections
 
 **[Getting Started](getting-started/index.md)**
 

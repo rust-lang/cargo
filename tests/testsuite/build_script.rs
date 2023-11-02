@@ -453,6 +453,43 @@ fn custom_build_env_var_rustc_linker() {
     p.cargo("build --target").arg(&target).run();
 }
 
+// Only run this test on linux, since it's difficult to construct
+// a case suitable for all platforms.
+// See:https://github.com/rust-lang/cargo/pull/12535#discussion_r1306618264
+#[cargo_test]
+#[cfg(target_os = "linux")]
+fn custom_build_env_var_rustc_linker_with_target_cfg() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(target_pointer_width = "32")']
+            linker = "/path/to/linker"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // no crate type set => linker never called => build succeeds if and
+    // only if build.rs succeeds, despite linker binary not existing.
+    p.cargo("build --target").arg(&target).run();
+}
+
 #[cargo_test]
 fn custom_build_env_var_rustc_linker_bad_host_target() {
     let target = rustc_host();
@@ -1434,6 +1471,7 @@ fn testing_and_such() {
 [DOCUMENTING] foo v0.5.0 ([CWD])
 [RUNNING] `rustdoc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -1755,7 +1793,7 @@ fn build_cmd_with_a_build_cmd() {
     --extern a=[..]liba[..].rlib`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]lib.rs [..]--crate-type lib \
-    --emit=[..]link[..]-C debuginfo=2 \
+    --emit=[..]link[..]-C debuginfo=2 [..]\
     -C metadata=[..] \
     --out-dir [..] \
     -L [..]target/debug/deps`
@@ -1926,7 +1964,6 @@ fn output_separate_lines_new() {
         .run();
 }
 
-#[cfg(not(windows))] // FIXME(#867)
 #[cargo_test]
 fn code_generation() {
     let p = project()
@@ -1976,7 +2013,7 @@ fn code_generation() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo`",
+[RUNNING] `target/debug/foo[EXE]`",
         )
         .with_stdout("Hello, World!")
         .run();
@@ -3742,8 +3779,8 @@ fn warnings_emitted() {
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
-warning: foo
-warning: bar
+warning: foo@0.5.0: foo
+warning: foo@0.5.0: bar
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -3780,7 +3817,7 @@ fn warnings_emitted_when_build_script_panics() {
     p.cargo("build")
         .with_status(101)
         .with_stdout("")
-        .with_stderr_contains("warning: foo\nwarning: bar")
+        .with_stderr_contains("warning: foo@0.5.0: foo\nwarning: foo@0.5.0: bar")
         .run();
 }
 
@@ -3893,8 +3930,8 @@ fn warnings_printed_on_vv() {
 [COMPILING] bar v0.1.0
 [RUNNING] `[..] rustc [..]`
 [RUNNING] `[..]`
-warning: foo
-warning: bar
+warning: bar@0.1.0: foo
+warning: bar@0.1.0: bar
 [RUNNING] `[..] rustc [..]`
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..] rustc [..]`
@@ -5108,7 +5145,7 @@ fn duplicate_script_with_extra_env() {
         p.cargo("test --workspace -Z doctest-xcompile --doc --target")
             .arg(&target)
             .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-            .with_stdout_contains("test src/lib.rs - (line 2) ... ok")
+            .with_stdout_contains("test foo/src/lib.rs - (line 2) ... ok")
             .run();
     }
 }
@@ -5134,6 +5171,35 @@ fn wrong_output() {
 [COMPILING] foo [..]
 error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:example`
 Expected a line with `cargo:key=value` with an `=` character, but none was found.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn wrong_syntax_with_two_colons() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::foo=bar");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+error: unsupported output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::foo=bar`
+Found a `cargo::key=value` build directive which is reserved for future use.
+Either change the directive to `cargo:key=value` syntax (note the single `:`) or upgrade your version of Rust.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
 for more information about build script outputs.
 ",

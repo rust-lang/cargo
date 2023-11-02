@@ -16,8 +16,10 @@ the vendor directory specified by `<path>` will contain all remote sources from
 dependencies specified. Additional manifests beyond the default one can be
 specified with the `-s` option.
 
-The `cargo vendor` command will also print out the configuration necessary
-to use the vendored sources, which you will need to add to `.cargo/config.toml`.
+The configuration necessary to use the vendored sources would be printed to
+stdout after `cargo vendor` completes the vendoring process.
+You will need to add or redirect it to your Cargo configuration file,
+which is usually `.cargo/config.toml` locally for the current package.
 
 ## OPTIONS
 
@@ -143,7 +145,12 @@ See the <a href="../reference/config.html#command-line-overrides">command-line o
 <dt class="option-term" id="option-cargo-vendor--C"><a class="option-anchor" href="#option-cargo-vendor--C"></a><code>-C</code> <em>PATH</em></dt>
 <dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
-the directories searched for discovering <code>.cargo/config.toml</code>, for example.</dd>
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-vendor--h"><a class="option-anchor" href="#option-cargo-vendor--h"></a><code>-h</code></dt>
@@ -183,6 +190,10 @@ details on environment variables that Cargo reads.
 3. Vendor the current workspace as well as another to "vendor"
 
        cargo vendor -s ../path/to/Cargo.toml
+
+4. Vendor and redirect the necessary vendor configs to a config file.
+
+       cargo vendor > path/to/my/cargo/config.toml
 
 ## SEE ALSO
 [cargo(1)](cargo.html)

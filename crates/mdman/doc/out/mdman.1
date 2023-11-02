@@ -6,7 +6,7 @@
 .SH "NAME"
 mdman \- Converts markdown to a man page
 .SH "SYNOPSIS"
-\fBmdman\fR [\fIoptions\fR] \fB\-t\fR \fItype\fR \fB\-o\fR \fIoutdir\fR \fIsources...\fR
+\fBmdman\fR [\fIoptions\fR] \fB\-t\fR \fItype\fR \fB\-o\fR \fIoutdir\fR \fIsources\[u2026]\fR
 .SH "DESCRIPTION"
 Converts a markdown file to a man page.
 .sp
@@ -29,7 +29,7 @@ and end.
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'Each option must be expressed with a \fB{{#option}}\fR block. The parameters to
-the the block are a sequence of strings indicating the option. For example,
+the block are a sequence of strings indicating the option. For example,
 \fB{{#option "`\-p` _spec_..." "`\-\-package` _spec_..."}}\fR is an option that
 has two different forms. The text within the string is processed as markdown.
 It is recommended to use formatting similar to this example.
@@ -83,7 +83,7 @@ Outputs with the \fB\&.md\fR extension.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBtxt\fR \[em] A text file, rendered for situations where a man page viewer isn't
+\h'-04'\(bu\h'+02'\fBtxt\fR \[em] A text file, rendered for situations where a man page viewer isn\[cq]t
 available. Outputs with the \fB\&.txt\fR extension.
 .RE
 .RE
@@ -107,7 +107,7 @@ matching \fB\-\-man\fR entry, then a relative link to a file named \fIname\fR\fB
 be used.
 .RE
 .sp
-\fIsources...\fR
+\fIsources\[u2026]\fR
 .RS 4
 The source input filename, may be specified multiple times.
 .RE

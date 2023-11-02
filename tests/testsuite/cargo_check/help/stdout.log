@@ -1,0 +1,56 @@
+Check a local package and all of its dependencies for errors
+
+Usage: cargo[EXE] check [OPTIONS]
+
+Options:
+      --ignore-rust-version     Ignore `rust-version` specification in packages
+      --future-incompat-report  Outputs a future incompatibility report at the end of the build
+      --message-format <FMT>    Error format
+  -q, --quiet                   Do not print cargo log messages
+  -v, --verbose...              Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>            Coloring: auto, always, never
+      --config <KEY=VALUE>      Override a configuration value
+  -Z <FLAG>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                                details
+  -h, --help                    Print help
+
+Package Selection:
+  -p, --package [<SPEC>]  Package(s) to check
+      --workspace         Check all packages in the workspace
+      --exclude <SPEC>    Exclude packages from the check
+      --all               Alias for --workspace (deprecated)
+
+Target Selection:
+      --lib               Check only this package's library
+      --bins              Check all binaries
+      --bin [<NAME>]      Check only the specified binary
+      --examples          Check all examples
+      --example [<NAME>]  Check only the specified example
+      --tests             Check all tests
+      --test [<NAME>]     Check only the specified test target
+      --benches           Check all benches
+      --bench [<NAME>]    Check only the specified bench target
+      --all-targets       Check all targets
+
+Feature Selection:
+  -F, --features <FEATURES>  Space or comma separated list of features to activate
+      --all-features         Activate all available features
+      --no-default-features  Do not activate the `default` feature
+
+Compilation Options:
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error
+  -r, --release                 Check artifacts in release mode, with optimizations
+      --profile <PROFILE-NAME>  Check artifacts with the specified profile
+      --target [<TRIPLE>]       Check for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+      --unit-graph              Output build graph in JSON (unstable)
+      --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help check` for more detailed information.

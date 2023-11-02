@@ -10,26 +10,28 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use bytesize::ByteSize;
-use curl::easy::{Easy, HttpVersion};
+use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
 use lazycell::LazyCell;
-use log::{debug, warn};
 use semver::Version;
 use serde::Serialize;
+use tracing::debug;
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::features::ForceAllTargets;
 use crate::core::resolver::{HasDevUnits, Resolve};
-use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
-use crate::core::{SourceMap, Summary, Workspace};
-use crate::ops;
-use crate::util::config::PackageCacheLock;
+use crate::core::{Summary, Workspace};
+use crate::sources::source::{MaybePackage, SourceMap};
+use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::interning::InternedString;
+use crate::util::network::http::http_handle_and_timeout;
+use crate::util::network::http::HttpTimeout;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
+use crate::util::RustVersion;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
 pub const MANIFEST_PREAMBLE: &str = "\
@@ -102,7 +104,7 @@ pub struct SerializedPackage {
     #[serde(skip_serializing_if = "Option::is_none")]
     metabuild: Option<Vec<String>>,
     default_run: Option<String>,
-    rust_version: Option<String>,
+    rust_version: Option<RustVersion>,
 }
 
 impl Package {
@@ -176,7 +178,7 @@ impl Package {
         self.targets().iter().any(|target| target.proc_macro())
     }
     /// Gets the package's minimum Rust version.
-    pub fn rust_version(&self) -> Option<&str> {
+    pub fn rust_version(&self) -> Option<&RustVersion> {
         self.manifest().rust_version()
     }
 
@@ -261,7 +263,7 @@ impl Package {
             metabuild: self.manifest().metabuild().cloned(),
             publish: self.publish().as_ref().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
-            rust_version: self.rust_version().map(|s| s.to_owned()),
+            rust_version: self.rust_version().cloned(),
         }
     }
 }
@@ -336,7 +338,7 @@ pub struct Downloads<'a, 'cfg> {
     /// Total bytes for all successfully downloaded packages.
     downloaded_bytes: u64,
     /// Size (in bytes) and package name of the largest downloaded package.
-    largest: (u64, String),
+    largest: (u64, InternedString),
     /// Time when downloading started.
     start: Instant,
     /// Indicates *all* downloads were successful.
@@ -348,7 +350,7 @@ pub struct Downloads<'a, 'cfg> {
     /// Note that timeout management is done manually here instead of in libcurl
     /// because we want to apply timeouts to an entire batch of operations, not
     /// any one particular single operation.
-    timeout: ops::HttpTimeout,
+    timeout: HttpTimeout,
     /// Last time bytes were received.
     updated_at: Cell<Instant>,
     /// This is a slow-speed check. It is reset to `now + timeout_duration`
@@ -365,7 +367,7 @@ pub struct Downloads<'a, 'cfg> {
     next_speed_check_bytes_threshold: Cell<u64>,
     /// Global filesystem lock to ensure only one Cargo is downloading at a
     /// time.
-    _lock: PackageCacheLock<'cfg>,
+    _lock: CacheLock<'cfg>,
 }
 
 struct Download<'cfg> {
@@ -378,6 +380,9 @@ struct Download<'cfg> {
 
     /// Actual downloaded data, updated throughout the lifetime of this download.
     data: RefCell<Vec<u8>>,
+
+    /// HTTP headers for debugging.
+    headers: RefCell<Vec<String>>,
 
     /// The URL that we're downloading from, cached here for error messages and
     /// reenqueuing.
@@ -438,7 +443,7 @@ impl<'cfg> PackageSet<'cfg> {
 
     pub fn enable_download<'a>(&'a self) -> CargoResult<Downloads<'a, 'cfg>> {
         assert!(!self.downloading.replace(true));
-        let timeout = ops::HttpTimeout::new(self.config)?;
+        let timeout = HttpTimeout::new(self.config)?;
         Ok(Downloads {
             start: Instant::now(),
             set: self,
@@ -454,13 +459,15 @@ impl<'cfg> PackageSet<'cfg> {
             ))),
             downloads_finished: 0,
             downloaded_bytes: 0,
-            largest: (0, String::new()),
+            largest: (0, InternedString::new("")),
             success: false,
             updated_at: Cell::new(Instant::now()),
             timeout,
             next_speed_check: Cell::new(Instant::now()),
             next_speed_check_bytes_threshold: Cell::new(0),
-            _lock: self.config.acquire_package_cache_lock()?,
+            _lock: self
+                .config
+                .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?,
         })
     }
 
@@ -473,6 +480,9 @@ impl<'cfg> PackageSet<'cfg> {
 
     pub fn get_many(&self, ids: impl IntoIterator<Item = PackageId>) -> CargoResult<Vec<&Package>> {
         let mut pkgs = Vec::new();
+        let _lock = self
+            .config
+            .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
         let mut downloads = self.enable_download()?;
         for id in ids {
             pkgs.extend(downloads.start(id)?);
@@ -707,10 +717,10 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // happen during `wait_for_download`
         let token = self.next;
         self.next += 1;
-        debug!("downloading {} as {}", id, token);
+        debug!(target: "network", "downloading {} as {}", id, token);
         assert!(self.pending_ids.insert(id));
 
-        let (mut handle, _timeout) = ops::http_handle_and_timeout(self.set.config)?;
+        let (mut handle, _timeout) = http_handle_and_timeout(self.set.config)?;
         handle.get(true)?;
         handle.url(&url)?;
         handle.follow_location(true)?; // follow redirects
@@ -722,35 +732,11 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             handle.http_headers(headers)?;
         }
 
-        // Enable HTTP/2 to be used as it'll allow true multiplexing which makes
-        // downloads much faster.
-        //
-        // Currently Cargo requests the `http2` feature of the `curl` crate
-        // which means it should always be built in. On OSX, however, we ship
-        // cargo still linked against the system libcurl. Building curl with
-        // ALPN support for HTTP/2 requires newer versions of OSX (the
-        // SecureTransport API) than we want to ship Cargo for. By linking Cargo
-        // against the system libcurl then older curl installations won't use
-        // HTTP/2 but newer ones will. All that to basically say we ignore
-        // errors here on OSX, but consider this a fatal error to not activate
-        // HTTP/2 on all other platforms.
-        if self.set.multiplexing {
-            crate::try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
-        } else {
-            handle.http_version(HttpVersion::V11)?;
-        }
-
-        // This is an option to `libcurl` which indicates that if there's a
-        // bunch of parallel requests to the same host they all wait until the
-        // pipelining status of the host is known. This means that we won't
-        // initiate dozens of connections to crates.io, but rather only one.
-        // Once the main one is opened we realized that pipelining is possible
-        // and multiplexing is possible with static.crates.io. All in all this
-        // reduces the number of connections down to a more manageable state.
-        crate::try_old_curl!(handle.pipewait(true), "pipewait");
+        // Enable HTTP/2 if possible.
+        crate::try_old_curl_http2_pipewait!(self.set.multiplexing, handle);
 
         handle.write_function(move |buf| {
-            debug!("{} - {} bytes of data", token, buf.len());
+            debug!(target: "network", "{} - {} bytes of data", token, buf.len());
             tls::with(|downloads| {
                 if let Some(downloads) = downloads {
                     downloads.pending[&token]
@@ -761,6 +747,17 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 }
             });
             Ok(buf.len())
+        })?;
+        handle.header_function(move |data| {
+            tls::with(|downloads| {
+                if let Some(downloads) = downloads {
+                    // Headers contain trailing \r\n, trim them to make it easier
+                    // to work with.
+                    let h = String::from_utf8_lossy(data).trim().to_string();
+                    downloads.pending[&token].0.headers.borrow_mut().push(h);
+                }
+            });
+            true
         })?;
 
         handle.progress(true)?;
@@ -787,6 +784,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let dl = Download {
             token,
             data: RefCell::new(Vec::new()),
+            headers: RefCell::new(Vec::new()),
             id,
             url,
             descriptor,
@@ -819,13 +817,14 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let (dl, data) = loop {
             assert_eq!(self.pending.len(), self.pending_ids.len());
             let (token, result) = self.wait_for_curl()?;
-            debug!("{} finished with {:?}", token, result);
+            debug!(target: "network", "{} finished with {:?}", token, result);
 
             let (mut dl, handle) = self
                 .pending
                 .remove(&token)
                 .expect("got a token for a non-in-progress transfer");
             let data = mem::take(&mut *dl.data.borrow_mut());
+            let headers = mem::take(&mut *dl.headers.borrow_mut());
             let mut handle = self.set.multi.remove(handle)?;
             self.pending_ids.remove(&dl.id);
 
@@ -862,12 +861,12 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
 
                     let code = handle.response_code()?;
                     if code != 200 && code != 0 {
-                        let url = handle.effective_url()?.unwrap_or(url);
-                        return Err(HttpNotSuccessful {
-                            code,
-                            url: url.to_string(),
-                            body: data,
-                        }
+                        return Err(HttpNotSuccessful::new_from_handle(
+                            &mut handle,
+                            &url,
+                            data,
+                            headers,
+                        )
                         .into());
                     }
                     Ok(data)
@@ -879,7 +878,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                     return Err(e.context(format!("failed to download from `{}`", dl.url)))
                 }
                 RetryResult::Retry(sleep) => {
-                    debug!("download retry {} for {sleep}ms", dl.url);
+                    debug!(target: "network", "download retry {} for {sleep}ms", dl.url);
                     self.sleeping.push(sleep, (dl, handle));
                 }
             }
@@ -897,7 +896,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         self.downloads_finished += 1;
         self.downloaded_bytes += dl.total.get();
         if dl.total.get() > self.largest.0 {
-            self.largest = (dl.total.get(), dl.id.name().to_string());
+            self.largest = (dl.total.get(), dl.id.name());
         }
 
         // We're about to synchronously extract the crate below. While we're
@@ -975,7 +974,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                     .perform()
                     .with_context(|| "failed to perform http requests")
             })?;
-            debug!("handles remaining: {}", n);
+            debug!(target: "network", "handles remaining: {}", n);
             let results = &mut self.results;
             let pending = &self.pending;
             self.set.multi.messages(|msg| {
@@ -984,7 +983,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 if let Some(result) = msg.result_for(handle) {
                     results.push((token, result));
                 } else {
-                    debug!("message without a result (?)");
+                    debug!(target: "network", "message without a result (?)");
                 }
             });
 
@@ -994,7 +993,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             assert_ne!(self.remaining(), 0);
             if self.pending.is_empty() {
                 let delay = self.sleeping.time_to_next().unwrap();
-                debug!("sleeping main thread for {delay:?}");
+                debug!(target: "network", "sleeping main thread for {delay:?}");
                 std::thread::sleep(delay);
             } else {
                 let min_timeout = Duration::new(1, 0);

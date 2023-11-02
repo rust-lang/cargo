@@ -37,7 +37,7 @@ Create a package with a library target (\fBsrc/lib.rs\fR).
 \fB\-\-edition\fR \fIedition\fR
 .RS 4
 Specify the Rust edition to use. Default is 2021.
-Possible values: 2015, 2018, 2021
+Possible values: 2015, 2018, 2021, 2024
 .RE
 .sp
 \fB\-\-name\fR \fIname\fR
@@ -125,7 +125,13 @@ See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/
 .RS 4
 Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
-the directories searched for discovering \fB\&.cargo/config.toml\fR, for example.
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 

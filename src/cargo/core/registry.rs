@@ -2,13 +2,16 @@ use std::collections::{HashMap, HashSet};
 use std::task::{ready, Poll};
 
 use crate::core::PackageSet;
-use crate::core::{Dependency, PackageId, QueryKind, Source, SourceId, SourceMap, Summary};
+use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::sources::config::SourceConfigMap;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
+use crate::sources::source::SourceMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, Config};
 use anyhow::{bail, Context as _};
-use log::{debug, trace};
+use tracing::{debug, trace};
 use url::Url;
 
 /// Source of information about a group of packages.
@@ -113,7 +116,7 @@ enum Kind {
 /// directive that we found in a lockfile, if present.
 pub struct LockedPatchDependency {
     /// The original `Dependency` directive, except "locked" so it's version
-    /// requirement is `=foo` and its `SourceId` has a "precise" listed.
+    /// requirement is Locked to `foo` and its `SourceId` has a "precise" listed.
     pub dependency: Dependency,
     /// The `PackageId` that was previously found in a lock file which
     /// `dependency` matches.
@@ -158,7 +161,7 @@ impl<'cfg> PackageRegistry<'cfg> {
 
             // If the previous source was not a precise source, then we can be
             // sure that it's already been updated if we've already loaded it.
-            Some((previous, _)) if previous.precise().is_none() => {
+            Some((previous, _)) if !previous.has_precise() => {
                 debug!("load/precise  {}", namespace);
                 return Ok(());
             }
@@ -167,7 +170,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             // then we're done, otherwise we need to need to move forward
             // updating this source.
             Some((previous, _)) => {
-                if previous.precise() == namespace.precise() {
+                if previous.has_same_precise_as(namespace) {
                     debug!("load/match    {}", namespace);
                     return Ok(());
                 }
@@ -396,7 +399,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         // Note that this is somewhat subtle where the list of `ids` for a
         // canonical URL is extend with possibly two ids per summary. This is done
         // to handle the transition from the v2->v3 lock file format where in
-        // v2 DefeaultBranch was either DefaultBranch or Branch("master") for
+        // v2 DefaultBranch was either DefaultBranch or Branch("master") for
         // git dependencies. In this case if `summary.package_id()` is
         // Branch("master") then alt_package_id will be DefaultBranch. This
         // signifies that there's a patch available for either of those
@@ -468,9 +471,9 @@ impl<'cfg> PackageRegistry<'cfg> {
         //
         // If we have a precise version, then we'll update lazily during the
         // querying phase. Note that precise in this case is only
-        // `Some("locked")` as other `Some` values indicate a `cargo update
+        // `"locked"` as other values indicate a `cargo update
         // --precise` request
-        if source_id.precise() != Some("locked") {
+        if !source_id.has_locked_precise() {
             self.sources.get_mut(source_id).unwrap().invalidate_cache();
         } else {
             debug!("skipping update due to locked registry");
@@ -876,7 +879,7 @@ fn summary_for_patch(
         // Since the locked patch did not match anything, try the unlocked one.
         let orig_matches =
             ready!(source.query_vec(orig_patch, QueryKind::Exact)).unwrap_or_else(|e| {
-                log::warn!(
+                tracing::warn!(
                     "could not determine unlocked summaries for dep {:?}: {:?}",
                     orig_patch,
                     e
@@ -895,7 +898,7 @@ fn summary_for_patch(
 
     let name_summaries =
         ready!(source.query_vec(&name_only_dep, QueryKind::Exact)).unwrap_or_else(|e| {
-            log::warn!(
+            tracing::warn!(
                 "failed to do name-only summary query for {:?}: {:?}",
                 name_only_dep,
                 e

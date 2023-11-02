@@ -1,0 +1,26 @@
+Update dependencies as recorded in the local lock file
+
+Usage: cargo[EXE] update [OPTIONS] [SPEC]...
+
+Options:
+  -n, --dry-run             Don't actually write the lockfile
+      --recursive           Force updating all dependencies of [SPEC]... as well
+      --precise <PRECISE>   Update [SPEC] to exactly PRECISE
+  -q, --quiet               Do not print cargo log messages
+  -v, --verbose...          Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>        Coloring: auto, always, never
+      --config <KEY=VALUE>  Override a configuration value
+  -Z <FLAG>                 Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                Print help
+
+Package Selection:
+  -w, --workspace  Only update the workspace packages
+  [SPEC]...    Package to update
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help update` for more detailed information.

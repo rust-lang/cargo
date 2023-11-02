@@ -1,5 +1,8 @@
 //! SSH host key validation support.
 //!
+//! The only public item in this module is [`certificate_check`],
+//! which provides a callback to [`git2::RemoteCallbacks::certificate_check`].
+//!
 //! A primary goal with this implementation is to provide user-friendly error
 //! messages, guiding them to understand the issue and how to resolve it.
 //!
@@ -138,7 +141,7 @@ pub fn certificate_check(
     let Some(host_key) = cert.as_hostkey() else {
         // Return passthrough for TLS X509 certificates to use whatever validation
         // was done in git2.
-        return Ok(CertificateCheckStatus::CertificatePassthrough)
+        return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
     // If a nonstandard port is in use, check for that first.
     // The fallback to check without a port is handled in the HostKeyNotFound handler.
@@ -339,7 +342,7 @@ fn check_ssh_known_hosts(
             };
             match parse_known_hosts_line(&line_value.val, location) {
                 Some(known_host) => known_hosts.push(known_host),
-                None => log::warn!(
+                None => tracing::warn!(
                     "failed to parse known host {} from {}",
                     line_value.val,
                     line_value.definition
@@ -408,7 +411,7 @@ fn check_ssh_known_hosts_loaded(
     // fingerprints (see FingerprintHash ssh config option). Here we only
     // support SHA256.
     let mut remote_fingerprint = cargo_util::Sha256::new();
-    remote_fingerprint.update(remote_host_key.clone());
+    remote_fingerprint.update(remote_host_key);
     let remote_fingerprint = STANDARD_NO_PAD.encode(remote_fingerprint.finish());
     let remote_host_key_encoded = STANDARD.encode(remote_host_key);
 
@@ -608,10 +611,18 @@ impl KnownHost {
 }
 
 fn hashed_hostname_matches(host: &str, hashed: &str) -> bool {
-    let Some((b64_salt, b64_host)) = hashed.split_once('|') else { return false; };
-    let Ok(salt) = STANDARD.decode(b64_salt) else { return false; };
-    let Ok(hashed_host) = STANDARD.decode(b64_host) else { return false; };
-    let Ok(mut mac) = hmac::Hmac::<sha1::Sha1>::new_from_slice(&salt) else { return false; };
+    let Some((b64_salt, b64_host)) = hashed.split_once('|') else {
+        return false;
+    };
+    let Ok(salt) = STANDARD.decode(b64_salt) else {
+        return false;
+    };
+    let Ok(hashed_host) = STANDARD.decode(b64_host) else {
+        return false;
+    };
+    let Ok(mut mac) = hmac::Hmac::<sha1::Sha1>::new_from_slice(&salt) else {
+        return false;
+    };
     mac.update(host.as_bytes());
     let result = mac.finalize().into_bytes();
     hashed_host == &result[..]

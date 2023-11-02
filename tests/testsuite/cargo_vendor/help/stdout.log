@@ -1,0 +1,27 @@
+Vendor all dependencies for a project locally
+
+Usage: cargo[EXE] vendor [OPTIONS] [path]
+
+Arguments:
+  [path]  Where to vendor crates (`vendor` by default)
+
+Options:
+      --no-delete              Don't delete older crates in the vendor directory
+  -s, --sync <TOML>            Additional `Cargo.toml` to sync and vendor
+      --respect-source-config  Respect `[source]` config in `.cargo/config`
+      --versioned-dirs         Always include version in subdir name
+  -q, --quiet                  Do not print cargo log messages
+  -v, --verbose...             Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>           Coloring: auto, always, never
+      --config <KEY=VALUE>     Override a configuration value
+  -Z <FLAG>                    Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                               details
+  -h, --help                   Print help
+
+Manifest Options:
+      --manifest-path <PATH>  Path to Cargo.toml
+      --frozen                Require Cargo.lock and cache are up to date
+      --locked                Require Cargo.lock is up to date
+      --offline               Run without accessing the network
+
+Run `cargo help vendor` for more detailed information.

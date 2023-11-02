@@ -1,0 +1,56 @@
+Install a Rust binary. Default location is $HOME/.cargo/bin
+
+Usage: cargo[EXE] install [OPTIONS] [CRATE[@<VER>]]...
+
+Arguments:
+  [CRATE[@<VER>]]...  Select the package from the given source
+
+Options:
+      --version <VERSION>     Specify a version to install
+      --index <INDEX>         Registry index to install from
+      --registry <REGISTRY>   Registry to use
+      --git <URL>             Git URL to install the specified crate from
+      --branch <BRANCH>       Branch to use when installing from git
+      --tag <TAG>             Tag to use when installing from git
+      --rev <SHA>             Specific commit to use when installing from git
+      --path <PATH>           Filesystem path to local crate to install
+      --root <DIR>            Directory to install packages into
+  -f, --force                 Force overwriting existing crates or binaries
+      --no-track              Do not save tracking information
+      --list                  list all installed packages and their versions
+      --ignore-rust-version   Ignore `rust-version` specification in packages
+      --message-format <FMT>  Error format
+  -q, --quiet                 Do not print cargo log messages
+      --debug                 Build in debug mode (with the 'dev' profile) instead of release mode
+  -v, --verbose...            Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>          Coloring: auto, always, never
+      --config <KEY=VALUE>    Override a configuration value
+  -Z <FLAG>                   Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+                              details
+  -h, --help                  Print help
+
+Target Selection:
+      --bin [<NAME>]      Install only the specified binary
+      --bins              Install all binaries
+      --example [<NAME>]  Install only the specified example
+      --examples          Install all examples
+
+Feature Selection:
+  -F, --features <FEATURES>  Space or comma separated list of features to activate
+      --all-features         Activate all available features
+      --no-default-features  Do not activate the `default` feature
+
+Compilation Options:
+  -j, --jobs <N>                Number of parallel jobs, defaults to # of CPUs.
+      --keep-going              Do not abort the build as soon as there is an error
+      --profile <PROFILE-NAME>  Install artifacts with the specified profile
+      --target [<TRIPLE>]       Build for the target triple
+      --target-dir <DIRECTORY>  Directory for all generated artifacts
+      --timings[=<FMTS>]        Timing output formats (unstable) (comma separated): html, json
+
+Manifest Options:
+      --frozen   Require Cargo.lock and cache are up to date
+      --locked   Require Cargo.lock is up to date
+      --offline  Run without accessing the network
+
+Run `cargo help install` for more detailed information.

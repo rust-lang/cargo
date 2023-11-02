@@ -2,6 +2,8 @@
 #![allow(clippy::all)]
 #![warn(clippy::disallowed_methods)]
 
+use cargo::util::network::http::http_handle;
+use cargo::util::network::http::needs_custom_http_transport;
 use cargo::util::toml::StringOrVec;
 use cargo::util::CliError;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
@@ -18,10 +20,7 @@ mod commands;
 use crate::command_prelude::*;
 
 fn main() {
-    #[cfg(feature = "pretty-env-logger")]
-    pretty_env_logger::init_custom_env("CARGO_LOG");
-    #[cfg(not(feature = "pretty-env-logger"))]
-    env_logger::init_from_env("CARGO_LOG");
+    setup_logger();
 
     let mut config = cli::LazyConfig::new();
 
@@ -36,6 +35,18 @@ fn main() {
         Err(e) => cargo::exit_with_error(e, &mut config.get_mut().shell()),
         Ok(()) => {}
     }
+}
+
+fn setup_logger() {
+    let env = tracing_subscriber::EnvFilter::from_env("CARGO_LOG");
+
+    tracing_subscriber::fmt()
+        .with_timer(tracing_subscriber::fmt::time::Uptime::default())
+        .with_ansi(std::io::IsTerminal::is_terminal(&std::io::stderr()))
+        .with_writer(std::io::stderr)
+        .with_env_filter(env)
+        .init();
+    tracing::trace!(start = humantime::format_rfc3339(std::time::SystemTime::now()).to_string());
 }
 
 /// Table for defining the aliases which come builtin in `Cargo`.
@@ -95,17 +106,18 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
         };
         for entry in entries.filter_map(|e| e.ok()) {
             let path = entry.path();
-            let filename = match path.file_name().and_then(|s| s.to_str()) {
-                Some(filename) => filename,
-                _ => continue,
-            };
-            if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
+            let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
                 continue;
-            }
+            };
+            let Some(name) = filename
+                .strip_prefix(prefix)
+                .and_then(|s| s.strip_suffix(suffix))
+            else {
+                continue;
+            };
             if is_executable(entry.path()) {
-                let end = filename.len() - suffix.len();
                 commands.insert(
-                    filename[prefix.len()..end].to_string(),
+                    name.to_string(),
                     CommandInfo::External { path: path.clone() },
                 );
             }
@@ -180,10 +192,9 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
                 let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
 
                 anyhow::format_err!(
-                    "no such command: `{}`{}\n\n\t\
-                    View all installed commands with `cargo --list`",
-                    cmd,
-                    did_you_mean
+                    "no such command: `{cmd}`{did_you_mean}\n\n\t\
+                    View all installed commands with `cargo --list`\n\t\
+                    Find a package to install `{cmd}` with `cargo search cargo-{cmd}`",
                 )
             };
 
@@ -293,16 +304,12 @@ fn init_git(config: &Config) {
 /// configured to use libcurl instead of the built-in networking support so
 /// that those configuration settings can be used.
 fn init_git_transports(config: &Config) {
-    // Only use a custom transport if any HTTP options are specified,
-    // such as proxies or custom certificate authorities. The custom
-    // transport, however, is not as well battle-tested.
-
-    match cargo::ops::needs_custom_http_transport(config) {
+    match needs_custom_http_transport(config) {
         Ok(true) => {}
         _ => return,
     }
 
-    let handle = match cargo::ops::http_handle(config) {
+    let handle = match http_handle(config) {
         Ok(handle) => handle,
         Err(..) => return,
     };

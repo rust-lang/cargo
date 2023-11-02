@@ -172,9 +172,6 @@ Caused by:
   could not parse TOML configuration in `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 1, column 2
     |
   1 | 4
@@ -199,8 +196,11 @@ fn bad_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
+  TOML parse error at line 1, column 1
+    |
+  1 | [[package]]
+    | ^^^^^^^^^^^
   missing field `name`
-  in `package`
 ",
         )
         .run();
@@ -303,8 +303,11 @@ fn bad_source_in_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
+  TOML parse error at line 12, column 26
+     |
+  12 |                 source = \"You shall not parse\"
+     |                          ^^^^^^^^^^^^^^^^^^^^^
   invalid source `You shall not parse`
-  in `package.source`
 ",
         )
         .run();
@@ -370,7 +373,7 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  URLs need to specify the path to the repository
+  URL \"git://host.xz\" does not specify a path to a repository
 "
     } else {
         "\
@@ -447,9 +450,6 @@ fn malformed_override() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 8, column 27
@@ -780,8 +780,8 @@ fn empty_dependencies() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-warning: dependency (bar) specified without providing a local path, Git repository, or version \
-to use. This will be considered an error in future versions
+warning: dependency (bar) specified without providing a local path, Git repository, version, \
+or workspace dependency to use. This will be considered an error in future versions
 ",
         )
         .run();
@@ -802,9 +802,6 @@ error: could not load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]`
-
-Caused by:
-  could not parse input as TOML
 
 Caused by:
   TOML parse error at line 1, column 7
@@ -1288,8 +1285,11 @@ fn bad_dependency() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 8, column 23
+    |
+  8 |                 bar = 3
+    |                       ^
   invalid type: integer `3`, expected a version string like [..]
-  in `dependencies.bar`
 ",
         )
         .run();
@@ -1317,11 +1317,49 @@ fn bad_debuginfo() {
         .with_status(101)
         .with_stderr(
             "\
+error: failed to parse manifest [..]
+
+Caused by:
+  TOML parse error at line 8, column 25
+    |
+  8 |                 debug = 'a'
+    |                         ^^^
+  invalid value: string \"a\", expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_debuginfo2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+
+                [profile.dev]
+                debug = 3.6
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  expected a boolean or an integer
-  in `profile.dev.debug`
+  TOML parse error at line 8, column 25
+    |
+  8 |                 debug = 3.6
+    |                         ^^^
+  invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
 ",
         )
         .run();
@@ -1350,8 +1388,11 @@ fn bad_opt_level() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  expected a boolean or a string
-  in `package.build`
+  TOML parse error at line 6, column 25
+    |
+  6 |                 build = 3
+    |                         ^
+  invalid type: integer `3`, expected a boolean or string
 ",
         )
         .run();
@@ -1376,6 +1417,117 @@ fn warn_semver_metadata() {
         .build();
     p.cargo("check")
         .with_stderr_contains("[WARNING] version requirement `1.0.0+1234` for dependency `bar`[..]")
+        .run();
+}
+
+#[cargo_test]
+fn bad_http_ssl_version() {
+    // Invalid type in SslVersionConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [http]
+            ssl-version = ["tlsv1.2", "tlsv1.3"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `http.ssl-version`
+
+Caused by:
+  invalid type: sequence, expected a string or map
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_http_ssl_version_range() {
+    // Invalid type in SslVersionConfigRange.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [http]
+            ssl-version.min = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `http.ssl-version`
+
+Caused by:
+  error in [..]/config.toml: `http.ssl-version.min` expected a string, but found a boolean
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_build_jobs() {
+    // Invalid type in JobsConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            jobs = { default = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `build.jobs`
+
+Caused by:
+  invalid type: map, expected an integer or string
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_build_target() {
+    // Invalid type in BuildTargetConfig.
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target.'cfg(unix)' = "x86_64"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/config.toml: could not load config key `build.target`
+
+Caused by:
+  error in [..]/config.toml: could not load config key `build.target`
+
+Caused by:
+  invalid type: map, expected a string or array
+",
+        )
         .run();
 }
 
@@ -1509,6 +1661,40 @@ note: Sources are not allowed to be defined multiple times.
     but that source is already defined by `[..]`
 note: Sources are not allowed to be defined multiple times.
 ",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_trim_paths() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [profile.dev]
+                trim-paths = "split-debuginfo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["trim-paths"])
+        .with_status(101)
+        .with_stderr(
+            r#"error: failed to parse manifest at `[..]`
+
+Caused by:
+  TOML parse error at line 7, column 30
+    |
+  7 |                 trim-paths = "split-debuginfo"
+    |                              ^^^^^^^^^^^^^^^^^
+  expected a boolean, "none", "diagnostics", "macro", "object", "all", or an array with these options
+"#,
         )
         .run();
 }

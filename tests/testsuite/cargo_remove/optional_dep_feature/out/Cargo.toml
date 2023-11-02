@@ -20,4 +20,4 @@ clippy = "0.4"
 regex = "0.1.1"
 
 [features]
-std = ["semver/std"]
+std = [ "semver/std"]

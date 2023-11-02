@@ -10,7 +10,7 @@ This writes an HTML report in `target/cargo-timings/cargo-timing.html`. This
 also writes a copy of the report to the same directory with a timestamp in the
 filename, if you want to look at older runs.
 
-#### Reading the graphs
+## Reading the graphs
 
 There are two tables and two graphs in the output. 
 

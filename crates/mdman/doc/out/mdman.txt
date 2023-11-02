@@ -4,7 +4,7 @@ NAME
        mdman - Converts markdown to a man page
 
 SYNOPSIS
-       mdman [options] -t type -o outdir sources...
+       mdman [options] -t type -o outdir sources…
 
 DESCRIPTION
        Converts a markdown file to a man page.
@@ -25,7 +25,7 @@ DESCRIPTION
           the options start and end.
 
        o  Each option must be expressed with a {{#option}} block. The
-          parameters to the the block are a sequence of strings indicating the
+          parameters to the block are a sequence of strings indicating the
           option. For example, {{#option "`-p` _spec_..." "`--package`
           _spec_..."}} is an option that has two different forms. The text
           within the string is processed as markdown. It is recommended to use
@@ -65,7 +65,7 @@ OPTIONS
               finished. Outputs with the .md extension.
 
            o  txt — A text file, rendered for situations where a man page
-              viewer isn't available. Outputs with the .txt extension.
+              viewer isn’t available. Outputs with the .txt extension.
 
        -o outdir
            Specifies the directory where to save the output.
@@ -81,7 +81,7 @@ OPTIONS
            does not have a matching --man entry, then a relative link to a file
            named name.md will be used.
 
-       sources...
+       sources…
            The source input filename, may be specified multiple times.
 
 EXAMPLES

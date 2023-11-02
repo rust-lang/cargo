@@ -1,7 +1,8 @@
 # cargo-package(1)
-{{*set actionverb="Package"}}
-{{*set noall=true}}
-{{*set multitarget=true}}
+{{~*set command="package"}}
+{{~*set actionverb="Package"}}
+{{~*set noall=true}}
+{{~*set multitarget=true}}
 
 ## NAME
 

@@ -15,6 +15,7 @@ fn rustdoc_simple() {
         [..] \
         -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -35,6 +36,7 @@ fn rustdoc_args() {
         -C metadata=[..] \
         -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -88,6 +90,7 @@ fn rustdoc_foo_with_bar_dependency() {
         -L dependency=[CWD]/target/debug/deps \
         --extern [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -127,6 +130,7 @@ fn rustdoc_only_bar_dependency() {
         -C metadata=[..] \
         -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/bar/index.html
 ",
         )
         .run();
@@ -150,6 +154,7 @@ fn rustdoc_same_name_documents_lib() {
         -C metadata=[..] \
         -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -225,7 +230,8 @@ fn rustdoc_target() {
     [..] \
     -L dependency=[CWD]/target/{target}/debug/deps \
     -L dependency=[CWD]/target/debug/deps[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/[..]/doc/foo/index.html",
             target = cross_compile::alternate()
         ))
         .run();

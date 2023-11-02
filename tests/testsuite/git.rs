@@ -548,90 +548,6 @@ Caused by:
 }
 
 #[cargo_test]
-fn two_revs_same_deps() {
-    let bar = git::new("meta-dep", |project| {
-        project
-            .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
-            .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
-    });
-
-    let repo = git2::Repository::open(&bar.root()).unwrap();
-    let rev1 = repo.revparse_single("HEAD").unwrap().id();
-
-    // Commit the changes and make sure we trigger a recompile
-    bar.change_file("src/lib.rs", "pub fn bar() -> i32 { 2 }");
-    git::add(&repo);
-    let rev2 = git::commit(&repo);
-
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.0.0"
-                    authors = []
-
-                    [dependencies.bar]
-                    git = '{}'
-                    rev = "{}"
-
-                    [dependencies.baz]
-                    path = "../baz"
-                "#,
-                bar.url(),
-                rev1
-            ),
-        )
-        .file(
-            "src/main.rs",
-            r#"
-                extern crate bar;
-                extern crate baz;
-
-                fn main() {
-                    assert_eq!(bar::bar(), 1);
-                    assert_eq!(baz::baz(), 2);
-                }
-            "#,
-        )
-        .build();
-
-    let _baz = project()
-        .at("baz")
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "baz"
-                    version = "0.0.0"
-                    authors = []
-
-                    [dependencies.bar]
-                    git = '{}'
-                    rev = "{}"
-                "#,
-                bar.url(),
-                rev2
-            ),
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                extern crate bar;
-                pub fn baz() -> i32 { bar::bar() }
-            "#,
-        )
-        .build();
-
-    foo.cargo("build -v").run();
-    assert!(foo.bin("foo").is_file());
-    foo.process(&foo.bin("foo")).run();
-}
-
-#[cargo_test]
 fn recompilation() {
     let git_project = git::new("bar", |project| {
         project
@@ -826,11 +742,11 @@ fn update_with_shared_deps() {
 
     // By default, not transitive updates
     println!("dep1 update");
-    p.cargo("update -p dep1").with_stdout("").run();
+    p.cargo("update dep1").with_stdout("").run();
 
     // Don't do anything bad on a weird --precise argument
     println!("bar bad precise update");
-    p.cargo("update -p bar --precise 0.1.2")
+    p.cargo("update bar --precise 0.1.2")
         .with_status(101)
         .with_stderr(
             "\
@@ -848,14 +764,14 @@ Caused by:
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
     println!("bar precise update");
-    p.cargo("update -p bar --precise")
+    p.cargo("update bar --precise")
         .arg(&old_head.to_string())
         .with_stdout("")
         .run();
 
-    // Updating aggressively should, however, update the repo.
-    println!("dep1 aggressive update");
-    p.cargo("update -p dep1 --aggressive")
+    // Updating recursively should, however, update the repo.
+    println!("dep1 recursive update");
+    p.cargo("update dep1 --recursive")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
@@ -879,7 +795,7 @@ Caused by:
         .run();
 
     // We should be able to update transitive deps
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`",
             git_project.url()
@@ -1267,7 +1183,7 @@ fn two_deps_only_update_one() {
     let oid = git::commit(&repo);
     println!("dep1 head sha: {}", oid_to_short_sha(oid));
 
-    p.cargo("update -p dep1")
+    p.cargo("update dep1")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
@@ -1965,14 +1881,14 @@ fn update_ambiguous() {
         .build();
 
     p.cargo("generate-lockfile").run();
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_status(101)
         .with_stderr(
             "\
 [ERROR] There are multiple `bar` packages in your project, and the specification `bar` \
 is ambiguous.
-Please re-run this command with `-p <spec>` where `<spec>` is one of the \
-following:
+Please re-run this command with one of the \
+following specifications:
   bar@0.[..].0
   bar@0.[..].0
 ",
@@ -2012,7 +1928,7 @@ fn update_one_dep_in_repo_with_many_deps() {
         .build();
 
     p.cargo("generate-lockfile").run();
-    p.cargo("update -p bar")
+    p.cargo("update bar")
         .with_stderr(&format!("[UPDATING] git repository `{}`", bar.url()))
         .run();
 }
@@ -2175,7 +2091,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
     git::add(&repo);
     git::commit(&repo);
 
-    p.cargo("update -p dep").run();
+    p.cargo("update dep").run();
     let lockfile = p.read_lockfile();
     assert!(
         !lockfile.contains(&rev1.to_string()),
@@ -2662,9 +2578,6 @@ Caused by:
   failed to parse manifest at `[..]`
 
 Caused by:
-  could not parse input as TOML
-
-Caused by:
   TOML parse error at line 8, column 21
     |
   8 |                     categories = [\"algorithms\"]
@@ -2795,7 +2708,7 @@ fn use_the_cli() {
 [UPDATING] git repository `[..]`
 [RUNNING] `git fetch [..]`
 From [..]
- * [new ref]                    -> origin/HEAD
+ * [new ref] [..] -> origin/HEAD[..]
 [CHECKING] dep1 [..]
 [RUNNING] `rustc [..]`
 [CHECKING] foo [..]
@@ -3421,6 +3334,9 @@ fn metadata_master_consistency() {
               "workspace_members": [
                 "foo 0.1.0 [..]"
               ],
+              "workspace_default_members": [
+                "foo 0.1.0 [..]"
+              ],
               "resolve": {
                 "nodes": [
                   {
@@ -3699,4 +3615,72 @@ fn cleans_temp_pack_files() {
     // Trigger an index update.
     p.cargo("generate-lockfile").run();
     assert!(!tmp_path.exists());
+}
+
+#[cargo_test]
+fn different_user_relative_submodules() {
+    let user1_git_project = git::new("user1/dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+
+    let user2_git_project = git::new("user2/dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+    let user2_git_project2 = git::new("user2/dep2", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+
+    let user2_repo = git2::Repository::open(&user2_git_project.root()).unwrap();
+    let url = "../dep2";
+    git::add_submodule(&user2_repo, url, Path::new("dep2"));
+    git::commit(&user2_repo);
+
+    let user1_repo = git2::Repository::open(&user1_git_project.root()).unwrap();
+    let url = user2_git_project.url();
+    git::add_submodule(&user1_repo, url.as_str(), Path::new("user2/dep1"));
+    git::commit(&user1_repo);
+
+    let project = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo" 
+                    version = "0.5.0"
+
+                    [dependencies.dep1]
+                    git = '{}'
+                "#,
+                user1_git_project.url()
+            ),
+        )
+        .file("src/main.rs", &main_file(r#""hello""#, &[]))
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(&format!(
+            "\
+[UPDATING] git repository `{}`
+[UPDATING] git submodule `{}`
+[UPDATING] git submodule `{}`
+[COMPILING] dep1 v0.5.0 ({}#[..])
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+            path2url(&user1_git_project.root()),
+            path2url(&user2_git_project.root()),
+            path2url(&user2_git_project2.root()),
+            path2url(&user1_git_project.root()),
+        ))
+        .run();
+
+    assert!(project.bin("foo").is_file());
 }

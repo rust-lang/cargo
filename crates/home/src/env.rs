@@ -9,7 +9,7 @@ use std::{
 /// Permits parameterizing the home functions via the _from variants - used for
 /// in-process unit testing by rustup.
 pub trait Env {
-    /// Return the path to the the users home dir, or None if any error occurs:
+    /// Return the path to the users home dir, or None if any error occurs:
     /// see home_inner.
     fn home_dir(&self) -> Option<PathBuf>;
     /// Return the current working directory.

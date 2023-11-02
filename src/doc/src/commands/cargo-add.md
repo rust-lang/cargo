@@ -1,8 +1,5 @@
 # cargo-add(1)
 
-
-
-
 ## NAME
 
 cargo-add --- Add dependencies to a Cargo.toml manifest file
@@ -129,6 +126,14 @@ crates, the features for a specific crate may be enabled with
 which enables all specified features.</dd>
 
 
+<dt class="option-term" id="option-cargo-add---ignore-rust-version"><a class="option-anchor" href="#option-cargo-add---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</p>
+<p>This option is unstable and available only on the
+<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
+and requires the <code>-Z unstable-options</code> flag to enable.
+See <a href="https://github.com/rust-lang/cargo/issues/5579">https://github.com/rust-lang/cargo/issues/5579</a> for more information.</dd>
+
+
 </dl>
 
 
@@ -225,7 +230,12 @@ See the <a href="../reference/config.html#command-line-overrides">command-line o
 <dt class="option-term" id="option-cargo-add--C"><a class="option-anchor" href="#option-cargo-add--C"></a><code>-C</code> <em>PATH</em></dt>
 <dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
-the directories searched for discovering <code>.cargo/config.toml</code>, for example.</dd>
+the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
+appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
 
 
 <dt class="option-term" id="option-cargo-add--h"><a class="option-anchor" href="#option-cargo-add--h"></a><code>-h</code></dt>

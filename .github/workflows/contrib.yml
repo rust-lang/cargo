@@ -4,6 +4,10 @@ on:
     branches:
       - master
 
+concurrency:
+  cancel-in-progress: false
+  group: "gh-pages"
+
 permissions:
   contents: read
 
@@ -13,7 +17,7 @@ jobs:
       contents: write  # for Git to git push
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Install mdbook
@@ -23,16 +27,26 @@ jobs:
         echo `pwd`/mdbook >> $GITHUB_PATH
     - name: Deploy docs
       run: |
+        GENERATE_PY="$(pwd)/ci/generate.py"
+
         cd src/doc/contrib
         mdbook build
-        git worktree add gh-pages gh-pages
+
+        # Override previous ref to avoid keeping history.
+        git worktree add --orphan -B gh-pages gh-pages
         git config user.name "Deploy from CI"
         git config user.email ""
         cd gh-pages
-        # Delete the ref to avoid keeping history.
-        git update-ref -d refs/heads/gh-pages
-        rm -rf contrib
         mv ../book contrib
         git add contrib
+
+        # Generate HTML for link redirections.
+        python3 "$GENERATE_PY"
+        git add *.html
+        # WARN: The CNAME file is for GitHub to redirect requests to the custom domain.
+        # Missing this may entail security hazard and domain takeover.
+        # See <https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#securing-your-custom-domain>
+        git add CNAME
+
         git commit -m "Deploy $GITHUB_SHA to gh-pages"
-        git push --force
+        git push origin +gh-pages

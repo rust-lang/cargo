@@ -1,6 +1,7 @@
 mod add_basic;
 mod add_multiple;
 mod add_normalized_name_external;
+mod add_toolchain;
 mod build;
 mod build_prefer_existing_version;
 mod change_rename_target;
@@ -15,7 +16,10 @@ mod dev;
 mod dev_build_conflict;
 mod dev_prefer_existing_version;
 mod dry_run;
+mod empty_dep_table;
 mod features;
+mod features_activated_over_limit;
+mod features_deactivated_over_limit;
 mod features_empty;
 mod features_multiple_occurrences;
 mod features_preserve;
@@ -33,9 +37,9 @@ mod git_normalized_name;
 mod git_registry;
 mod git_rev;
 mod git_tag;
+mod help;
 mod infer_prerelease;
 mod invalid_arg;
-mod invalid_git_external;
 mod invalid_git_name;
 mod invalid_key_inherit_dependency;
 mod invalid_key_overwrite_inherit_dependency;
@@ -95,12 +99,18 @@ mod path_dev;
 mod path_inferred_name;
 mod path_inferred_name_conflicts_full_feature;
 mod path_normalized_name;
+mod preserve_dep_std_table;
+mod preserve_features_table;
 mod preserve_sorted;
 mod preserve_unsorted;
 mod quiet;
 mod registry;
 mod rename;
 mod require_weak;
+mod rust_version_ignore;
+mod rust_version_incompatible;
+mod rust_version_latest;
+mod rust_version_older;
 mod sorted_table_with_dotted_item;
 mod target;
 mod target_cfg;
@@ -109,95 +119,3 @@ mod vers;
 mod workspace_name;
 mod workspace_path;
 mod workspace_path_dev;
-
-fn init_registry() {
-    cargo_test_support::registry::init();
-    add_registry_packages(false);
-}
-
-fn init_alt_registry() {
-    cargo_test_support::registry::alt_init();
-    add_registry_packages(true);
-}
-
-fn add_registry_packages(alt: bool) {
-    for name in [
-        "my-package",
-        "my-package1",
-        "my-package2",
-        "my-dev-package1",
-        "my-dev-package2",
-        "my-build-package1",
-        "my-build-package2",
-        "toml",
-        "versioned-package",
-        "cargo-list-test-fixture-dependency",
-        "unrelateed-crate",
-    ] {
-        cargo_test_support::registry::Package::new(name, "0.1.1+my-package")
-            .alternative(alt)
-            .publish();
-        cargo_test_support::registry::Package::new(name, "0.2.0+my-package")
-            .alternative(alt)
-            .publish();
-        cargo_test_support::registry::Package::new(name, "0.2.3+my-package")
-            .alternative(alt)
-            .publish();
-        cargo_test_support::registry::Package::new(name, "0.4.1+my-package")
-            .alternative(alt)
-            .publish();
-        cargo_test_support::registry::Package::new(name, "20.0.0+my-package")
-            .alternative(alt)
-            .publish();
-        cargo_test_support::registry::Package::new(name, "99999.0.0+my-package")
-            .alternative(alt)
-            .publish();
-        cargo_test_support::registry::Package::new(name, "99999.0.0-alpha.1+my-package")
-            .alternative(alt)
-            .publish();
-    }
-
-    cargo_test_support::registry::Package::new("prerelease_only", "0.2.0-alpha.1")
-        .alternative(alt)
-        .publish();
-    cargo_test_support::registry::Package::new("test_breaking", "0.2.0")
-        .alternative(alt)
-        .publish();
-    cargo_test_support::registry::Package::new("test_nonbreaking", "0.1.1")
-        .alternative(alt)
-        .publish();
-    cargo_test_support::registry::Package::new("test_cyclic_features", "0.1.1")
-        .alternative(alt)
-        .feature("default", &["feature-one", "feature-two"])
-        .feature("feature-one", &["feature-two"])
-        .feature("feature-two", &["feature-one"])
-        .publish();
-
-    // Normalization
-    cargo_test_support::registry::Package::new("linked-hash-map", "0.5.4")
-        .alternative(alt)
-        .feature("clippy", &[])
-        .feature("heapsize", &[])
-        .feature("heapsize_impl", &[])
-        .feature("nightly", &[])
-        .feature("serde", &[])
-        .feature("serde_impl", &[])
-        .feature("serde_test", &[])
-        .publish();
-    cargo_test_support::registry::Package::new("inflector", "0.11.4")
-        .alternative(alt)
-        .feature("default", &["heavyweight", "lazy_static", "regex"])
-        .feature("heavyweight", &[])
-        .feature("lazy_static", &[])
-        .feature("regex", &[])
-        .feature("unstable", &[])
-        .publish();
-
-    cargo_test_support::registry::Package::new("your-face", "99999.0.0+my-package")
-        .alternative(alt)
-        .feature("nose", &[])
-        .feature("mouth", &[])
-        .feature("eyes", &[])
-        .feature("ears", &[])
-        .publish();
-}

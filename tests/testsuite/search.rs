@@ -1,5 +1,6 @@
 //! Tests for the `cargo search` command.
 
+use cargo::util::cache_lock::CacheLockMode;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{RegistryBuilder, Response};
@@ -89,7 +90,8 @@ fn setup() -> RegistryBuilder {
 fn not_update() {
     let registry = setup().build();
 
-    use cargo::core::{Shell, Source, SourceId};
+    use cargo::core::{Shell, SourceId};
+    use cargo::sources::source::Source;
     use cargo::sources::RegistrySource;
     use cargo::util::Config;
 
@@ -99,7 +101,9 @@ fn not_update() {
         paths::root(),
         paths::home().join(".cargo"),
     );
-    let lock = cfg.acquire_package_cache_lock().unwrap();
+    let lock = cfg
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
+        .unwrap();
     let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg).unwrap();
     regsrc.invalidate_cache();
     regsrc.block_until_ready().unwrap();
@@ -172,8 +176,7 @@ fn colored_results() {
 fn auth_required_failure() {
     let server = setup().auth_required().no_configure_token().build();
 
-    cargo_process("-Zregistry-auth search postgres")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
+    cargo_process("search postgres")
         .replace_crates_io(server.index_url())
         .with_status(101)
         .with_stderr_contains("[ERROR] no token found, please run `cargo login`")
@@ -184,8 +187,7 @@ fn auth_required_failure() {
 fn auth_required() {
     let server = setup().auth_required().build();
 
-    cargo_process("-Zregistry-auth search postgres")
-        .masquerade_as_nightly_cargo(&["registry-auth"])
+    cargo_process("search postgres")
         .replace_crates_io(server.index_url())
         .with_stdout_contains(SEARCH_RESULTS)
         .run();

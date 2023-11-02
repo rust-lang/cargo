@@ -6,8 +6,8 @@ use std::sync::Mutex;
 
 use anyhow::Context as _;
 use cargo_util::{paths, ProcessBuilder, ProcessError};
-use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
+use tracing::{debug, info, warn};
 
 use crate::util::interning::InternedString;
 use crate::util::{profile, CargoResult, Config, StableHasher};
@@ -28,6 +28,8 @@ pub struct Rustc {
     pub version: semver::Version,
     /// The host triple (arch-platform-OS), this comes from verbose_version.
     pub host: InternedString,
+    /// The rustc full commit hash, this comes from `verbose_version`.
+    pub commit_hash: Option<String>,
     cache: Mutex<Cache>,
 }
 
@@ -63,8 +65,7 @@ impl Rustc {
         let extract = |field: &str| -> CargoResult<&str> {
             verbose_version
                 .lines()
-                .find(|l| l.starts_with(field))
-                .map(|l| &l[field.len()..])
+                .find_map(|l| l.strip_prefix(field))
                 .ok_or_else(|| {
                     anyhow::format_err!(
                         "`rustc -vV` didn't have a line for `{}`, got:\n{}",
@@ -81,6 +82,17 @@ impl Rustc {
                 verbose_version
             )
         })?;
+        let commit_hash = extract("commit-hash: ").ok().map(|hash| {
+            debug_assert!(
+                hash.chars().all(|ch| ch.is_ascii_hexdigit()),
+                "commit hash must be a hex string"
+            );
+            debug_assert!(
+                hash.len() == 40 || hash.len() == 64,
+                "hex string must be generated from sha1 or sha256"
+            );
+            hash.to_string()
+        });
 
         Ok(Rustc {
             path,
@@ -89,6 +101,7 @@ impl Rustc {
             verbose_version,
             version,
             host,
+            commit_hash,
             cache: Mutex::new(cache),
         })
     }

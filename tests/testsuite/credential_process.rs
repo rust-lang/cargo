@@ -1,142 +1,10 @@
 //! Tests for credential-process.
 
-use cargo_test_support::registry::TestRegistry;
+use cargo_test_support::registry::{Package, TestRegistry};
 use cargo_test_support::{basic_manifest, cargo_process, paths, project, registry, Project};
-use std::fs::{self, read_to_string};
 
 fn toml_bin(proj: &Project, name: &str) -> String {
     proj.bin(name).display().to_string().replace('\\', "\\\\")
-}
-
-#[cargo_test]
-fn gated() {
-    let _alternative = registry::RegistryBuilder::new()
-        .alternative()
-        .no_configure_token()
-        .build();
-
-    let cratesio = registry::RegistryBuilder::new()
-        .no_configure_token()
-        .build();
-
-    let p = project()
-        .file(
-            ".cargo/config",
-            r#"
-                [registry]
-                credential-process = "false"
-            "#,
-        )
-        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("publish --no-verify")
-        .replace_crates_io(cratesio.index_url())
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
-",
-        )
-        .run();
-
-    p.change_file(
-        ".cargo/config",
-        r#"
-            [registry.alternative]
-            credential-process = "false"
-        "#,
-    );
-
-    p.cargo("publish --no-verify --registry alternative")
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn warn_both_token_and_process() {
-    // Specifying both credential-process and a token in config should issue a warning.
-    let _server = registry::RegistryBuilder::new()
-        .http_api()
-        .http_index()
-        .alternative()
-        .no_configure_token()
-        .build();
-    let p = project()
-        .file(
-            ".cargo/config",
-            r#"
-                [registries.alternative]
-                token = "alternative-sekrit"
-                credential-process = "false"
-            "#,
-        )
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                description = "foo"
-                authors = []
-                license = "MIT"
-                homepage = "https://example.com/"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[ERROR] both `token` and `credential-process` were specified in the config for registry `alternative`.
-Only one of these values may be set, remove one or the other to proceed.
-",
-        )
-        .run();
-
-    // Try with global credential-process, and registry-specific `token`.
-    // This should silently use the config token, and not run the "false" exe.
-    p.change_file(
-        ".cargo/config",
-        r#"
-            [registry]
-            credential-process = "false"
-
-            [registries.alternative]
-            token = "alternative-sekrit"
-        "#,
-    );
-    p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[PACKAGING] foo v0.1.0 [..]
-[PACKAGED] [..]
-[UPLOADING] foo v0.1.0 [..]
-[UPLOADED] foo v0.1.0 [..]
-note: Waiting [..]
-You may press ctrl-c [..]
-[PUBLISHED] foo v0.1.0 [..]
-",
-        )
-        .run();
 }
 
 /// Setup for a test that will issue a command that needs to fetch a token.
@@ -158,29 +26,14 @@ fn get_token_test() -> (Project, TestRegistry) {
         ))
         .alternative()
         .http_api()
+        .http_index()
+        .auth_required()
         .build();
-    // The credential process to use.
-    let cred_proj = project()
-        .at("cred_proj")
-        .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
-        .file(
-            "src/main.rs",
-            r#"
-                use std::fs::File;
-                use std::io::Write;
-                fn main() {
-                    let mut f = File::options()
-                        .write(true)
-                        .create(true)
-                        .append(true)
-                        .open("runs.log")
-                        .unwrap();
-                    write!(f, "+");
-                    println!("sekrit");
-                } "#,
-        )
-        .build();
-    cred_proj.cargo("build").run();
+
+    let provider = build_provider(
+        "test-cred",
+        r#"{"Ok":{"kind":"get","token":"sekrit","cache":"session","operation_independent":false}}"#,
+    );
 
     let p = project()
         .file(
@@ -189,10 +42,9 @@ fn get_token_test() -> (Project, TestRegistry) {
                 r#"
                     [registries.alternative]
                     index = "{}"
-                    credential-process = ["{}"]
+                    credential-provider = ["{provider}"]
                 "#,
                 server.index_url(),
-                toml_bin(&cred_proj, "test-cred")
             ),
         )
         .file(
@@ -202,7 +54,6 @@ fn get_token_test() -> (Project, TestRegistry) {
                 name = "foo"
                 version = "0.1.0"
                 description = "foo"
-                authors = []
                 license = "MIT"
                 homepage = "https://example.com/"
             "#,
@@ -217,24 +68,21 @@ fn publish() {
     // Checks that credential-process is used for `cargo publish`.
     let (p, _t) = get_token_test();
 
-    p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("publish --no-verify --registry alternative")
         .with_stderr(
-            "\
-[UPDATING] [..]
+            r#"[UPDATING] [..]
+{"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read"}
 [PACKAGING] foo v0.1.0 [..]
 [PACKAGED] [..]
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
 [UPLOADING] foo v0.1.0 [..]
 [UPLOADED] foo v0.1.0 [..]
 note: Waiting [..]
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.0 [..]
-",
+"#,
         )
         .run();
-
-    let calls = read_to_string(p.root().join("runs.log")).unwrap().len();
-    assert_eq!(calls, 1);
 }
 
 #[cargo_test]
@@ -242,39 +90,32 @@ fn basic_unsupported() {
     // Non-action commands don't support login/logout.
     let registry = registry::RegistryBuilder::new()
         .no_configure_token()
+        .credential_provider(&["cargo:token-from-stdout", "false"])
         .build();
-    cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
-        br#"
-            [registry]
-            credential-process = "false"
-        "#,
-    )
-    .unwrap();
 
-    cargo_process("login -Z credential-process abcdefg")
+    cargo_process("login abcdefg")
         .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["credential-process"])
         .with_status(101)
         .with_stderr(
             "\
 [UPDATING] crates.io index
-[ERROR] credential process `false` cannot be used to log in, \
-the credential-process configuration value must pass the \
-`{action}` argument in the config to support this command
+[ERROR] credential provider `cargo:token-from-stdout false` failed action `login`
+
+Caused by:
+  requested operation not supported
 ",
         )
         .run();
 
-    cargo_process("logout -Z credential-process")
+    cargo_process("logout")
         .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["credential-process", "cargo-logout"])
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] credential process `false` cannot be used to log out, \
-the credential-process configuration value must pass the \
-`{action}` argument in the config to support this command
+[ERROR] credential provider `cargo:token-from-stdout false` failed action `logout`
+
+Caused by:
+  requested operation not supported
 ",
         )
         .run();
@@ -282,130 +123,55 @@ the credential-process configuration value must pass the \
 
 #[cargo_test]
 fn login() {
-    let server = registry::RegistryBuilder::new()
+    let registry = registry::RegistryBuilder::new()
         .no_configure_token()
+        .credential_provider(&[
+            &build_provider("test-cred", r#"{"Ok": {"kind": "login"}}"#),
+            "cfg1",
+            "--cfg2",
+        ])
         .build();
-    // The credential process to use.
-    let cred_proj = project()
-        .at("cred_proj")
-        .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
-        .file(
-            "src/main.rs",
-                r#"
-                use std::io::Read;
 
-                fn main() {{
-                    assert_eq!(std::env::var("CARGO_REGISTRY_NAME_OPT").unwrap(), "crates-io");
-                    assert_eq!(std::env::var("CARGO_REGISTRY_INDEX_URL").unwrap(), "https://github.com/rust-lang/crates.io-index");
-                    assert_eq!(std::env::args().skip(1).next().unwrap(), "store");
-                    let mut buffer = String::new();
-                    std::io::stdin().read_to_string(&mut buffer).unwrap();
-                    assert_eq!(buffer, "abcdefg\n");
-                    std::fs::write("token-store", buffer).unwrap();
-                }}
-            "#,
-        )
-        .build();
-    cred_proj.cargo("build").run();
-
-    cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
-        format!(
-            r#"
-                [registry]
-                credential-process = ["{}", "{{action}}"]
-            "#,
-            toml_bin(&cred_proj, "test-cred")
-        )
-        .as_bytes(),
-    )
-    .unwrap();
-
-    cargo_process("login -Z credential-process abcdefg")
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .replace_crates_io(server.index_url())
+    cargo_process("login abcdefg -- cmd3 --cmd4")
+        .replace_crates_io(registry.index_url())
         .with_stderr(
-            "\
-[UPDATING] [..]
-[LOGIN] token for `crates.io` saved
-",
+            r#"[UPDATING] [..]
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]","args":["cfg1","--cfg2","cmd3","--cmd4"]}
+"#,
         )
         .run();
-    assert_eq!(
-        fs::read_to_string(paths::root().join("token-store")).unwrap(),
-        "abcdefg\n"
-    );
 }
 
 #[cargo_test]
 fn logout() {
     let server = registry::RegistryBuilder::new()
         .no_configure_token()
+        .credential_provider(&[&build_provider(
+            "test-cred",
+            r#"{"Ok": {"kind": "logout"}}"#,
+        )])
         .build();
-    // The credential process to use.
-    let cred_proj = project()
-        .at("cred_proj")
-        .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
-        .file(
-            "src/main.rs",
-                r#"
-                use std::io::Read;
 
-                fn main() {{
-                    assert_eq!(std::env::var("CARGO_REGISTRY_NAME_OPT").unwrap(), "crates-io");
-                    assert_eq!(std::env::var("CARGO_REGISTRY_INDEX_URL").unwrap(), "https://github.com/rust-lang/crates.io-index");
-                    assert_eq!(std::env::args().skip(1).next().unwrap(), "erase");
-                    std::fs::write("token-store", "").unwrap();
-                    eprintln!("token for `crates-io` has been erased!")
-                }}
-            "#,
-        )
-        .build();
-    cred_proj.cargo("build").run();
-
-    cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
-        format!(
-            r#"
-                [registry]
-                credential-process = ["{}", "{{action}}"]
-            "#,
-            toml_bin(&cred_proj, "test-cred")
-        )
-        .as_bytes(),
-    )
-    .unwrap();
-
-    cargo_process("logout -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process", "cargo-logout"])
+    cargo_process("logout")
         .replace_crates_io(server.index_url())
         .with_stderr(
-            "\
-token for `crates-io` has been erased!
-[LOGOUT] token for `crates-io` has been removed from local storage
-[NOTE] This does not revoke the token on the registry server.
-    If you need to revoke the token, visit <https://crates.io/me> \
-    and follow the instructions there.
-",
+            r#"{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"logout"}
+"#,
         )
         .run();
-    assert_eq!(
-        fs::read_to_string(paths::root().join("token-store")).unwrap(),
-        ""
-    );
 }
 
 #[cargo_test]
 fn yank() {
     let (p, _t) = get_token_test();
 
-    p.cargo("yank --version 0.1.0 --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("yank --version 0.1.0 --registry alternative")
         .with_stderr(
-            "\
-[UPDATING] [..]
+            r#"[UPDATING] [..]
+{"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read"}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"yank","name":"foo","vers":"0.1.0"}
 [YANK] foo@0.1.0
-",
+"#,
         )
         .run();
 }
@@ -414,62 +180,13 @@ fn yank() {
 fn owner() {
     let (p, _t) = get_token_test();
 
-    p.cargo("owner --add username --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("owner --add username --registry alternative")
         .with_stderr(
-            "\
-[UPDATING] [..]
+            r#"[UPDATING] [..]
+{"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read"}
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"owners","name":"foo"}
 [OWNER] completed!
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn owner_sub_add() {
-    let (p, _t) = get_token_test();
-
-    p.cargo("owner add username --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[OWNER] completed!
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn libexec_path() {
-    // cargo: prefixed names use the sysroot
-    let server = registry::RegistryBuilder::new()
-        .no_configure_token()
-        .build();
-    cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
-        br#"
-            [registry]
-            credential-process = "cargo:doesnotexist"
-        "#,
-    )
-    .unwrap();
-
-    cargo_process("login -Z credential-process abcdefg")
-        .masquerade_as_nightly_cargo(&["credential-process"])
-        .replace_crates_io(server.index_url())
-        .with_status(101)
-        .with_stderr(
-            // FIXME: Update "Caused by" error message once rust/pull/87704 is merged.
-            // On Windows, changing to a custom executable resolver has changed the
-            // error messages.
-            &format!("\
-[UPDATING] [..]
-[ERROR] failed to execute `[..]libexec/cargo-credential-doesnotexist[EXE]` to store authentication token for registry `crates-io`
-
-Caused by:
-  [..]
-"),
+"#,
         )
         .run();
 }
@@ -477,43 +194,509 @@ Caused by:
 #[cargo_test]
 fn invalid_token_output() {
     // Error when credential process does not output the expected format for a token.
-    let _server = registry::RegistryBuilder::new()
-        .alternative()
-        .no_configure_token()
-        .build();
     let cred_proj = project()
         .at("cred_proj")
         .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
         .file("src/main.rs", r#"fn main() { print!("a\nb\n"); } "#)
         .build();
     cred_proj.cargo("build").run();
-
-    cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
-        format!(
-            r#"
-                [registry]
-                credential-process = ["{}"]
-            "#,
-            toml_bin(&cred_proj, "test-cred")
-        )
-        .as_bytes(),
-    )
-    .unwrap();
+    let _server = registry::RegistryBuilder::new()
+        .alternative()
+        .credential_provider(&[
+            "cargo:token-from-stdout",
+            &toml_bin(&cred_proj, "test-cred"),
+        ])
+        .no_configure_token()
+        .build();
 
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish --no-verify --registry alternative -Z credential-process")
-        .masquerade_as_nightly_cargo(&["credential-process"])
+    p.cargo("publish --no-verify --registry alternative")
         .with_status(101)
         .with_stderr(
             "\
 [UPDATING] [..]
-[ERROR] credential process `[..]test-cred[EXE]` returned more than one line of output; expected a single token
+[ERROR] credential provider `[..]test-cred[EXE]` failed action `get`
+
+Caused by:
+  process `[..]` returned more than one line of output; expected a single token
 ",
+        )
+        .run();
+}
+
+/// Builds a credential provider that echos the request from cargo to stderr,
+/// and prints the `response` to stdout.
+fn build_provider(name: &str, response: &str) -> String {
+    // The credential process to use.
+    let cred_proj = project()
+        .at(name)
+        .file("Cargo.toml", &basic_manifest(name, "1.0.0"))
+        .file(
+            "src/main.rs",
+            &r####"
+                fn main() {
+                    println!(r#"{{"v":[1]}}"#);
+                    assert_eq!(std::env::args().skip(1).next().unwrap(), "--cargo-plugin");
+                    let mut buffer = String::new();
+                    std::io::stdin().read_line(&mut buffer).unwrap();
+                    eprint!("{}", buffer);
+                    use std::io::Write;
+                    std::io::stdout().write_all(r###"[RESPONSE]"###.as_bytes()).unwrap();
+                    println!();
+                } "####
+                .replace("[RESPONSE]", response),
+        )
+        .build();
+    cred_proj.cargo("build").run();
+    toml_bin(&cred_proj, name)
+}
+
+#[cargo_test]
+fn not_found() {
+    let registry = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .http_index()
+        .auth_required()
+        .credential_provider(&[&build_provider(
+            "not_found",
+            r#"{"Err": {"kind": "not-found"}}"#,
+        )])
+        .build();
+
+    // should not suggest a _TOKEN environment variable since the cargo:token provider isn't available.
+    cargo_process("install -v foo")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] [..]
+[CREDENTIAL] [..]not_found[..] get crates-io
+{"v":1[..]
+[ERROR] failed to query replaced source registry `crates-io`
+
+Caused by:
+  no token found, please run `cargo login`
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn all_not_found() {
+    let server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .auth_required()
+        .http_index()
+        .build();
+    let not_found = build_provider("not_found", r#"{"Err": {"kind": "not-found"}}"#);
+    cargo_util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [registry]
+                global-credential-providers = ["not_found"]
+                [credential-alias]
+                not_found = ["{not_found}"]
+            "#,
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    // should not suggest a _TOKEN environment variable since the cargo:token provider isn't available.
+    cargo_process("install -v foo")
+        .replace_crates_io(server.index_url())
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] [..]
+[CREDENTIAL] [..]not_found[..] get crates-io
+{"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"WWW-Authenticate: Cargo login_url=\"https://test-registry-login/me\""[..]]},"kind":"get","operation":"read"}
+[ERROR] failed to query replaced source registry `crates-io`
+
+Caused by:
+  no token found, please run `cargo login`
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn all_not_supported() {
+    let server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .auth_required()
+        .http_index()
+        .build();
+    let not_supported =
+        build_provider("not_supported", r#"{"Err": {"kind": "url-not-supported"}}"#);
+    cargo_util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [registry]
+                global-credential-providers = ["not_supported"]
+                [credential-alias]
+                not_supported = ["{not_supported}"]
+            "#,
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("install -v foo")
+        .replace_crates_io(server.index_url())
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] [..]
+[CREDENTIAL] [..]not_supported[..] get crates-io
+{"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"WWW-Authenticate: Cargo login_url=\"https://test-registry-login/me\""[..]]},"kind":"get","operation":"read"}
+[ERROR] failed to query replaced source registry `crates-io`
+
+Caused by:
+  no credential providers could handle the request
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn multiple_providers() {
+    let server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .build();
+
+    // Set up two credential providers: the first will fail with "UrlNotSupported"
+    // and Cargo should skip it. The second should succeed.
+    let url_not_supported = build_provider(
+        "url_not_supported",
+        r#"{"Err": {"kind": "url-not-supported"}}"#,
+    );
+
+    let success_provider = build_provider("success_provider", r#"{"Ok": {"kind": "login"}}"#);
+
+    cargo_util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [registry]
+                global-credential-providers = ["success_provider", "url_not_supported"]
+
+                [credential-alias]
+                success_provider = ["{success_provider}"]
+                url_not_supported = ["{url_not_supported}"]
+            "#,
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("login -v abcdefg")
+        .replace_crates_io(server.index_url())
+        .with_stderr(
+            r#"[UPDATING] [..]
+[CREDENTIAL] [..]url_not_supported[..] login crates-io
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]"}
+[CREDENTIAL] [..]success_provider[..] login crates-io
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]"}
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn both_token_and_provider() {
+    let server = registry::RegistryBuilder::new()
+        .credential_provider(&["cargo:paseto"])
+        .build();
+
+    cargo_process("login -Z asymmetric-token")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
+        .replace_crates_io(server.index_url())
+        .with_stderr(
+            r#"[UPDATING] [..]
+[WARNING] registry `crates-io` has a token configured in [..] that will be ignored because this registry is configured to use credential-provider `cargo:paseto`
+k3.public[..]
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn registry_provider_overrides_global() {
+    let server = registry::RegistryBuilder::new().build();
+    cargo_util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [registry]
+                global-credential-providers = ["should-not-be-called"]
+            "#,
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("login -v abcdefg")
+        .env("CARGO_REGISTRY_CREDENTIAL_PROVIDER", "cargo:token")
+        .replace_crates_io(server.index_url())
+        .with_stderr(
+            r#"[UPDATING] [..]
+[CREDENTIAL] cargo:token login crates-io
+[LOGIN] token for `crates-io` saved
+"#,
+        )
+        .run();
+    let credentials =
+        std::fs::read_to_string(paths::home().join(".cargo/credentials.toml")).unwrap();
+    assert_eq!(credentials, "[registry]\ntoken = \"abcdefg\"\n");
+}
+
+#[cargo_test]
+fn both_asymmetric_and_token() {
+    let server = registry::RegistryBuilder::new().build();
+    cargo_util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [registry]
+                token = "foo"
+                secret-key = "bar"
+            "#,
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("login -Zasymmetric-token -v abcdefg")
+        .masquerade_as_nightly_cargo(&["asymmetric-token"])
+        .replace_crates_io(server.index_url())
+        .with_stderr(
+            r#"[UPDATING] [..]
+[WARNING] registry `crates-io` has a `secret_key` configured in [..]config that will be ignored because a `token` is also configured, and the `cargo:token` provider is configured with higher precedence
+[CREDENTIAL] cargo:token login crates-io
+[LOGIN] token for `crates-io` saved
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn token_caching() {
+    let server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .no_configure_registry()
+        .token(cargo_test_support::registry::Token::Plaintext(
+            "sekrit".to_string(),
+        ))
+        .alternative()
+        .http_api()
+        .http_index()
+        .build();
+
+    // Token should not be re-used if it is expired
+    let expired_provider = build_provider(
+        "expired_provider",
+        r#"{"Ok":{"kind":"get","token":"sekrit","cache":"expires","expiration":0,"operation_independent":true}}"#,
+    );
+
+    // Token should not be re-used for a different operation if it is not operation_independent
+    let non_independent_provider = build_provider(
+        "non_independent_provider",
+        r#"{"Ok":{"kind":"get","token":"sekrit","cache":"session","operation_independent":false}}"#,
+    );
+
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [registries.alternative]
+                    index = "{}"
+                    credential-provider = ["{expired_provider}"]
+                "#,
+                server.index_url(),
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                license = "MIT"
+                homepage = "https://example.com/"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let output = r#"[UPDATING] `alternative` index
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"read"}
+[PACKAGING] foo v0.1.0 [..]
+[PACKAGED] [..]
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
+[UPLOADING] foo v0.1.0 [..]
+[UPLOADED] foo v0.1.0 [..]
+note: Waiting [..]
+You may press ctrl-c [..]
+[PUBLISHED] foo v0.1.0 [..]
+"#;
+
+    // The output should contain two JSON messages from the provider in both cases:
+    // The first because the credential is expired, the second because the provider
+    // indicated that the token was non-operation-independent.
+    p.cargo("publish --registry alternative --no-verify")
+        .with_stderr(output)
+        .run();
+
+    p.change_file(
+        ".cargo/config",
+        &format!(
+            r#"
+                [registries.alternative]
+                index = "{}"
+                credential-provider = ["{non_independent_provider}"]
+            "#,
+            server.index_url(),
+        ),
+    );
+
+    p.cargo("publish --registry alternative --no-verify")
+        .with_stderr(output)
+        .run();
+}
+
+#[cargo_test]
+fn basic_provider() {
+    let cred_proj = project()
+        .at("cred_proj")
+        .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
+        .file("src/main.rs", r#"fn main() {
+            eprintln!("CARGO={:?}", std::env::var("CARGO").ok());
+            eprintln!("CARGO_REGISTRY_NAME_OPT={:?}", std::env::var("CARGO_REGISTRY_NAME_OPT").ok());
+            eprintln!("CARGO_REGISTRY_INDEX_URL={:?}", std::env::var("CARGO_REGISTRY_INDEX_URL").ok());
+            print!("sekrit"); 
+        }"#)
+        .build();
+    cred_proj.cargo("build").run();
+
+    let _server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .credential_provider(&[
+            "cargo:token-from-stdout",
+            &toml_bin(&cred_proj, "test-cred"),
+        ])
+        .token(cargo_test_support::registry::Token::Plaintext(
+            "sekrit".to_string(),
+        ))
+        .alternative()
+        .http_api()
+        .auth_required()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+CARGO=Some([..])
+CARGO_REGISTRY_NAME_OPT=Some(\"alternative\")
+CARGO_REGISTRY_INDEX_URL=Some([..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([..])
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn unsupported_version() {
+    let cred_proj = project()
+        .at("new-vers")
+        .file("Cargo.toml", &basic_manifest("new-vers", "1.0.0"))
+        .file(
+            "src/main.rs",
+            &r####"
+                fn main() {
+                    println!(r#"{{"v":[998, 999]}}"#);
+                    assert_eq!(std::env::args().skip(1).next().unwrap(), "--cargo-plugin");
+                    let mut buffer = String::new();
+                    std::io::stdin().read_line(&mut buffer).unwrap();
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    panic!("child process should have been killed before getting here");
+                } "####,
+        )
+        .build();
+    cred_proj.cargo("build").run();
+    let provider = toml_bin(&cred_proj, "new-vers");
+
+    let registry = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .credential_provider(&[&provider])
+        .build();
+
+    cargo_process("login abcdefg")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr(
+            r#"[UPDATING] [..]
+[ERROR] credential provider `[..]` failed action `login`
+
+Caused by:
+  credential provider supports protocol versions [998, 999], while Cargo supports [1]
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn alias_builtin_warning() {
+    let registry = registry::RegistryBuilder::new()
+        .credential_provider(&[&"cargo:token"])
+        .build();
+
+    cargo_util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [credential-alias]
+                "cargo:token" = ["ignored"]
+            "#,
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("login abcdefg")
+        .replace_crates_io(registry.index_url())
+        .with_stderr(
+            r#"[UPDATING] [..]
+[WARNING] credential-alias `cargo:token` (defined in `[..]`) will be ignored because it would shadow a built-in credential-provider
+[LOGIN] token for `crates-io` saved
+"#,
         )
         .run();
 }

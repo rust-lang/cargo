@@ -78,6 +78,8 @@ impl Token {
     }
 }
 
+type RequestCallback = Box<dyn Send + Fn(&Request, &HttpServer) -> Response>;
+
 /// A builder for initializing registries.
 pub struct RegistryBuilder {
     /// If set, configures an alternate registry with the given name.
@@ -97,9 +99,13 @@ pub struct RegistryBuilder {
     /// Write the registry in configuration.
     configure_registry: bool,
     /// API responders.
-    custom_responders: HashMap<String, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
+    custom_responders: HashMap<String, RequestCallback>,
+    /// Handler for 404 responses.
+    not_found_handler: RequestCallback,
     /// If nonzero, the git index update to be delayed by the given number of seconds.
     delayed_index_update: usize,
+    /// Credential provider in configuration
+    credential_provider: Option<String>,
 }
 
 pub struct TestRegistry {
@@ -149,6 +155,13 @@ impl TestRegistry {
 impl RegistryBuilder {
     #[must_use]
     pub fn new() -> RegistryBuilder {
+        let not_found = |_req: &Request, _server: &HttpServer| -> Response {
+            Response {
+                code: 404,
+                headers: vec![],
+                body: b"not found".to_vec(),
+            }
+        };
         RegistryBuilder {
             alternative: None,
             token: None,
@@ -159,7 +172,9 @@ impl RegistryBuilder {
             configure_registry: true,
             configure_token: true,
             custom_responders: HashMap::new(),
+            not_found_handler: Box::new(not_found),
             delayed_index_update: 0,
+            credential_provider: None,
         }
     }
 
@@ -172,6 +187,15 @@ impl RegistryBuilder {
     ) -> Self {
         self.custom_responders
             .insert(url.into(), Box::new(responder));
+        self
+    }
+
+    #[must_use]
+    pub fn not_found_handler<R: 'static + Send + Fn(&Request, &HttpServer) -> Response>(
+        mut self,
+        responder: R,
+    ) -> Self {
+        self.not_found_handler = Box::new(responder);
         self
     }
 
@@ -245,6 +269,13 @@ impl RegistryBuilder {
         self
     }
 
+    /// The credential provider to configure for this registry.
+    #[must_use]
+    pub fn credential_provider(mut self, provider: &[&str]) -> Self {
+        self.credential_provider = Some(format!("['{}']", provider.join("','")));
+        self
+    }
+
     /// Initializes the registry.
     #[must_use]
     pub fn build(self) -> TestRegistry {
@@ -276,6 +307,7 @@ impl RegistryBuilder {
                 token.clone(),
                 self.auth_required,
                 self.custom_responders,
+                self.not_found_handler,
                 self.delayed_index_update,
             );
             let index_url = if self.http_index {
@@ -314,6 +346,18 @@ impl RegistryBuilder {
                     .as_bytes(),
                 )
                 .unwrap();
+                if let Some(p) = &self.credential_provider {
+                    append(
+                        &config_path,
+                        &format!(
+                            "
+                        credential-provider = {p}
+                        "
+                        )
+                        .as_bytes(),
+                    )
+                    .unwrap()
+                }
             } else {
                 append(
                     &config_path,
@@ -329,6 +373,20 @@ impl RegistryBuilder {
                     .as_bytes(),
                 )
                 .unwrap();
+
+                if let Some(p) = &self.credential_provider {
+                    append(
+                        &config_path,
+                        &format!(
+                            "
+                        [registry]
+                        credential-provider = {p}
+                        "
+                        )
+                        .as_bytes(),
+                    )
+                    .unwrap()
+                }
             }
         }
 
@@ -428,7 +486,10 @@ impl RegistryBuilder {
 /// `VendorPackage` which implements directory sources.
 ///
 /// # Example
-/// ```
+/// ```no_run
+/// use cargo_test_support::registry::Package;
+/// use cargo_test_support::project;
+///
 /// // Publish package "a" depending on "b".
 /// Package::new("a", "1.0.0")
 ///     .dep("b", "1.0.0")
@@ -488,7 +549,9 @@ pub struct Dependency {
     name: String,
     vers: String,
     kind: String,
-    artifact: Option<(String, Option<String>)>,
+    artifact: Option<String>,
+    bindep_target: Option<String>,
+    lib: bool,
     target: Option<String>,
     features: Vec<String>,
     registry: Option<String>,
@@ -602,7 +665,8 @@ pub struct HttpServer {
     addr: SocketAddr,
     token: Token,
     auth_required: bool,
-    custom_responders: HashMap<String, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
+    custom_responders: HashMap<String, RequestCallback>,
+    not_found_handler: RequestCallback,
     delayed_index_update: usize,
 }
 
@@ -622,7 +686,8 @@ impl HttpServer {
         api_path: PathBuf,
         token: Token,
         auth_required: bool,
-        api_responders: HashMap<String, Box<dyn Send + Fn(&Request, &HttpServer) -> Response>>,
+        custom_responders: HashMap<String, RequestCallback>,
+        not_found_handler: RequestCallback,
         delayed_index_update: usize,
     ) -> HttpServerHandle {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -635,7 +700,8 @@ impl HttpServer {
             addr,
             token,
             auth_required,
-            custom_responders: api_responders,
+            custom_responders,
+            not_found_handler,
             delayed_index_update,
         };
         let handle = Some(thread::spawn(move || server.start()));
@@ -715,6 +781,7 @@ impl HttpServer {
             let buf = buf.get_mut();
             write!(buf, "HTTP/1.1 {}\r\n", response.code).unwrap();
             write!(buf, "Content-Length: {}\r\n", response.body.len()).unwrap();
+            write!(buf, "Connection: close\r\n").unwrap();
             for header in response.headers {
                 write!(buf, "{}\r\n", header).unwrap();
             }
@@ -724,7 +791,7 @@ impl HttpServer {
         }
     }
 
-    fn check_authorized(&self, req: &Request, mutation: Option<Mutation>) -> bool {
+    fn check_authorized(&self, req: &Request, mutation: Option<Mutation<'_>>) -> bool {
         let (private_key, private_key_subject) = if mutation.is_some() || self.auth_required {
             match &self.token {
                 Token::Plaintext(token) => return Some(token) == req.authorization.as_ref(),
@@ -766,7 +833,8 @@ impl HttpServer {
             url: &'a str,
             kip: &'a str,
         }
-        let footer: Footer = t!(serde_json::from_slice(untrusted_token.untrusted_footer()).ok());
+        let footer: Footer<'_> =
+            t!(serde_json::from_slice(untrusted_token.untrusted_footer()).ok());
         if footer.kip != paserk_pub_key_id {
             return false;
         }
@@ -780,7 +848,6 @@ impl HttpServer {
         if footer.url != "https://github.com/rust-lang/crates.io-index"
             && footer.url != &format!("sparse+http://{}/index/", self.addr.to_string())
         {
-            dbg!(footer.url);
             return false;
         }
 
@@ -796,20 +863,18 @@ impl HttpServer {
             _challenge: Option<&'a str>, // todo: PASETO with challenges
             v: Option<u8>,
         }
-        let message: Message = t!(serde_json::from_str(trusted_token.payload()).ok());
+        let message: Message<'_> = t!(serde_json::from_str(trusted_token.payload()).ok());
         let token_time = t!(OffsetDateTime::parse(message.iat, &Rfc3339).ok());
         let now = OffsetDateTime::now_utc();
         if (now - token_time) > Duration::MINUTE {
             return false;
         }
         if private_key_subject.as_deref() != message.sub {
-            dbg!(message.sub);
             return false;
         }
         // - If the claim v is set, that it has the value of 1.
         if let Some(v) = message.v {
             if v != 1 {
-                dbg!(message.v);
                 return false;
             }
         }
@@ -819,22 +884,18 @@ impl HttpServer {
         if let Some(mutation) = mutation {
             //  - That the operation matches the mutation field and is one of publish, yank, or unyank.
             if message.mutation != Some(mutation.mutation) {
-                dbg!(message.mutation);
                 return false;
             }
             //  - That the package, and version match the request.
             if message.name != mutation.name {
-                dbg!(message.name);
                 return false;
             }
             if message.vers != mutation.vers {
-                dbg!(message.vers);
                 return false;
             }
             //  - If the mutation is publish, that the version has not already been published, and that the hash matches the request.
             if mutation.mutation == "publish" {
                 if message.cksum != mutation.cksum {
-                    dbg!(message.cksum);
                     return false;
                 }
             }
@@ -928,12 +989,8 @@ impl HttpServer {
     }
 
     /// Not found response
-    pub fn not_found(&self, _req: &Request) -> Response {
-        Response {
-            code: 404,
-            headers: vec![],
-            body: b"not found".to_vec(),
-        }
+    pub fn not_found(&self, req: &Request) -> Response {
+        (self.not_found_handler)(req, self)
     }
 
     /// Respond OK without doing anything
@@ -1123,6 +1180,7 @@ fn save_new_crate(
         false,
         new_crate.links,
         None,
+        None,
     );
 
     write_to_index(registry_path, &new_crate.name, line, false);
@@ -1219,7 +1277,7 @@ impl Package {
     }
 
     /// Adds a normal dependency. Example:
-    /// ```
+    /// ```toml
     /// [dependencies]
     /// foo = {version = "1.0"}
     /// ```
@@ -1228,7 +1286,7 @@ impl Package {
     }
 
     /// Adds a dependency with the given feature. Example:
-    /// ```
+    /// ```toml
     /// [dependencies]
     /// foo = {version = "1.0", "features": ["feat1", "feat2"]}
     /// ```
@@ -1251,7 +1309,7 @@ impl Package {
     }
 
     /// Adds a dev-dependency. Example:
-    /// ```
+    /// ```toml
     /// [dev-dependencies]
     /// foo = {version = "1.0"}
     /// ```
@@ -1260,7 +1318,7 @@ impl Package {
     }
 
     /// Adds a build-dependency. Example:
-    /// ```
+    /// ```toml
     /// [build-dependencies]
     /// foo = {version = "1.0"}
     /// ```
@@ -1317,7 +1375,7 @@ impl Package {
 
     /// Sets the index schema version for this package.
     ///
-    /// See `cargo::sources::registry::RegistryPackage` for more information.
+    /// See `cargo::sources::registry::IndexPackage` for more information.
     pub fn schema_version(&mut self, version: u32) -> &mut Package {
         self.v = Some(version);
         self
@@ -1348,13 +1406,20 @@ impl Package {
                     (true, Some("alternative")) => None,
                     _ => panic!("registry_dep currently only supports `alternative`"),
                 };
+                let artifact = if let Some(artifact) = &dep.artifact {
+                    serde_json::json!([artifact])
+                } else {
+                    serde_json::json!(null)
+                };
                 serde_json::json!({
                     "name": dep.name,
                     "req": dep.vers,
                     "features": dep.features,
                     "default_features": true,
                     "target": dep.target,
-                    "artifact": dep.artifact,
+                    "artifact": artifact,
+                    "bindep_target": dep.bindep_target,
+                    "lib": dep.lib,
                     "optional": dep.optional,
                     "kind": dep.kind,
                     "registry": registry_url,
@@ -1379,6 +1444,7 @@ impl Package {
             self.features.clone(),
             self.yanked,
             self.links.clone(),
+            self.rust_version.as_deref(),
             self.v,
         );
 
@@ -1474,11 +1540,14 @@ impl Package {
             "#,
                 target, kind, dep.name, dep.vers
             ));
-            if let Some((artifact, target)) = &dep.artifact {
+            if let Some(artifact) = &dep.artifact {
                 manifest.push_str(&format!("artifact = \"{}\"\n", artifact));
-                if let Some(target) = &target {
-                    manifest.push_str(&format!("target = \"{}\"\n", target))
-                }
+            }
+            if let Some(target) = &dep.bindep_target {
+                manifest.push_str(&format!("target = \"{}\"\n", target));
+            }
+            if dep.lib {
+                manifest.push_str("lib = true\n");
             }
             if let Some(registry) = &dep.registry {
                 assert_eq!(registry, "alternative");
@@ -1555,6 +1624,8 @@ impl Dependency {
             vers: vers.to_string(),
             kind: "normal".to_string(),
             artifact: None,
+            bindep_target: None,
+            lib: false,
             target: None,
             features: Vec::new(),
             package: None,
@@ -1584,7 +1655,8 @@ impl Dependency {
     /// Change the artifact to be of the given kind, like "bin", or "staticlib",
     /// along with a specific target triple if provided.
     pub fn artifact(&mut self, kind: &str, target: Option<String>) -> &mut Self {
-        self.artifact = Some((kind.to_string(), target));
+        self.artifact = Some(kind.to_string());
+        self.bindep_target = target;
         self
     }
 

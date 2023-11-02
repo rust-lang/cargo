@@ -1,4 +1,4 @@
-## Working on an Existing Cargo Package
+# Working on an Existing Cargo Package
 
 If you download an existing [package][def-package] that uses Cargo, it’s
 really easy to get going.

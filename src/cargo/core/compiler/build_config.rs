@@ -1,4 +1,5 @@
 use crate::core::compiler::CompileKind;
+use crate::util::config::JobsConfig;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
 use anyhow::{bail, Context as _};
@@ -6,7 +7,7 @@ use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::rc::Rc;
 use std::thread::available_parallelism;
 
 /// Configuration information for a rustc build.
@@ -34,7 +35,7 @@ pub struct BuildConfig {
     pub primary_unit_rustc: Option<ProcessBuilder>,
     /// A thread used by `cargo fix` to receive messages on a socket regarding
     /// the success/failure of applying fixes.
-    pub rustfix_diagnostic_server: Arc<RefCell<Option<RustfixDiagnosticServer>>>,
+    pub rustfix_diagnostic_server: Rc<RefCell<Option<RustfixDiagnosticServer>>>,
     /// The directory to copy final artifacts to. Note that even if `out_dir` is
     /// set, a copy of artifacts still could be found a `target/(debug\release)`
     /// as usual.
@@ -64,7 +65,7 @@ impl BuildConfig {
     /// * `target.$target.libfoo.metadata`
     pub fn new(
         config: &Config,
-        jobs: Option<i32>,
+        jobs: Option<JobsConfig>,
         keep_going: bool,
         requested_targets: &[String],
         mode: CompileMode,
@@ -78,11 +79,22 @@ impl BuildConfig {
                  its environment, ignoring the `-j` parameter",
             )?;
         }
-        let jobs = match jobs.or(cfg.jobs) {
+        let jobs = match jobs.or(cfg.jobs.clone()) {
             None => default_parallelism()?,
-            Some(0) => anyhow::bail!("jobs may not be 0"),
-            Some(j) if j < 0 => (default_parallelism()? as i32 + j).max(1) as u32,
-            Some(j) => j as u32,
+            Some(value) => match value {
+                JobsConfig::Integer(j) => match j {
+                    0 => anyhow::bail!("jobs may not be 0"),
+                    j if j < 0 => (default_parallelism()? as i32 + j).max(1) as u32,
+                    j => j as u32,
+                },
+                JobsConfig::String(j) => match j.as_str() {
+                    "default" => default_parallelism()?,
+                    _ => {
+                        anyhow::bail!(
+			    format!("could not parse `{j}`. Number of parallel jobs should be `default` or a number."))
+                    }
+                },
+            },
         };
 
         if config.cli_unstable().build_std.is_some() && requested_kinds[0].is_host() {
@@ -101,7 +113,7 @@ impl BuildConfig {
             build_plan: false,
             unit_graph: false,
             primary_unit_rustc: None,
-            rustfix_diagnostic_server: Arc::new(RefCell::new(None)),
+            rustfix_diagnostic_server: Rc::new(RefCell::new(None)),
             export_dir: None,
             future_incompat_report: false,
             timing_outputs: Vec::new(),

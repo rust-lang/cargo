@@ -9,7 +9,7 @@ use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::toml::read_manifest;
 use crate::util::Config;
 use cargo_util::paths;
-use log::{info, trace};
+use tracing::{info, trace};
 
 pub fn read_package(
     path: &Path,

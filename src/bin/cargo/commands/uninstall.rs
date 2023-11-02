@@ -5,12 +5,17 @@ use cargo::ops;
 pub fn cli() -> Command {
     subcommand("uninstall")
         .about("Remove a Rust binary")
-        .arg_quiet()
-        .arg(Arg::new("spec").num_args(0..))
-        .arg_package_spec_simple("Package to uninstall")
-        .arg(multi_opt("bin", "NAME", "Only uninstall the binary NAME"))
+        .arg(Arg::new("spec").value_name("SPEC").num_args(0..))
         .arg(opt("root", "Directory to uninstall packages from").value_name("DIR"))
-        .after_help("Run `cargo help uninstall` for more detailed information.\n")
+        .arg_quiet()
+        .arg_package_spec_simple("Package to uninstall")
+        .arg(
+            multi_opt("bin", "NAME", "Only uninstall the binary NAME")
+                .help_heading(heading::TARGET_SELECTION),
+        )
+        .after_help(color_print::cstr!(
+            "Run `<cyan,bold>cargo help uninstall</>` for more detailed information.\n"
+        ))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

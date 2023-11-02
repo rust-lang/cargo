@@ -4,7 +4,7 @@ use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
 use crate::sources::CRATES_IO_REGISTRY;
-use crate::util::{CargoResult, Config};
+use crate::util::{try_canonicalize, CargoResult, Config};
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
 use serde::Serialize;
@@ -83,7 +83,7 @@ fn sync(
     workspaces: &[&Workspace<'_>],
     opts: &VendorOptions<'_>,
 ) -> CargoResult<VendorConfig> {
-    let canonical_destination = opts.destination.canonicalize();
+    let canonical_destination = try_canonicalize(opts.destination);
     let canonical_destination = canonical_destination.as_deref().unwrap_or(opts.destination);
     let dest_dir_already_exists = canonical_destination.exists();
 
@@ -125,7 +125,7 @@ fn sync(
             // Don't delete actual source code!
             if pkg.source_id().is_path() {
                 if let Ok(path) = pkg.source_id().url().to_file_path() {
-                    if let Ok(path) = path.canonicalize() {
+                    if let Ok(path) = try_canonicalize(path) {
                         to_remove.remove(&path);
                     }
                 }
@@ -258,7 +258,7 @@ fn sync(
         } else {
             // Remove `precise` since that makes the source name very long,
             // and isn't needed to disambiguate multiple sources.
-            source_id.with_precise(None).as_url().to_string()
+            source_id.without_precise().as_url().to_string()
         };
 
         let source = if source_id.is_crates_io() {

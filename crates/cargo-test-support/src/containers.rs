@@ -94,7 +94,9 @@ impl Container {
 
         let image_base = self.build_context.file_name().unwrap();
         let image_name = format!("cargo-test-{}", image_base.to_str().unwrap());
-        let _lock = BUILD_LOCK.lock().unwrap();
+        let _lock = BUILD_LOCK
+            .lock()
+            .map_err(|_| panic!("previous docker build failed, unable to run test"));
         ProcessBuilder::new("docker")
             .args(&["build", "--tag", image_name.as_str()])
             .arg(&self.build_context)

@@ -48,7 +48,10 @@ fn rerun() {
     p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").run();
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--cfg=foo")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr(
+            "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html",
+        )
         .run();
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--cfg=bar")
@@ -56,6 +59,7 @@ fn rerun() {
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
         .run();
@@ -110,17 +114,19 @@ fn whitespace() {
         .with_status(101)
         .run();
 
-    const SPACED_VERSION: &str = "a\nb\tc\u{00a0}d";
     p.cargo("doc")
         .env_remove("__CARGO_TEST_FORCE_ARGFILE") // Not applicable for argfile.
         .env(
             "RUSTDOCFLAGS",
-            format!("--crate-version {}", SPACED_VERSION),
+            "--crate-version 1111\n2222\t3333\u{00a0}4444",
         )
         .run();
 
     let contents = p.read_file("target/doc/foo/index.html");
-    assert!(contents.contains(SPACED_VERSION));
+    assert!(contents.contains("1111"));
+    assert!(contents.contains("2222"));
+    assert!(contents.contains("3333"));
+    assert!(contents.contains("4444"));
 }
 
 #[cargo_test]

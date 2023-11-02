@@ -62,7 +62,7 @@ pub(crate) fn std_crates(config: &Config, units: Option<&[Unit]>) -> Option<Vec<
 /// Resolve the standard library dependencies.
 pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData<'cfg>,
+    target_data: &mut RustcTargetData<'cfg>,
     build_config: &BuildConfig,
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
@@ -92,7 +92,7 @@ pub fn resolve_std<'cfg>(
         String::from("library/std"),
         String::from("library/core"),
         String::from("library/alloc"),
-        String::from("library/test"),
+        String::from("library/sysroot"),
     ];
     let ws_config = crate::core::WorkspaceConfig::Root(crate::core::WorkspaceRootConfig::new(
         &src_path,
@@ -114,13 +114,13 @@ pub fn resolve_std<'cfg>(
     let config = ws.config();
     // This is a delicate hack. In order for features to resolve correctly,
     // the resolver needs to run a specific "current" member of the workspace.
-    // Thus, in order to set the features for `std`, we need to set `libtest`
-    // to be the "current" member. `libtest` is the root, and all other
+    // Thus, in order to set the features for `std`, we need to set `sysroot`
+    // to be the "current" member. `sysroot` is the root, and all other
     // standard library crates are dependencies from there. Since none of the
     // other crates need to alter their features, this should be fine, for
     // now. Perhaps in the future features will be decoupled from the resolver
     // and it will be easier to control feature selection.
-    let current_manifest = src_path.join("library/test/Cargo.toml");
+    let current_manifest = src_path.join("library/sysroot/Cargo.toml");
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
     let mut std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, config)?;
@@ -128,10 +128,10 @@ pub fn resolve_std<'cfg>(
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
     std_ws.set_require_optional_deps(false);
-    // `test` is not in the default set because it is optional, but it needs
-    // to be part of the resolve in case we do need it.
+    // `sysroot` is not in the default set because it is optional, but it needs
+    // to be part of the resolve in case we do need it or `libtest`.
     let mut spec_pkgs = Vec::from(crates);
-    spec_pkgs.push("test".to_string());
+    spec_pkgs.push("sysroot".to_string());
     let spec = Packages::Packages(spec_pkgs);
     let specs = spec.to_package_id_specs(&std_ws)?;
     let features = match &config.cli_unstable().build_std_features {
@@ -145,6 +145,7 @@ pub fn resolve_std<'cfg>(
     let cli_features = CliFeatures::from_command_line(
         &features, /*all_features*/ false, /*uses_default_features*/ false,
     )?;
+    let max_rust_version = ws.rust_version();
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
@@ -153,6 +154,7 @@ pub fn resolve_std<'cfg>(
         &specs,
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
+        max_rust_version,
     )?;
     Ok((
         resolve.pkg_set,

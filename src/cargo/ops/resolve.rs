@@ -49,8 +49,8 @@
 //! [`Package`]: crate::core::package
 //! [`Target`]: crate::core::Target
 //! [`Manifest`]: crate::core::Manifest
-//! [`Source`]: crate::core::Source
-//! [`SourceMap`]: crate::core::SourceMap
+//! [`Source`]: crate::sources::source::Source
+//! [`SourceMap`]: crate::sources::source::SourceMap
 //! [`PackageRegistry`]: crate::core::registry::PackageRegistry
 //! [source implementations]: crate::sources
 //! [`Downloads`]: crate::core::package::Downloads
@@ -68,11 +68,13 @@ use crate::core::Feature;
 use crate::core::{GitReference, PackageId, PackageIdSpec, PackageSet, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;
+use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
+use crate::util::RustVersion;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
-use log::{debug, trace};
 use std::collections::{HashMap, HashSet};
+use tracing::{debug, trace};
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'cfg> {
@@ -106,8 +108,10 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// This is a simple interface used by commands like `clean`, `fetch`, and
 /// `package`, which don't specify any options or features.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
+    let max_rust_version = ws.rust_version();
+
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = resolve_with_registry(ws, &mut registry)?;
+    let resolve = resolve_with_registry(ws, &mut registry, max_rust_version)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
 }
@@ -124,12 +128,13 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// members. In this case, `opts.all_features` must be `true`.
 pub fn resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
-    target_data: &RustcTargetData<'cfg>,
+    target_data: &mut RustcTargetData<'cfg>,
     requested_targets: &[CompileKind],
     cli_features: &CliFeatures,
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
+    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<WorkspaceResolve<'cfg>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
@@ -138,7 +143,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry)?;
+        let resolve = resolve_with_registry(ws, &mut registry, max_rust_version)?;
         // No need to add patches again, `resolve_with_registry` has done it.
         add_patches = false;
 
@@ -149,7 +154,7 @@ pub fn resolve_ws_with_opts<'cfg>(
 
         add_overrides(&mut registry, ws)?;
 
-        for &(ref replace_spec, ref dep) in ws.root_replace() {
+        for (replace_spec, dep) in ws.root_replace() {
             if !resolve
                 .iter()
                 .any(|r| replace_spec.matches(r) && !dep.matches_id(r))
@@ -184,6 +189,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         None,
         specs,
         add_patches,
+        max_rust_version,
     )?;
 
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
@@ -235,6 +241,7 @@ pub fn resolve_ws_with_opts<'cfg>(
 fn resolve_with_registry<'cfg>(
     ws: &Workspace<'cfg>,
     registry: &mut PackageRegistry<'cfg>,
+    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let mut resolve = resolve_with_previous(
@@ -246,6 +253,7 @@ fn resolve_with_registry<'cfg>(
         None,
         &[],
         true,
+        max_rust_version,
     )?;
 
     if !ws.is_ephemeral() && ws.require_optional_deps() {
@@ -278,10 +286,13 @@ pub fn resolve_with_previous<'cfg>(
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
+    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
-    let _lock = ws.config().acquire_package_cache_lock()?;
+    let _lock = ws
+        .config()
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a Git
@@ -321,15 +332,12 @@ pub fn resolve_with_previous<'cfg>(
             for patch in patches {
                 version_prefs.prefer_dependency(patch.clone());
             }
-            let previous = match previous {
-                Some(r) => r,
-                None => {
-                    let patches: Vec<_> = patches.iter().map(|p| (p, None)).collect();
-                    let unlock_ids = registry.patch(url, &patches)?;
-                    // Since nothing is locked, this shouldn't possibly return anything.
-                    assert!(unlock_ids.is_empty());
-                    continue;
-                }
+            let Some(previous) = previous else {
+                let patches: Vec<_> = patches.iter().map(|p| (p, None)).collect();
+                let unlock_ids = registry.patch(url, &patches)?;
+                // Since nothing is locked, this shouldn't possibly return anything.
+                assert!(unlock_ids.is_empty());
+                continue;
             };
 
             // This is a list of pairs where the first element of the pair is
@@ -381,12 +389,8 @@ pub fn resolve_with_previous<'cfg>(
                         }) {
                             Some(id_using_default) => {
                                 let id_using_master = id_using_default.with_source_id(
-                                    dep.source_id().with_precise(
-                                        id_using_default
-                                            .source_id()
-                                            .precise()
-                                            .map(|s| s.to_string()),
-                                    ),
+                                    dep.source_id()
+                                        .with_precise_from(id_using_default.source_id()),
                                 );
 
                                 let mut locked_dep = dep.clone();
@@ -481,7 +485,7 @@ pub fn resolve_with_previous<'cfg>(
     let replace = match previous {
         Some(r) => root_replace
             .iter()
-            .map(|&(ref spec, ref dep)| {
+            .map(|(spec, dep)| {
                 for (&key, &val) in r.replacements().iter() {
                     if spec.matches(key) && dep.matches_id(val) && keep(&val) {
                         let mut dep = dep.clone();
@@ -505,6 +509,7 @@ pub fn resolve_with_previous<'cfg>(
         ws.unstable_features()
             .require(Feature::public_dependency())
             .is_ok(),
+        max_rust_version,
     )?;
     let patches: Vec<_> = registry
         .patches()
@@ -530,9 +535,8 @@ pub fn add_overrides<'a>(
     ws: &Workspace<'a>,
 ) -> CargoResult<()> {
     let config = ws.config();
-    let paths = match config.get_list("paths")? {
-        Some(list) => list,
-        None => return Ok(()),
+    let Some(paths) = config.get_list("paths")? else {
+        return Ok(());
     };
 
     let paths = paths.val.iter().map(|(s, def)| {
@@ -603,7 +607,7 @@ fn register_previous_locks(
 
     // Ok so we've been passed in a `keep` function which basically says "if I
     // return `true` then this package wasn't listed for an update on the command
-    // line". That is, if we run `cargo update -p foo` then `keep(bar)` will return
+    // line". That is, if we run `cargo update foo` then `keep(bar)` will return
     // `true`, whereas `keep(foo)` will return `false` (roughly speaking).
     //
     // This isn't actually quite what we want, however. Instead we want to
@@ -613,7 +617,7 @@ fn register_previous_locks(
     // * There's a crate `log`.
     // * There's a crate `serde` which depends on `log`.
     //
-    // Let's say we then run `cargo update -p serde`. This may *also* want to
+    // Let's say we then run `cargo update serde`. This may *also* want to
     // update the `log` dependency as our newer version of `serde` may have a
     // new minimum version required for `log`. Now this isn't always guaranteed
     // to work. What'll happen here is we *won't* lock the `log` dependency nor
@@ -623,23 +627,11 @@ fn register_previous_locks(
     // however, nothing else in the dependency graph depends on `log` and the
     // newer version of `serde` requires a new version of `log` it'll get pulled
     // in (as we didn't accidentally lock it to an old version).
-    //
-    // Additionally, here we process all path dependencies listed in the previous
-    // resolve. They can not only have their dependencies change but also
-    // the versions of the package change as well. If this ends up happening
-    // then we want to make sure we don't lock a package ID node that doesn't
-    // actually exist. Note that we don't do transitive visits of all the
-    // package's dependencies here as that'll be covered below to poison those
-    // if they changed.
     let mut avoid_locking = HashSet::new();
     registry.add_to_yanked_whitelist(resolve.iter().filter(keep));
     for node in resolve.iter() {
         if !keep(&node) {
             add_deps(resolve, node, &mut avoid_locking);
-        } else if let Some(pkg) = path_pkg(node.source_id()) {
-            if pkg.package_id() != node {
-                avoid_locking.insert(node);
-            }
         }
     }
 
@@ -732,6 +724,24 @@ fn register_previous_locks(
         }
     }
 
+    // Additionally, here we process all path dependencies listed in the previous
+    // resolve. They can not only have their dependencies change but also
+    // the versions of the package change as well. If this ends up happening
+    // then we want to make sure we don't lock a package ID node that doesn't
+    // actually exist. Note that we don't do transitive visits of all the
+    // package's dependencies here as that'll be covered below to poison those
+    // if they changed.
+    //
+    // This must come after all other `add_deps` calls to ensure it recursively walks the tree when
+    // called.
+    for node in resolve.iter() {
+        if let Some(pkg) = path_pkg(node.source_id()) {
+            if pkg.package_id() != node {
+                avoid_locking.insert(node);
+            }
+        }
+    }
+
     // Alright now that we've got our new, fresh, shiny, and refined `keep`
     // function let's put it to action. Take a look at the previous lock file,
     // filter everything by this callback, and then shove everything else into
@@ -782,7 +792,7 @@ fn master_branch_git_source(id: PackageId, resolve: &Resolve) -> Option<PackageI
             let new_source =
                 SourceId::for_git(source.url(), GitReference::Branch("master".to_string()))
                     .unwrap()
-                    .with_precise(source.precise().map(|s| s.to_string()));
+                    .with_precise_from(source);
             return Some(id.with_source_id(new_source));
         }
     }

@@ -7,7 +7,7 @@ use std::rc::Rc;
 use anyhow::{anyhow, bail, Context as _};
 use glob::glob;
 use itertools::Itertools;
-use log::debug;
+use tracing::debug;
 use url::Url;
 
 use crate::core::compiler::Unit;
@@ -15,14 +15,15 @@ use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::CliFeatures;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec};
+use crate::core::{Dependency, Edition, FeatureValue, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lev_distance;
 use crate::util::toml::{read_manifest, InheritableFields, TomlDependency, TomlProfiles};
+use crate::util::RustVersion;
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
@@ -381,7 +382,21 @@ impl<'cfg> Workspace<'cfg> {
     pub fn target_dir(&self) -> Filesystem {
         self.target_dir
             .clone()
-            .unwrap_or_else(|| Filesystem::new(self.root().join("target")))
+            .unwrap_or_else(|| self.default_target_dir())
+    }
+
+    fn default_target_dir(&self) -> Filesystem {
+        if self.root_maybe().is_embedded() {
+            let hash = crate::util::hex::short_hash(&self.root_manifest().to_string_lossy());
+            let mut rel_path = PathBuf::new();
+            rel_path.push("target");
+            rel_path.push(&hash[0..2]);
+            rel_path.push(&hash[2..]);
+
+            self.config().home().join(rel_path)
+        } else {
+            Filesystem::new(self.root().join("target"))
+        }
     }
 
     /// Returns the root `[replace]` section of this workspace.
@@ -495,7 +510,7 @@ impl<'cfg> Workspace<'cfg> {
         self.members
             .iter()
             .filter_map(move |path| match packages.get(path) {
-                &MaybePackage::Package(ref p) => Some(p),
+                MaybePackage::Package(p) => Some(p),
                 _ => None,
             })
     }
@@ -526,7 +541,7 @@ impl<'cfg> Workspace<'cfg> {
         self.default_members
             .iter()
             .filter_map(move |path| match packages.get(path) {
-                &MaybePackage::Package(ref p) => Some(p),
+                MaybePackage::Package(p) => Some(p),
                 _ => None,
             })
     }
@@ -579,6 +594,12 @@ impl<'cfg> Workspace<'cfg> {
     pub fn set_ignore_lock(&mut self, ignore_lock: bool) -> &mut Workspace<'cfg> {
         self.ignore_lock = ignore_lock;
         self
+    }
+
+    /// Get the lowest-common denominator `package.rust-version` within the workspace, if specified
+    /// anywhere
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        self.members().filter_map(|pkg| pkg.rust_version()).min()
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {
@@ -642,18 +663,15 @@ impl<'cfg> Workspace<'cfg> {
     /// will transitively follow all `path` dependencies looking for members of
     /// the workspace.
     fn find_members(&mut self) -> CargoResult<()> {
-        let workspace_config = match self.load_workspace_config()? {
-            Some(workspace_config) => workspace_config,
-            None => {
-                debug!("find_members - only me as a member");
-                self.members.push(self.current_manifest.clone());
-                self.default_members.push(self.current_manifest.clone());
-                if let Ok(pkg) = self.current() {
-                    let id = pkg.package_id();
-                    self.member_ids.insert(id);
-                }
-                return Ok(());
+        let Some(workspace_config) = self.load_workspace_config()? else {
+            debug!("find_members - only me as a member");
+            self.members.push(self.current_manifest.clone());
+            self.default_members.push(self.current_manifest.clone());
+            if let Ok(pkg) = self.current() {
+                let id = pkg.package_id();
+                self.member_ids.insert(id);
             }
+            return Ok(());
         };
 
         // self.root_manifest must be Some to have retrieved workspace_config
@@ -724,6 +742,10 @@ impl<'cfg> Workspace<'cfg> {
     ) -> CargoResult<()> {
         let manifest_path = paths::normalize_path(manifest_path);
         if self.members.contains(&manifest_path) {
+            return Ok(());
+        }
+        if is_path_dep && self.root_maybe().is_embedded() {
+            // Embedded manifests cannot have workspace members
             return Ok(());
         }
         if is_path_dep
@@ -993,13 +1015,38 @@ impl<'cfg> Workspace<'cfg> {
                     }
                 }
             }
+            if let MaybePackage::Virtual(vm) = self.root_maybe() {
+                if vm.resolve_behavior().is_none() {
+                    if let Some(edition) = self
+                        .members()
+                        .filter(|p| p.manifest_path() != root_manifest)
+                        .map(|p| p.manifest().edition())
+                        .filter(|&e| e >= Edition::Edition2021)
+                        .max()
+                    {
+                        let resolver = edition.default_resolve_behavior().to_manifest();
+                        self.config.shell().warn(format_args!(
+                            "virtual workspace defaulting to `resolver = \"1\"` despite one or more workspace members being on edition {edition} which implies `resolver = \"{resolver}\"`"
+                        ))?;
+                        self.config.shell().note(
+                            "to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest",
+                        )?;
+                        self.config.shell().note(format_args!(
+                            "to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"` in the workspace root's manifest"
+                        ))?;
+                        self.config.shell().note(
+                            "for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions",
+                        )?;
+                    }
+                }
+            }
         }
         Ok(())
     }
 
     pub fn load(&self, manifest_path: &Path) -> CargoResult<Package> {
         match self.packages.maybe_get(manifest_path) {
-            Some(&MaybePackage::Package(ref p)) => return Ok(p.clone()),
+            Some(MaybePackage::Package(p)) => return Ok(p.clone()),
             Some(&MaybePackage::Virtual(_)) => bail!("cannot load workspace root"),
             None => {}
         }
@@ -1245,8 +1292,9 @@ impl<'cfg> Workspace<'cfg> {
             optional_dependency_names_per_member.insert(member, optional_dependency_names_raw);
         }
 
-        let levenshtein_test =
-            |a: InternedString, b: InternedString| lev_distance(a.as_str(), b.as_str()) < 4;
+        let edit_distance_test = |a: InternedString, b: InternedString| {
+            edit_distance(a.as_str(), b.as_str(), 3).is_some()
+        };
 
         let suggestions: Vec<_> = cli_features
             .features
@@ -1257,12 +1305,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds member features which are similar to the requested feature.
                     let summary_features = summary_features
                         .iter()
-                        .filter(move |feature| levenshtein_test(**feature, *typo));
+                        .filter(move |feature| edit_distance_test(**feature, *typo));
 
                     // Finds optional dependencies which name is similar to the feature
                     let optional_dependency_features = optional_dependency_names
                         .iter()
-                        .filter(move |feature| levenshtein_test(**feature, *typo));
+                        .filter(move |feature| edit_distance_test(**feature, *typo));
 
                     summary_features
                         .chain(optional_dependency_features)
@@ -1278,13 +1326,13 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `pkg/feat` that are very similar to current `pkg/feat`.
                     let pkg_feat_similar = dependencies_features
                         .iter()
-                        .filter(|(name, _)| levenshtein_test(**name, *dep_name))
+                        .filter(|(name, _)| edit_distance_test(**name, *dep_name))
                         .map(|(name, features)| {
                             (
                                 name,
                                 features
                                     .iter()
-                                    .filter(|feature| levenshtein_test(**feature, *dep_feature))
+                                    .filter(|feature| edit_distance_test(**feature, *dep_feature))
                                     .collect::<Vec<_>>(),
                             )
                         })
@@ -1298,12 +1346,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `member/optional_dep` features which name is similar to current `pkg/feat`.
                     let optional_dependency_features = optional_dependency_names_per_member
                         .iter()
-                        .filter(|(package, _)| levenshtein_test(package.name(), *dep_name))
+                        .filter(|(package, _)| edit_distance_test(package.name(), *dep_name))
                         .map(|(package, optional_dependencies)| {
                             optional_dependencies
                                 .into_iter()
                                 .filter(|optional_dependency| {
-                                    levenshtein_test(**optional_dependency, *dep_name)
+                                    edit_distance_test(**optional_dependency, *dep_name)
                                 })
                                 .map(move |optional_dependency| {
                                     format!("{}/{}", package.name(), optional_dependency)
@@ -1314,12 +1362,12 @@ impl<'cfg> Workspace<'cfg> {
                     // Finds set of `member/feat` features which name is similar to current `pkg/feat`.
                     let summary_features = summary_features_per_member
                         .iter()
-                        .filter(|(package, _)| levenshtein_test(package.name(), *dep_name))
+                        .filter(|(package, _)| edit_distance_test(package.name(), *dep_name))
                         .map(|(package, summary_features)| {
                             summary_features
                                 .into_iter()
                                 .filter(|summary_feature| {
-                                    levenshtein_test(**summary_feature, *dep_feature)
+                                    edit_distance_test(**summary_feature, *dep_feature)
                                 })
                                 .map(move |summary_feature| {
                                     format!("{}/{}", package.name(), summary_feature)
@@ -1443,7 +1491,7 @@ impl<'cfg> Workspace<'cfg> {
                         // Check if `dep_name` is member of the workspace, but isn't associated with current package.
                         self.current_opt() != Some(member) && member.name() == *dep_name
                     });
-                    if is_member && specs.iter().any(|spec| spec.name() == *dep_name) {
+                    if is_member && specs.iter().any(|spec| spec.name() == dep_name.as_str()) {
                         member_specific_features
                             .entry(*dep_name)
                             .or_default()
@@ -1561,6 +1609,14 @@ impl MaybePackage {
             MaybePackage::Virtual(ref vm) => vm.workspace_config(),
         }
     }
+
+    /// Has an embedded manifest (single-file package)
+    pub fn is_embedded(&self) -> bool {
+        match self {
+            MaybePackage::Package(p) => p.manifest().is_embedded(),
+            MaybePackage::Virtual(_) => false,
+        }
+    }
 }
 
 impl WorkspaceRootConfig {
@@ -1634,9 +1690,8 @@ impl WorkspaceRootConfig {
     }
 
     fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
-        let path = match path.to_str() {
-            Some(p) => p,
-            None => return Ok(Vec::new()),
+        let Some(path) = path.to_str() else {
+            return Ok(Vec::new());
         };
         let res = glob(path).with_context(|| format!("could not parse pattern `{}`", &path))?;
         let res = res

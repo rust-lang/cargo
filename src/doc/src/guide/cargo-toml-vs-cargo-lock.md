@@ -1,4 +1,4 @@
-## Cargo.toml vs Cargo.lock
+# Cargo.toml vs Cargo.lock
 
 `Cargo.toml` and `Cargo.lock` serve two different purposes. Before we talk
 about them, here’s a summary:
@@ -8,14 +8,11 @@ about them, here’s a summary:
 * `Cargo.lock` contains exact information about your dependencies. It is
   maintained by Cargo and should not be manually edited.
 
-If you’re building a non-end product, such as a rust library that other rust
-[packages][def-package] will depend on, put `Cargo.lock` in your
-`.gitignore`. If you’re building an end product, which are executable like
-command-line tool or an application, or a system library with crate-type of
-`staticlib` or `cdylib`, check `Cargo.lock` into `git`. If you're curious
-about why that is, see
-["Why do binaries have `Cargo.lock` in version control, but not libraries?" in the
-FAQ](../faq.md#why-do-binaries-have-cargolock-in-version-control-but-not-libraries).
+When in doubt, check `Cargo.lock` into the version control system (e.g. Git).
+For a better understanding of why and what the alternatives might be, see
+[“Why have Cargo.lock in version control?” in the FAQ](../faq.md#why-have-cargolock-in-version-control).
+We recommend pairing this with
+[Verifying Latest Dependencies](continuous-integration.md#verifying-latest-dependencies)
 
 Let’s dig in a little bit more.
 
@@ -35,7 +32,7 @@ regex = { git = "https://github.com/rust-lang/regex.git" }
 This package has a single dependency, on the `regex` library. We’ve stated in
 this case that we’re relying on a particular Git repository that lives on
 GitHub. Since we haven’t specified any other information, Cargo assumes that
-we intend to use the latest commit on the `master` branch to build our package.
+we intend to use the latest commit on the default branch to build our package.
 
 Sound good? Well, there’s one problem: If you build this package today, and
 then you send a copy to me, and I build this package tomorrow, something bad
@@ -94,8 +91,8 @@ When we’re ready to opt in to a new version of the library, Cargo can
 re-calculate the dependencies and update things for us:
 
 ```console
-$ cargo update            # updates all dependencies
-$ cargo update -p regex   # updates just “regex”
+$ cargo update         # updates all dependencies
+$ cargo update regex   # updates just “regex”
 ```
 
 This will write out a new `Cargo.lock` with the new version information. Note

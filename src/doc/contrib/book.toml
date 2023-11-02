@@ -5,6 +5,8 @@ authors = ["Eric Huss"]
 [output.html]
 curly-quotes = true # Enable smart-punctuation feature for more than quotes.
 git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src"
+edit-url-template = "https://github.com/rust-lang/cargo/edit/master/src/doc/contrib/{path}"
+search.use-boolean-and = true
 
 [output.html.redirect]
 "/apidoc/cargo/index.html" = "https://doc.rust-lang.org/nightly/nightly-rustc/cargo/"

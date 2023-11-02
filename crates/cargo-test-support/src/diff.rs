@@ -7,7 +7,6 @@
 
 use std::fmt;
 use std::io::Write;
-use termcolor::{Ansi, Color, ColorSpec, NoColor, WriteColor};
 
 /// A single line change to be applied to the original.
 #[derive(Debug, Eq, PartialEq)]
@@ -111,42 +110,35 @@ where
 }
 
 pub fn render_colored_changes<T: fmt::Display>(changes: &[Change<T>]) -> String {
-    // termcolor is not very ergonomic, but I don't want to bring in another dependency.
-    let mut red = ColorSpec::new();
-    red.set_fg(Some(Color::Red));
-    let mut green = ColorSpec::new();
-    green.set_fg(Some(Color::Green));
-    let mut dim = ColorSpec::new();
-    dim.set_dimmed(true);
-    let mut v = Vec::new();
-    let mut result: Box<dyn WriteColor> = if crate::is_ci() {
+    // anstyle is not very ergonomic, but I don't want to bring in another dependency.
+    let red = anstyle::AnsiColor::Red.on_default().render();
+    let green = anstyle::AnsiColor::Green.on_default().render();
+    let dim = (anstyle::Style::new() | anstyle::Effects::DIMMED).render();
+    let bold = (anstyle::Style::new() | anstyle::Effects::BOLD).render();
+    let reset = anstyle::Reset.render();
+
+    let choice = if crate::is_ci() {
         // Don't use color on CI. Even though GitHub can display colors, it
         // makes reading the raw logs more difficult.
-        Box::new(NoColor::new(&mut v))
+        anstream::ColorChoice::Never
     } else {
-        Box::new(Ansi::new(&mut v))
+        anstream::AutoStream::choice(&std::io::stdout())
     };
+    let mut buffer = anstream::AutoStream::new(Vec::new(), choice);
 
     for change in changes {
         let (nums, sign, color, text) = match change {
-            Change::Add(i, s) => (format!("    {:<4} ", i), '+', &green, s),
-            Change::Remove(i, s) => (format!("{:<4}     ", i), '-', &red, s),
-            Change::Keep(x, y, s) => (format!("{:<4}{:<4} ", x, y), ' ', &dim, s),
+            Change::Add(i, s) => (format!("    {:<4} ", i), '+', green, s),
+            Change::Remove(i, s) => (format!("{:<4}     ", i), '-', red, s),
+            Change::Keep(x, y, s) => (format!("{:<4}{:<4} ", x, y), ' ', dim, s),
         };
-        result.set_color(&dim).unwrap();
-        write!(result, "{}", nums).unwrap();
-        let mut bold = color.clone();
-        bold.set_bold(true);
-        result.set_color(&bold).unwrap();
-        write!(result, "{}", sign).unwrap();
-        result.reset().unwrap();
-        result.set_color(&color).unwrap();
-        write!(result, "{}", text).unwrap();
-        result.reset().unwrap();
-        writeln!(result).unwrap();
+        writeln!(
+            buffer,
+            "{dim}{nums}{reset}{bold}{sign}{reset}{color}{text}{reset}"
+        )
+        .unwrap();
     }
-    drop(result);
-    String::from_utf8(v).unwrap()
+    String::from_utf8(buffer.into_inner()).unwrap()
 }
 
 #[cfg(test)]

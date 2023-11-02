@@ -43,6 +43,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
     Ok(ExportInfo {
         packages,
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
+        workspace_default_members: ws.default_members().map(|pkg| pkg.package_id()).collect(),
         resolve,
         target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
@@ -58,6 +59,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
 pub struct ExportInfo {
     packages: Vec<SerializedPackage>,
     workspace_members: Vec<PackageId>,
+    workspace_default_members: Vec<PackageId>,
     resolve: Option<MetadataResolve>,
     target_directory: PathBuf,
     version: u32,
@@ -124,7 +126,7 @@ fn build_resolve_graph(
     // How should this work?
     let requested_kinds =
         CompileKind::from_requested_targets(ws.config(), &metadata_opts.filter_platforms)?;
-    let target_data = RustcTargetData::new(ws, &requested_kinds)?;
+    let mut target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;
     let force_all = if metadata_opts.filter_platforms.is_empty() {
@@ -133,16 +135,19 @@ fn build_resolve_graph(
         crate::core::resolver::features::ForceAllTargets::No
     };
 
+    let max_rust_version = ws.rust_version();
+
     // Note that even with --filter-platform we end up downloading host dependencies as well,
     // as that is the behavior of download_accessible.
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
-        &target_data,
+        &mut target_data,
         &requested_kinds,
         &metadata_opts.cli_features,
         &specs,
         HasDevUnits::Yes,
         force_all,
+        max_rust_version,
     )?;
 
     let package_map: BTreeMap<PackageId, Package> = ws_resolve
@@ -311,7 +316,7 @@ fn build_resolve_graph_r(
                     dep_kinds,
                 },
                 // No lib or artifact dep exists.
-                // Ususally this mean parent depending on non-lib bin crate.
+                // Usually this mean parent depending on non-lib bin crate.
                 (None, _) => continue,
             };
 

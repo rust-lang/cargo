@@ -313,11 +313,10 @@ fn cargo_bench_failing_test() {
 [FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] [..] (target/release/deps/foo-[..][EXE])",
         )
-        .with_stdout_contains(
-            "[..]thread '[..]' panicked at 'assertion failed: `(left == right)`[..]",
-        )
-        .with_stdout_contains("[..]left: `\"hello\"`[..]")
-        .with_stdout_contains("[..]right: `\"nope\"`[..]")
+        .with_stdout_contains("[..]thread '[..]' panicked at[..]")
+        .with_stdout_contains("[..]assertion [..]failed[..]")
+        .with_stdout_contains("[..]left: [..]\"hello\"[..]")
+        .with_stdout_contains("[..]right: [..]\"nope\"[..]")
         .with_stdout_contains("[..]src/main.rs:15[..]")
         .with_status(101)
         .run();
@@ -1668,6 +1667,43 @@ fn json_artifact_includes_executable_for_benchmark() {
 
                 {"reason": "build-finished", "success": true}
             "#,
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "bench")]
+fn cargo_bench_print_env_verbose() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file(
+            "src/main.rs",
+            r#"
+            #![feature(test)]
+            #[cfg(test)]
+            extern crate test;
+
+            fn hello() -> &'static str {
+                "hello"
+            }
+
+            pub fn main() {
+                println!("{}", hello())
+            }
+
+            #[bench]
+            fn bench_hello(_b: &mut test::Bencher) {
+                assert_eq!(hello(), "hello")
+            }
+            "#,
+        )
+        .build();
+    p.cargo("bench -vv")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc[..]`
+[FINISHED] bench [optimized] target(s) in [..]
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] [CWD]/target/release/deps/foo-[..][EXE] --bench`",
         )
         .run();
 }

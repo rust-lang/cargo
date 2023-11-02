@@ -1,0 +1,9 @@
+[package]
+name = "xtask-stale-label"
+version = "0.0.0"
+rust-version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+toml_edit.workspace = true

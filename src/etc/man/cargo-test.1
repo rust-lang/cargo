@@ -54,11 +54,18 @@ and may change in the future; beware of depending on it.
 See the \fIrustdoc book\fR <https://doc.rust\-lang.org/rustdoc/> for more information
 on writing doc tests.
 .SS "Working directory of tests"
-The working directory of every test is set to the root directory of the package 
-the test belongs to.
-Setting the working directory of tests to the package\[cq]s root directory makes it 
+The working directory when running each unit and integration test is set to the
+root directory of the package the test belongs to.
+Setting the working directory of tests to the package\[cq]s root directory makes it
 possible for tests to reliably access the package\[cq]s files using relative paths,
 regardless from where \fBcargo test\fR was executed from.
+.sp
+For documentation tests, the working directory when invoking \fBrustdoc\fR is set to
+the workspace root directory, and is also the directory \fBrustdoc\fR uses as the
+compilation directory of each documentation test.
+The working directory when running each documentation test is set to the root
+directory of the package the test belongs to, and is controlled via \fBrustdoc\fR\[cq]s
+\fB\-\-test\-run\-directory\fR option.
 .SH "OPTIONS"
 .SS "Test Options"
 .sp
@@ -149,12 +156,19 @@ available)
 .sp
 The default behavior can be changed by setting the \fBtest\fR flag for the target
 in the manifest settings. Setting examples to \fBtest = true\fR will build and run
-the example as a test. Setting targets to \fBtest = false\fR will stop them from
-being tested by default. Target selection options that take a target by name
+the example as a test, replacing the example\[cq]s \fBmain\fR function with the
+libtest harness. If you don\[cq]t want the \fBmain\fR function replaced, also include
+\fBharness = false\fR, in which case the example will be built and executed as\-is.
+.sp
+Setting targets to \fBtest = false\fR will stop them from being tested by default.
+Target selection options that take a target by name (such as \fB\-\-example foo\fR)
 ignore the \fBtest\fR flag and will always test the given target.
 .sp
 Doc tests for libraries may be disabled by setting \fBdoctest = false\fR for the
 library in the manifest.
+.sp
+See \fIConfiguring a target\fR <https://doc.rust\-lang.org/cargo/reference/cargo\-targets.html#configuring\-a\-target>
+for more information on per\-target settings.
 .sp
 Binary targets are automatically built if there is an integration test or
 benchmark being selected to test. This allows an integration
@@ -295,7 +309,7 @@ See also the \fB\-\-profile\fR option for choosing a specific profile by name.
 \fB\-\-profile\fR \fIname\fR
 .RS 4
 Test with the given profile.
-See the \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
 .RE
 .sp
 \fB\-\-ignore\-rust\-version\fR
@@ -480,7 +494,13 @@ See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/
 .RS 4
 Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
-the directories searched for discovering \fB\&.cargo/config.toml\fR, for example.
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
 .RE
 .sp
 \fB\-h\fR, 
@@ -510,15 +530,9 @@ cargo test \-j 2 \-\- \-\-test\-threads=2
 Number of parallel jobs to run. May also be specified with the
 \fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of logical CPUs. If negative, it sets the maximum number of
-parallel jobs to the number of logical CPUs plus provided value.
+parallel jobs to the number of logical CPUs plus provided value. If
+a string \fBdefault\fR is provided, it sets the value back to defaults.
 Should not be 0.
-.RE
-.sp
-\fB\-\-keep\-going\fR
-.RS 4
-Build as many crates in the dependency graph as possible, rather than aborting
-the build on the first one that fails to build. Unstable, requires
-\fB\-Zunstable\-options\fR\&.
 .RE
 .sp
 \fB\-\-future\-incompat\-report\fR
@@ -527,6 +541,18 @@ Displays a future\-incompat report for any future\-incompatible warnings
 produced during execution of this command
 .sp
 See \fBcargo\-report\fR(1)
+.RE
+.sp
+While \fBcargo test\fR involves compilation, it does not provide a \fB\-\-keep\-going\fR
+flag. Use \fB\-\-no\-fail\-fast\fR to run as many tests as possible without stopping at
+the first failure. To \[lq]compile\[rq] as many tests as possible, use \fB\-\-tests\fR to
+build test binaries separately. For example:
+.sp
+.RS 4
+.nf
+cargo build \-\-tests \-\-keep\-going
+cargo test \-\-tests \-\-no\-fail\-fast
+.fi
 .RE
 .SH "ENVIRONMENT"
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for

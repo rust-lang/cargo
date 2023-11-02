@@ -362,6 +362,10 @@ fn add_pkg(
                 if !opts.edge_kinds.contains(&EdgeKind::Dep(dep.kind())) {
                     return false;
                 }
+                // Filter out proc-macrcos if requested.
+                if opts.no_proc_macro && graph.package_for_id(dep_id).proc_macro() {
+                    return false;
+                }
                 if dep.is_optional() {
                     // If the new feature resolver does not enable this
                     // optional dep, then don't use it.
@@ -594,9 +598,8 @@ fn add_feature_rec(
     package_index: usize,
 ) {
     let feature_map = resolve.summary(package_id).features();
-    let fvs = match feature_map.get(&feature_name) {
-        Some(fvs) => fvs,
-        None => return,
+    let Some(fvs) = feature_map.get(&feature_name) else {
+        return;
     };
     for fv in fvs {
         match fv {
@@ -638,7 +641,7 @@ fn add_feature_rec(
                 let dep_indexes = match graph.dep_name_map[&package_index].get(dep_name) {
                     Some(indexes) => indexes.clone(),
                     None => {
-                        log::debug!(
+                        tracing::debug!(
                             "enabling feature {} on {}, found {}/{}, \
                              dep appears to not be enabled",
                             feature_name,

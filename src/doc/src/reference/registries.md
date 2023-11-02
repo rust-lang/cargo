@@ -1,4 +1,4 @@
-## Registries
+# Registries
 
 Cargo installs crates and fetches dependencies from a "registry". The default
 registry is [crates.io]. A registry contains an "index" which contains a
@@ -11,7 +11,11 @@ support publishing new crates directly from Cargo.
 If you are implementing a registry server, see [Running a Registry] for more
 details about the protocol between Cargo and a registry.
 
-### Using an Alternate Registry
+If you're using a registry that requires authentication, see [Registry Authentication].
+If you are implementing a credential provider, see [Credential Provider Protocol]
+for details.
+
+## Using an Alternate Registry
 
 To use a registry other than [crates.io], the name and index URL of the
 registry must be added to a [`.cargo/config.toml` file][config]. The `registries`
@@ -51,7 +55,7 @@ CARGO_REGISTRIES_MY_REGISTRY_INDEX=https://my-intranet:8080/git/index
 > Note: [crates.io] does not accept packages that depend on crates from other
 > registries.
 
-### Publishing to an Alternate Registry
+## Publishing to an Alternate Registry
 
 If the registry supports web API access, then packages can be published
 directly to the registry from Cargo. Several of Cargo's commands such as
@@ -100,7 +104,7 @@ has a separate table for each registry, for example:
 token = "854DvwSlUwEHtIo3kWy6x7UCPKHfzCmy"
 ```
 
-### Registry Protocols
+## Registry Protocols
 Cargo supports two remote registry protocols: `git` and `sparse`. If the registry
 index URL starts with `sparse+`, Cargo uses the sparse protocol. Otherwise
 Cargo uses the `git` protocol.
@@ -117,6 +121,8 @@ controlled via the [`registries.crates-io.protocol`] config key.
 
 [Source Replacement]: source-replacement.md
 [Running a Registry]: running-a-registry.md
+[Credential Provider Protocol]: credential-provider-protocol.md
+[Registry Authentication]: registry-authentication.md
 [`cargo publish`]: ../commands/cargo-publish.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo login`]: ../commands/cargo-login.md

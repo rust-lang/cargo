@@ -1051,10 +1051,11 @@ fn vendor_preserves_permissions() {
 
     p.cargo("vendor --respect-source-config").run();
 
+    let umask = cargo::util::get_umask();
     let metadata = fs::metadata(p.root().join("vendor/bar/src/lib.rs")).unwrap();
-    assert_eq!(metadata.mode() & 0o777, 0o644);
+    assert_eq!(metadata.mode() & 0o777, 0o644 & !umask);
     let metadata = fs::metadata(p.root().join("vendor/bar/example.sh")).unwrap();
-    assert_eq!(metadata.mode() & 0o777, 0o755);
+    assert_eq!(metadata.mode() & 0o777, 0o755 & !umask);
 }
 
 #[cargo_test]

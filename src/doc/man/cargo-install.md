@@ -1,6 +1,7 @@
 # cargo-install(1)
-{{*set actionverb="Install"}}
-{{*set temp-target-dir=true}}
+{{~*set command="install"}}
+{{~*set actionverb="Install"}}
+{{~*set temp-target-dir=true}}
 
 ## NAME
 
@@ -18,7 +19,7 @@ cargo-install --- Build and install a Rust binary
 This command manages Cargo's local set of installed binary crates. Only
 packages which have executable `[[bin]]` or `[[example]]` targets can be
 installed, and all executables are installed into the installation root's
-`bin` folder.
+`bin` folder. By default only binaries, not examples, are installed.
 
 {{> description-install-root }}
 
@@ -141,7 +142,7 @@ Install only the specified binary.
 {{/option}}
 
 {{#option "`--bins`" }}
-Install all binaries.
+Install all binaries. This is the default behavior.
 {{/option}}
 
 {{#option "`--example` _name_..." }}
@@ -173,7 +174,7 @@ Directory to install packages into.
 {{> options-target-dir }}
 
 {{#option "`--debug`" }}
-Build with the `dev` profile instead the `release` profile.
+Build with the `dev` profile instead of the `release` profile.
 See also the `--profile` option for choosing a specific profile by name.
 {{/option}}
 

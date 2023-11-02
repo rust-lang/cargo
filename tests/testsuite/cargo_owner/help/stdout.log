@@ -1,0 +1,27 @@
+Manage the owners of a crate on the registry
+
+Usage: cargo[EXE] owner [OPTIONS] [CRATE]
+
+Arguments:
+  [CRATE]  
+
+Options:
+  -a, --add <LOGIN>          Name of a user or team to invite as an owner
+  -r, --remove <LOGIN>       Name of a user or team to remove as an owner
+  -l, --list                 List owners of a crate
+      --index <INDEX>        Registry index URL to modify owners for
+      --registry <REGISTRY>  Registry to modify owners for
+      --token <TOKEN>        API token to use when authenticating
+  -q, --quiet                Do not print cargo log messages
+  -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)
+      --color <WHEN>         Coloring: auto, always, never
+      --config <KEY=VALUE>   Override a configuration value
+  -Z <FLAG>                  Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                 Print help
+
+Manifest Options:
+      --frozen   Require Cargo.lock and cache are up to date
+      --locked   Require Cargo.lock is up to date
+      --offline  Run without accessing the network
+
+Run `cargo help owner` for more detailed information.

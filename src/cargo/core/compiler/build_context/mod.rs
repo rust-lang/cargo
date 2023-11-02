@@ -10,7 +10,6 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::Rustc;
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 
 mod target_info;
 pub use self::target_info::{
@@ -118,15 +117,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     /// Information of the `rustc` this build task will use.
     pub fn rustc(&self) -> &Rustc {
         &self.target_data.rustc
-    }
-
-    /// Gets the user-specified linker for a particular host or target.
-    pub fn linker(&self, kind: CompileKind) -> Option<PathBuf> {
-        self.target_data
-            .target_config(kind)
-            .linker
-            .as_ref()
-            .map(|l| l.val.clone().resolve_program(self.config))
     }
 
     /// Gets the host architecture triple.

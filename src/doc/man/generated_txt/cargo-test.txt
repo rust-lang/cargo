@@ -53,11 +53,18 @@ DESCRIPTION
        information on writing doc tests.
 
    Working directory of tests
-       The working directory of every test is set to the root directory of the
-       package the test belongs to. Setting the working directory of tests to
-       the package’s root directory makes it possible for tests to reliably
-       access the package’s files using relative paths, regardless from where
-       cargo test was executed from.
+       The working directory when running each unit and integration test is set
+       to the root directory of the package the test belongs to. Setting the
+       working directory of tests to the package’s root directory makes it
+       possible for tests to reliably access the package’s files using
+       relative paths, regardless from where cargo test was executed from.
+
+       For documentation tests, the working directory when invoking rustdoc is
+       set to the workspace root directory, and is also the directory rustdoc
+       uses as the compilation directory of each documentation test. The
+       working directory when running each documentation test is set to the
+       root directory of the package the test belongs to, and is controlled via
+       rustdoc’s --test-run-directory option.
 
 OPTIONS
    Test Options
@@ -128,13 +135,22 @@ OPTIONS
 
        The default behavior can be changed by setting the test flag for the
        target in the manifest settings. Setting examples to test = true will
-       build and run the example as a test. Setting targets to test = false
-       will stop them from being tested by default. Target selection options
-       that take a target by name ignore the test flag and will always test the
-       given target.
+       build and run the example as a test, replacing the example’s main
+       function with the libtest harness. If you don’t want the main function
+       replaced, also include harness = false, in which case the example will
+       be built and executed as-is.
+
+       Setting targets to test = false will stop them from being tested by
+       default. Target selection options that take a target by name (such as
+       --example foo) ignore the test flag and will always test the given
+       target.
 
        Doc tests for libraries may be disabled by setting doctest = false for
        the library in the manifest.
+
+       See Configuring a target
+       <https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target>
+       for more information on per-target settings.
 
        Binary targets are automatically built if there is an integration test
        or benchmark being selected to test. This allows an integration test to
@@ -246,7 +262,7 @@ OPTIONS
            --profile option for choosing a specific profile by name.
 
        --profile name
-           Test with the given profile. See the the reference
+           Test with the given profile. See the reference
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 
@@ -394,7 +410,14 @@ OPTIONS
            Changes the current working directory before executing any specified
            operations. This affects things like where cargo looks by default
            for the project manifest (Cargo.toml), as well as the directories
-           searched for discovering .cargo/config.toml, for example.
+           searched for discovering .cargo/config.toml, for example. This
+           option must appear before the command name, for example cargo -C
+           path/to/my-project build.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #10098
+           <https://github.com/rust-lang/cargo/issues/10098>).
 
        -h, --help
            Prints help information.
@@ -416,18 +439,22 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            the number of logical CPUs. If negative, it sets the maximum number
            of parallel jobs to the number of logical CPUs plus provided value.
+           If a string default is provided, it sets the value back to defaults.
            Should not be 0.
-
-       --keep-going
-           Build as many crates in the dependency graph as possible, rather
-           than aborting the build on the first one that fails to build.
-           Unstable, requires -Zunstable-options.
 
        --future-incompat-report
            Displays a future-incompat report for any future-incompatible
            warnings produced during execution of this command
 
            See cargo-report(1)
+
+       While cargo test involves compilation, it does not provide a
+       --keep-going flag. Use --no-fail-fast to run as many tests as possible
+       without stopping at the first failure. To “compile” as many tests as
+       possible, use --tests to build test binaries separately. For example:
+
+           cargo build --tests --keep-going
+           cargo test --tests --no-fail-fast
 
 ENVIRONMENT
        See the reference

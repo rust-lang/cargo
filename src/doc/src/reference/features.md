@@ -1,4 +1,4 @@
-## Features
+# Features
 
 Cargo "features" provide a mechanism to express [conditional compilation] and
 [optional dependencies](#optional-dependencies). A package defines a set of
@@ -13,7 +13,7 @@ be used.
 [conditional compilation]: ../../reference/conditional-compilation.md
 [Features Examples]: features-examples.md
 
-### The `[features]` section
+## The `[features]` section
 
 Features are defined in the `[features]` table in `Cargo.toml`. Each feature
 specifies an array of other features or optional dependencies that it enables.
@@ -68,7 +68,7 @@ includes most letters), and additionally allows starting with `_` or digits
 [`cfg` attribute]: ../../reference/conditional-compilation.md#the-cfg-attribute
 [`cfg` macro]: ../../std/macro.cfg.html
 
-### The `default` feature
+## The `default` feature
 
 By default, all features are disabled unless explicitly enabled. This can be
 changed by specifying the `default` feature:
@@ -105,7 +105,7 @@ enables the listed features. This behavior can be changed by:
 > change](#semver-compatibility) to remove a feature from the default set, so
 > you should be confident that you will keep those features.
 
-### Optional dependencies
+## Optional dependencies
 
 Dependencies can be marked "optional", which means they will not be compiled
 by default. For example, let's say that our 2D image processing library uses
@@ -164,7 +164,7 @@ our crate.
 
 [platform-specific dependencies]: specifying-dependencies.md#platform-specific-dependencies
 
-### Dependency features
+## Dependency features
 
 Features of dependencies can be enabled within the dependency declaration. The
 `features` key indicates which features to enable:
@@ -226,7 +226,7 @@ dependency.
 It will also enable the `serde` feature for the `rgb` dependency, but only if
 something else has enabled the `rgb` dependency.
 
-### Command-line feature options
+## Command-line feature options
 
 The following command-line flags can be used to control which features are
 enabled:
@@ -246,7 +246,7 @@ enabled:
 
 [workspace]: workspaces.md
 
-### Feature unification
+## Feature unification
 
 Features are unique to the package that defines them. Enabling a feature on a
 package does not enable a feature of the same name on other packages.
@@ -291,7 +291,7 @@ pub fn function_that_requires_std() {
 [`no_std`]: ../../reference/names/preludes.html#the-no_std-attribute
 [features section]: resolver.md#features
 
-#### Mutually exclusive features
+### Mutually exclusive features
 
 There are rare cases where features may be mutually incompatible with one
 another. This should be avoided if at all possible, because it requires
@@ -318,7 +318,7 @@ Instead of using mutually exclusive features, consider some other options:
 [`cfg-if`]: https://crates.io/crates/cfg-if
 [feature-precedence]: features-examples.md#feature-precedence
 
-#### Inspecting resolved features
+### Inspecting resolved features
 
 In complex dependency graphs, it can sometimes be difficult to understand how
 different features get enabled on various packages. The [`cargo tree`] command
@@ -338,7 +338,7 @@ enabled. Some options to try:
 
 [`cargo tree`]: ../commands/cargo-tree.md
 
-### Feature resolver version 2
+## Feature resolver version 2
 
 A different feature resolver can be specified with the `resolver` field in
 `Cargo.toml`, like this:
@@ -386,7 +386,7 @@ the resolved features. For build dependencies, this is not necessary if you
 are cross-compiling with the `--target` flag because build dependencies are
 always built separately from normal dependencies in that scenario.
 
-#### Resolver version 2 command-line flags
+### Resolver version 2 command-line flags
 
 The `resolver = "2"` setting also changes the behavior of the `--features` and
 `--no-default-features` [command-line options](#command-line-feature-options).
@@ -419,7 +419,7 @@ version "2", it will disable the default features for all workspace members.
 [dev-dependencies]: specifying-dependencies.md#development-dependencies
 [resolver-v2]: resolver.md#feature-resolver-version-2
 
-### Build scripts
+## Build scripts
 
 [Build scripts] can detect which features are enabled on the package by
 inspecting the `CARGO_FEATURE_<name>` environment variable, where `<name>` is
@@ -427,7 +427,7 @@ the feature name converted to uppercase and `-` converted to `_`.
 
 [build scripts]: build-scripts.md
 
-### Required features
+## Required features
 
 The [`required-features` field] can be used to disable specific [Cargo
 targets] if a feature is not enabled. See the linked documentation for more
@@ -436,7 +436,7 @@ details.
 [`required-features` field]: cargo-targets.md#the-required-features-field
 [Cargo targets]: cargo-targets.md
 
-### SemVer compatibility
+## SemVer compatibility
 
 Enabling a feature should not introduce a SemVer-incompatible change. For
 example, the feature shouldn't change an existing API in a way that could
@@ -466,7 +466,7 @@ See the links for caveats and examples.
 [cargo-remove-opt-dep]: semver.md#cargo-remove-opt-dep
 [cargo-feature-remove-another]: semver.md#cargo-feature-remove-another
 
-### Feature documentation and discovery
+## Feature documentation and discovery
 
 You are encouraged to document which features are available in your package.
 This can be done by adding [doc comments] at the top of `lib.rs`. As an
@@ -501,7 +501,7 @@ control which features are enabled when the documentation is built. See
 [`doc_cfg`]: ../../unstable-book/language-features/doc-cfg.html
 [`syn` documentation]: https://docs.rs/syn/1.0.54/syn/#modules
 
-#### Discovering features
+### Discovering features
 
 When features are documented in the library API, this can make it easier for
 your users to discover which features are available and what they do. If the
@@ -514,7 +514,7 @@ source and inspect it.
 [`cargo vendor`]: ../commands/cargo-vendor.md
 [cargo-clone-crate]: https://crates.io/crates/cargo-clone-crate
 
-### Feature combinations
+## Feature combinations
 
 Because features are a form of conditional compilation, they require an exponential number of configurations and test cases to be 100% covered. By default, tests, docs, and other tooling such as [Clippy](https://github.com/rust-lang/rust-clippy) will only run with the default set of features.
 

@@ -184,10 +184,9 @@ fn known_host_works() {
     // Validate the fingerprint while we're here.
     let fingerprint = stderr
         .lines()
-        .find(|line| line.starts_with("  The ECDSA key fingerprint"))
+        .find_map(|line| line.strip_prefix("  The ECDSA key fingerprint is: "))
         .unwrap()
         .trim();
-    let fingerprint = &fingerprint[30..];
     let finger_out = sshd.exec(&["ssh-keygen", "-l", "-f", "/etc/ssh/ssh_host_ecdsa_key.pub"]);
     let gen_finger = std::str::from_utf8(&finger_out.stdout).unwrap();
     // <key-size> <fingerprint> <comments…>
@@ -469,11 +468,6 @@ Caused by:
   failed to authenticate when downloading repository
 
   *";
-    let err = if cfg!(windows) {
-        "error authenticating: unable to connect to agent pipe; class=Ssh (23)"
-    } else {
-        "error authenticating: failed connecting with agent; class=Ssh (23)"
-    };
     let expected = if cargo_uses_gitoxide() {
         format!(
             "{shared_stderr} attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
@@ -496,7 +490,7 @@ Caused by:
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 Caused by:
-  {err}
+  no authentication methods succeeded
 "
         )
     };
@@ -546,7 +540,7 @@ Caused by:
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 Caused by:
-  {err}
+  no authentication methods succeeded
 "
         )
     };

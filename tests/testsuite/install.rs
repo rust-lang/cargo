@@ -58,6 +58,54 @@ fn simple() {
 }
 
 #[cargo_test]
+fn install_the_same_version_twice() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn toolchain() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install +nightly")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid character `+` in package name: `+nightly`
+    Use `cargo +nightly install` if you meant to use the `nightly` toolchain.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn url() {
+    pkg("foo", "0.0.1");
+    cargo_process("install https://github.com/bar/foo")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid package name: `https://github.com/bar/foo`
+    Use `cargo install --git https://github.com/bar/foo` if you meant to install from a git repository.")
+        .run();
+}
+
+#[cargo_test]
 fn simple_with_message_format() {
     pkg("foo", "0.0.1");
 
@@ -964,7 +1012,8 @@ fn compile_failure() {
             "\
 [ERROR] could not compile `foo` (bin \"foo\") due to previous error
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be \
-    found at `[..]target`
+    found at `[..]target`.\nTo reuse those artifacts with a future compilation, \
+    set the environment variable `CARGO_TARGET_DIR` to that path.
 ",
         )
         .run();
@@ -1269,7 +1318,8 @@ fn reports_unsuccessful_subcommand_result() {
         .run();
     cargo_process("fail")
         .with_status(101)
-        .with_stderr_contains("thread '[..]' panicked at 'explicit panic', [..]")
+        .with_stderr_contains("thread '[..]' panicked at [..]src/main.rs:1:[..]")
+        .with_stderr_contains("[..]explicit panic[..]")
         .run();
 }
 
@@ -1416,6 +1466,46 @@ fn path_install_workspace_root_despite_default_members() {
 }
 
 #[cargo_test]
+fn git_install_workspace_root_despite_default_members() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "ws-root"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["ws-member"]
+                default-members = ["ws-member"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "ws-member/Cargo.toml",
+            r#"
+                [package]
+                name = "ws-member"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file("ws-member/src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .arg("ws-root")
+        .with_stderr_contains(
+            "[INSTALLED] package `ws-root v0.1.0 ([..])` (executable `ws-root[EXE]`)",
+        )
+        // Particularly avoid "Installed package `ws-root v0.1.0 ([..]])` (executable `ws-member`)":
+        .with_stderr_does_not_contain("ws-member")
+        .run();
+}
+
+#[cargo_test]
 fn dev_dependencies_no_check() {
     Package::new("foo", "1.0.0").publish();
     let p = project()
@@ -1544,8 +1634,13 @@ fn inline_version_without_name() {
     pkg("foo", "0.1.2");
 
     cargo_process("install @0.1.1")
-        .with_status(101)
-        .with_stderr("error: missing crate name for `@0.1.1`")
+        .with_status(1)
+        .with_stderr(
+            "error: invalid value '@0.1.1' for '[CRATE[@<VER>]]...': missing crate name before '@'
+
+For more information, try '--help'.
+",
+        )
         .run();
 }
 
@@ -1556,7 +1651,7 @@ fn inline_and_explicit_version() {
 
     cargo_process("install foo@0.1.1 --version 0.1.1")
         .with_status(101)
-        .with_stderr("error: cannot specify both `@0.1.1` and `--version`")
+        .with_stderr("error: cannot specify both `@<VERSION>` and `--version <VERSION>`")
         .run();
 }
 
@@ -1771,7 +1866,9 @@ fn install_empty_argument() {
     cargo_process("install")
         .arg("")
         .with_status(1)
-        .with_stderr_contains("[ERROR] a value is required for '[crate]...' but none was supplied")
+        .with_stderr_contains(
+            "[ERROR] invalid value '' for '[CRATE[@<VER>]]...': crate name is empty",
+        )
         .run();
 }
 
@@ -2210,16 +2307,18 @@ fn failed_install_retains_temp_directory() {
     )
     .unwrap();
     compare::match_contains(
-        "error: failed to compile `foo v0.0.1`, intermediate artifacts can be found at `[..]`",
+        "error: failed to compile `foo v0.0.1`, intermediate artifacts can be found at \
+        `[..]`.\nTo reuse those artifacts with a future compilation, set the environment \
+        variable `CARGO_TARGET_DIR` to that path.",
         &stderr,
         None,
     )
     .unwrap();
 
     // Find the path in the output.
-    let start = stderr.find("found at `").unwrap() + 10;
-    let end = stderr[start..].find('\n').unwrap() - 1;
-    let path = Path::new(&stderr[start..(end + start)]);
+    let stderr = stderr.split_once("found at `").unwrap().1;
+    let end = stderr.find('.').unwrap() - 1;
+    let path = Path::new(&stderr[..end]);
     assert!(path.exists());
     assert!(path.join("release/deps").exists());
 }
@@ -2286,4 +2385,125 @@ fn sparse_install() {
         r#"[v1]
 "#,
     );
+}
+
+#[cargo_test]
+fn self_referential() {
+    // Some packages build-dep on prior versions of themselves.
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "fn hello() {}")
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .publish();
+    Package::new("foo", "0.0.2")
+        .file("src/lib.rs", "fn hello() {}")
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .build_dep("foo", "0.0.1")
+        .publish();
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.2 (registry [..])
+[INSTALLING] foo v0.0.2
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[COMPILING] foo v0.0.1
+[COMPILING] foo v0.0.2
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.2` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn ambiguous_registry_vs_local_package() {
+    // Correctly install 'foo' from a local package, even if that package also
+    // depends on a registry dependency named 'foo'.
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+        authors = []
+        edition = "2021"
+
+        [dependencies]
+        foo = "0.0.1"
+    "#,
+        )
+        .build();
+
+    cargo_process("install --path")
+        .arg(p.root())
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.1.0 ([..])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[COMPILING] foo v0.0.1
+[COMPILING] foo v0.1.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.1.0 ([..])` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn install_with_redundant_default_mode() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo --release")
+        .with_stderr(
+            "\
+error: unexpected argument '--release' found
+
+  tip: `--release` is the default for `cargo install`; instead `--debug` is supported
+
+Usage: cargo[EXE] install [OPTIONS] [CRATE[@<VER>]]...
+
+For more information, try '--help'.
+",
+        )
+        .with_status(1)
+        .run();
+}
+
+#[cargo_test]
+fn install_incompat_msrv() {
+    Package::new("foo", "0.1.0")
+        .file("src/main.rs", "fn main() {}")
+        .rust_version("1.30")
+        .publish();
+    Package::new("foo", "0.2.0")
+        .file("src/main.rs", "fn main() {}")
+        .rust_version("1.9876.0")
+        .publish();
+
+    cargo_process("install foo")
+        .with_stderr("\
+[UPDATING] `dummy-registry` index
+[ERROR] cannot install package `foo 0.2.0`, it requires rustc 1.9876.0 or newer, while the currently active rustc version is [..]
+`foo 0.1.0` supports rustc 1.30
+")
+        .with_status(101).run();
 }

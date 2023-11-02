@@ -1,6 +1,7 @@
 # cargo-rustdoc(1)
-{{*set actionverb="Document"}}
-{{*set multitarget=true}}
+{{~*set command="rustdoc"}}
+{{~*set actionverb="Document"}}
+{{~*set multitarget=true}}
 
 ## NAME
 
