@@ -59,7 +59,7 @@ Available binaries:
             .with_stderr(
                 "\
 error: \"--bench\" takes one argument.
-Available benches:
+Available bench targets:
     bench1
     bench2
 
@@ -75,7 +75,7 @@ Available benches:
             .with_stderr(
                 "\
 error: \"--test\" takes one argument.
-Available tests:
+Available test targets:
     test1
     test2
 
@@ -139,7 +139,7 @@ No binaries available.
             .with_stderr(
                 "\
 error: \"--bench\" takes one argument.
-No benches available.
+No bench targets available.
 
 ",
             )
@@ -153,7 +153,7 @@ No benches available.
             .with_stderr(
                 "\
 error: \"--test\" takes one argument.
-No tests available.
+No test targets available.
 
 ",
             )

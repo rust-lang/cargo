@@ -26,9 +26,9 @@ Target Selection:
       --bin [<NAME>]      Build only the specified binary
       --examples          Build all examples
       --example [<NAME>]  Build only the specified example
-      --tests             Build all tests
+      --tests             Build all test targets
       --test [<NAME>]     Build only the specified test target
-      --benches           Build all benches
+      --benches           Build all bench targets
       --bench [<NAME>]    Build only the specified bench target
       --all-targets       Build all targets
 

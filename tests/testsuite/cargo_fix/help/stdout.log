@@ -31,9 +31,9 @@ Target Selection:
       --bin [<NAME>]      Fix only the specified binary
       --examples          Fix all examples
       --example [<NAME>]  Fix only the specified example
-      --tests             Fix all tests
+      --tests             Fix all test targets
       --test [<NAME>]     Fix only the specified test target
-      --benches           Fix all benches
+      --benches           Fix all bench targets
       --bench [<NAME>]    Fix only the specified bench target
       --all-targets       Fix all targets (default)
 

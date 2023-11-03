@@ -39,9 +39,9 @@ pub fn cli() -> Command {
             "Build only the specified example",
             "Build all examples",
             "Build only the specified test target",
-            "Build all tests",
+            "Build all test targets",
             "Build only the specified bench target",
-            "Build all benches",
+            "Build all bench targets",
             "Build all targets",
         )
         .arg_features()

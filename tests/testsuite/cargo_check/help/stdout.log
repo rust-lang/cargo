@@ -26,9 +26,9 @@ Target Selection:
       --bin [<NAME>]      Check only the specified binary
       --examples          Check all examples
       --example [<NAME>]  Check only the specified example
-      --tests             Check all tests
+      --tests             Check all test targets
       --test [<NAME>]     Check only the specified test target
-      --benches           Check all benches
+      --benches           Check all bench targets
       --bench [<NAME>]    Check only the specified bench target
       --all-targets       Check all targets
 

@@ -43,9 +43,9 @@ pub fn cli() -> Command {
             "Test only the specified example",
             "Test all examples",
             "Test only the specified test target",
-            "Test all tests",
+            "Test all test targets",
             "Test only the specified bench target",
-            "Test all benches",
+            "Test all bench targets",
             "Test all targets (does not include doctests)",
         )
         .arg_features()
