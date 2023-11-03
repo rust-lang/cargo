@@ -16,8 +16,6 @@ pub fn cli() -> Command {
        cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
        cargo owner list   [CRATE_NAME] [OPTIONS]",
         )
-        // The following three parameters are planned to be replaced in the form of subcommands.
-        // refer to issue: https://github.com/rust-lang/cargo/issues/4352
         .arg(
             multi_opt(
                 "add",
@@ -38,10 +36,9 @@ pub fn cli() -> Command {
         )
         .arg(flag("list", "List owners of a crate").short('l').hide(true))
         .subcommands([
-            for_subcommand_add_arg(
+            add_registry_args(
                 Command::new("add")
                     .about("Name of a user or team to invite as an owner")
-                    .arg_quiet()
                     .args([
                         Arg::new("add")
                             .required(true)
@@ -52,11 +49,11 @@ pub fn cli() -> Command {
                             .value_name("CRATE_NAME")
                             .help("Crate name that you want to manage the owner"),
                     ]),
-            ),
-            for_subcommand_add_arg(
+            )
+            .override_usage("cargo owner add <OWNER_NAME> [CRATE_NAME] [OPTIONS]"),
+            add_registry_args(
                 Command::new("remove")
                     .about("Name of a user or team to remove as an owner")
-                    .arg_quiet()
                     .args([
                         Arg::new("remove")
                             .required(true)
@@ -67,17 +64,16 @@ pub fn cli() -> Command {
                             .value_name("CRATE_NAME")
                             .help("Crate name that you want to manage the owner"),
                     ]),
-            ),
-            for_subcommand_add_arg(
-                Command::new("list")
-                    .about("List owners of a crate")
-                    .arg_quiet()
-                    .arg(
-                        Arg::new("crate")
-                            .value_name("CRATE_NAME")
-                            .help("Crate name which you want to list all owner names"),
-                    ),
-            ),
+            )
+            .override_usage("cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]"),
+            add_registry_args(
+                Command::new("list").about("List owners of a crate").arg(
+                    Arg::new("crate")
+                        .value_name("CRATE_NAME")
+                        .help("Crate name which you want to list all owner names"),
+                ),
+            )
+            .override_usage("cargo owner list [CRATE_NAME] [OPTIONS]"),
         ])
         .arg_index("Registry index URL to modify owners for")
         .arg_registry("Registry to modify owners for")
@@ -87,7 +83,7 @@ pub fn cli() -> Command {
         ))
 }
 
-fn for_subcommand_add_arg(command: Command) -> Command {
+fn add_registry_args(command: Command) -> Command {
     command
         .arg_index("Registry index URL to modify owners for")
         .arg_registry("Registry to modify owners for")
