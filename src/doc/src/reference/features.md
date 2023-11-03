@@ -7,6 +7,13 @@ either be enabled or disabled. Features for the package being built can be
 enabled on the command-line with flags such as `--features`. Features for
 dependencies can be enabled in the dependency declaration in `Cargo.toml`.
 
+> **Note**: New crates or versions published on crates.io are now limited to
+> a maximum of 300 features. Exceptions are granted on a case-by-case basis.
+> See this [blog post] for details. Participation in solution discussions is
+> encouraged via the crates.io Zulip stream.
+
+[blog post]: https://blog.rust-lang.org/2023/10/26/broken-badges-and-23k-keywords.html
+
 See also the [Features Examples] chapter for some examples of how features can
 be used.
 
