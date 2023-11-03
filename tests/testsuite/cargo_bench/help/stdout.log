@@ -31,9 +31,9 @@ Target Selection:
       --bin [<NAME>]      Benchmark only the specified binary
       --examples          Benchmark all examples
       --example [<NAME>]  Benchmark only the specified example
-      --tests             Benchmark all tests
+      --tests             Benchmark all test targets
       --test [<NAME>]     Benchmark only the specified test target
-      --benches           Benchmark all benches
+      --benches           Benchmark all bench targets
       --bench [<NAME>]    Benchmark only the specified bench target
       --all-targets       Benchmark all targets
 

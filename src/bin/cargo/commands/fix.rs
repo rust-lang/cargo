@@ -41,9 +41,9 @@ pub fn cli() -> Command {
             "Fix only the specified example",
             "Fix all examples",
             "Fix only the specified test target",
-            "Fix all tests",
+            "Fix all test targets",
             "Fix only the specified bench target",
-            "Fix all benches",
+            "Fix all bench targets",
             "Fix all targets (default)",
         )
         .arg_features()
