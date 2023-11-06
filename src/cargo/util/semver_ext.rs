@@ -201,7 +201,7 @@ pub struct PartialVersion {
 }
 
 impl PartialVersion {
-    pub fn version(&self) -> Option<Version> {
+    pub fn to_version(&self) -> Option<Version> {
         Some(Version {
             major: self.major,
             minor: self.minor?,
@@ -211,7 +211,7 @@ impl PartialVersion {
         })
     }
 
-    pub fn caret_req(&self) -> VersionReq {
+    pub fn to_caret_req(&self) -> VersionReq {
         VersionReq {
             comparators: vec![Comparator {
                 op: semver::Op::Caret,

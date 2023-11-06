@@ -493,7 +493,7 @@ pub fn create_bcx<'a, 'cfg>(
                 continue;
             };
 
-            let req = version.caret_req();
+            let req = version.to_caret_req();
             if req.matches(&untagged_version) {
                 continue;
             }
