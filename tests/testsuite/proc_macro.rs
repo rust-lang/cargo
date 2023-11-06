@@ -202,52 +202,6 @@ fn impl_and_derive() {
     p.cargo("run").with_stdout("X { success: true }").run();
 }
 
-#[cargo_test(nightly, reason = "plugins are unstable")]
-fn plugin_and_proc_macro() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-
-                [lib]
-                plugin = true
-                proc-macro = true
-            "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                #![feature(rustc_private)]
-                #![feature(proc_macro, proc_macro_lib)]
-
-                extern crate rustc_driver;
-                use rustc_driver::plugin::Registry;
-
-                extern crate proc_macro;
-                use proc_macro::TokenStream;
-
-                #[no_mangle]
-                pub fn __rustc_plugin_registrar(reg: &mut Registry) {}
-
-                #[proc_macro_derive(Questionable)]
-                pub fn questionable(input: TokenStream) -> TokenStream {
-                    input
-                }
-            "#,
-        )
-        .build();
-
-    let msg = "  `lib.plugin` and `lib.proc-macro` cannot both be `true`";
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr_contains(msg)
-        .run();
-}
-
 #[cargo_test]
 fn proc_macro_doctest() {
     let foo = project()
