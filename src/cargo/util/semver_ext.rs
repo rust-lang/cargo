@@ -76,12 +76,6 @@ impl OptVersionReq {
     }
 
     pub fn update_precise(&mut self, version: &Version) {
-        assert!(
-            self.matches(version),
-            "cannot update_precise {} to {}",
-            self,
-            version
-        );
         use OptVersionReq::*;
         let version = version.clone();
         *self = match self {
