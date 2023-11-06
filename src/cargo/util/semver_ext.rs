@@ -12,18 +12,8 @@ pub enum OptVersionReq {
     UpdatePrecise(Version, VersionReq),
 }
 
-pub trait VersionExt {
-    fn is_prerelease(&self) -> bool;
-}
-
 pub trait VersionReqExt {
     fn exact(version: &Version) -> Self;
-}
-
-impl VersionExt for Version {
-    fn is_prerelease(&self) -> bool {
-        !self.pre.is_empty()
-    }
 }
 
 impl VersionReqExt for VersionReq {

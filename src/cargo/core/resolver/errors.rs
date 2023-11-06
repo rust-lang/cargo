@@ -4,7 +4,7 @@ use std::task::Poll;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::util::edit_distance::edit_distance;
-use crate::util::{Config, OptVersionReq, VersionExt};
+use crate::util::{Config, OptVersionReq};
 use anyhow::Error;
 
 use super::context::Context;
@@ -275,7 +275,7 @@ pub(super) fn activation_error(
         msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
 
         // If we have a pre-release candidate, then that may be what our user is looking for
-        if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
+        if let Some(pre) = candidates.iter().find(|c| !c.version().pre.is_empty()) {
             msg.push_str("\nif you are looking for the prerelease package it needs to be specified explicitly");
             msg.push_str(&format!(
                 "\n    {} = {{ version = \"{}\" }}",
