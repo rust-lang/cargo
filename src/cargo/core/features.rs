@@ -195,7 +195,7 @@ pub const SEE_CHANNELS: &str =
 /// [`LATEST_STABLE`]: Edition::LATEST_STABLE
 /// [this example]: https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
 /// [`is_stable`]: Edition::is_stable
-/// [`TomlManifest::to_real_manifest`]: crate::util::toml::TomlManifest::to_real_manifest
+/// [`TomlManifest::to_real_manifest`]: crate::util::toml::schema::TomlManifest::to_real_manifest
 /// [`features!`]: macro.features.html
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Edition {

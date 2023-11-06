@@ -93,7 +93,7 @@
 //! Files that interact with cargo include
 //!
 //! - Package
-//!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::TomlManifest`] and then
+//!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::schema::TomlManifest`] and then
 //!     translated to [`core::manifest::Manifest`] which maybe stored in a [`core::Package`].
 //!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
 //!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`core::resolver::Resolve`]

@@ -16,7 +16,7 @@ use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::config::JobsConfig;
 use crate::util::errors::CargoResult;
-use crate::util::toml::TomlManifest;
+use crate::util::toml::schema::TomlManifest;
 use crate::util::{self, human_readable_bytes, restricted_names, Config, FileLock};
 use crate::{drop_println, ops};
 use anyhow::Context as _;
