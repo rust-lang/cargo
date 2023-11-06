@@ -417,13 +417,14 @@ fn update_precise_mismatched() {
 
     // `1.6.0` does not match `"~1.2"`
     p.cargo("update serde:1.2 --precise 1.6.0")
-        // This terrible error message was a regression in #12749
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-thread 'main' panicked at src/cargo/util/semver_ext.rs:79:9:
-cannot update_precise ~1.2 to 1.6.0
-[..]
+[ERROR] failed to select a version for the requirement `serde = \"~1.2\"`
+candidate versions found which didn't match: 1.6.0
+location searched: `[..]` index (which is replacing registry `crates-io`)
+required by package `bar v0.0.1 ([..]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
 ",
         )
         .with_status(101)
@@ -434,11 +435,11 @@ cannot update_precise ~1.2 to 1.6.0
         // This terrible error message has been the same for a long time. A fix is more than welcome!
         .with_stderr(
             "\
-    [UPDATING] `[..]` index
-    [ERROR] no matching package named `serde` found
-    location searched: registry `crates-io`
-    required by package `bar v0.0.1 ([..]/foo)`
-    ",
+[UPDATING] `[..]` index
+[ERROR] no matching package named `serde` found
+location searched: registry `crates-io`
+required by package `bar v0.0.1 ([..]/foo)`
+",
         )
         .with_status(101)
         .run();
