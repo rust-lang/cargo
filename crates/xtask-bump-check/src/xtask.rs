@@ -24,7 +24,6 @@ use cargo::core::Workspace;
 use cargo::sources::source::QueryKind;
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::command_prelude::*;
-use cargo::util::ToSemver;
 use cargo::CargoResult;
 use cargo_util::ProcessBuilder;
 
@@ -277,7 +276,7 @@ fn beta_and_stable_branch(repo: &git2::Repository) -> CargoResult<[git2::Branch<
             tracing::trace!("branch `{name}` is not in the format of `<remote>/rust-<semver>`");
             continue;
         };
-        let Ok(version) = version.to_semver() else {
+        let Ok(version) = version.parse::<semver::Version>() else {
             tracing::trace!("branch `{name}` is not a valid semver: `{version}`");
             continue;
         };
