@@ -131,7 +131,6 @@ mod patch;
 mod path;
 mod paths;
 mod pkgid;
-mod plugins;
 mod proc_macro;
 mod profile_config;
 mod profile_custom;
