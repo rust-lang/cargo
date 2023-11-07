@@ -453,6 +453,12 @@ mod tests {
         assert!(PackageIdSpec::parse("foo@1.2.3").unwrap().matches(foo));
         assert!(!PackageIdSpec::parse("foo@1.2.2").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo@1.2").unwrap().matches(foo));
+        assert!(PackageIdSpec::parse("https://example.com#foo@1.2")
+            .unwrap()
+            .matches(foo));
+        assert!(!PackageIdSpec::parse("https://bob.com#foo@1.2")
+            .unwrap()
+            .matches(foo));
 
         let meta = PackageId::new("meta", "1.2.3+hello", sid).unwrap();
         assert!(PackageIdSpec::parse("meta").unwrap().matches(meta));
