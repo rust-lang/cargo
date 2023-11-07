@@ -331,7 +331,10 @@ mod tests {
         fn ok(spec: &str, expected: PackageIdSpec, expected_rendered: &str) {
             let parsed = PackageIdSpec::parse(spec).unwrap();
             assert_eq!(parsed, expected);
-            assert_eq!(parsed.to_string(), expected_rendered);
+            let rendered = parsed.to_string();
+            assert_eq!(rendered, expected_rendered);
+            let reparsed = PackageIdSpec::parse(&rendered).unwrap();
+            assert_eq!(reparsed, expected);
         }
 
         ok(
