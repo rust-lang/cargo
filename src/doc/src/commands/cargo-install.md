@@ -94,7 +94,7 @@ will be used, beginning discovery at `$PATH/.cargo/config.toml`.
 
 <dt class="option-term" id="option-cargo-install---vers"><a class="option-anchor" href="#option-cargo-install---vers"></a><code>--vers</code> <em>version</em></dt>
 <dt class="option-term" id="option-cargo-install---version"><a class="option-anchor" href="#option-cargo-install---version"></a><code>--version</code> <em>version</em></dt>
-<dd class="option-desc">Specify a version to install. This may be a <a href="../reference/specifying-dependencies.md">version
+<dd class="option-desc">Specify a version to install. This may be a <a href="../reference/specifying-dependencies.html">version
 requirement</a>, like <code>~1.2</code>, to have Cargo
 select the newest version from the given requirement. If the version does not
 have a requirement operator (such as <code>^</code> or <code>~</code>), then it must be in the form
