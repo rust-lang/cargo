@@ -36,7 +36,10 @@ fn local() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid foo")
-        .with_stdout(format!("file://[..]{}#0.1.0", p.root().to_str().unwrap()))
+        .with_stdout(format!(
+            "path+file://[..]{}#0.1.0",
+            p.root().to_str().unwrap()
+        ))
         .run();
 
     // Bad file URL.
@@ -91,7 +94,7 @@ fn registry() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid crates-io")
-        .with_stdout("https://github.com/rust-lang/crates.io-index#crates-io@0.1.0")
+        .with_stdout("registry+https://github.com/rust-lang/crates.io-index#crates-io@0.1.0")
         .run();
 
     // Bad URL.
@@ -145,7 +148,7 @@ fn multiple_versions() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid two-ver:0.2.0")
-        .with_stdout("https://github.com/rust-lang/crates.io-index#two-ver@0.2.0")
+        .with_stdout("registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0")
         .run();
 
     // Incomplete version.
@@ -165,7 +168,7 @@ Please re-run this command with one of the following specifications:
     p.cargo("pkgid two-ver@0.2")
         .with_stdout(
             "\
-https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
+registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
 ",
         )
         .run();
@@ -274,8 +277,8 @@ foo v0.1.0 ([..]/foo)
             "\
 error: There are multiple `xyz` packages in your project, and the specification `xyz` is ambiguous.
 Please re-run this command with one of the following specifications:
-  file://[..]/xyz#0.5.0
-  file://[..]/xyz#0.5.0
+  git+file://[..]/xyz#0.5.0
+  git+file://[..]/xyz#0.5.0
 ",
         )
         .run();

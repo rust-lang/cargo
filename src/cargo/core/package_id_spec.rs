@@ -6,6 +6,7 @@ use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
+use crate::core::GitReference;
 use crate::core::PackageId;
 use crate::core::SourceKind;
 use crate::util::edit_distance;
@@ -104,17 +105,47 @@ impl PackageIdSpec {
             name: String::from(package_id.name().as_str()),
             version: Some(package_id.version().clone().into()),
             url: Some(package_id.source_id().url().clone()),
-            kind: None,
+            kind: Some(package_id.source_id().kind().clone()),
         }
     }
 
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
+        let mut kind = None;
+        if let Some((kind_str, scheme)) = url.scheme().split_once('+') {
+            match kind_str {
+                "git" => {
+                    let git_ref = GitReference::DefaultBranch;
+                    kind = Some(SourceKind::Git(git_ref));
+                    url = strip_url_protocol(&url);
+                }
+                "registry" => {
+                    kind = Some(SourceKind::Registry);
+                    url = strip_url_protocol(&url);
+                }
+                "sparse" => {
+                    kind = Some(SourceKind::SparseRegistry);
+                    // Leave `sparse` as part of URL, see `SourceId::new`
+                    // url = strip_url_protocol(&url);
+                }
+                "path" => {
+                    if scheme != "file" {
+                        anyhow::bail!("`path+{scheme}` is unsupported; `path+file` and `file` schemes are supported");
+                    }
+                    kind = Some(SourceKind::Path);
+                    url = strip_url_protocol(&url);
+                }
+                kind => anyhow::bail!("unsupported source protocol: {kind}"),
+            }
+        }
+
         if url.query().is_some() {
             bail!("cannot have a query string in a pkgid: {}", url)
         }
+
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
+
         let (name, version) = {
             let mut path = url
                 .path_segments()
@@ -148,7 +179,7 @@ impl PackageIdSpec {
             name,
             version,
             url: Some(url),
-            kind: None,
+            kind,
         })
     }
 
@@ -173,6 +204,14 @@ impl PackageIdSpec {
         self.url = Some(url);
     }
 
+    pub fn kind(&self) -> Option<&SourceKind> {
+        self.kind.as_ref()
+    }
+
+    pub fn set_kind(&mut self, kind: SourceKind) {
+        self.kind = Some(kind);
+    }
+
     /// Checks whether the given `PackageId` matches the `PackageIdSpec`.
     pub fn matches(&self, package_id: PackageId) -> bool {
         if self.name() != package_id.name().as_str() {
@@ -187,6 +226,12 @@ impl PackageIdSpec {
 
         if let Some(u) = &self.url {
             if u != package_id.source_id().url() {
+                return false;
+            }
+        }
+
+        if let Some(k) = &self.kind {
+            if k != package_id.source_id().kind() {
                 return false;
             }
         }
@@ -287,11 +332,20 @@ impl PackageIdSpec {
     }
 }
 
+fn strip_url_protocol(url: &Url) -> Url {
+    // Ridiculous hoop because `Url::set_scheme` errors when changing to http/https
+    let raw = url.to_string();
+    raw.split_once('+').unwrap().1.parse().unwrap()
+}
+
 impl fmt::Display for PackageIdSpec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
+                if let Some(protocol) = self.kind.as_ref().and_then(|k| k.protocol()) {
+                    write!(f, "{protocol}+")?;
+                }
                 write!(f, "{}", url)?;
                 if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
                     printed_name = true;
@@ -332,7 +386,7 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 #[cfg(test)]
 mod tests {
     use super::PackageIdSpec;
-    use crate::core::{PackageId, SourceId};
+    use crate::core::{GitReference, PackageId, SourceId, SourceKind};
     use url::Url;
 
     #[test]
@@ -406,6 +460,26 @@ mod tests {
                 kind: None,
             },
             "https://crates.io/foo#bar@1.2",
+        );
+        ok(
+            "registry+https://crates.io/foo#bar@1.2",
+            PackageIdSpec {
+                name: String::from("bar"),
+                version: Some("1.2".parse().unwrap()),
+                url: Some(Url::parse("https://crates.io/foo").unwrap()),
+                kind: Some(SourceKind::Registry),
+            },
+            "registry+https://crates.io/foo#bar@1.2",
+        );
+        ok(
+            "sparse+https://crates.io/foo#bar@1.2",
+            PackageIdSpec {
+                name: String::from("bar"),
+                version: Some("1.2".parse().unwrap()),
+                url: Some(Url::parse("sparse+https://crates.io/foo").unwrap()),
+                kind: Some(SourceKind::SparseRegistry),
+            },
+            "sparse+https://crates.io/foo#bar@1.2",
         );
         ok(
             "foo",
@@ -500,6 +574,18 @@ mod tests {
             "https://github.com/rust-lang/crates.io-index#regex@1.4.3",
         );
         ok(
+            "sparse+https://github.com/rust-lang/crates.io-index#regex@1.4.3",
+            PackageIdSpec {
+                name: String::from("regex"),
+                version: Some("1.4.3".parse().unwrap()),
+                url: Some(
+                    Url::parse("sparse+https://github.com/rust-lang/crates.io-index").unwrap(),
+                ),
+                kind: Some(SourceKind::SparseRegistry),
+            },
+            "sparse+https://github.com/rust-lang/crates.io-index#regex@1.4.3",
+        );
+        ok(
             "https://github.com/rust-lang/cargo#0.52.0",
             PackageIdSpec {
                 name: String::from("cargo"),
@@ -530,6 +616,16 @@ mod tests {
             "ssh://git@github.com/rust-lang/regex.git#regex@1.4.3",
         );
         ok(
+            "git+ssh://git@github.com/rust-lang/regex.git#regex@1.4.3",
+            PackageIdSpec {
+                name: String::from("regex"),
+                version: Some("1.4.3".parse().unwrap()),
+                url: Some(Url::parse("ssh://git@github.com/rust-lang/regex.git").unwrap()),
+                kind: Some(SourceKind::Git(GitReference::DefaultBranch)),
+            },
+            "git+ssh://git@github.com/rust-lang/regex.git#regex@1.4.3",
+        );
+        ok(
             "file:///path/to/my/project/foo",
             PackageIdSpec {
                 name: String::from("foo"),
@@ -549,6 +645,16 @@ mod tests {
             },
             "file:///path/to/my/project/foo#1.1.8",
         );
+        ok(
+            "path+file:///path/to/my/project/foo#1.1.8",
+            PackageIdSpec {
+                name: String::from("foo"),
+                version: Some("1.1.8".parse().unwrap()),
+                url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: Some(SourceKind::Path),
+            },
+            "path+file:///path/to/my/project/foo#1.1.8",
+        );
     }
 
     #[test]
@@ -560,6 +666,10 @@ mod tests {
         assert!(PackageIdSpec::parse("baz@^1.0").is_err());
         assert!(PackageIdSpec::parse("https://baz:1.0").is_err());
         assert!(PackageIdSpec::parse("https://#baz:1.0").is_err());
+        assert!(
+            PackageIdSpec::parse("foobar+https://github.com/rust-lang/crates.io-index").is_err()
+        );
+        assert!(PackageIdSpec::parse("path+https://github.com/rust-lang/crates.io-index").is_err());
     }
 
     #[test]
@@ -579,6 +689,12 @@ mod tests {
             .unwrap()
             .matches(foo));
         assert!(!PackageIdSpec::parse("https://bob.com#foo@1.2")
+            .unwrap()
+            .matches(foo));
+        assert!(PackageIdSpec::parse("registry+https://example.com#foo@1.2")
+            .unwrap()
+            .matches(foo));
+        assert!(!PackageIdSpec::parse("git+https://example.com#foo@1.2")
             .unwrap()
             .matches(foo));
 
