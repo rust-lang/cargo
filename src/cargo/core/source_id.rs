@@ -752,6 +752,20 @@ impl PartialEq for SourceIdInner {
     }
 }
 
+impl SourceKind {
+    pub(crate) fn protocol(&self) -> Option<&str> {
+        match self {
+            SourceKind::Path => Some("path"),
+            SourceKind::Git(_) => Some("git"),
+            SourceKind::Registry => Some("registry"),
+            // Sparse registry URL already includes the `sparse+` prefix
+            SourceKind::SparseRegistry => None,
+            SourceKind::LocalRegistry => Some("local-registry"),
+            SourceKind::Directory => Some("directory"),
+        }
+    }
+}
+
 /// Forwards to `Ord`
 impl PartialOrd for SourceKind {
     fn partial_cmp(&self, other: &SourceKind) -> Option<Ordering> {
@@ -848,53 +862,24 @@ pub struct SourceIdAsUrl<'a> {
 
 impl<'a> fmt::Display for SourceIdAsUrl<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self.inner {
-            SourceIdInner {
-                kind: SourceKind::Path,
-                ref url,
-                ..
-            } => write!(f, "path+{}", url),
-            SourceIdInner {
-                kind: SourceKind::Git(ref reference),
-                ref url,
-                ref precise,
-                ..
-            } => {
-                write!(f, "git+{}", url)?;
-                if let Some(pretty) = reference.pretty_ref(self.encoded) {
-                    write!(f, "?{}", pretty)?;
-                }
-                if let Some(precise) = precise.as_ref() {
-                    write!(f, "#{}", precise)?;
-                }
-                Ok(())
-            }
-            SourceIdInner {
-                kind: SourceKind::Registry,
-                ref url,
-                ..
-            } => {
-                write!(f, "registry+{url}")
-            }
-            SourceIdInner {
-                kind: SourceKind::SparseRegistry,
-                ref url,
-                ..
-            } => {
-                // Sparse registry URL already includes the `sparse+` prefix
-                write!(f, "{url}")
-            }
-            SourceIdInner {
-                kind: SourceKind::LocalRegistry,
-                ref url,
-                ..
-            } => write!(f, "local-registry+{}", url),
-            SourceIdInner {
-                kind: SourceKind::Directory,
-                ref url,
-                ..
-            } => write!(f, "directory+{}", url),
+        if let Some(protocol) = self.inner.kind.protocol() {
+            write!(f, "{protocol}+")?;
         }
+        write!(f, "{}", self.inner.url)?;
+        if let SourceIdInner {
+            kind: SourceKind::Git(ref reference),
+            ref precise,
+            ..
+        } = *self.inner
+        {
+            if let Some(pretty) = reference.pretty_ref(self.encoded) {
+                write!(f, "?{}", pretty)?;
+            }
+            if let Some(precise) = precise.as_ref() {
+                write!(f, "#{}", precise)?;
+            }
+        }
+        Ok(())
     }
 }
 
