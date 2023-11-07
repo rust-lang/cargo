@@ -96,7 +96,6 @@ impl VersionPreferences {
 mod test {
     use super::*;
     use crate::core::SourceId;
-    use crate::util::RustVersion;
     use std::collections::BTreeMap;
 
     fn pkgid(name: &str, version: &str) -> PackageId {
@@ -111,7 +110,7 @@ mod test {
         Dependency::parse(name, Some(version), src_id).unwrap()
     }
 
-    fn summ(name: &str, version: &str) -> Summary {
+    fn summ(name: &str, version: &str, msrv: Option<&str>) -> Summary {
         let pkg_id = pkgid(name, version);
         let features = BTreeMap::new();
         Summary::new(
@@ -119,7 +118,7 @@ mod test {
             Vec::new(),
             &features,
             None::<&String>,
-            None::<RustVersion>,
+            msrv.map(|m| m.parse().unwrap()),
         )
         .unwrap()
     }
@@ -138,10 +137,10 @@ mod test {
         vp.prefer_package_id(pkgid("foo", "1.2.3"));
 
         let mut summaries = vec![
-            summ("foo", "1.2.4"),
-            summ("foo", "1.2.3"),
-            summ("foo", "1.1.0"),
-            summ("foo", "1.0.9"),
+            summ("foo", "1.2.4", None),
+            summ("foo", "1.2.3", None),
+            summ("foo", "1.1.0", None),
+            summ("foo", "1.0.9", None),
         ];
 
         vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
@@ -165,10 +164,10 @@ mod test {
         vp.prefer_dependency(dep("foo", "=1.2.3"));
 
         let mut summaries = vec![
-            summ("foo", "1.2.4"),
-            summ("foo", "1.2.3"),
-            summ("foo", "1.1.0"),
-            summ("foo", "1.0.9"),
+            summ("foo", "1.2.4", None),
+            summ("foo", "1.2.3", None),
+            summ("foo", "1.1.0", None),
+            summ("foo", "1.0.9", None),
         ];
 
         vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
@@ -193,10 +192,10 @@ mod test {
         vp.prefer_dependency(dep("foo", "=1.1.0"));
 
         let mut summaries = vec![
-            summ("foo", "1.2.4"),
-            summ("foo", "1.2.3"),
-            summ("foo", "1.1.0"),
-            summ("foo", "1.0.9"),
+            summ("foo", "1.2.4", None),
+            summ("foo", "1.2.3", None),
+            summ("foo", "1.1.0", None),
+            summ("foo", "1.0.9", None),
         ];
 
         vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
@@ -211,6 +210,33 @@ mod test {
         assert_eq!(
             describe(&summaries),
             "foo/1.1.0, foo/1.2.3, foo/1.0.9, foo/1.2.4".to_string()
+        );
+    }
+
+    #[test]
+    fn test_max_rust_version() {
+        let mut vp = VersionPreferences::default();
+        vp.max_rust_version(Some("1.50".parse().unwrap()));
+
+        let mut summaries = vec![
+            summ("foo", "1.2.4", Some("1.60")),
+            summ("foo", "1.2.3", Some("1.50")),
+            summ("foo", "1.1.0", Some("1.40")),
+            summ("foo", "1.0.9", None),
+        ];
+
+        vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
+        assert_eq!(
+            describe(&summaries),
+            "foo/1.2.3, foo/1.1.0, foo/1.0.9".to_string()
+        );
+
+        vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
+        assert_eq!(
+            describe(&summaries),
+            "foo/1.0.9, foo/1.1.0, foo/1.2.3".to_string()
         );
     }
 }
