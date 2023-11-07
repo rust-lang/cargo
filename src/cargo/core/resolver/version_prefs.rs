@@ -75,15 +75,14 @@ impl VersionPreferences {
             let prefer_a = should_prefer(&a.package_id());
             let prefer_b = should_prefer(&b.package_id());
             let previous_cmp = prefer_a.cmp(&prefer_b).reverse();
-            match previous_cmp {
-                Ordering::Equal => {
-                    let cmp = a.version().cmp(b.version());
-                    match first_version.unwrap_or(self.version_ordering) {
-                        VersionOrdering::MaximumVersionsFirst => cmp.reverse(),
-                        VersionOrdering::MinimumVersionsFirst => cmp,
-                    }
-                }
-                _ => previous_cmp,
+            if previous_cmp != Ordering::Equal {
+                return previous_cmp;
+            }
+
+            let cmp = a.version().cmp(b.version());
+            match first_version.unwrap_or(self.version_ordering) {
+                VersionOrdering::MaximumVersionsFirst => cmp.reverse(),
+                VersionOrdering::MinimumVersionsFirst => cmp,
             }
         });
         if first_version.is_some() {
