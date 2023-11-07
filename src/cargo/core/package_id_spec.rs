@@ -7,6 +7,7 @@ use serde::{de, ser};
 use url::Url;
 
 use crate::core::PackageId;
+use crate::core::SourceKind;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::{validate_package_name, IntoUrl};
@@ -26,6 +27,7 @@ pub struct PackageIdSpec {
     name: String,
     version: Option<PartialVersion>,
     url: Option<Url>,
+    kind: Option<SourceKind>,
 }
 
 impl PackageIdSpec {
@@ -78,6 +80,7 @@ impl PackageIdSpec {
             name: String::from(name),
             version,
             url: None,
+            kind: None,
         })
     }
 
@@ -101,6 +104,7 @@ impl PackageIdSpec {
             name: String::from(package_id.name().as_str()),
             version: Some(package_id.version().clone().into()),
             url: Some(package_id.source_id().url().clone()),
+            kind: None,
         }
     }
 
@@ -144,6 +148,7 @@ impl PackageIdSpec {
             name,
             version,
             url: Some(url),
+            kind: None,
         })
     }
 
@@ -216,6 +221,7 @@ impl PackageIdSpec {
                         name: self.name.clone(),
                         version: self.version.clone(),
                         url: None,
+                        kind: None,
                     },
                     &mut suggestion,
                 );
@@ -226,6 +232,7 @@ impl PackageIdSpec {
                         name: self.name.clone(),
                         version: None,
                         url: None,
+                        kind: None,
                     },
                     &mut suggestion,
                 );
@@ -346,6 +353,7 @@ mod tests {
                 name: String::from("foo"),
                 version: None,
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
+                kind: None,
             },
             "https://crates.io/foo",
         );
@@ -355,6 +363,7 @@ mod tests {
                 name: String::from("foo"),
                 version: Some("1.2.3".parse().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
+                kind: None,
             },
             "https://crates.io/foo#1.2.3",
         );
@@ -364,6 +373,7 @@ mod tests {
                 name: String::from("foo"),
                 version: Some("1.2".parse().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
+                kind: None,
             },
             "https://crates.io/foo#1.2",
         );
@@ -373,6 +383,7 @@ mod tests {
                 name: String::from("bar"),
                 version: Some("1.2.3".parse().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
+                kind: None,
             },
             "https://crates.io/foo#bar@1.2.3",
         );
@@ -382,6 +393,7 @@ mod tests {
                 name: String::from("bar"),
                 version: Some("1.2.3".parse().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
+                kind: None,
             },
             "https://crates.io/foo#bar@1.2.3",
         );
@@ -391,6 +403,7 @@ mod tests {
                 name: String::from("bar"),
                 version: Some("1.2".parse().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
+                kind: None,
             },
             "https://crates.io/foo#bar@1.2",
         );
@@ -400,6 +413,7 @@ mod tests {
                 name: String::from("foo"),
                 version: None,
                 url: None,
+                kind: None,
             },
             "foo",
         );
@@ -409,6 +423,7 @@ mod tests {
                 name: String::from("foo"),
                 version: Some("1.2.3".parse().unwrap()),
                 url: None,
+                kind: None,
             },
             "foo@1.2.3",
         );
@@ -418,6 +433,7 @@ mod tests {
                 name: String::from("foo"),
                 version: Some("1.2.3".parse().unwrap()),
                 url: None,
+                kind: None,
             },
             "foo@1.2.3",
         );
@@ -427,6 +443,7 @@ mod tests {
                 name: String::from("foo"),
                 version: Some("1.2".parse().unwrap()),
                 url: None,
+                kind: None,
             },
             "foo@1.2",
         );
@@ -438,6 +455,7 @@ mod tests {
                 name: String::from("regex"),
                 version: None,
                 url: None,
+                kind: None,
             },
             "regex",
         );
@@ -447,6 +465,7 @@ mod tests {
                 name: String::from("regex"),
                 version: Some("1.4".parse().unwrap()),
                 url: None,
+                kind: None,
             },
             "regex@1.4",
         );
@@ -456,6 +475,7 @@ mod tests {
                 name: String::from("regex"),
                 version: Some("1.4.3".parse().unwrap()),
                 url: None,
+                kind: None,
             },
             "regex@1.4.3",
         );
@@ -465,6 +485,7 @@ mod tests {
                 name: String::from("regex"),
                 version: None,
                 url: Some(Url::parse("https://github.com/rust-lang/crates.io-index").unwrap()),
+                kind: None,
             },
             "https://github.com/rust-lang/crates.io-index#regex",
         );
@@ -474,6 +495,7 @@ mod tests {
                 name: String::from("regex"),
                 version: Some("1.4.3".parse().unwrap()),
                 url: Some(Url::parse("https://github.com/rust-lang/crates.io-index").unwrap()),
+                kind: None,
             },
             "https://github.com/rust-lang/crates.io-index#regex@1.4.3",
         );
@@ -483,6 +505,7 @@ mod tests {
                 name: String::from("cargo"),
                 version: Some("0.52.0".parse().unwrap()),
                 url: Some(Url::parse("https://github.com/rust-lang/cargo").unwrap()),
+                kind: None,
             },
             "https://github.com/rust-lang/cargo#0.52.0",
         );
@@ -492,6 +515,7 @@ mod tests {
                 name: String::from("cargo-platform"),
                 version: Some("0.1.2".parse().unwrap()),
                 url: Some(Url::parse("https://github.com/rust-lang/cargo").unwrap()),
+                kind: None,
             },
             "https://github.com/rust-lang/cargo#cargo-platform@0.1.2",
         );
@@ -501,6 +525,7 @@ mod tests {
                 name: String::from("regex"),
                 version: Some("1.4.3".parse().unwrap()),
                 url: Some(Url::parse("ssh://git@github.com/rust-lang/regex.git").unwrap()),
+                kind: None,
             },
             "ssh://git@github.com/rust-lang/regex.git#regex@1.4.3",
         );
@@ -510,6 +535,7 @@ mod tests {
                 name: String::from("foo"),
                 version: None,
                 url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: None,
             },
             "file:///path/to/my/project/foo",
         );
@@ -519,6 +545,7 @@ mod tests {
                 name: String::from("foo"),
                 version: Some("1.1.8".parse().unwrap()),
                 url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: None,
             },
             "file:///path/to/my/project/foo#1.1.8",
         );

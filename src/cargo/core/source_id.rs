@@ -85,7 +85,7 @@ impl fmt::Display for Precise {
 /// The possible kinds of code source.
 /// Along with [`SourceIdInner`], this fully defines the source.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum SourceKind {
+pub enum SourceKind {
     /// A git repository.
     Git(GitReference),
     /// A local path.
