@@ -18,9 +18,12 @@ use crate::util::interning::InternedString;
 pub struct VersionPreferences {
     try_to_use: HashSet<PackageId>,
     prefer_patch_deps: HashMap<InternedString, HashSet<Dependency>>,
+    version_ordering: VersionOrdering,
 }
 
+#[derive(Copy, Clone, Default, PartialEq, Eq, Hash, Debug)]
 pub enum VersionOrdering {
+    #[default]
     MaximumVersionsFirst,
     MinimumVersionsFirst,
 }
@@ -39,14 +42,17 @@ impl VersionPreferences {
             .insert(dep);
     }
 
+    pub fn version_ordering(&mut self, ordering: VersionOrdering) {
+        self.version_ordering = ordering;
+    }
+
     /// Sort the given vector of summaries in-place, with all summaries presumed to be for
     /// the same package.  Preferred versions appear first in the result, sorted by
     /// `version_ordering`, followed by non-preferred versions sorted the same way.
     pub fn sort_summaries(
         &self,
         summaries: &mut Vec<Summary>,
-        version_ordering: VersionOrdering,
-        first_version: bool,
+        first_version: Option<VersionOrdering>,
     ) {
         let should_prefer = |pkg_id: &PackageId| {
             self.try_to_use.contains(pkg_id)
@@ -63,7 +69,7 @@ impl VersionPreferences {
             match previous_cmp {
                 Ordering::Equal => {
                     let cmp = a.version().cmp(b.version());
-                    match version_ordering {
+                    match first_version.unwrap_or(self.version_ordering) {
                         VersionOrdering::MaximumVersionsFirst => cmp.reverse(),
                         VersionOrdering::MinimumVersionsFirst => cmp,
                     }
@@ -71,7 +77,7 @@ impl VersionPreferences {
                 _ => previous_cmp,
             }
         });
-        if first_version {
+        if first_version.is_some() {
             let _ = summaries.split_off(1);
         }
     }
@@ -129,13 +135,15 @@ mod test {
             summ("foo", "1.0.9"),
         ];
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst, false);
+        vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.2.4, foo/1.1.0, foo/1.0.9".to_string()
         );
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst, false);
+        vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.0.9, foo/1.1.0, foo/1.2.4".to_string()
@@ -154,13 +162,15 @@ mod test {
             summ("foo", "1.0.9"),
         ];
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst, false);
+        vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.2.4, foo/1.1.0, foo/1.0.9".to_string()
         );
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst, false);
+        vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.0.9, foo/1.1.0, foo/1.2.4".to_string()
@@ -180,13 +190,15 @@ mod test {
             summ("foo", "1.0.9"),
         ];
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MaximumVersionsFirst, false);
+        vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.1.0, foo/1.2.4, foo/1.0.9".to_string()
         );
 
-        vp.sort_summaries(&mut summaries, VersionOrdering::MinimumVersionsFirst, false);
+        vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.1.0, foo/1.2.3, foo/1.0.9, foo/1.2.4".to_string()

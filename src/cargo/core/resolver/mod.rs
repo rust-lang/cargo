@@ -142,13 +142,11 @@ pub fn resolve(
     mut max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
     let _p = profile::start("resolving");
-    let minimal_versions = match config {
-        Some(config) => config.cli_unstable().minimal_versions,
-        None => false,
-    };
-    let direct_minimal_versions = match config {
-        Some(config) => config.cli_unstable().direct_minimal_versions,
-        None => false,
+    let first_version = match config {
+        Some(config) if config.cli_unstable().direct_minimal_versions => {
+            Some(VersionOrdering::MinimumVersionsFirst)
+        }
+        _ => None,
     };
     if !config
         .map(|c| c.cli_unstable().msrv_policy)
@@ -156,22 +154,11 @@ pub fn resolve(
     {
         max_rust_version = None;
     }
-    let mut registry = RegistryQueryer::new(
-        registry,
-        replacements,
-        version_prefs,
-        minimal_versions,
-        max_rust_version,
-    );
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, version_prefs, max_rust_version);
     let cx = loop {
         let cx = Context::new(check_public_visible_dependencies);
-        let cx = activate_deps_loop(
-            cx,
-            &mut registry,
-            summaries,
-            direct_minimal_versions,
-            config,
-        )?;
+        let cx = activate_deps_loop(cx, &mut registry, summaries, first_version, config)?;
         if registry.reset_pending() {
             break cx;
         } else {
@@ -223,7 +210,7 @@ fn activate_deps_loop(
     mut cx: Context,
     registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, ResolveOpts)],
-    direct_minimal_versions: bool,
+    first_version: Option<VersionOrdering>,
     config: Option<&Config>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
@@ -241,7 +228,7 @@ fn activate_deps_loop(
             registry,
             None,
             summary.clone(),
-            direct_minimal_versions,
+            first_version,
             opts,
         );
         match res {
@@ -441,13 +428,13 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let direct_minimal_version = false; // this is an indirect dependency
+            let first_version = None; // this is an indirect dependency
             let res = activate(
                 &mut cx,
                 registry,
                 Some((&parent, &dep)),
                 candidate,
-                direct_minimal_version,
+                first_version,
                 &opts,
             );
 
@@ -659,7 +646,7 @@ fn activate(
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
-    first_minimal_version: bool,
+    first_version: Option<VersionOrdering>,
     opts: &ResolveOpts,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
@@ -716,7 +703,7 @@ fn activate(
         parent.map(|p| p.0.package_id()),
         &candidate,
         opts,
-        first_minimal_version,
+        first_version,
     )?;
 
     // Record what list of features is active for this package.
@@ -905,14 +892,14 @@ fn generalize_conflicting(
         })
     {
         for critical_parents_dep in critical_parents_deps.iter() {
-            // We only want `first_minimal_version=true` for direct dependencies of workspace
+            // We only want `first_version.is_some()` for direct dependencies of workspace
             // members which isn't the case here as this has a `parent`
-            let first_minimal_version = false;
+            let first_version = None;
             // A dep is equivalent to one of the things it can resolve to.
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
             if let Some(others) = registry
-                .query(critical_parents_dep, first_minimal_version)
+                .query(critical_parents_dep, first_version)
                 .expect("an already used dep now error!?")
                 .expect("an already used dep now pending!?")
                 .iter()

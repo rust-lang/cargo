@@ -12,7 +12,7 @@ use std::task::Poll;
 use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
-use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
+use cargo::core::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::core::{GitReference, SourceId};
@@ -191,11 +191,15 @@ pub fn resolve_with_config_raw(
     let opts = ResolveOpts::everything();
     let start = Instant::now();
     let max_rust_version = None;
+    let mut version_prefs = VersionPreferences::default();
+    if config.cli_unstable().minimal_versions {
+        version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
+    }
     let resolve = resolver::resolve(
         &[(summary, opts)],
         &[],
         &mut registry,
-        &VersionPreferences::default(),
+        &version_prefs,
         Some(config),
         true,
         max_rust_version,
