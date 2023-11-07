@@ -190,7 +190,6 @@ pub fn resolve_with_config_raw(
     .unwrap();
     let opts = ResolveOpts::everything();
     let start = Instant::now();
-    let max_rust_version = None;
     let mut version_prefs = VersionPreferences::default();
     if config.cli_unstable().minimal_versions {
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
@@ -202,7 +201,6 @@ pub fn resolve_with_config_raw(
         &version_prefs,
         Some(config),
         true,
-        max_rust_version,
     );
 
     // The largest test in our suite takes less then 30 sec.

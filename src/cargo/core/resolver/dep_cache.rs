@@ -20,7 +20,6 @@ use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, 
 use crate::sources::source::QueryKind;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::RustVersion;
 
 use anyhow::Context as _;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -32,7 +31,6 @@ pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     version_prefs: &'a VersionPreferences,
-    max_rust_version: Option<RustVersion>,
     /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_version`)
     registry_cache: HashMap<(Dependency, Option<VersionOrdering>), Poll<Rc<Vec<Summary>>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
@@ -53,13 +51,11 @@ impl<'a> RegistryQueryer<'a> {
         registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
-        max_rust_version: Option<&RustVersion>,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
             version_prefs,
-            max_rust_version: max_rust_version.cloned(),
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
@@ -109,10 +105,7 @@ impl<'a> RegistryQueryer<'a> {
 
         let mut ret = Vec::new();
         let ready = self.registry.query(dep, QueryKind::Exact, &mut |s| {
-            if self.max_rust_version.is_none() || s.rust_version() <= self.max_rust_version.as_ref()
-            {
-                ret.push(s);
-            }
+            ret.push(s);
         })?;
         if ready.is_pending() {
             self.registry_cache

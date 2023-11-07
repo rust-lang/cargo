@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::interning::InternedString;
+use crate::util::RustVersion;
 
 /// A collection of preferences for particular package versions.
 ///
@@ -19,6 +20,7 @@ pub struct VersionPreferences {
     try_to_use: HashSet<PackageId>,
     prefer_patch_deps: HashMap<InternedString, HashSet<Dependency>>,
     version_ordering: VersionOrdering,
+    max_rust_version: Option<RustVersion>,
 }
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, Debug)]
@@ -46,6 +48,10 @@ impl VersionPreferences {
         self.version_ordering = ordering;
     }
 
+    pub fn max_rust_version(&mut self, ver: Option<RustVersion>) {
+        self.max_rust_version = ver;
+    }
+
     /// Sort the given vector of summaries in-place, with all summaries presumed to be for
     /// the same package.  Preferred versions appear first in the result, sorted by
     /// `version_ordering`, followed by non-preferred versions sorted the same way.
@@ -62,6 +68,9 @@ impl VersionPreferences {
                     .map(|deps| deps.iter().any(|d| d.matches_id(*pkg_id)))
                     .unwrap_or(false)
         };
+        if self.max_rust_version.is_some() {
+            summaries.retain(|s| s.rust_version() <= self.max_rust_version.as_ref());
+        }
         summaries.sort_unstable_by(|a, b| {
             let prefer_a = should_prefer(&a.package_id());
             let prefer_b = should_prefer(&b.package_id());
