@@ -277,8 +277,8 @@ foo v0.1.0 ([..]/foo)
             "\
 error: There are multiple `xyz` packages in your project, and the specification `xyz` is ambiguous.
 Please re-run this command with one of the following specifications:
-  git+file://[..]/xyz#0.5.0
-  git+file://[..]/xyz#0.5.0
+  git+file://[..]/xyz?rev=[..]#0.5.0
+  git+file://[..]/xyz?rev=[..]#0.5.0
 ",
         )
         .run();

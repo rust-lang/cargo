@@ -115,20 +115,30 @@ impl PackageIdSpec {
         if let Some((kind_str, scheme)) = url.scheme().split_once('+') {
             match kind_str {
                 "git" => {
-                    let git_ref = GitReference::DefaultBranch;
+                    let git_ref = GitReference::from_query(url.query_pairs());
+                    url.set_query(None);
                     kind = Some(SourceKind::Git(git_ref));
                     url = strip_url_protocol(&url);
                 }
                 "registry" => {
+                    if url.query().is_some() {
+                        bail!("cannot have a query string in a pkgid: {url}")
+                    }
                     kind = Some(SourceKind::Registry);
                     url = strip_url_protocol(&url);
                 }
                 "sparse" => {
+                    if url.query().is_some() {
+                        bail!("cannot have a query string in a pkgid: {url}")
+                    }
                     kind = Some(SourceKind::SparseRegistry);
                     // Leave `sparse` as part of URL, see `SourceId::new`
                     // url = strip_url_protocol(&url);
                 }
                 "path" => {
+                    if url.query().is_some() {
+                        bail!("cannot have a query string in a pkgid: {url}")
+                    }
                     if scheme != "file" {
                         anyhow::bail!("`path+{scheme}` is unsupported; `path+file` and `file` schemes are supported");
                     }
@@ -137,10 +147,10 @@ impl PackageIdSpec {
                 }
                 kind => anyhow::bail!("unsupported source protocol: {kind}"),
             }
-        }
-
-        if url.query().is_some() {
-            bail!("cannot have a query string in a pkgid: {}", url)
+        } else {
+            if url.query().is_some() {
+                bail!("cannot have a query string in a pkgid: {url}")
+            }
         }
 
         let frag = url.fragment().map(|s| s.to_owned());
@@ -347,6 +357,11 @@ impl fmt::Display for PackageIdSpec {
                     write!(f, "{protocol}+")?;
                 }
                 write!(f, "{}", url)?;
+                if let Some(SourceKind::Git(git_ref)) = self.kind.as_ref() {
+                    if let Some(pretty) = git_ref.pretty_ref(true) {
+                        write!(f, "?{}", pretty)?;
+                    }
+                }
                 if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
                     printed_name = true;
                     write!(f, "#{}", self.name)?;
@@ -626,6 +641,16 @@ mod tests {
             "git+ssh://git@github.com/rust-lang/regex.git#regex@1.4.3",
         );
         ok(
+            "git+ssh://git@github.com/rust-lang/regex.git?branch=dev#regex@1.4.3",
+            PackageIdSpec {
+                name: String::from("regex"),
+                version: Some("1.4.3".parse().unwrap()),
+                url: Some(Url::parse("ssh://git@github.com/rust-lang/regex.git").unwrap()),
+                kind: Some(SourceKind::Git(GitReference::Branch("dev".to_owned()))),
+            },
+            "git+ssh://git@github.com/rust-lang/regex.git?branch=dev#regex@1.4.3",
+        );
+        ok(
             "file:///path/to/my/project/foo",
             PackageIdSpec {
                 name: String::from("foo"),
@@ -670,6 +695,18 @@ mod tests {
             PackageIdSpec::parse("foobar+https://github.com/rust-lang/crates.io-index").is_err()
         );
         assert!(PackageIdSpec::parse("path+https://github.com/rust-lang/crates.io-index").is_err());
+
+        // Only `git+` can use `?`
+        assert!(PackageIdSpec::parse("file:///path/to/my/project/foo?branch=dev").is_err());
+        assert!(PackageIdSpec::parse("path+file:///path/to/my/project/foo?branch=dev").is_err());
+        assert!(PackageIdSpec::parse(
+            "registry+https://github.com/rust-lang/cargo#0.52.0?branch=dev"
+        )
+        .is_err());
+        assert!(PackageIdSpec::parse(
+            "sparse+https://github.com/rust-lang/cargo#0.52.0?branch=dev"
+        )
+        .is_err());
     }
 
     #[test]

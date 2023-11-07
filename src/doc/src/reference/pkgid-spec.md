@@ -22,7 +22,8 @@ The formal grammar for a Package Id Specification is:
 
 ```notrust
 spec := pkgname |
-        [ kind "+" ] proto "://" hostname-and-path [ "#" ( pkgname | semver ) ]
+        [ kind "+" ] proto "://" hostname-and-path [ "?" query] [ "#" ( pkgname | semver ) ]
+query = ( "branch" | "tag" | "rev" ) "=" ref
 pkgname := name [ ("@" | ":" ) semver ]
 semver := digits [ "." digits [ "." digits [ "-" prerelease ] [ "+" build ]]]
 
@@ -56,6 +57,7 @@ The following are some examples of specs for several different git dependencies:
 | `https://github.com/rust-lang/cargo#cargo-platform@0.1.2`  | <nobr>`cargo-platform`</nobr> | `0.1.2`  |
 | `ssh://git@github.com/rust-lang/regex.git#regex@1.4.3`     | `regex`          | `1.4.3`  |
 | `git+ssh://git@github.com/rust-lang/regex.git#regex@1.4.3` | `regex`          | `1.4.3`  |
+| `git+ssh://git@github.com/rust-lang/regex.git?branch=dev#regex@1.4.3` | `regex`          | `1.4.3`  |
 
 Local packages on the filesystem can use `file://` URLs to reference them:
 
