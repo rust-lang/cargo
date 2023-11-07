@@ -180,10 +180,13 @@ impl PackageIdSpec {
             }
         }
 
-        match self.url {
-            Some(ref u) => u == package_id.source_id().url(),
-            None => true,
+        if let Some(u) = &self.url {
+            if u != package_id.source_id().url() {
+                return false;
+            }
         }
+
+        true
     }
 
     /// Checks a list of `PackageId`s to find 1 that matches this `PackageIdSpec`. If 0, 2, or
