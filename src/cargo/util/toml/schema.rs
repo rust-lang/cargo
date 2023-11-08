@@ -939,6 +939,23 @@ impl TomlTarget {
     pub fn new() -> TomlTarget {
         TomlTarget::default()
     }
+
+    pub fn proc_macro(&self) -> Option<bool> {
+        self.proc_macro_raw.or(self.proc_macro_raw2).or_else(|| {
+            if let Some(types) = self.crate_types() {
+                if types.contains(&"proc-macro".to_string()) {
+                    return Some(true);
+                }
+            }
+            None
+        })
+    }
+
+    pub fn crate_types(&self) -> Option<&Vec<String>> {
+        self.crate_type
+            .as_ref()
+            .or_else(|| self.crate_type2.as_ref())
+    }
 }
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
