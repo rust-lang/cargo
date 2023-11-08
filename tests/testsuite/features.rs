@@ -2076,7 +2076,7 @@ error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   invalid character `&` in feature `a&b` in package foo v0.1.0 ([ROOT]/foo), \
-  characters must be Unicode XID characters, `+`, or `.` \
+  characters must be Unicode XID characters, '-', `+`, or `.` \
   (numbers, `+`, `-`, `_`, `.`, or most letters)
 ",
         )

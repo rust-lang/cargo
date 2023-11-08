@@ -451,7 +451,7 @@ fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
         if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
             bail!(
                 "invalid character `{}` in feature `{}` in package {}, \
-                characters must be Unicode XID characters, `+`, or `.` \
+                characters must be Unicode XID characters, '-', `+`, or `.` \
                 (numbers, `+`, `-`, `_`, `.`, or most letters)",
                 ch,
                 name,
