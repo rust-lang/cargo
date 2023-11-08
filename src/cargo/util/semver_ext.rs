@@ -14,27 +14,23 @@ pub enum OptVersionReq {
 
 pub trait VersionExt {
     fn is_prerelease(&self) -> bool;
-}
 
-pub trait VersionReqExt {
-    fn exact(version: &Version) -> Self;
+    fn to_exact_req(&self) -> VersionReq;
 }
 
 impl VersionExt for Version {
     fn is_prerelease(&self) -> bool {
         !self.pre.is_empty()
     }
-}
 
-impl VersionReqExt for VersionReq {
-    fn exact(version: &Version) -> Self {
+    fn to_exact_req(&self) -> VersionReq {
         VersionReq {
             comparators: vec![Comparator {
                 op: Op::Exact,
-                major: version.major,
-                minor: Some(version.minor),
-                patch: Some(version.patch),
-                pre: version.pre.clone(),
+                major: self.major,
+                minor: Some(self.minor),
+                patch: Some(self.patch),
+                pre: self.pre.clone(),
             }],
         }
     }
@@ -42,14 +38,14 @@ impl VersionReqExt for VersionReq {
 
 impl OptVersionReq {
     pub fn exact(version: &Version) -> Self {
-        OptVersionReq::Req(VersionReq::exact(version))
+        OptVersionReq::Req(version.to_exact_req())
     }
 
     // Since some registries have allowed crate versions to differ only by build metadata,
     // A query using OptVersionReq::exact return nondeterministic results.
     // So we `lock_to` the exact version were interested in.
     pub fn lock_to_exact(version: &Version) -> Self {
-        OptVersionReq::Locked(version.clone(), VersionReq::exact(version))
+        OptVersionReq::Locked(version.clone(), version.to_exact_req())
     }
 
     pub fn is_exact(&self) -> bool {
@@ -205,7 +201,7 @@ pub struct PartialVersion {
 }
 
 impl PartialVersion {
-    pub fn version(&self) -> Option<Version> {
+    pub fn to_version(&self) -> Option<Version> {
         Some(Version {
             major: self.major,
             minor: self.minor?,
@@ -215,7 +211,7 @@ impl PartialVersion {
         })
     }
 
-    pub fn caret_req(&self) -> VersionReq {
+    pub fn to_caret_req(&self) -> VersionReq {
         VersionReq {
             comparators: vec![Comparator {
                 op: semver::Op::Caret,

@@ -153,7 +153,7 @@ impl PackageIdSpec {
 
     /// Full `semver::Version`, if present
     pub fn version(&self) -> Option<Version> {
-        self.version.as_ref().and_then(|v| v.version())
+        self.version.as_ref().and_then(|v| v.to_version())
     }
 
     pub fn partial_version(&self) -> Option<&PartialVersion> {

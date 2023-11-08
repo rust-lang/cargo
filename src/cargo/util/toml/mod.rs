@@ -568,7 +568,7 @@ impl schema::TomlManifest {
             let rust_version = rust_version
                 .clone()
                 .resolve("rust_version", || inherit()?.rust_version())?;
-            let req = rust_version.caret_req();
+            let req = rust_version.to_caret_req();
             if let Some(first_version) = edition.first_version() {
                 let unsupported =
                     semver::Version::new(first_version.major, first_version.minor - 1, 9999);

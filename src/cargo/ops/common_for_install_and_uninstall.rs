@@ -555,7 +555,7 @@ where
     match deps.iter().max_by_key(|p| p.package_id()) {
         Some(summary) => {
             if let (Some(current), Some(msrv)) = (current_rust_version, summary.rust_version()) {
-                let msrv_req = msrv.caret_req();
+                let msrv_req = msrv.to_caret_req();
                 if !msrv_req.matches(current) {
                     let name = summary.name();
                     let ver = summary.version();
@@ -574,7 +574,7 @@ where
                             .filter(|summary| {
                                 summary
                                     .rust_version()
-                                    .map(|msrv| msrv.caret_req().matches(current))
+                                    .map(|msrv| msrv.to_caret_req().matches(current))
                                     .unwrap_or(true)
                             })
                             .max_by_key(|s| s.package_id())
