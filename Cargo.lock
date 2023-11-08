@@ -281,6 +281,7 @@ dependencies = [
  "sha1",
  "shell-escape",
  "snapbox",
+ "supports-hyperlinks",
  "syn 2.0.38",
  "tar",
  "tempfile",
@@ -3132,6 +3133,15 @@ name = "subtle"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
+
+[[package]]
+name = "supports-hyperlinks"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f84231692eb0d4d41e4cdd0cabfdd2e6cd9e255e65f80c9aa7c98dd502b4233d"
+dependencies = [
+ "is-terminal",
+]
 
 [[package]]
 name = "syn"

@@ -1032,6 +1032,9 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color)?;
+        if let Some(hyperlinks) = term.hyperlinks {
+            self.shell().set_hyperlinks(hyperlinks)?;
+        }
         self.progress_config = term.progress.unwrap_or_default();
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
@@ -2560,6 +2563,7 @@ struct TermConfig {
     verbose: Option<bool>,
     quiet: Option<bool>,
     color: Option<String>,
+    hyperlinks: Option<bool>,
     #[serde(default)]
     #[serde(deserialize_with = "progress_or_string")]
     progress: Option<ProgressConfig>,

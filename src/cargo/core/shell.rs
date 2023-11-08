@@ -6,6 +6,7 @@ use anstream::AutoStream;
 use anstyle::Style;
 
 use crate::util::errors::CargoResult;
+use crate::util::hostname;
 use crate::util::style::*;
 
 pub enum TtyWidth {
@@ -57,6 +58,7 @@ pub struct Shell {
     /// Flag that indicates the current line needs to be cleared before
     /// printing. Used when a progress bar is currently displayed.
     needs_clear: bool,
+    hostname: Option<String>,
 }
 
 impl fmt::Debug for Shell {
@@ -85,6 +87,7 @@ enum ShellOut {
         stderr: AutoStream<std::io::Stderr>,
         stderr_tty: bool,
         color_choice: ColorChoice,
+        hyperlinks: bool,
     },
 }
 
@@ -111,10 +114,12 @@ impl Shell {
                 stdout: AutoStream::new(std::io::stdout(), stdout_choice),
                 stderr: AutoStream::new(std::io::stderr(), stderr_choice),
                 color_choice: auto_clr,
+                hyperlinks: supports_hyperlinks(),
                 stderr_tty: std::io::stderr().is_terminal(),
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            hostname: None,
         }
     }
 
@@ -124,6 +129,7 @@ impl Shell {
             output: ShellOut::Write(AutoStream::never(out)), // strip all formatting on write
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            hostname: None,
         }
     }
 
@@ -314,6 +320,16 @@ impl Shell {
         Ok(())
     }
 
+    pub fn set_hyperlinks(&mut self, yes: bool) -> CargoResult<()> {
+        if let ShellOut::Stream {
+            ref mut hyperlinks, ..
+        } = self.output
+        {
+            *hyperlinks = yes;
+        }
+        Ok(())
+    }
+
     /// Gets the current color choice.
     ///
     /// If we are not using a color stream, this will always return `Never`, even if the color
@@ -338,6 +354,61 @@ impl Shell {
             ShellOut::Write(_) => false,
             ShellOut::Stream { stdout, .. } => supports_color(stdout.current_choice()),
         }
+    }
+
+    pub fn out_hyperlink<D: fmt::Display>(&self, url: D) -> Hyperlink<D> {
+        let supports_hyperlinks = match &self.output {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream {
+                stdout, hyperlinks, ..
+            } => stdout.current_choice() == anstream::ColorChoice::AlwaysAnsi && *hyperlinks,
+        };
+        Hyperlink {
+            url: supports_hyperlinks.then_some(url),
+        }
+    }
+
+    pub fn err_hyperlink<D: fmt::Display>(&self, url: D) -> Hyperlink<D> {
+        let supports_hyperlinks = match &self.output {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream {
+                stderr, hyperlinks, ..
+            } => stderr.current_choice() == anstream::ColorChoice::AlwaysAnsi && *hyperlinks,
+        };
+        if supports_hyperlinks {
+            Hyperlink { url: Some(url) }
+        } else {
+            Hyperlink { url: None }
+        }
+    }
+
+    pub fn out_file_hyperlink(&mut self, path: &std::path::Path) -> Hyperlink<url::Url> {
+        let url = self.file_hyperlink(path);
+        url.map(|u| self.out_hyperlink(u)).unwrap_or_default()
+    }
+
+    pub fn err_file_hyperlink(&mut self, path: &std::path::Path) -> Hyperlink<url::Url> {
+        let url = self.file_hyperlink(path);
+        url.map(|u| self.err_hyperlink(u)).unwrap_or_default()
+    }
+
+    fn file_hyperlink(&mut self, path: &std::path::Path) -> Option<url::Url> {
+        let mut url = url::Url::from_file_path(path).ok()?;
+        // Do a best-effort of setting the host in the URL to avoid issues with opening a link
+        // scoped to the computer you've SSHed into
+        let hostname = if cfg!(windows) {
+            // Not supported correctly on windows
+            None
+        } else {
+            if let Some(hostname) = self.hostname.as_deref() {
+                Some(hostname)
+            } else {
+                self.hostname = hostname().ok().and_then(|h| h.into_string().ok());
+                self.hostname.as_deref()
+            }
+        };
+        let _ = url.set_host(hostname);
+        Some(url)
     }
 
     /// Prints a message to stderr and translates ANSI escape code into console colors.
@@ -436,6 +507,44 @@ fn supports_color(choice: anstream::ColorChoice) -> bool {
         | anstream::ColorChoice::AlwaysAnsi
         | anstream::ColorChoice::Auto => true,
         anstream::ColorChoice::Never => false,
+    }
+}
+
+fn supports_hyperlinks() -> bool {
+    #[allow(clippy::disallowed_methods)] // We are reading the state of the system, not config
+    if std::env::var_os("TERM_PROGRAM").as_deref() == Some(std::ffi::OsStr::new("iTerm.app")) {
+        // Override `supports_hyperlinks` as we have an unknown incompatibility with iTerm2
+        return false;
+    }
+
+    supports_hyperlinks::supports_hyperlinks()
+}
+
+pub struct Hyperlink<D: fmt::Display> {
+    url: Option<D>,
+}
+
+impl<D: fmt::Display> Default for Hyperlink<D> {
+    fn default() -> Self {
+        Self { url: None }
+    }
+}
+
+impl<D: fmt::Display> Hyperlink<D> {
+    pub fn open(&self) -> impl fmt::Display {
+        if let Some(url) = self.url.as_ref() {
+            format!("\x1B]8;;{url}\x1B\\")
+        } else {
+            String::new()
+        }
+    }
+
+    pub fn close(&self) -> impl fmt::Display {
+        if self.url.is_some() {
+            "\x1B]8;;\x1B\\"
+        } else {
+            ""
+        }
     }
 }
 
