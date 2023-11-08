@@ -161,6 +161,7 @@ pub mod core;
 pub mod ops;
 pub mod sources;
 pub mod util;
+pub mod util_semver;
 mod version;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {

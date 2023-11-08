@@ -9,8 +9,8 @@ use url::Url;
 use crate::core::PackageId;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
-use crate::util::PartialVersion;
 use crate::util::{validate_package_name, IntoUrl};
+use crate::util_semver::PartialVersion;
 
 /// Some or all of the data required to identify a package:
 ///
