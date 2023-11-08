@@ -111,7 +111,6 @@ fn read_manifest_from_str(
         }
     };
 
-    let manifest = Rc::new(manifest);
     if let Some(deps) = manifest
         .workspace
         .as_ref()
@@ -128,7 +127,7 @@ fn read_manifest_from_str(
     }
     return if manifest.project.is_some() || manifest.package.is_some() {
         let (mut manifest, paths) = schema::TomlManifest::to_real_manifest(
-            &manifest,
+            manifest,
             embedded,
             source_id,
             package_root,
@@ -145,7 +144,7 @@ fn read_manifest_from_str(
         Ok((EitherManifest::Real(manifest), paths))
     } else {
         let (mut m, paths) =
-            schema::TomlManifest::to_virtual_manifest(&manifest, source_id, package_root, config)?;
+            schema::TomlManifest::to_virtual_manifest(manifest, source_id, package_root, config)?;
         add_unused(m.warnings_mut());
         Ok((EitherManifest::Virtual(m), paths))
     };
@@ -391,7 +390,7 @@ impl schema::TomlManifest {
     }
 
     pub fn to_real_manifest(
-        me: &Rc<schema::TomlManifest>,
+        me: schema::TomlManifest,
         embedded: bool,
         source_id: SourceId,
         package_root: &Path,
@@ -603,7 +602,7 @@ impl schema::TomlManifest {
         // If we have a lib with no path, use the inferred lib or else the package name.
         let targets = targets(
             &features,
-            me,
+            &me,
             package_name,
             package_root,
             edition,
@@ -1119,7 +1118,7 @@ impl schema::TomlManifest {
     }
 
     fn to_virtual_manifest(
-        me: &Rc<schema::TomlManifest>,
+        me: schema::TomlManifest,
         source_id: SourceId,
         root: &Path,
         config: &Config,
