@@ -22,7 +22,7 @@ impl State {
 struct Span {
     /// Start of this span in parent data
     start: usize,
-    /// up to end including
+    /// up to end excluding
     end: usize,
     data: State,
 }
@@ -42,7 +42,7 @@ impl Data {
             parts: vec![Span {
                 data: State::Initial,
                 start: 0,
-                end: data.len().saturating_sub(1),
+                end: data.len(),
             }],
         }
     }
@@ -55,7 +55,7 @@ impl Data {
 
         self.parts.iter().fold(Vec::new(), |mut acc, d| {
             match d.data {
-                State::Initial => acc.extend_from_slice(&self.original[d.start..=d.end]),
+                State::Initial => acc.extend_from_slice(&self.original[d.start..d.end]),
                 State::Replaced(ref d) | State::Inserted(ref d) => acc.extend_from_slice(d),
             };
             acc
@@ -66,28 +66,27 @@ impl Data {
     /// was already changed previously.
     pub fn replace_range(
         &mut self,
-        from: usize,
-        up_to_and_including: usize,
+        range: std::ops::Range<usize>,
         data: &[u8],
     ) -> Result<(), Error> {
-        let exclusive_end = up_to_and_including + 1;
+        let exclusive_end = range.end;
 
         ensure!(
-            from <= exclusive_end,
-            "Invalid range {}...{}, start is larger than end",
-            from,
-            up_to_and_including
+            range.start <= exclusive_end,
+            "Invalid range {}..{}, start is larger than end",
+            range.start,
+            range.end
         );
 
         ensure!(
-            up_to_and_including <= self.original.len(),
-            "Invalid range {}...{} given, original data is only {} byte long",
-            from,
-            up_to_and_including,
+            exclusive_end <= self.original.len(),
+            "Invalid range {}..{} given, original data is only {} byte long",
+            range.start,
+            range.end,
             self.original.len()
         );
 
-        let insert_only = from == exclusive_end;
+        let insert_only = range.start == range.end;
 
         // Since we error out when replacing an already replaced chunk of data,
         // we can take some shortcuts here. For example, there can be no
@@ -103,7 +102,7 @@ impl Data {
                 .parts
                 .iter()
                 .position(|p| {
-                    !p.data.is_inserted() && p.start <= from && p.end >= up_to_and_including
+                    !p.data.is_inserted() && p.start <= range.start && p.end >= range.end
                 })
                 .ok_or_else(|| {
                     use log::Level::Debug;
@@ -124,16 +123,16 @@ impl Data {
                             })
                             .collect::<Vec<_>>();
                         debug!(
-                            "no single slice covering {}...{}, current slices: {:?}",
-                            from, up_to_and_including, slices,
+                            "no single slice covering {}..{}, current slices: {:?}",
+                            range.start, range.end, slices,
                         );
                     }
 
                     anyhow!(
-                        "Could not replace range {}...{} in file \
+                        "Could not replace range {}..{} in file \
                          -- maybe parts of it were already replaced?",
-                        from,
-                        up_to_and_including
+                        range.start,
+                        range.end,
                     )
                 })?;
 
@@ -147,7 +146,7 @@ impl Data {
             // This is currently done to alleviate issues like
             // rust-lang/rust#51211 although this clause likely wants to be
             // removed if that's fixed deeper in the compiler.
-            if part_to_split.start == from && part_to_split.end == up_to_and_including {
+            if part_to_split.start == range.start && part_to_split.end == range.end {
                 if let State::Replaced(ref replacement) = part_to_split.data {
                     if &**replacement == data {
                         return Ok(());
@@ -168,18 +167,18 @@ impl Data {
             }
 
             // Keep initial data on left side of part
-            if from > part_to_split.start {
+            if range.start > part_to_split.start {
                 new_parts.push(Span {
                     start: part_to_split.start,
-                    end: from.saturating_sub(1),
+                    end: range.start,
                     data: State::Initial,
                 });
             }
 
             // New part
             new_parts.push(Span {
-                start: from,
-                end: up_to_and_including,
+                start: range.start,
+                end: range.end,
                 data: if insert_only {
                     State::Inserted(data.into())
                 } else {
@@ -188,9 +187,9 @@ impl Data {
             });
 
             // Keep initial data on right side of part
-            if up_to_and_including < part_to_split.end {
+            if range.end < part_to_split.end {
                 new_parts.push(Span {
-                    start: up_to_and_including + 1,
+                    start: range.end,
                     end: part_to_split.end,
                     data: State::Initial,
                 });
@@ -220,16 +219,30 @@ mod tests {
     }
 
     #[test]
+    fn insert_at_beginning() {
+        let mut d = Data::new(b"foo bar baz");
+        d.replace_range(0..0, b"oh no ").unwrap();
+        assert_eq!("oh no foo bar baz", str(&d.to_vec()));
+    }
+
+    #[test]
+    fn insert_at_end() {
+        let mut d = Data::new(b"foo bar baz");
+        d.replace_range(11..11, b" oh no").unwrap();
+        assert_eq!("foo bar baz oh no", str(&d.to_vec()));
+    }
+
+    #[test]
     fn replace_some_stuff() {
         let mut d = Data::new(b"foo bar baz");
-        d.replace_range(4, 6, b"lol").unwrap();
+        d.replace_range(4..7, b"lol").unwrap();
         assert_eq!("foo lol baz", str(&d.to_vec()));
     }
 
     #[test]
     fn replace_a_single_char() {
         let mut d = Data::new(b"let y = true;");
-        d.replace_range(4, 4, b"mut y").unwrap();
+        d.replace_range(4..5, b"mut y").unwrap();
         assert_eq!("let mut y = true;", str(&d.to_vec()));
     }
 
@@ -237,10 +250,10 @@ mod tests {
     fn replace_multiple_lines() {
         let mut d = Data::new(b"lorem\nipsum\ndolor");
 
-        d.replace_range(6, 10, b"lol").unwrap();
+        d.replace_range(6..11, b"lol").unwrap();
         assert_eq!("lorem\nlol\ndolor", str(&d.to_vec()));
 
-        d.replace_range(12, 16, b"lol").unwrap();
+        d.replace_range(12..17, b"lol").unwrap();
         assert_eq!("lorem\nlol\nlol", str(&d.to_vec()));
     }
 
@@ -248,13 +261,13 @@ mod tests {
     fn replace_multiple_lines_with_insert_only() {
         let mut d = Data::new(b"foo!");
 
-        d.replace_range(3, 2, b"bar").unwrap();
+        d.replace_range(3..3, b"bar").unwrap();
         assert_eq!("foobar!", str(&d.to_vec()));
 
-        d.replace_range(0, 2, b"baz").unwrap();
+        d.replace_range(0..3, b"baz").unwrap();
         assert_eq!("bazbar!", str(&d.to_vec()));
 
-        d.replace_range(3, 3, b"?").unwrap();
+        d.replace_range(3..4, b"?").unwrap();
         assert_eq!("bazbar?", str(&d.to_vec()));
     }
 
@@ -262,8 +275,8 @@ mod tests {
     fn replace_invalid_range() {
         let mut d = Data::new(b"foo!");
 
-        assert!(d.replace_range(2, 0, b"bar").is_err());
-        assert!(d.replace_range(0, 2, b"bar").is_ok());
+        assert!(d.replace_range(2..1, b"bar").is_err());
+        assert!(d.replace_range(0..3, b"bar").is_ok());
     }
 
     #[test]
@@ -277,24 +290,24 @@ mod tests {
     fn replace_overlapping_stuff_errs() {
         let mut d = Data::new(b"foo bar baz");
 
-        d.replace_range(4, 6, b"lol").unwrap();
+        d.replace_range(4..7, b"lol").unwrap();
         assert_eq!("foo lol baz", str(&d.to_vec()));
 
-        d.replace_range(4, 6, b"lol2").unwrap();
+        d.replace_range(4..7, b"lol2").unwrap();
     }
 
     #[test]
     #[should_panic(expected = "original data is only 3 byte long")]
     fn broken_replacements() {
         let mut d = Data::new(b"foo");
-        d.replace_range(4, 7, b"lol").unwrap();
+        d.replace_range(4..8, b"lol").unwrap();
     }
 
     #[test]
     fn replace_same_twice() {
         let mut d = Data::new(b"foo");
-        d.replace_range(0, 0, b"b").unwrap();
-        d.replace_range(0, 0, b"b").unwrap();
+        d.replace_range(0..1, b"b").unwrap();
+        d.replace_range(0..1, b"b").unwrap();
         assert_eq!("boo", str(&d.to_vec()));
     }
 
@@ -316,7 +329,7 @@ mod tests {
         ) {
             let mut d = Data::new(data.as_bytes());
             for &(ref range, ref bytes) in replacements {
-                let _ = d.replace_range(range.start, range.end, bytes);
+                let _ = d.replace_range(range.clone(), bytes);
             }
         }
     }
