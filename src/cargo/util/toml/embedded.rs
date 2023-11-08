@@ -8,7 +8,7 @@ const DEFAULT_EDITION: crate::core::features::Edition =
     crate::core::features::Edition::LATEST_STABLE;
 const AUTO_FIELDS: &[&str] = &["autobins", "autoexamples", "autotests", "autobenches"];
 
-pub fn expand_manifest(
+pub(super) fn expand_manifest(
     content: &str,
     path: &std::path::Path,
     config: &Config,
@@ -329,7 +329,7 @@ impl DocFragment {
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum CommentKind {
+enum CommentKind {
     Line,
     Block,
 }

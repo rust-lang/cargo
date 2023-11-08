@@ -28,7 +28,7 @@ use crate::util::{
     RustVersion,
 };
 
-pub mod embedded;
+mod embedded;
 pub mod schema;
 mod targets;
 use self::targets::targets;
@@ -1446,7 +1446,7 @@ fn inheritable_from_path(
 }
 
 /// Returns the name of the README file for a [`schema::TomlPackage`].
-pub fn readme_for_package(
+fn readme_for_package(
     package_root: &Path,
     readme: Option<&schema::StringOrBool>,
 ) -> Option<String> {
@@ -1505,7 +1505,7 @@ macro_rules! inheritable_field_getter {
     ( $(($key:literal, $field:ident -> $ret:ty),)* ) => (
         $(
             #[doc = concat!("Gets the field `workspace.", $key, "`.")]
-            pub fn $field(&self) -> CargoResult<$ret> {
+            fn $field(&self) -> CargoResult<$ret> {
                 let Some(val) = &self.$field else  {
                     bail!("`workspace.{}` was not defined", $key);
                 };
@@ -1518,7 +1518,6 @@ macro_rules! inheritable_field_getter {
 impl schema::InheritableFields {
     inheritable_field_getter! {
         // Please keep this list lexicographically ordered.
-        ("dependencies",          dependencies  -> BTreeMap<String, schema::TomlDependency>),
         ("lints",                 lints         -> schema::TomlLints),
         ("package.authors",       authors       -> Vec<String>),
         ("package.badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
@@ -1538,7 +1537,7 @@ impl schema::InheritableFields {
     }
 
     /// Gets a workspace dependency with the `name`.
-    pub fn get_dependency(
+    fn get_dependency(
         &self,
         name: &str,
         package_root: &Path,
@@ -1557,7 +1556,7 @@ impl schema::InheritableFields {
     }
 
     /// Gets the field `workspace.package.license-file`.
-    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
+    fn license_file(&self, package_root: &Path) -> CargoResult<String> {
         let Some(license_file) = &self.license_file else {
             bail!("`workspace.package.license-file` was not defined");
         };
@@ -1565,7 +1564,7 @@ impl schema::InheritableFields {
     }
 
     /// Gets the field `workspace.package.readme`.
-    pub fn readme(&self, package_root: &Path) -> CargoResult<schema::StringOrBool> {
+    fn readme(&self, package_root: &Path) -> CargoResult<schema::StringOrBool> {
         let Some(readme) = readme_for_package(self.ws_root.as_path(), self.readme.as_ref()) else {
             bail!("`workspace.package.readme` was not defined");
         };
@@ -1573,25 +1572,25 @@ impl schema::InheritableFields {
             .map(schema::StringOrBool::String)
     }
 
-    pub fn ws_root(&self) -> &PathBuf {
+    fn ws_root(&self) -> &PathBuf {
         &self.ws_root
     }
 
-    pub fn update_deps(&mut self, deps: Option<BTreeMap<String, schema::TomlDependency>>) {
+    fn update_deps(&mut self, deps: Option<BTreeMap<String, schema::TomlDependency>>) {
         self.dependencies = deps;
     }
 
-    pub fn update_lints(&mut self, lints: Option<schema::TomlLints>) {
+    fn update_lints(&mut self, lints: Option<schema::TomlLints>) {
         self.lints = lints;
     }
 
-    pub fn update_ws_path(&mut self, ws_root: PathBuf) {
+    fn update_ws_path(&mut self, ws_root: PathBuf) {
         self.ws_root = ws_root;
     }
 }
 
 impl schema::TomlPackage {
-    pub fn to_package_id(&self, source_id: SourceId, version: semver::Version) -> PackageId {
+    fn to_package_id(&self, source_id: SourceId, version: semver::Version) -> PackageId {
         PackageId::pure(self.name.as_str().into(), version, source_id)
     }
 }
@@ -2084,7 +2083,7 @@ impl schema::TomlProfiles {
     ///
     /// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
     /// because profiles can now be set in either `Cargo.toml` or `config.toml`.
-    pub fn validate(
+    fn validate(
         &self,
         cli_unstable: &CliUnstable,
         features: &Features,

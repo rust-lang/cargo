@@ -31,7 +31,7 @@ const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
 const DEFAULT_EXAMPLE_DIR_NAME: &'static str = "examples";
 const DEFAULT_BIN_DIR_NAME: &'static str = "bin";
 
-pub fn targets(
+pub(super) fn targets(
     features: &Features,
     manifest: &TomlManifest,
     package_name: &str,
