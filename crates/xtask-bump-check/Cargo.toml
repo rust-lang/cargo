@@ -11,5 +11,6 @@ cargo.workspace = true
 cargo-util.workspace = true
 clap.workspace = true
 git2.workspace = true
-tracing.workspace = true
+semver.workspace = true
 tracing-subscriber.workspace = true
+tracing.workspace = true

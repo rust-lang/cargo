@@ -23,7 +23,6 @@ pub use self::queue::Queue;
 pub use self::restricted_names::validate_package_name;
 pub use self::rustc::Rustc;
 pub use self::semver_ext::{OptVersionReq, PartialVersion, RustVersion, VersionExt, VersionReqExt};
-pub use self::to_semver::ToSemver;
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::workspace::{
     add_path_args, path_args, print_available_benches, print_available_binaries,
@@ -62,7 +61,6 @@ pub mod restricted_names;
 pub mod rustc;
 mod semver_ext;
 pub mod style;
-pub mod to_semver;
 pub mod toml;
 pub mod toml_mut;
 mod vcs;

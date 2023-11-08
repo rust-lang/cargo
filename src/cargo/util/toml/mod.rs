@@ -536,7 +536,7 @@ impl schema::TomlManifest {
             version
                 .clone()
                 .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
-        )?;
+        );
 
         let edition = if let Some(edition) = package.edition.clone() {
             let edition: Edition = edition
@@ -1596,12 +1596,8 @@ impl schema::InheritableFields {
 }
 
 impl schema::TomlPackage {
-    pub fn to_package_id(
-        &self,
-        source_id: SourceId,
-        version: semver::Version,
-    ) -> CargoResult<PackageId> {
-        PackageId::new(&self.name, version, source_id)
+    pub fn to_package_id(&self, source_id: SourceId, version: semver::Version) -> PackageId {
+        PackageId::pure(self.name.as_str().into(), version, source_id)
     }
 }
 

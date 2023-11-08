@@ -6,7 +6,6 @@ use anyhow::format_err;
 use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
 use cargo::util::IntoUrl;
-use cargo::util::ToSemver;
 use cargo::util::VersionReqExt;
 use cargo::CargoResult;
 use itertools::Itertools;
@@ -264,7 +263,7 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
             ),
         }
     } else {
-        match v.to_semver() {
+        match v.trim().parse() {
             Ok(v) => Ok(VersionReq::exact(&v)),
             Err(e) => {
                 let mut msg = e.to_string();
