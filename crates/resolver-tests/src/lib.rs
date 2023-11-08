@@ -982,14 +982,17 @@ fn meta_test_multiple_versions_strategy() {
 
 /// Assert `xs` contains `elems`
 #[track_caller]
-pub fn assert_contains<A: PartialEq>(xs: &[A], elems: &[A]) {
+pub fn assert_contains<A: PartialEq + std::fmt::Debug>(xs: &[A], elems: &[A]) {
     for elem in elems {
-        assert!(xs.contains(elem));
+        assert!(
+            xs.contains(elem),
+            "missing element\nset: {xs:?}\nmissing: {elem:?}"
+        );
     }
 }
 
 #[track_caller]
-pub fn assert_same<A: PartialEq>(a: &[A], b: &[A]) {
-    assert_eq!(a.len(), b.len());
+pub fn assert_same<A: PartialEq + std::fmt::Debug>(a: &[A], b: &[A]) {
+    assert_eq!(a.len(), b.len(), "not equal\n{a:?}\n{b:?}");
     assert_contains(b, a);
 }
