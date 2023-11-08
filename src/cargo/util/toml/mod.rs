@@ -1310,30 +1310,6 @@ impl schema::TomlManifest {
         }
         Ok(patch)
     }
-
-    /// Returns the path to the build script if one exists for this crate.
-    fn maybe_custom_build(
-        &self,
-        build: &Option<schema::StringOrBool>,
-        package_root: &Path,
-    ) -> Option<PathBuf> {
-        let build_rs = package_root.join("build.rs");
-        match *build {
-            // Explicitly no build script.
-            Some(schema::StringOrBool::Bool(false)) => None,
-            Some(schema::StringOrBool::Bool(true)) => Some(build_rs),
-            Some(schema::StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
-            None => {
-                // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
-                // a build script.
-                if build_rs.is_file() {
-                    Some(build_rs)
-                } else {
-                    None
-                }
-            }
-        }
-    }
 }
 
 struct Context<'a, 'b> {
