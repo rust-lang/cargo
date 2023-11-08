@@ -380,14 +380,7 @@ impl<'cfg> Timings<'cfg> {
             .unwrap_or_else(|_| "n/a".into());
         let rustc_info = render_rustc_info(bcx);
         let error_msg = match error {
-            Some(e) => format!(
-                r#"\
-  <tr>
-    <td class="error-text">Error:</td><td>{}</td>
-  </tr>
-"#,
-                e
-            ),
+            Some(e) => format!(r#"<tr><td class="error-text">Error:</td><td>{e}</td></tr>"#),
             None => "".to_string(),
         };
         write!(
