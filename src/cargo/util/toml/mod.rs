@@ -280,19 +280,11 @@ impl schema::TomlManifest {
             dependencies: map_deps(config, self.dependencies.as_ref(), all)?,
             dev_dependencies: map_deps(
                 config,
-                self.dev_dependencies
-                    .as_ref()
-                    .or_else(|| self.dev_dependencies2.as_ref()),
+                self.dev_dependencies(),
                 schema::TomlDependency::is_version_specified,
             )?,
             dev_dependencies2: None,
-            build_dependencies: map_deps(
-                config,
-                self.build_dependencies
-                    .as_ref()
-                    .or_else(|| self.build_dependencies2.as_ref()),
-                all,
-            )?,
+            build_dependencies: map_deps(config, self.build_dependencies(), all)?,
             build_dependencies2: None,
             features: self.features.clone(),
             target: match self.target.as_ref().map(|target_map| {
@@ -305,19 +297,11 @@ impl schema::TomlManifest {
                                 dependencies: map_deps(config, v.dependencies.as_ref(), all)?,
                                 dev_dependencies: map_deps(
                                     config,
-                                    v.dev_dependencies
-                                        .as_ref()
-                                        .or_else(|| v.dev_dependencies2.as_ref()),
+                                    v.dev_dependencies(),
                                     schema::TomlDependency::is_version_specified,
                                 )?,
                                 dev_dependencies2: None,
-                                build_dependencies: map_deps(
-                                    config,
-                                    v.build_dependencies
-                                        .as_ref()
-                                        .or_else(|| v.build_dependencies2.as_ref()),
-                                    all,
-                                )?,
+                                build_dependencies: map_deps(config, v.build_dependencies(), all)?,
                                 build_dependencies2: None,
                             },
                         ))
@@ -715,10 +699,7 @@ impl schema::TomlManifest {
         if me.dev_dependencies.is_some() && me.dev_dependencies2.is_some() {
             warn_on_deprecated("dev-dependencies", package_name, "package", cx.warnings);
         }
-        let dev_deps = me
-            .dev_dependencies
-            .as_ref()
-            .or_else(|| me.dev_dependencies2.as_ref());
+        let dev_deps = me.dev_dependencies();
         let dev_deps = process_dependencies(
             &mut cx,
             dev_deps,
@@ -729,10 +710,7 @@ impl schema::TomlManifest {
         if me.build_dependencies.is_some() && me.build_dependencies2.is_some() {
             warn_on_deprecated("build-dependencies", package_name, "package", cx.warnings);
         }
-        let build_deps = me
-            .build_dependencies
-            .as_ref()
-            .or_else(|| me.build_dependencies2.as_ref());
+        let build_deps = me.build_dependencies();
         let build_deps = process_dependencies(
             &mut cx,
             build_deps,
@@ -767,10 +745,7 @@ impl schema::TomlManifest {
             if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
                 warn_on_deprecated("build-dependencies", name, "platform target", cx.warnings);
             }
-            let build_deps = platform
-                .build_dependencies
-                .as_ref()
-                .or_else(|| platform.build_dependencies2.as_ref());
+            let build_deps = platform.build_dependencies();
             let build_deps = process_dependencies(
                 &mut cx,
                 build_deps,
@@ -781,10 +756,7 @@ impl schema::TomlManifest {
             if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
                 warn_on_deprecated("dev-dependencies", name, "platform target", cx.warnings);
             }
-            let dev_deps = platform
-                .dev_dependencies
-                .as_ref()
-                .or_else(|| platform.dev_dependencies2.as_ref());
+            let dev_deps = platform.dev_dependencies();
             let dev_deps = process_dependencies(
                 &mut cx,
                 dev_deps,
@@ -1147,10 +1119,10 @@ impl schema::TomlManifest {
         if me.dependencies.is_some() {
             bail!("this virtual manifest specifies a [dependencies] section, which is not allowed");
         }
-        if me.dev_dependencies.is_some() || me.dev_dependencies2.is_some() {
+        if me.dev_dependencies().is_some() {
             bail!("this virtual manifest specifies a [dev-dependencies] section, which is not allowed");
         }
-        if me.build_dependencies.is_some() || me.build_dependencies2.is_some() {
+        if me.build_dependencies().is_some() {
             bail!("this virtual manifest specifies a [build-dependencies] section, which is not allowed");
         }
         if me.features.is_some() {
@@ -1662,7 +1634,7 @@ impl schema::TomlWorkspaceDependency {
         inheritable()?.get_dependency(name, cx.root).map(|d| {
             match d {
                 schema::TomlDependency::Simple(s) => {
-                    if let Some(false) = self.default_features.or(self.default_features2) {
+                    if let Some(false) = self.default_features() {
                         default_features_msg(name, None, cx);
                     }
                     if self.optional.is_some() || self.features.is_some() || self.public.is_some() {
@@ -1679,10 +1651,7 @@ impl schema::TomlWorkspaceDependency {
                 }
                 schema::TomlDependency::Detailed(d) => {
                     let mut d = d.clone();
-                    match (
-                        self.default_features.or(self.default_features2),
-                        d.default_features.or(d.default_features2),
-                    ) {
+                    match (self.default_features(), d.default_features()) {
                         // member: default-features = true and
                         // workspace: default-features = false should turn on
                         // default-features
@@ -1982,11 +1951,7 @@ impl<P: ResolveToPath + Clone> schema::DetailedTomlDependency<P> {
             warn_on_deprecated("default-features", name_in_toml, "dependency", cx.warnings);
         }
         dep.set_features(self.features.iter().flatten())
-            .set_default_features(
-                self.default_features
-                    .or(self.default_features2)
-                    .unwrap_or(true),
-            )
+            .set_default_features(self.default_features().unwrap_or(true))
             .set_optional(self.optional.unwrap_or(false))
             .set_platform(cx.platform.clone());
         if let Some(registry) = &self.registry {

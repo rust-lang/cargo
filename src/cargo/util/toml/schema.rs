@@ -45,6 +45,18 @@ impl TomlManifest {
         self.profile.is_some()
     }
 
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
+        self.dev_dependencies
+            .as_ref()
+            .or(self.dev_dependencies2.as_ref())
+    }
+
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
+        self.build_dependencies
+            .as_ref()
+            .or(self.build_dependencies2.as_ref())
+    }
+
     pub fn features(&self) -> Option<&BTreeMap<String, Vec<String>>> {
         self.features.as_ref()
     }
@@ -462,6 +474,12 @@ pub struct TomlWorkspaceDependency {
     pub unused_keys: BTreeMap<String, toml::Value>,
 }
 
+impl TomlWorkspaceDependency {
+    pub fn default_features(&self) -> Option<bool> {
+        self.default_features.or(self.default_features2)
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum TomlDependency<P: Clone = String> {
@@ -551,6 +569,12 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     #[serde(skip_serializing)]
     #[serde(flatten)]
     pub unused_keys: BTreeMap<String, toml::Value>,
+}
+
+impl<P: Clone> DetailedTomlDependency<P> {
+    pub fn default_features(&self) -> Option<bool> {
+        self.default_features.or(self.default_features2)
+    }
 }
 
 // Explicit implementation so we avoid pulling in P: Default
@@ -969,6 +993,20 @@ pub struct TomlPlatform {
     pub dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
     #[serde(rename = "dev_dependencies")]
     pub dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+}
+
+impl TomlPlatform {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
+        self.dev_dependencies
+            .as_ref()
+            .or(self.dev_dependencies2.as_ref())
+    }
+
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
+        self.build_dependencies
+            .as_ref()
+            .or(self.build_dependencies2.as_ref())
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
