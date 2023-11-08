@@ -101,9 +101,7 @@ impl Data {
             let index_of_part_to_split = self
                 .parts
                 .iter()
-                .position(|p| {
-                    !p.data.is_inserted() && p.start <= range.start && p.end >= range.end
-                })
+                .position(|p| !p.data.is_inserted() && p.start <= range.start && p.end >= range.end)
                 .ok_or_else(|| {
                     use log::Level::Debug;
                     if log_enabled!(Debug) {
