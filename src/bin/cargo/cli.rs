@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context as _};
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
+use cargo::util::config::WarningHandling;
 use cargo::{self, drop_print, drop_println, CargoResult, CliResult, Config};
 use clap::{builder::UnknownArgumentValueParser, Arg, ArgMatches};
 use itertools::Itertools;
@@ -181,7 +182,9 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
     config_configure(config, &expanded_args, subcommand_args, global_args, &exec)?;
     super::init_git(config);
 
-    exec.exec(config, subcommand_args)
+    let result = exec.exec(config, subcommand_args);
+    config.shell().error_for_warnings()?;
+    result
 }
 
 pub fn get_version_string(is_verbose: bool) -> String {
@@ -394,6 +397,13 @@ fn config_configure(
     let frozen = args.flag("frozen") || global_args.frozen;
     let locked = args.flag("locked") || global_args.locked;
     let offline = args.flag("offline") || global_args.offline;
+    let warnings = match args.get_one::<String>("warnings").map(String::as_str) {
+        Some("ignore") => Some(WarningHandling::Ignore),
+        Some("warn") => Some(WarningHandling::Warn),
+        Some("error") => Some(WarningHandling::Error),
+        None => None,
+        _ => unreachable!(),
+    };
     let mut unstable_flags = global_args.unstable_flags;
     if let Some(values) = args.get_many::<String>("unstable-features") {
         unstable_flags.extend(values.cloned());
@@ -405,6 +415,7 @@ fn config_configure(
     config.configure(
         verbose,
         quiet,
+        warnings,
         color,
         frozen,
         locked,
@@ -593,6 +604,11 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")
+                .global(true),
+        )
+        .arg(
+            opt("warnings", "Warning behavior")
+                .value_parser(["error", "warn", "ignore"])
                 .global(true),
         )
         .arg(

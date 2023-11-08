@@ -158,6 +158,16 @@ pub struct CredentialCacheValue {
     pub operation_independent: bool,
 }
 
+/// Whether warnings should warn, be ignored, or cause an error.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum WarningHandling {
+    #[default]
+    Warn,
+    Ignore,
+    Error,
+}
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 #[derive(Debug)]
@@ -971,6 +981,7 @@ impl Config {
         &mut self,
         verbose: u32,
         quiet: bool,
+        warnings: Option<WarningHandling>,
         color: Option<&str>,
         frozen: bool,
         locked: bool,
@@ -1032,6 +1043,8 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color)?;
+        self.shell()
+            .set_warnings(warnings.or_else(|| term.warnings).unwrap_or_default());
         self.progress_config = term.progress.unwrap_or_default();
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
@@ -2563,6 +2576,7 @@ struct TermConfig {
     #[serde(default)]
     #[serde(deserialize_with = "progress_or_string")]
     progress: Option<ProgressConfig>,
+    warnings: Option<WarningHandling>,
 }
 
 #[derive(Debug, Default, Deserialize)]

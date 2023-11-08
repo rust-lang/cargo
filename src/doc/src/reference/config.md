@@ -1257,6 +1257,19 @@ Controls whether or not extra detailed messages are displayed by Cargo.
 Specifying the `--quiet` flag will override and disable verbose output.
 Specifying the `--verbose` flag will override and force verbose output.
 
+#### `term.warnings`
+* Type: string
+* Default: "warn"
+* Environment: `CARGO_TERM_WARNINGS`
+
+Overrides how warnings are handled, including warnings that come from `rustc`.
+
+The `--warnings=` CLI option overrides this configuration value.
+
+* `warn` (default): warnings are displayed and do not fail the operation.
+* `error`: if any warnings are encountered an error will be emitted at the of the operation.
+* `ignore`: warnings will be silently ignored.
+
 #### `term.color`
 * Type: string
 * Default: "auto"
