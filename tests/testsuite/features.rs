@@ -36,6 +36,37 @@ Caused by:
 }
 
 #[cargo_test]
+fn empty_feature_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                "" = []
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  feature name cannot be empty
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn same_name() {
     // Feature with the same name as a dependency.
     let p = project()
