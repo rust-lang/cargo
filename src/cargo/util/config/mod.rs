@@ -76,7 +76,6 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
-use crate::util::toml as cargo_toml;
 use crate::util::{internal, CanonicalUrl};
 use crate::util::{try_canonicalize, validate_package_name};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
@@ -1198,7 +1197,7 @@ impl Config {
         }
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
-        let toml = cargo_toml::parse_document(&contents, path, self).with_context(|| {
+        let toml = parse_document(&contents, path, self).with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
         let def = match why_load {
@@ -2249,7 +2248,7 @@ pub fn save_credentials(
         )
     })?;
 
-    let mut toml = cargo_toml::parse_document(&contents, file.path(), cfg)?;
+    let mut toml = parse_document(&contents, file.path(), cfg)?;
 
     // Move the old token location to the new one.
     if let Some(token) = toml.remove("token") {
@@ -2715,6 +2714,11 @@ impl EnvConfigValue {
 }
 
 pub type EnvConfig = HashMap<String, EnvConfigValue>;
+
+fn parse_document(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Table> {
+    // At the moment, no compatibility checks are needed.
+    toml.parse().map_err(Into::into)
+}
 
 /// A type to deserialize a list of strings from a toml file.
 ///

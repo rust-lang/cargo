@@ -175,11 +175,6 @@ fn read_manifest_from_str(
     }
 }
 
-pub fn parse_document(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Table> {
-    // At the moment, no compatibility checks are needed.
-    toml.parse().map_err(Into::into)
-}
-
 /// Warn about paths that have been deprecated and may conflict.
 fn warn_on_deprecated(new_path: &str, name: &str, kind: &str, warnings: &mut Vec<String>) {
     let old_path = new_path.replace("-", "_");
