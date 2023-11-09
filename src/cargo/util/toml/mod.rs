@@ -954,7 +954,7 @@ impl schema::TomlManifest {
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
             let cli_unstable = config.cli_unstable();
-            profiles.validate(cli_unstable, &features, &mut warnings)?;
+            validate_profiles(profiles, cli_unstable, &features, &mut warnings)?;
         }
 
         let publish = package.publish.clone().map(|publish| {
@@ -1155,7 +1155,7 @@ impl schema::TomlManifest {
         };
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
-            profiles.validate(config.cli_unstable(), &features, &mut warnings)?;
+            validate_profiles(profiles, config.cli_unstable(), &features, &mut warnings)?;
         }
         let resolve_behavior = me
             .workspace
@@ -1969,175 +1969,179 @@ impl<P: ResolveToPath + Clone> schema::TomlDetailedDependency<P> {
     }
 }
 
-impl schema::TomlProfiles {
-    /// Checks syntax validity and unstable feature gate for each profile.
-    ///
-    /// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
-    /// because profiles can now be set in either `Cargo.toml` or `config.toml`.
-    fn validate(
-        &self,
-        cli_unstable: &CliUnstable,
-        features: &Features,
-        warnings: &mut Vec<String>,
-    ) -> CargoResult<()> {
-        for (name, profile) in &self.0 {
-            profile.validate(name, cli_unstable, features, warnings)?;
-        }
-        Ok(())
+/// Checks syntax validity and unstable feature gate for each profile.
+///
+/// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
+/// because profiles can now be set in either `Cargo.toml` or `config.toml`.
+fn validate_profiles(
+    profiles: &schema::TomlProfiles,
+    cli_unstable: &CliUnstable,
+    features: &Features,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
+    for (name, profile) in &profiles.0 {
+        validate_profile(profile, name, cli_unstable, features, warnings)?;
     }
+    Ok(())
 }
 
-impl schema::TomlProfile {
-    /// Checks stytax validity and unstable feature gate for a given profile.
-    pub fn validate(
-        &self,
-        name: &str,
-        cli_unstable: &CliUnstable,
-        features: &Features,
-        warnings: &mut Vec<String>,
-    ) -> CargoResult<()> {
-        self.validate_profile(name, cli_unstable, features)?;
-        if let Some(ref profile) = self.build_override {
-            profile.validate_override("build-override")?;
-            profile.validate_profile(&format!("{name}.build-override"), cli_unstable, features)?;
+/// Checks stytax validity and unstable feature gate for a given profile.
+pub fn validate_profile(
+    root: &schema::TomlProfile,
+    name: &str,
+    cli_unstable: &CliUnstable,
+    features: &Features,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
+    validate_profile_layer(root, name, cli_unstable, features)?;
+    if let Some(ref profile) = root.build_override {
+        validate_profile_override(profile, "build-override")?;
+        validate_profile_layer(
+            profile,
+            &format!("{name}.build-override"),
+            cli_unstable,
+            features,
+        )?;
+    }
+    if let Some(ref packages) = root.package {
+        for (override_name, profile) in packages {
+            validate_profile_override(profile, "package")?;
+            validate_profile_layer(
+                profile,
+                &format!("{name}.package.{override_name}"),
+                cli_unstable,
+                features,
+            )?;
         }
-        if let Some(ref packages) = self.package {
-            for (override_name, profile) in packages {
-                profile.validate_override("package")?;
-                profile.validate_profile(
-                    &format!("{name}.package.{override_name}"),
-                    cli_unstable,
-                    features,
-                )?;
-            }
-        }
+    }
 
-        // Profile name validation
-        restricted_names::validate_profile_name(name)?;
+    // Profile name validation
+    restricted_names::validate_profile_name(name)?;
 
-        if let Some(dir_name) = &self.dir_name {
-            // This is disabled for now, as we would like to stabilize named
-            // profiles without this, and then decide in the future if it is
-            // needed. This helps simplify the UI a little.
-            bail!(
-                "dir-name=\"{}\" in profile `{}` is not currently allowed, \
+    if let Some(dir_name) = &root.dir_name {
+        // This is disabled for now, as we would like to stabilize named
+        // profiles without this, and then decide in the future if it is
+        // needed. This helps simplify the UI a little.
+        bail!(
+            "dir-name=\"{}\" in profile `{}` is not currently allowed, \
                  directory names are tied to the profile name for custom profiles",
-                dir_name,
-                name
-            );
-        }
+            dir_name,
+            name
+        );
+    }
 
-        // `inherits` validation
-        if matches!(self.inherits.as_deref(), Some("debug")) {
+    // `inherits` validation
+    if matches!(root.inherits.as_deref(), Some("debug")) {
+        bail!(
+            "profile.{}.inherits=\"debug\" should be profile.{}.inherits=\"dev\"",
+            name,
+            name
+        );
+    }
+
+    match name {
+        "doc" => {
+            warnings.push("profile `doc` is deprecated and has no effect".to_string());
+        }
+        "test" | "bench" => {
+            if root.panic.is_some() {
+                warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
+            }
+        }
+        _ => {}
+    }
+
+    if let Some(panic) = &root.panic {
+        if panic != "unwind" && panic != "abort" {
             bail!(
-                "profile.{}.inherits=\"debug\" should be profile.{}.inherits=\"dev\"",
-                name,
-                name
+                "`panic` setting of `{}` is not a valid setting, \
+                     must be `unwind` or `abort`",
+                panic
             );
         }
+    }
 
-        match name {
-            "doc" => {
-                warnings.push("profile `doc` is deprecated and has no effect".to_string());
-            }
-            "test" | "bench" => {
-                if self.panic.is_some() {
-                    warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
-                }
-            }
+    if let Some(schema::StringOrBool::String(arg)) = &root.lto {
+        if arg == "true" || arg == "false" {
+            bail!(
+                "`lto` setting of string `\"{arg}\"` for `{name}` profile is not \
+                     a valid setting, must be a boolean (`true`/`false`) or a string \
+                    (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.",
+            );
+        }
+    }
+
+    Ok(())
+}
+
+/// Validates a profile.
+///
+/// This is a shallow check, which is reused for the profile itself and any overrides.
+fn validate_profile_layer(
+    profile: &schema::TomlProfile,
+    name: &str,
+    cli_unstable: &CliUnstable,
+    features: &Features,
+) -> CargoResult<()> {
+    if let Some(codegen_backend) = &profile.codegen_backend {
+        match (
+            features.require(Feature::codegen_backend()),
+            cli_unstable.codegen_backend,
+        ) {
+            (Err(e), false) => return Err(e),
             _ => {}
         }
 
-        if let Some(panic) = &self.panic {
-            if panic != "unwind" && panic != "abort" {
-                bail!(
-                    "`panic` setting of `{}` is not a valid setting, \
-                     must be `unwind` or `abort`",
-                    panic
-                );
-            }
+        if codegen_backend.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
+            bail!(
+                "`profile.{}.codegen-backend` setting of `{}` is not a valid backend name.",
+                name,
+                codegen_backend,
+            );
         }
-
-        if let Some(schema::StringOrBool::String(arg)) = &self.lto {
-            if arg == "true" || arg == "false" {
-                bail!(
-                    "`lto` setting of string `\"{arg}\"` for `{name}` profile is not \
-                     a valid setting, must be a boolean (`true`/`false`) or a string \
-                    (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.",
-                );
-            }
-        }
-
-        Ok(())
     }
-
-    /// Validates a profile.
-    ///
-    /// This is a shallow check, which is reused for the profile itself and any overrides.
-    fn validate_profile(
-        &self,
-        name: &str,
-        cli_unstable: &CliUnstable,
-        features: &Features,
-    ) -> CargoResult<()> {
-        if let Some(codegen_backend) = &self.codegen_backend {
-            match (
-                features.require(Feature::codegen_backend()),
-                cli_unstable.codegen_backend,
-            ) {
-                (Err(e), false) => return Err(e),
-                _ => {}
-            }
-
-            if codegen_backend.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
-                bail!(
-                    "`profile.{}.codegen-backend` setting of `{}` is not a valid backend name.",
-                    name,
-                    codegen_backend,
-                );
-            }
+    if profile.rustflags.is_some() {
+        match (
+            features.require(Feature::profile_rustflags()),
+            cli_unstable.profile_rustflags,
+        ) {
+            (Err(e), false) => return Err(e),
+            _ => {}
         }
-        if self.rustflags.is_some() {
-            match (
-                features.require(Feature::profile_rustflags()),
-                cli_unstable.profile_rustflags,
-            ) {
-                (Err(e), false) => return Err(e),
-                _ => {}
-            }
-        }
-        if self.trim_paths.is_some() {
-            match (
-                features.require(Feature::trim_paths()),
-                cli_unstable.trim_paths,
-            ) {
-                (Err(e), false) => return Err(e),
-                _ => {}
-            }
-        }
-        Ok(())
     }
-
-    /// Validation that is specific to an override.
-    fn validate_override(&self, which: &str) -> CargoResult<()> {
-        if self.package.is_some() {
-            bail!("package-specific profiles cannot be nested");
+    if profile.trim_paths.is_some() {
+        match (
+            features.require(Feature::trim_paths()),
+            cli_unstable.trim_paths,
+        ) {
+            (Err(e), false) => return Err(e),
+            _ => {}
         }
-        if self.build_override.is_some() {
-            bail!("build-override profiles cannot be nested");
-        }
-        if self.panic.is_some() {
-            bail!("`panic` may not be specified in a `{}` profile", which)
-        }
-        if self.lto.is_some() {
-            bail!("`lto` may not be specified in a `{}` profile", which)
-        }
-        if self.rpath.is_some() {
-            bail!("`rpath` may not be specified in a `{}` profile", which)
-        }
-        Ok(())
     }
+    Ok(())
+}
 
+/// Validation that is specific to an override.
+fn validate_profile_override(profile: &schema::TomlProfile, which: &str) -> CargoResult<()> {
+    if profile.package.is_some() {
+        bail!("package-specific profiles cannot be nested");
+    }
+    if profile.build_override.is_some() {
+        bail!("build-override profiles cannot be nested");
+    }
+    if profile.panic.is_some() {
+        bail!("`panic` may not be specified in a `{}` profile", which)
+    }
+    if profile.lto.is_some() {
+        bail!("`lto` may not be specified in a `{}` profile", which)
+    }
+    if profile.rpath.is_some() {
+        bail!("`rpath` may not be specified in a `{}` profile", which)
+    }
+    Ok(())
+}
+
+impl schema::TomlProfile {
     /// Overwrite self's values with the given profile.
     pub fn merge(&mut self, profile: &schema::TomlProfile) {
         if let Some(v) = &profile.opt_level {
