@@ -2286,28 +2286,6 @@ impl schema::TomlTarget {
             None => panic!("target name is required"),
         }
     }
-
-    fn validate_proc_macro(&self, warnings: &mut Vec<String>) {
-        if self.proc_macro_raw.is_some() && self.proc_macro_raw2.is_some() {
-            warn_on_deprecated(
-                "proc-macro",
-                self.name().as_str(),
-                "library target",
-                warnings,
-            );
-        }
-    }
-
-    fn validate_crate_types(&self, target_kind_human: &str, warnings: &mut Vec<String>) {
-        if self.crate_type.is_some() && self.crate_type2.is_some() {
-            warn_on_deprecated(
-                "crate-type",
-                self.name().as_str(),
-                format!("{target_kind_human} target").as_str(),
-                warnings,
-            );
-        }
-    }
 }
 
 impl schema::MaybeWorkspaceLints {

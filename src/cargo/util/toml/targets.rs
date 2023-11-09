@@ -23,6 +23,7 @@ use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names;
+use crate::util::toml::warn_on_deprecated;
 
 use anyhow::Context as _;
 
@@ -172,8 +173,8 @@ fn clean_lib(
     };
 
     let Some(ref lib) = lib else { return Ok(None) };
-    lib.validate_proc_macro(warnings);
-    lib.validate_crate_types("library", warnings);
+    validate_proc_macro(lib, "library", warnings);
+    validate_crate_types(lib, "library", warnings);
 
     validate_target_name(lib, "library", "lib", warnings)?;
 
@@ -398,7 +399,7 @@ fn clean_examples(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        toml.validate_crate_types("example", warnings);
+        validate_crate_types(&toml, "example", warnings);
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
             None => Vec::new(),
@@ -982,5 +983,27 @@ fn maybe_custom_build(build: &Option<StringOrBool>, package_root: &Path) -> Opti
                 None
             }
         }
+    }
+}
+
+fn validate_proc_macro(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
+    if target.proc_macro_raw.is_some() && target.proc_macro_raw2.is_some() {
+        warn_on_deprecated(
+            "proc-macro",
+            target.name().as_str(),
+            format!("{kind} target").as_str(),
+            warnings,
+        );
+    }
+}
+
+fn validate_crate_types(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
+    if target.crate_type.is_some() && target.crate_type2.is_some() {
+        warn_on_deprecated(
+            "crate-type",
+            target.name().as_str(),
+            format!("{kind} target").as_str(),
+            warnings,
+        );
     }
 }
