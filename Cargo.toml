@@ -128,9 +128,6 @@ anyhow.workspace = true
 base64.workspace = true
 bytesize.workspace = true
 cargo-credential.workspace = true
-cargo-credential-libsecret.workspace = true
-cargo-credential-macos-keychain.workspace = true
-cargo-credential-wincred.workspace = true
 cargo-platform.workspace = true
 cargo-util.workspace = true
 clap = { workspace = true, features = ["wrap_help"] }
@@ -189,8 +186,17 @@ unicode-xid.workspace = true
 url.workspace = true
 walkdir.workspace = true
 
+[target.'cfg(target_os = "linux")'.dependencies]
+cargo-credential-libsecret.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cargo-credential-macos-keychain.workspace = true
+
 [target.'cfg(not(windows))'.dependencies]
 openssl = { workspace = true, optional = true }
+
+[target.'cfg(windows)'.dependencies]
+cargo-credential-wincred.workspace = true
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 workspace = true
