@@ -52,9 +52,17 @@ impl VersionPreferences {
         self.max_rust_version = ver;
     }
 
-    /// Sort the given vector of summaries in-place, with all summaries presumed to be for
-    /// the same package.  Preferred versions appear first in the result, sorted by
-    /// `version_ordering`, followed by non-preferred versions sorted the same way.
+    /// Sort (and filter) the given vector of summaries in-place
+    ///
+    /// Note: all summaries presumed to be for the same package.
+    ///
+    /// Sort order:
+    /// 1. Preferred packages
+    /// 2. `first_version`, falling back to [`VersionPreferences::version_ordering`] when `None`
+    ///
+    /// Filtering:
+    /// - [`VersionPreferences::max_rust_version`]
+    /// - `first_version`
     pub fn sort_summaries(
         &self,
         summaries: &mut Vec<Summary>,
