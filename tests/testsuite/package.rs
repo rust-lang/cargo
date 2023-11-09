@@ -5,6 +5,7 @@ use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, git, path2url, paths, project, symlink_supported, t,
+    ProjectBuilder,
 };
 use flate2::read::GzDecoder;
 use std::fs::{self, read_to_string, File};
@@ -3131,4 +3132,74 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
         &[],
     );
+}
+
+#[cargo_test]
+fn include_files_called_target_project() {
+    // https://github.com/rust-lang/cargo/issues/12790
+    // files and folders called "target" should be included, unless they're the actual target directory
+
+    let p = init_project_files_called_target(project()).build();
+
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+data/not_target
+data/target
+derp/not_target/foo.txt
+derp/target/foo.txt
+src/main.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn include_files_called_target_git() {
+    // https://github.com/rust-lang/cargo/issues/12790
+    // files and folders called "target" should be included, unless they're the actual target directory
+
+    let p = git::new("all", |p| init_project_files_called_target(p));
+
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+data/not_target
+data/target
+derp/not_target/foo.txt
+derp/target/foo.txt
+src/main.rs
+",
+        )
+        .run();
+}
+
+fn init_project_files_called_target(p: ProjectBuilder) -> ProjectBuilder {
+    p.file(
+        "Cargo.toml",
+        r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+    )
+    .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+    // actual target dir, should be excluded
+    .file("target/foo.txt", "")
+    // file called target, should be included
+    .file("data/target", "")
+    .file("data/not_target", "")
+    // folder called target, should be included
+    .file("derp/target/foo.txt", "")
+    .file("derp/not_target/foo.txt", "")
 }
