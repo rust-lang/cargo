@@ -23,6 +23,7 @@ use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names;
+use crate::util::toml::warn_on_deprecated;
 
 use anyhow::Context as _;
 
@@ -31,7 +32,7 @@ const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
 const DEFAULT_EXAMPLE_DIR_NAME: &'static str = "examples";
 const DEFAULT_BIN_DIR_NAME: &'static str = "bin";
 
-pub fn targets(
+pub(super) fn targets(
     features: &Features,
     manifest: &TomlManifest,
     package_name: &str,
@@ -105,7 +106,7 @@ pub fn targets(
     )?);
 
     // processing the custom build script
-    if let Some(custom_build) = manifest.maybe_custom_build(custom_build, package_root) {
+    if let Some(custom_build) = maybe_custom_build(custom_build, package_root) {
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
@@ -172,8 +173,8 @@ fn clean_lib(
     };
 
     let Some(ref lib) = lib else { return Ok(None) };
-    lib.validate_proc_macro(warnings);
-    lib.validate_crate_types("library", warnings);
+    validate_proc_macro(lib, "library", warnings);
+    validate_crate_types(lib, "library", warnings);
 
     validate_target_name(lib, "library", "lib", warnings)?;
 
@@ -181,20 +182,22 @@ fn clean_lib(
         (Some(path), _) => package_root.join(&path.0),
         (None, Some(path)) => path,
         (None, None) => {
-            let legacy_path = package_root.join("src").join(format!("{}.rs", lib.name()));
+            let legacy_path = package_root
+                .join("src")
+                .join(format!("{}.rs", name_or_panic(lib)));
             if edition == Edition::Edition2015 && legacy_path.exists() {
                 warnings.push(format!(
                     "path `{}` was erroneously implicitly accepted for library `{}`,\n\
                      please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
                     legacy_path.display(),
-                    lib.name()
+                    name_or_panic(lib)
                 ));
                 legacy_path
             } else {
                 anyhow::bail!(
                     "can't find library `{}`, \
                      rename file to `src/lib.rs` or specify lib.path",
-                    lib.name()
+                    name_or_panic(lib)
                 )
             }
         }
@@ -216,7 +219,7 @@ fn clean_lib(
         {
             anyhow::bail!(format!(
                 "library `{}` cannot set the crate type of both `dylib` and `cdylib`",
-                lib.name()
+                name_or_panic(lib)
             ));
         }
         (Some(kinds), _, _) if kinds.contains(&"proc-macro".to_string()) => {
@@ -224,12 +227,12 @@ fn clean_lib(
                 // This is a warning to retain backwards compatibility.
                 warnings.push(format!(
                     "proc-macro library `{}` should not specify `plugin = true`",
-                    lib.name()
+                    name_or_panic(lib)
                 ));
             }
             warnings.push(format!(
                 "library `{}` should only specify `proc-macro = true` instead of setting `crate-type`",
-                lib.name()
+                name_or_panic(lib)
             ));
             if kinds.len() > 1 {
                 anyhow::bail!("cannot mix `proc-macro` crate type with others");
@@ -245,7 +248,7 @@ fn clean_lib(
         (None, _, _) => vec![CrateType::Lib],
     };
 
-    let mut target = Target::lib_target(&lib.name(), crate_types, path, edition);
+    let mut target = Target::lib_target(name_or_panic(lib), crate_types, path, edition);
     configure(lib, &mut target)?;
     Ok(Some(target))
 }
@@ -285,7 +288,7 @@ fn clean_bins(
 
         validate_target_name(bin, "binary", "bin", warnings)?;
 
-        let name = bin.name();
+        let name = name_or_panic(bin).to_owned();
 
         if let Some(crate_types) = bin.crate_types() {
             if !crate_types.is_empty() {
@@ -320,12 +323,12 @@ fn clean_bins(
     let mut result = Vec::new();
     for bin in &bins {
         let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
-            if let Some(legacy_path) = legacy_bin_path(package_root, &bin.name(), has_lib) {
+            if let Some(legacy_path) = legacy_bin_path(package_root, name_or_panic(bin), has_lib) {
                 warnings.push(format!(
                     "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
                      please set bin.path in Cargo.toml",
                     legacy_path.display(),
-                    bin.name()
+                    name_or_panic(bin)
                 ));
                 Some(legacy_path)
             } else {
@@ -338,7 +341,7 @@ fn clean_bins(
         };
 
         let mut target = Target::bin_target(
-            &bin.name(),
+            name_or_panic(bin),
             bin.filename.clone(),
             path,
             bin.required_features.clone(),
@@ -398,14 +401,14 @@ fn clean_examples(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        toml.validate_crate_types("example", warnings);
+        validate_crate_types(&toml, "example", warnings);
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
             None => Vec::new(),
         };
 
         let mut target = Target::example_target(
-            &toml.name(),
+            name_or_panic(&toml),
             crate_types,
             path,
             toml.required_features.clone(),
@@ -443,8 +446,12 @@ fn clean_tests(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        let mut target =
-            Target::test_target(&toml.name(), path, toml.required_features.clone(), edition);
+        let mut target = Target::test_target(
+            name_or_panic(&toml),
+            path,
+            toml.required_features.clone(),
+            edition,
+        );
         configure(&toml, &mut target)?;
         result.push(target);
     }
@@ -464,14 +471,14 @@ fn clean_benches(
     let targets = {
         let mut legacy_bench_path = |bench: &TomlTarget| {
             let legacy_path = package_root.join("src").join("bench.rs");
-            if !(bench.name() == "bench" && legacy_path.exists()) {
+            if !(name_or_panic(bench) == "bench" && legacy_path.exists()) {
                 return None;
             }
             legacy_warnings.push(format!(
                 "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
                  please set bench.path in Cargo.toml",
                 legacy_path.display(),
-                bench.name()
+                name_or_panic(bench)
             ));
             Some(legacy_path)
         };
@@ -497,8 +504,12 @@ fn clean_benches(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        let mut target =
-            Target::bench_target(&toml.name(), path, toml.required_features.clone(), edition);
+        let mut target = Target::bench_target(
+            name_or_panic(&toml),
+            path,
+            toml.required_features.clone(),
+            edition,
+        );
         configure(&toml, &mut target)?;
         result.push(target);
     }
@@ -784,8 +795,8 @@ fn validate_target_name(
 /// Will check a list of toml targets, and make sure the target names are unique within a vector.
 fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResult<()> {
     let mut seen = HashSet::new();
-    for name in targets.iter().map(|e| e.name()) {
-        if !seen.insert(name.clone()) {
+    for name in targets.iter().map(|e| name_or_panic(e)) {
+        if !seen.insert(name) {
             anyhow::bail!(
                 "found duplicate {target_kind} name {name}, \
                  but all {target_kind} targets must have a unique name",
@@ -875,7 +886,7 @@ fn target_path_not_found_error_message(
         return [target_path_file, target_path_subdir];
     }
 
-    let target_name = target.name();
+    let target_name = name_or_panic(target);
     let commonly_wrong_paths = possible_target_paths(&target_name, target_kind, true);
     let possible_paths = possible_target_paths(&target_name, target_kind, false);
     let existing_wrong_path_index = match (
@@ -922,7 +933,7 @@ fn target_path(
         // Should we verify that this path exists here?
         return Ok(package_root.join(&path.0));
     }
-    let name = target.name();
+    let name = name_or_panic(target).to_owned();
 
     let mut matching = inferred
         .iter()
@@ -955,12 +966,61 @@ fn target_path(
                 "\
 cannot infer path for `{}` {}
 Cargo doesn't know which to use because multiple target files found at `{}` and `{}`.",
-                target.name(),
+                name_or_panic(target),
                 target_kind,
                 p0.strip_prefix(package_root).unwrap_or(&p0).display(),
                 p1.strip_prefix(package_root).unwrap_or(&p1).display(),
             ))
         }
         (None, Some(_)) => unreachable!(),
+    }
+}
+
+/// Returns the path to the build script if one exists for this crate.
+fn maybe_custom_build(build: &Option<StringOrBool>, package_root: &Path) -> Option<PathBuf> {
+    let build_rs = package_root.join("build.rs");
+    match *build {
+        // Explicitly no build script.
+        Some(StringOrBool::Bool(false)) => None,
+        Some(StringOrBool::Bool(true)) => Some(build_rs),
+        Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
+        None => {
+            // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
+            // a build script.
+            if build_rs.is_file() {
+                Some(build_rs)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+fn name_or_panic(target: &TomlTarget) -> &str {
+    target
+        .name
+        .as_deref()
+        .unwrap_or_else(|| panic!("target name is required"))
+}
+
+fn validate_proc_macro(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
+    if target.proc_macro_raw.is_some() && target.proc_macro_raw2.is_some() {
+        warn_on_deprecated(
+            "proc-macro",
+            name_or_panic(target),
+            format!("{kind} target").as_str(),
+            warnings,
+        );
+    }
+}
+
+fn validate_crate_types(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
+    if target.crate_type.is_some() && target.crate_type2.is_some() {
+        warn_on_deprecated(
+            "crate-type",
+            name_or_panic(target),
+            format!("{kind} target").as_str(),
+            warnings,
+        );
     }
 }

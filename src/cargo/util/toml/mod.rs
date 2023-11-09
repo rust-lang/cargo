@@ -23,12 +23,13 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
+use crate::util::restricted_names;
 use crate::util::{
     self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, OptVersionReq,
     RustVersion,
 };
 
-pub mod embedded;
+mod embedded;
 pub mod schema;
 mod targets;
 use self::targets::targets;
@@ -110,7 +111,6 @@ fn read_manifest_from_str(
         }
     };
 
-    let manifest = Rc::new(manifest);
     if let Some(deps) = manifest
         .workspace
         .as_ref()
@@ -127,7 +127,7 @@ fn read_manifest_from_str(
     }
     return if manifest.project.is_some() || manifest.package.is_some() {
         let (mut manifest, paths) = schema::TomlManifest::to_real_manifest(
-            &manifest,
+            manifest,
             embedded,
             source_id,
             package_root,
@@ -144,7 +144,7 @@ fn read_manifest_from_str(
         Ok((EitherManifest::Real(manifest), paths))
     } else {
         let (mut m, paths) =
-            schema::TomlManifest::to_virtual_manifest(&manifest, source_id, package_root, config)?;
+            schema::TomlManifest::to_virtual_manifest(manifest, source_id, package_root, config)?;
         add_unused(m.warnings_mut());
         Ok((EitherManifest::Virtual(m), paths))
     };
@@ -173,11 +173,6 @@ fn read_manifest_from_str(
             | Path::NewtypeStruct { parent } => stringify(dst, parent),
         }
     }
-}
-
-pub fn parse_document(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Table> {
-    // At the moment, no compatibility checks are needed.
-    toml.parse().map_err(Into::into)
 }
 
 /// Warn about paths that have been deprecated and may conflict.
@@ -285,19 +280,11 @@ impl schema::TomlManifest {
             dependencies: map_deps(config, self.dependencies.as_ref(), all)?,
             dev_dependencies: map_deps(
                 config,
-                self.dev_dependencies
-                    .as_ref()
-                    .or_else(|| self.dev_dependencies2.as_ref()),
+                self.dev_dependencies(),
                 schema::TomlDependency::is_version_specified,
             )?,
             dev_dependencies2: None,
-            build_dependencies: map_deps(
-                config,
-                self.build_dependencies
-                    .as_ref()
-                    .or_else(|| self.build_dependencies2.as_ref()),
-                all,
-            )?,
+            build_dependencies: map_deps(config, self.build_dependencies(), all)?,
             build_dependencies2: None,
             features: self.features.clone(),
             target: match self.target.as_ref().map(|target_map| {
@@ -310,19 +297,11 @@ impl schema::TomlManifest {
                                 dependencies: map_deps(config, v.dependencies.as_ref(), all)?,
                                 dev_dependencies: map_deps(
                                     config,
-                                    v.dev_dependencies
-                                        .as_ref()
-                                        .or_else(|| v.dev_dependencies2.as_ref()),
+                                    v.dev_dependencies(),
                                     schema::TomlDependency::is_version_specified,
                                 )?,
                                 dev_dependencies2: None,
-                                build_dependencies: map_deps(
-                                    config,
-                                    v.build_dependencies
-                                        .as_ref()
-                                        .or_else(|| v.build_dependencies2.as_ref()),
-                                    all,
-                                )?,
+                                build_dependencies: map_deps(config, v.build_dependencies(), all)?,
                                 build_dependencies2: None,
                             },
                         ))
@@ -395,7 +374,7 @@ impl schema::TomlManifest {
     }
 
     pub fn to_real_manifest(
-        me: &Rc<schema::TomlManifest>,
+        me: schema::TomlManifest,
         embedded: bool,
         source_id: SourceId,
         package_root: &Path,
@@ -607,7 +586,7 @@ impl schema::TomlManifest {
         // If we have a lib with no path, use the inferred lib or else the package name.
         let targets = targets(
             &features,
-            me,
+            &me,
             package_name,
             package_root,
             edition,
@@ -720,10 +699,7 @@ impl schema::TomlManifest {
         if me.dev_dependencies.is_some() && me.dev_dependencies2.is_some() {
             warn_on_deprecated("dev-dependencies", package_name, "package", cx.warnings);
         }
-        let dev_deps = me
-            .dev_dependencies
-            .as_ref()
-            .or_else(|| me.dev_dependencies2.as_ref());
+        let dev_deps = me.dev_dependencies();
         let dev_deps = process_dependencies(
             &mut cx,
             dev_deps,
@@ -734,10 +710,7 @@ impl schema::TomlManifest {
         if me.build_dependencies.is_some() && me.build_dependencies2.is_some() {
             warn_on_deprecated("build-dependencies", package_name, "package", cx.warnings);
         }
-        let build_deps = me
-            .build_dependencies
-            .as_ref()
-            .or_else(|| me.build_dependencies2.as_ref());
+        let build_deps = me.build_dependencies();
         let build_deps = process_dependencies(
             &mut cx,
             build_deps,
@@ -772,10 +745,7 @@ impl schema::TomlManifest {
             if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
                 warn_on_deprecated("build-dependencies", name, "platform target", cx.warnings);
             }
-            let build_deps = platform
-                .build_dependencies
-                .as_ref()
-                .or_else(|| platform.build_dependencies2.as_ref());
+            let build_deps = platform.build_dependencies();
             let build_deps = process_dependencies(
                 &mut cx,
                 build_deps,
@@ -786,10 +756,7 @@ impl schema::TomlManifest {
             if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
                 warn_on_deprecated("dev-dependencies", name, "platform target", cx.warnings);
             }
-            let dev_deps = platform
-                .dev_dependencies
-                .as_ref()
-                .or_else(|| platform.dev_dependencies2.as_ref());
+            let dev_deps = platform.dev_dependencies();
             let dev_deps = process_dependencies(
                 &mut cx,
                 dev_deps,
@@ -1123,7 +1090,7 @@ impl schema::TomlManifest {
     }
 
     fn to_virtual_manifest(
-        me: &Rc<schema::TomlManifest>,
+        me: schema::TomlManifest,
         source_id: SourceId,
         root: &Path,
         config: &Config,
@@ -1152,10 +1119,10 @@ impl schema::TomlManifest {
         if me.dependencies.is_some() {
             bail!("this virtual manifest specifies a [dependencies] section, which is not allowed");
         }
-        if me.dev_dependencies.is_some() || me.dev_dependencies2.is_some() {
+        if me.dev_dependencies().is_some() {
             bail!("this virtual manifest specifies a [dev-dependencies] section, which is not allowed");
         }
-        if me.build_dependencies.is_some() || me.build_dependencies2.is_some() {
+        if me.build_dependencies().is_some() {
             bail!("this virtual manifest specifies a [build-dependencies] section, which is not allowed");
         }
         if me.features.is_some() {
@@ -1315,30 +1282,6 @@ impl schema::TomlManifest {
         }
         Ok(patch)
     }
-
-    /// Returns the path to the build script if one exists for this crate.
-    fn maybe_custom_build(
-        &self,
-        build: &Option<schema::StringOrBool>,
-        package_root: &Path,
-    ) -> Option<PathBuf> {
-        let build_rs = package_root.join("build.rs");
-        match *build {
-            // Explicitly no build script.
-            Some(schema::StringOrBool::Bool(false)) => None,
-            Some(schema::StringOrBool::Bool(true)) => Some(build_rs),
-            Some(schema::StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
-            None => {
-                // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
-                // a build script.
-                if build_rs.is_file() {
-                    Some(build_rs)
-                } else {
-                    None
-                }
-            }
-        }
-    }
 }
 
 struct Context<'a, 'b> {
@@ -1451,7 +1394,7 @@ fn inheritable_from_path(
 }
 
 /// Returns the name of the README file for a [`schema::TomlPackage`].
-pub fn readme_for_package(
+fn readme_for_package(
     package_root: &Path,
     readme: Option<&schema::StringOrBool>,
 ) -> Option<String> {
@@ -1510,7 +1453,7 @@ macro_rules! inheritable_field_getter {
     ( $(($key:literal, $field:ident -> $ret:ty),)* ) => (
         $(
             #[doc = concat!("Gets the field `workspace.", $key, "`.")]
-            pub fn $field(&self) -> CargoResult<$ret> {
+            fn $field(&self) -> CargoResult<$ret> {
                 let Some(val) = &self.$field else  {
                     bail!("`workspace.{}` was not defined", $key);
                 };
@@ -1523,7 +1466,6 @@ macro_rules! inheritable_field_getter {
 impl schema::InheritableFields {
     inheritable_field_getter! {
         // Please keep this list lexicographically ordered.
-        ("dependencies",          dependencies  -> BTreeMap<String, schema::TomlDependency>),
         ("lints",                 lints         -> schema::TomlLints),
         ("package.authors",       authors       -> Vec<String>),
         ("package.badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
@@ -1543,7 +1485,7 @@ impl schema::InheritableFields {
     }
 
     /// Gets a workspace dependency with the `name`.
-    pub fn get_dependency(
+    fn get_dependency(
         &self,
         name: &str,
         package_root: &Path,
@@ -1562,7 +1504,7 @@ impl schema::InheritableFields {
     }
 
     /// Gets the field `workspace.package.license-file`.
-    pub fn license_file(&self, package_root: &Path) -> CargoResult<String> {
+    fn license_file(&self, package_root: &Path) -> CargoResult<String> {
         let Some(license_file) = &self.license_file else {
             bail!("`workspace.package.license-file` was not defined");
         };
@@ -1570,7 +1512,7 @@ impl schema::InheritableFields {
     }
 
     /// Gets the field `workspace.package.readme`.
-    pub fn readme(&self, package_root: &Path) -> CargoResult<schema::StringOrBool> {
+    fn readme(&self, package_root: &Path) -> CargoResult<schema::StringOrBool> {
         let Some(readme) = readme_for_package(self.ws_root.as_path(), self.readme.as_ref()) else {
             bail!("`workspace.package.readme` was not defined");
         };
@@ -1578,25 +1520,25 @@ impl schema::InheritableFields {
             .map(schema::StringOrBool::String)
     }
 
-    pub fn ws_root(&self) -> &PathBuf {
+    fn ws_root(&self) -> &PathBuf {
         &self.ws_root
     }
 
-    pub fn update_deps(&mut self, deps: Option<BTreeMap<String, schema::TomlDependency>>) {
+    fn update_deps(&mut self, deps: Option<BTreeMap<String, schema::TomlDependency>>) {
         self.dependencies = deps;
     }
 
-    pub fn update_lints(&mut self, lints: Option<schema::TomlLints>) {
+    fn update_lints(&mut self, lints: Option<schema::TomlLints>) {
         self.lints = lints;
     }
 
-    pub fn update_ws_path(&mut self, ws_root: PathBuf) {
+    fn update_ws_path(&mut self, ws_root: PathBuf) {
         self.ws_root = ws_root;
     }
 }
 
 impl schema::TomlPackage {
-    pub fn to_package_id(&self, source_id: SourceId, version: semver::Version) -> PackageId {
+    fn to_package_id(&self, source_id: SourceId, version: semver::Version) -> PackageId {
         PackageId::pure(self.name.as_str().into(), version, source_id)
     }
 }
@@ -1692,7 +1634,7 @@ impl schema::TomlWorkspaceDependency {
         inheritable()?.get_dependency(name, cx.root).map(|d| {
             match d {
                 schema::TomlDependency::Simple(s) => {
-                    if let Some(false) = self.default_features.or(self.default_features2) {
+                    if let Some(false) = self.default_features() {
                         default_features_msg(name, None, cx);
                     }
                     if self.optional.is_some() || self.features.is_some() || self.public.is_some() {
@@ -1709,10 +1651,7 @@ impl schema::TomlWorkspaceDependency {
                 }
                 schema::TomlDependency::Detailed(d) => {
                     let mut d = d.clone();
-                    match (
-                        self.default_features.or(self.default_features2),
-                        d.default_features.or(d.default_features2),
-                    ) {
+                    match (self.default_features(), d.default_features()) {
                         // member: default-features = true and
                         // workspace: default-features = false should turn on
                         // default-features
@@ -2012,11 +1951,7 @@ impl<P: ResolveToPath + Clone> schema::DetailedTomlDependency<P> {
             warn_on_deprecated("default-features", name_in_toml, "dependency", cx.warnings);
         }
         dep.set_features(self.features.iter().flatten())
-            .set_default_features(
-                self.default_features
-                    .or(self.default_features2)
-                    .unwrap_or(true),
-            )
+            .set_default_features(self.default_features().unwrap_or(true))
             .set_optional(self.optional.unwrap_or(false))
             .set_platform(cx.platform.clone());
         if let Some(registry) = &self.registry {
@@ -2089,7 +2024,7 @@ impl schema::TomlProfiles {
     ///
     /// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
     /// because profiles can now be set in either `Cargo.toml` or `config.toml`.
-    pub fn validate(
+    fn validate(
         &self,
         cli_unstable: &CliUnstable,
         features: &Features,
@@ -2128,7 +2063,7 @@ impl schema::TomlProfile {
         }
 
         // Profile name validation
-        Self::validate_name(name)?;
+        restricted_names::validate_profile_name(name)?;
 
         if let Some(dir_name) = &self.dir_name {
             // This is disabled for now, as we would like to stabilize named
@@ -2181,85 +2116,6 @@ impl schema::TomlProfile {
                     (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.",
                 );
             }
-        }
-
-        Ok(())
-    }
-
-    /// Validate dir-names and profile names according to RFC 2678.
-    pub fn validate_name(name: &str) -> CargoResult<()> {
-        if let Some(ch) = name
-            .chars()
-            .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
-        {
-            bail!(
-                "invalid character `{}` in profile name `{}`\n\
-                Allowed characters are letters, numbers, underscore, and hyphen.",
-                ch,
-                name
-            );
-        }
-
-        const SEE_DOCS: &str = "See https://doc.rust-lang.org/cargo/reference/profiles.html \
-            for more on configuring profiles.";
-
-        let lower_name = name.to_lowercase();
-        if lower_name == "debug" {
-            bail!(
-                "profile name `{}` is reserved\n\
-                 To configure the default development profile, use the name `dev` \
-                 as in [profile.dev]\n\
-                {}",
-                name,
-                SEE_DOCS
-            );
-        }
-        if lower_name == "build-override" {
-            bail!(
-                "profile name `{}` is reserved\n\
-                 To configure build dependency settings, use [profile.dev.build-override] \
-                 and [profile.release.build-override]\n\
-                 {}",
-                name,
-                SEE_DOCS
-            );
-        }
-
-        // These are some arbitrary reservations. We have no plans to use
-        // these, but it seems safer to reserve a few just in case we want to
-        // add more built-in profiles in the future. We can also uses special
-        // syntax like cargo:foo if needed. But it is unlikely these will ever
-        // be used.
-        if matches!(
-            lower_name.as_str(),
-            "build"
-                | "check"
-                | "clean"
-                | "config"
-                | "fetch"
-                | "fix"
-                | "install"
-                | "metadata"
-                | "package"
-                | "publish"
-                | "report"
-                | "root"
-                | "run"
-                | "rust"
-                | "rustc"
-                | "rustdoc"
-                | "target"
-                | "tmp"
-                | "uninstall"
-        ) || lower_name.starts_with("cargo")
-        {
-            bail!(
-                "profile name `{}` is reserved\n\
-                 Please choose a different name.\n\
-                 {}",
-                name,
-                SEE_DOCS
-            );
         }
 
         Ok(())
@@ -2420,54 +2276,6 @@ impl schema::TomlProfile {
         if let Some(v) = &profile.trim_paths {
             self.trim_paths = Some(v.clone())
         }
-    }
-}
-
-impl schema::TomlTarget {
-    fn name(&self) -> String {
-        match self.name {
-            Some(ref name) => name.clone(),
-            None => panic!("target name is required"),
-        }
-    }
-
-    fn validate_proc_macro(&self, warnings: &mut Vec<String>) {
-        if self.proc_macro_raw.is_some() && self.proc_macro_raw2.is_some() {
-            warn_on_deprecated(
-                "proc-macro",
-                self.name().as_str(),
-                "library target",
-                warnings,
-            );
-        }
-    }
-
-    fn proc_macro(&self) -> Option<bool> {
-        self.proc_macro_raw.or(self.proc_macro_raw2).or_else(|| {
-            if let Some(types) = self.crate_types() {
-                if types.contains(&"proc-macro".to_string()) {
-                    return Some(true);
-                }
-            }
-            None
-        })
-    }
-
-    fn validate_crate_types(&self, target_kind_human: &str, warnings: &mut Vec<String>) {
-        if self.crate_type.is_some() && self.crate_type2.is_some() {
-            warn_on_deprecated(
-                "crate-type",
-                self.name().as_str(),
-                format!("{target_kind_human} target").as_str(),
-                warnings,
-            );
-        }
-    }
-
-    fn crate_types(&self) -> Option<&Vec<String>> {
-        self.crate_type
-            .as_ref()
-            .or_else(|| self.crate_type2.as_ref())
     }
 }
 
