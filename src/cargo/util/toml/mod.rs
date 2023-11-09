@@ -2279,15 +2279,6 @@ impl schema::TomlProfile {
     }
 }
 
-impl schema::TomlTarget {
-    fn name(&self) -> String {
-        match self.name {
-            Some(ref name) => name.clone(),
-            None => panic!("target name is required"),
-        }
-    }
-}
-
 impl schema::MaybeWorkspaceLints {
     fn resolve<'a>(
         self,
