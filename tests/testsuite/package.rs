@@ -4,7 +4,7 @@ use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, git, path2url, paths, project, project_in, symlink_supported, t,
+    basic_manifest, cargo_process, git, path2url, paths, project, symlink_supported, t,
     ProjectBuilder,
 };
 use flate2::read::GzDecoder;
@@ -3162,9 +3162,10 @@ src/main.rs
 fn include_files_called_target_git() {
     // https://github.com/rust-lang/cargo/issues/12790
     // files and folders called "target" should be included, unless they're the actual target directory
-    let (p, repo) = git::new_repo("all", |p| init_and_add_inner_target(p));
+    let (p, repo) = git::new_repo("target_uncommitted", |p| init_and_add_inner_target(p));
     // add target folder but not committed.
-    let _ = project_in(&repo.path().display().to_string()).file("target/foo.txt", "");
+    let _ = fs::create_dir_all(&repo.workdir().unwrap().join("target/foo.txt")).unwrap();
+
     p.cargo("package -l")
         .with_stdout(
             "\
@@ -3182,7 +3183,7 @@ src/main.rs
         .run();
 
     // if target is committed, it should be include.
-    let p = git::new("all", |p| {
+    let p = git::new("target_committed", |p| {
         init_and_add_inner_target(p).file("target/foo.txt", "")
     });
     p.cargo("package -l")
