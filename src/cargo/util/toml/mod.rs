@@ -1508,20 +1508,20 @@ impl schema::InheritableFields {
         let Some(license_file) = &self.license_file else {
             bail!("`workspace.package.license-file` was not defined");
         };
-        resolve_relative_path("license-file", &self.ws_root, package_root, license_file)
+        resolve_relative_path("license-file", &self._ws_root, package_root, license_file)
     }
 
     /// Gets the field `workspace.package.readme`.
     fn readme(&self, package_root: &Path) -> CargoResult<schema::StringOrBool> {
-        let Some(readme) = readme_for_package(self.ws_root.as_path(), self.readme.as_ref()) else {
+        let Some(readme) = readme_for_package(self._ws_root.as_path(), self.readme.as_ref()) else {
             bail!("`workspace.package.readme` was not defined");
         };
-        resolve_relative_path("readme", &self.ws_root, package_root, &readme)
+        resolve_relative_path("readme", &self._ws_root, package_root, &readme)
             .map(schema::StringOrBool::String)
     }
 
     fn ws_root(&self) -> &PathBuf {
-        &self.ws_root
+        &self._ws_root
     }
 
     fn update_deps(&mut self, deps: Option<BTreeMap<String, schema::TomlDependency>>) {
@@ -1533,7 +1533,7 @@ impl schema::InheritableFields {
     }
 
     fn update_ws_path(&mut self, ws_root: PathBuf) {
-        self.ws_root = ws_root;
+        self._ws_root = ws_root;
     }
 }
 

@@ -1,3 +1,9 @@
+//! `Cargo.toml` / Manifest schema definition
+//!
+//! ## Style
+//!
+//! - Keys that exist for bookkeeping but don't correspond to the schema have a `_` prefix
+
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
@@ -108,7 +114,7 @@ pub struct InheritableFields {
     // We use skip here since it will never be present when deserializing
     // and we don't want it present when serializing
     #[serde(skip)]
-    pub ws_root: PathBuf,
+    pub _ws_root: PathBuf,
 }
 
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
@@ -430,7 +436,7 @@ impl MaybeWorkspaceDependency {
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
             MaybeWorkspaceDependency::Defined(d) => d.unused_keys(),
-            MaybeWorkspaceDependency::Workspace(w) => w.unused_keys.keys().cloned().collect(),
+            MaybeWorkspaceDependency::Workspace(w) => w._unused_keys.keys().cloned().collect(),
         }
     }
 }
@@ -471,7 +477,7 @@ pub struct TomlWorkspaceDependency {
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    pub unused_keys: BTreeMap<String, toml::Value>,
+    pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl TomlWorkspaceDependency {
@@ -510,7 +516,7 @@ impl TomlDependency {
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
             TomlDependency::Simple(_) => vec![],
-            TomlDependency::Detailed(detailed) => detailed.unused_keys.keys().cloned().collect(),
+            TomlDependency::Detailed(detailed) => detailed._unused_keys.keys().cloned().collect(),
         }
     }
 }
@@ -568,7 +574,7 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    pub unused_keys: BTreeMap<String, toml::Value>,
+    pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl<P: Clone> DetailedTomlDependency<P> {
@@ -598,7 +604,7 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
             artifact: Default::default(),
             lib: Default::default(),
             target: Default::default(),
-            unused_keys: Default::default(),
+            _unused_keys: Default::default(),
         }
     }
 }
