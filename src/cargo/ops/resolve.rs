@@ -61,7 +61,7 @@ use crate::core::resolver::features::{
     CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
 };
 use crate::core::resolver::{
-    self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionPreferences,
+    self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionOrdering, VersionPreferences,
 };
 use crate::core::summary::Summary;
 use crate::core::Feature;
@@ -321,6 +321,12 @@ pub fn resolve_with_previous<'cfg>(
     // While registering patches, we will record preferences for particular versions
     // of various packages.
     let mut version_prefs = VersionPreferences::default();
+    if ws.config().cli_unstable().minimal_versions {
+        version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
+    }
+    if ws.config().cli_unstable().msrv_policy {
+        version_prefs.max_rust_version(max_rust_version.cloned());
+    }
 
     // This is a set of PackageIds of `[patch]` entries, and some related locked PackageIds, for
     // which locking should be avoided (but which will be preferred when searching dependencies,
@@ -509,7 +515,6 @@ pub fn resolve_with_previous<'cfg>(
         ws.unstable_features()
             .require(Feature::public_dependency())
             .is_ok(),
-        max_rust_version,
     )?;
     let patches: Vec<_> = registry
         .patches()
