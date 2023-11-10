@@ -204,7 +204,7 @@ impl schema::TomlManifest {
                 package
                     .edition
                     .as_ref()
-                    .and_then(|e| e.as_defined())
+                    .and_then(|e| e.as_value())
                     .map(|e| Edition::from_str(e))
                     .unwrap_or(Ok(Edition::Edition2015))
                     .map(|e| e.default_resolve_behavior())
@@ -218,14 +218,14 @@ impl schema::TomlManifest {
         }
         if let Some(license_file) = &package.license_file {
             let license_file = license_file
-                .as_defined()
+                .as_value()
                 .context("license file should have been resolved before `prepare_for_publish()`")?;
             let license_path = Path::new(&license_file);
             let abs_license_path = paths::normalize_path(&package_root.join(license_path));
             if abs_license_path.strip_prefix(package_root).is_err() {
                 // This path points outside of the package root. `cargo package`
                 // will copy it into the root, so adjust the path to this location.
-                package.license_file = Some(schema::MaybeWorkspace::Defined(
+                package.license_file = Some(schema::InheritableField::Value(
                     license_path
                         .file_name()
                         .unwrap()
@@ -238,7 +238,7 @@ impl schema::TomlManifest {
 
         if let Some(readme) = &package.readme {
             let readme = readme
-                .as_defined()
+                .as_value()
                 .context("readme should have been resolved before `prepare_for_publish()`")?;
             match readme {
                 schema::StringOrBool::String(readme) => {
@@ -247,7 +247,7 @@ impl schema::TomlManifest {
                     if abs_readme_path.strip_prefix(package_root).is_err() {
                         // This path points outside of the package root. `cargo package`
                         // will copy it into the root, so adjust the path to this location.
-                        package.readme = Some(schema::MaybeWorkspace::Defined(
+                        package.readme = Some(schema::InheritableField::Value(
                             schema::StringOrBool::String(
                                 readme_path
                                     .file_name()
@@ -317,14 +317,14 @@ impl schema::TomlManifest {
 
         fn map_deps(
             config: &Config,
-            deps: Option<&BTreeMap<String, schema::MaybeWorkspaceDependency>>,
+            deps: Option<&BTreeMap<String, schema::InheritableDependency>>,
             filter: impl Fn(&schema::TomlDependency) -> bool,
-        ) -> CargoResult<Option<BTreeMap<String, schema::MaybeWorkspaceDependency>>> {
+        ) -> CargoResult<Option<BTreeMap<String, schema::InheritableDependency>>> {
             let Some(deps) = deps else { return Ok(None) };
             let deps = deps
                 .iter()
                 .filter(|(_k, v)| {
-                    if let schema::MaybeWorkspace::Defined(def) = v {
+                    if let schema::InheritableField::Value(def) = v {
                         filter(def)
                     } else {
                         false
@@ -337,10 +337,10 @@ impl schema::TomlManifest {
 
         fn map_dependency(
             config: &Config,
-            dep: &schema::MaybeWorkspaceDependency,
-        ) -> CargoResult<schema::MaybeWorkspaceDependency> {
+            dep: &schema::InheritableDependency,
+        ) -> CargoResult<schema::InheritableDependency> {
             let dep = match dep {
-                schema::MaybeWorkspace::Defined(schema::TomlDependency::Detailed(d)) => {
+                schema::InheritableField::Value(schema::TomlDependency::Detailed(d)) => {
                     let mut d = d.clone();
                     // Path dependencies become crates.io deps.
                     d.path.take();
@@ -355,7 +355,7 @@ impl schema::TomlManifest {
                     }
                     Ok(d)
                 }
-                schema::MaybeWorkspace::Defined(schema::TomlDependency::Simple(s)) => {
+                schema::InheritableField::Value(schema::TomlDependency::Simple(s)) => {
                     Ok(schema::TomlDetailedDependency {
                         version: Some(s.clone()),
                         ..Default::default()
@@ -364,7 +364,7 @@ impl schema::TomlManifest {
                 _ => unreachable!(),
             };
             dep.map(schema::TomlDependency::Detailed)
-                .map(schema::MaybeWorkspace::Defined)
+                .map(schema::InheritableField::Value)
         }
     }
 
@@ -503,7 +503,7 @@ impl schema::TomlManifest {
             .map(|version| version.resolve("version", || inherit()?.version()))
             .transpose()?;
 
-        package.version = version.clone().map(schema::MaybeWorkspace::Defined);
+        package.version = version.clone().map(schema::InheritableField::Value);
 
         let pkgid = package.to_package_id(
             source_id,
@@ -517,7 +517,7 @@ impl schema::TomlManifest {
                 .resolve("edition", || inherit()?.edition())?
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?;
-            package.edition = Some(schema::MaybeWorkspace::Defined(edition.to_string()));
+            package.edition = Some(schema::InheritableField::Value(edition.to_string()));
             edition
         } else {
             Edition::Edition2015
@@ -641,11 +641,11 @@ impl schema::TomlManifest {
 
         fn process_dependencies(
             cx: &mut Context<'_, '_>,
-            new_deps: Option<&BTreeMap<String, schema::MaybeWorkspaceDependency>>,
+            new_deps: Option<&BTreeMap<String, schema::InheritableDependency>>,
             kind: Option<DepKind>,
             workspace_config: &WorkspaceConfig,
             inherit_cell: &LazyCell<schema::InheritableFields>,
-        ) -> CargoResult<Option<BTreeMap<String, schema::MaybeWorkspaceDependency>>> {
+        ) -> CargoResult<Option<BTreeMap<String, schema::InheritableDependency>>> {
             let Some(dependencies) = new_deps else {
                 return Ok(None);
             };
@@ -656,7 +656,7 @@ impl schema::TomlManifest {
                 })
             };
 
-            let mut deps: BTreeMap<String, schema::MaybeWorkspaceDependency> = BTreeMap::new();
+            let mut deps: BTreeMap<String, schema::InheritableDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
                 let resolved = v
                     .clone()
@@ -677,7 +677,7 @@ impl schema::TomlManifest {
                 cx.deps.push(dep);
                 deps.insert(
                     n.to_string(),
-                    schema::MaybeWorkspace::Defined(resolved.clone()),
+                    schema::InheritableField::Value(resolved.clone()),
                 );
             }
             Ok(Some(deps))
@@ -900,54 +900,54 @@ impl schema::TomlManifest {
         package.description = metadata
             .description
             .clone()
-            .map(|description| schema::MaybeWorkspace::Defined(description));
+            .map(|description| schema::InheritableField::Value(description));
         package.homepage = metadata
             .homepage
             .clone()
-            .map(|homepage| schema::MaybeWorkspace::Defined(homepage));
+            .map(|homepage| schema::InheritableField::Value(homepage));
         package.documentation = metadata
             .documentation
             .clone()
-            .map(|documentation| schema::MaybeWorkspace::Defined(documentation));
+            .map(|documentation| schema::InheritableField::Value(documentation));
         package.readme = metadata
             .readme
             .clone()
-            .map(|readme| schema::MaybeWorkspace::Defined(schema::StringOrBool::String(readme)));
+            .map(|readme| schema::InheritableField::Value(schema::StringOrBool::String(readme)));
         package.authors = package
             .authors
             .as_ref()
-            .map(|_| schema::MaybeWorkspace::Defined(metadata.authors.clone()));
+            .map(|_| schema::InheritableField::Value(metadata.authors.clone()));
         package.license = metadata
             .license
             .clone()
-            .map(|license| schema::MaybeWorkspace::Defined(license));
+            .map(|license| schema::InheritableField::Value(license));
         package.license_file = metadata
             .license_file
             .clone()
-            .map(|license_file| schema::MaybeWorkspace::Defined(license_file));
+            .map(|license_file| schema::InheritableField::Value(license_file));
         package.repository = metadata
             .repository
             .clone()
-            .map(|repository| schema::MaybeWorkspace::Defined(repository));
+            .map(|repository| schema::InheritableField::Value(repository));
         package.keywords = package
             .keywords
             .as_ref()
-            .map(|_| schema::MaybeWorkspace::Defined(metadata.keywords.clone()));
+            .map(|_| schema::InheritableField::Value(metadata.keywords.clone()));
         package.categories = package
             .categories
             .as_ref()
-            .map(|_| schema::MaybeWorkspace::Defined(metadata.categories.clone()));
+            .map(|_| schema::InheritableField::Value(metadata.categories.clone()));
         package.rust_version = rust_version
             .clone()
-            .map(|rv| schema::MaybeWorkspace::Defined(rv));
+            .map(|rv| schema::InheritableField::Value(rv));
         package.exclude = package
             .exclude
             .as_ref()
-            .map(|_| schema::MaybeWorkspace::Defined(exclude.clone()));
+            .map(|_| schema::InheritableField::Value(exclude.clone()));
         package.include = package
             .include
             .as_ref()
-            .map(|_| schema::MaybeWorkspace::Defined(include.clone()));
+            .map(|_| schema::InheritableField::Value(include.clone()));
 
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
@@ -960,7 +960,7 @@ impl schema::TomlManifest {
             .clone()
             .map(|publish| publish.resolve("publish", || inherit()?.publish()).unwrap());
 
-        package.publish = publish.clone().map(|p| schema::MaybeWorkspace::Defined(p));
+        package.publish = publish.clone().map(|p| schema::InheritableField::Value(p));
 
         let publish = match publish {
             Some(schema::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
@@ -1029,8 +1029,8 @@ impl schema::TomlManifest {
             badges: me
                 .badges
                 .as_ref()
-                .map(|_| schema::MaybeWorkspace::Defined(metadata.badges.clone())),
-            lints: lints.map(|lints| schema::MaybeWorkspaceLints {
+                .map(|_| schema::InheritableField::Value(metadata.badges.clone())),
+            lints: lints.map(|lints| schema::InheritableLints {
                 workspace: false,
                 lints,
             }),
@@ -1538,9 +1538,9 @@ impl schema::TomlPackage {
     }
 }
 
-/// This Trait exists to make [`schema::MaybeWorkspace::Workspace`] generic. It makes deserialization of
-/// [`schema::MaybeWorkspace`] much easier, as well as making error messages for
-/// [`schema::MaybeWorkspace::resolve`] much nicer
+/// This Trait exists to make [`schema::InheritableField::Inherit`] generic. It makes deserialization of
+/// [`schema::InheritableField`] much easier, as well as making error messages for
+/// [`schema::InheritableField::resolve`] much nicer
 ///
 /// Implementors should have a field `workspace` with the type of `bool`. It is used to ensure
 /// `workspace` is not `false` in a `Cargo.toml`
@@ -1550,15 +1550,15 @@ pub trait WorkspaceInherit {
     fn inherit_toml_table(&self) -> &str;
 }
 
-impl<T, W: WorkspaceInherit> schema::MaybeWorkspace<T, W> {
+impl<T, W: WorkspaceInherit> schema::InheritableField<T, W> {
     fn resolve<'a>(
         self,
         label: &str,
         get_ws_inheritable: impl FnOnce() -> CargoResult<T>,
     ) -> CargoResult<T> {
         match self {
-            schema::MaybeWorkspace::Defined(value) => Ok(value),
-            schema::MaybeWorkspace::Workspace(w) => get_ws_inheritable().with_context(|| {
+            schema::InheritableField::Value(value) => Ok(value),
+            schema::InheritableField::Inherit(w) => get_ws_inheritable().with_context(|| {
                 format!(
                 "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
                 w.inherit_toml_table(),
@@ -1573,8 +1573,8 @@ impl<T, W: WorkspaceInherit> schema::MaybeWorkspace<T, W> {
         get_ws_inheritable: impl FnOnce(&W) -> CargoResult<T>,
     ) -> CargoResult<T> {
         match self {
-            schema::MaybeWorkspace::Defined(value) => Ok(value),
-            schema::MaybeWorkspace::Workspace(w) => get_ws_inheritable(&w).with_context(|| {
+            schema::InheritableField::Value(value) => Ok(value),
+            schema::InheritableField::Inherit(w) => get_ws_inheritable(&w).with_context(|| {
                 format!(
                 "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
                 w.inherit_toml_table(),
@@ -1583,21 +1583,21 @@ impl<T, W: WorkspaceInherit> schema::MaybeWorkspace<T, W> {
         }
     }
 
-    fn as_defined(&self) -> Option<&T> {
+    fn as_value(&self) -> Option<&T> {
         match self {
-            schema::MaybeWorkspace::Workspace(_) => None,
-            schema::MaybeWorkspace::Defined(defined) => Some(defined),
+            schema::InheritableField::Inherit(_) => None,
+            schema::InheritableField::Value(defined) => Some(defined),
         }
     }
 }
 
-impl WorkspaceInherit for schema::TomlWorkspaceField {
+impl WorkspaceInherit for schema::TomlInheritedField {
     fn inherit_toml_table(&self) -> &str {
         "package"
     }
 }
 
-impl schema::TomlWorkspaceDependency {
+impl schema::TomlInheritedDependency {
     fn resolve<'a>(
         &self,
         name: &str,
@@ -1673,7 +1673,7 @@ impl schema::TomlWorkspaceDependency {
     }
 }
 
-impl WorkspaceInherit for schema::TomlWorkspaceDependency {
+impl WorkspaceInherit for schema::TomlInheritedDependency {
     fn inherit_toml_table(&self) -> &str {
         "dependencies"
     }
@@ -2263,7 +2263,7 @@ impl schema::TomlProfile {
     }
 }
 
-impl schema::MaybeWorkspaceLints {
+impl schema::InheritableLints {
     fn resolve<'a>(
         self,
         get_ws_inheritable: impl FnOnce() -> CargoResult<schema::TomlLints>,
