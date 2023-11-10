@@ -188,17 +188,7 @@ impl SourceId {
         match kind {
             "git" => {
                 let mut url = url.into_url()?;
-                let mut reference = GitReference::DefaultBranch;
-                for (k, v) in url.query_pairs() {
-                    match &k[..] {
-                        // Map older 'ref' to branch.
-                        "branch" | "ref" => reference = GitReference::Branch(v.into_owned()),
-
-                        "rev" => reference = GitReference::Rev(v.into_owned()),
-                        "tag" => reference = GitReference::Tag(v.into_owned()),
-                        _ => {}
-                    }
-                }
+                let reference = GitReference::from_query(url.query_pairs());
                 let precise = url.fragment().map(|s| s.to_owned());
                 url.set_fragment(None);
                 url.set_query(None);
@@ -752,6 +742,20 @@ impl PartialEq for SourceIdInner {
     }
 }
 
+impl SourceKind {
+    pub(crate) fn protocol(&self) -> Option<&str> {
+        match self {
+            SourceKind::Path => Some("path"),
+            SourceKind::Git(_) => Some("git"),
+            SourceKind::Registry => Some("registry"),
+            // Sparse registry URL already includes the `sparse+` prefix
+            SourceKind::SparseRegistry => None,
+            SourceKind::LocalRegistry => Some("local-registry"),
+            SourceKind::Directory => Some("directory"),
+        }
+    }
+}
+
 /// Forwards to `Ord`
 impl PartialOrd for SourceKind {
     fn partial_cmp(&self, other: &SourceKind) -> Option<Ordering> {
@@ -848,57 +852,46 @@ pub struct SourceIdAsUrl<'a> {
 
 impl<'a> fmt::Display for SourceIdAsUrl<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self.inner {
-            SourceIdInner {
-                kind: SourceKind::Path,
-                ref url,
-                ..
-            } => write!(f, "path+{}", url),
-            SourceIdInner {
-                kind: SourceKind::Git(ref reference),
-                ref url,
-                ref precise,
-                ..
-            } => {
-                write!(f, "git+{}", url)?;
-                if let Some(pretty) = reference.pretty_ref(self.encoded) {
-                    write!(f, "?{}", pretty)?;
-                }
-                if let Some(precise) = precise.as_ref() {
-                    write!(f, "#{}", precise)?;
-                }
-                Ok(())
-            }
-            SourceIdInner {
-                kind: SourceKind::Registry,
-                ref url,
-                ..
-            } => {
-                write!(f, "registry+{url}")
-            }
-            SourceIdInner {
-                kind: SourceKind::SparseRegistry,
-                ref url,
-                ..
-            } => {
-                // Sparse registry URL already includes the `sparse+` prefix
-                write!(f, "{url}")
-            }
-            SourceIdInner {
-                kind: SourceKind::LocalRegistry,
-                ref url,
-                ..
-            } => write!(f, "local-registry+{}", url),
-            SourceIdInner {
-                kind: SourceKind::Directory,
-                ref url,
-                ..
-            } => write!(f, "directory+{}", url),
+        if let Some(protocol) = self.inner.kind.protocol() {
+            write!(f, "{protocol}+")?;
         }
+        write!(f, "{}", self.inner.url)?;
+        if let SourceIdInner {
+            kind: SourceKind::Git(ref reference),
+            ref precise,
+            ..
+        } = *self.inner
+        {
+            if let Some(pretty) = reference.pretty_ref(self.encoded) {
+                write!(f, "?{}", pretty)?;
+            }
+            if let Some(precise) = precise.as_ref() {
+                write!(f, "#{}", precise)?;
+            }
+        }
+        Ok(())
     }
 }
 
 impl GitReference {
+    pub fn from_query(
+        query_pairs: impl Iterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
+    ) -> Self {
+        let mut reference = GitReference::DefaultBranch;
+        for (k, v) in query_pairs {
+            let v = v.as_ref();
+            match k.as_ref() {
+                // Map older 'ref' to branch.
+                "branch" | "ref" => reference = GitReference::Branch(v.to_owned()),
+
+                "rev" => reference = GitReference::Rev(v.to_owned()),
+                "tag" => reference = GitReference::Tag(v.to_owned()),
+                _ => {}
+            }
+        }
+        reference
+    }
+
     /// Returns a `Display`able view of this git reference, or None if using
     /// the head of the default branch
     pub fn pretty_ref(&self, url_encoded: bool) -> Option<PrettyRef<'_>> {
