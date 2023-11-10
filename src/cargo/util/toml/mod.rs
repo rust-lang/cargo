@@ -194,12 +194,7 @@ impl schema::TomlManifest {
         package_root: &Path,
     ) -> CargoResult<schema::TomlManifest> {
         let config = ws.config();
-        let mut package = self
-            .package
-            .as_ref()
-            .or_else(|| self.project.as_ref())
-            .unwrap()
-            .clone();
+        let mut package = self.package().unwrap().clone();
         package.workspace = None;
         let current_resolver = package
             .resolver

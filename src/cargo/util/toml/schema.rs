@@ -2,6 +2,7 @@
 //!
 //! ## Style
 //!
+//! - Fields duplicated for an alias will have an accessor with the primary field's name
 //! - Keys that exist for bookkeeping but don't correspond to the schema have a `_` prefix
 
 use std::collections::BTreeMap;
@@ -49,6 +50,10 @@ pub struct TomlManifest {
 impl TomlManifest {
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()
+    }
+
+    pub fn package(&self) -> Option<&Box<TomlPackage>> {
+        self.package.as_ref().or(self.project.as_ref())
     }
 
     pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
