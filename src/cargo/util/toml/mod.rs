@@ -356,7 +356,7 @@ impl schema::TomlManifest {
                     Ok(d)
                 }
                 schema::MaybeWorkspace::Defined(schema::TomlDependency::Simple(s)) => {
-                    Ok(schema::DetailedTomlDependency {
+                    Ok(schema::TomlDetailedDependency {
                         version: Some(s.clone()),
                         ..Default::default()
                     })
@@ -1633,7 +1633,7 @@ impl schema::TomlWorkspaceDependency {
                         default_features_msg(name, None, cx);
                     }
                     if self.optional.is_some() || self.features.is_some() || self.public.is_some() {
-                        schema::TomlDependency::Detailed(schema::DetailedTomlDependency {
+                        schema::TomlDependency::Detailed(schema::TomlDetailedDependency {
                             version: Some(s),
                             optional: self.optional,
                             features: self.features.clone(),
@@ -1726,7 +1726,7 @@ impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
         kind: Option<DepKind>,
     ) -> CargoResult<Dependency> {
         match *self {
-            schema::TomlDependency::Simple(ref version) => schema::DetailedTomlDependency::<P> {
+            schema::TomlDependency::Simple(ref version) => schema::TomlDetailedDependency::<P> {
                 version: Some(version.clone()),
                 ..Default::default()
             }
@@ -1736,7 +1736,7 @@ impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
     }
 }
 
-impl schema::DetailedTomlDependency {
+impl schema::TomlDetailedDependency {
     fn add_features(&mut self, features: Option<Vec<String>>) {
         self.features = match (self.features.clone(), features.clone()) {
             (Some(dep_feat), Some(inherit_feat)) => Some(
@@ -1773,7 +1773,7 @@ impl schema::DetailedTomlDependency {
     }
 }
 
-impl<P: ResolveToPath + Clone> schema::DetailedTomlDependency<P> {
+impl<P: ResolveToPath + Clone> schema::TomlDetailedDependency<P> {
     fn to_dependency(
         &self,
         name_in_toml: &str,
