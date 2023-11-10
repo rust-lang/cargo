@@ -451,6 +451,11 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
         // things like colored output to work correctly.
         rustc.arg(arg);
     }
+    // Removes `FD_CLOEXEC` set by `jobserver::Client` to pass jobserver
+    // as environment variables specify.
+    if let Some(client) = config.jobserver_from_env() {
+        rustc.inherit_jobserver(client);
+    }
     debug!("calling rustc to display remaining diagnostics: {rustc}");
     exit_with(rustc.status()?);
 }
