@@ -956,10 +956,9 @@ pub struct TomlTarget {
     pub doc: Option<bool>,
     pub plugin: Option<bool>,
     pub doc_scrape_examples: Option<bool>,
-    #[serde(rename = "proc-macro")]
-    pub proc_macro_raw: Option<bool>,
+    pub proc_macro: Option<bool>,
     #[serde(rename = "proc_macro")]
-    pub proc_macro_raw2: Option<bool>,
+    pub proc_macro2: Option<bool>,
     pub harness: Option<bool>,
     pub required_features: Option<Vec<String>>,
     pub edition: Option<String>,
@@ -971,7 +970,7 @@ impl TomlTarget {
     }
 
     pub fn proc_macro(&self) -> Option<bool> {
-        self.proc_macro_raw.or(self.proc_macro_raw2).or_else(|| {
+        self.proc_macro.or(self.proc_macro2).or_else(|| {
             if let Some(types) = self.crate_types() {
                 if types.contains(&"proc-macro".to_string()) {
                     return Some(true);
