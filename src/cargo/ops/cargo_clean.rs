@@ -1,10 +1,7 @@
 use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
-use crate::core::gc::{AutoGcKind, Gc, GcOpts};
-use crate::core::global_cache_tracker::GlobalCacheTracker;
 use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
-use crate::util::cache_lock::CacheLockMode;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -28,7 +25,6 @@ pub struct CleanOptions<'cfg> {
     pub doc: bool,
     /// If set, doesn't delete anything.
     pub dry_run: bool,
-    pub gc_opts: GcOpts,
 }
 
 pub struct CleanContext<'cfg> {
@@ -41,76 +37,45 @@ pub struct CleanContext<'cfg> {
 }
 
 /// Cleans various caches.
-pub fn clean(ws: CargoResult<Workspace<'_>>, opts: &CleanOptions<'_>) -> CargoResult<()> {
+pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
+    let mut target_dir = ws.target_dir();
     let config = opts.config;
     let mut ctx = CleanContext::new(config);
     ctx.dry_run = opts.dry_run;
 
-    let any_download_cache_opts = opts.gc_opts.is_download_cache_opt_set();
+    if opts.doc {
+        if !opts.spec.is_empty() {
+            // FIXME: https://github.com/rust-lang/cargo/issues/8790
+            // This should support the ability to clean specific packages
+            // within the doc directory. It's a little tricky since it
+            // needs to find all documentable targets, but also consider
+            // the fact that target names might overlap with dependency
+            // names and such.
+            bail!("--doc cannot be used with -p");
+        }
+        // If the doc option is set, we just want to delete the doc directory.
+        target_dir = target_dir.join("doc");
+        ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
+    } else {
+        let profiles = Profiles::new(&ws, opts.requested_profile)?;
 
-    // The following options need a workspace.
-    let any_ws_opts = !opts.spec.is_empty()
-        || !opts.targets.is_empty()
-        || opts.profile_specified
-        || opts.doc
-        || opts.gc_opts.is_target_opt_set();
+        if opts.profile_specified {
+            // After parsing profiles we know the dir-name of the profile, if a profile
+            // was passed from the command line. If so, delete only the directory of
+            // that profile.
+            let dir_name = profiles.get_dir_name();
+            target_dir = target_dir.join(dir_name);
+        }
 
-    // When no options are specified, do the default action.
-    let no_opts_specified = !any_download_cache_opts && !any_ws_opts;
-
-    if any_ws_opts || no_opts_specified {
-        let ws = ws?;
-        let mut target_dir = ws.target_dir();
-
-        if opts.doc {
-            if !opts.spec.is_empty() {
-                // FIXME: https://github.com/rust-lang/cargo/issues/8790
-                // This should support the ability to clean specific packages
-                // within the doc directory. It's a little tricky since it
-                // needs to find all documentable targets, but also consider
-                // the fact that target names might overlap with dependency
-                // names and such.
-                bail!("--doc cannot be used with -p");
-            }
-            // If the doc option is set, we just want to delete the doc directory.
-            target_dir = target_dir.join("doc");
+        // If we have a spec, then we need to delete some packages, otherwise, just
+        // remove the whole target directory and be done with it!
+        //
+        // Note that we don't bother grabbing a lock here as we're just going to
+        // blow it all away anyway.
+        if opts.spec.is_empty() {
             ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
         } else {
-            let profiles = Profiles::new(&ws, opts.requested_profile)?;
-
-            if opts.profile_specified {
-                // After parsing profiles we know the dir-name of the profile, if a profile
-                // was passed from the command line. If so, delete only the directory of
-                // that profile.
-                let dir_name = profiles.get_dir_name();
-                target_dir = target_dir.join(dir_name);
-            }
-
-            // If we have a spec, then we need to delete some packages, otherwise, just
-            // remove the whole target directory and be done with it!
-            //
-            // Note that we don't bother grabbing a lock here as we're just going to
-            // blow it all away anyway.
-            if opts.spec.is_empty() {
-                ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
-            } else {
-                clean_specs(&mut ctx, &ws, &profiles, &opts.targets, &opts.spec)?;
-            }
-        }
-    }
-
-    if config.cli_unstable().gc {
-        let _lock = config.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
-        let mut cache_track = GlobalCacheTracker::new(&config)?;
-        let mut gc = Gc::new(config, &mut cache_track)?;
-        if no_opts_specified {
-            // This is the behavior for `cargo clean` without *any* options.
-            // It uses the defaults from config to determine what is cleaned.
-            let mut gc_opts = opts.gc_opts.clone();
-            gc_opts.update_for_auto_gc(config, &[AutoGcKind::All], None)?;
-            gc.gc(&mut ctx, &gc_opts)?;
-        } else {
-            gc.gc(&mut ctx, &opts.gc_opts)?;
+            clean_specs(&mut ctx, &ws, &profiles, &opts.targets, &opts.spec)?;
         }
     }
 
@@ -424,7 +389,7 @@ impl<'cfg> CleanContext<'cfg> {
         Ok(())
     }
 
-    fn display_summary(&self) -> CargoResult<()> {
+    pub fn display_summary(&self) -> CargoResult<()> {
         let status = if self.dry_run { "Summary" } else { "Removed" };
         let byte_count = if self.total_bytes_removed == 0 {
             String::new()

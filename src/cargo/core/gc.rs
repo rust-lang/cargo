@@ -23,8 +23,7 @@ use crate::core::global_cache_tracker::{self, GlobalCacheTracker};
 use crate::ops::CleanContext;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::{CargoResult, Config};
-use anyhow::format_err;
-use anyhow::{bail, Context};
+use anyhow::{format_err, Context};
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -136,11 +135,6 @@ pub struct GcOpts {
     pub max_git_size: Option<u64>,
     /// The `--max-download-size` CLI option.
     pub max_download_size: Option<u64>,
-
-    /// The `--max-target-age` CLI option (UNIMPLEMENTED).
-    pub max_target_age: Option<Duration>,
-    /// The `--max-target-size` CLI option  (UNIMPLEMENTED).
-    pub max_target_size: Option<u64>,
 }
 
 impl GcOpts {
@@ -165,127 +159,69 @@ impl GcOpts {
             || self.max_download_size.is_some()
     }
 
-    /// Returns whether any target directory cleaning options are set.
-    pub fn is_target_opt_set(&self) -> bool {
-        self.max_target_size.is_some() || self.max_target_age.is_some()
+    /// Updates the `GcOpts` to incorporate the specified max download age.
+    ///
+    /// "Download" means any cached data that can be re-downloaded.
+    pub fn set_max_download_age(&mut self, max_download_age: Duration) {
+        self.max_src_age = Some(maybe_newer_span(max_download_age, self.max_src_age));
+        self.max_crate_age = Some(maybe_newer_span(max_download_age, self.max_crate_age));
+        self.max_index_age = Some(maybe_newer_span(max_download_age, self.max_index_age));
+        self.max_git_co_age = Some(maybe_newer_span(max_download_age, self.max_git_co_age));
+        self.max_git_db_age = Some(maybe_newer_span(max_download_age, self.max_git_db_age));
     }
 
     /// Updates the configuration of this [`GcOpts`] to incorporate the
-    /// settings from config and the given CLI options.
-    ///
-    /// * `kinds` is a list of [`AutoGcKind`] that is being requested to
-    ///   perform. This corresponds to the `cargo clean --gc` flag. If empty,
-    ///   no config options are incorporated.
-    /// * `max_download_age` is the `--max-download-age` CLI option which
-    ///   requires special handling since it implicitly overlaps two options.
-    ///   It will use the newer value of either this or the explicit value.
-    ///
-    /// The `kinds` list is used in a few different ways:
-    ///
-    /// * If empty, uses only the options the user specified on the
-    ///   command-line, like `cargo clean --max-crate-size=…`.
-    /// * If the user specified a `cargo clean --gc` option, then the `kinds`
-    ///   list is filled in with whatever `--gc` option the user picked, and
-    ///   then this function *merges* the settings between the requested
-    ///   `--gc` option and any options that were explicitly specified.
-    /// * [`AutoGcKind::All`] is used in `cargo clean` when no options are
-    ///   specified.
-    pub fn update_for_auto_gc(
-        &mut self,
-        config: &Config,
-        kinds: &[AutoGcKind],
-        max_download_age: Option<Duration>,
-    ) -> CargoResult<()> {
+    /// settings from config.
+    pub fn update_for_auto_gc(&mut self, config: &Config) -> CargoResult<()> {
         let auto_config = config
             .get::<Option<AutoConfig>>("gc.auto")?
             .unwrap_or_default();
-        self.update_for_auto_gc_config(&auto_config, kinds, max_download_age)
+        self.update_for_auto_gc_config(&auto_config)
     }
 
-    fn update_for_auto_gc_config(
-        &mut self,
-        auto_config: &AutoConfig,
-        kinds: &[AutoGcKind],
-        max_download_age: Option<Duration>,
-    ) -> CargoResult<()> {
-        for kind in kinds {
-            if matches!(kind, AutoGcKind::All | AutoGcKind::Download) {
-                self.max_src_age = newer_time_span_for_config(
-                    self.max_src_age,
-                    "gc.auto.max-src-age",
-                    auto_config
-                        .max_src_age
-                        .as_deref()
-                        .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
-                )?;
-                self.max_crate_age = newer_time_span_for_config(
-                    self.max_crate_age,
-                    "gc.auto.max-crate-age",
-                    auto_config
-                        .max_crate_age
-                        .as_deref()
-                        .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
-                )?;
-                self.max_index_age = newer_time_span_for_config(
-                    self.max_index_age,
-                    "gc.auto.max-index-age",
-                    auto_config
-                        .max_index_age
-                        .as_deref()
-                        .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
-                )?;
-                self.max_git_co_age = newer_time_span_for_config(
-                    self.max_git_co_age,
-                    "gc.auto.max-git-co-age",
-                    auto_config
-                        .max_git_co_age
-                        .as_deref()
-                        .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
-                )?;
-                self.max_git_db_age = newer_time_span_for_config(
-                    self.max_git_db_age,
-                    "gc.auto.max-git-db-age",
-                    auto_config
-                        .max_git_db_age
-                        .as_deref()
-                        .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
-                )?;
-            }
-            if matches!(kind, AutoGcKind::Target) {
-                bail!("target is unimplemented");
-            }
-        }
-        if let Some(max_download_age) = max_download_age {
-            self.max_src_age = Some(maybe_newer_span(max_download_age, self.max_src_age));
-            self.max_crate_age = Some(maybe_newer_span(max_download_age, self.max_crate_age));
-            self.max_index_age = Some(maybe_newer_span(max_download_age, self.max_index_age));
-            self.max_git_co_age = Some(maybe_newer_span(max_download_age, self.max_git_co_age));
-            self.max_git_db_age = Some(maybe_newer_span(max_download_age, self.max_git_db_age));
-        }
+    fn update_for_auto_gc_config(&mut self, auto_config: &AutoConfig) -> CargoResult<()> {
+        self.max_src_age = newer_time_span_for_config(
+            self.max_src_age,
+            "gc.auto.max-src-age",
+            auto_config
+                .max_src_age
+                .as_deref()
+                .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
+        )?;
+        self.max_crate_age = newer_time_span_for_config(
+            self.max_crate_age,
+            "gc.auto.max-crate-age",
+            auto_config
+                .max_crate_age
+                .as_deref()
+                .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
+        )?;
+        self.max_index_age = newer_time_span_for_config(
+            self.max_index_age,
+            "gc.auto.max-index-age",
+            auto_config
+                .max_index_age
+                .as_deref()
+                .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
+        )?;
+        self.max_git_co_age = newer_time_span_for_config(
+            self.max_git_co_age,
+            "gc.auto.max-git-co-age",
+            auto_config
+                .max_git_co_age
+                .as_deref()
+                .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
+        )?;
+        self.max_git_db_age = newer_time_span_for_config(
+            self.max_git_db_age,
+            "gc.auto.max-git-db-age",
+            auto_config
+                .max_git_db_age
+                .as_deref()
+                .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
+        )?;
         Ok(())
     }
-}
-
-/// The kind of automatic garbage collection to perform.
-///
-/// "Automatic" is the kind of gc performed automatically by Cargo in any
-/// command that is already doing a bunch of work. See [`auto_gc`] for more.
-#[derive(Clone, Debug)]
-pub enum AutoGcKind {
-    /// Automatically clean up the downloaded files *and* the target directory.
-    ///
-    /// This is the mode used by default.
-    All,
-    /// Automatically clean only downloaded files.
-    ///
-    /// This corresponds to `cargo clean --gc=download`.
-    Download,
-    /// Automatically clean only the target directory.
-    ///
-    /// THIS IS NOT IMPLEMENTED.
-    ///
-    /// This corresponds to `cargo clean --gc=target`.
-    Target,
 }
 
 /// Garbage collector.
@@ -342,7 +278,7 @@ impl<'a, 'config> Gc<'a, 'config> {
             return Ok(());
         }
         let mut gc_opts = GcOpts::default();
-        gc_opts.update_for_auto_gc_config(&auto_config, &[AutoGcKind::All], None)?;
+        gc_opts.update_for_auto_gc_config(&auto_config)?;
         self.gc(clean_ctx, &gc_opts)?;
         if !clean_ctx.dry_run {
             self.global_cache_tracker.set_last_auto_gc()?;

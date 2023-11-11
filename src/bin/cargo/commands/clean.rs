@@ -1,10 +1,11 @@
 use crate::command_prelude::*;
-use cargo::core::gc::{parse_human_size, parse_time_span};
-use cargo::core::gc::{AutoGcKind, GcOpts};
+use crate::util::cache_lock::CacheLockMode;
+use cargo::core::gc::Gc;
+use cargo::core::gc::{parse_human_size, parse_time_span, GcOpts};
+use cargo::core::global_cache_tracker::GlobalCacheTracker;
+use cargo::ops::CleanContext;
 use cargo::ops::{self, CleanOptions};
 use cargo::util::print_available_packages;
-use cargo::CargoResult;
-use clap::builder::{PossibleValuesParser, TypedValueParser};
 use std::time::Duration;
 
 pub fn cli() -> Command {
@@ -19,145 +20,106 @@ pub fn cli() -> Command {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_dry_run("Display what would be deleted without deleting anything")
-        // NOTE: Not all of these options may get stabilized. Some of them are
-        // very low-level details, and may not be something typical users need.
-        .arg(
-            optional_opt(
-                "gc",
-                "Delete old and unused files (unstable) (comma separated)",
-            )
-            .hide(true)
-            .value_name("KINDS")
-            .value_parser(
-                PossibleValuesParser::new(["all", "download", "target"]).map(|x| {
-                    match x.as_str() {
-                        "all" => AutoGcKind::All,
-                        "download" => AutoGcKind::Download,
-                        "target" => panic!("target is not yet implemented"),
-                        x => panic!("possible value out of sync with `{x}`"),
-                    }
-                }),
-            )
-            .require_equals(true),
-        )
-        .arg(
-            opt(
-                "max-src-age",
-                "Deletes source cache files that have not been used \
-                since the given age (unstable)",
-            )
-            .value_name("DURATION")
-            .value_parser(parse_time_span)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-crate-age",
-                "Deletes crate cache files that have not been used \
-                since the given age (unstable)",
-            )
-            .value_name("DURATION")
-            .value_parser(parse_time_span)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-index-age",
-                "Deletes registry indexes that have not been used \
-                since the given age (unstable)",
-            )
-            .value_name("DURATION")
-            .value_parser(parse_time_span)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-git-co-age",
-                "Deletes git dependency checkouts that have not been used \
-                since the given age (unstable)",
-            )
-            .value_name("DURATION")
-            .value_parser(parse_time_span)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-git-db-age",
-                "Deletes git dependency clones that have not been used \
-                since the given age (unstable)",
-            )
-            .value_name("DURATION")
-            .value_parser(parse_time_span)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-download-age",
-                "Deletes any downloaded cache data that has not been used \
-                since the given age (unstable)",
-            )
-            .value_name("DURATION")
-            .value_parser(parse_time_span)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-src-size",
-                "Deletes source cache files until the cache is under the given size (unstable)",
-            )
-            .value_name("SIZE")
-            .value_parser(parse_human_size)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-crate-size",
-                "Deletes crate cache files until the cache is under the given size (unstable)",
-            )
-            .value_name("SIZE")
-            .value_parser(parse_human_size)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-git-size",
-                "Deletes git dependency caches until the cache is under the given size (unstable)",
-            )
-            .value_name("SIZE")
-            .value_parser(parse_human_size)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-download-size",
-                "Deletes downloaded cache data until the cache is under the given size (unstable)",
-            )
-            .value_name("SIZE")
-            .value_parser(parse_human_size)
-            .hide(true),
-        )
-        // These are unimplemented. Leaving here as a guide for how this is
-        // intended to evolve. These will likely change, this is just a sketch
-        // of ideas.
-        .arg(
-            opt(
-                "max-target-age",
-                "Deletes any build artifact files that have not been used \
-                since the given age (unstable) (UNIMPLEMENTED)",
-            )
-            .value_name("DURATION")
-            .value_parser(parse_time_span)
-            .hide(true),
-        )
-        .arg(
-            opt(
-                "max-target-size",
-                "Deletes build artifact files until the cache is under the given size \
-                (unstable) (UNIMPLEMENTED)",
-            )
-            .value_name("SIZE")
-            .value_parser(parse_human_size)
-            .hide(true),
+        .args_conflicts_with_subcommands(true)
+        .subcommand(
+            subcommand("gc")
+                .about("Clean global caches")
+                .hide(true)
+                // FIXME: arg_quiet doesn't work because `config_configure`
+                // doesn't know about subcommands.
+                .arg_dry_run("Display what would be deleted without deleting anything")
+                // NOTE: Not all of these options may get stabilized. Some of them are
+                // very low-level details, and may not be something typical users need.
+                .arg(
+                    opt(
+                        "max-src-age",
+                        "Deletes source cache files that have not been used \
+                        since the given age (unstable)",
+                    )
+                    .value_name("DURATION")
+                    .value_parser(parse_time_span),
+                )
+                .arg(
+                    opt(
+                        "max-crate-age",
+                        "Deletes crate cache files that have not been used \
+                        since the given age (unstable)",
+                    )
+                    .value_name("DURATION")
+                    .value_parser(parse_time_span),
+                )
+                .arg(
+                    opt(
+                        "max-index-age",
+                        "Deletes registry indexes that have not been used \
+                        since the given age (unstable)",
+                    )
+                    .value_name("DURATION")
+                    .value_parser(parse_time_span),
+                )
+                .arg(
+                    opt(
+                        "max-git-co-age",
+                        "Deletes git dependency checkouts that have not been used \
+                        since the given age (unstable)",
+                    )
+                    .value_name("DURATION")
+                    .value_parser(parse_time_span),
+                )
+                .arg(
+                    opt(
+                        "max-git-db-age",
+                        "Deletes git dependency clones that have not been used \
+                        since the given age (unstable)",
+                    )
+                    .value_name("DURATION")
+                    .value_parser(parse_time_span),
+                )
+                .arg(
+                    opt(
+                        "max-download-age",
+                        "Deletes any downloaded cache data that has not been used \
+                        since the given age (unstable)",
+                    )
+                    .value_name("DURATION")
+                    .value_parser(parse_time_span),
+                )
+                .arg(
+                    opt(
+                        "max-src-size",
+                        "Deletes source cache files until the cache is under the \
+                        given size (unstable)",
+                    )
+                    .value_name("SIZE")
+                    .value_parser(parse_human_size),
+                )
+                .arg(
+                    opt(
+                        "max-crate-size",
+                        "Deletes crate cache files until the cache is under the \
+                        given size (unstable)",
+                    )
+                    .value_name("SIZE")
+                    .value_parser(parse_human_size),
+                )
+                .arg(
+                    opt(
+                        "max-git-size",
+                        "Deletes git dependency caches until the cache is under \
+                        the given size (unstable)",
+                    )
+                    .value_name("SIZE")
+                    .value_parser(parse_human_size),
+                )
+                .arg(
+                    opt(
+                        "max-download-size",
+                        "Deletes downloaded cache data until the cache is under \
+                        the given size (unstable)",
+                    )
+                    .value_name("SIZE")
+                    .value_parser(parse_human_size),
+                ),
         )
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help clean</>` for more detailed information.\n"
@@ -165,77 +127,21 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config);
+    match args.subcommand() {
+        Some(("gc", args)) => {
+            return gc(config, args);
+        }
+        Some((cmd, _)) => {
+            unreachable!("unexpected command {}", cmd)
+        }
+        None => {}
+    }
+
+    let ws = args.workspace(config)?;
 
     if args.is_present_with_zero_values("package") {
-        print_available_packages(&ws?)?;
-        return Ok(());
+        print_available_packages(&ws)?;
     }
-
-    let unstable_gc = |opt| {
-        config.cli_unstable().fail_if_stable_opt_custom_z(
-            opt,
-            12633,
-            "gc",
-            config.cli_unstable().gc,
-        )
-    };
-    let unstable_size_opt = |opt| -> CargoResult<Option<u64>> {
-        let arg = args.get_one::<u64>(opt).copied();
-        if arg.is_some() {
-            unstable_gc(opt)?;
-        }
-        Ok(arg)
-    };
-    let unstable_duration_opt = |opt| -> CargoResult<Option<Duration>> {
-        let arg = args.get_one::<Duration>(opt).copied();
-        if arg.is_some() {
-            unstable_gc(opt)?;
-        }
-        Ok(arg)
-    };
-    let unimplemented_opt = |opt| -> CargoResult<()> {
-        if args.contains_id(opt) {
-            anyhow::bail!("option --{opt} is not yet implemented");
-        }
-        Ok(())
-    };
-    let unimplemented_size_opt = |opt| -> CargoResult<Option<u64>> {
-        unimplemented_opt(opt)?;
-        Ok(None)
-    };
-    let unimplemented_duration_opt = |opt| -> CargoResult<Option<Duration>> {
-        unimplemented_opt(opt)?;
-        Ok(None)
-    };
-
-    let mut gc: Vec<_> = args
-        .get_many::<AutoGcKind>("gc")
-        .unwrap_or_default()
-        .cloned()
-        .collect();
-    if gc.is_empty() && args.contains_id("gc") {
-        gc.push(AutoGcKind::All);
-    }
-    if !gc.is_empty() {
-        unstable_gc("gc")?;
-    }
-
-    let mut gc_opts = GcOpts {
-        max_src_age: unstable_duration_opt("max-src-age")?,
-        max_crate_age: unstable_duration_opt("max-crate-age")?,
-        max_index_age: unstable_duration_opt("max-index-age")?,
-        max_git_co_age: unstable_duration_opt("max-git-co-age")?,
-        max_git_db_age: unstable_duration_opt("max-git-db-age")?,
-        max_src_size: unstable_size_opt("max-src-size")?,
-        max_crate_size: unstable_size_opt("max-crate-size")?,
-        max_git_size: unstable_size_opt("max-git-size")?,
-        max_download_size: unstable_size_opt("max-download-size")?,
-        max_target_age: unimplemented_duration_opt("max-target-age")?,
-        max_target_size: unimplemented_size_opt("max-target-size")?,
-    };
-    let max_download_age = unstable_duration_opt("max-download-age")?;
-    gc_opts.update_for_auto_gc(config, &gc, max_download_age)?;
 
     let opts = CleanOptions {
         config,
@@ -245,8 +151,48 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),
         dry_run: args.dry_run(),
-        gc_opts,
     };
-    ops::clean(ws, &opts)?;
+    ops::clean(&ws, &opts)?;
+    Ok(())
+}
+
+fn gc(config: &Config, args: &ArgMatches) -> CliResult {
+    config.cli_unstable().fail_if_stable_command(
+        config,
+        "clean gc",
+        12633,
+        "gc",
+        config.cli_unstable().gc,
+    )?;
+
+    let size_opt = |opt| -> Option<u64> { args.get_one::<u64>(opt).copied() };
+    let duration_opt = |opt| -> Option<Duration> { args.get_one::<Duration>(opt).copied() };
+    let mut gc_opts = GcOpts {
+        max_src_age: duration_opt("max-src-age"),
+        max_crate_age: duration_opt("max-crate-age"),
+        max_index_age: duration_opt("max-index-age"),
+        max_git_co_age: duration_opt("max-git-co-age"),
+        max_git_db_age: duration_opt("max-git-db-age"),
+        max_src_size: size_opt("max-src-size"),
+        max_crate_size: size_opt("max-crate-size"),
+        max_git_size: size_opt("max-git-size"),
+        max_download_size: size_opt("max-download-size"),
+    };
+    if let Some(age) = duration_opt("max-download-age") {
+        gc_opts.set_max_download_age(age);
+    }
+    // If the user sets any options, then only perform the options requested.
+    // If no options are set, do the default behavior.
+    if !gc_opts.is_download_cache_opt_set() {
+        gc_opts.update_for_auto_gc(config)?;
+    }
+
+    let _lock = config.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
+    let mut cache_track = GlobalCacheTracker::new(&config)?;
+    let mut gc = Gc::new(config, &mut cache_track)?;
+    let mut clean_ctx = CleanContext::new(config);
+    clean_ctx.dry_run = args.dry_run();
+    gc.gc(&mut clean_ctx, &gc_opts)?;
+    clean_ctx.display_summary()?;
     Ok(())
 }

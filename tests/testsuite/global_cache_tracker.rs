@@ -173,44 +173,18 @@ fn auto_gc_gated() {
 }
 
 #[cargo_test]
-fn cache_clean_options_gated() {
-    // Checks that all cache clean options require -Zgc.
-    let p = project().build();
-    for opt in [
-        "--gc",
-        "--max-src-age=0 day",
-        "--max-index-age=0 day",
-        "--max-git-co-age=0 day",
-        "--max-git-db-age=0 day",
-        "--max-download-age=0 day",
-        "--max-src-size=0",
-        "--max-crate-size=0",
-        "--max-download-size=0",
-    ] {
-        let trimmed_opt = opt.trim_start_matches('-').split('=').next().unwrap();
-        p.cargo("clean")
-            .arg(opt)
-            .with_status(101)
-            .with_stderr(&format!(
-                "\
-error: the `{trimmed_opt}` flag is unstable, [..]
+fn clean_gc_gated() {
+    cargo_process("clean gc")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the `cargo clean gc` command is unstable, and only available on the \
+nightly channel of Cargo, but this is the `stable` channel
 See [..]
-See [..] for more information about the `{trimmed_opt}` flag.
-"
-            ))
-            .run();
-    }
-
-    for opt in ["--max-target-age=0 day", "--max-target-size=0"] {
-        let trimmed_opt = opt.split('=').next().unwrap();
-        p.cargo("clean")
-            .arg(opt)
-            .with_status(101)
-            .with_stderr(&format!(
-                "error: option {trimmed_opt} is not yet implemented"
-            ))
-            .run();
-    }
+See [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -722,7 +696,7 @@ fn both_git_and_http_index_cleans() {
 
     // Running in the future without these indexes should delete them.
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.2.0"));
-    p.cargo("clean --gc -Zgc")
+    p.cargo("clean gc -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .run();
     let lock = config
@@ -763,7 +737,7 @@ fn clean_gc_dry_run() {
         .map(|p| p.to_str().unwrap())
         .join("\n");
 
-    p.cargo("clean --gc --dry-run -v -Zgc")
+    p.cargo("clean gc --dry-run -v -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stdout_unordered(&expected_files)
         .with_stderr(
@@ -773,7 +747,7 @@ fn clean_gc_dry_run() {
         .run();
 
     // Again, make sure the information is still tracked.
-    p.cargo("clean --gc --dry-run -v -Zgc")
+    p.cargo("clean gc --dry-run -v -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stdout_unordered(&expected_files)
         .with_stderr(
@@ -785,14 +759,14 @@ fn clean_gc_dry_run() {
 
 #[cargo_test]
 fn clean_default_gc() {
-    // `clean` without options should also gc
+    // `clean gc` without options should also gc
     let p = basic_foo_bar_project();
     // Populate the last-use data.
     p.cargo("fetch -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
-    p.cargo("clean -v -Zgc")
+    p.cargo("clean gc -v -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr_unordered(
             "\
@@ -935,7 +909,7 @@ fn max_size() {
             format!("{files} files")
         };
         write!(stderr, "[REMOVED] {files_display}{total_display}").unwrap();
-        cargo_process(&format!("clean -Zgc -v --max-crate-size={clean_size}"))
+        cargo_process(&format!("clean gc -Zgc -v --max-crate-size={clean_size}"))
             .masquerade_as_nightly_cargo(&["gc"])
             .with_stderr_unordered(&stderr)
             .run();
@@ -958,7 +932,7 @@ fn max_size() {
             format!(", {bytes}B total")
         };
         write!(stderr, "[REMOVED] {files_display}{total_display}").unwrap();
-        cargo_process(&format!("clean -Zgc -v --max-src-size={clean_size}"))
+        cargo_process(&format!("clean gc -Zgc -v --max-src-size={clean_size}"))
             .masquerade_as_nightly_cargo(&["gc"])
             .with_stderr_unordered(&stderr)
             .run();
@@ -993,7 +967,7 @@ fn max_size_untracked_crate() {
         std::fs::write(cache.join(name), "x".repeat(size as usize)).unwrap()
     }
     // This should scan the directory and populate the db with the size information.
-    cargo_process("clean -Zgc -v --max-crate-size=100000")
+    cargo_process("clean gc -Zgc -v --max-crate-size=100000")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr("[REMOVED] 0 files")
         .run();
@@ -1069,7 +1043,7 @@ fn max_size_untracked_src_from_use() {
     drop(lock);
 
     // Fix the size.
-    p.cargo("clean -v --max-src-size=10000 -Zgc")
+    p.cargo("clean gc -v --max-src-size=10000 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr("[REMOVED] 0 files")
         .run();
@@ -1084,7 +1058,7 @@ fn max_size_untracked_src_from_clean() {
     let (config, p) = max_size_untracked_prepare();
 
     // Clean should scan the src and update the db.
-    p.cargo("clean -v --max-src-size=10000 -Zgc")
+    p.cargo("clean gc -v --max-src-size=10000 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr("[REMOVED] 0 files")
         .run();
@@ -1138,7 +1112,7 @@ fn max_download_size() {
             format!(", {bytes}B total")
         };
         write!(stderr, "[REMOVED] {files_display}{total_display}",).unwrap();
-        cargo_process(&format!("clean -Zgc -v --max-download-size={max_size}"))
+        cargo_process(&format!("clean gc -Zgc -v --max-download-size={max_size}"))
             .masquerade_as_nightly_cargo(&["gc"])
             .with_stderr_unordered(&stderr)
             .run();
@@ -1233,7 +1207,7 @@ fn package_cache_lock_during_build() {
 
     // Cleaning while a command is running should block.
     let mut clean_cmd = p_foo2
-        .cargo("clean --max-download-size=0 -Zgc")
+        .cargo("clean gc --max-download-size=0 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .build_command();
     clean_cmd.stderr(Stdio::piped());
@@ -1316,7 +1290,7 @@ fn delete_index_also_deletes_crates() {
     assert_eq!(get_registry_names("src"), ["bar-1.0.0"]);
     assert_eq!(get_registry_names("cache"), ["bar-1.0.0.crate"]);
 
-    p.cargo("clean")
+    p.cargo("clean gc")
         .arg("--max-index-age=0 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
@@ -1377,7 +1351,7 @@ fn clean_syncs_missing_files() {
     }
 
     // Clean should update the db.
-    p.cargo("clean -v --max-download-size=1GB -Zgc")
+    p.cargo("clean gc -v --max-download-size=1GB -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr("[REMOVED] 0 files")
         .run();
@@ -1436,7 +1410,7 @@ fn can_handle_future_schema() -> anyhow::Result<()> {
     conn.pragma_update(None, "user_version", &(user_version + 1))?;
     drop(conn);
     // Verify it doesn't blow up.
-    p.cargo("clean --max-download-size=0 -Zgc")
+    p.cargo("clean gc --max-download-size=0 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr("[REMOVED] 4 files, [..] total")
         .run();
@@ -1495,7 +1469,7 @@ fn clean_max_git_age() {
     assert_eq!(co_names.len(), 2);
 
     // Delete the first checkout
-    p.cargo("clean -v -Zgc")
+    p.cargo("clean gc -v -Zgc")
         .arg("--max-git-co-age=3 days")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
@@ -1512,7 +1486,7 @@ fn clean_max_git_age() {
     assert_eq!(co_names.len(), 1);
 
     // delete the second checkout
-    p.cargo("clean -v -Zgc")
+    p.cargo("clean gc -v -Zgc")
         .arg("--max-git-co-age=0 days")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
@@ -1529,7 +1503,7 @@ fn clean_max_git_age() {
     assert_eq!(co_names.len(), 0);
 
     // delete the db
-    p.cargo("clean -v -Zgc")
+    p.cargo("clean gc -v -Zgc")
         .arg("--max-git-db-age=1 days")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
@@ -1586,7 +1560,7 @@ fn clean_max_src_crate_age() {
     );
 
     // Delete the old src.
-    p.cargo("clean -v -Zgc")
+    p.cargo("clean gc -v -Zgc")
         .arg("--max-src-age=3 days")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
@@ -1598,7 +1572,7 @@ fn clean_max_src_crate_age() {
         .run();
 
     // delete the second src
-    p.cargo("clean -v -Zgc")
+    p.cargo("clean gc -v -Zgc")
         .arg("--max-src-age=0 days")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
@@ -1610,7 +1584,7 @@ fn clean_max_src_crate_age() {
         .run();
 
     // delete the old crate
-    p.cargo("clean -v -Zgc")
+    p.cargo("clean gc -v -Zgc")
         .arg("--max-crate-age=3 days")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
@@ -1622,36 +1596,12 @@ fn clean_max_src_crate_age() {
         .run();
 
     // delete the seecond crate
-    p.cargo("clean -v -Zgc")
+    p.cargo("clean gc -v -Zgc")
         .arg("--max-crate-age=0 days")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
             "\
 [REMOVING] [..]/bar-1.0.1.crate
-[REMOVED] [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn clean_doc_with_cache() {
-    // clean --doc with other cache flags should do both.
-    let p = basic_foo_bar_project();
-    p.cargo("doc -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
-        .run();
-    assert_eq!(get_registry_names("src"), ["bar-1.0.0"]);
-    assert_eq!(get_registry_names("cache"), ["bar-1.0.0.crate"]);
-    assert!(p.build_dir().join("doc").exists());
-    p.cargo("clean --doc --max-download-size=0 -v -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .with_stderr_unordered(
-            "\
-[REMOVING] [ROOT]/foo/target/doc
-[REMOVING] [ROOT]/home/.cargo/registry/src/[..]/bar-1.0.0
-[REMOVING] [ROOT]/home/.cargo/registry/cache/[..]/bar-1.0.0.crate
 [REMOVED] [..]
 ",
         )
@@ -1727,7 +1677,7 @@ fn clean_max_git_size() {
 
     let threshold = db_size + second_co_size;
 
-    p.cargo(&format!("clean --max-git-size={threshold} -Zgc -v"))
+    p.cargo(&format!("clean gc --max-git-size={threshold} -Zgc -v"))
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(&format!(
             "\
@@ -1738,7 +1688,7 @@ fn clean_max_git_size() {
         .run();
 
     // And then try cleaning everything.
-    p.cargo("clean --max-git-size=0 -Zgc -v")
+    p.cargo("clean gc --max-git-size=0 -Zgc -v")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr_unordered(&format!(
             "\
@@ -1773,7 +1723,7 @@ fn clean_max_git_size_untracked() {
     // The db_name of "example" depends on the sorting order of the names ("e"
     // should be after "c"), so that the db comes after the checkouts.
     setup_fake_git_sizes("example", 5000, &[1000, 2000]);
-    cargo_process(&format!("clean -Zgc -v --max-git-size=7000"))
+    cargo_process(&format!("clean gc -Zgc -v --max-git-size=7000"))
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
             "\
@@ -1782,7 +1732,7 @@ fn clean_max_git_size_untracked() {
 ",
         )
         .run();
-    cargo_process(&format!("clean -Zgc -v --max-git-size=5000"))
+    cargo_process(&format!("clean gc -Zgc -v --max-git-size=5000"))
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
             "\
@@ -1791,7 +1741,7 @@ fn clean_max_git_size_untracked() {
 ",
         )
         .run();
-    cargo_process(&format!("clean -Zgc -v --max-git-size=0"))
+    cargo_process(&format!("clean gc -Zgc -v --max-git-size=0"))
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
             "\
@@ -1812,7 +1762,7 @@ fn clean_max_git_size_deletes_co_from_db() {
     setup_fake_git_sizes("abc", 5000, &[1000, 2000]);
     // This deletes everything because it tries to delete the db, which then
     // deletes all checkouts.
-    cargo_process(&format!("clean -Zgc -v --max-git-size=3000"))
+    cargo_process(&format!("clean gc -Zgc -v --max-git-size=3000"))
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
             "\
@@ -1833,7 +1783,7 @@ fn handles_missing_index() {
         .masquerade_as_nightly_cargo(&["gc"])
         .run();
     paths::home().join(".cargo/registry/index").rm_rf();
-    cargo_process("clean -v --max-download-size=0 -Zgc")
+    cargo_process("clean gc -v --max-download-size=0 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr_unordered(
             "\
@@ -1873,7 +1823,7 @@ fn handles_missing_git_db() {
         .masquerade_as_nightly_cargo(&["gc"])
         .run();
     paths::home().join(".cargo/git/db").rm_rf();
-    cargo_process("clean -v --max-git-size=0 -Zgc")
+    cargo_process("clean gc -v --max-git-size=0 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr(
             "\

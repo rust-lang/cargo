@@ -1432,10 +1432,9 @@ max-git-db-age = "3 months"
 
 ### Manual garbage collection with `cargo clean`
 
-Manual deletion can be done with the `cargo clean` command.
+Manual deletion can be done with the `cargo clean gc` command.
 Deletion of cache contents can be performed by passing one of the cache options:
 
-- `--gc` --- Performs the same garbage collection that is performed by the once-a-day automatic deletion.
 - `--max-src-age=DURATION` --- Deletes source cache files that have not been used since the given age.
 - `--max-crate-age=DURATION` --- Deletes crate cache files that have not been used since the given age.
 - `--max-index-age=DURATION` --- Deletes registry indexes that have not been used since then given age (including their `.crate` and `src` files).
@@ -1452,8 +1451,9 @@ A DURATION is specified in the form "N seconds/minutes/days/weeks/months" where 
 A SIZE is specified in the form "N *suffix*" where *suffix* is B, kB, MB, GB, kiB, MiB, or GiB, and N is an integer or floating point number. If no suffix is specified, the number is the number of bytes.
 
 ```sh
-cargo clean --max-download-age=1week
-cargo clean --max-git-size=0 --max-download-size=100MB
+cargo clean gc
+cargo clean gc --max-download-age=1week
+cargo clean gc --max-git-size=0 --max-download-size=100MB
 ```
 
 # Stabilized and removed features

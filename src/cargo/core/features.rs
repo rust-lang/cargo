@@ -1157,8 +1157,10 @@ impl CliUnstable {
         config: &Config,
         command: &str,
         issue: u32,
+        z_name: &str,
+        enabled: bool,
     ) -> CargoResult<()> {
-        if self.unstable_options {
+        if enabled {
             return Ok(());
         }
         let see = format!(
@@ -1168,10 +1170,9 @@ impl CliUnstable {
         );
         if config.nightly_features_allowed {
             bail!(
-                "the `cargo {}` command is unstable, pass `-Z unstable-options` to enable it\n\
-                 {}",
-                command,
-                see
+                "the `cargo {command}` command is unstable, pass `-Z {z_name}` \
+                 to enable it\n\
+                 {see}",
             );
         } else {
             bail!(
