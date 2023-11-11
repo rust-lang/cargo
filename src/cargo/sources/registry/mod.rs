@@ -201,6 +201,7 @@ use tar::Archive;
 use tracing::debug;
 
 use crate::core::dependency::Dependency;
+use crate::core::global_cache_tracker;
 use crate::core::{Package, PackageId, SourceId, Summary};
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
@@ -239,6 +240,7 @@ struct LockMetadata {
 ///
 /// For general concepts of registries, see the [module-level documentation](crate::sources::registry).
 pub struct RegistrySource<'cfg> {
+    name: InternedString,
     /// The unique identifier of this source.
     source_id: SourceId,
     /// The path where crate files are extracted (`$CARGO_HOME/registry/src/$REG-HASH`).
@@ -514,6 +516,7 @@ impl<'cfg> RegistrySource<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
     ) -> RegistrySource<'cfg> {
         RegistrySource {
+            name: name.into(),
             src_path: config.registry_source_path().join(name),
             config,
             source_id,
@@ -589,6 +592,13 @@ impl<'cfg> RegistrySource<'cfg> {
         match fs::read_to_string(path) {
             Ok(ok) => match serde_json::from_str::<LockMetadata>(&ok) {
                 Ok(lock_meta) if lock_meta.v == 1 => {
+                    self.config
+                        .deferred_global_last_use()?
+                        .mark_registry_src_used(global_cache_tracker::RegistrySrc {
+                            encoded_registry_name: self.name,
+                            package_dir: package_dir.into(),
+                            size: None,
+                        });
                     return Ok(unpack_dir.to_path_buf());
                 }
                 _ => {
@@ -613,6 +623,7 @@ impl<'cfg> RegistrySource<'cfg> {
             set_mask(&mut tar);
             tar
         };
+        let mut bytes_written = 0;
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
         for entry in tar.entries()? {
@@ -644,6 +655,7 @@ impl<'cfg> RegistrySource<'cfg> {
                 continue;
             }
             // Unpacking failed
+            bytes_written += entry.size();
             let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
             if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
                 result = result.with_context(|| {
@@ -669,6 +681,14 @@ impl<'cfg> RegistrySource<'cfg> {
 
         let lock_meta = LockMetadata { v: 1 };
         write!(ok, "{}", serde_json::to_string(&lock_meta).unwrap())?;
+
+        self.config
+            .deferred_global_last_use()?
+            .mark_registry_src_used(global_cache_tracker::RegistrySrc {
+                encoded_registry_name: self.name,
+                package_dir: package_dir.into(),
+                size: Some(bytes_written),
+            });
 
         Ok(unpack_dir.to_path_buf())
     }

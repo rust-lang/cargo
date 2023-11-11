@@ -76,6 +76,7 @@ pub fn fetch<'a>(
     }
 
     packages.get_many(to_download)?;
+    crate::core::gc::auto_gc(config);
 
     Ok((resolve, packages))
 }

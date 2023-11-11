@@ -1,5 +1,6 @@
 //! Tests for the `cargo clean` command.
 
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_bin_manifest, basic_manifest, git, main_file, project, project_in, rustc_host,
@@ -805,15 +806,6 @@ fn clean_dry_run() {
         .file("src/lib.rs", "")
         .build();
 
-    let ls_r = || -> Vec<_> {
-        let mut file_list: Vec<_> = walkdir::WalkDir::new(p.build_dir())
-            .into_iter()
-            .filter_map(|e| e.map(|e| e.path().to_owned()).ok())
-            .collect();
-        file_list.sort();
-        file_list
-    };
-
     // Start with no files.
     p.cargo("clean --dry-run")
         .with_stdout("")
@@ -823,7 +815,7 @@ fn clean_dry_run() {
         )
         .run();
     p.cargo("check").run();
-    let before = ls_r();
+    let before = p.build_dir().ls_r();
     p.cargo("clean --dry-run")
         .with_stderr(
             "[SUMMARY] [..] files, [..] total\n\
@@ -831,7 +823,7 @@ fn clean_dry_run() {
         )
         .run();
     // Verify it didn't delete anything.
-    let after = ls_r();
+    let after = p.build_dir().ls_r();
     assert_eq!(before, after);
     let expected = cargo::util::iter_join(before.iter().map(|p| p.to_str().unwrap()), "\n");
     eprintln!("{expected}");

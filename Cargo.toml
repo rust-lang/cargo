@@ -73,6 +73,8 @@ pretty_assertions = "1.4.0"
 proptest = "1.3.1"
 pulldown-cmark = { version = "0.9.3", default-features = false }
 rand = "0.8.5"
+regex = "1.9.3"
+rusqlite = { version = "0.29.0", features = ["bundled"] }
 rustfix = "0.6.1"
 same-file = "1.0.6"
 security-framework = "2.9.2"
@@ -162,6 +164,8 @@ pasetors.workspace = true
 pathdiff.workspace = true
 pulldown-cmark.workspace = true
 rand.workspace = true
+regex.workspace = true
+rusqlite.workspace = true
 rustfix.workspace = true
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }

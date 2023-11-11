@@ -12,6 +12,7 @@ description = "Miscellaneous support code used by Cargo."
 anyhow.workspace = true
 filetime.workspace = true
 hex.workspace = true
+ignore.workspace = true
 jobserver.workspace = true
 libc.workspace = true
 same-file.workspace = true

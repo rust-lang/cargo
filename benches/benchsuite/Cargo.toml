@@ -11,8 +11,10 @@ publish = false
 
 [dependencies]
 cargo.workspace = true
+cargo-util.workspace = true
 criterion.workspace = true
 flate2.workspace = true
+rand.workspace = true
 tar.workspace = true
 url.workspace = true
 
@@ -25,4 +27,8 @@ harness = false
 
 [[bench]]
 name = "workspace_initialization"
+harness = false
+
+[[bench]]
+name = "global_cache_tracker"
 harness = false

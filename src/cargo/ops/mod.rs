@@ -1,6 +1,6 @@
 use crate::sources::CRATES_IO_DOMAIN;
 
-pub use self::cargo_clean::{clean, CleanOptions};
+pub use self::cargo_clean::{clean, CleanContext, CleanOptions};
 pub use self::cargo_compile::{
     compile, compile_with_exec, compile_ws, create_bcx, print, resolve_all_features, CompileOptions,
 };

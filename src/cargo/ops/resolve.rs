@@ -530,6 +530,9 @@ pub fn resolve_with_previous<'cfg>(
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
     }
+    let config = ws.config();
+    let mut deferred = config.deferred_global_last_use()?;
+    deferred.save_no_error(config);
     Ok(resolved)
 }
 

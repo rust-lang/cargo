@@ -389,7 +389,7 @@ impl<'cfg> CleanContext<'cfg> {
         Ok(())
     }
 
-    fn display_summary(&self) -> CargoResult<()> {
+    pub fn display_summary(&self) -> CargoResult<()> {
         let status = if self.dry_run { "Summary" } else { "Removed" };
         let byte_count = if self.total_bytes_removed == 0 {
             String::new()

@@ -85,6 +85,7 @@ For the latest nightly, see the [nightly version] of this page.
     * [check-cfg](#check-cfg) --- Compile-time validation of `cfg` expressions.
     * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
+    * [gc](#gc) --- Global cache garbage collection.
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
@@ -1382,6 +1383,78 @@ This will not affect any hard-coded paths in the source code, such as in strings
     the user may request them to be sanitized in different types of artifacts.
     Common paths requiring sanitization include `OUT_DIR` and `CARGO_MANIFEST_DIR`,
     plus any other introduced by the build script, such as include directories.
+
+## gc
+
+* Tracking Issue: [#12633](https://github.com/rust-lang/cargo/issues/12633)
+
+The `-Zgc` flag enables garbage-collection within cargo's global cache within the cargo home directory.
+This includes downloaded dependencies such as compressed `.crate` files, extracted `src` directories, registry index caches, and git dependencies.
+When `-Zgc` is present, cargo will track the last time any index and dependency was used,
+and then uses those timestamps to manually or automatically delete cache entries that have not been used for a while.
+
+```sh
+cargo build -Zgc
+```
+
+### Automatic garbage collection
+
+Automatic deletion happens on commands that are already doing a significant amount of work,
+such as all of the build commands (`cargo build`, `cargo test`, `cargo check`, etc.), and `cargo fetch`.
+The deletion happens just after resolution and packages have been downloaded.
+Automatic deletion is only done once per day (see `gc.auto.frequency` to configure).
+Automatic deletion is disabled if cargo is offline such as with `--offline` or `--frozen` to avoid deleting artifacts that may need to be used if you are offline for a long period of time.
+
+#### Automatic gc configuration
+
+The automatic gc behavior can be specified via a cargo configuration setting.
+The settings available are:
+
+```toml
+# Example config.toml file.
+
+# This table defines the behavior for automatic garbage collection.
+[gc.auto]
+# The maximum frequency that automatic garbage collection happens.
+# Can be "never" to disable automatic-gc, or "always" to run on every command.
+frequency = "1 day"
+# Anything older than this duration will be deleted in the source cache.
+max-src-age = "1 month"
+# Anything older than this duration will be deleted in the compressed crate cache.
+max-crate-age = "3 months"
+# Any index older than this duration will be deleted from the index cache.
+max-index-age = "3 months"
+# Any git checkout older than this duration will be deleted from the checkout cache.
+max-git-co-age = "1 month"
+# Any git clone older than this duration will be deleted from the git cache.
+max-git-db-age = "3 months"
+```
+
+### Manual garbage collection with `cargo clean`
+
+Manual deletion can be done with the `cargo clean gc` command.
+Deletion of cache contents can be performed by passing one of the cache options:
+
+- `--max-src-age=DURATION` --- Deletes source cache files that have not been used since the given age.
+- `--max-crate-age=DURATION` --- Deletes crate cache files that have not been used since the given age.
+- `--max-index-age=DURATION` --- Deletes registry indexes that have not been used since then given age (including their `.crate` and `src` files).
+- `--max-git-co-age=DURATION` --- Deletes git dependency checkouts that have not been used since then given age.
+- `--max-git-db-age=DURATION` --- Deletes git dependency clones that have not been used since then given age.
+- `--max-download-age=DURATION` --- Deletes any downloaded cache data that has not been used since then given age.
+- `--max-src-size=SIZE` --- Deletes the oldest source cache files until the cache is under the given size.
+- `--max-crate-size=SIZE` --- Deletes the oldest crate cache files until the cache is under the given size.
+- `--max-git-size=SIZE` --- Deletes the oldest git dependency caches until the cache is under the given size.
+- `--max-download-size=SIZE` --- Deletes the oldest downloaded cache data until the cache is under the given size.
+
+A DURATION is specified in the form "N seconds/minutes/days/weeks/months" where N is an integer.
+
+A SIZE is specified in the form "N *suffix*" where *suffix* is B, kB, MB, GB, kiB, MiB, or GiB, and N is an integer or floating point number. If no suffix is specified, the number is the number of bytes.
+
+```sh
+cargo clean gc
+cargo clean gc --max-download-age=1week
+cargo clean gc --max-git-size=0 --max-download-size=100MB
+```
 
 # Stabilized and removed features
 
