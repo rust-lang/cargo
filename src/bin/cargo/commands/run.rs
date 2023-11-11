@@ -24,7 +24,7 @@ pub fn cli() -> Command {
         )
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package("Package with the target to run")
         .arg_targets_bin_example(
             "Name of the bin target to run",

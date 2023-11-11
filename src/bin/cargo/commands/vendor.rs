@@ -36,7 +36,6 @@ pub fn cli() -> Command {
         .arg(unsupported("relative-path"))
         .arg(unsupported("only-git-deps"))
         .arg(unsupported("disallow-duplicates"))
-        .arg_quiet_without_unknown_silent_arg_tip()
         .arg_manifest_path()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help vendor</>` for more detailed information.\n"

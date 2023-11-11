@@ -589,7 +589,7 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
             .action(ArgAction::Count)
             .global(true),
         )
-        .arg_quiet()
+        .arg(flag("quiet", "Do not print cargo log messages").short('q').global(true))
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")

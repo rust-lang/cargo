@@ -20,9 +20,9 @@ Options:
       --list                  list all installed packages and their versions
       --ignore-rust-version   Ignore `rust-version` specification in packages
       --message-format <FMT>  Error format
-  -q, --quiet                 Do not print cargo log messages
       --debug                 Build in debug mode (with the 'dev' profile) instead of release mode
   -v, --verbose...            Use verbose output (-vv very verbose/build.rs output)
+  -q, --quiet                 Do not print cargo log messages
       --color <WHEN>          Coloring: auto, always, never
       --config <KEY=VALUE>    Override a configuration value
   -Z <FLAG>                   Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for

@@ -23,7 +23,7 @@ pub fn cli() -> Command {
                 .value_name("VERSION")
                 .value_parser(["1"]),
         )
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_features()
         .arg_manifest_path()
         .after_help(color_print::cstr!(

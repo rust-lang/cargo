@@ -30,7 +30,7 @@ pub fn cli() -> Command {
         .arg_future_incompat_report()
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package("Package to build")
         .arg_targets_all(
             "Build only this package's library",

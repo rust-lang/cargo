@@ -76,7 +76,7 @@ pub fn cli() -> Command {
         ))
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_targets_bins_examples(
             "Install only the specified binary",
             "Install all binaries",

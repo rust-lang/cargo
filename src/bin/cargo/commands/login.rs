@@ -14,7 +14,7 @@ pub fn cli() -> Command {
                 .num_args(0..)
                 .last(true),
         )
-        .arg_quiet()
+        .arg_silent_suggestion()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help login</>` for more detailed information.\n"
         ))

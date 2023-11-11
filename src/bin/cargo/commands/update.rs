@@ -35,7 +35,7 @@ pub fn cli() -> Command {
                 .value_name("PRECISE")
                 .requires("package-group"),
         )
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg(
             flag("workspace", "Only update the workspace packages")
                 .short('w')

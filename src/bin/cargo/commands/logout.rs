@@ -7,7 +7,7 @@ pub fn cli() -> Command {
     subcommand("logout")
         .about("Remove an API token from the registry locally")
         .arg_registry("Registry to use")
-        .arg_quiet()
+        .arg_silent_suggestion()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help logout</>` for more detailed information.\n"
         ))
