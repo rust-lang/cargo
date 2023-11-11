@@ -1,3 +1,10 @@
+//! `Cargo.toml` / Manifest schema definition
+//!
+//! ## Style
+//!
+//! - Fields duplicated for an alias will have an accessor with the primary field's name
+//! - Keys that exist for bookkeeping but don't correspond to the schema have a `_` prefix
+
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
@@ -43,6 +50,10 @@ pub struct TomlManifest {
 impl TomlManifest {
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()
+    }
+
+    pub fn package(&self) -> Option<&Box<TomlPackage>> {
+        self.package.as_ref().or(self.project.as_ref())
     }
 
     pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
@@ -108,7 +119,7 @@ pub struct InheritableFields {
     // We use skip here since it will never be present when deserializing
     // and we don't want it present when serializing
     #[serde(skip)]
-    pub ws_root: PathBuf,
+    pub _ws_root: PathBuf,
 }
 
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
@@ -430,7 +441,7 @@ impl MaybeWorkspaceDependency {
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
             MaybeWorkspaceDependency::Defined(d) => d.unused_keys(),
-            MaybeWorkspaceDependency::Workspace(w) => w.unused_keys.keys().cloned().collect(),
+            MaybeWorkspaceDependency::Workspace(w) => w._unused_keys.keys().cloned().collect(),
         }
     }
 }
@@ -471,7 +482,7 @@ pub struct TomlWorkspaceDependency {
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    pub unused_keys: BTreeMap<String, toml::Value>,
+    pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl TomlWorkspaceDependency {
@@ -510,7 +521,7 @@ impl TomlDependency {
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
             TomlDependency::Simple(_) => vec![],
-            TomlDependency::Detailed(detailed) => detailed.unused_keys.keys().cloned().collect(),
+            TomlDependency::Detailed(detailed) => detailed._unused_keys.keys().cloned().collect(),
         }
     }
 }
@@ -568,7 +579,7 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
-    pub unused_keys: BTreeMap<String, toml::Value>,
+    pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
 impl<P: Clone> DetailedTomlDependency<P> {
@@ -598,7 +609,7 @@ impl<P: Clone> Default for DetailedTomlDependency<P> {
             artifact: Default::default(),
             lib: Default::default(),
             target: Default::default(),
-            unused_keys: Default::default(),
+            _unused_keys: Default::default(),
         }
     }
 }
@@ -950,10 +961,9 @@ pub struct TomlTarget {
     pub doc: Option<bool>,
     pub plugin: Option<bool>,
     pub doc_scrape_examples: Option<bool>,
-    #[serde(rename = "proc-macro")]
-    pub proc_macro_raw: Option<bool>,
+    pub proc_macro: Option<bool>,
     #[serde(rename = "proc_macro")]
-    pub proc_macro_raw2: Option<bool>,
+    pub proc_macro2: Option<bool>,
     pub harness: Option<bool>,
     pub required_features: Option<Vec<String>>,
     pub edition: Option<String>,
@@ -965,7 +975,7 @@ impl TomlTarget {
     }
 
     pub fn proc_macro(&self) -> Option<bool> {
-        self.proc_macro_raw.or(self.proc_macro_raw2).or_else(|| {
+        self.proc_macro.or(self.proc_macro2).or_else(|| {
             if let Some(types) = self.crate_types() {
                 if types.contains(&"proc-macro".to_string()) {
                     return Some(true);

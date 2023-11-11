@@ -1004,7 +1004,7 @@ fn name_or_panic(target: &TomlTarget) -> &str {
 }
 
 fn validate_proc_macro(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
-    if target.proc_macro_raw.is_some() && target.proc_macro_raw2.is_some() {
+    if target.proc_macro.is_some() && target.proc_macro2.is_some() {
         warn_on_deprecated(
             "proc-macro",
             name_or_panic(target),
