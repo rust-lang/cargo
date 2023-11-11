@@ -52,7 +52,7 @@ It is recommended to experiment with different levels to find the right
 balance for your project. There may be surprising results, such as level `3`
 being slower than `2`, or the `"s"` and `"z"` levels not being necessarily
 smaller. You may also want to reevaluate your settings over time as newer
-versions of `rustc` changes optimization behavior.
+versions of `rustc` change optimization behavior.
 
 See also [Profile Guided Optimization] for more advanced optimization
 techniques.
