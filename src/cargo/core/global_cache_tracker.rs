@@ -567,6 +567,7 @@ impl GlobalCacheTracker {
             // TODO: Investigate how slow this might be.
             Self::sync_db_with_files(
                 &tx,
+                now,
                 config,
                 &base,
                 gc_opts.is_download_cache_size_set(),
@@ -695,6 +696,7 @@ impl GlobalCacheTracker {
     ///    caller can delete them.
     fn sync_db_with_files(
         conn: &Connection,
+        now: Timestamp,
         config: &Config,
         base: &BasePaths,
         sync_size: bool,
@@ -703,8 +705,8 @@ impl GlobalCacheTracker {
         let _p = crate::util::profile::start("global cache db sync");
         debug!(target: "gc", "starting db sync");
         // For registry_index and git_db, add anything that is missing in the db.
-        Self::update_parent_for_missing_from_db(conn, REGISTRY_INDEX_TABLE, &base.index)?;
-        Self::update_parent_for_missing_from_db(conn, GIT_DB_TABLE, &base.git_db)?;
+        Self::update_parent_for_missing_from_db(conn, now, REGISTRY_INDEX_TABLE, &base.index)?;
+        Self::update_parent_for_missing_from_db(conn, now, GIT_DB_TABLE, &base.git_db)?;
 
         // For registry_crate, registry_src, and git_checkout, remove anything
         // from the db that isn't on disk.
@@ -746,9 +748,10 @@ impl GlobalCacheTracker {
 
         // For registry_crate, registry_src, and git_checkout, add anything
         // that is missing in the db.
-        Self::populate_untracked_crate(conn, &base.crate_dir)?;
+        Self::populate_untracked_crate(conn, now, &base.crate_dir)?;
         Self::populate_untracked(
             conn,
+            now,
             config,
             REGISTRY_INDEX_TABLE,
             "registry_id",
@@ -758,6 +761,7 @@ impl GlobalCacheTracker {
         )?;
         Self::populate_untracked(
             conn,
+            now,
             config,
             GIT_DB_TABLE,
             "git_id",
@@ -791,6 +795,7 @@ impl GlobalCacheTracker {
     /// For parent tables, add any entries that are on disk but aren't tracked in the db.
     fn update_parent_for_missing_from_db(
         conn: &Connection,
+        now: Timestamp,
         parent_table_name: &str,
         base_path: &Path,
     ) -> CargoResult<()> {
@@ -805,7 +810,6 @@ impl GlobalCacheTracker {
                 VALUES (?1, ?2)
                 ON CONFLICT DO NOTHING",
         ))?;
-        let now = now();
         for name in names {
             stmt.execute(params![name, now])?;
         }
@@ -882,7 +886,11 @@ impl GlobalCacheTracker {
     /// Updates the database to add any `.crate` files that are currently
     /// not tracked (such as when they are downloaded by an older version of
     /// cargo).
-    fn populate_untracked_crate(conn: &Connection, base_path: &Path) -> CargoResult<()> {
+    fn populate_untracked_crate(
+        conn: &Connection,
+        now: Timestamp,
+        base_path: &Path,
+    ) -> CargoResult<()> {
         let _p = crate::util::profile::start("populate untracked crate");
         trace!(target: "gc", "populating untracked crate files");
         let mut insert_stmt = conn.prepare_cached(
@@ -890,7 +898,6 @@ impl GlobalCacheTracker {
              VALUES (?1, ?2, ?3, ?4)
              ON CONFLICT DO NOTHING",
         )?;
-        let now = now();
         let index_names = Self::names_from(&base_path)?;
         for index_name in index_names {
             let Some(id) = Self::id_from_name(conn, REGISTRY_INDEX_TABLE, &index_name)? else {
@@ -915,6 +922,7 @@ impl GlobalCacheTracker {
     /// (such as when they are downloaded by an older version of cargo).
     fn populate_untracked(
         conn: &Connection,
+        now: Timestamp,
         config: &Config,
         id_table_name: &str,
         id_column_name: &str,
@@ -940,7 +948,6 @@ impl GlobalCacheTracker {
              ON CONFLICT DO NOTHING",
         ))?;
         let mut progress = Progress::with_style("Scanning", ProgressStyle::Ratio, config);
-        let now = now();
         // Compute the size of any directory not in the database.
         for id_name in id_names {
             let Some(id) = Self::id_from_name(conn, id_table_name, &id_name)? else {
