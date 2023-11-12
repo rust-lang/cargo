@@ -1548,9 +1548,6 @@ pub trait WorkspaceInherit {
     /// This is the workspace table that is being inherited from.
     /// For example `[workspace.dependencies]` would be the table "dependencies"
     fn inherit_toml_table(&self) -> &str;
-
-    /// This is used to output the value of the implementors `workspace` field
-    fn workspace(&self) -> bool;
 }
 
 impl<T, W: WorkspaceInherit> schema::MaybeWorkspace<T, W> {
@@ -1597,10 +1594,6 @@ impl<T, W: WorkspaceInherit> schema::MaybeWorkspace<T, W> {
 impl WorkspaceInherit for schema::TomlWorkspaceField {
     fn inherit_toml_table(&self) -> &str {
         "package"
-    }
-
-    fn workspace(&self) -> bool {
-        self.workspace
     }
 }
 
@@ -1683,10 +1676,6 @@ impl schema::TomlWorkspaceDependency {
 impl WorkspaceInherit for schema::TomlWorkspaceDependency {
     fn inherit_toml_table(&self) -> &str {
         "dependencies"
-    }
-
-    fn workspace(&self) -> bool {
-        self.workspace
     }
 }
 
