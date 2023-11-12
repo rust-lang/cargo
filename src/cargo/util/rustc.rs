@@ -85,11 +85,11 @@ impl Rustc {
         let commit_hash = extract("commit-hash: ").ok().map(|hash| {
             debug_assert!(
                 hash.chars().all(|ch| ch.is_ascii_hexdigit()),
-                "commit hash must be a hex string"
+                "commit hash must be a hex string, got: {hash:?}"
             );
             debug_assert!(
                 hash.len() == 40 || hash.len() == 64,
-                "hex string must be generated from sha1 or sha256"
+                "hex string must be generated from sha1 or sha256 (i.e., it must be 40 or 64 characters long)\ngot: {hash:?}"
             );
             hash.to_string()
         });
