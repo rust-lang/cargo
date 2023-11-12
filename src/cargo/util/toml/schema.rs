@@ -500,7 +500,7 @@ pub enum TomlDependency<P: Clone = String> {
     /// The simple format is equivalent to a detailed dependency
     /// specifying only a version, eg.
     /// `package = { version = "<version>" }`
-    Detailed(DetailedTomlDependency<P>),
+    Detailed(TomlDetailedDependency<P>),
 }
 
 impl TomlDependency {
@@ -544,7 +544,7 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct DetailedTomlDependency<P: Clone = String> {
+pub struct TomlDetailedDependency<P: Clone = String> {
     pub version: Option<String>,
     pub registry: Option<String>,
     /// The URL of the `registry` field.
@@ -582,14 +582,14 @@ pub struct DetailedTomlDependency<P: Clone = String> {
     pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
-impl<P: Clone> DetailedTomlDependency<P> {
+impl<P: Clone> TomlDetailedDependency<P> {
     pub fn default_features(&self) -> Option<bool> {
         self.default_features.or(self.default_features2)
     }
 }
 
 // Explicit implementation so we avoid pulling in P: Default
-impl<P: Clone> Default for DetailedTomlDependency<P> {
+impl<P: Clone> Default for TomlDetailedDependency<P> {
     fn default() -> Self {
         Self {
             version: Default::default(),
