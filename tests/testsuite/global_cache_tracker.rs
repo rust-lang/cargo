@@ -1833,3 +1833,30 @@ fn handles_missing_git_db() {
         )
         .run();
 }
+
+#[cargo_test]
+fn clean_gc_quiet_is_quiet() {
+    // Checks that --quiet works with `cargo clean gc`, since there was a
+    // subtle issue with how the flag is defined as a global flag.
+    let p = basic_foo_bar_project();
+    p.cargo("fetch -Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
+        .run();
+    p.cargo("clean gc --quiet -Zgc --dry-run")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stdout("")
+        .with_stderr("")
+        .run();
+    // Verify exact same command without -q would actually display something.
+    p.cargo("clean gc -Zgc --dry-run")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stdout("")
+        .with_stderr(
+            "\
+[SUMMARY] [..] files, [..] total
+[WARNING] no files deleted due to --dry-run
+",
+        )
+        .run();
+}

@@ -17,7 +17,7 @@ pub fn cli() -> Command {
                 .short('a')
                 .hide(true),
         )
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg(flag("no-dev-dependencies", "Deprecated, use -e=no-dev instead").hide(true))
         .arg(
             multi_opt(

@@ -27,7 +27,7 @@ pub fn cli() -> Command {
         .arg_index("Registry index URL to modify owners for")
         .arg_registry("Registry to modify owners for")
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
-        .arg_quiet()
+        .arg_silent_suggestion()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help owner</>` for more detailed information.\n"
         ))

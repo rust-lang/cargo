@@ -363,20 +363,19 @@ pub trait CommandExt: Sized {
         ))
     }
 
-    fn arg_quiet(self) -> Self {
-        let unsupported_silent_arg = {
-            let value_parser = UnknownArgumentValueParser::suggest_arg("--quiet");
+    /// Adds a suggestion for the `--silent` or `-s` flags to use the
+    /// `--quiet` flag instead. This is to help with people familiar with
+    /// other tools that use `-s`.
+    ///
+    /// Every command should call this, unless it has its own `-s` short flag.
+    fn arg_silent_suggestion(self) -> Self {
+        let value_parser = UnknownArgumentValueParser::suggest_arg("--quiet");
+        self._arg(
             flag("silent", "")
                 .short('s')
                 .value_parser(value_parser)
-                .hide(true)
-        };
-        self.arg_quiet_without_unknown_silent_arg_tip()
-            ._arg(unsupported_silent_arg)
-    }
-
-    fn arg_quiet_without_unknown_silent_arg_tip(self) -> Self {
-        self._arg(flag("quiet", "Do not print cargo log messages").short('q'))
+                .hide(true),
+        )
     }
 
     fn arg_timings(self) -> Self {

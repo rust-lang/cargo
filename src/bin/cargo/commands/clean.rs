@@ -12,7 +12,7 @@ pub fn cli() -> Command {
     subcommand("clean")
         .about("Remove artifacts that cargo has generated in the past")
         .arg_doc("Whether or not to clean just the documentation directory")
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package_spec_simple("Package to clean artifacts for")
         .arg_release("Whether or not to clean release artifacts")
         .arg_profile("Clean artifacts of the specified profile")
@@ -25,8 +25,7 @@ pub fn cli() -> Command {
             subcommand("gc")
                 .about("Clean global caches")
                 .hide(true)
-                // FIXME: arg_quiet doesn't work because `config_configure`
-                // doesn't know about subcommands.
+                .arg_silent_suggestion()
                 .arg_dry_run("Display what would be deleted without deleting anything")
                 // NOTE: Not all of these options may get stabilized. Some of them are
                 // very low-level details, and may not be something typical users need.

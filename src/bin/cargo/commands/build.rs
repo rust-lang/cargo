@@ -10,7 +10,7 @@ pub fn cli() -> Command {
         .arg_ignore_rust_version()
         .arg_future_incompat_report()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package_spec(
             "Package to build (see `cargo help pkgid`)",
             "Build all packages in the workspace",

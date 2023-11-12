@@ -846,3 +846,29 @@ fn doc_with_package_selection() {
         .with_stderr("error: --doc cannot be used with -p")
         .run();
 }
+
+#[cargo_test]
+fn quiet_does_not_show_summary() {
+    // Checks that --quiet works with `cargo clean`, since there was a
+    // subtle issue with how the flag is defined as a global flag.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+    p.cargo("clean --quiet --dry-run")
+        .with_stdout("")
+        .with_stderr("")
+        .run();
+    // Verify exact same command without -q would actually display something.
+    p.cargo("clean --dry-run")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[SUMMARY] [..] files, [..] total
+[WARNING] no files deleted due to --dry-run
+",
+        )
+        .run();
+}

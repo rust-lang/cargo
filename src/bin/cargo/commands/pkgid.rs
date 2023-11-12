@@ -7,7 +7,7 @@ pub fn cli() -> Command {
     subcommand("pkgid")
         .about("Print a fully qualified package specification")
         .arg(Arg::new("spec").value_name("SPEC").action(ArgAction::Set))
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package("Argument to get the package ID specifier for")
         .arg_manifest_path()
         .after_help(color_print::cstr!(

@@ -5,8 +5,8 @@ Usage: cargo[EXE] locate-project [OPTIONS]
 Options:
       --workspace             Locate Cargo.toml of the workspace root
       --message-format <FMT>  Output representation [possible values: json, plain]
-  -q, --quiet                 Do not print cargo log messages
   -v, --verbose...            Use verbose output (-vv very verbose/build.rs output)
+  -q, --quiet                 Do not print cargo log messages
       --color <WHEN>          Coloring: auto, always, never
       --config <KEY=VALUE>    Override a configuration value
   -Z <FLAG>                   Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for

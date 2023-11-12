@@ -17,7 +17,7 @@ pub fn cli() -> Command {
         )
         .arg_index("Registry index URL to search packages in")
         .arg_registry("Registry to search packages in")
-        .arg_quiet()
+        .arg_silent_suggestion()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help search</>` for more detailed information.\n"
         ))

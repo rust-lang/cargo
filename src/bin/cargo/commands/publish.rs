@@ -17,7 +17,7 @@ pub fn cli() -> Command {
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package("Package to publish")
         .arg_features()
         .arg_parallel()

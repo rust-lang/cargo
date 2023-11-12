@@ -13,7 +13,7 @@ pub fn cli() -> Command {
         )
         .arg_new_opts()
         .arg_registry("Registry to use")
-        .arg_quiet()
+        .arg_silent_suggestion()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help new</>` for more detailed information.\n"
         ))

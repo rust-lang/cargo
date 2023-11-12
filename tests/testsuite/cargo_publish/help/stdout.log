@@ -9,8 +9,8 @@ Options:
       --token <TOKEN>        Token to use when uploading
       --no-verify            Don't verify the contents by building them
       --allow-dirty          Allow dirty working directories to be packaged
-  -q, --quiet                Do not print cargo log messages
   -v, --verbose...           Use verbose output (-vv very verbose/build.rs output)
+  -q, --quiet                Do not print cargo log messages
       --color <WHEN>         Coloring: auto, always, never
       --config <KEY=VALUE>   Override a configuration value
   -Z <FLAG>                  Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
