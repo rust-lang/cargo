@@ -435,7 +435,14 @@ fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool,
     }
 }
 
-pub type InheritableDependency = InheritableField<TomlDependency, TomlInheritedDependency>;
+#[derive(Serialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum InheritableDependency {
+    /// The type that that is used when not inheriting from a workspace.
+    Value(TomlDependency),
+    /// The type when inheriting from a workspace.
+    Inherit(TomlInheritedDependency),
+}
 
 impl InheritableDependency {
     pub fn unused_keys(&self) -> Vec<String> {
@@ -458,13 +465,13 @@ impl<'de> de::Deserialize<'de> for InheritableDependency {
         >::new(value.clone()))
         {
             return if w.workspace {
-                Ok(InheritableField::Inherit(w))
+                Ok(InheritableDependency::Inherit(w))
             } else {
                 Err(de::Error::custom("`workspace` cannot be false"))
             };
         }
         TomlDependency::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
-            .map(InheritableField::Value)
+            .map(InheritableDependency::Value)
     }
 }
 

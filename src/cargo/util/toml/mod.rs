@@ -32,6 +32,7 @@ use crate::util::{
 mod embedded;
 pub mod schema;
 mod targets;
+use self::schema::TomlDependency;
 use self::targets::targets;
 
 /// Loads a `Cargo.toml` from a file on disk.
@@ -324,7 +325,7 @@ impl schema::TomlManifest {
             let deps = deps
                 .iter()
                 .filter(|(_k, v)| {
-                    if let schema::InheritableField::Value(def) = v {
+                    if let schema::InheritableDependency::Value(def) = v {
                         filter(def)
                     } else {
                         false
@@ -340,7 +341,7 @@ impl schema::TomlManifest {
             dep: &schema::InheritableDependency,
         ) -> CargoResult<schema::InheritableDependency> {
             let dep = match dep {
-                schema::InheritableField::Value(schema::TomlDependency::Detailed(d)) => {
+                schema::InheritableDependency::Value(schema::TomlDependency::Detailed(d)) => {
                     let mut d = d.clone();
                     // Path dependencies become crates.io deps.
                     d.path.take();
@@ -355,7 +356,7 @@ impl schema::TomlManifest {
                     }
                     Ok(d)
                 }
-                schema::InheritableField::Value(schema::TomlDependency::Simple(s)) => {
+                schema::InheritableDependency::Value(schema::TomlDependency::Simple(s)) => {
                     Ok(schema::TomlDetailedDependency {
                         version: Some(s.clone()),
                         ..Default::default()
@@ -364,7 +365,7 @@ impl schema::TomlManifest {
                 _ => unreachable!(),
             };
             dep.map(schema::TomlDependency::Detailed)
-                .map(schema::InheritableField::Value)
+                .map(schema::InheritableDependency::Value)
         }
     }
 
@@ -677,7 +678,7 @@ impl schema::TomlManifest {
                 cx.deps.push(dep);
                 deps.insert(
                     n.to_string(),
-                    schema::InheritableField::Value(resolved.clone()),
+                    schema::InheritableDependency::Value(resolved.clone()),
                 );
             }
             Ok(Some(deps))
@@ -1567,22 +1568,6 @@ impl<T, W: WorkspaceInherit> schema::InheritableField<T, W> {
         }
     }
 
-    fn resolve_with_self<'a>(
-        self,
-        label: &str,
-        get_ws_inheritable: impl FnOnce(&W) -> CargoResult<T>,
-    ) -> CargoResult<T> {
-        match self {
-            schema::InheritableField::Value(value) => Ok(value),
-            schema::InheritableField::Inherit(w) => get_ws_inheritable(&w).with_context(|| {
-                format!(
-                "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
-                w.inherit_toml_table(),
-            )
-            }),
-        }
-    }
-
     fn as_value(&self) -> Option<&T> {
         match self {
             schema::InheritableField::Inherit(_) => None,
@@ -1594,6 +1579,25 @@ impl<T, W: WorkspaceInherit> schema::InheritableField<T, W> {
 impl WorkspaceInherit for schema::TomlInheritedField {
     fn inherit_toml_table(&self) -> &str {
         "package"
+    }
+}
+
+impl schema::InheritableDependency {
+    fn resolve_with_self<'a>(
+        self,
+        label: &str,
+        get_ws_inheritable: impl FnOnce(&schema::TomlInheritedDependency) -> CargoResult<TomlDependency>,
+    ) -> CargoResult<TomlDependency> {
+        match self {
+            schema::InheritableDependency::Value(value) => Ok(value),
+            schema::InheritableDependency::Inherit(w) => {
+                get_ws_inheritable(&w).with_context(|| {
+                    format!(
+                        "error inheriting `{label}` from workspace root manifest's `workspace.dependencies.{label}`",
+                    )
+                })
+            }
+        }
     }
 }
 
@@ -1670,12 +1674,6 @@ impl schema::TomlInheritedDependency {
                 }
             }
         })
-    }
-}
-
-impl WorkspaceInherit for schema::TomlInheritedDependency {
-    fn inherit_toml_table(&self) -> &str {
-        "dependencies"
     }
 }
 
