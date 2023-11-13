@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-search --- Search packages in crates.io
+cargo-search --- Search packages in the registry. Default registry is crates.io
 
 ## SYNOPSIS
 
@@ -49,4 +49,5 @@ Limit the number of results (default: 10, max: 100).
        cargo search serde
 
 ## SEE ALSO
+
 {{man "cargo" 1}}, {{man "cargo-install" 1}}, {{man "cargo-publish" 1}}
