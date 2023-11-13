@@ -70,6 +70,7 @@
 - Allowed incomplete versions when they are unambiguous for flags like `--package`.
   [#12591](https://github.com/rust-lang/cargo/pull/12591)
   [#12614](https://github.com/rust-lang/cargo/pull/12614)
+  [#12806](https://github.com/rust-lang/cargo/pull/12806)
 
 ### Changed
 
