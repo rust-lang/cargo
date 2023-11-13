@@ -377,6 +377,7 @@ fn check_crates_io<'a>(
                 "`{name}@{current}` needs a bump because its should have a version newer than crates.io: {:?}`",
                 possibilities
                     .iter()
+                    .map(|s| s.as_summary())
                     .map(|s| format!("{}@{}", s.name(), s.version()))
                     .collect::<Vec<_>>(),
             );
