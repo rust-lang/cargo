@@ -3,11 +3,12 @@
 use crate::core::global_cache_tracker;
 use crate::core::GitReference;
 use crate::core::SourceId;
-use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::core::{Dependency, Package, PackageId};
 use crate::sources::git::utils::GitRemote;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
+use crate::sources::IndexSummary;
 use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
@@ -192,7 +193,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         if let Some(src) = self.path_source.as_mut() {
             src.query(dep, kind, f)

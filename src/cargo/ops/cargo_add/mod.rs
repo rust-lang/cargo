@@ -545,7 +545,7 @@ fn get_latest_dependency(
             unreachable!("registry dependencies required, found a workspace dependency");
         }
         MaybeWorkspace::Other(query) => {
-            let mut possibilities = loop {
+            let possibilities = loop {
                 match registry.query_vec(&query, QueryKind::Fuzzy) {
                     std::task::Poll::Ready(res) => {
                         break res?;
@@ -553,6 +553,11 @@ fn get_latest_dependency(
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
             };
+
+            let mut possibilities: Vec<_> = possibilities
+                .into_iter()
+                .map(|s| s.into_summary())
+                .collect();
 
             possibilities.sort_by_key(|s| {
                 // Fallback to a pre-release if no official release is available by sorting them as
@@ -671,6 +676,12 @@ fn select_package(
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
             };
+
+            let possibilities: Vec<_> = possibilities
+                .into_iter()
+                .map(|s| s.into_summary())
+                .collect();
+
             match possibilities.len() {
                 0 => {
                     let source = dependency
@@ -889,6 +900,7 @@ fn populate_available_features(
     // in the lock file for a given version requirement.
     let lowest_common_denominator = possibilities
         .iter()
+        .map(|s| s.as_summary())
         .min_by_key(|s| {
             // Fallback to a pre-release if no official release is available by sorting them as
             // more.

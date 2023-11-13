@@ -223,6 +223,15 @@ impl IndexSummary {
         }
     }
 
+    pub fn map_summary(self, f: impl Fn(Summary) -> Summary) -> Self {
+        match self {
+            IndexSummary::Candidate(s) => IndexSummary::Candidate(f(s)),
+            IndexSummary::Yanked(s) => IndexSummary::Yanked(f(s)),
+            IndexSummary::Offline(s) => IndexSummary::Offline(f(s)),
+            IndexSummary::Unsupported(s, v) => IndexSummary::Unsupported(f(s), v.clone()),
+        }
+    }
+
     /// Extract the package id from any variant
     pub fn package_id(&self) -> PackageId {
         match self {

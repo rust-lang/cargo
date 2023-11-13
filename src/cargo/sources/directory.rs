@@ -3,10 +3,11 @@ use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 use std::task::Poll;
 
-use crate::core::{Dependency, Package, PackageId, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, SourceId};
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
+use crate::sources::IndexSummary;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::Config;
@@ -99,7 +100,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         if !self.updated {
             return Poll::Pending;
@@ -110,7 +111,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             QueryKind::Fuzzy => true,
         });
         for summary in matches.map(|pkg| pkg.summary().clone()) {
-            f(summary);
+            f(IndexSummary::Candidate(summary));
         }
         Poll::Ready(Ok(()))
     }

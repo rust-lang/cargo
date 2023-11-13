@@ -105,7 +105,7 @@ impl<'a> RegistryQueryer<'a> {
 
         let mut ret = Vec::new();
         let ready = self.registry.query(dep, QueryKind::Exact, &mut |s| {
-            ret.push(s);
+            ret.push(s.into_summary());
         })?;
         if ready.is_pending() {
             self.registry_cache
@@ -135,16 +135,19 @@ impl<'a> RegistryQueryer<'a> {
                     return Poll::Pending;
                 }
             };
-            let s = summaries.next().ok_or_else(|| {
-                anyhow::format_err!(
-                    "no matching package for override `{}` found\n\
+            let s = summaries
+                .next()
+                .ok_or_else(|| {
+                    anyhow::format_err!(
+                        "no matching package for override `{}` found\n\
                      location searched: {}\n\
                      version required: {}",
-                    spec,
-                    dep.source_id(),
-                    dep.version_req()
-                )
-            })?;
+                        spec,
+                        dep.source_id(),
+                        dep.version_req()
+                    )
+                })?
+                .into_summary();
             let summaries = summaries.collect::<Vec<_>>();
             if !summaries.is_empty() {
                 let bullets = summaries
